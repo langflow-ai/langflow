@@ -8,12 +8,18 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
 
 # We'll use a mocked adapter so we don't need real credentials.
 # We need to mock the adapter resolution and the telemetry service.
+
+pytestmark = pytest.mark.skipif(
+    not FEATURE_FLAGS.wxo_deployments,
+    reason="wxo_deployments feature flag is disabled; deployment routes are not mounted.",
+)
 
 
 @pytest.fixture
