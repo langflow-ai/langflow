@@ -202,7 +202,10 @@ export const GetStartedProgress: FC<{
             ) : (
               <FaDiscord className="h-4 w-4 text-[#5865F2]" />
             )}
-            <ShadTooltip content={t("sidebar.joinCommunity")} styleClasses="z-50">
+            <ShadTooltip
+              content={t("sidebar.joinCommunity")}
+              styleClasses="z-50"
+            >
               <span
                 className={cn(
                   "truncate text-sm",
@@ -237,7 +240,9 @@ export const GetStartedProgress: FC<{
               />
             </span>
             <ShadTooltip content={t("sidebar.createFlow")} styleClasses="z-50">
-              <span className={cn("truncate text-sm", hasFlows && "line-through")}>
+              <span
+                className={cn("truncate text-sm", hasFlows && "line-through")}
+              >
                 {t("sidebar.createFlow")}
               </span>
             </ShadTooltip>
