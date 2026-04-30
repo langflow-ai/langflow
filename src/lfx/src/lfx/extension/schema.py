@@ -38,11 +38,10 @@ def build_schema() -> dict[str, Any]:
     )
     schema["$schema"] = JSON_SCHEMA_DIALECT
     schema["$id"] = EXTENSION_SCHEMA_URL
-    schema.setdefault("title", "Langflow Extension Manifest (v1)")
-    schema.setdefault(
-        "description",
+    schema["title"] = "Langflow Extension Manifest (v1)"
+    schema["description"] = (
         "Schema for the v0 Langflow Extension manifest (LE-1014). "
-        "See https://docs.langflow.org/extensions/manifest for the author's guide.",
+        "See https://docs.langflow.org/extensions/manifest for the author's guide."
     )
     return schema
 
