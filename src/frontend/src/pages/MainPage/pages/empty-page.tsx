@@ -94,7 +94,7 @@ export const EmptyPageCommunity = ({
             <div className="flex w-full max-w-[510px] flex-col gap-7 sm:gap-[29px]">
               <Button
                 unstyled
-                className="group mx-3 h-[84px] sm:mx-0"
+                className="group mx-3 min-h-[84px] sm:mx-0"
                 onClick={() => {
                   handleUserTrack("github_starred")();
                   window.open(GITHUB_URL, "_blank", "noopener,noreferrer");
@@ -113,7 +113,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-base text-secondary-foreground">
+                      <span className="line-clamp-2 text-base text-secondary-foreground">
                         {t("page.githubDescription")}
                       </span>
                     </div>
@@ -124,7 +124,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 unstyled
-                className="group mx-3 h-[84px] sm:mx-0"
+                className="group mx-3 min-h-[84px] sm:mx-0"
                 onClick={() => {
                   handleUserTrack("discord_clicked")();
                   window.open(DISCORD_URL, "_blank", "noopener,noreferrer");
@@ -143,7 +143,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="text-base text-secondary-foreground">
+                      <span className="line-clamp-2 text-base text-secondary-foreground">
                         {t("page.discordDescription")}
                       </span>
                     </div>
@@ -154,7 +154,7 @@ export const EmptyPageCommunity = ({
 
               <Button
                 variant="default"
-                className="z-10 m-auto mt-3 h-10 w-full max-w-[10rem] rounded-lg font-bold transition-all duration-300"
+                className="z-10 m-auto mt-3 h-auto min-h-10 w-auto whitespace-normal rounded-lg font-bold transition-all duration-300"
                 onClick={() => setOpenModal(true)}
                 id="new-project-btn"
                 data-testid="new_project_btn_empty_page"
