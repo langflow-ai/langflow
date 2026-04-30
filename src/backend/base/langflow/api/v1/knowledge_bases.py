@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import json
+import tempfile
 import uuid
 from contextlib import suppress
 from datetime import datetime, timezone
@@ -39,6 +40,8 @@ from langflow.schema.knowledge_base import (
     KnowledgeBaseInfo,
     PaginatedChunkResponse,
     PaginatedIngestionRunResponse,
+    TestBackendConnectionRequest,
+    TestBackendConnectionResponse,
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
@@ -355,6 +358,60 @@ async def _delete_remote_backend_collection(
     return None
 
 
+@router.post("/test-connection", status_code=HTTPStatus.OK)
+async def test_backend_connection(
+    request: TestBackendConnectionRequest,
+    current_user: CurrentActiveUser,
+) -> TestBackendConnectionResponse:
+    """Validate a vector-store backend's configuration without creating a KB.
+
+    Builds a transient backend instance against the supplied
+    ``backend_type`` / ``backend_config`` and runs ``backend.test_connection()``,
+    which each backend implements with a native reachability check
+    (e.g. OpenSearch ``cluster.info``, Chroma ``heartbeat``). Both
+    success and connectivity / credential failures return HTTP 200 — the
+    ``ok`` field on the response indicates outcome. Malformed requests
+    (unknown backend, missing required field) are rejected by the
+    Pydantic validators before they reach this handler and surface as
+    HTTP 422.
+    """
+    # Use a private temp directory for the transient backend so a
+    # local-storage backend (Chroma) doesn't leak files into the user's
+    # KB root, and so concurrent test-connection calls don't collide.
+    with tempfile.TemporaryDirectory(prefix="kb-test-connection-") as tmp_dir:
+        kb_path = Path(tmp_dir)
+        try:
+            backend = create_backend(
+                request.backend_type,
+                kb_name="__test_connection__",
+                kb_path=kb_path,
+                backend_config=dict(request.backend_config),
+                embedding_function=None,
+                user_id=current_user.id,
+            )
+        except ValueError as exc:
+            # Registry rejection (unregistered backend, etc.) — surface
+            # as a normal failure result rather than a 5xx so the UI can
+            # render the message in the same toast it uses for the rest.
+            return TestBackendConnectionResponse(
+                ok=False,
+                message=str(exc),
+                details={"type": "ValueError"},
+            )
+
+        try:
+            result = await backend.test_connection()
+        finally:
+            with suppress(Exception):
+                await backend.teardown()
+
+    return TestBackendConnectionResponse(
+        ok=result.ok,
+        message=result.message,
+        details=dict(result.details),
+    )
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_knowledge_base(
@@ -377,8 +434,11 @@ async def create_knowledge_base(
         kb_path = (kb_user_path / kb_name).resolve()
         _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
-        # Check if KB already exists
-        if kb_path.exists():
+        # Check both durable DB state and legacy disk state. During
+        # expand/contract rollout a KB row can exist even if its local
+        # sidecar directory was cleaned up out of band.
+        existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        if existing_record is not None or kb_path.exists():
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
         # Create KB directory
@@ -1452,10 +1512,18 @@ async def get_ingestion_run(
 
 
 def _run_row_to_info(row) -> IngestionRunInfo:
-    """Translate an ``IngestionRun`` row into its list-response shape."""
-    # ``user_metadata`` is a JSON column; some legacy rows pre-migration
-    # may surface as None until the column default backfills on next
-    # write. Coerce to ``{}`` so the API contract stays stable.
+    """Translate a ``RunRow`` projection into the list-response shape.
+
+    Source rows used to come from the ``ingestion_run`` table; they
+    now come from a ``RunRow`` dataclass projected from
+    ``Job`` + ``Job.job_metadata``. Field names are unchanged so the
+    ``IngestionRunInfo`` Pydantic shape (and the frontend that reads
+    it) doesn't move.
+
+    ``user_metadata`` is read defensively because legacy job rows
+    written before the user-metadata work was merged may not have the
+    key on their ``job_metadata`` blob.
+    """
     user_metadata = getattr(row, "user_metadata", None) or {}
     return IngestionRunInfo(
         id=str(row.id),

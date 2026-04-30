@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +20,8 @@ const ModelList = ({
   selectedModel,
   onSelect,
 }: ModelListProps) => {
+  const { t } = useTranslation();
+
   if (Object.keys(groupedOptions).length === 0) {
     return (
       <CommandList className="max-h-[300px] overflow-y-auto">
@@ -26,7 +29,7 @@ const ModelList = ({
           disabled
           className="w-full px-4 py-2 text-[13px] text-muted-foreground"
         >
-          No Models Enabled
+          {t("modelInput.noModelsEnabled")}
         </CommandItem>
       </CommandList>
     );

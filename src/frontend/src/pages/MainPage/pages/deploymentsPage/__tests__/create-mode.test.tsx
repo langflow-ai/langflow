@@ -32,7 +32,7 @@ const mockInstance: ProviderAccount = {
   id: "instance-1",
   name: "My WxO Instance",
   provider_key: "watsonx-orchestrate",
-  url: "https://api.example.com",
+  provider_data: { url: "https://api.example.com" },
   created_at: "2025-01-01T00:00:00Z",
   updated_at: "2025-01-01T00:00:00Z",
 };
@@ -253,6 +253,23 @@ describe("Create mode — canGoNext validation", () => {
       expect(result.current.canGoNext).toBe(true);
       expect(result.current.isDeploymentNameValid).toBe(true);
       expect(result.current.hasDeploymentNameFormatError).toBe(false);
+    });
+
+    it("blocks while agent name validation is still pending", () => {
+      const { result } = renderCreateHook({
+        initialProvider: mockProvider,
+        initialInstance: mockInstance,
+      });
+
+      act(() => result.current.handleNext()); // → step 2
+
+      act(() => {
+        result.current.setDeploymentName("My Agent");
+        result.current.setSelectedLlm("gpt-4");
+        result.current.setIsAgentNameValidationPending(true);
+      });
+
+      expect(result.current.canGoNext).toBe(false);
     });
   });
 
@@ -496,6 +513,7 @@ describe("Create mode — connection management", () => {
     const conns: ConnectionItem[] = [
       {
         id: "conn-1",
+        connectionId: "conn-1",
         name: "DB Connection",
         variableCount: 2,
         isNew: true,
@@ -700,6 +718,7 @@ describe("Create mode — buildDeploymentPayload", () => {
 
     const newConn: ConnectionItem = {
       id: "conn-new",
+      connectionId: "conn-new",
       name: "New Connection",
       variableCount: 1,
       isNew: true,
@@ -707,6 +726,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     };
     const existingConn: ConnectionItem = {
       id: "conn-existing",
+      connectionId: "conn-existing",
       name: "Existing Connection",
       variableCount: 0,
       isNew: false,
@@ -734,6 +754,7 @@ describe("Create mode — buildDeploymentPayload", () => {
 
     const conn: ConnectionItem = {
       id: "conn-1",
+      connectionId: "conn-1",
       name: "Connection",
       variableCount: 1,
       isNew: true,
@@ -765,6 +786,7 @@ describe("Create mode — buildDeploymentPayload", () => {
 
     const conn: ConnectionItem = {
       id: "conn-1",
+      connectionId: "conn-1",
       name: "Connection",
       variableCount: 2,
       isNew: true,
@@ -837,6 +859,7 @@ describe("Create mode — multi-flow scenarios", () => {
 
     const conn1: ConnectionItem = {
       id: "conn-a",
+      connectionId: "conn-a",
       name: "Connection A",
       variableCount: 1,
       isNew: true,
@@ -844,6 +867,7 @@ describe("Create mode — multi-flow scenarios", () => {
     };
     const conn2: ConnectionItem = {
       id: "conn-b",
+      connectionId: "conn-b",
       name: "Connection B",
       variableCount: 1,
       isNew: true,
@@ -902,6 +926,7 @@ describe("Create mode — multi-flow scenarios", () => {
 
     const sharedConn: ConnectionItem = {
       id: "conn-shared",
+      connectionId: "conn-shared",
       name: "Shared Connection",
       variableCount: 1,
       isNew: true,
@@ -964,6 +989,7 @@ describe("Create mode — edge cases", () => {
 
     const conn: ConnectionItem = {
       id: "conn-empty",
+      connectionId: "conn-empty",
       name: "Empty Vars",
       variableCount: 0,
       isNew: true,

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
+  type AvailableKnowledgeBackendId,
   getActiveKnowledgeBackend,
   getGlobalVariableValue,
   KNOWLEDGE_BACKEND_OPTIONS,
@@ -13,9 +14,11 @@ import {
   type KnowledgeBackendConfigField,
   type KnowledgeBackendOption,
   type KnowledgeBackendTextField,
+  OPENSEARCH_VARIABLES,
   parseBooleanGlobalVariable,
 } from "@/constants/knowledgeBackendConstants";
 import { VARIABLE_CATEGORY } from "@/constants/providerConstants";
+import { useTestKnowledgeBackendConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
 import {
   useGetGlobalVariables,
   usePatchGlobalVariables,
@@ -57,6 +60,8 @@ export default function KnowledgeBackendsPage() {
     usePostGlobalVariables();
   const { mutateAsync: updateGlobalVariable, isPending: isUpdating } =
     usePatchGlobalVariables();
+  const { mutateAsync: testBackendConnection, isPending: isTesting } =
+    useTestKnowledgeBackendConnection();
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -158,8 +163,13 @@ export default function KnowledgeBackendsPage() {
     )
     .every((field) => getFieldValue(field).trim());
 
-  const handleSave = async () => {
-    if (selectedBackend.status !== "available") return;
+  // Returns ``true`` if the save fully succeeded so callers (the Test
+  // Connection button) can chain a follow-up step. Errors are surfaced
+  // via toast inside the function — callers should not duplicate them.
+  const handleSave = async (options?: {
+    silent?: boolean;
+  }): Promise<boolean> => {
+    if (selectedBackend.status !== "available") return false;
     if (!canSave) {
       setErrorData({
         title: "Missing required configuration",
@@ -175,7 +185,7 @@ export default function KnowledgeBackendsPage() {
             .join(", ")}.`,
         ],
       });
-      return;
+      return false;
     }
 
     try {
@@ -210,15 +220,97 @@ export default function KnowledgeBackendsPage() {
       setVariableValues({});
       setEditingSecret({});
       setHasManuallySelectedBackend(false);
-      setSuccessData({
-        title:
-          selectedBackend.id === "chroma"
-            ? "Chroma selected"
-            : `${selectedBackend.label} configuration saved`,
-      });
+      if (!options?.silent) {
+        setSuccessData({
+          title:
+            selectedBackend.id === "chroma"
+              ? "Chroma selected"
+              : `${selectedBackend.label} configuration saved`,
+        });
+      }
+      return true;
     } catch (error: unknown) {
       setErrorData({
         title: "Error saving knowledge backend",
+        list: [getErrorDetail(error)],
+      });
+      return false;
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (selectedBackend.status !== "available") return;
+    if (!canSave) {
+      setErrorData({
+        title: "Missing required configuration",
+        list: [
+          `${selectedBackend.label} requires ${selectedBackend.configFields
+            .filter(
+              (field): field is KnowledgeBackendTextField =>
+                field.kind !== "boolean" &&
+                field.required &&
+                !getFieldValue(field).trim(),
+            )
+            .map((field) => field.label)
+            .join(", ")}.`,
+        ],
+      });
+      return;
+    }
+
+    // Build the test payload from current form state BEFORE saving —
+    // ``handleSave`` clears ``variableValues`` on success, so reading
+    // form values afterward would surface stale globals instead of the
+    // user's just-saved draft. The backend_config still references
+    // credential VARIABLE NAMES (URL/USERNAME/PASSWORD), so the
+    // server-side variable_service lookup happens after Save persists
+    // them.
+    const literalFields: Record<string, string> = {};
+    const booleanFields: Record<string, boolean> = {};
+    for (const field of selectedBackend.configFields) {
+      const raw = getFieldValue(field);
+      if (field.kind === "boolean") {
+        booleanFields[field.variableKey] = raw === "true";
+      } else {
+        literalFields[field.variableKey] = raw.trim();
+      }
+    }
+
+    // Persist the variables first; the server-side test reads
+    // OPENSEARCH_URL etc. through ``variable_service``.
+    const saved = await handleSave({ silent: true });
+    if (!saved) {
+      // ``handleSave`` already surfaced an error toast.
+      return;
+    }
+
+    try {
+      const backendConfig = buildBackendConfigPayload(
+        selectedBackend.id as AvailableKnowledgeBackendId,
+        literalFields,
+        booleanFields,
+      );
+      const response = await testBackendConnection({
+        backend_type: selectedBackend.id,
+        backend_config: backendConfig,
+      });
+      if (response.ok) {
+        // ``setSuccessData`` only takes a title; pack any backend
+        // detail (cluster name, version) into the title so it shows.
+        setSuccessData({
+          title: response.message
+            ? `Connection successful — ${response.message}`
+            : "Connection successful",
+        });
+      } else {
+        setErrorData({
+          title: "Connection failed",
+          list: [response.message || "The backend rejected the connection."],
+        });
+      }
+    } catch (error: unknown) {
+      setErrorData({
+        title: "Error testing backend connection",
         list: [getErrorDetail(error)],
       });
     }
@@ -307,14 +399,51 @@ export default function KnowledgeBackendsPage() {
                 setEditingSecret((prev) => ({ ...prev, [key]: editing }))
               }
               onSave={
-                selectedBackend.id === "chroma" ? handleUseChroma : handleSave
+                selectedBackend.id === "chroma"
+                  ? handleUseChroma
+                  : () => {
+                      void handleSave();
+                    }
               }
+              onTestConnection={
+                selectedBackend.id === "chroma"
+                  ? undefined
+                  : handleTestConnection
+              }
+              isTesting={isTesting}
             />
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Build a ``backend_config`` payload for ``POST /test-connection`` from
+// the in-memory form values, side-stepping the global-variable cache
+// which is stale immediately after Save. The server-side test still
+// resolves credentials (URL/USERNAME/PASSWORD) through variable_service
+// using the variable-name fields below — those names are stable
+// constants and don't depend on what the user typed.
+function buildBackendConfigPayload(
+  backendId: AvailableKnowledgeBackendId,
+  literalFields: Record<string, string>,
+  booleanFields: Record<string, boolean>,
+): Record<string, unknown> {
+  if (backendId !== "opensearch") {
+    return {};
+  }
+  return {
+    url_variable: OPENSEARCH_VARIABLES.URL,
+    username_variable: OPENSEARCH_VARIABLES.USERNAME,
+    password_variable: OPENSEARCH_VARIABLES.PASSWORD,
+    index_name: literalFields[OPENSEARCH_VARIABLES.INDEX_NAME] || "",
+    vector_field:
+      literalFields[OPENSEARCH_VARIABLES.VECTOR_FIELD] || "vector_field",
+    text_field: literalFields[OPENSEARCH_VARIABLES.TEXT_FIELD] || "text",
+    use_ssl: booleanFields[OPENSEARCH_VARIABLES.USE_SSL] ?? true,
+    verify_certs: booleanFields[OPENSEARCH_VARIABLES.VERIFY_CERTS] ?? true,
+  };
 }
 
 function BackendListItem({
@@ -399,6 +528,8 @@ function BackendConfigurationPanel({
   onVariableChange,
   onSecretEditingChange,
   onSave,
+  onTestConnection,
+  isTesting,
 }: {
   backend: KnowledgeBackendOption;
   activeBackendId: "chroma" | "opensearch";
@@ -411,6 +542,8 @@ function BackendConfigurationPanel({
   onVariableChange: (key: string, value: string) => void;
   onSecretEditingChange: (key: string, editing: boolean) => void;
   onSave: () => void;
+  onTestConnection?: () => void;
+  isTesting: boolean;
 }) {
   const isComingSoon = backend.status === "coming_soon";
   const isActive = activeBackendId === backend.id;
@@ -519,12 +652,24 @@ function BackendConfigurationPanel({
               />
             ),
           )}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            {onTestConnection && (
+              <Button
+                onClick={onTestConnection}
+                size="sm"
+                variant="outline"
+                loading={isTesting}
+                disabled={!canSave || isPending || isTesting}
+                data-testid="knowledge-backend-test-connection"
+              >
+                Test connection
+              </Button>
+            )}
             <Button
               onClick={onSave}
               size="sm"
               loading={isPending}
-              disabled={!canSave || isPending}
+              disabled={!canSave || isPending || isTesting}
             >
               {isActive ? "Save" : `Save and use ${backend.label}`}
             </Button>

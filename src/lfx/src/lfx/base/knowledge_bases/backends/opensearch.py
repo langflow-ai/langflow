@@ -45,6 +45,7 @@ from lfx.base.knowledge_bases.backends.base import (
     BackendType,
     BaseVectorStoreBackend,
     IngestedDocument,
+    TestConnectionResult,
     drain_queue_until_sentinel,
 )
 from lfx.log.logger import logger
@@ -250,6 +251,124 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             # the user can correlate a 0-chunk count with the real cause.
             logger.warning("OpenSearch count() failed for %s: %s", self.kb_name, exc)
             return 0
+
+    async def test_connection(self) -> TestConnectionResult:
+        """Validate auth + reachability via ``cluster.info()``.
+
+        The LangChain wrapper builds lazily, so the default
+        ``test_connection`` would only catch construction-time mistakes.
+        Calling ``cluster.info()`` on the raw ``opensearch-py`` client
+        exercises the same auth / SSL / DNS path ingestion uses, but
+        without requiring the index to exist yet — operators commonly
+        configure the backend before creating the index.
+        """
+        try:
+            await self.ensure_ready()
+        except ValueError as exc:
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc),
+                details={"type": "ConfigError"},
+            )
+        except Exception as exc:  # noqa: BLE001
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+
+        try:
+            _ = self.vector_store  # populates self._os_client
+        except Exception as exc:  # noqa: BLE001
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+
+        client = getattr(self, "_os_client", None)
+        if client is None:  # pragma: no cover — _build_vector_store always sets this
+            return TestConnectionResult(
+                ok=False,
+                message="OpenSearch client was not initialized.",
+                details={"type": "RuntimeError"},
+            )
+
+        try:
+            from opensearchpy.exceptions import (
+                AuthenticationException,
+                AuthorizationException,
+            )
+            from opensearchpy.exceptions import (
+                ConnectionError as OpenSearchConnectionError,
+            )
+            from opensearchpy.exceptions import (
+                SSLError as OpenSearchSSLError,
+            )
+        except ImportError as exc:
+            return TestConnectionResult(
+                ok=False,
+                message="opensearch-py is not installed. Install the 'opensearch' extras.",
+                details={"type": type(exc).__name__},
+            )
+
+        # ``opensearch-py`` exposes ``info()`` on the top-level client
+        # (not on ``client.cluster`` — that namespace covers
+        # ``health/state/stats`` etc.). Calling ``client.cluster.info``
+        # raises ``AttributeError: 'ClusterClient' object has no
+        # attribute 'info'`` instead of the connectivity error we want
+        # to surface.
+        try:
+            info = await asyncio.to_thread(client.info)
+        except AuthenticationException as exc:
+            return TestConnectionResult(
+                ok=False,
+                message="Authentication failed. Check the username and password variables.",
+                details={"type": "AuthenticationException", "error": str(exc)},
+            )
+        except AuthorizationException as exc:
+            return TestConnectionResult(
+                ok=False,
+                message="Authorization failed. The user is reachable but lacks cluster permissions.",
+                details={"type": "AuthorizationException", "error": str(exc)},
+            )
+        except OpenSearchSSLError as exc:
+            return TestConnectionResult(
+                ok=False,
+                message=(
+                    "TLS handshake failed. Verify the URL scheme matches the cluster, and "
+                    "toggle 'Verify TLS cert' off if you are using a self-signed certificate."
+                ),
+                details={"type": "SSLError", "error": str(exc)},
+            )
+        except OpenSearchConnectionError as exc:
+            return TestConnectionResult(
+                ok=False,
+                message=(
+                    "Could not reach the cluster. Verify the URL, network access, and that "
+                    "the 'Use TLS' toggle matches the cluster's scheme."
+                ),
+                details={"type": "ConnectionError", "error": str(exc)},
+            )
+        except Exception as exc:  # noqa: BLE001
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+
+        cluster_name = ""
+        version = ""
+        if isinstance(info, dict):
+            cluster_name = str(info.get("cluster_name") or "")
+            version_info = info.get("version")
+            if isinstance(version_info, dict):
+                version = str(version_info.get("number") or "")
+        return TestConnectionResult(
+            ok=True,
+            message=f"Connected to OpenSearch cluster {cluster_name or '(unnamed)'}".strip(),
+            details={"cluster_name": cluster_name, "version": version},
+        )
 
     async def iter_documents(
         self,

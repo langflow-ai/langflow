@@ -8,19 +8,12 @@ import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
-import { useTypesStore } from "@/stores/typesStore";
-import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import {
   convertStringToHTML,
   getStatusColor,
 } from "@/utils/stringManipulation";
 import type { DropDownComponent } from "../../../types/components";
-import {
-  cn,
-  filterNullOptions,
-  formatName,
-  groupByFamily,
-} from "../../../utils/utils";
+import { cn, filterNullOptions, formatName } from "../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../common/genericIconComponent";
 import ShadTooltip from "../../common/shadTooltipComponent";
 import { Button } from "../../ui/button";
@@ -71,9 +64,9 @@ export default function Dropdown({
   // Initialize state and refs
   const [open, setOpen] = useState(children ? true : false);
   const [openDialog, setOpenDialog] = useState(false);
-  const [waitingForResponse, setWaitingForResponse] = useState(false);
+  const [_waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
-  const nodes = useFlowStore((state) => state.nodes);
+  const _nodes = useFlowStore((state) => state.nodes);
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -338,7 +331,7 @@ export default function Dropdown({
       variant="primary"
       size="xs"
     >
-      <LoadingTextComponent text="Loading options" />
+      <LoadingTextComponent text={t("dropdown.loadingOptions")} />
     </Button>
   );
 
@@ -680,7 +673,7 @@ export default function Dropdown({
   if (Object.keys(validOptions).length === 0 && !combobox && isLoading) {
     return (
       <div>
-        <span className="text-sm italic">Loading...</span>
+        <span className="text-sm italic">{t("dropdown.loadingOptions")}</span>
       </div>
     );
   }

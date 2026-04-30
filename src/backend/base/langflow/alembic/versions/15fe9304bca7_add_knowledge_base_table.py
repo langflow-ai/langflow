@@ -1,7 +1,7 @@
 """Add knowledge_base table
 
 Revision ID: 15fe9304bca7
-Revises: 72df732be86b
+Revises: mb00a1b2c3d4
 Create Date: 2026-04-20 14:00:00.000000
 
 Phase: EXPAND
@@ -33,7 +33,7 @@ KB_STATUS_VALUES = ("creating", "ready", "ingesting", "failed")
 
 # revision identifiers, used by Alembic.
 revision: str = "15fe9304bca7"  # pragma: allowlist secret
-down_revision: str | None = "72df732be86b"  # pragma: allowlist secret
+down_revision: str | None = "mb00a1b2c3d4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -295,6 +295,66 @@ class TestKnowledgeBaseAPI:
             assert response.status_code == 422, (stubbed, response.text)
             assert "not enabled" in response.text.lower(), (stubbed, response.text)
 
+    async def test_test_connection_chroma_returns_ok(self, client: AsyncClient, logged_in_headers):
+        """Chroma succeeds against a transient temp dir.
+
+        The endpoint builds the backend in a tempfile that is cleaned
+        up before the response is returned, so no on-disk state
+        outlasts the request.
+        """
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["ok"] is True
+        assert "Chroma" in body["message"]
+
+    async def test_test_connection_rejects_unknown_backend(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "not-a-backend", "backend_config": {}},
+        )
+        assert response.status_code == 422
+        assert "unknown vector-store backend" in response.text.lower()
+
+    async def test_test_connection_rejects_missing_required_field(self, client: AsyncClient, logged_in_headers):
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={"backend_type": "opensearch", "backend_config": {}},
+        )
+        assert response.status_code == 422
+        assert "index_name" in response.text
+
+    async def test_test_connection_returns_failure_for_unreachable_opensearch(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        """Reachability failures return HTTP 200 with ``ok=False``.
+
+        Credential and connectivity failures are an *expected* result,
+        not an error condition — the frontend differentiates by the
+        ``ok`` field rather than the HTTP status code.
+        """
+        response = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=logged_in_headers,
+            json={
+                "backend_type": "opensearch",
+                "backend_config": {
+                    "url_variable": "OPENSEARCH_URL_TEST_DOES_NOT_EXIST",
+                    "index_name": "any_idx",
+                },
+            },
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["ok"] is False
+        assert body["message"]
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(
         self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
@@ -449,6 +509,37 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
 
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_duplicate_kb_rejects_existing_db_row_without_directory(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="Duplicate_DB_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+        )
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "Duplicate DB KB",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "model",
+            },
+        )
+
+        assert response.status_code == 409
+        assert "already exists" in response.json()["detail"]
+        assert not (tmp_path / active_user.username / "Duplicate_DB_KB").exists()
+
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.backfill_from_disk", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_list_knowledge_bases(
@@ -482,6 +573,51 @@ class TestKnowledgeBaseAPI:
         assert kb["backend_config"] == {"index_name": "kb1_index"}
         assert kb["size"] == 1024
         mock_backfill.assert_not_awaited()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_list_and_detail_reflect_cleared_db_separator(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="Cleared_Separator_KB",
+            embedding_provider="OpenAI",
+            embedding_model="model",
+            separator="\n",
+        )
+        await knowledge_base_service.update_stats(
+            record.id,
+            chunks=3,
+            words=30,
+            characters=300,
+            size_bytes=2048,
+            chunk_size=512,
+            chunk_overlap=64,
+            separator=None,
+        )
+
+        list_response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
+        assert list_response.status_code == 200
+        listed = next(kb for kb in list_response.json() if kb["id"] == str(record.id))
+        assert listed["chunk_size"] == 512
+        assert listed["chunk_overlap"] == 64
+        assert listed["separator"] is None
+
+        detail_response = await client.get(
+            "api/v1/knowledge_bases/Cleared_Separator_KB",
+            headers=logged_in_headers,
+        )
+        assert detail_response.status_code == 200
+        detail = detail_response.json()
+        assert detail["chunk_size"] == 512
+        assert detail["chunk_overlap"] == 64
+        assert detail["separator"] is None
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_list_knowledge_bases_falls_back_to_disk_when_user_has_no_rows(
@@ -1196,7 +1332,7 @@ class TestPerformIngestionTask:
 
         # Finalize should mark the run SUCCEEDED when every item lands.
         finalize_kwargs = mock_finalize_run.await_args.kwargs
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         assert finalize_kwargs["status"] is IngestionRunStatus.SUCCEEDED
         assert finalize_kwargs["summary"].succeeded == 1
@@ -1271,7 +1407,7 @@ class TestPerformIngestionTask:
             job_service=AsyncMock(),
         )
 
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         mock_finalize_run.assert_awaited_once()
         finalize_kwargs = mock_finalize_run.await_args.kwargs
@@ -1411,7 +1547,7 @@ class TestPerformIngestionTask:
         # visibility UI doesn't show stuck RUNNING rows.
         mock_finalize_run.assert_awaited_once()
         finalize_kwargs = mock_finalize_run.await_args.kwargs
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         assert finalize_kwargs["status"] is IngestionRunStatus.FAILED
         assert finalize_kwargs["error_message"] == "Chroma error"

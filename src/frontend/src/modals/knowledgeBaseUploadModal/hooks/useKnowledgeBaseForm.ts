@@ -1,5 +1,6 @@
 import { type AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
   type AvailableKnowledgeBackendId,
@@ -16,8 +17,8 @@ import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-m
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import useAlertStore from "@/stores/alertStore";
 import {
-  metadataPairsToFormValue,
   type MetadataPair,
+  metadataPairsToFormValue,
 } from "../components/MetadataEditor";
 import {
   DEFAULT_CHUNK_OVERLAP,
@@ -75,6 +76,7 @@ export function useKnowledgeBaseForm({
     | "hideAdvanced"
     | "existingKnowledgeBaseNames"
   >) {
+  const { t } = useTranslation();
   const isAddSourcesMode = !!existingKnowledgeBase;
 
   // Wizard state
@@ -334,7 +336,7 @@ export function useKnowledgeBaseForm({
     } catch (error: unknown) {
       const err = error as AxiosError<{ detail?: string }>;
       setErrorData({
-        title: "Failed to generate chunk preview",
+        title: t("knowledge.errorChunkPreview"),
         list: [err?.response?.data?.detail || err?.message || "Unknown error"],
       });
       setChunkPreviews([]);
@@ -354,22 +356,21 @@ export function useKnowledgeBaseForm({
     const errors: Record<string, string> = {};
     const trimmedName = sourceName.trim().replace(/\s+/g, "_");
     if (!trimmedName) {
-      errors.sourceName = "Name is required";
+      errors.sourceName = t("knowledge.validationNameRequired");
     } else if (trimmedName.length < 3 || trimmedName.length > 512) {
-      errors.sourceName = "Name must be between 3 and 512 characters";
+      errors.sourceName = t("knowledge.validationNameLength");
     } else if (!KB_NAME_REGEX.test(trimmedName)) {
-      errors.sourceName =
-        "Name must only contain [a-zA-Z0-9._-] and start/end with [a-zA-Z0-9]";
+      errors.sourceName = t("knowledge.validationNameFormat");
     } else if (
       !isAddSourcesMode &&
       existingKnowledgeBaseNames?.some(
         (name) => name.toLowerCase() === trimmedName.toLowerCase(),
       )
     ) {
-      errors.sourceName = "A knowledge base with this name already exists";
+      errors.sourceName = t("knowledge.validationNameDuplicate");
     }
     if (!isAddSourcesMode && selectedEmbeddingModel.length === 0) {
-      errors.embeddingModel = "Embedding model is required";
+      errors.embeddingModel = t("knowledge.validationEmbeddingRequired");
     }
     if (!isAddSourcesMode) {
       const selectedBackend = getKnowledgeBackendOption(backendType);
@@ -384,10 +385,11 @@ export function useKnowledgeBaseForm({
     }
     const totalBytes = files.reduce((acc, file) => acc + file.size, 0);
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
-      errors.files = "Total file size exceeds the 1 GB limit";
+      errors.files = t("knowledge.validationFileSizeLimit");
     }
     return errors;
   }, [
+    t,
     sourceName,
     isAddSourcesMode,
     selectedEmbeddingModel,
@@ -493,7 +495,7 @@ export function useKnowledgeBaseForm({
           .catch((ingestError: unknown) => {
             const err = ingestError as AxiosError<{ detail?: string }>;
             setErrorData({
-              title: `Failed to start ingestion for "${sourceName}"`,
+              title: t("knowledge.errorIngestion", { name: sourceName }),
               list: [
                 err?.response?.data?.detail || err?.message || "Unknown error",
               ],
@@ -515,11 +517,11 @@ export function useKnowledgeBaseForm({
 
       if (isAddSourcesMode) {
         setSuccessData({
-          title: `Sources added to "${sourceName}"`,
+          title: t("knowledge.successSourcesAdded", { name: sourceName }),
         });
       } else {
         setSuccessData({
-          title: `Knowledge base "${sourceName}" created`,
+          title: t("knowledge.baseCreated", { name: sourceName }),
         });
       }
 
@@ -531,7 +533,7 @@ export function useKnowledgeBaseForm({
       const errorMessage =
         err?.response?.data?.detail ||
         err?.message ||
-        "Failed to create knowledge base";
+        t("knowledge.errorCreateFailed");
       setErrorData({ title: errorMessage });
     } finally {
       setIsSubmitting(false);

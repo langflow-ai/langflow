@@ -160,6 +160,51 @@ class JobService(Service):
                 await session.flush()
             return job
 
+    async def update_job_metadata(
+        self,
+        job_id: UUID,
+        patch: dict,
+        *,
+        replace: bool = False,
+    ) -> Job | None:
+        """Merge ``patch`` into ``job.job_metadata`` (or replace it).
+
+        Domain-owned per-job context lives here — KB ingestion writes
+        counters and per-item outcomes, workflow runs can record their
+        own keys, etc. The wrapped coroutine inside
+        ``execute_with_status`` calls this as it makes progress so the
+        UI can read partial state without waiting for the job to
+        finish.
+
+        Args:
+            job_id: The job ID to update.
+            patch: Top-level keys to merge into the existing dict. Keys
+                in ``patch`` overwrite same-named keys on the existing
+                row; nested dicts are NOT deep-merged — callers that
+                want deep-merge semantics should read, merge, and pass
+                the full result.
+            replace: When ``True``, replace ``job_metadata`` outright
+                instead of merging. Use when the caller is the sole
+                writer and wants a known-shape blob (e.g. KB ingestion
+                finalize).
+
+        Returns:
+            The updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            if replace or job.job_metadata is None:
+                job.job_metadata = dict(patch)
+            else:
+                # Shallow merge — callers wanting deep-merge own the
+                # composition. This keeps the helper predictable.
+                job.job_metadata = {**job.job_metadata, **patch}
+            session.add(job)
+            await session.flush()
+            return job
+
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 

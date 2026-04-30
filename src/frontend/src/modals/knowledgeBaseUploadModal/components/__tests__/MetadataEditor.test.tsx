@@ -1,8 +1,8 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import {
   MetadataEditor,
-  metadataPairsToFormValue,
   type MetadataPair,
+  metadataPairsToFormValue,
 } from "../MetadataEditor";
 
 const renderEditor = (pairs: MetadataPair[]) => {

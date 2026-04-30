@@ -60,7 +60,11 @@ const ModelTrigger = ({
           name="Brain"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
-        <div className="text-[13px] text-muted-foreground">{placeholder}</div>
+        <div className="text-[13px] text-muted-foreground">
+          {placeholder === "Setup Provider"
+            ? t("model.setupProvider")
+            : placeholder}
+        </div>
       </Button>
     );
   }
@@ -91,7 +95,7 @@ const ModelTrigger = ({
                 t("component.receivingInput")
               ) : isEmptyStateMode ? (
                 <div className="truncate text-muted-foreground">
-                  No models enabled
+                  {t("model.noModelsEnabled")}
                 </div>
               ) : (
                 <div
@@ -100,7 +104,7 @@ const ModelTrigger = ({
                     !selectedModel?.name && "text-muted-foreground",
                   )}
                 >
-                  {selectedModel?.name || "Select a model"}
+                  {selectedModel?.name || t("model.selectModel")}
                 </div>
               )}
             </span>

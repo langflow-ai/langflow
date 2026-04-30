@@ -23,7 +23,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -91,73 +91,38 @@ class IngestedDocument:
     embedding: list[float] | None = None
 
 
-@runtime_checkable
-class VectorStoreBackend(Protocol):
-    """Protocol every KB vector-store backend must satisfy.
+@dataclass(frozen=True)
+class TestConnectionResult:
+    """Outcome of a backend ``test_connection`` call.
 
-    Implementations should be lightweight to construct; heavy resources (e.g.
-    a Chroma persistent client, a MongoDB connection) are the backend's own
-    concern and must be released in ``teardown``.
+    ``ok`` is the only field the UI strictly needs. ``message`` is a short,
+    user-facing summary safe to surface verbatim in a toast. ``details`` is an
+    optional structured bag (e.g. ``{"type": "AuthenticationException"}``) for
+    the frontend to render extra hints without parsing free-form text.
     """
 
-    backend_type: BackendType
-    kb_name: str
+    # Tell pytest not to try to collect this dataclass as a test class
+    # just because its name starts with ``Test``.
+    __test__ = False
 
-    async def add_documents(self, docs: list[Document]) -> None:
-        """Persist ``docs`` into the backend. Called per batch by ingestion."""
-        ...
-
-    async def similarity_search(
-        self,
-        query: str,
-        k: int,
-        *,
-        filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
-        with_scores: bool = False,
-    ) -> list[tuple[Document, float]]:
-        """Return the top-k matching documents.
-
-        When ``with_scores`` is False, returned tuples still carry a float but
-        the value is implementation-defined (Langflow uses 0.0 as a sentinel).
-        """
-        ...
-
-    async def delete_by(self, where: dict[str, Any]) -> None:
-        """Delete all documents matching ``where`` (backend-native filter)."""
-        ...
-
-    async def count(self) -> int:
-        """Total number of documents stored."""
-        ...
-
-    async def iter_documents(
-        self,
-        *,
-        batch_size: int = 5000,
-        include_embeddings: bool = False,
-    ) -> AsyncIterator[list[IngestedDocument]]:
-        """Yield batches of stored documents. Used for metrics + visibility."""
-        ...
-
-    async def storage_size_bytes(self) -> int:
-        """Approximate on-disk / cluster-side size for dashboard display."""
-        ...
-
-    async def delete_collection(self) -> None:
-        """Delete the backend-owned collection/index for this KB."""
-        ...
-
-    async def teardown(self) -> None:
-        """Release all backend resources. Must be idempotent."""
-        ...
+    ok: bool
+    message: str
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 class BaseVectorStoreBackend(ABC):
-    """Default ``VectorStoreBackend`` implementation around a LangChain store.
+    """Base class every KB vector-store backend inherits from.
 
-    Subclasses provide ``_build_vector_store`` and override
-    ``storage_size_bytes`` / ``teardown`` / ``iter_documents`` where the
-    LangChain primitives don't line up with what Langflow needs.
+    Wraps a LangChain ``VectorStore``: subclasses provide
+    ``_build_vector_store`` and override ``storage_size_bytes`` /
+    ``teardown`` / ``iter_documents`` where the LangChain primitives don't
+    line up with what Langflow needs.
+
+    Backends should be lightweight to construct; heavy resources (a Chroma
+    persistent client, a MongoDB connection) are the backend's own concern
+    and must be released in ``teardown``. Each call site obtains a fresh
+    backend instance and tears it down via ``teardown()`` in a ``finally``
+    block.
     """
 
     backend_type: BackendType
@@ -335,3 +300,24 @@ class BaseVectorStoreBackend(ABC):
     async def teardown(self) -> None:  # pragma: no cover
         """Default: drop the LangChain reference and let GC handle the rest."""
         self._vector_store = None
+
+    async def test_connection(self) -> TestConnectionResult:
+        """Default: resolve secrets and ensure the LangChain store can build.
+
+        For backends where ``_build_vector_store`` actually opens a network
+        connection (e.g. clients that eagerly dial on construction) this is
+        sufficient. Backends whose store builder is lazy should override and
+        issue a backend-native ping (cluster info, SELECT 1, etc.) — the goal
+        is to fail loudly at configure-time rather than waiting until the
+        first ingestion call.
+        """
+        try:
+            await self.ensure_ready()
+            _ = self.vector_store
+        except Exception as exc:  # noqa: BLE001 — converted to user-facing result
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc) or type(exc).__name__,
+                details={"type": type(exc).__name__},
+            )
+        return TestConnectionResult(ok=True, message="Connection succeeded")
