@@ -758,10 +758,15 @@ class TestToolCallingAgentIntegration:
     """Integration tests for ToolCallingAgentComponent with IBM WatsonX."""
 
     def test_watsonx_detection_in_create_agent_runnable(self):
-        """Test that WatsonX models are detected in create_agent_runnable."""
-        from lfx.components.langchain_utilities import ToolCallingAgentComponent
+        """WatsonX models are routed through the WatsonXAgentMiddleware path.
 
-        # Create a mock WatsonX LLM (simulating ChatWatsonx)
+        Updated for create_agent migration: the legacy `create_granite_agent` was replaced
+        with `WatsonXAgentMiddleware` injected into `create_agent(middleware=[...])`. The
+        observable contract is the same — WatsonX models receive WatsonX-specific behavior.
+        """
+        from lfx.components.langchain_utilities import ToolCallingAgentComponent
+        from lfx.components.langchain_utilities.ibm_granite_middleware import WatsonXAgentMiddleware
+
         mock_llm = Mock()
         mock_llm.__class__.__name__ = "ChatWatsonx"
         mock_llm.model_id = "ibm/granite-13b-chat-v2"
@@ -773,22 +778,31 @@ class TestToolCallingAgentIntegration:
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
+        captured: dict = {}
+
+        def _capture(**kwargs):
+            captured.update(kwargs)
+            return Mock()
+
         with (
             patch.object(component, "_get_llm", return_value=mock_llm),
-            patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create,
+            patch("lfx.components.langchain_utilities.tool_calling.create_agent", side_effect=_capture),
         ):
-            mock_create.return_value = Mock()
-
             component.create_agent_runnable()
 
-            # Verify create_granite_agent was called (for WatsonX models)
-            mock_create.assert_called_once()
+            middleware = captured.get("middleware") or []
+            assert any(isinstance(m, WatsonXAgentMiddleware) for m in middleware)
 
     def test_watsonx_llama_uses_default_agent(self):
-        """Test that Llama model on WatsonX uses default agent (not Granite-specific)."""
-        from lfx.components.langchain_utilities import ToolCallingAgentComponent
+        """Llama on WatsonX still routes through WatsonXAgentMiddleware (platform-level fix).
 
-        # Create a mock WatsonX LLM with Llama model (non-Granite)
+        Note: prior to migration, Llama-on-WatsonX bypassed create_granite_agent. The platform
+        constraints (single tool call per turn, dynamic tool_choice) apply to ALL WatsonX
+        models, so the middleware now applies uniformly to any model running on WatsonX.
+        """
+        from lfx.components.langchain_utilities import ToolCallingAgentComponent
+        from lfx.components.langchain_utilities.ibm_granite_middleware import WatsonXAgentMiddleware
+
         mock_llm = Mock()
         mock_llm.__class__.__name__ = "ChatWatsonx"
         mock_llm.model_id = "meta-llama/llama-3-2-11b-vision"
@@ -800,22 +814,26 @@ class TestToolCallingAgentIntegration:
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
+        captured: dict = {}
+
+        def _capture(**kwargs):
+            captured.update(kwargs)
+            return Mock()
+
         with (
             patch.object(component, "_get_llm", return_value=mock_llm),
-            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_default,
+            patch("lfx.components.langchain_utilities.tool_calling.create_agent", side_effect=_capture),
         ):
-            mock_default.return_value = Mock()
-
             component.create_agent_runnable()
 
-            # Verify create_tool_calling_agent was called (default behavior for non-Granite)
-            mock_default.assert_called_once()
+            middleware = captured.get("middleware") or []
+            assert any(isinstance(m, WatsonXAgentMiddleware) for m in middleware)
 
     def test_non_watsonx_uses_default_agent(self):
-        """Test that non-WatsonX models use the default agent creation."""
+        """Non-WatsonX models do not receive WatsonXAgentMiddleware."""
         from lfx.components.langchain_utilities import ToolCallingAgentComponent
+        from lfx.components.langchain_utilities.ibm_granite_middleware import WatsonXAgentMiddleware
 
-        # Create a mock non-WatsonX LLM (e.g., OpenAI)
         mock_llm = Mock()
         mock_llm.__class__.__name__ = "ChatOpenAI"
         mock_llm.__class__.__module__ = "langchain_openai"
@@ -828,19 +846,23 @@ class TestToolCallingAgentIntegration:
         component.tools = mock_tools
         component.system_prompt = "Test prompt"
 
+        captured: dict = {}
+
+        def _capture(**kwargs):
+            captured.update(kwargs)
+            return Mock()
+
         with (
             patch.object(component, "_get_llm", return_value=mock_llm),
-            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create,
+            patch("lfx.components.langchain_utilities.tool_calling.create_agent", side_effect=_capture),
         ):
-            mock_create.return_value = Mock()
-
             component.create_agent_runnable()
 
-            # Verify create_tool_calling_agent was called
-            mock_create.assert_called_once()
+            middleware = captured.get("middleware") or []
+            assert not any(isinstance(m, WatsonXAgentMiddleware) for m in middleware)
 
     def test_system_prompt_enhanced_for_watsonx(self):
-        """Test that system prompt is enhanced for WatsonX models."""
+        """System prompt enhancement still happens for Granite models with tools."""
         from lfx.components.langchain_utilities import ToolCallingAgentComponent
 
         mock_llm = Mock()
@@ -856,19 +878,16 @@ class TestToolCallingAgentIntegration:
 
         with (
             patch.object(component, "_get_llm", return_value=mock_llm),
-            patch("lfx.components.langchain_utilities.tool_calling.create_granite_agent") as mock_create,
+            patch("lfx.components.langchain_utilities.tool_calling.create_agent", return_value=Mock()),
         ):
-            mock_create.return_value = Mock()
-
             component.create_agent_runnable()
 
-            # Verify enhanced prompt is stored separately (original is not mutated)
             assert component.system_prompt == "Original prompt"
             assert hasattr(component, "_effective_system_prompt")
             assert "TOOL USAGE GUIDELINES" in component._effective_system_prompt
 
     def test_system_prompt_not_enhanced_without_tools(self):
-        """Test that system prompt is not enhanced when no tools."""
+        """No tools → no Granite-specific prompt enhancement."""
         from lfx.components.langchain_utilities import ToolCallingAgentComponent
 
         mock_llm = Mock()
@@ -882,13 +901,10 @@ class TestToolCallingAgentIntegration:
 
         with (
             patch.object(component, "_get_llm", return_value=mock_llm),
-            patch("lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent") as mock_create,
+            patch("lfx.components.langchain_utilities.tool_calling.create_agent", return_value=Mock()),
         ):
-            mock_create.return_value = Mock()
-
             component.create_agent_runnable()
 
-            # Verify system prompt was NOT enhanced (no _effective_system_prompt set)
             assert component.system_prompt == "Original prompt"
             assert not hasattr(component, "_effective_system_prompt")
 

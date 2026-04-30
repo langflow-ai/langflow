@@ -5,9 +5,11 @@ from time import perf_counter
 from typing import Any, Protocol
 
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import AIMessageChunk, BaseMessage
+from langchain_core.messages import AIMessageChunk, BaseMessage, HumanMessage
 from typing_extensions import TypedDict
 
+from lfx.base.agents.exception_formatting import format_exception_for_message
+from lfx.base.agents.graph_event_extractor import extract_final_text
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
@@ -69,21 +71,25 @@ async def handle_on_chain_start(
 
     if event["data"].get("input"):
         input_data = event["data"].get("input")
-        if isinstance(input_data, dict) and "input" in input_data:
-            # Cast the input_data to InputDict
-            input_message = input_data.get("input", "")
-            if isinstance(input_message, BaseMessage):
-                input_message = input_message.text()
-            elif not isinstance(input_message, str):
-                input_message = str(input_message)
+        rendered_text: str | None = None
 
-            input_dict: InputDict = {
-                "input": input_message,
-                "chat_history": input_data.get("chat_history", []),
-            }
+        if isinstance(input_data, dict):
+            if "messages" in input_data:
+                # create_agent (CompiledStateGraph) shape: {"messages": [HumanMessage, ...]}
+                rendered_text = _last_human_text(input_data["messages"])
+            elif "input" in input_data:
+                # Legacy AgentExecutor shape: {"input": str, "chat_history": [...]}
+                input_message = input_data.get("input", "")
+                if isinstance(input_message, BaseMessage):
+                    input_message = input_message.text()
+                elif not isinstance(input_message, str):
+                    input_message = str(input_message)
+                rendered_text = input_message
+
+        if rendered_text:
             text_content = TextContent(
                 type="text",
-                text=_build_agent_input_text_content(input_dict),
+                text=rendered_text,
                 duration=_calculate_duration(start_time),
                 header={"title": "Input", "icon": "MessageSquare"},
             )
@@ -91,6 +97,25 @@ async def handle_on_chain_start(
             agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
             start_time = perf_counter()
     return agent_message, start_time
+
+
+def _last_human_text(messages: object) -> str:
+    """Return the textual content of the last HumanMessage in a list — empty string if none."""
+    if not isinstance(messages, list):
+        return ""
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            content = message.content
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = [
+                    part.get("text", "")
+                    for part in content
+                    if isinstance(part, dict) and part.get("type") == "text"
+                ]
+                return "".join(parts)
+    return ""
 
 
 def _extract_output_text(output: str | list) -> str:
@@ -159,12 +184,11 @@ async def handle_on_chain_end(
     message_id: str | None = None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
-    if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
-        output = data_output.return_values.get("output")
+    final_text = _resolve_final_text(data_output)
 
-        agent_message.text = _extract_output_text(output)
+    if final_text:
+        agent_message.text = final_text
         agent_message.properties.state = "complete"
-        # Add duration to the last content if it exists
         if agent_message.content_blocks:
             duration = _calculate_duration(start_time)
             text_content = TextContent(
@@ -181,6 +205,19 @@ async def handle_on_chain_end(
             agent_message = await send_message_callback(message=agent_message)
         start_time = perf_counter()
     return agent_message, start_time
+
+
+def _resolve_final_text(data_output: object) -> str:
+    """Extract final assistant text from either the create_agent state shape or legacy AgentFinish."""
+    if isinstance(data_output, dict) and "messages" in data_output:
+        # create_agent (CompiledStateGraph) — final state.
+        return extract_final_text(data_output)
+    if isinstance(data_output, AgentFinish):
+        # Legacy AgentExecutor shape.
+        legacy_output = data_output.return_values.get("output")
+        if legacy_output:
+            return _extract_output_text(legacy_output)
+    return ""
 
 
 async def handle_on_tool_start(
@@ -426,5 +463,9 @@ async def process_agent_events(
         # Final DB update with the complete message (skip_db_update=False by default)
         agent_message = await send_message_callback(message=agent_message)
     except Exception as e:
-        raise ExceptionWithMessageError(agent_message, str(e)) from e
+        # Surface provider-side API error details (status code + body message) to the UI.
+        # Without this, structured errors from langchain_ibm / OpenAI / Anthropic
+        # show up as generic strings ("Failure during achat.") and users have to dig
+        # through backend logs to find out why their flow failed.
+        raise ExceptionWithMessageError(agent_message, format_exception_for_message(e)) from e
     return await Message.create(**agent_message.model_dump())

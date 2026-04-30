@@ -1,16 +1,17 @@
-from langchain_classic.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 
-# IBM Granite-specific logic is in a separate file
+# IBM WatsonX-specific behavior is implemented as a middleware (see ibm_granite_middleware.py).
 from lfx.components.langchain_utilities.ibm_granite_handler import (
-    create_granite_agent,
     get_enhanced_system_prompt,
     is_granite_model,
+    is_watsonx_model,
 )
+from lfx.components.langchain_utilities.ibm_granite_middleware import build_watsonx_middleware
 from lfx.inputs.inputs import (
     DataInput,
     DropdownInput,
@@ -100,42 +101,51 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         return self.chat_history
 
     def create_agent_runnable(self):
-        messages = []
+        """Build the agent graph using `langchain.agents.create_agent`.
 
-        # Use local variable to avoid mutating component state on repeated calls
-        effective_system_prompt = self.system_prompt or ""
-
-        llm = self._get_llm()
-
-        # Enhance prompt for IBM Granite models (they need explicit tool usage instructions)
-        if is_granite_model(llm) and self.tools:
-            effective_system_prompt = get_enhanced_system_prompt(effective_system_prompt, self.tools)
-            # Store enhanced prompt for use in agent.py without mutating original
-            self._effective_system_prompt = effective_system_prompt
-
-        # Only include system message if system_prompt is provided and not empty
-        if effective_system_prompt.strip():
-            messages.append(("system", "{system_prompt}"))
-
-        messages.extend(
-            [
-                ("placeholder", "{chat_history}"),
-                ("human", "{input}"),
-                ("placeholder", "{agent_scratchpad}"),
-            ]
-        )
-
-        prompt = ChatPromptTemplate.from_messages(messages)
+        Returns a `CompiledStateGraph` (LangGraph). The legacy
+        `langchain_classic.create_tool_calling_agent` path is removed; WatsonX-specific
+        behavior is now applied via middleware so it composes with the rest of the system.
+        """
         self.validate_tool_names()
 
-        try:
-            # Use IBM Granite-specific agent if detected
-            # Other WatsonX models (Llama, Mistral, etc.) use default behavior
-            if is_granite_model(llm) and self.tools:
-                return create_granite_agent(llm, self.tools, prompt)
+        llm = self._get_llm()
+        tools = self.tools or []
+        effective_system_prompt = (self.system_prompt or "").strip()
 
-            # Default behavior for other models (including non-Granite WatsonX models)
-            return create_tool_calling_agent(llm, self.tools or [], prompt)
+        # WatsonX models still need their tool-usage hints injected directly into the system prompt
+        # because some providers behave better when the prompt itself describes how to call tools.
+        if is_granite_model(llm) and tools:
+            effective_system_prompt = get_enhanced_system_prompt(effective_system_prompt, tools)
+            self._effective_system_prompt = effective_system_prompt
+
+        # Eagerly verify tool-calling support to preserve the legacy build-time error contract.
+        # `create_agent` itself is lazy — without this check, a model that does not support
+        # tool calling would only fail at run-time, surprising users who expect the error
+        # at flow build-time.
+        try:
+            llm.bind_tools(tools)
         except NotImplementedError as e:
             message = f"{self.display_name} does not support tool calling. Please try using a compatible model."
             raise NotImplementedError(message) from e
+
+        middleware = []
+        if is_watsonx_model(llm) and tools:
+            middleware.append(build_watsonx_middleware(llm=llm, tools=tools))
+
+        max_iterations = getattr(self, "max_iterations", None)
+        if max_iterations:
+            middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+
+        if getattr(self, "handle_parsing_errors", False):
+            # ToolRetryMiddleware retries tool failures with exponential backoff. This is the
+            # closest equivalent to AgentExecutor's `handle_parsing_errors=True` (best-effort
+            # mapping; semantics are not 1:1 — see CZL/PLAN_create_agent_migration.md §5.1).
+            middleware.append(ToolRetryMiddleware(max_retries=2))
+
+        return create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=effective_system_prompt or None,
+            middleware=middleware,
+        )

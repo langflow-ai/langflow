@@ -6,11 +6,12 @@ from typing import TYPE_CHECKING, cast
 from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
 from langchain_classic.agents.agent import RunnableAgent
 from langchain_core.callbacks.base import BaseCallbackHandler
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.messages_input_builder import build_initial_messages
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
@@ -148,97 +149,8 @@ class LCAgentComponent(Component):
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
     ) -> Message:
-        if isinstance(agent, AgentExecutor):
-            runnable = agent
-        else:
-            # note the tools are not required to run the agent, hence the validation removed.
-            handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
-            max_iterations = hasattr(self, "max_iterations") and self.max_iterations
-            runnable = AgentExecutor.from_agent_and_tools(
-                agent=agent,
-                tools=self.tools or [],
-                handle_parsing_errors=handle_parsing_errors,
-                verbose=verbose,
-                max_iterations=max_iterations,
-            )
-        # Convert input_value to proper format for agent
-        lc_message = None
-        if isinstance(self.input_value, Message):
-            lc_message = self.input_value.to_lc_message()
-            # Extract text content from the LangChain message for agent input
-            # Agents expect a string input, not a Message object
-            if hasattr(lc_message, "content"):
-                if isinstance(lc_message.content, str):
-                    input_dict: dict[str, str | list[BaseMessage] | BaseMessage] = {"input": lc_message.content}
-                elif isinstance(lc_message.content, list):
-                    # For multimodal content, extract text parts
-                    text_parts = [item.get("text", "") for item in lc_message.content if item.get("type") == "text"]
-                    input_dict = {"input": " ".join(text_parts) if text_parts else ""}
-                else:
-                    input_dict = {"input": str(lc_message.content)}
-            else:
-                input_dict = {"input": str(lc_message)}
-        else:
-            input_dict = {"input": self.input_value}
-
-        # Ensure input_dict is initialized
-        if "input" not in input_dict:
-            input_dict = {"input": self.input_value}
-
-        # Use enhanced prompt if available (set by IBM Granite handler), otherwise use original
-        system_prompt_to_use = getattr(self, "_effective_system_prompt", None) or getattr(self, "system_prompt", None)
-        if system_prompt_to_use and system_prompt_to_use.strip():
-            input_dict["system_prompt"] = system_prompt_to_use
-
-        if hasattr(self, "chat_history") and self.chat_history:
-            if isinstance(self.chat_history, Data):
-                input_dict["chat_history"] = self._data_to_messages_skip_empty([self.chat_history])
-            elif all(hasattr(m, "to_data") and callable(m.to_data) and "text" in m.data for m in self.chat_history):
-                input_dict["chat_history"] = self._data_to_messages_skip_empty(self.chat_history)
-            elif all(isinstance(m, Message) for m in self.chat_history):
-                input_dict["chat_history"] = self._data_to_messages_skip_empty([m.to_data() for m in self.chat_history])
-
-        # Handle multimodal input (images + text)
-        # Note: Agent input must be a string, so we extract text and move images to chat_history
-        if lc_message is not None and hasattr(lc_message, "content") and isinstance(lc_message.content, list):
-            # Extract images and text from the text content items
-            # Support both "image" (legacy) and "image_url" (standard) types
-            image_dicts = [item for item in lc_message.content if item.get("type") in ("image", "image_url")]
-            text_content = [item for item in lc_message.content if item.get("type") not in ("image", "image_url")]
-
-            text_strings = [
-                item.get("text", "")
-                for item in text_content
-                if item.get("type") == "text" and item.get("text", "").strip()
-            ]
-
-            # Set input to concatenated text or empty string
-            input_dict["input"] = " ".join(text_strings) if text_strings else ""
-
-            # If input is still a list or empty, provide a default
-            if isinstance(input_dict["input"], list) or not input_dict["input"]:
-                input_dict["input"] = "Process the provided images."
-
-            if "chat_history" not in input_dict:
-                input_dict["chat_history"] = []
-
-            if isinstance(input_dict["chat_history"], list):
-                input_dict["chat_history"].extend(HumanMessage(content=[image_dict]) for image_dict in image_dicts)
-            else:
-                input_dict["chat_history"] = [HumanMessage(content=[image_dict]) for image_dict in image_dicts]
-
-        # Final safety check: ensure input is never empty (prevents Anthropic API errors)
-        current_input = input_dict.get("input", "")
-        if isinstance(current_input, list):
-            current_input = " ".join(map(str, current_input))
-        elif not isinstance(current_input, str):
-            current_input = str(current_input)
-
-        if not current_input.strip():
-            input_dict["input"] = "Continue the conversation."
-        else:
-            input_dict["input"] = current_input
+        runnable = self._resolve_runnable(agent)
+        graph_input = self._build_graph_input()
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
@@ -267,8 +179,7 @@ class LCAgentComponent(Component):
         try:
             result = await process_agent_events(
                 runnable.astream_events(
-                    input_dict,
-                    # here we use the shared callbacks because the AgentExecutor uses the tools
+                    graph_input,
                     config={
                         "callbacks": [
                             AgentAsyncHandler(self.log),
@@ -309,6 +220,38 @@ class LCAgentComponent(Component):
 
         self.status = result
         return result
+
+    def _resolve_runnable(
+        self,
+        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
+    ) -> Runnable:
+        """Return the agent as-is when it is already a runnable graph or AgentExecutor.
+
+        Legacy callers may still pass a `BaseSingleActionAgent` / `BaseMultiActionAgent`;
+        wrap them in `AgentExecutor` for backward compatibility (kept as a transition shim).
+        """
+        if isinstance(agent, (Runnable, AgentExecutor)):
+            return agent
+        # Legacy fallback path: wrap raw agent objects in AgentExecutor (deprecated).
+        handle_parsing_errors = bool(getattr(self, "handle_parsing_errors", False))
+        verbose = bool(getattr(self, "verbose", False))
+        max_iterations = getattr(self, "max_iterations", None)
+        return AgentExecutor.from_agent_and_tools(
+            agent=agent,
+            tools=self.tools or [],
+            handle_parsing_errors=handle_parsing_errors,
+            verbose=verbose,
+            max_iterations=max_iterations,
+        )
+
+    def _build_graph_input(self) -> dict:
+        """Construct the `{"messages": [...]}` payload expected by `create_agent` graphs."""
+        chat_history = getattr(self, "chat_history", None)
+        messages = build_initial_messages(
+            input_value=self.input_value,
+            chat_history=chat_history,
+        )
+        return {"messages": messages}
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
