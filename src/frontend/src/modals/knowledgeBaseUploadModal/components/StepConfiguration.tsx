@@ -45,7 +45,7 @@ interface StepConfigurationProps {
   separator: string;
   onSeparatorChange: (value: string) => void;
   showAdvanced: boolean;
-  toggleAdvanced: () => void;
+  hasFiles: boolean;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFolderSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   validationErrors?: Record<string, string>;
@@ -78,7 +78,7 @@ export function StepConfiguration({
   separator,
   onSeparatorChange,
   showAdvanced,
-  toggleAdvanced,
+  hasFiles,
   onFileSelect,
   onFolderSelect,
   validationErrors = {},
@@ -220,7 +220,7 @@ export function StepConfiguration({
           } as React.HTMLAttributes<HTMLInputElement>)}
         />
 
-        {/* Configure Sources - Animated */}
+        {/* Ingest Content - Animated */}
         <div
           className={cn(
             "grid transition-all duration-300 ease-in-out",
@@ -238,7 +238,7 @@ export function StepConfiguration({
                   className="h-4 w-4 text-muted-foreground"
                 />
                 <span className="text-sm font-medium">
-                  Configure Sources
+                  Ingest Content
                   <span className="text-xs text-muted-foreground ml-1">
                     (1 GB max upload)
                   </span>
@@ -256,7 +256,7 @@ export function StepConfiguration({
                         variant="outline"
                         data-testid="kb-browse-btn"
                         className={cn(
-                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-offset-background ",
+                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-input focus-visible:ring-offset-0 focus-visible:ring-offset-background",
                           validationErrors.files && "border-destructive",
                         )}
                       >
@@ -265,7 +265,7 @@ export function StepConfiguration({
                             name="Upload"
                             className="h-4 w-4"
                           />
-                          Add Sources
+                          Add Files
                         </span>
                         <ForwardedIconComponent
                           name="ChevronDown"
@@ -345,7 +345,13 @@ export function StepConfiguration({
         >
           <div className="overflow-hidden">
             <Separator className="my-4" />
-            <div className="flex flex-col gap-4">
+            <div
+              className={cn(
+                "flex flex-col gap-4 transition-opacity",
+                !hasFiles && "opacity-50",
+              )}
+              aria-disabled={!hasFiles}
+            >
               <div className="flex items-center gap-2">
                 <ForwardedIconComponent
                   name="Settings2"
@@ -388,6 +394,7 @@ export function StepConfiguration({
                     }
                     min={1}
                     max={10000}
+                    disabled={!hasFiles}
                     data-testid="kb-chunk-size-input"
                   />
                 </div>
@@ -424,6 +431,7 @@ export function StepConfiguration({
                     }
                     min={0}
                     max={chunkSize - 1}
+                    disabled={!hasFiles}
                     data-testid="kb-chunk-overlap-input"
                   />
                 </div>
@@ -459,6 +467,7 @@ export function StepConfiguration({
                   placeholder="\n"
                   value={separator}
                   onChange={(e) => onSeparatorChange(e.target.value)}
+                  disabled={!hasFiles}
                   data-testid="kb-separator-input"
                 />
               </div>

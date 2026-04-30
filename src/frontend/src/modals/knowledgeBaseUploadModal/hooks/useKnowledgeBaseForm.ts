@@ -80,8 +80,11 @@ export function useKnowledgeBaseForm({
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
 
-  // Fetch embedding model data from API
-  const { data: modelProviders = [] } = useGetModelProviders({});
+  // Fetch embedding model data from API. Include deprecated entries so the
+  // picker can surface them with a "Deprecated" badge instead of dropping them.
+  const { data: modelProviders = [] } = useGetModelProviders({
+    includeDeprecated: true,
+  });
   const { data: globalVariables = [], isFetched: areGlobalVariablesFetched } =
     useGetGlobalVariables();
   const hasAppliedBackendDefaults = useRef(false);
@@ -108,9 +111,9 @@ export function useKnowledgeBaseForm({
   // Form state - Step 1
   const [sourceName, setSourceName] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [chunkSize, setChunkSize] = useState(0);
-  const [chunkOverlap, setChunkOverlap] = useState(0);
-  const [separator, setSeparator] = useState("");
+  const [chunkSize, setChunkSize] = useState(DEFAULT_CHUNK_SIZE);
+  const [chunkOverlap, setChunkOverlap] = useState(DEFAULT_CHUNK_OVERLAP);
+  const [separator, setSeparator] = useState(DEFAULT_SEPARATOR);
   const [metadataPairs, setMetadataPairs] = useState<MetadataPair[]>([]);
   const [perFileMetadata, setPerFileMetadata] = useState<
     Record<string, MetadataPair[]>
@@ -136,7 +139,7 @@ export function useKnowledgeBaseForm({
     Record<string, KnowledgeBackendConfigValue>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
     () => getDefaultKnowledgeBackendConfig(globalVariables),
@@ -213,7 +216,7 @@ export function useKnowledgeBaseForm({
         existingKnowledgeBase.chunkSize != null ||
         existingKnowledgeBase.chunkOverlap != null ||
         existingKnowledgeBase.separator != null;
-      if (hasAdvancedConfig) {
+      if (hasAdvancedConfig && !hideAdvanced) {
         setShowAdvanced(true);
       }
       if (
@@ -262,9 +265,9 @@ export function useKnowledgeBaseForm({
   const resetForm = useCallback(() => {
     setSourceName("");
     setFiles([]);
-    setChunkSize(0);
-    setChunkOverlap(0);
-    setSeparator("");
+    setChunkSize(DEFAULT_CHUNK_SIZE);
+    setChunkOverlap(DEFAULT_CHUNK_OVERLAP);
+    setSeparator(DEFAULT_SEPARATOR);
     setColumnConfig([
       { column_name: "text", vectorize: true, identifier: true },
     ]);
@@ -278,29 +281,11 @@ export function useKnowledgeBaseForm({
     setSelectedPreviewFileIndex(0);
     setCurrentStep(1);
     setIsFilePanelOpen(false);
-    setShowAdvanced(false);
+    setShowAdvanced(!hideAdvanced);
     setIngestionJobId(null);
     setValidationErrors({});
     hasAppliedBackendDefaults.current = false;
-  }, []);
-
-  const toggleAdvanced = useCallback(() => {
-    setShowAdvanced((prev) => {
-      if (prev) {
-        // Hiding advanced: reset chunk settings and close the file panel.
-        setChunkSize(0);
-        setChunkOverlap(0);
-        setSeparator("");
-        setIsFilePanelOpen(false);
-      } else {
-        // Showing advanced: apply defaults
-        setChunkSize(DEFAULT_CHUNK_SIZE);
-        setChunkOverlap(DEFAULT_CHUNK_OVERLAP);
-        setSeparator(DEFAULT_SEPARATOR);
-      }
-      return !prev;
-    });
-  }, []);
+  }, [hideAdvanced]);
 
   // Generate chunk previews via backend API
   const generateChunkPreviews = useCallback(async () => {
@@ -651,7 +636,6 @@ export function useKnowledgeBaseForm({
 
     // UI state
     showAdvanced,
-    toggleAdvanced,
     isFilePanelOpen,
     isSubmitting,
 

@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
@@ -40,6 +41,15 @@ const ModelRow = ({
       >
         {model.model_name}
       </span>
+      {model.metadata?.deprecated ? (
+        <Badge
+          variant="secondaryStatic"
+          size="tag"
+          data-testid={`${testIdPrefix}-deprecated-${model.model_name}`}
+        >
+          Deprecated
+        </Badge>
+      ) : null}
     </div>
     {isEnabledModel && (
       <Switch
