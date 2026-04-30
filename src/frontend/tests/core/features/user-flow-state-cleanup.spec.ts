@@ -116,14 +116,11 @@ test(
     });
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    // Wait for the new-flow Loading state to clear before checking canvas
-    // controls — the canvas mounts only after the flow finishes loading.
-    await page.waitForSelector('text="Loading"', {
-      state: "hidden",
-      timeout: 60000,
-    });
+    // Match the canvas_controls_dropdown wait used elsewhere in the suite
+    // (tests/core/features/token-usage.spec.ts, chatInputOutput.spec.ts):
+    // the new-flow canvas can take well over 30s to mount on slower runners.
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 30000,
+      timeout: 100000,
     });
 
     await renameFlow(page, { flowName: userAFlowName });
