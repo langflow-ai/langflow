@@ -34,10 +34,15 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any, Literal
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib  # stdlib on 3.11+
+else:
+    import tomli as tomllib  # 3.10 fallback (lfx already depends on tomli)
+
 from pydantic import (
     BaseModel,
     ConfigDict,
