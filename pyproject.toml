@@ -146,7 +146,7 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
-    "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
 [project.scripts]
