@@ -1,23 +1,42 @@
-"""Integration tests for the Phase 2 ingestion-run visibility endpoints.
+"""Integration tests for the KB ingestion-run visibility endpoints.
 
 These drive ``GET /{kb}/runs`` and ``GET /{kb}/runs/{run_id}``
 end-to-end against the real FastAPI app and test DB so we catch
 routing, auth scoping, pagination, and SQL-level behavior in one
 test pass.
+
+Storage note: as of the unification onto the canonical ``job`` table,
+ingestion-run data lives on ``Job.job_metadata``. The URL ``run_id``
+path parameter is now the ``Job.job_id``; the response shape is
+unchanged so the frontend is unaffected.
 """
 
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
-from langflow.services.database.models.ingestion_run import IngestionRun, IngestionRunStatus
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
+from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
+
+
+# Bump ``created_timestamp`` per insertion so the newest-first ordering
+# test has a stable sort key. Without this, two rows inserted in the
+# same wall-clock millisecond can flip order on fast hardware.
+_INSERT_OFFSET_SECONDS = 0
+
+
+def _next_created_timestamp() -> datetime:
+    global _INSERT_OFFSET_SECONDS  # noqa: PLW0603
+    _INSERT_OFFSET_SECONDS += 1
+    return datetime.now(timezone.utc) + timedelta(seconds=_INSERT_OFFSET_SECONDS)
 
 
 async def _insert_run(
@@ -31,35 +50,52 @@ async def _insert_run(
     succeeded: int = 1,
     failed: int = 0,
 ) -> uuid.UUID:
+    """Seed a ``Job`` row carrying KB ingestion-run data on its metadata.
+
+    Returns the ``job_id`` so callers can use it as the URL ``run_id``
+    — the two are equal post-unification.
+    """
     run_id = uuid.uuid4()
+    items_payload = items or [
+        {
+            "item_id": "0:a.txt",
+            "display_name": "a.txt",
+            "status": "succeeded",
+            "chunks_created": 3,
+            "error_message": None,
+        }
+    ]
+    started_at = _next_created_timestamp()
     async with session_scope() as session:
-        row = IngestionRun(
-            id=run_id,
-            job_id=uuid.uuid4(),
-            kb_name=kb_name,
-            kb_id=kb_id,
+        job = Job(
+            job_id=run_id,
+            flow_id=run_id,
+            status=JobStatus.COMPLETED,
+            type=JobType.INGESTION,
             user_id=user_id,
-            source_type=source_type,
-            source_config={"source_name": "demo"},
-            status=status.value,
-            total_items=succeeded + failed,
-            succeeded=succeeded,
-            failed=failed,
-            skipped=0,
-            total_bytes=1024,
-            chunks_created=succeeded * 3,
-            items=items
-            or [
-                {
-                    "item_id": "0:a.txt",
-                    "display_name": "a.txt",
-                    "status": "succeeded",
-                    "chunks_created": 3,
-                    "error_message": None,
-                }
-            ],
+            asset_id=kb_id,
+            asset_type="knowledge_base",
+            created_timestamp=started_at,
+            finished_timestamp=started_at,
+            job_metadata={
+                "kind": "kb_ingestion",
+                "kb_name": kb_name,
+                "kb_id": str(kb_id) if kb_id is not None else None,
+                "source_type": source_type,
+                "source_config": {"source_name": "demo"},
+                "status": status.value,
+                "error_message": None,
+                "total_items": succeeded + failed,
+                "succeeded": succeeded,
+                "failed": failed,
+                "skipped": 0,
+                "total_bytes": 1024,
+                "chunks_created": succeeded * 3,
+                "items": items_payload,
+                "ingestion_run_id": str(run_id),
+            },
         )
-        session.add(row)
+        session.add(job)
         await session.commit()
     return run_id
 

@@ -35,13 +35,12 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     IngestionSummary,
     KBIngestionSource,
 )
-from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus
+from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus, IngestionRunStatus
 from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser
-from langflow.services.database.models.ingestion_run import IngestionRunStatus
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
 from langflow.services.deps import get_settings_service

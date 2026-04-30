@@ -1253,7 +1253,7 @@ class TestPerformIngestionTask:
 
         # Finalize should mark the run SUCCEEDED when every item lands.
         finalize_kwargs = mock_finalize_run.await_args.kwargs
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         assert finalize_kwargs["status"] is IngestionRunStatus.SUCCEEDED
         assert finalize_kwargs["summary"].succeeded == 1
@@ -1328,7 +1328,7 @@ class TestPerformIngestionTask:
             job_service=AsyncMock(),
         )
 
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         mock_finalize_run.assert_awaited_once()
         finalize_kwargs = mock_finalize_run.await_args.kwargs
@@ -1468,7 +1468,7 @@ class TestPerformIngestionTask:
         # visibility UI doesn't show stuck RUNNING rows.
         mock_finalize_run.assert_awaited_once()
         finalize_kwargs = mock_finalize_run.await_args.kwargs
-        from langflow.services.database.models.ingestion_run import IngestionRunStatus
+        from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
 
         assert finalize_kwargs["status"] is IngestionRunStatus.FAILED
         assert finalize_kwargs["error_message"] == "Chroma error"

@@ -1393,7 +1393,14 @@ async def get_ingestion_run(
 
 
 def _run_row_to_info(row) -> IngestionRunInfo:
-    """Translate an ``IngestionRun`` row into its list-response shape."""
+    """Translate a ``RunRow`` projection into the list-response shape.
+
+    Source rows used to come from the ``ingestion_run`` table; they
+    now come from a ``RunRow`` dataclass projected from
+    ``Job`` + ``Job.job_metadata``. Field names are unchanged so the
+    ``IngestionRunInfo`` Pydantic shape (and the frontend that reads
+    it) doesn't move.
+    """
     return IngestionRunInfo(
         id=str(row.id),
         kb_name=row.kb_name,

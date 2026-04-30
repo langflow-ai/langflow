@@ -57,6 +57,25 @@ class IngestionItemStatus(str, Enum):
     SKIPPED = "skipped"  # e.g. empty file, duplicate, filtered extension
 
 
+class IngestionRunStatus(str, Enum):
+    """Run-level outcome surfaced in the UI.
+
+    Distinct from ``JobStatus`` (queued/in_progress/completed/...) —
+    that one describes scheduling lifecycle. This one describes the
+    ingestion *outcome* (did every file land?). Persisted on
+    ``Job.job_metadata.status`` after the migration that dropped the
+    ``ingestion_run`` table; the values are kept lowercase strings so
+    they survive the JSON round-trip without coercion.
+    """
+
+    PENDING = "pending"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    PARTIAL = "partial"  # some items failed but run completed
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
 @dataclass(frozen=True)
 class IngestionItem:
     """Metadata for a single item a source intends to ingest.
