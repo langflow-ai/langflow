@@ -1,7 +1,7 @@
 """Add job_metadata column to job
 
 Revision ID: da7f6b9b638a
-Revises: e728126476a8
+Revises: 15fe9304bca7
 Create Date: 2026-04-30 17:30:00.000000
 
 Phase: EXPAND
@@ -9,10 +9,14 @@ Safe to rollback: YES (column is nullable; older services continue
     operating without ever reading the column).
 Services compatible: All versions. New code writes per-domain progress
     / outcome data into ``job_metadata`` from inside
-    ``execute_with_status``; old code simply ignores it. A CONTRACT
-    migration to drop the legacy ``ingestion_run`` table can happen in
-    a later phase once read-paths and the UI are migrated and a
-    backfill has run.
+    ``execute_with_status``; old code simply ignores it.
+
+Originally part of an expand-contract sequence that also created a
+parallel ``ingestion_run`` table and later dropped it. The full
+sequence collapsed to this single migration once it was clear the
+``ingestion_run`` table never shipped to any tagged release —
+production users only ever experience the unified ``Job.job_metadata``
+surface.
 """
 
 from collections.abc import Sequence
@@ -24,7 +28,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = "da7f6b9b638a"  # pragma: allowlist secret
-down_revision: str | None = "e728126476a8"  # pragma: allowlist secret
+down_revision: str | None = "15fe9304bca7"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -32,8 +36,8 @@ TABLE_NAME = "job"
 COLUMN_NAME = "job_metadata"
 
 # JSONB on Postgres for binary storage + GIN-indexable paths, JSON
-# elsewhere. Matches the variant used on ``ingestion_run`` and
-# ``knowledge_base`` JSON columns.
+# elsewhere. Matches the variant used on the ``knowledge_base`` JSON
+# columns and on the matching SQLModel so ORM and DDL agree.
 JsonVariant = sa.JSON().with_variant(JSONB(), "postgresql")
 
 
