@@ -32,6 +32,7 @@ import {
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { useGetTracesQuery } from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
@@ -88,6 +89,7 @@ export function FlowInsightsContent({
 
   const { mutate: patchFlow, isPending: isPatchingFlow } = usePatchUpdateFlow();
   const patchFlowField = useFlowsManagerStore((state) => state.patchFlowField);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const handleRecordingCheckedChange = useCallback(
     (checked: boolean) => {
@@ -96,13 +98,25 @@ export function FlowInsightsContent({
         { id: resolvedFlowId, flow_activity_enabled: checked },
         {
           onSuccess: (updated) => {
-            const newVal = updated?.flow_activity_enabled ?? checked;
-            patchFlowField(resolvedFlowId, { flow_activity_enabled: newVal });
+            if (typeof updated?.flow_activity_enabled !== "boolean") {
+              return;
+            }
+            patchFlowField(resolvedFlowId, {
+              flow_activity_enabled: updated.flow_activity_enabled,
+            });
+          },
+          onError: () => {
+            setErrorData({
+              title: "Failed to update Flow Activity recording",
+              list: [
+                "Please try again. If the problem persists, reload the page.",
+              ],
+            });
           },
         },
       );
     },
-    [resolvedFlowId, isPatchingFlow, patchFlow, patchFlowField],
+    [resolvedFlowId, isPatchingFlow, patchFlow, patchFlowField, setErrorData],
   );
 
   const columns = useMemo(
