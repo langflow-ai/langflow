@@ -16,7 +16,9 @@ const SUPPORTED_LANGUAGES = [
 const normalizeLanguage = (lang?: string | null): string => {
   if (!lang) return "en";
 
-  if (SUPPORTED_LANGUAGES.includes(lang as (typeof SUPPORTED_LANGUAGES)[number])) {
+  if (
+    SUPPORTED_LANGUAGES.includes(lang as (typeof SUPPORTED_LANGUAGES)[number])
+  ) {
     return lang;
   }
 
