@@ -43,6 +43,31 @@ export interface ProviderCredentials {
 
 export type DeploymentType = "agent" | "mcp";
 
+export interface SelectedFlowVersion {
+  key: string;
+  flowId: string;
+  flowName?: string;
+  versionId: string;
+  versionTag: string;
+}
+
+export function getSelectedFlowVersionKey(flowId: string, versionId: string) {
+  return `${flowId}:${versionId}`;
+}
+
+export function getDefaultDeploymentToolName(
+  flowName: string,
+  uniqueId: string,
+) {
+  const trimmedFlowName = flowName.trim() || "Flow";
+  const normalizedId = uniqueId.trim();
+  const compactId = normalizedId.includes("-")
+    ? normalizedId.split("-").at(-1) || normalizedId
+    : normalizedId;
+  const shortId = compactId.slice(0, 8) || "tool";
+  return `${trimmedFlowName} ${shortId}`;
+}
+
 export interface Deployment {
   id: string;
   provider_id?: string;

@@ -9,6 +9,7 @@ import type {
   DeploymentProvider,
   ProviderAccount,
 } from "../types";
+import { getSelectedFlowVersionKey } from "../types";
 
 jest.mock(
   "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
@@ -97,6 +98,84 @@ describe("Create mode — basic state", () => {
   it("accepts initialFlowId", () => {
     const { result } = renderCreateHook({ initialFlowId: "flow-abc" });
     expect(result.current.initialFlowId).toBe("flow-abc");
+  });
+
+  it("supports attaching multiple versions of the same flow", () => {
+    const { result } = renderCreateHook();
+
+    act(() => {
+      result.current.setDeploymentName("Agent");
+      result.current.setSelectedLlm("model-1");
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion("flow-1", "ver-2", "v2");
+      result.current.setToolNameByFlow(
+        new Map([
+          [getSelectedFlowVersionKey("flow-1", "ver-1"), "Flow One v1"],
+          [getSelectedFlowVersionKey("flow-1", "ver-2"), "Flow One v2"],
+        ]),
+      );
+      result.current.setAttachedConnectionByFlow(
+        new Map([
+          [getSelectedFlowVersionKey("flow-1", "ver-1"), ["conn-1"]],
+          [getSelectedFlowVersionKey("flow-1", "ver-2"), ["conn-2"]],
+        ]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentPayload("p-1");
+    expect(payload.provider_data.add_flows).toEqual([
+      {
+        flow_version_id: "ver-1",
+        app_ids: ["conn-1"],
+        tool_name: "Flow One v1",
+      },
+      {
+        flow_version_id: "ver-2",
+        app_ids: ["conn-2"],
+        tool_name: "Flow One v2",
+      },
+    ]);
+  });
+
+  it("defaults tool names to flow name plus truncated id", () => {
+    const { result } = renderCreateHook();
+
+    act(() => {
+      result.current.setDeploymentName("Agent");
+      result.current.setSelectedLlm("model-1");
+      result.current.handleSelectVersion(
+        "flow-1",
+        "12345678-aaaa-bbbb-cccc-deadbeefcafe",
+        "v1",
+      );
+      result.current.setAttachedConnectionByFlow(
+        new Map([
+          [
+            getSelectedFlowVersionKey(
+              "flow-1",
+              "12345678-aaaa-bbbb-cccc-deadbeefcafe",
+            ),
+            [],
+          ],
+        ]),
+      );
+      result.current.setToolNameByFlow(
+        new Map([
+          [
+            getSelectedFlowVersionKey(
+              "flow-1",
+              "12345678-aaaa-bbbb-cccc-deadbeefcafe",
+            ),
+            "Original Flow deadbeef",
+          ],
+        ]),
+      );
+    });
+
+    const payload = result.current.buildDeploymentPayload("p-1");
+    expect(payload.provider_data.add_flows[0].tool_name).toBe(
+      "Original Flow deadbeef",
+    );
   });
 });
 

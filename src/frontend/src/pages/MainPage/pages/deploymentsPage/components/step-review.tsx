@@ -8,6 +8,7 @@ import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+import { getDefaultDeploymentToolName } from "../types";
 
 function normalizeWxoName(s: string): string {
   return s.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
@@ -126,9 +127,12 @@ export default function StepReview() {
   );
 
   const reviewFlows = Array.from(selectedVersionByFlow.entries()).map(
-    ([flowId, { versionId, versionTag }]) => {
-      const flow = allFlows.find((f) => f.id === flowId);
-      const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
+    ([attachmentKey, entry]) => {
+      const flow = allFlows.find((f) => f.id === entry.flowId);
+      const connectionIds =
+        attachedConnectionByFlow.get(attachmentKey) ??
+        attachedConnectionByFlow.get(entry.flowId) ??
+        [];
       const flowConnections = connectionIds
         .map((cid) => connections.find((c) => c.id === cid))
         .filter((c): c is (typeof connections)[number] => c != null);
@@ -144,11 +148,20 @@ export default function StepReview() {
       });
 
       const flowName = flow?.name ?? "Unknown";
-      return {
-        flowId,
+      const defaultToolName = getDefaultDeploymentToolName(
         flowName,
-        toolName: toolNameByFlow.get(flowId)?.trim() || flowName,
-        versionLabel: versionTag || versionId,
+        entry.versionId,
+      );
+      return {
+        attachmentKey,
+        flowId: entry.flowId,
+        flowName,
+        toolName:
+          toolNameByFlow.get(attachmentKey)?.trim() ||
+          toolNameByFlow.get(entry.flowId)?.trim() ||
+          defaultToolName,
+        defaultToolName,
+        versionLabel: entry.versionTag || entry.versionId,
         connectionDetails,
       };
     },
@@ -161,14 +174,16 @@ export default function StepReview() {
       const normalized = normalizeWxoName(item.toolName);
       if (!normalized) continue;
       // Skip pre-existing flows only if their tool name hasn't changed.
-      if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+      if (isEditMode && preExistingFlowIds.has(item.attachmentKey)) {
         const original = normalizeWxoName(
-          initialToolNameByFlow.get(item.flowId) ?? "",
+          initialToolNameByFlow.get(item.attachmentKey) ??
+            initialToolNameByFlow.get(item.flowId) ??
+            "",
         );
         if (
           normalized.toLowerCase() === original.toLowerCase() ||
           normalized.toLowerCase() ===
-            normalizeWxoName(item.flowName).toLowerCase()
+            normalizeWxoName(item.defaultToolName).toLowerCase()
         )
           continue;
       }
@@ -192,7 +207,7 @@ export default function StepReview() {
 
   const toolNameErrors = useMemo(() => {
     const errors = new Map<string, string>();
-    const batchNames = new Map<string, string>(); // normalized -> flowId (first seen)
+    const batchNames = new Map<string, string>(); // normalized -> attachmentKey (first seen)
 
     for (const item of reviewFlows) {
       const normalized = normalizeWxoName(item.toolName).toLowerCase();
@@ -201,28 +216,36 @@ export default function StepReview() {
       // Check batch duplicates (two flows with same tool name in this deployment)
       const firstFlowId = batchNames.get(normalized);
       if (firstFlowId) {
-        errors.set(item.flowId, "Duplicate tool name within this deployment");
+        errors.set(
+          item.attachmentKey,
+          "Duplicate tool name within this deployment",
+        );
         if (!errors.has(firstFlowId)) {
           errors.set(firstFlowId, "Duplicate tool name within this deployment");
         }
       } else {
-        batchNames.set(normalized, item.flowId);
+        batchNames.set(normalized, item.attachmentKey);
       }
 
       // Check against existing provider tools (skip for pre-existing flows only if name unchanged)
-      if (!errors.has(item.flowId) && existingToolNames.has(normalized)) {
+      if (
+        !errors.has(item.attachmentKey) &&
+        existingToolNames.has(normalized)
+      ) {
         let skipProviderCheck = false;
-        if (isEditMode && preExistingFlowIds.has(item.flowId)) {
+        if (isEditMode && preExistingFlowIds.has(item.attachmentKey)) {
           const original = normalizeWxoName(
-            initialToolNameByFlow.get(item.flowId) ?? "",
+            initialToolNameByFlow.get(item.attachmentKey) ??
+              initialToolNameByFlow.get(item.flowId) ??
+              "",
           ).toLowerCase();
           skipProviderCheck =
             normalized === original ||
-            normalized === normalizeWxoName(item.flowName).toLowerCase();
+            normalized === normalizeWxoName(item.defaultToolName).toLowerCase();
         }
         if (!skipProviderCheck) {
           errors.set(
-            item.flowId,
+            item.attachmentKey,
             "Edit tool name (already exists in provider)",
           );
         }
@@ -329,10 +352,10 @@ export default function StepReview() {
       {reviewFlows.length > 0 && (
         <div className="flex flex-col gap-3">
           {reviewFlows.map((item) => {
-            const toolError = toolNameErrors.get(item.flowId);
+            const toolError = toolNameErrors.get(item.attachmentKey);
             return (
               <div
-                key={item.flowId}
+                key={item.attachmentKey}
                 className={`rounded-xl border bg-background p-4 ${toolError ? "border-destructive/50" : "border-border"}`}
               >
                 <div className="flex flex-col gap-3">
@@ -343,15 +366,17 @@ export default function StepReview() {
                         className={`h-3.5 w-3.5 shrink-0 ${toolError ? "text-destructive" : "text-muted-foreground"}`}
                       />
                       <EditableToolName
-                        value={toolNameByFlow.get(item.flowId)?.trim() ?? ""}
-                        placeholder={item.flowName}
+                        value={
+                          toolNameByFlow.get(item.attachmentKey)?.trim() ?? ""
+                        }
+                        placeholder={item.defaultToolName}
                         onSave={(name) => {
                           setToolNameByFlow((prev) => {
                             const next = new Map(prev);
                             if (name.trim()) {
-                              next.set(item.flowId, name.trim());
+                              next.set(item.attachmentKey, name.trim());
                             } else {
-                              next.delete(item.flowId);
+                              next.delete(item.attachmentKey);
                             }
                             return next;
                           });

@@ -1,9 +1,15 @@
 import { memo } from "react";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import VersionLabel from "@/components/common/versionLabelComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
+import {
+  type ConnectionItem,
+  getSelectedFlowVersionKey,
+  type SelectedFlowVersion,
+} from "../types";
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -21,12 +27,22 @@ export const VersionPanel = memo(function VersionPanel({
   isLoadingVersions,
   selectedVersionByFlow,
   onAttach,
+  onDetach,
+  onUndoRemove,
+  removedFlowIds = new Set<string>(),
+  attachedConnectionByFlow = new Map<string, string[]>(),
+  connections = [],
 }: {
   selectedFlow: FlowType | undefined;
   versions: FlowVersionEntry[];
   isLoadingVersions: boolean;
-  selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+  selectedVersionByFlow: Map<string, SelectedFlowVersion>;
   onAttach: (versionId: string) => void;
+  onDetach: (attachmentKey: string) => void;
+  onUndoRemove?: (attachmentKey: string) => void;
+  removedFlowIds?: Set<string>;
+  attachedConnectionByFlow?: Map<string, string[]>;
+  connections?: ConnectionItem[];
 }) {
   if (!selectedFlow) {
     return (
@@ -35,8 +51,6 @@ export const VersionPanel = memo(function VersionPanel({
       </div>
     );
   }
-
-  const attachedEntry = selectedVersionByFlow.get(selectedFlow.id);
 
   return (
     <>
@@ -60,18 +74,50 @@ export const VersionPanel = memo(function VersionPanel({
 
           {!isLoadingVersions &&
             versions.map((version) => {
-              const isAttachedVersion = attachedEntry?.versionId === version.id;
+              const attachmentKey = getSelectedFlowVersionKey(
+                selectedFlow.id,
+                version.id,
+              );
+              const isAttachedVersion =
+                selectedVersionByFlow.has(attachmentKey) ||
+                selectedVersionByFlow.get(selectedFlow.id)?.versionId ===
+                  version.id ||
+                Array.from(selectedVersionByFlow.values()).some(
+                  (entry) =>
+                    entry.flowId === selectedFlow.id &&
+                    entry.versionId === version.id,
+                );
+              const isRemoved = removedFlowIds?.has(attachmentKey) ?? false;
+              const connectionNames = (
+                attachedConnectionByFlow.get(attachmentKey) ?? []
+              )
+                .map((cid) => connections.find((c) => c.id === cid)?.name)
+                .filter(Boolean);
               return (
-                <button
+                <div
                   key={version.id}
-                  type="button"
                   data-testid={`version-item-${version.id}`}
-                  onClick={() => onAttach(version.id)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (!isRemoved) onAttach(version.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      (event.key === "Enter" || event.key === " ") &&
+                      !isRemoved
+                    ) {
+                      event.preventDefault();
+                      onAttach(version.id);
+                    }
+                  }}
                   className={cn(
-                    "flex w-full cursor-pointer items-center gap-4 rounded-xl border p-3 text-left transition-colors",
-                    isAttachedVersion
+                    "flex w-full items-center gap-4 rounded-xl border p-3 text-left transition-colors",
+                    isAttachedVersion && !isRemoved
                       ? "border-accent-blue-foreground bg-accent-blue-muted/40"
-                      : "border-transparent bg-muted hover:border-border",
+                      : isRemoved
+                        ? "border-destructive/40 bg-destructive/5 opacity-70"
+                        : "border-transparent bg-muted hover:border-border",
                   )}
                 >
                   <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -81,7 +127,7 @@ export const VersionPanel = memo(function VersionPanel({
                         description={version.description}
                         className="truncate"
                       />
-                      {isAttachedVersion && (
+                      {isAttachedVersion && !isRemoved && (
                         <Badge
                           variant="secondaryStatic"
                           size="tag"
@@ -90,12 +136,82 @@ export const VersionPanel = memo(function VersionPanel({
                           ATTACHED
                         </Badge>
                       )}
+                      {isRemoved && (
+                        <Badge
+                          variant="secondaryStatic"
+                          size="tag"
+                          className="shrink-0 bg-destructive/10 text-destructive"
+                        >
+                          REMOVED
+                        </Badge>
+                      )}
                     </span>
                     <span className="text-xxs leading-tight text-muted-foreground">
                       Created: {formatDate(version.created_at)}
                     </span>
+                    {connectionNames.length > 0 && !isRemoved && (
+                      <span className="truncate text-xxs leading-tight text-muted-foreground">
+                        {connectionNames.join(", ")}
+                      </span>
+                    )}
                   </span>
-                </button>
+                  {isRemoved && onUndoRemove ? (
+                    <button
+                      type="button"
+                      className="rounded p-1 text-muted-foreground hover:bg-accent-blue-muted hover:text-accent-blue-muted-foreground"
+                      data-testid={`undo-version-${version.id}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onUndoRemove(attachmentKey);
+                      }}
+                    >
+                      <ForwardedIconComponent
+                        name="Undo2"
+                        className="h-3.5 w-3.5"
+                      />
+                    </button>
+                  ) : isAttachedVersion ? (
+                    <>
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                        data-testid={`edit-version-${version.id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onAttach(version.id);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        data-testid={`detach-version-${version.id}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDetach(attachmentKey);
+                        }}
+                      >
+                        <ForwardedIconComponent
+                          name="X"
+                          className="h-3.5 w-3.5"
+                        />
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="rounded px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                      data-testid={`attach-version-${version.id}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onAttach(version.id);
+                      }}
+                    >
+                      Attach
+                    </button>
+                  )}
+                </div>
               );
             })}
         </div>

@@ -25,14 +25,16 @@ import type {
   DeploymentType,
   ProviderAccount,
   ProviderCredentials,
+  SelectedFlowVersion,
+} from "../types";
+import {
+  getDefaultDeploymentToolName,
+  getSelectedFlowVersionKey,
 } from "../types";
 
 interface DeploymentStepperInitialState {
   projectId?: string;
-  selectedVersionByFlow?: Map<
-    string,
-    { versionId: string; versionTag: string }
-  >;
+  selectedVersionByFlow?: Map<string, SelectedFlowVersion>;
   initialFlowId?: string;
   initialProvider?: DeploymentProvider;
   initialInstance?: ProviderAccount;
@@ -41,9 +43,9 @@ interface DeploymentStepperInitialState {
   editingDeployment?: Deployment;
   /** Pre-populated initial LLM from provider (edit mode). */
   initialLlm?: string;
-  /** Pre-populated tool names from provider (edit mode). Key = flowId. */
+  /** Pre-populated tool names from provider (edit mode). Key = attachment key. */
   initialToolNameByFlow?: Map<string, string>;
-  /** Pre-populated connection assignments from provider (edit mode). Key = flowId. */
+  /** Pre-populated connection assignments from provider (edit mode). Key = attachment key. */
   initialConnectionsByFlow?: Map<string, string[]>;
 }
 
@@ -84,25 +86,26 @@ interface DeploymentStepperContextType {
   initialFlowId: string | null;
   connections: ConnectionItem[];
   setConnections: Dispatch<SetStateAction<ConnectionItem[]>>;
-  selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
+  selectedVersionByFlow: Map<string, SelectedFlowVersion>;
   handleSelectVersion: (
     flowId: string,
-    versionId: string,
-    versionTag: string,
+    flowNameOrVersionId: string,
+    versionIdOrVersionTag: string,
+    versionTag?: string,
   ) => void;
   attachedConnectionByFlow: Map<string, string[]>;
   setAttachedConnectionByFlow: Dispatch<SetStateAction<Map<string, string[]>>>;
-  /** User-provided tool names per flow. Key = flowId. */
+  /** User-provided tool names per attached version. Key = attachment key. */
   toolNameByFlow: Map<string, string>;
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
-  /** Original tool names from provider before this edit session (edit mode). Key = flowId. */
+  /** Original tool names from provider before this edit session (edit mode). Key = attachment key. */
   initialToolNameByFlow: Map<string, string>;
-  /** Flow IDs that were already attached before this edit session (edit mode). */
+  /** Attachment keys that were already attached before this edit session (edit mode). */
   preExistingFlowIds: Set<string>;
-  /** Flow IDs that were originally attached but the user chose to detach (edit mode). */
+  /** Attachment keys that were originally attached but the user chose to detach (edit mode). */
   removedFlowIds: Set<string>;
-  handleRemoveAttachedFlow: (flowId: string) => void;
-  handleUndoRemoveFlow: (flowId: string) => void;
+  handleRemoveAttachedFlow: (attachmentKey: string) => void;
+  handleUndoRemoveFlow: (attachmentKey: string) => void;
 
   // Tool name validation
   hasToolNameErrors: boolean;
@@ -123,6 +126,35 @@ interface DeploymentStepperContextType {
 
 const DeploymentStepperContext =
   createContext<DeploymentStepperContextType | null>(null);
+
+function normalizeSelectedFlowVersions(
+  versions?: Map<string, SelectedFlowVersion>,
+): Map<string, SelectedFlowVersion> {
+  const next = new Map<string, SelectedFlowVersion>();
+  for (const [key, value] of versions ?? new Map()) {
+    const flowId = value.flowId ?? key;
+    const versionId = value.versionId;
+    const normalizedKey = value.flowId
+      ? getSelectedFlowVersionKey(flowId, versionId)
+      : key;
+    next.set(normalizedKey, {
+      key: normalizedKey,
+      flowId,
+      flowName: value.flowName,
+      versionId,
+      versionTag: value.versionTag,
+    });
+  }
+  return next;
+}
+
+function getScopedValue<T>(
+  map: Map<string, T>,
+  attachmentKey: string,
+  flowId: string,
+): T | undefined {
+  return map.get(attachmentKey) ?? map.get(flowId);
+}
 
 export function DeploymentStepperProvider({
   children,
@@ -165,8 +197,8 @@ export function DeploymentStepperProvider({
   );
 
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
-    Map<string, { versionId: string; versionTag: string }>
-  >(initialState?.selectedVersionByFlow ?? new Map());
+    Map<string, SelectedFlowVersion>
+  >(normalizeSelectedFlowVersions(initialState?.selectedVersionByFlow));
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
     initialState?.initialToolNameByFlow ?? new Map(),
@@ -189,7 +221,7 @@ export function DeploymentStepperProvider({
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
   // Cache removed flow data so undo can restore it.
   const initialVersionByFlow = useMemo(
-    () => initialState?.selectedVersionByFlow ?? new Map(),
+    () => normalizeSelectedFlowVersions(initialState?.selectedVersionByFlow),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -208,40 +240,51 @@ export function DeploymentStepperProvider({
     [],
   );
 
-  const handleRemoveAttachedFlow = useCallback((flowId: string) => {
-    setRemovedFlowIds((prev) => new Set([...Array.from(prev), flowId]));
-    setSelectedVersionByFlow((prev) => {
-      const next = new Map(prev);
-      next.delete(flowId);
-      return next;
-    });
-    setAttachedConnectionByFlow((prev) => {
-      const next = new Map(prev);
-      next.delete(flowId);
-      return next;
-    });
-  }, []);
-
-  const handleUndoRemoveFlow = useCallback(
-    (flowId: string) => {
-      setRemovedFlowIds((prev) => {
-        const next = new Set(prev);
-        next.delete(flowId);
+  const handleRemoveAttachedFlow = useCallback(
+    (attachmentKeyOrFlowId: string) => {
+      const resolvedKey = selectedVersionByFlow.has(attachmentKeyOrFlowId)
+        ? attachmentKeyOrFlowId
+        : Array.from(selectedVersionByFlow.values()).find(
+            (entry) => entry.flowId === attachmentKeyOrFlowId,
+          )?.key;
+      if (!resolvedKey) return;
+      setRemovedFlowIds((prev) => new Set([...Array.from(prev), resolvedKey]));
+      setSelectedVersionByFlow((prev) => {
+        const next = new Map(prev);
+        next.delete(resolvedKey);
         return next;
       });
-      const originalVersion = initialVersionByFlow.get(flowId);
+      setAttachedConnectionByFlow((prev) => {
+        const next = new Map(prev);
+        next.delete(resolvedKey);
+        return next;
+      });
+    },
+    [selectedVersionByFlow],
+  );
+
+  const handleUndoRemoveFlow = useCallback(
+    (attachmentKey: string) => {
+      setRemovedFlowIds((prev) => {
+        const next = new Set(prev);
+        next.delete(attachmentKey);
+        return next;
+      });
+      const originalVersion = initialVersionByFlow.get(attachmentKey);
       if (originalVersion) {
         setSelectedVersionByFlow((prev) => {
           const next = new Map(prev);
-          next.set(flowId, originalVersion);
+          next.set(attachmentKey, originalVersion);
           return next;
         });
       }
-      const originalConnections = initialConnectionsByFlow.get(flowId);
+      const originalConnections =
+        initialConnectionsByFlow.get(attachmentKey) ??
+        initialConnectionsByFlow.get(originalVersion?.flowId ?? "");
       if (originalConnections) {
         setAttachedConnectionByFlow((prev) => {
           const next = new Map(prev);
-          next.set(flowId, originalConnections);
+          next.set(attachmentKey, originalConnections);
           return next;
         });
       }
@@ -320,10 +363,27 @@ export function DeploymentStepperProvider({
   }, []);
 
   const handleSelectVersion = useCallback(
-    (flowId: string, versionId: string, versionTag: string) => {
+    (
+      flowId: string,
+      flowNameOrVersionId: string,
+      versionIdOrVersionTag: string,
+      versionTag?: string,
+    ) => {
+      const flowName = versionTag ? flowNameOrVersionId : "Flow";
+      const versionId = versionTag
+        ? versionIdOrVersionTag
+        : flowNameOrVersionId;
+      const resolvedVersionTag = versionTag ?? versionIdOrVersionTag;
       setSelectedVersionByFlow((prev) => {
         const next = new Map(prev);
-        next.set(flowId, { versionId, versionTag });
+        const key = getSelectedFlowVersionKey(flowId, versionId);
+        next.set(key, {
+          key,
+          flowId,
+          flowName,
+          versionId,
+          versionTag: resolvedVersionTag,
+        });
         return next;
       });
     },
@@ -391,13 +451,30 @@ export function DeploymentStepperProvider({
 
       const addFlows: DeploymentCreateRequest["provider_data"]["add_flows"] =
         [];
-      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
-        const customToolName = toolNameByFlow.get(flowId)?.trim();
+      for (const [attachmentKey, versionEntry] of Array.from(
+        selectedVersionByFlow,
+      )) {
+        const connectionIds =
+          getScopedValue(
+            attachedConnectionByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          ) ?? [];
+        const customToolName = getScopedValue(
+          toolNameByFlow,
+          attachmentKey,
+          versionEntry.flowId,
+        )?.trim();
+        const resolvedToolName =
+          customToolName ||
+          getDefaultDeploymentToolName(
+            versionEntry.flowName ?? "Flow",
+            versionEntry.versionId,
+          );
         addFlows.push({
           flow_version_id: versionEntry.versionId,
           app_ids: connectionIds,
-          ...(customToolName && { tool_name: customToolName }),
+          tool_name: resolvedToolName,
         });
       }
 
@@ -457,27 +534,66 @@ export function DeploymentStepperProvider({
       const upsertFlows: DeploymentUpdateFlowItem[] = [];
 
       // New flows attached during this edit session.
-      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        if (initialVersionByFlow.has(flowId)) continue;
-        const connectionIds = attachedConnectionByFlow.get(flowId) ?? [];
-        const customToolName = toolNameByFlow.get(flowId)?.trim();
+      for (const [attachmentKey, versionEntry] of Array.from(
+        selectedVersionByFlow,
+      )) {
+        if (initialVersionByFlow.has(attachmentKey)) continue;
+        const connectionIds =
+          getScopedValue(
+            attachedConnectionByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          ) ?? [];
+        const customToolName = getScopedValue(
+          toolNameByFlow,
+          attachmentKey,
+          versionEntry.flowId,
+        )?.trim();
+        const resolvedToolName =
+          customToolName ||
+          getDefaultDeploymentToolName(
+            versionEntry.flowName ?? "Flow",
+            versionEntry.versionId,
+          );
         upsertFlows.push({
           flow_version_id: versionEntry.versionId,
           add_app_ids: connectionIds,
           remove_app_ids: [],
-          ...(customToolName && { tool_name: customToolName }),
+          tool_name: resolvedToolName,
         });
       }
 
       // Changes on pre-existing flows (tool name and/or connections).
-      for (const [flowId, versionEntry] of Array.from(selectedVersionByFlow)) {
-        if (!initialVersionByFlow.has(flowId)) continue;
-        const currentName = toolNameByFlow.get(flowId)?.trim() ?? "";
-        const originalName = initialToolNameByFlow.get(flowId)?.trim() ?? "";
+      for (const [attachmentKey, versionEntry] of Array.from(
+        selectedVersionByFlow,
+      )) {
+        if (!initialVersionByFlow.has(attachmentKey)) continue;
+        const currentName =
+          getScopedValue(
+            toolNameByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          )?.trim() ?? "";
+        const originalName =
+          getScopedValue(
+            initialToolNameByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          )?.trim() ?? "";
         const nameChanged = currentName && currentName !== originalName;
 
-        const currentConnections = attachedConnectionByFlow.get(flowId) ?? [];
-        const originalConnections = initialConnectionsByFlow.get(flowId) ?? [];
+        const currentConnections =
+          getScopedValue(
+            attachedConnectionByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          ) ?? [];
+        const originalConnections =
+          getScopedValue(
+            initialConnectionsByFlow,
+            attachmentKey,
+            versionEntry.flowId,
+          ) ?? [];
         const originalSet = new Set(originalConnections);
         const currentSet = new Set(currentConnections);
         const addAppIds = currentConnections.filter(
@@ -500,8 +616,8 @@ export function DeploymentStepperProvider({
       }
 
       const removeFlows: string[] = [];
-      for (const flowId of Array.from(removedFlowIds)) {
-        const originalVersion = initialVersionByFlow.get(flowId);
+      for (const attachmentKey of Array.from(removedFlowIds)) {
+        const originalVersion = initialVersionByFlow.get(attachmentKey);
         if (originalVersion) {
           removeFlows.push(originalVersion.versionId);
         }
