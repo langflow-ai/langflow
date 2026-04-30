@@ -1,4 +1,4 @@
-"""ChromaDB-backed ``VectorStoreBackend`` implementation.
+"""ChromaDB-backed ``BaseVectorStoreBackend`` implementation.
 
 This mirrors the behavior already present in ``kb_helpers`` — persistent
 local storage, one collection per KB, a fresh client per instance to sidestep

@@ -23,7 +23,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
@@ -110,83 +110,19 @@ class TestConnectionResult:
     details: dict[str, Any] = field(default_factory=dict)
 
 
-@runtime_checkable
-class VectorStoreBackend(Protocol):
-    """Protocol every KB vector-store backend must satisfy.
-
-    Implementations should be lightweight to construct; heavy resources (e.g.
-    a Chroma persistent client, a MongoDB connection) are the backend's own
-    concern and must be released in ``teardown``.
-    """
-
-    backend_type: BackendType
-    kb_name: str
-
-    async def add_documents(self, docs: list[Document]) -> None:
-        """Persist ``docs`` into the backend. Called per batch by ingestion."""
-        ...
-
-    async def similarity_search(
-        self,
-        query: str,
-        k: int,
-        *,
-        filter: dict[str, Any] | None = None,  # noqa: A002 — matches LangChain VectorStore API
-        with_scores: bool = False,
-    ) -> list[tuple[Document, float]]:
-        """Return the top-k matching documents.
-
-        When ``with_scores`` is False, returned tuples still carry a float but
-        the value is implementation-defined (Langflow uses 0.0 as a sentinel).
-        """
-        ...
-
-    async def delete_by(self, where: dict[str, Any]) -> None:
-        """Delete all documents matching ``where`` (backend-native filter)."""
-        ...
-
-    async def count(self) -> int:
-        """Total number of documents stored."""
-        ...
-
-    async def iter_documents(
-        self,
-        *,
-        batch_size: int = 5000,
-        include_embeddings: bool = False,
-    ) -> AsyncIterator[list[IngestedDocument]]:
-        """Yield batches of stored documents. Used for metrics + visibility."""
-        ...
-
-    async def storage_size_bytes(self) -> int:
-        """Approximate on-disk / cluster-side size for dashboard display."""
-        ...
-
-    async def delete_collection(self) -> None:
-        """Delete the backend-owned collection/index for this KB."""
-        ...
-
-    async def teardown(self) -> None:
-        """Release all backend resources. Must be idempotent."""
-        ...
-
-    async def test_connection(self) -> TestConnectionResult:
-        """Validate that the backend is reachable with the current config.
-
-        Called from the KB-backend settings UI before a KB is created so users
-        can catch credential / URL / SSL mistakes without going through a full
-        ingestion cycle. Implementations must not raise — failures are reported
-        via ``TestConnectionResult(ok=False, message=...)``.
-        """
-        ...
-
-
 class BaseVectorStoreBackend(ABC):
-    """Default ``VectorStoreBackend`` implementation around a LangChain store.
+    """Base class every KB vector-store backend inherits from.
 
-    Subclasses provide ``_build_vector_store`` and override
-    ``storage_size_bytes`` / ``teardown`` / ``iter_documents`` where the
-    LangChain primitives don't line up with what Langflow needs.
+    Wraps a LangChain ``VectorStore``: subclasses provide
+    ``_build_vector_store`` and override ``storage_size_bytes`` /
+    ``teardown`` / ``iter_documents`` where the LangChain primitives don't
+    line up with what Langflow needs.
+
+    Backends should be lightweight to construct; heavy resources (a Chroma
+    persistent client, a MongoDB connection) are the backend's own concern
+    and must be released in ``teardown``. Each call site obtains a fresh
+    backend instance and tears it down via ``teardown()`` in a ``finally``
+    block.
     """
 
     backend_type: BackendType

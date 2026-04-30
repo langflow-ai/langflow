@@ -5,9 +5,9 @@ subsystem can address multiple vector databases through a single interface.
 
 Public surface:
 
-* ``VectorStoreBackend`` — the protocol KB helpers depend on.
-* ``BaseVectorStoreBackend`` — default implementation wrapping a LangChain
-  ``VectorStore`` instance; subclasses override only what's backend-specific.
+* ``BaseVectorStoreBackend`` — abstract base class every backend inherits
+  from; wraps a LangChain ``VectorStore`` so subclasses override only
+  what's backend-specific.
 * ``BackendType`` — enum of registered backend identifiers.
 * ``register_backend`` / ``create_backend`` — registry entry points.
 
@@ -26,7 +26,6 @@ from lfx.base.knowledge_bases.backends.base import (
     BaseVectorStoreBackend,
     IngestedDocument,
     TestConnectionResult,
-    VectorStoreBackend,
 )
 from lfx.base.knowledge_bases.backends.chroma import ChromaBackend
 from lfx.base.knowledge_bases.backends.mongodb import MongoDBBackend
@@ -55,7 +54,6 @@ __all__ = [
     "OpenSearchBackend",
     "PostgresBackend",
     "TestConnectionResult",
-    "VectorStoreBackend",
     "create_backend",
     "get_backend_class",
     "register_backend",

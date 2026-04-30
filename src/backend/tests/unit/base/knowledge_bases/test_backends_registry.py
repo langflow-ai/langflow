@@ -12,7 +12,6 @@ from lfx.base.knowledge_bases.backends import (
     BackendType,
     BaseVectorStoreBackend,
     ChromaBackend,
-    VectorStoreBackend,
     create_backend,
     get_backend_class,
     register_backend,
@@ -68,7 +67,7 @@ class TestBackendRegistry:
             kb_path=tmp_path,
         )
         assert isinstance(backend, ChromaBackend)
-        assert isinstance(backend, VectorStoreBackend)  # Protocol runtime-check
+        assert isinstance(backend, BaseVectorStoreBackend)  # Confirms ABC contract
         assert backend.kb_name == "test_kb"
         assert backend.kb_path == tmp_path
 
