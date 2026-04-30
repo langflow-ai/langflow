@@ -71,6 +71,10 @@ def validate_command(
     target = Path(root)
     report = validate_extension(target, execute_imports=execute_imports)
 
+    if output_format not in {"text", "json"}:
+        typer.echo("Invalid --format. Expected one of: text, json.", err=True)
+        raise typer.Exit(code=2)
+
     if output_format == "json":
         payload = {
             "ok": report.ok,
