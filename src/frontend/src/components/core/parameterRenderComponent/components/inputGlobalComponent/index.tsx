@@ -151,6 +151,22 @@ export default function InputGlobalComponent({
     variableOptions = [...variableOptions, currentValue];
   }
 
+  // Disable Credential-typed variables in non-password fields. The backend
+  // (_reject_secret_in_non_password_field) rejects this at build time to
+  // prevent the value leaking via Message.text/status/traces; we surface that
+  // constraint here so users see why the option isn't selectable instead of
+  // hitting a runtime error after picking it.
+  const disabledOptions: Record<string, string> = !(password ?? false)
+    ? Object.fromEntries(
+        typedGlobalVariables
+          .filter((v) => v.type === "Credential")
+          .map((v) => [
+            v.name,
+            "Credential variables can only be used in secret fields (API keys, tokens). Select a Generic-typed variable, or change this variable's type to Generic if it isn't sensitive.",
+          ]),
+      )
+    : {};
+
   const selectedOption = loadFromDb ? currentValue : "";
 
   if (!showParameter) {
@@ -168,6 +184,7 @@ export default function InputGlobalComponent({
       password={password ?? false}
       value={currentValue}
       options={variableOptions}
+      disabledOptions={disabledOptions}
       optionsPlaceholder="Global Variables"
       optionsIcon="Globe"
       optionsButton={renderAddVariableButton()}
