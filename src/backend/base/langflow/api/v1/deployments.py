@@ -12,7 +12,6 @@ from lfx.services.adapters.deployment.exceptions import (
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
-    DeploymentListParams,
     DeploymentListTypesResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -134,13 +133,15 @@ DeploymentIdQuery = Annotated[
 SnapshotNameQueryItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
-def _dedupe_snapshot_names(values: list[str] | None) -> list[str] | None:
+def _dedupe_names(values: list[str] | None) -> list[str] | None:
     if values is None:
         return None
     return list(dict.fromkeys(values))
 
 
-SnapshotNamesQuery = Annotated[list[SnapshotNameQueryItem] | None, AfterValidator(_dedupe_snapshot_names)]
+SnapshotNamesQuery = Annotated[list[SnapshotNameQueryItem] | None, AfterValidator(_dedupe_names)]
+DeploymentNameQueryItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+DeploymentNamesQuery = Annotated[list[DeploymentNameQueryItem] | None, AfterValidator(_dedupe_names)]
 IncludeProviderDeleteQuery = Annotated[
     bool,
     Query(
@@ -194,7 +195,7 @@ async def _count_provider_deployments_after_reconciliation(
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         deployment_mapper = get_deployment_mapper(provider_account.provider_key)
         with deployment_provider_scope(provider_account.id):
-            _, deployment_count = await list_deployments_synced(
+            _, deployment_count, _ = await list_deployments_synced(
                 deployment_adapter=deployment_adapter,
                 deployment_mapper=deployment_mapper,
                 user_id=user_id,
@@ -622,6 +623,17 @@ async def list_deployments(
         ),
     ] = None,
     project_id: ProjectIdQuery = None,
+    names: Annotated[
+        DeploymentNamesQuery,
+        Query(
+            description=(
+                "Optional deployment names (pass as repeated query params, "
+                "e.g. ?names=A&names=B). Filters deployments by name match. "
+                "When load_from_provider is false (default), filters Langflow-tracked deployments in the DB. "
+                "Otherwise, filters provider deployments directly, including deployments not tracked by Langflow."
+            )
+        ),
+    ] = None,
 ):
     if flow_ids and flow_version_ids:
         raise HTTPException(
@@ -658,8 +670,12 @@ async def list_deployments(
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
         provider_list_params = deployment_mapper.resolve_load_from_provider_deployment_list_params()
-        adapter_params = DeploymentListParams(provider_params=provider_list_params) if provider_list_params else None
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
+            adapter_params = await deployment_mapper.resolve_deployment_list_adapter_params(
+                deployment_type=deployment_type,
+                names=names,
+                provider_params=provider_list_params,
+            )
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
                 db=session,
@@ -668,7 +684,7 @@ async def list_deployments(
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
-        rows_with_counts, total = await list_deployments_synced(
+        rows_with_counts, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
@@ -679,6 +695,7 @@ async def list_deployments(
             deployment_type=deployment_type,
             flow_version_ids=effective_flow_version_ids,
             project_id=project_id,
+            names=names,
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
@@ -687,6 +704,7 @@ async def list_deployments(
         # (empty lists are rejected by validation)
         has_flow_filter=bool(flow_version_ids or flow_ids),
         provider_key=provider_account.provider_key,
+        provider_data_by_resource_key=provider_data_by_resource_key,
     )
     return DeploymentListResponse(
         deployments=deployments,
@@ -865,7 +883,6 @@ async def list_deployment_configs(
     adapter_params = await deployment_mapper.resolve_config_list_adapter_params(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         config_result = await deployment_adapter.list_configs(
@@ -922,7 +939,6 @@ async def list_deployment_snapshots(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         snapshot_names=names,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         snapshot_result = await deployment_adapter.list_snapshots(

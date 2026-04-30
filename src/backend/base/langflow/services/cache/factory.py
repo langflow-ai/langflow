@@ -37,8 +37,9 @@ class CacheServiceFactory(ServiceFactory):
         if settings_service.settings.cache_type == "async":
             return AsyncInMemoryCache(expiration_time=settings_service.settings.cache_expire)
         if settings_service.settings.cache_type == "disk":
+            cache_dir = settings_service.settings.cache_dir or settings_service.settings.config_dir
             return AsyncDiskCache(
-                cache_dir=settings_service.settings.config_dir,
+                cache_dir=cache_dir,
                 expiration_time=settings_service.settings.cache_expire,
             )
         return None
