@@ -12,38 +12,30 @@ Delegates to the same two abstractions ingestion uses:
 
 from __future__ import annotations
 
-import json
 import uuid
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.components.files_and_knowledge._kb_paths import (
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+)
+from lfx.components.files_and_knowledge._kb_paths import (
+    load_kb_metadata,
+)
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service, session_scope
+from lfx.services.deps import session_scope
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+if TYPE_CHECKING:
+    from pathlib import Path
 
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
-
-
-def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
-        settings = get_settings_service().settings
-        knowledge_directory = settings.knowledge_bases_dir
-        if not knowledge_directory:
-            msg = "Knowledge bases directory is not set in the settings."
-            raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeBaseComponent(Component):
@@ -129,22 +121,12 @@ class KnowledgeBaseComponent(Component):
         space.
 
         Legacy key material that may be present in older metadata
-        files (``api_key``) is intentionally ignored here; credential
-        resolution is now owned by the unified-models layer via
-        provider settings.
+        files (``api_key``) is loaded by ``load_kb_metadata`` but
+        intentionally ignored downstream; credential resolution is now
+        owned by the unified-models layer via provider settings.
         """
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        metadata_file = kb_path / "embedding_metadata.json"
-        if not metadata_file.exists():
-            logger.warning(f"Embedding metadata file not found at {metadata_file}")
-            return {}
-
-        try:
-            with metadata_file.open("r", encoding="utf-8") as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {metadata_file}")
-            return {}
+        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
 
     async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002 — reserved for path-scoped fallback
         """Return ``(backend_type, backend_config)`` for this KB.
