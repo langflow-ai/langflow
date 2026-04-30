@@ -2,9 +2,29 @@
 import { test as base, expect, Page } from "@playwright/test";
 import "./playwrightCoverage";
 
+// Optional CPU throttling for reproducing race conditions seen on slower
+// runners (Windows CI). Enable with LF_CPU_THROTTLE=<rate>, e.g. 4.
+const CPU_THROTTLE_RATE = (() => {
+  const raw = process.env.LF_CPU_THROTTLE;
+  if (!raw) return 0;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) && n > 1 ? n : 0;
+})();
+
 // Extend test to log backend errors
 export const test = base.extend({
   page: async ({ page }, use) => {
+    if (CPU_THROTTLE_RATE > 0) {
+      try {
+        const client = await page.context().newCDPSession(page);
+        await client.send("Emulation.setCPUThrottlingRate", {
+          rate: CPU_THROTTLE_RATE,
+        });
+      } catch {
+        // Throttling is best-effort and only supported on Chromium.
+      }
+    }
+
     const errors: Array<{
       url: string;
       status: number;
