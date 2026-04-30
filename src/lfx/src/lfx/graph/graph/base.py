@@ -2415,6 +2415,7 @@ class Graph:
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
         subgraph._is_subgraph = True
+        subgraph.flow_activity_enabled = self.flow_activity_enabled
 
         # Add the filtered nodes and edges
         subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
