@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
@@ -242,7 +243,9 @@ export function DeploymentStepperProvider({
     normalizedInitialToolNames,
   );
   const [defaultToolNameScopeId] = useState<string | null>(() =>
-    isEditMode ? null : createDeploymentToolNameScopeId(),
+    isEditMode
+      ? (editingDeployment?.id ?? createDeploymentToolNameScopeId())
+      : createDeploymentToolNameScopeId(),
   );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
@@ -268,32 +271,27 @@ export function DeploymentStepperProvider({
   );
   const initialToolNameByFlow = normalizedInitialToolNames;
   const initialConnectionsByFlow = normalizedInitialConnections;
+  const hasHydratedEditStateRef = useRef(false);
 
   useEffect(() => {
     if (!isEditMode) return;
+    if (hasHydratedEditStateRef.current) return;
     if (
-      selectedVersionByFlow.size === 0 &&
-      normalizedInitialVersions.size > 0
+      normalizedInitialVersions.size === 0 &&
+      normalizedInitialToolNames.size === 0 &&
+      normalizedInitialConnections.size === 0
     ) {
-      setSelectedVersionByFlow(normalizedInitialVersions);
+      return;
     }
-    if (toolNameByFlow.size === 0 && normalizedInitialToolNames.size > 0) {
-      setToolNameByFlow(normalizedInitialToolNames);
-    }
-    if (
-      attachedConnectionByFlow.size === 0 &&
-      normalizedInitialConnections.size > 0
-    ) {
-      setAttachedConnectionByFlow(normalizedInitialConnections);
-    }
+    hasHydratedEditStateRef.current = true;
+    setSelectedVersionByFlow(normalizedInitialVersions);
+    setToolNameByFlow(normalizedInitialToolNames);
+    setAttachedConnectionByFlow(normalizedInitialConnections);
   }, [
-    attachedConnectionByFlow.size,
     isEditMode,
     normalizedInitialConnections,
     normalizedInitialToolNames,
     normalizedInitialVersions,
-    selectedVersionByFlow.size,
-    toolNameByFlow.size,
   ]);
 
   const handleRemoveAttachedFlow = useCallback(
@@ -305,48 +303,17 @@ export function DeploymentStepperProvider({
           )?.key;
       if (!resolvedKey) return;
       setRemovedFlowIds((prev) => new Set([...Array.from(prev), resolvedKey]));
-      setSelectedVersionByFlow((prev) => {
-        const next = new Map(prev);
-        next.delete(resolvedKey);
-        return next;
-      });
-      setAttachedConnectionByFlow((prev) => {
-        const next = new Map(prev);
-        next.delete(resolvedKey);
-        return next;
-      });
     },
     [selectedVersionByFlow],
   );
 
-  const handleUndoRemoveFlow = useCallback(
-    (attachmentKey: string) => {
-      setRemovedFlowIds((prev) => {
-        const next = new Set(prev);
-        next.delete(attachmentKey);
-        return next;
-      });
-      const originalVersion = initialVersionByFlow.get(attachmentKey);
-      if (originalVersion) {
-        setSelectedVersionByFlow((prev) => {
-          const next = new Map(prev);
-          next.set(attachmentKey, originalVersion);
-          return next;
-        });
-      }
-      const originalConnections =
-        initialConnectionsByFlow.get(attachmentKey) ??
-        initialConnectionsByFlow.get(originalVersion?.flowId ?? "");
-      if (originalConnections) {
-        setAttachedConnectionByFlow((prev) => {
-          const next = new Map(prev);
-          next.set(attachmentKey, originalConnections);
-          return next;
-        });
-      }
-    },
-    [initialVersionByFlow, initialConnectionsByFlow],
-  );
+  const handleUndoRemoveFlow = useCallback((attachmentKey: string) => {
+    setRemovedFlowIds((prev) => {
+      const next = new Set(prev);
+      next.delete(attachmentKey);
+      return next;
+    });
+  }, []);
 
   const hasValidCredentials =
     credentials.name.trim() !== "" &&
@@ -510,6 +477,7 @@ export function DeploymentStepperProvider({
       for (const [attachmentKey, versionEntry] of Array.from(
         selectedVersionByFlow,
       )) {
+        if (removedFlowIds.has(attachmentKey)) continue;
         const connectionIds =
           getScopedValue(
             attachedConnectionByFlow,
@@ -561,6 +529,7 @@ export function DeploymentStepperProvider({
       deploymentDescription,
       deploymentType,
       isDeploymentNameValid,
+      removedFlowIds,
       selectedLlm,
       selectedVersionByFlow,
       trimmedDeploymentName,
@@ -596,6 +565,7 @@ export function DeploymentStepperProvider({
       for (const [attachmentKey, versionEntry] of Array.from(
         selectedVersionByFlow,
       )) {
+        if (removedFlowIds.has(attachmentKey)) continue;
         if (initialVersionByFlow.has(attachmentKey)) continue;
         const connectionIds =
           getScopedValue(
@@ -628,6 +598,7 @@ export function DeploymentStepperProvider({
       for (const [attachmentKey, versionEntry] of Array.from(
         selectedVersionByFlow,
       )) {
+        if (removedFlowIds.has(attachmentKey)) continue;
         if (!initialVersionByFlow.has(attachmentKey)) continue;
         const currentName =
           getScopedToolName(

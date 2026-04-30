@@ -311,14 +311,9 @@ export default function StepAttachFlows() {
   const handleDetachFlow = useCallback(
     (attachmentKey: string) => {
       handleRemoveAttachedFlow(attachmentKey);
-      setToolNameByFlow((prev) => {
-        const next = new Map(prev);
-        next.delete(attachmentKey);
-        return next;
-      });
       setRightPanel("versions");
     },
-    [handleRemoveAttachedFlow, setToolNameByFlow],
+    [handleRemoveAttachedFlow],
   );
 
   const handleSelectFlow = useCallback(

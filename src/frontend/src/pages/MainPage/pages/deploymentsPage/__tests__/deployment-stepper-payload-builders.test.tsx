@@ -389,7 +389,7 @@ describe("buildDeploymentUpdatePayload", () => {
     const flowB = upsertFlows.find((f) => f.flow_version_id === "ver-new-b");
     expect(flowB).toBeDefined();
     expect(flowB!.add_app_ids).toEqual([]);
-    expect(flowB!.tool_name).toBe("Flow b");
+    expect(flowB!.tool_name).toMatch(/^Flow [a-f0-9]{1,6}-b$/);
   });
 
   it("sends fallback description when no changes detected", () => {

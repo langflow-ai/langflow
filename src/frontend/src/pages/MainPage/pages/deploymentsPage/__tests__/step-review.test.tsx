@@ -461,7 +461,16 @@ describe("Removal section (edit mode)", () => {
       {
         isEditMode: true,
         removedFlowIds: new Set(["flow-removed"]),
-        selectedVersionByFlow: new Map(),
+        selectedVersionByFlow: new Map([
+          [
+            "flow-removed",
+            {
+              flowId: "flow-removed",
+              versionId: "ver-removed",
+              versionTag: "v1",
+            },
+          ],
+        ]),
       },
       [{ id: "flow-removed", name: "Removed Flow", folder_id: "folder-1" }],
     );
@@ -481,7 +490,16 @@ describe("Removal section (edit mode)", () => {
       {
         isEditMode: true,
         removedFlowIds: new Set(["flow-unknown"]),
-        selectedVersionByFlow: new Map(),
+        selectedVersionByFlow: new Map([
+          [
+            "flow-unknown",
+            {
+              flowId: "flow-unknown",
+              versionId: "ver-unknown",
+              versionTag: "v1",
+            },
+          ],
+        ]),
       },
       [],
     );

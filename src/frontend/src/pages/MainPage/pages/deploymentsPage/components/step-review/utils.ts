@@ -53,6 +53,7 @@ interface BuildReviewFlowsParams {
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
   defaultToolNameScopeId: string | null;
+  removedFlowIds: Set<string>;
   selectedVersionByFlow: Map<
     string,
     {
@@ -70,6 +71,7 @@ export function buildReviewFlows({
   attachedConnectionByFlow,
   connections,
   defaultToolNameScopeId,
+  removedFlowIds,
   selectedVersionByFlow,
   toolNameByFlow,
 }: BuildReviewFlowsParams): ReviewFlowItem[] {
@@ -80,8 +82,11 @@ export function buildReviewFlows({
     }),
   );
 
-  return Array.from(selectedVersionByFlow.entries()).map(
-    ([attachmentKey, entry]) => {
+  return Array.from(selectedVersionByFlow.entries())
+    .map(([attachmentKey, entry]) => {
+      if (removedFlowIds.has(attachmentKey)) {
+        return null;
+      }
       const flowId = entry.flowId ?? attachmentKey;
       const flow = allFlows.find((item) => item.id === flowId);
       const connectionIds =
@@ -133,8 +138,8 @@ export function buildReviewFlows({
         versionLabel: entry.versionTag || entry.versionId,
         connectionDetails,
       };
-    },
-  );
+    })
+    .filter((item): item is ReviewFlowItem => item !== null);
 }
 
 interface BuildToolNamesToCheckParams {

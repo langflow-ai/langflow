@@ -59,6 +59,7 @@ export default function StepReview() {
         attachedConnectionByFlow,
         connections,
         defaultToolNameScopeId,
+        removedFlowIds,
         selectedVersionByFlow,
         toolNameByFlow,
       }),
@@ -67,9 +68,27 @@ export default function StepReview() {
       attachedConnectionByFlow,
       connections,
       defaultToolNameScopeId,
+      removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,
     ],
+  );
+  const removedReviewFlows = useMemo(
+    () =>
+      Array.from(selectedVersionByFlow.entries())
+        .filter(([attachmentKey]) => removedFlowIds.has(attachmentKey))
+        .map(([attachmentKey, entry]) => {
+          const flowName =
+            allFlows.find((flow) => flow.id === entry.flowId)?.name ??
+            entry.flowName ??
+            "Unknown flow";
+          return {
+            attachmentKey,
+            flowName,
+            versionLabel: entry.versionTag || entry.versionId,
+          };
+        }),
+    [allFlows, removedFlowIds, selectedVersionByFlow],
   );
 
   const toolNamesToCheck = useMemo(
@@ -167,10 +186,7 @@ export default function StepReview() {
       )}
 
       {isEditMode && (
-        <ReviewDetachingSection
-          allFlows={allFlows}
-          removedFlowIds={removedFlowIds}
-        />
+        <ReviewDetachingSection removedFlows={removedReviewFlows} />
       )}
     </div>
   );
