@@ -949,7 +949,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.3"
                   },
                   {
                     "name": "googleapiclient",
@@ -2024,7 +2024,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.3"
                   },
                   {
                     "name": "trustcall",
