@@ -1,6 +1,7 @@
 import { memo } from "react";
 import VersionLabel from "@/components/common/versionLabelComponent";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
@@ -19,14 +20,18 @@ export const VersionPanel = memo(function VersionPanel({
   selectedFlow,
   versions,
   isLoadingVersions,
+  isCreatingDraftVersion,
   selectedVersionByFlow,
   onAttach,
+  onCreateFromDraft,
 }: {
   selectedFlow: FlowType | undefined;
   versions: FlowVersionEntry[];
   isLoadingVersions: boolean;
+  isCreatingDraftVersion: boolean;
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
   onAttach: (versionId: string) => void;
+  onCreateFromDraft: () => void;
 }) {
   if (!selectedFlow) {
     return (
@@ -53,8 +58,19 @@ export const VersionPanel = memo(function VersionPanel({
           )}
 
           {!isLoadingVersions && versions.length === 0 && (
-            <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              No versions found
+            <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
+              <p className="max-w-sm text-sm text-muted-foreground">
+                Deploy this flow by creating a version from current Draft
+              </p>
+              <Button
+                onClick={onCreateFromDraft}
+                loading={isCreatingDraftVersion}
+                disabled={isCreatingDraftVersion}
+                ignoreTitleCase
+                data-testid="create-version-from-draft"
+              >
+                Create from Draft
+              </Button>
             </div>
           )}
 
