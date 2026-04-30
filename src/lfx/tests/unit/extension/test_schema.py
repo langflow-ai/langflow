@@ -93,7 +93,7 @@ def test_schema_rejects_at_least_10_distinct_paths() -> None:
         assert errors, f"Case {label!r} expected to fail but passed: {case}"
         # Capture the first error's path; this is what authors see.
         path = "/".join(str(p) for p in errors[0].absolute_path) or "(root)"
-        seen_paths.add(f"{label}:{path}")
+        seen_paths.add(path)
     # The acceptance criterion says >= 10 *distinct* error paths.
     assert len(seen_paths) >= 10, f"Only {len(seen_paths)} distinct paths: {seen_paths}"
 
