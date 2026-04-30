@@ -678,6 +678,64 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             f"Got {len(chat_emissions)} emission(s)."
         )
 
+    async def test_should_restore_send_message_when_run_agent_raises_in_fallback(self, component_class, default_kwargs):
+        """Durability anchor: the suppression of send_message during fallback must be
+        scoped — even when run_agent raises, the original method must be restored on the
+        component instance. Otherwise a later message_response call would silently swallow
+        chat emissions.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        default_kwargs["add_calculator_tool"] = False
+        default_kwargs["add_current_date_tool"] = False
+        default_kwargs["output_schema"] = [
+            {"name": "answer", "type": "str", "description": "the answer", "multiple": False},
+        ]
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+        # Force fallback path via attached tools (prefer_native=False).
+        fake_tool = MagicMock()
+        fake_tool.name = "fake_tool"
+        component.tools = [fake_tool]
+        component.set = MagicMock(return_value=component)
+        component.create_agent_runnable = MagicMock(return_value=MagicMock())
+
+        # Install a known sentinel so we can identity-check it after json_response.
+        # (Default `component.send_message` is a bound method recreated on every access,
+        # which would defeat an `is` assertion.)
+        post_emissions: list[Any] = []
+
+        async def sentinel_send_message(message, *_args, **_kwargs):
+            post_emissions.append(message)
+            return message
+
+        component.send_message = sentinel_send_message
+
+        async def exploding_run_agent(_runnable):
+            msg = "boom"
+            raise ValueError(msg)
+
+        component.run_agent = exploding_run_agent
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            # json_response handles the exception internally and returns an error Data,
+            # so the exception is swallowed gracefully — but the swap must already be undone.
+            await component.json_response()
+
+        assert component.send_message is sentinel_send_message, (
+            "send_message must be restored on the component even when run_agent raises; "
+            "otherwise a subsequent message_response would silently drop chat emissions."
+        )
+        # And the restored function must actually be callable as send_message.
+        from lfx.schema.message import Message
+
+        await component.send_message(Message(text="post-fallback"))
+        assert len(post_emissions) == 1
+
     async def test_should_accept_add_calculator_tool_in_default_keys(self, component_class, default_kwargs):
         """update_build_config's default_keys validation must include add_calculator_tool."""
         from lfx.schema.dotdict import dotdict

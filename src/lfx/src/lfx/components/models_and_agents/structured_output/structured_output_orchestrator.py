@@ -48,22 +48,34 @@ async def orchestrate_structured_output(
 
     output_model = build_model_from_schema(preprocess_schema(output_schema))
 
+    fallback_reason = "llm_lacks_with_structured_output"
     if prefer_native and _supports_native_structured_output(llm):
         await logger.adebug(
             "structured_output.native_invoked",
             extra={"strategy": "native"},
         )
-        payload = await invoke_with_native_structured_output(
-            llm=llm,
-            model_cls=output_model,
-            system_prompt=system_prompt,
-            input_value=input_value,
-        )
-        return _wrap_payload(payload)
+        try:
+            payload = await invoke_with_native_structured_output(
+                llm=llm,
+                model_cls=output_model,
+                system_prompt=system_prompt,
+                input_value=input_value,
+            )
+        except NotImplementedError as exc:
+            # LangChain wrappers commonly inherit `with_structured_output` but raise
+            # NotImplementedError at bind- or invocation-time when the provider does
+            # not actually support it. Recover transparently via the prompt fallback.
+            await logger.adebug(
+                "structured_output.native_unsupported",
+                extra={"strategy": "native", "reason": str(exc)},
+            )
+            fallback_reason = "native_raised_not_implemented"
+        else:
+            return _wrap_payload(payload)
 
     await logger.adebug(
         "structured_output.fallback_invoked",
-        extra={"strategy": "prompt_fallback", "reason": "llm_lacks_with_structured_output"},
+        extra={"strategy": "prompt_fallback", "reason": fallback_reason},
     )
     augmented_prompt = _build_augmented_system_prompt(system_prompt, format_instructions, output_model)
     raw_content = await run_prompt_fallback(augmented_prompt)

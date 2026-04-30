@@ -43,7 +43,6 @@ const useAddFlow = () => {
   );
   const isOnboarding =
     !hideGettingStartedProgress && !userData?.optins?.dialog_dismissed;
-
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );

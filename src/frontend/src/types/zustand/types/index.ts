@@ -1,4 +1,8 @@
-import type { APIClassType, APIDataType } from "../../api";
+import type {
+  APIClassType,
+  APIDataType,
+  ComponentDisplayNamesType,
+} from "../../api";
 
 export type TypesStoreType = {
   types: { [char: string]: string };
@@ -10,4 +14,6 @@ export type TypesStoreType = {
   ComponentFields: Set<string>;
   setComponentFields: (fields: Set<string>) => void;
   addComponentField: (field: string) => void;
+  componentDisplayNames: ComponentDisplayNamesType;
+  setComponentDisplayNames: (data: ComponentDisplayNamesType) => void;
 };

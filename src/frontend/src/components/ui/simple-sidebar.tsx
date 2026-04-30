@@ -445,7 +445,7 @@ const SimpleSidebarTrigger = React.forwardRef<
       variant="ghost"
       size="md"
       className={cn(
-        "!px-2 !font-normal !justify-start !gap-1.5 !w-[7.2rem]",
+        "!px-2 !font-normal !justify-start !gap-1.5 w-auto",
         className,
       )}
       onClick={handleClick}

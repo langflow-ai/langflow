@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lfx.components.models_and_agents.memory import MemoryComponent
 
@@ -46,6 +47,29 @@ def _extract_text_content(value) -> str:
     if isinstance(content, str):
         return content
     return str(value) if value is not None else ""
+
+
+@contextmanager
+def _suppress_send_message(component: Any):
+    """Temporarily replace component.send_message with a no-op for the duration of the block.
+
+    Used during the structured-output prompt fallback: run_agent streams the agent's
+    final answer through self.send_message (correct for message_response), but in
+    json_response the orchestrator parses that text into structured Data which the
+    downstream Chat Output emits — leaving the original emission in place produces a
+    duplicate message in the playground. The original method is always restored on exit,
+    even when the wrapped call raises.
+    """
+    original = component.send_message
+
+    async def _noop(message, *_args, **_kwargs):
+        return message
+
+    component.send_message = _noop
+    try:
+        yield
+    finally:
+        component.send_message = original
 
 
 class AgentComponent(ToolCallingAgentComponent):
@@ -420,21 +444,8 @@ class AgentComponent(ToolCallingAgentComponent):
                 system_prompt=augmented_prompt,
             )
             agent_runnable = self.create_agent_runnable()
-            # run_agent streams the agent's final answer through self.send_message,
-            # which is the right behavior for message_response. In json_response the
-            # orchestrator parses that text into structured Data which the downstream
-            # Chat Output emits — leaving the original emission in place produces a
-            # duplicate message in the playground.
-            original_send_message = self.send_message
-
-            async def _suppressed_send_message(message, *_args, **_kwargs):
-                return message
-
-            self.send_message = _suppressed_send_message  # type: ignore[method-assign]
-            try:
+            with _suppress_send_message(self):
                 result = await self.run_agent(agent_runnable)
-            finally:
-                self.send_message = original_send_message  # type: ignore[method-assign]
             return _extract_text_content(result)
 
         try:

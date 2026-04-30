@@ -1,14 +1,10 @@
-import json
 import os
 import uuid
 from pathlib import Path
-from typing import Any
 
 import chromadb
 import chromadb.api.client
-from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 from pydantic import SecretStr
 
@@ -17,31 +13,22 @@ from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_provider_all_variables,
 )
+from lfx.components.files_and_knowledge._kb_paths import (
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+)
+from lfx.components.files_and_knowledge._kb_paths import (
+    load_kb_metadata,
+)
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service, get_variable_service, session_scope
+from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
-
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
-
-
-def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
-        settings = get_settings_service().settings
-        knowledge_directory = settings.knowledge_bases_dir
-        if not knowledge_directory:
-            msg = "Knowledge bases directory is not set in the settings."
-            raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeBaseComponent(Component):
@@ -131,31 +118,8 @@ class KnowledgeBaseComponent(Component):
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
         """Load and process knowledge base metadata."""
-        # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        metadata: dict[str, Any] = {}
-        metadata_file = kb_path / "embedding_metadata.json"
-        if not metadata_file.exists():
-            logger.warning(f"Embedding metadata file not found at {metadata_file}")
-            return metadata
-
-        try:
-            with metadata_file.open("r", encoding="utf-8") as f:
-                metadata = json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {metadata_file}")
-            return {}
-
-        # Decrypt API key if it exists
-        if "api_key" in metadata and metadata.get("api_key"):
-            settings_service = get_settings_service()
-            try:
-                decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
-                metadata["api_key"] = decrypted_key
-            except (InvalidToken, TypeError, ValueError) as e:
-                logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
-                metadata["api_key"] = None
-        return metadata
+        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
 
     async def _resolve_provider_variables(self, provider: str) -> dict[str, str]:
         """Resolve all global variables for a provider using the async session.

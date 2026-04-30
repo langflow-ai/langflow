@@ -37,6 +37,42 @@ class _LegacyLLMStub:
     """LLM that does NOT support with_structured_output."""
 
 
+class _NotImplementedRunnable:
+    def __init__(self) -> None:
+        self.invoke_count = 0
+
+    async def ainvoke(self, _messages: Any) -> Any:
+        self.invoke_count += 1
+        msg = "provider does not support structured output"
+        raise NotImplementedError(msg)
+
+
+class _NotImplementedNativeLLMStub:
+    """LLM that exposes with_structured_output but raises NotImplementedError on invocation."""
+
+    def __init__(self) -> None:
+        self._runnable = _NotImplementedRunnable()
+
+    def with_structured_output(self, _schema: type[BaseModel]) -> _NotImplementedRunnable:
+        return self._runnable
+
+    @property
+    def runnable(self) -> _NotImplementedRunnable:
+        return self._runnable
+
+
+class _NotImplementedAtBindLLMStub:
+    """LLM whose with_structured_output(...) factory itself raises NotImplementedError."""
+
+    def __init__(self) -> None:
+        self.bind_count = 0
+
+    def with_structured_output(self, _schema: type[BaseModel]) -> Any:
+        self.bind_count += 1
+        msg = "binding structured output is not supported"
+        raise NotImplementedError(msg)
+
+
 _PERSON_SCHEMA = [
     {"name": "name", "type": "str", "description": "person name", "multiple": False},
     {"name": "age", "type": "int", "description": "person age", "multiple": False},
@@ -259,6 +295,54 @@ class TestOrchestrateStructuredOutput:
         assert used_fallback.get("yes") is True
         assert llm.runnable.invoke_count == 0
         assert data.data == {"name": "from_tools_path", "age": 7}
+
+    async def test_should_fall_back_when_native_invocation_raises_not_implemented_error(self):
+        # Many LangChain wrappers inherit `with_structured_output` from BaseLanguageModel
+        # but raise NotImplementedError at invocation time when the provider does not
+        # actually support structured output. The orchestrator must detect this and
+        # transparently route to the prompt fallback rather than surfacing the error.
+        llm = _NotImplementedNativeLLMStub()
+        captured: dict[str, str] = {}
+
+        async def _fallback(prompt: str) -> str:
+            captured["prompt"] = prompt
+            return '{"name": "Recovered", "age": 7}'
+
+        data = await orchestrate_structured_output(
+            llm=llm,
+            output_schema=_PERSON_SCHEMA,
+            system_prompt="extract",
+            format_instructions="strict JSON",
+            input_value="x",
+            run_prompt_fallback=_fallback,
+        )
+
+        assert llm.runnable.invoke_count == 1  # native was attempted
+        assert "prompt" in captured  # fallback was used after the failure
+        assert data.data == {"name": "Recovered", "age": 7}
+
+    async def test_should_fall_back_when_with_structured_output_factory_raises_not_implemented(self):
+        # Some wrappers raise NotImplementedError at bind time (when calling
+        # with_structured_output) rather than at invocation time. Same recovery contract.
+        llm = _NotImplementedAtBindLLMStub()
+        captured: dict[str, str] = {}
+
+        async def _fallback(prompt: str) -> str:
+            captured["prompt"] = prompt
+            return '{"name": "RecoveredBind", "age": 9}'
+
+        data = await orchestrate_structured_output(
+            llm=llm,
+            output_schema=_PERSON_SCHEMA,
+            system_prompt="extract",
+            format_instructions="strict JSON",
+            input_value="x",
+            run_prompt_fallback=_fallback,
+        )
+
+        assert llm.bind_count == 1
+        assert "prompt" in captured
+        assert data.data == {"name": "RecoveredBind", "age": 9}
 
     @pytest.mark.parametrize(
         ("provider_label", "raw_payload", "expected"),

@@ -44,3 +44,22 @@ class TestExtractJsonFromText:
         text = '[{"a": 1}, {"a": 2}]'
 
         assert extract_json_from_text(text) == [{"a": 1}, {"a": 2}]
+
+    def test_should_extract_array_when_text_contains_prose_around_json_array(self):
+        # A fallback LLM commonly wraps a JSON array in narration. The extractor
+        # must recognise arrays — not only objects — embedded in prose.
+        text = 'Here you go: [{"a": 1}, {"a": 2}]. Done.'
+
+        assert extract_json_from_text(text) == [{"a": 1}, {"a": 2}]
+
+    def test_should_extract_array_when_wrapped_in_markdown_code_fence(self):
+        text = '```json\n[{"k": "v"}, {"k": "w"}]\n```'
+
+        assert extract_json_from_text(text) == [{"k": "v"}, {"k": "w"}]
+
+    def test_should_return_first_value_when_text_contains_array_then_object(self):
+        # When both shapes appear, return the first JSON value that parses cleanly.
+        # Anchoring this prevents future regex tweaks from silently swapping which one wins.
+        text = 'first: [{"id": 1}] then: {"only": true}'
+
+        assert extract_json_from_text(text) == [{"id": 1}]
