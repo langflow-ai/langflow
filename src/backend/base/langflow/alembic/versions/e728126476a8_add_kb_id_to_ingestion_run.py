@@ -22,9 +22,14 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "e728126476a8"  # pragma: allowlist secret
-down_revision: str | None = "15fe9304bca7"  # pragma: allowlist secret
+# Chain through ``72df732be86b`` (creates ingestion_run) so this
+# migration has only one parent path. The FK target ``knowledge_base``
+# table is a separate dependency declared via ``depends_on`` so the
+# graph stays valid no matter which order the unrelated KB-table
+# branch runs.
+down_revision: str | None = "72df732be86b"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = "15fe9304bca7"  # pragma: allowlist secret
 
 TABLE_NAME = "ingestion_run"
 COLUMN_NAME = "kb_id"
