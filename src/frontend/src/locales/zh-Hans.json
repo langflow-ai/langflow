@@ -615,6 +615,7 @@
   "misc.chatTitle": "Langflow Chat",
   "misc.copyFailed": "复制失败",
   "misc.copyJson": "将 JSON 复制到剪贴板",
+  "misc.deploy": "部署",
   "misc.editorNotAvailable": "编辑功能不可用",
   "misc.embedIntoSite": "嵌入网站",
   "misc.export": "导出",

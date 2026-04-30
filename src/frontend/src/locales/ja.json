@@ -615,6 +615,7 @@
   "misc.chatTitle": "Langflow Chat",
   "misc.copyFailed": "コピーが失敗しました",
   "misc.copyJson": "JSONをクリップボードにコピー",
+  "misc.deploy": "デプロイ",
   "misc.editorNotAvailable": "エディタが利用できません",
   "misc.embedIntoSite": "サイトに埋め込む",
   "misc.export": "エクスポート",

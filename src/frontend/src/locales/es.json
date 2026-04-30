@@ -615,6 +615,7 @@
   "misc.chatTitle": "Langflow Chat",
   "misc.copyFailed": "Anomalía en la copia",
   "misc.copyJson": "Copiar JSON al portapapeles",
+  "misc.deploy": "Desplegar",
   "misc.editorNotAvailable": "El editor no está disponible",
   "misc.embedIntoSite": "Incorporar en el sitio web",
   "misc.export": "Exportar",

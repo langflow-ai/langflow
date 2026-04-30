@@ -185,6 +185,7 @@
   "misc.chatTitle": "Langflow Chat",
   "misc.playground": "Playground",
   "misc.share": "Share",
+  "misc.deploy": "Deploy",
   "misc.apiAccess": "API access",
   "misc.export": "Export",
   "misc.mcpServer": "MCP Server",
