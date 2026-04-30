@@ -43,9 +43,7 @@ async def test_should_invoke_taskkill_via_systemroot_absolute_path(
 
     assert captured, "taskkill must have been invoked"
     invoked_path = captured[0][0]
-    assert ntpath.isabs(invoked_path), (
-        f"taskkill must be invoked via an absolute path, got {invoked_path!r}"
-    )
+    assert ntpath.isabs(invoked_path), f"taskkill must be invoked via an absolute path, got {invoked_path!r}"
     assert invoked_path.lower().endswith("taskkill.exe")
     # The path must include the SystemRoot directory so a malicious
     # ``taskkill`` planted on PATH cannot be used in its place.

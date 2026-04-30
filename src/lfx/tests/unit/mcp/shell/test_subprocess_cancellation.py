@@ -82,9 +82,7 @@ async def test_should_kill_process_tree_when_outer_task_is_cancelled(
     with contextlib.suppress(asyncio.CancelledError):
         await task
 
-    assert kill_called.is_set(), (
-        "_kill_process_tree must run when the outer task is cancelled"
-    )
+    assert kill_called.is_set(), "_kill_process_tree must run when the outer task is cancelled"
 
 
 @pytest.mark.asyncio
@@ -129,15 +127,11 @@ async def test_should_kill_process_tree_when_communicate_raises_unexpected_error
             timeout=5,
         )
 
-    assert kill_called.is_set(), (
-        "_kill_process_tree must run when communicate raises an unexpected error"
-    )
+    assert kill_called.is_set(), "_kill_process_tree must run when communicate raises an unexpected error"
 
 
 @pytest.mark.asyncio
-async def test_should_not_double_kill_after_normal_completion(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+async def test_should_not_double_kill_after_normal_completion(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """The cleanup path must not re-kill a process that finished normally.
 
     The guard rail must check returncode, not blindly fire kill on every exit.

@@ -75,8 +75,7 @@ async def test_should_drain_within_grace_window_when_communicate_hangs(
 
     assert result.timed_out is True
     assert elapsed < _GRACE_BUDGET_UPPER_BOUND, (
-        f"post-kill drain budget exceeded: {elapsed:.2f}s "
-        f"(must be < {_GRACE_BUDGET_UPPER_BOUND}s)"
+        f"post-kill drain budget exceeded: {elapsed:.2f}s (must be < {_GRACE_BUDGET_UPPER_BOUND}s)"
     )
 
 
@@ -111,7 +110,5 @@ async def test_should_give_up_taskkill_within_grace_window_when_taskkill_hangs(
     await subprocess_executor._kill_tree_windows(proc)
     elapsed = asyncio.get_event_loop().time() - start
 
-    assert elapsed < _GRACE_BUDGET_UPPER_BOUND, (
-        f"taskkill grace budget exceeded: {elapsed:.2f}s"
-    )
+    assert elapsed < _GRACE_BUDGET_UPPER_BOUND, f"taskkill grace budget exceeded: {elapsed:.2f}s"
     proc.kill.assert_called_once()

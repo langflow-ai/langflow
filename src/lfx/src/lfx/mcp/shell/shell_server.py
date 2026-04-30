@@ -150,8 +150,7 @@ async def handle_execute_command(
         )
         return _rejection(
             RejectionReason.QUEUE_FULL,
-            "Command rejected: server is at concurrency cap "
-            f"({config.max_concurrent}); retry after a short backoff.",
+            f"Command rejected: server is at concurrency cap ({config.max_concurrent}); retry after a short backoff.",
         )
 
     try:
