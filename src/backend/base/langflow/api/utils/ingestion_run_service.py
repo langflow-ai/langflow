@@ -183,19 +183,36 @@ async def list_runs_for_kb(
 ) -> tuple[list[RunRow], int]:
     """Return a page of KB ingestion runs for ``kb_name`` scoped to ``user_id``.
 
-    Implemented as a query over the ``job`` table filtered by
-    ``user_id`` + ``type = INGESTION`` + ``job_metadata.kb_name``.
-    Cross-DB JSON-key access uses SQLAlchemy's column getitem which
-    maps to ``->>`` on Postgres and ``json_extract`` on SQLite.
+    Prefers the indexed ``Job.asset_id`` filter (resolved via
+    ``KnowledgeBaseRecord.id``) over a JSON-extract on
+    ``Job.job_metadata.kb_name``. The asset_id path is a btree index
+    lookup, free of dialect-specific JSON gymnastics; the JSON-extract
+    fallback only fires for legacy KBs that exist on disk but haven't
+    been backfilled into the ``knowledge_base`` table yet.
 
     Ordered newest-first by ``Job.created_timestamp`` — the drill-down
     UI reads the most recent run the vast majority of the time.
     """
+    # Lazy import: ``ingestion_run_service`` lives in the langflow API
+    # surface but the KB record lookup is also there; avoid a circular
+    # at module import time.
+    from langflow.api.utils import knowledge_base_service
+
     offset = max(page - 1, 0) * limit
-    kb_name_expr = Job.job_metadata["kb_name"].as_string()
+    kb_record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
 
     async with session_scope() as session:
-        base_filter = (Job.user_id == user_id) & (Job.type == JobType.INGESTION) & (kb_name_expr == kb_name)
+        if kb_record is not None:
+            base_filter = (
+                (Job.user_id == user_id)
+                & (Job.type == JobType.INGESTION)
+                & (Job.asset_type == "knowledge_base")
+                & (Job.asset_id == kb_record.id)
+            )
+        else:
+            # Legacy fallback for KBs not yet reconciled into the DB.
+            kb_name_expr = Job.job_metadata["kb_name"].as_string()
+            base_filter = (Job.user_id == user_id) & (Job.type == JobType.INGESTION) & (kb_name_expr == kb_name)
 
         count_stmt = select(func.count()).select_from(Job).where(base_filter)
         total = (await session.exec(count_stmt)).one()

@@ -262,7 +262,12 @@ class TestRunRowProjection:
         assert row is None
 
     async def test_list_runs_for_kb_filters_and_paginates(self, active_user) -> None:
-        # Seed 3 runs for kb_a + 1 for kb_b to confirm filtering.
+        """Legacy fallback: KB has no DB record, query falls back to JSON-extract on kb_name.
+
+        Seeds Jobs but never creates a ``KnowledgeBaseRecord``, so
+        ``list_runs_for_kb`` resolves ``kb_record`` to ``None`` and uses
+        the JSON-extract path.
+        """
         for _ in range(3):
             jid = uuid.uuid4()
             await _insert_job(job_id=jid, user_id=active_user.id)
@@ -290,6 +295,73 @@ class TestRunRowProjection:
         assert total == 3
         assert len(rows) == 2
         assert all(r.kb_name == "kb_a" for r in rows)
+
+    async def test_list_runs_for_kb_uses_indexed_asset_id_when_record_exists(self, active_user) -> None:
+        """Indexed path activates when a ``KnowledgeBaseRecord`` exists.
+
+        With a record present the query filters on ``Job.asset_id``
+        (btree-indexed) instead of doing a JSON-extract on
+        ``Job.job_metadata.kb_name``.
+
+        Verified by giving two Jobs the *same* ``kb_name`` in metadata
+        but different ``asset_id`` values (one matching the kb_record,
+        one a stranger). The indexed filter must surface only the
+        kb_record-matched run.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        # Create a real KB record so the indexed path activates.
+        kb_record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name="kb_indexed",
+            embedding_provider="HuggingFace",
+            embedding_model="model",
+        )
+
+        # Job linked to the KB record via asset_id — should be returned.
+        owned_job_id = uuid.uuid4()
+        async with session_scope() as session:
+            session.add(
+                Job(
+                    job_id=owned_job_id,
+                    flow_id=owned_job_id,
+                    status=JobStatus.COMPLETED,
+                    type=JobType.INGESTION,
+                    user_id=active_user.id,
+                    asset_id=kb_record.id,
+                    asset_type="knowledge_base",
+                    job_metadata={"kind": "kb_ingestion", "kb_name": "kb_indexed"},
+                )
+            )
+            await session.commit()
+
+        # Stranger Job with the same kb_name in metadata but a
+        # different asset_id — must NOT be returned because the
+        # asset_id filter excludes it.
+        stranger_job_id = uuid.uuid4()
+        async with session_scope() as session:
+            session.add(
+                Job(
+                    job_id=stranger_job_id,
+                    flow_id=stranger_job_id,
+                    status=JobStatus.COMPLETED,
+                    type=JobType.INGESTION,
+                    user_id=active_user.id,
+                    asset_id=uuid.uuid4(),  # different from kb_record.id
+                    asset_type="knowledge_base",
+                    job_metadata={"kind": "kb_ingestion", "kb_name": "kb_indexed"},
+                )
+            )
+            await session.commit()
+
+        rows, total = await ingestion_run_service.list_runs_for_kb(
+            kb_name="kb_indexed",
+            user_id=active_user.id,
+        )
+        ids = {r.id for r in rows}
+        assert owned_job_id in ids
+        assert stranger_job_id not in ids
+        assert total == 1
 
 
 class TestPrivatePatchHelper:
