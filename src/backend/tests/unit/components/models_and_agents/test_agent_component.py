@@ -679,10 +679,11 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         )
 
     async def test_should_restore_send_message_when_run_agent_raises_in_fallback(self, component_class, default_kwargs):
-        """Durability anchor: the suppression of send_message during fallback must be
-        scoped — even when run_agent raises, the original method must be restored on the
-        component instance. Otherwise a later message_response call would silently swallow
-        chat emissions.
+        """Durability anchor: send_message suppression during fallback must be scoped.
+
+        Even when run_agent raises, the original method must be restored on the component
+        instance. Otherwise a later message_response call would silently swallow chat
+        emissions.
         """
         from unittest.mock import AsyncMock, MagicMock
 
