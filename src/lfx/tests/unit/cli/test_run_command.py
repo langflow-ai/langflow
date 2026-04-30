@@ -4,7 +4,7 @@ import contextlib
 import json
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import typer
@@ -155,6 +155,10 @@ chat_input = ChatInput(
     def test_execute_python_script_success(self, simple_chat_script, capsys):
         """Test executing a valid Python script."""
         # Test that Python script execution either succeeds or fails gracefully
+        # ``run`` is a typer command, so any parameter with a ``typer.Option(...)`` default
+        # (e.g. session_id) needs to be passed explicitly when invoking outside typer's
+        # parser — otherwise the default evaluates to a ``typer.models.OptionInfo``
+        # sentinel and propagates downstream.
         with contextlib.suppress(typer.Exit):
             run(
                 script_path=simple_chat_script,
@@ -164,6 +168,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=False,
+                session_id=None,
             )
 
         # Test passes as long as no unhandled exceptions occur
@@ -181,6 +186,7 @@ chat_input = ChatInput(
     def test_execute_python_script_verbose(self, simple_chat_script, capsys):
         """Test executing a Python script with verbose output."""
         # Test that verbose mode execution either succeeds or fails gracefully
+        # See note in ``test_execute_python_script_success`` re: session_id=None.
         with contextlib.suppress(typer.Exit):
             run(
                 script_path=simple_chat_script,
@@ -190,6 +196,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=False,
+                session_id=None,
             )
 
         # Test passes as long as no unhandled exceptions occur
@@ -320,7 +327,8 @@ chat_input = ChatInput(
         flow_json_str = json.dumps(simple_json_flow)
         mock_stdin.read.return_value = flow_json_str
 
-        # Test that stdin execution either succeeds or fails gracefully
+        # Test that stdin execution either succeeds or fails gracefully.
+        # See note in ``test_execute_python_script_success`` re: session_id=None.
         with pytest.raises(typer.Exit) as exc_info:
             run(
                 script_path=None,
@@ -330,6 +338,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=True,
+                session_id=None,
             )
 
         # Check that stdin was read and function exited cleanly
@@ -436,6 +445,7 @@ chat_input = ChatInput(
 
     def test_execute_verbose_error_output(self, invalid_script, capsys):
         """Test that verbose mode shows error details."""
+        # See note in ``test_execute_python_script_success`` re: session_id=None.
         with pytest.raises(typer.Exit) as exc_info:
             run(
                 script_path=invalid_script,
@@ -445,6 +455,7 @@ chat_input = ChatInput(
                 output_format="json",
                 flow_json=None,
                 stdin=False,
+                session_id=None,
             )
 
         assert exc_info.value.exit_code == 1
@@ -452,6 +463,55 @@ chat_input = ChatInput(
         # Verbose mode should show error details
         error_output = captured.out + captured.err
         assert "graph" in error_output.lower() or "variable" in error_output.lower()
+
+    def test_session_id_cli_flag_plumbs_through_to_run_flow(self, simple_chat_script):
+        """--session-id is wired from typer through `run` into `run_flow(session_id=...)`.
+
+        Locks in the typer Option name so a rename or wiring typo at lfx.cli.run.run
+        is caught here (the unit tests on run_flow itself only cover the function
+        contract, not this CLI layer).
+        """
+        captured = {}
+
+        async def fake_run_flow(**kwargs):
+            captured.update(kwargs)
+            return {"success": True, "result": "ok", "logs": ""}
+
+        with patch("lfx.cli.run.run_flow", new=AsyncMock(side_effect=fake_run_flow)):
+            run(
+                script_path=simple_chat_script,
+                input_value="hi",
+                input_value_option=None,
+                verbose=False,
+                output_format="json",
+                flow_json=None,
+                stdin=False,
+                session_id="my-fixed-session",
+            )
+
+        assert captured.get("session_id") == "my-fixed-session"
+
+    def test_session_id_cli_flag_omitted_passes_none(self, simple_chat_script):
+        """No --session-id => `run_flow` receives session_id=None (auto-gen happens downstream)."""
+        captured = {}
+
+        async def fake_run_flow(**kwargs):
+            captured.update(kwargs)
+            return {"success": True, "result": "ok", "logs": ""}
+
+        with patch("lfx.cli.run.run_flow", new=AsyncMock(side_effect=fake_run_flow)):
+            run(
+                script_path=simple_chat_script,
+                input_value="hi",
+                input_value_option=None,
+                verbose=False,
+                output_format="json",
+                flow_json=None,
+                stdin=False,
+                session_id=None,
+            )
+
+        assert captured.get("session_id") is None
 
     def test_execute_without_input_value(self, simple_chat_script, capsys):
         """Test executing without providing input value."""
