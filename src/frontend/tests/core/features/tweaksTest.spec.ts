@@ -11,8 +11,15 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="publish-button"]', {
+    // Wait for the new-flow Loading state to clear before checking the
+    // publish button — the canvas mounts only after the flow finishes
+    // loading, which can outlast a 20s action timeout on Windows CI.
+    await page.waitForSelector('text="Loading"', {
+      state: "hidden",
       timeout: 60000,
+    });
+    await page.waitForSelector('[data-testid="publish-button"]', {
+      timeout: 30000,
     });
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();

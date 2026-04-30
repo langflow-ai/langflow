@@ -46,9 +46,15 @@ test(
     });
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Create User A
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
+    // Create User A — wait for the homepage Loading state to clear before
+    // checking mainpage_title (mainpage_title only renders after data load,
+    // which can outlast a 30s wait on slower runners like Windows CI).
+    await page.waitForSelector('text="Loading"', {
+      state: "hidden",
       timeout: 60000,
+    });
+    await page.waitForSelector('[data-testid="mainpage_title"]', {
+      timeout: 30000,
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Admin Page", { exact: true }).click();
@@ -110,8 +116,14 @@ test(
     });
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+    // Wait for the new-flow Loading state to clear before checking canvas
+    // controls — the canvas mounts only after the flow finishes loading.
+    await page.waitForSelector('text="Loading"', {
+      state: "hidden",
       timeout: 60000,
+    });
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 30000,
     });
 
     await renameFlow(page, { flowName: userAFlowName });
