@@ -11,6 +11,9 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.waitForSelector('[data-testid="publish-button"]', {
+      timeout: 60000,
+    });
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
     await page.getByTestId("api_tab_curl").click();

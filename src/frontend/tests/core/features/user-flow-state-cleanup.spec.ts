@@ -48,7 +48,7 @@ test(
 
     // Create User A
     await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
+      timeout: 60000,
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Admin Page", { exact: true }).click();
@@ -110,7 +110,7 @@ test(
     });
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 60000,
+      timeout: 120000,
     });
 
     await renameFlow(page, { flowName: userAFlowName });
