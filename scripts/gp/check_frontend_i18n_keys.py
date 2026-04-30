@@ -59,7 +59,11 @@ def build_report(
     en_total = len(en_keys)
     detected_total = len(used_keys)
     gap = en_total - detected_total
-    status = "✅ All detected keys are present in `en.json`" if not missing else f"❌ {len(missing)} key(s) missing from `en.json`"
+    status = (
+        "✅ All detected keys are present in `en.json`"
+        if not missing
+        else f"❌ {len(missing)} key(s) missing from `en.json`"
+    )
 
     lines = [
         "## Frontend i18n Key Coverage Report",
@@ -70,8 +74,8 @@ def build_report(
         "",
         "### Summary",
         "",
-        f"| Metric | Count |",
-        f"|--------|-------|",
+        "| Metric | Count |",
+        "|--------|-------|",
         f"| Keys in `en.json` | {en_total} |",
         f"| Statically detected `t()` keys in source | {detected_total} |",
         f"| Keys in source missing from `en.json` | {len(missing)} |",
@@ -101,19 +105,19 @@ def build_report(
         "",
         "### ℹ️ Why `en.json` has more keys than detected in source",
         "",
-        "The static analysis only counts hardcoded `t(\"some.key\")` string literals.",
+        'The static analysis only counts hardcoded `t("some.key")` string literals.',
         f"`en.json` has {en_total} keys while the scanner detected {detected_total} — a gap of {gap}. This is expected for three reasons:",
         "",
         "**1. Pluralization suffixes**",
         "",
         "i18next requires separate keys for singular/plural forms. When you write:",
         "```ts",
-        "t(\"alerts.modelsRefreshed\", { count })",
+        't("alerts.modelsRefreshed", { count })',
         "```",
         "The source has one key, but `en.json` needs two:",
         "```json",
-        "\"alerts.modelsRefreshed_one\": \"{{count}} model refreshed\",",
-        "\"alerts.modelsRefreshed_other\": \"{{count}} models refreshed\"",
+        '"alerts.modelsRefreshed_one": "{{count}} model refreshed",',
+        '"alerts.modelsRefreshed_other": "{{count}} models refreshed"',
         "```",
         "",
         "**2. Dynamic keys**",
@@ -179,7 +183,9 @@ def main() -> int:
     # Always print a summary to stdout
     if not missing:
         print(f"✓ All {len(used_keys)} detected i18n keys found in en.json")
-        print(f"  (en.json has {len(en_keys)} total keys; gap of {len(en_keys) - len(used_keys)} is expected — see report for details)")
+        print(
+            f"  (en.json has {len(en_keys)} total keys; gap of {len(en_keys) - len(used_keys)} is expected — see report for details)"
+        )
     else:
         print(f"✗ {len(missing)} key(s) used in source but missing from en.json:\n")
         for key, locations in sorted(missing.items()):
