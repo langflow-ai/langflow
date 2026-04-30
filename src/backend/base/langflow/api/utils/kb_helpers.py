@@ -508,8 +508,7 @@ class KBIngestionHelper:
         separator: str,
         source_name: str,
         current_user: CurrentActiveUser,
-        embedding_provider: str,
-        embedding_model: str,
+        model_selection: dict | list[dict],
         task_job_id: uuid.UUID,
         job_service: JobService,
         source_type: str = DEFAULT_INGESTION_SOURCE_TYPE,
@@ -524,6 +523,12 @@ class KBIngestionHelper:
         implementation. When both are provided, ``source`` wins; when
         neither is, raises ``ValueError``.
 
+        ``model_selection`` is the canonical embedding-config payload
+        (matching ``KnowledgeBaseRecord.model_selection``); provider /
+        model name are derived via the ``get_embedding_provider`` /
+        ``get_embedding_model`` helpers when this function needs them
+        for ``build_embeddings``.
+
         Every chunk carries ``source_type`` + ``source_metadata`` so
         Phase 2 visibility tooling can group, filter, and drill into
         chunks by origin.
@@ -537,6 +542,13 @@ class KBIngestionHelper:
         # Lazy import: the service reaches into langflow DB plumbing we
         # can't expose at module scope without widening lfx's surface.
         from langflow.api.utils import ingestion_run_service, knowledge_base_service
+        from langflow.api.utils.knowledge_base_service import (
+            get_embedding_model,
+            get_embedding_provider,
+        )
+
+        embedding_provider = get_embedding_provider(model_selection)
+        embedding_model = get_embedding_model(model_selection)
 
         if source is None:
             if not files_data:

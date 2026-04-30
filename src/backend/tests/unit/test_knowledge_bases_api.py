@@ -1523,8 +1523,7 @@ class TestPerformIngestionTask:
                 separator="\n",
                 source_name="src",
                 current_user=current_user,
-                embedding_provider="OpenAI",
-                embedding_model="model",
+                model_selection={"name": "model", "provider": "OpenAI"},
                 task_job_id=job_id,
                 job_service=AsyncMock(),
             )
