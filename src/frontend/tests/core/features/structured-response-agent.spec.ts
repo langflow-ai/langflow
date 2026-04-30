@@ -48,7 +48,9 @@ test(
     // canvas they share a single combobox-style dropdown keyed by the
     // component name — the testid resolves to "dropdown-output-undefined"
     // because Simple Agent's cached node ships with `data.node.key === null`.
-    const outputDropdown = page.getByTestId("dropdown-output-undefined").first();
+    const outputDropdown = page
+      .getByTestId("dropdown-output-undefined")
+      .first();
     await expect(outputDropdown).toBeVisible({ timeout: 30000 });
 
     // The dropdown shows the currently selected output (Response by default).
@@ -130,7 +132,9 @@ test(
 
     await adjustScreenView(page);
 
-    const outputDropdown = page.getByTestId("dropdown-output-undefined").first();
+    const outputDropdown = page
+      .getByTestId("dropdown-output-undefined")
+      .first();
     await expect(outputDropdown).toBeVisible({ timeout: 30000 });
 
     // Switch the agent's selected output to Structured Response — this is
