@@ -99,7 +99,7 @@ export default function DeploymentsTable({
           <TableHead>Name</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Attached</TableHead>
-          <TableHead>Provider</TableHead>
+          <TableHead>Environment</TableHead>
           <TableHead>Last Modified</TableHead>
           <TableHead>Test</TableHead>
           <TableHead className="w-10" />
