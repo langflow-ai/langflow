@@ -2,6 +2,7 @@ import { type FC, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import IconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
@@ -157,14 +158,16 @@ export const GetStartedProgress: FC<{
             ) : (
               <FaGithub className="h-4 w-4" />
             )}
-            <span
-              className={cn(
-                "text-sm",
-                isGithubStarredChild && "text-muted-foreground line-through",
-              )}
-            >
-              {t("sidebar.starRepo")}
-            </span>
+            <ShadTooltip content={t("sidebar.starRepo")} styleClasses="z-50">
+              <span
+                className={cn(
+                  "truncate text-sm",
+                  isGithubStarredChild && "text-muted-foreground line-through",
+                )}
+              >
+                {t("sidebar.starRepo")}
+              </span>
+            </ShadTooltip>
           </div>
         </Button>
 
@@ -199,14 +202,16 @@ export const GetStartedProgress: FC<{
             ) : (
               <FaDiscord className="h-4 w-4 text-[#5865F2]" />
             )}
-            <span
-              className={cn(
-                "text-sm",
-                isDiscordJoinedChild && "text-muted-foreground line-through",
-              )}
-            >
-              {t("sidebar.joinCommunity")}
-            </span>
+            <ShadTooltip content={t("sidebar.joinCommunity")} styleClasses="z-50">
+              <span
+                className={cn(
+                  "truncate text-sm",
+                  isDiscordJoinedChild && "text-muted-foreground line-through",
+                )}
+              >
+                {t("sidebar.joinCommunity")}
+              </span>
+            </ShadTooltip>
           </div>
         </Button>
 
@@ -231,9 +236,11 @@ export const GetStartedProgress: FC<{
                 )}
               />
             </span>
-            <span className={cn("text-sm", hasFlows && "line-through")}>
-              {t("sidebar.createFlow")}
-            </span>
+            <ShadTooltip content={t("sidebar.createFlow")} styleClasses="z-50">
+              <span className={cn("truncate text-sm", hasFlows && "line-through")}>
+                {t("sidebar.createFlow")}
+              </span>
+            </ShadTooltip>
           </div>
         </Button>
       </div>
