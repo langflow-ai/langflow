@@ -52,9 +52,7 @@ class TestEphemeralStrategy:
         with strategy.acquire() as workdir:
             captured = Path(workdir)
             assert captured.is_dir()
-        assert not captured.exists(), (
-            "ephemeral working directory must be deleted after the call returns"
-        )
+        assert not captured.exists(), "ephemeral working directory must be deleted after the call returns"
 
     def test_should_isolate_files_between_calls(self, tmp_path: Path) -> None:
         """Two consecutive calls must NEVER see each other's files."""

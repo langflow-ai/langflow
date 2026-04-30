@@ -48,9 +48,7 @@ def _reset_semaphore() -> None:
 
 
 @pytest.mark.asyncio
-async def test_should_include_request_id_in_accepted_log(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+async def test_should_include_request_id_in_accepted_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured: list[tuple[str, dict]] = []
 
     def fake_info(event: str, **kwargs: object) -> None:
@@ -78,9 +76,7 @@ async def test_should_include_request_id_in_accepted_log(
 
 
 @pytest.mark.asyncio
-async def test_should_include_request_id_in_rejected_log(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+async def test_should_include_request_id_in_rejected_log(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured: list[tuple[str, dict]] = []
 
     def fake_info(event: str, **kwargs: object) -> None:

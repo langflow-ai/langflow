@@ -72,15 +72,11 @@ class EphemeralStrategy:
 
     @contextmanager
     def acquire(self) -> Iterator[str]:
-        with tempfile.TemporaryDirectory(
-            prefix=_EPHEMERAL_PREFIX, dir=self._base_directory
-        ) as path:
+        with tempfile.TemporaryDirectory(prefix=_EPHEMERAL_PREFIX, dir=self._base_directory) as path:
             yield path
 
 
-def build_strategy(
-    mode: IsolationMode, *, base_directory: str
-) -> WorkingDirectoryStrategy:
+def build_strategy(mode: IsolationMode, *, base_directory: str) -> WorkingDirectoryStrategy:
     """Materialise the strategy chosen via ``ShellServerConfig.isolation``."""
     # Local import to avoid a cycle: shell_config imports types from
     # this module's neighbour ``shell_constants`` and we want
