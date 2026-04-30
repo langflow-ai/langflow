@@ -592,7 +592,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.social_media_agent.15789e48"
           },
           "type": "note"
         },
@@ -618,7 +619,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.social_media_agent.15789e48"
           },
           "type": "note"
         },
@@ -647,7 +649,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "amber"
-            }
+            },
+            "i18n_key": "template_notes.social_media_agent.501213ba"
           },
           "type": "note"
         },
@@ -1233,7 +1236,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.social_media_agent.cd87cff6"
           },
           "type": "note"
         },

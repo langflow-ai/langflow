@@ -1850,7 +1850,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.youtube_analysis.8d068d5f"
           },
           "type": "note"
         },
