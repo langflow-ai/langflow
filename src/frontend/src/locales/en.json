@@ -1063,5 +1063,12 @@
   "auth.usernamePlaceholderInput": "Username",
   "auth.confirmPassword": "Confirm password",
   "storeApiKey.insertPlaceholder": "Insert your API Key",
-  "paginator.placeholder": "1"
+  "paginator.placeholder": "1",
+  "alerts.modelsRefreshed": "{{count}} model(s) refreshed",
+  "mcp.servers.toolsCount": "{{count}} tool(s)",
+  "misc.fetchErrorDescription": "Check if the server is running and try again.",
+  "misc.fetchErrorMessage": "Unable to reach the server",
+  "misc.timeoutErrorDescription": "The server is taking too long to respond.",
+  "misc.timeoutErrorMessage": "Connection timed out",
+  "store.results": "result(s)"
 }
