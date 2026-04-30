@@ -7,6 +7,7 @@ from .flow import Flow
 from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
+from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import Job
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
@@ -25,6 +26,8 @@ __all__ = [
     "FlowVersion",
     "FlowVersionDeploymentAttachment",
     "Folder",
+    "IngestionRun",
+    "IngestionRunStatus",
     "Job",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
