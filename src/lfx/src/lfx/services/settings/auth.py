@@ -133,6 +133,70 @@ class AuthSettings(BaseSettings):
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
+    # External trusted identity provider settings.
+    # These are used by Langflow to accept a credential issued or validated by
+    # an external identity layer, then map that identity to a normal local
+    # Langflow user through SSOUserProfile.
+    EXTERNAL_AUTH_ENABLED: bool = Field(
+        default=False,
+        description="Enable trusted external request authentication and JIT local user mapping.",
+    )
+    EXTERNAL_AUTH_PROVIDER: str = Field(
+        default="external",
+        description="Stable provider key used in SSOUserProfile.",
+    )
+    EXTERNAL_AUTH_TOKEN_HEADER: str = Field(
+        default="Authorization",
+        description="Header containing the external credential. Authorization Bearer values are supported.",
+    )
+    EXTERNAL_AUTH_TOKEN_COOKIE: str | None = Field(
+        default=None,
+        description="Optional cookie containing the external credential.",
+    )
+    EXTERNAL_AUTH_IDENTITY_RESOLVER: str | None = Field(
+        default=None,
+        description=(
+            "Optional module:attribute import path for a resolver that converts the external credential into an "
+            "identity. Defaults to built-in JWT validation."
+        ),
+    )
+    EXTERNAL_AUTH_TRUSTED_JWT_DECODE: bool = Field(
+        default=False,
+        description="Decode the external JWT without signature verification when an upstream layer validates it.",
+    )
+    EXTERNAL_AUTH_JWKS_URL: str | None = Field(
+        default=None,
+        description="JWKS URL used to verify external JWT signatures when trusted decode is disabled.",
+    )
+    EXTERNAL_AUTH_ISSUER: str | None = Field(
+        default=None,
+        description="Expected JWT issuer. Leave empty to skip issuer validation.",
+    )
+    EXTERNAL_AUTH_AUDIENCE: str | None = Field(
+        default=None,
+        description="Expected JWT audience. Comma-separated audiences are supported.",
+    )
+    EXTERNAL_AUTH_ALGORITHMS: str = Field(
+        default="RS256",
+        description="Comma-separated JWT algorithms accepted for external JWT validation.",
+    )
+    EXTERNAL_AUTH_SUBJECT_CLAIM: str = Field(
+        default="sub",
+        description="JWT claim used as the stable external user id.",
+    )
+    EXTERNAL_AUTH_USERNAME_CLAIM: str = Field(
+        default="preferred_username",
+        description="JWT claim preferred for the local Langflow username.",
+    )
+    EXTERNAL_AUTH_EMAIL_CLAIM: str = Field(
+        default="email",
+        description="JWT claim containing the user's email.",
+    )
+    EXTERNAL_AUTH_NAME_CLAIM: str = Field(
+        default="name",
+        description="JWT claim containing the user's display name.",
+    )
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")

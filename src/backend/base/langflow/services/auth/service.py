@@ -25,6 +25,7 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.exceptions import (
     InvalidTokenError as AuthInvalidTokenError,
 )
+from langflow.services.auth.external import get_or_create_external_user
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -170,10 +171,16 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -191,6 +198,18 @@ class AuthService(BaseAuthService):
             raise InactiveUserError(msg)
 
         return user
+
+    async def _authenticate_with_external_token(self, token: str, db: AsyncSession) -> User | None:
+        settings_service = self.settings
+        if not settings_service.auth_settings.EXTERNAL_AUTH_ENABLED:
+            return None
+
+        return await get_or_create_external_user(
+            token=token,
+            db=db,
+            auth_settings=settings_service.auth_settings,
+            password_hasher=self.get_password_hash,
+        )
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
