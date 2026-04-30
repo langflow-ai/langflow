@@ -43,6 +43,7 @@ from langflow.api.utils.flow_utils import (
     build_graph_from_db,
     build_graph_from_db_no_cache,
     cascade_delete_flow,
+    scope_session_to_namespace,
     verify_public_flow_and_get_user,
 )
 
@@ -85,6 +86,7 @@ __all__ = [
     "parse_value",
     "raise_error_if_astra_cloud_env",
     "remove_api_keys",
+    "scope_session_to_namespace",
     "validate_is_component",
     "verify_public_flow_and_get_user",
 ]

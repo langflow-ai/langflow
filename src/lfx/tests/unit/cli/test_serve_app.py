@@ -118,13 +118,13 @@ class TestCreateServeApp:
     def real_graph(self, simple_chat_json):
         """Create a real graph using Graph.from_payload to match serve_app expectations."""
         # Create graph using from_payload with real test data
-        return Graph.from_payload(simple_chat_json, flow_id="test-flow-id")
+        return Graph.from_payload(simple_chat_json, flow_id="00000000-0000-0000-0000-000000000001")
 
     @pytest.fixture
     def mock_meta(self):
         """Create mock flow metadata."""
         return FlowMeta(
-            id="test-flow-id",
+            id="00000000-0000-0000-0000-000000000001",
             relative_path="test.json",
             title="Test Flow",
             description="A test flow",
@@ -132,8 +132,8 @@ class TestCreateServeApp:
 
     def test_create_multi_serve_app_single_flow(self, real_graph, mock_meta):
         """Test creating app with single flow."""
-        graphs = {"test-flow-id": real_graph}
-        metas = {"test-flow-id": mock_meta}
+        graphs = {"00000000-0000-0000-0000-000000000001": real_graph}
+        metas = {"00000000-0000-0000-0000-000000000001": mock_meta}
         verbose_print = Mock()
 
         app = create_multi_serve_app(
@@ -150,7 +150,7 @@ class TestCreateServeApp:
         routes = [route.path for route in app.routes]
         assert "/health" in routes
         assert "/flows" in routes  # Multi-flow always has this
-        assert "/flows/test-flow-id/run" in routes  # Flow-specific endpoint
+        assert "/flows/00000000-0000-0000-0000-000000000001/run" in routes  # Flow-specific endpoint
 
     def test_create_multi_serve_app_multiple_flows(self, real_graph, mock_meta, simple_chat_json):
         """Test creating app with multiple flows."""
@@ -164,8 +164,8 @@ class TestCreateServeApp:
             description="Second flow",
         )
 
-        graphs = {"test-flow-id": real_graph, "flow-2": graph2}
-        metas = {"test-flow-id": mock_meta, "flow-2": meta2}
+        graphs = {"00000000-0000-0000-0000-000000000001": real_graph, "flow-2": graph2}
+        metas = {"00000000-0000-0000-0000-000000000001": mock_meta, "flow-2": meta2}
         verbose_print = Mock()
 
         app = create_multi_serve_app(
@@ -182,14 +182,14 @@ class TestCreateServeApp:
         routes = [route.path for route in app.routes]
         assert "/health" in routes
         assert "/flows" in routes
-        assert "/flows/test-flow-id/run" in routes
-        assert "/flows/test-flow-id/info" in routes
+        assert "/flows/00000000-0000-0000-0000-000000000001/run" in routes
+        assert "/flows/00000000-0000-0000-0000-000000000001/info" in routes
         assert "/flows/flow-2/run" in routes
         assert "/flows/flow-2/info" in routes
 
     def test_create_multi_serve_app_mismatched_keys(self, real_graph, mock_meta):
         """Test error when graphs and metas have different keys."""
-        graphs = {"test-flow-id": real_graph}
+        graphs = {"00000000-0000-0000-0000-000000000001": real_graph}
         metas = {"different-id": mock_meta}
         verbose_print = Mock()
 
@@ -217,13 +217,13 @@ class TestServeAppEndpoints:
     def real_graph_with_async(self, simple_chat_json):
         """Create a real graph with async execution capability."""
         # Create graph using from_payload with real test data
-        graph = Graph.from_payload(simple_chat_json, flow_id="test-flow-id")
+        graph = Graph.from_payload(simple_chat_json, flow_id="00000000-0000-0000-0000-000000000001")
 
         # Store original async_start to restore later if needed
         original_async_start = graph.async_start
 
         # Mock successful execution with real ResultData
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             # Create real Message and ResultData objects
             message = Message(text="Hello from flow")
             result_data = ResultData(
@@ -251,14 +251,14 @@ class TestServeAppEndpoints:
         from lfx.services.deps import get_settings_service
 
         meta = FlowMeta(
-            id="test-flow-id",
+            id="00000000-0000-0000-0000-000000000001",
             relative_path="test.json",
             title="Test Flow",
             description="A test flow",
         )
 
-        graphs = {"test-flow-id": real_graph_with_async}
-        metas = {"test-flow-id": meta}
+        graphs = {"00000000-0000-0000-0000-000000000001": real_graph_with_async}
+        metas = {"00000000-0000-0000-0000-000000000001": meta}
         verbose_print = Mock()
 
         app = create_multi_serve_app(
@@ -282,14 +282,14 @@ class TestServeAppEndpoints:
         # Create second real graph using the same JSON structure
         graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
 
-        async def mock_async_start2(inputs):  # noqa: ARG001
+        async def mock_async_start2(inputs, **kwargs):  # noqa: ARG001
             # Return empty results for this test
             yield MagicMock(outputs=[])
 
         graph2.async_start = mock_async_start2
 
         meta1 = FlowMeta(
-            id="test-flow-id",
+            id="00000000-0000-0000-0000-000000000001",
             relative_path="test.json",
             title="Test Flow",
             description="First flow",
@@ -301,8 +301,8 @@ class TestServeAppEndpoints:
             description="Second flow",
         )
 
-        graphs = {"test-flow-id": real_graph_with_async, "flow-2": graph2}
-        metas = {"test-flow-id": meta1, "flow-2": meta2}
+        graphs = {"00000000-0000-0000-0000-000000000001": real_graph_with_async, "flow-2": graph2}
+        metas = {"00000000-0000-0000-0000-000000000001": meta1, "flow-2": meta2}
         verbose_print = Mock()
 
         app = create_multi_serve_app(
@@ -340,7 +340,9 @@ class TestServeAppEndpoints:
                 "type": "message",
                 "component": "TestComponent",
             }
-            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -353,7 +355,7 @@ class TestServeAppEndpoints:
         request_data = {"input_value": "Test input"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
-            response = app_client.post("/flows/test-flow-id/run", json=request_data)
+            response = app_client.post("/flows/00000000-0000-0000-0000-000000000001/run", json=request_data)
 
         assert response.status_code == 401
         assert response.json()["detail"] == "API key required"
@@ -364,7 +366,9 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "wrong-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
-            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid API key"
@@ -376,15 +380,15 @@ class TestServeAppEndpoints:
         """Test that /run fails closed before execution when custom components are blocked."""
         real_graph_with_async.raw_graph_data = _blocked_raw_graph()
         meta = FlowMeta(
-            id="test-flow-id",
+            id="00000000-0000-0000-0000-000000000001",
             relative_path="test.json",
             title="Test Flow",
             description="A test flow",
         )
         app = create_multi_serve_app(
             root_dir=Path("/test"),
-            graphs={"test-flow-id": real_graph_with_async},
-            metas={"test-flow-id": meta},
+            graphs={"00000000-0000-0000-0000-000000000001": real_graph_with_async},
+            metas={"00000000-0000-0000-0000-000000000001": meta},
             verbose_print=Mock(),
         )
         headers = {"x-api-key": "test-api-key"}
@@ -411,7 +415,7 @@ class TestServeAppEndpoints:
         ):
             client = TestClient(app)
             response = client.post(
-                "/flows/test-flow-id/run",
+                "/flows/00000000-0000-0000-0000-000000000001/run",
                 json={"input_value": "Test input"},
                 headers=headers,
             )
@@ -435,7 +439,9 @@ class TestServeAppEndpoints:
                 "type": "message",
                 "component": "TestComponent",
             }
-            response = app_client.post("/flows/test-flow-id/run?x-api-key=test-api-key", json=request_data)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run?x-api-key=test-api-key", json=request_data
+            )
 
         assert response.status_code == 200
         assert response.json()["success"] is True
@@ -446,7 +452,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to raise an error
-        async def mock_execute_error(graph, input_value):  # noqa: ARG001
+        async def mock_execute_error(graph, input_value, session_id=None):  # noqa: ARG001
             msg = "Flow execution failed"
             raise RuntimeError(msg)
 
@@ -454,7 +460,9 @@ class TestServeAppEndpoints:
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
             patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_error),
         ):
-            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 200  # Returns 200 with error in response body
         data = response.json()
@@ -471,20 +479,69 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         # Mock execute_graph_with_capture to return empty results
-        async def mock_execute_empty(graph, input_value):  # noqa: ARG001
+        async def mock_execute_empty(graph, input_value, session_id=None):  # noqa: ARG001
             return [], ""  # Empty results and logs
 
         with (
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
             patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_empty),
         ):
-            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 200
         data = response.json()
         assert data["result"] == "No response generated"
         assert data["success"] is False
         assert data["type"] == "error"
+
+    def test_run_endpoint_forwards_session_id(self, app_client):
+        """The /run endpoint must forward session_id from RunRequest to the executor."""
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["session_id"] = session_id
+            return [], ""
+
+        request_data = {"input_value": "Test input", "session_id": "my-conversation"}
+        headers = {"x-api-key": "test-api-key"}
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+        ):
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
+
+        assert response.status_code == 200
+        assert captured["session_id"] == "my-conversation"
+
+    def test_stream_endpoint_forwards_session_id(self, app_client):
+        """The /stream endpoint must forward session_id from StreamRequest to the executor."""
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["session_id"] = session_id
+            return [], ""
+
+        request_data = {"input_value": "Test input", "session_id": "my-stream-conversation"}
+        headers = {"x-api-key": "test-api-key"}
+
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            # Drain the streaming response so the background task completes before we assert.
+            app_client.stream(
+                "POST", "/flows/00000000-0000-0000-0000-000000000001/stream", json=request_data, headers=headers
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        assert captured["session_id"] == "my-stream-conversation"
 
     def test_list_flows_endpoint(self, multi_flow_client):
         """Test listing flows in multi-flow mode."""
@@ -493,7 +550,7 @@ class TestServeAppEndpoints:
         assert response.status_code == 200
         flows = response.json()
         assert len(flows) == 2
-        assert any(f["id"] == "test-flow-id" for f in flows)
+        assert any(f["id"] == "00000000-0000-0000-0000-000000000001" for f in flows)
         assert any(f["id"] == "flow-2" for f in flows)
 
     def test_flow_info_endpoint(self, multi_flow_client):
@@ -501,11 +558,11 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
-            response = multi_flow_client.get("/flows/test-flow-id/info", headers=headers)
+            response = multi_flow_client.get("/flows/00000000-0000-0000-0000-000000000001/info", headers=headers)
 
         assert response.status_code == 200
         info = response.json()
-        assert info["id"] == "test-flow-id"
+        assert info["id"] == "00000000-0000-0000-0000-000000000001"
         assert info["title"] == "Test Flow"
         assert info["description"] == "First flow"
 
@@ -524,7 +581,9 @@ class TestServeAppEndpoints:
                 "type": "message",
                 "component": "TestComponent",
             }
-            response = multi_flow_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = multi_flow_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 200
         data = response.json()
@@ -536,7 +595,7 @@ class TestServeAppEndpoints:
         headers = {"x-api-key": "test-api-key"}
 
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
-            response = app_client.post("/flows/test-flow-id/run", json={}, headers=headers)
+            response = app_client.post("/flows/00000000-0000-0000-0000-000000000001/run", json={}, headers=headers)
 
         assert response.status_code == 422  # Validation error
 
@@ -544,7 +603,7 @@ class TestServeAppEndpoints:
         """Test flow execution with message-type output."""
 
         # Create a real message output scenario
-        async def mock_async_start_message(inputs):  # noqa: ARG001
+        async def mock_async_start_message(inputs, **kwargs):  # noqa: ARG001
             # Create real Message and ResultData objects
             message = Message(text="Message output")
             result_data = ResultData(
@@ -576,7 +635,9 @@ class TestServeAppEndpoints:
                 "type": "message",
                 "component": "Chat Output",
             }
-            response = app_client.post("/flows/test-flow-id/run", json=request_data, headers=headers)
+            response = app_client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
+            )
 
         assert response.status_code == 200
         data = response.json()
