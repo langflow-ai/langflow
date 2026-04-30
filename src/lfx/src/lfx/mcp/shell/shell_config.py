@@ -14,12 +14,17 @@ from pathlib import Path
 
 from lfx.mcp.shell.shell_constants import (
     DEFAULT_MAX_COMMAND_LENGTH,
+    DEFAULT_MAX_CONCURRENT,
     DEFAULT_MAX_OUTPUT_BYTES,
     DEFAULT_MAX_TIMEOUT_SECONDS,
+    DEFAULT_QUEUE_TIMEOUT_SECONDS,
+    ENV_ISOLATION,
     ENV_MAX_COMMAND_LENGTH,
+    ENV_MAX_CONCURRENT,
     ENV_MAX_OUTPUT_BYTES,
     ENV_MAX_TIMEOUT,
     ENV_MODE,
+    ENV_QUEUE_TIMEOUT,
     ENV_WORKING_DIR,
 )
 
@@ -27,6 +32,23 @@ from lfx.mcp.shell.shell_constants import (
 class ShellMode(Enum):
     READ_ONLY = "read_only"
     READ_WRITE = "read_write"
+
+
+class IsolationMode(Enum):
+    """How a per-call working directory is produced.
+
+    ``shared`` keeps the historical behaviour: every call uses the
+    configured ``working_directory``. Files persist between calls and
+    across tenants -- safe ONLY for single-tenant deployments.
+
+    ``ephemeral`` allocates a fresh ``TemporaryDirectory`` under the
+    configured base for every call and deletes it on return. Tenants
+    cannot see each other's files. Recommended default for any
+    deployment where more than one user shares the backend.
+    """
+
+    SHARED = "shared"
+    EPHEMERAL = "ephemeral"
 
 
 @dataclass(frozen=True)
@@ -43,6 +65,9 @@ class ShellServerConfig:
     max_timeout: int
     max_output_bytes: int
     max_command_length: int
+    max_concurrent: int
+    queue_timeout: int
+    isolation: IsolationMode
 
     @classmethod
     def from_environment(cls) -> ShellServerConfig:
@@ -52,6 +77,9 @@ class ShellServerConfig:
             max_timeout=_read_positive_int(ENV_MAX_TIMEOUT, DEFAULT_MAX_TIMEOUT_SECONDS),
             max_output_bytes=_read_positive_int(ENV_MAX_OUTPUT_BYTES, DEFAULT_MAX_OUTPUT_BYTES),
             max_command_length=_read_positive_int(ENV_MAX_COMMAND_LENGTH, DEFAULT_MAX_COMMAND_LENGTH),
+            max_concurrent=_read_positive_int(ENV_MAX_CONCURRENT, DEFAULT_MAX_CONCURRENT),
+            queue_timeout=_read_positive_int(ENV_QUEUE_TIMEOUT, DEFAULT_QUEUE_TIMEOUT_SECONDS),
+            isolation=_read_isolation(),
         )
 
     def clamp_timeout(self, requested: int) -> int:
@@ -81,6 +109,19 @@ def _read_mode() -> ShellMode:
     except ValueError as exc:
         valid = ", ".join(m.value for m in ShellMode)
         msg = f"{ENV_MODE} must be one of {valid}, got {raw!r}"
+        raise ValueError(msg) from exc
+
+
+def _read_isolation() -> IsolationMode:
+    raw = os.environ.get(ENV_ISOLATION)
+    if raw is None:
+        return IsolationMode.SHARED
+    normalized = raw.strip().lower()
+    try:
+        return IsolationMode(normalized)
+    except ValueError as exc:
+        valid = ", ".join(m.value for m in IsolationMode)
+        msg = f"{ENV_ISOLATION} must be one of {valid}, got {raw!r}"
         raise ValueError(msg) from exc
 
 

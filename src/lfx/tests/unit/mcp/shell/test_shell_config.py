@@ -21,10 +21,13 @@ class TestShellServerConfigDefaults:
         config = ShellServerConfig.from_environment()
         assert config.mode == ShellMode.READ_WRITE
 
-    def test_should_default_max_timeout_to_120_seconds(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_max_timeout_to_30_seconds(self, monkeypatch: pytest.MonkeyPatch):
+        # 30s is web-proxy-friendly: stays under Heroku's 30s, ALB 60s,
+        # Cloudflare 100s, nginx default 60s. Operators with longer-running
+        # commands raise LANGFLOW_SHELL_MAX_TIMEOUT explicitly.
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_TIMEOUT", raising=False)
         config = ShellServerConfig.from_environment()
-        assert config.max_timeout == 120
+        assert config.max_timeout == 30
 
     def test_should_default_max_output_bytes_to_16kb(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_OUTPUT_BYTES", raising=False)
@@ -35,6 +38,37 @@ class TestShellServerConfigDefaults:
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_COMMAND_LENGTH", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.max_command_length == 4 * 1024
+
+    def test_should_default_max_concurrent_to_4(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("LANGFLOW_SHELL_MAX_CONCURRENT", raising=False)
+        config = ShellServerConfig.from_environment()
+        assert config.max_concurrent == 4
+
+    def test_should_default_queue_timeout_to_10_seconds(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.delenv("LANGFLOW_SHELL_QUEUE_TIMEOUT", raising=False)
+        config = ShellServerConfig.from_environment()
+        assert config.queue_timeout == 10
+
+    def test_should_default_isolation_to_shared(self, monkeypatch: pytest.MonkeyPatch):
+        from lfx.mcp.shell.shell_config import IsolationMode
+
+        # ``shared`` is the historical behaviour; ephemeral is opt-in so
+        # operators upgrading do not see a sudden state-loss change.
+        monkeypatch.delenv("LANGFLOW_SHELL_ISOLATION", raising=False)
+        config = ShellServerConfig.from_environment()
+        assert config.isolation is IsolationMode.SHARED
+
+    def test_should_read_ephemeral_isolation_from_env(self, monkeypatch: pytest.MonkeyPatch):
+        from lfx.mcp.shell.shell_config import IsolationMode
+
+        monkeypatch.setenv("LANGFLOW_SHELL_ISOLATION", "ephemeral")
+        config = ShellServerConfig.from_environment()
+        assert config.isolation is IsolationMode.EPHEMERAL
+
+    def test_should_reject_unknown_isolation_value(self, monkeypatch: pytest.MonkeyPatch):
+        monkeypatch.setenv("LANGFLOW_SHELL_ISOLATION", "container")
+        with pytest.raises(ValueError, match="LANGFLOW_SHELL_ISOLATION"):
+            ShellServerConfig.from_environment()
 
 
 class TestShellServerConfigEnvOverrides:
@@ -117,24 +151,34 @@ class TestShellServerConfigImmutability:
 
 class TestShellServerConfigClamping:
     def test_clamp_timeout_should_return_min_of_requested_and_max(self):
+        from lfx.mcp.shell.shell_config import IsolationMode
+
         config = ShellServerConfig(
             working_directory=str(Path.cwd()),
             mode=ShellMode.READ_WRITE,
             max_timeout=60,
             max_output_bytes=1024,
             max_command_length=4096,
+            max_concurrent=4,
+            queue_timeout=10,
+            isolation=IsolationMode.SHARED,
         )
         assert config.clamp_timeout(30) == 30
         assert config.clamp_timeout(60) == 60
         assert config.clamp_timeout(120) == 60
 
     def test_clamp_timeout_should_reject_non_positive(self):
+        from lfx.mcp.shell.shell_config import IsolationMode
+
         config = ShellServerConfig(
             working_directory=str(Path.cwd()),
             mode=ShellMode.READ_WRITE,
             max_timeout=60,
             max_output_bytes=1024,
             max_command_length=4096,
+            max_concurrent=4,
+            queue_timeout=10,
+            isolation=IsolationMode.SHARED,
         )
         with pytest.raises(ValueError, match="timeout"):
             config.clamp_timeout(0)

@@ -40,6 +40,10 @@ class RejectionReason(Enum):
     # Refused construct: ``$(...)`` / `` `...` `` / similar shell
     # substitution wrappers that embed an unvalidatable inner command.
     SHELL_SUBSTITUTION_NOT_ALLOWED = "shell_substitution_not_allowed"
+    # Server is at its concurrency cap and the call could not acquire a
+    # permit before ``queue_timeout`` elapsed. Stable, retryable signal
+    # so an agent can back off instead of waiting past the proxy budget.
+    QUEUE_FULL = "queue_full"
 
 
 @dataclass(frozen=True)

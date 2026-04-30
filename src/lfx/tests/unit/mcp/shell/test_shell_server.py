@@ -21,12 +21,17 @@ if TYPE_CHECKING:
 
 
 def _config(tmp_path: Path, **overrides) -> ShellServerConfig:
+    from lfx.mcp.shell.shell_config import IsolationMode
+
     base = {
         "working_directory": str(tmp_path.resolve()),
         "mode": ShellMode.READ_WRITE,
         "max_timeout": 120,
         "max_output_bytes": 16 * 1024,
         "max_command_length": 4096,
+        "max_concurrent": 4,
+        "queue_timeout": 10,
+        "isolation": IsolationMode.SHARED,
     }
     base.update(overrides)
     return ShellServerConfig(**base)

@@ -14,12 +14,29 @@ ENV_MODE = "LANGFLOW_SHELL_MODE"
 ENV_MAX_TIMEOUT = "LANGFLOW_SHELL_MAX_TIMEOUT"
 ENV_MAX_OUTPUT_BYTES = "LANGFLOW_SHELL_MAX_OUTPUT_BYTES"
 ENV_MAX_COMMAND_LENGTH = "LANGFLOW_SHELL_MAX_COMMAND_LENGTH"
+ENV_MAX_CONCURRENT = "LANGFLOW_SHELL_MAX_CONCURRENT"
+ENV_QUEUE_TIMEOUT = "LANGFLOW_SHELL_QUEUE_TIMEOUT"
+ENV_ISOLATION = "LANGFLOW_SHELL_ISOLATION"
 
 # ---- Defaults ----------------------------------------------------------------
 
-DEFAULT_MAX_TIMEOUT_SECONDS = 120
+# Default deliberately tuned for web deployments: stays under common
+# proxy budgets (Heroku 30s hard limit, AWS ALB default 60s, Cloudflare
+# free 100s, nginx default 60s) so a synchronous tool call rarely
+# exceeds the request window. Operators running locally can raise
+# LANGFLOW_SHELL_MAX_TIMEOUT for long-running commands.
+DEFAULT_MAX_TIMEOUT_SECONDS = 30
 DEFAULT_MAX_OUTPUT_BYTES = 16 * 1024
 DEFAULT_MAX_COMMAND_LENGTH = 4 * 1024
+# Concurrency cap: a single agent / runaway loop must not be able to
+# saturate the host's PIDs / FDs / RAM and starve other tenants. Four
+# parallel commands is enough for most flows while keeping the worst-case
+# resource footprint bounded.
+DEFAULT_MAX_CONCURRENT = 4
+# Maximum time a queued call waits for a permit before being rejected
+# with QUEUE_FULL. Kept short so a backed-up server fails fast rather
+# than holding the request past the upstream proxy budget.
+DEFAULT_QUEUE_TIMEOUT_SECONDS = 10
 
 # ---- Truncation marker -------------------------------------------------------
 

@@ -20,12 +20,17 @@ if TYPE_CHECKING:
 def _config(
     tmp_path: Path, *, mode: ShellMode = ShellMode.READ_WRITE, max_command_length: int = 4096
 ) -> ShellServerConfig:
+    from lfx.mcp.shell.shell_config import IsolationMode
+
     return ShellServerConfig(
         working_directory=str(tmp_path.resolve()),
         mode=mode,
         max_timeout=120,
         max_output_bytes=16 * 1024,
         max_command_length=max_command_length,
+        max_concurrent=4,
+        queue_timeout=10,
+        isolation=IsolationMode.SHARED,
     )
 
 

@@ -12,16 +12,20 @@ honour an env var change made after the server boots.
 
 from __future__ import annotations
 
+import asyncio
+import dataclasses
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
 from lfx.log.logger import logger
+from lfx.mcp.shell.audit_context import AuditContext, from_fastmcp_context
 from lfx.mcp.shell.output_truncation import truncate_output
 from lfx.mcp.shell.shell_config import ShellServerConfig
 from lfx.mcp.shell.shell_types import ExecutionResult, RejectionReason
 from lfx.mcp.shell.subprocess_executor import execute_subprocess
 from lfx.mcp.shell.validation_pipeline import run_validation_pipeline
+from lfx.mcp.shell.working_directory_strategy import build_strategy
 
 mcp = FastMCP(
     "langflow-shell",
@@ -37,13 +41,15 @@ mcp = FastMCP(
         "Configuration via environment variables:\n"
         "  LANGFLOW_SHELL_WORKING_DIR     -- cwd for all commands (default: $PWD)\n"
         "  LANGFLOW_SHELL_MODE            -- read_write (default) or read_only\n"
-        "  LANGFLOW_SHELL_MAX_TIMEOUT     -- upper bound per call (default 120s)\n"
+        "  LANGFLOW_SHELL_MAX_TIMEOUT     -- upper bound per call (default 30s)\n"
         "  LANGFLOW_SHELL_MAX_OUTPUT_BYTES-- truncation threshold (default 16KB)\n"
         "  LANGFLOW_SHELL_MAX_COMMAND_LENGTH -- input cap (default 4KB)\n"
     ),
 )
 
 _config: ShellServerConfig | None = None
+_semaphore: asyncio.Semaphore | None = None
+_semaphore_capacity: int | None = None
 
 
 def get_config() -> ShellServerConfig:
@@ -53,8 +59,38 @@ def get_config() -> ShellServerConfig:
     return _config
 
 
+def _get_semaphore(config: ShellServerConfig) -> asyncio.Semaphore:
+    """Module-level concurrency permit pool.
+
+    Sized once from the supplied config. If a caller passes a different
+    ``max_concurrent`` (e.g. tests overriding the cap) the semaphore is
+    rebuilt — production runs always pass the same singleton config so
+    the rebuild is a no-op there.
+    """
+    global _semaphore, _semaphore_capacity  # noqa: PLW0603 — singleton lifecycle
+    if _semaphore is None or _semaphore_capacity != config.max_concurrent:
+        _semaphore = asyncio.Semaphore(config.max_concurrent)
+        _semaphore_capacity = config.max_concurrent
+    return _semaphore
+
+
+def _reset_concurrency_for_testing() -> None:
+    """Drop the cached semaphore so each test starts with fresh permits.
+
+    Test-only helper — never call from production code.
+    """
+    global _semaphore, _semaphore_capacity  # noqa: PLW0603 — test-only reset
+    _semaphore = None
+    _semaphore_capacity = None
+
+
 @mcp.tool()
-async def execute_command(command: str, timeout: int = 120, description: str = "") -> dict[str, Any]:
+async def execute_command(
+    command: str,
+    timeout: int = 30,
+    description: str = "",
+    ctx: object | None = None,
+) -> dict[str, Any]:
     """Execute a shell command in the configured working directory.
 
     Args:
@@ -65,6 +101,9 @@ async def execute_command(command: str, timeout: int = 120, description: str = "
             the server-configured ``max_timeout``.
         description: Free-form text describing the purpose of the
             command. Recorded in the audit log; not used for execution.
+        ctx: FastMCP request context, injected by the framework when
+            available. Used to extract correlation IDs (request_id,
+            client_id) for the structured audit log.
 
     Returns:
         Dict with keys ``stdout``, ``stderr``, ``exit_code``, ``timed_out``.
@@ -76,6 +115,7 @@ async def execute_command(command: str, timeout: int = 120, description: str = "
         timeout=timeout,
         description=description,
         config=get_config(),
+        audit_ctx=from_fastmcp_context(ctx),
     )
 
 
@@ -85,39 +125,68 @@ async def handle_execute_command(
     timeout: int,
     description: str,
     config: ShellServerConfig,
+    audit_ctx: AuditContext | None = None,
 ) -> dict[str, Any]:
     """Stand-alone handler — no FastMCP coupling.
 
     Kept separate from the ``@mcp.tool()`` registration so unit tests
     can exercise the full pipeline without booting the server.
     """
+    audit_fields = dict(audit_ctx.as_log_fields()) if audit_ctx is not None else {}
     try:
         clamped_timeout = config.clamp_timeout(timeout)
     except ValueError as exc:
         return _rejection(RejectionReason.INPUT_TOO_LARGE, str(exc))
 
-    validation = run_validation_pipeline(command, config)
-    if not validation.is_ok:
-        assert validation.reason is not None  # noqa: S101 — invariant of ValidationResult.reject
+    semaphore = _get_semaphore(config)
+    try:
+        await asyncio.wait_for(semaphore.acquire(), timeout=config.queue_timeout)
+    except asyncio.TimeoutError:
         logger.info(
-            "shell_mcp.command_rejected",
-            reason=validation.reason.value,
+            "shell_mcp.command_queue_full",
             description=description,
+            queue_timeout=config.queue_timeout,
+            **audit_fields,
         )
-        return _rejection(validation.reason, validation.message)
+        return _rejection(
+            RejectionReason.QUEUE_FULL,
+            "Command rejected: server is at concurrency cap "
+            f"({config.max_concurrent}); retry after a short backoff.",
+        )
 
-    logger.info(
-        "shell_mcp.command_accepted",
-        description=description,
-        timeout=clamped_timeout,
-    )
-    raw = await execute_subprocess(
-        command,
-        working_directory=config.working_directory,
-        timeout=clamped_timeout,
-    )
-    truncated = _apply_truncation(raw, config.max_output_bytes)
-    return truncated.to_dict()
+    try:
+        # The strategy yields the working directory used for both path
+        # validation and the subprocess; ephemeral mode allocates a fresh
+        # tempdir per call so tenants never see each other's files.
+        strategy = build_strategy(config.isolation, base_directory=config.working_directory)
+        with strategy.acquire() as effective_workdir:
+            effective_config = dataclasses.replace(config, working_directory=effective_workdir)
+            validation = run_validation_pipeline(command, effective_config)
+            if not validation.is_ok:
+                assert validation.reason is not None  # noqa: S101 — invariant of ValidationResult.reject
+                logger.info(
+                    "shell_mcp.command_rejected",
+                    reason=validation.reason.value,
+                    description=description,
+                    **audit_fields,
+                )
+                return _rejection(validation.reason, validation.message)
+
+            logger.info(
+                "shell_mcp.command_accepted",
+                description=description,
+                timeout=clamped_timeout,
+                **audit_fields,
+            )
+            raw = await execute_subprocess(
+                command,
+                working_directory=effective_workdir,
+                timeout=clamped_timeout,
+            )
+            truncated = _apply_truncation(raw, config.max_output_bytes)
+            return truncated.to_dict()
+    finally:
+        semaphore.release()
 
 
 def _rejection(reason: RejectionReason, message: str) -> dict[str, Any]:

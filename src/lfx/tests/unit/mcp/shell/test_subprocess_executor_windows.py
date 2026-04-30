@@ -90,7 +90,11 @@ async def test_kill_tree_windows_should_invoke_taskkill(monkeypatch: pytest.Monk
     proc.pid = 9999
     await subprocess_executor._kill_tree_windows(proc)
     assert captured_args, "taskkill should have been invoked"
-    assert captured_args[0][0] == "taskkill"
+    # taskkill is now resolved via %SystemRoot%\System32 (absolute path) to
+    # prevent PATH-based hijacking — the test only checks the binary name
+    # rather than the bare string "taskkill". See test_subprocess_taskkill_path
+    # for explicit absolute-path coverage.
+    assert captured_args[0][0].lower().endswith("taskkill.exe")
     assert "/T" in captured_args[0]
     assert "/F" in captured_args[0]
     assert "/PID" in captured_args[0]
