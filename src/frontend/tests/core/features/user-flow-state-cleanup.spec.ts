@@ -106,11 +106,12 @@ test(
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
+    await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 120000,
+      timeout: 60000,
     });
 
     await renameFlow(page, { flowName: userAFlowName });
