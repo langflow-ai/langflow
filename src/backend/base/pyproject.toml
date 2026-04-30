@@ -261,7 +261,7 @@ fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython==3.1.43"]
+gitpython = ["GitPython==3.1.47"]
 nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
