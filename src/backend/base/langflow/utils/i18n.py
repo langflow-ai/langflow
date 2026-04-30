@@ -131,10 +131,10 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
         if node.get("type") == "noteNode":
             i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
             if i18n_key:
-                node_copy = copy.deepcopy(node)
-                description = node_copy["data"]["node"].get("description", "")
-                node_copy["data"]["node"]["description"] = translate(i18n_key, locale, description)
-                result.append(node_copy)
+                translated_node = copy.deepcopy(node)
+                description = translated_node["data"]["node"].get("description", "")
+                translated_node["data"]["node"]["description"] = translate(i18n_key, locale, description)
+                result.append(translated_node)
                 continue
         result.append(node)
     return result
