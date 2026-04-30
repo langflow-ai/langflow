@@ -86,9 +86,18 @@ async def build_and_cache_graph_from_data(
     graph_data: dict,
 ):  # -> Graph | Any:
     """Build and cache the graph."""
-    # Convert flow_id to str if it's UUID
+    flow_uuid = flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(str(flow_id))
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
+
+    async with session_scope_readonly() as session:
+        flow_row = await session.get(Flow, flow_uuid)
+        if flow_row is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
+        flow_activity_enabled = flow_row.flow_activity_enabled
+
     graph = Graph.from_payload(graph_data, str_flow_id)
+    graph.flow_activity_enabled = flow_activity_enabled
     await chat_service.set_cache(str_flow_id, graph)
     return graph
 
