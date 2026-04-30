@@ -789,10 +789,16 @@ async def ingest_files_to_knowledge_base(
                 detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
             )
 
-        embedding_provider = metadata.get("embedding_provider")
-        embedding_model = metadata.get("embedding_model")
-
-        if not embedding_provider or not embedding_model:
+        # ``model_selection`` is the canonical embedding-config payload.
+        # Synthesize it from the legacy flat metadata fields when older
+        # KBs only carry those (``record_to_metadata_dict`` writes both
+        # forms for new KBs, so this branch is mainly for disk-only
+        # ones that haven't been backfilled yet).
+        model_selection = metadata.get("model_selection") or {
+            "name": metadata.get("embedding_model"),
+            "provider": metadata.get("embedding_provider"),
+        }
+        if not model_selection.get("name") or not model_selection.get("provider"):
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
 
         # Use ``KnowledgeBaseRecord.id`` (when present) as the Job's
@@ -834,8 +840,7 @@ async def ingest_files_to_knowledge_base(
             separator=separator,
             source_name=source_name,
             current_user=current_user,
-            embedding_provider=embedding_provider,
-            embedding_model=embedding_model,
+            model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
         )
@@ -909,9 +914,11 @@ async def ingest_folder_to_knowledge_base(
                 detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
             )
 
-        embedding_provider = metadata.get("embedding_provider")
-        embedding_model = metadata.get("embedding_model")
-        if not embedding_provider or not embedding_model:
+        model_selection = metadata.get("model_selection") or {
+            "name": metadata.get("embedding_model"),
+            "provider": metadata.get("embedding_provider"),
+        }
+        if not model_selection.get("name") or not model_selection.get("provider"):
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
 
         asset_id = await _resolve_kb_asset_id(
@@ -964,8 +971,7 @@ async def ingest_folder_to_knowledge_base(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
-            embedding_provider=embedding_provider,
-            embedding_model=embedding_model,
+            model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
             source=folder_source,
@@ -1296,9 +1302,11 @@ async def ingest_via_connector(
                 status_code=400,
                 detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
             )
-        embedding_provider = metadata.get("embedding_provider")
-        embedding_model = metadata.get("embedding_model")
-        if not embedding_provider or not embedding_model:
+        model_selection = metadata.get("model_selection") or {
+            "name": metadata.get("embedding_model"),
+            "provider": metadata.get("embedding_provider"),
+        }
+        if not model_selection.get("name") or not model_selection.get("provider"):
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
         asset_id = await _resolve_kb_asset_id(
             kb_name=kb_name,
@@ -1368,8 +1376,7 @@ async def ingest_via_connector(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
-            embedding_provider=embedding_provider,
-            embedding_model=embedding_model,
+            model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
             source=source,
