@@ -55,17 +55,33 @@ export function getSelectedFlowVersionKey(flowId: string, versionId: string) {
   return `${flowId}:${versionId}`;
 }
 
+function getShortIdentifier(value: string) {
+  const normalizedValue = value.trim();
+  const compactValue = normalizedValue.includes("-")
+    ? normalizedValue.split("-").at(-1) || normalizedValue
+    : normalizedValue;
+  return compactValue.slice(0, 8) || "tool";
+}
+
+export function createDeploymentToolNameScopeId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
 export function getDefaultDeploymentToolName(
   flowName: string,
   uniqueId: string,
+  scopeId?: string | null,
 ) {
   const trimmedFlowName = flowName.trim() || "Flow";
-  const normalizedId = uniqueId.trim();
-  const compactId = normalizedId.includes("-")
-    ? normalizedId.split("-").at(-1) || normalizedId
-    : normalizedId;
-  const shortId = compactId.slice(0, 8) || "tool";
-  return `${trimmedFlowName} ${shortId}`;
+  const shortId = getShortIdentifier(uniqueId);
+  const shortScopeId = scopeId ? getShortIdentifier(scopeId).slice(0, 6) : "";
+  return shortScopeId
+    ? `${trimmedFlowName} ${shortScopeId}-${shortId}`
+    : `${trimmedFlowName} ${shortId}`;
 }
 
 export interface Deployment {

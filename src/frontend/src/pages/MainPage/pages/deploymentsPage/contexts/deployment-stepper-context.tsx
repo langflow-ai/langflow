@@ -5,6 +5,7 @@ import {
   type SetStateAction,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -28,6 +29,7 @@ import type {
   SelectedFlowVersion,
 } from "../types";
 import {
+  createDeploymentToolNameScopeId,
   getDefaultDeploymentToolName,
   getSelectedFlowVersionKey,
 } from "../types";
@@ -100,6 +102,7 @@ interface DeploymentStepperContextType {
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
   /** Original tool names from provider before this edit session (edit mode). Key = attachment key. */
   initialToolNameByFlow: Map<string, string>;
+  defaultToolNameScopeId: string | null;
   /** Attachment keys that were already attached before this edit session (edit mode). */
   preExistingFlowIds: Set<string>;
   /** Attachment keys that were originally attached but the user chose to detach (edit mode). */
@@ -156,6 +159,28 @@ function getScopedValue<T>(
   return map.get(attachmentKey) ?? map.get(flowId);
 }
 
+function getScopedToolName(
+  map: Map<string, string>,
+  attachmentKey: string,
+  flowId: string,
+  versionMap: Map<string, SelectedFlowVersion>,
+): string | undefined {
+  const strictValue = map.get(attachmentKey);
+  if (strictValue !== undefined) {
+    return strictValue;
+  }
+
+  const flowVersionCount = Array.from(versionMap.values()).filter(
+    (entry) => entry.flowId === flowId,
+  ).length;
+
+  if (flowVersionCount > 1) {
+    return undefined;
+  }
+
+  return map.get(flowId);
+}
+
 export function DeploymentStepperProvider({
   children,
   initialState,
@@ -196,16 +221,32 @@ export function DeploymentStepperProvider({
     initialState?.initialLlm ?? "",
   );
 
+  const normalizedInitialVersions = useMemo(
+    () => normalizeSelectedFlowVersions(initialState?.selectedVersionByFlow),
+    [initialState?.selectedVersionByFlow],
+  );
+  const normalizedInitialToolNames = useMemo(
+    () => initialState?.initialToolNameByFlow ?? new Map<string, string>(),
+    [initialState?.initialToolNameByFlow],
+  );
+  const normalizedInitialConnections = useMemo(
+    () => initialState?.initialConnectionsByFlow ?? new Map<string, string[]>(),
+    [initialState?.initialConnectionsByFlow],
+  );
+
   const [selectedVersionByFlow, setSelectedVersionByFlow] = useState<
     Map<string, SelectedFlowVersion>
-  >(normalizeSelectedFlowVersions(initialState?.selectedVersionByFlow));
+  >(normalizedInitialVersions);
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
-    initialState?.initialToolNameByFlow ?? new Map(),
+    normalizedInitialToolNames,
+  );
+  const [defaultToolNameScopeId] = useState<string | null>(() =>
+    isEditMode ? null : createDeploymentToolNameScopeId(),
   );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
-  >(initialState?.initialConnectionsByFlow ?? new Map());
+  >(normalizedInitialConnections);
 
   const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
   const trimmedDeploymentName = deploymentName.trim();
@@ -220,25 +261,40 @@ export function DeploymentStepperProvider({
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
   // Cache removed flow data so undo can restore it.
-  const initialVersionByFlow = useMemo(
-    () => normalizeSelectedFlowVersions(initialState?.selectedVersionByFlow),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  const initialVersionByFlow = normalizedInitialVersions;
   const preExistingFlowIds = useMemo(
     () => new Set(initialVersionByFlow.keys()),
     [initialVersionByFlow],
   );
-  const initialToolNameByFlow = useMemo(
-    () => initialState?.initialToolNameByFlow ?? new Map<string, string>(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  const initialConnectionsByFlow = useMemo(
-    () => initialState?.initialConnectionsByFlow ?? new Map<string, string[]>(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  const initialToolNameByFlow = normalizedInitialToolNames;
+  const initialConnectionsByFlow = normalizedInitialConnections;
+
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (
+      selectedVersionByFlow.size === 0 &&
+      normalizedInitialVersions.size > 0
+    ) {
+      setSelectedVersionByFlow(normalizedInitialVersions);
+    }
+    if (toolNameByFlow.size === 0 && normalizedInitialToolNames.size > 0) {
+      setToolNameByFlow(normalizedInitialToolNames);
+    }
+    if (
+      attachedConnectionByFlow.size === 0 &&
+      normalizedInitialConnections.size > 0
+    ) {
+      setAttachedConnectionByFlow(normalizedInitialConnections);
+    }
+  }, [
+    attachedConnectionByFlow.size,
+    isEditMode,
+    normalizedInitialConnections,
+    normalizedInitialToolNames,
+    normalizedInitialVersions,
+    selectedVersionByFlow.size,
+    toolNameByFlow.size,
+  ]);
 
   const handleRemoveAttachedFlow = useCallback(
     (attachmentKeyOrFlowId: string) => {
@@ -460,16 +516,18 @@ export function DeploymentStepperProvider({
             attachmentKey,
             versionEntry.flowId,
           ) ?? [];
-        const customToolName = getScopedValue(
+        const strictToolName = getScopedToolName(
           toolNameByFlow,
           attachmentKey,
           versionEntry.flowId,
+          selectedVersionByFlow,
         )?.trim();
         const resolvedToolName =
-          customToolName ||
+          strictToolName ||
           getDefaultDeploymentToolName(
             versionEntry.flowName ?? "Flow",
             versionEntry.versionId,
+            defaultToolNameScopeId,
           );
         addFlows.push({
           flow_version_id: versionEntry.versionId,
@@ -499,6 +557,7 @@ export function DeploymentStepperProvider({
       attachedConnectionByFlow,
       buildConnectionPayloads,
       initialState?.projectId,
+      defaultToolNameScopeId,
       deploymentDescription,
       deploymentType,
       isDeploymentNameValid,
@@ -544,16 +603,18 @@ export function DeploymentStepperProvider({
             attachmentKey,
             versionEntry.flowId,
           ) ?? [];
-        const customToolName = getScopedValue(
+        const strictToolName = getScopedToolName(
           toolNameByFlow,
           attachmentKey,
           versionEntry.flowId,
+          selectedVersionByFlow,
         )?.trim();
         const resolvedToolName =
-          customToolName ||
+          strictToolName ||
           getDefaultDeploymentToolName(
             versionEntry.flowName ?? "Flow",
             versionEntry.versionId,
+            defaultToolNameScopeId,
           );
         upsertFlows.push({
           flow_version_id: versionEntry.versionId,
@@ -569,16 +630,18 @@ export function DeploymentStepperProvider({
       )) {
         if (!initialVersionByFlow.has(attachmentKey)) continue;
         const currentName =
-          getScopedValue(
+          getScopedToolName(
             toolNameByFlow,
             attachmentKey,
             versionEntry.flowId,
+            selectedVersionByFlow,
           )?.trim() ?? "";
         const originalName =
-          getScopedValue(
+          getScopedToolName(
             initialToolNameByFlow,
             attachmentKey,
             versionEntry.flowId,
+            initialVersionByFlow,
           )?.trim() ?? "";
         const nameChanged = currentName && currentName !== originalName;
 
@@ -657,6 +720,7 @@ export function DeploymentStepperProvider({
     }, [
       editingDeployment,
       deploymentDescription,
+      defaultToolNameScopeId,
       isDeploymentNameValid,
       selectedLlm,
       initialVersionByFlow,
@@ -703,6 +767,7 @@ export function DeploymentStepperProvider({
       toolNameByFlow,
       setToolNameByFlow,
       initialToolNameByFlow,
+      defaultToolNameScopeId,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       preExistingFlowIds,
@@ -744,6 +809,7 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       initialToolNameByFlow,
+      defaultToolNameScopeId,
       attachedConnectionByFlow,
       preExistingFlowIds,
       removedFlowIds,

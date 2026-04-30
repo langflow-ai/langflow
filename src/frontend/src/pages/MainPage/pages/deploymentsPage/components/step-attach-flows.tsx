@@ -31,6 +31,7 @@ export default function StepAttachFlows() {
     handleSelectVersion: onSelectVersion,
     toolNameByFlow,
     setToolNameByFlow,
+    defaultToolNameScopeId,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
     removedFlowIds,
@@ -141,13 +142,19 @@ export default function StepAttachFlows() {
           getDefaultDeploymentToolName(
             pendingAttachment.flowName,
             pendingAttachment.versionId,
+            defaultToolNameScopeId,
           ),
         );
         return next;
       });
       setPendingAttachment(null);
     }
-  }, [pendingAttachment, onSelectVersion, setToolNameByFlow]);
+  }, [
+    defaultToolNameScopeId,
+    pendingAttachment,
+    onSelectVersion,
+    setToolNameByFlow,
+  ]);
 
   const resetPendingAttachment = useCallback(() => {
     setPendingAttachment(null);
@@ -188,6 +195,7 @@ export default function StepAttachFlows() {
   const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
+  const handledPreselectedAttachmentRef = useRef<string | null>(null);
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
@@ -200,6 +208,8 @@ export default function StepAttachFlows() {
         )
       : undefined;
     if (!preSelected) return;
+    if (handledPreselectedAttachmentRef.current === preSelected.key) return;
+    handledPreselectedAttachmentRef.current = preSelected.key;
 
     setToolNameByFlow((prev) => {
       if (prev.has(preSelected.key)) {
@@ -210,7 +220,11 @@ export default function StepAttachFlows() {
       const next = new Map(prev);
       next.set(
         preSelected.key,
-        getDefaultDeploymentToolName(flowName, preSelected.versionId),
+        getDefaultDeploymentToolName(
+          flowName,
+          preSelected.versionId,
+          defaultToolNameScopeId,
+        ),
       );
       return next;
     });
@@ -236,6 +250,7 @@ export default function StepAttachFlows() {
     initialFlowId,
     selectedVersionByFlow,
     detectEnvVars,
+    defaultToolNameScopeId,
     setErrorData,
     setToolNameByFlow,
     updateDetectedEnvVars,
