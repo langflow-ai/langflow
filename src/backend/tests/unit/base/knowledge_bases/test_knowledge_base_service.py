@@ -23,8 +23,6 @@ class TestCreateAndRead:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_alpha",
-            embedding_provider="OpenAI",
-            embedding_model="text-embedding-3-small",
             model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
             chunk_size=512,
             chunk_overlap=64,
@@ -48,14 +46,12 @@ class TestCreateAndRead:
         first = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_list_a",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         second = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_list_b",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         rows = await knowledge_base_service.list_by_user(active_user.id)
         ids = [r.id for r in rows]
@@ -70,8 +66,7 @@ class TestUpdates:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_stats",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         await knowledge_base_service.update_stats(
             record.id,
@@ -99,8 +94,7 @@ class TestUpdates:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_separator_clear",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
             separator="\n",
         )
 
@@ -120,8 +114,7 @@ class TestUpdates:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_status",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         await knowledge_base_service.update_status(
             record.id, status=KnowledgeBaseStatus.FAILED, failure_reason="test error"
@@ -137,8 +130,7 @@ class TestDelete:
         await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_delete",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         assert await knowledge_base_service.get_by_user_and_name(active_user.id, "phase_15_kb_delete") is not None
 
@@ -161,9 +153,9 @@ class TestNormalization:
             id=uuid.uuid4(),
             name="kb",
             user_id=uuid.uuid4(),
-            embedding_provider="OpenAI",
-            embedding_model="text-embedding-3-small",
-            model_selection={"name": "x"},
+            # Provider / model now derived from ``model_selection`` —
+            # the flat columns no longer exist on the table.
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
             chunk_size=1000,
             chunk_overlap=200,
             backend_type="opensearch",
@@ -177,6 +169,9 @@ class TestNormalization:
             updated_at=datetime.now(timezone.utc),
         )
         snapshot = knowledge_base_service.record_to_metadata_dict(record)
+        # Flat fields are derived views over ``model_selection``.
+        assert snapshot["embedding_provider"] == "OpenAI"
+        assert snapshot["embedding_model"] == "text-embedding-3-small"
         # Matches legacy JSON keys so downstream readers stay intact.
         for key in [
             "id",
@@ -210,8 +205,7 @@ class TestNormalization:
             id=uuid.uuid4(),
             name="kb_empty",
             user_id=uuid.uuid4(),
-            embedding_provider="OpenAI",
-            embedding_model="text-embedding-3-small",
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
             chunks=0,
             words=0,
             characters=0,
@@ -253,7 +247,9 @@ class TestBackfillFromDisk:
 
         a = await knowledge_base_service.get_by_user_and_name(active_user.id, "diskonly_a")
         assert a is not None
-        assert a.embedding_provider == "OpenAI"
+        # Provider lives on ``model_selection`` now (synthesized by the
+        # backfill from the legacy flat fields on disk).
+        assert a.model_selection.get("provider") == "OpenAI"
         assert a.chunk_size == 512
         assert a.chunks == 161
         assert a.words == 3200
@@ -393,8 +389,7 @@ class TestReadMetadata:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_read_db",
-            embedding_provider="OpenAI",
-            embedding_model="from_db",
+            model_selection={"name": "from_db", "provider": "OpenAI"},
         )
         await knowledge_base_service.update_stats(record.id, chunks=7, words=42, characters=100, size_bytes=2048)
 
@@ -435,13 +430,11 @@ class TestUniqueConstraint:
         await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="phase_15_kb_dup",
-            embedding_provider="OpenAI",
-            embedding_model="m",
+            model_selection={"name": "m", "provider": "OpenAI"},
         )
         with pytest.raises(IntegrityError):
             await knowledge_base_service.create_record(
                 user_id=active_user.id,
                 name="phase_15_kb_dup",
-                embedding_provider="OpenAI",
-                embedding_model="m",
+                model_selection={"name": "m", "provider": "OpenAI"},
             )

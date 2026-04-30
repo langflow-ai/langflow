@@ -522,8 +522,7 @@ class TestKnowledgeBaseAPI:
         await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="Duplicate_DB_KB",
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
         )
 
         response = await client.post(
@@ -551,8 +550,7 @@ class TestKnowledgeBaseAPI:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="KB1",
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             backend_type="opensearch",
             backend_config={"index_name": "kb1_index"},
         )
@@ -587,8 +585,7 @@ class TestKnowledgeBaseAPI:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="Cleared_Separator_KB",
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             separator="\n",
         )
         await knowledge_base_service.update_stats(
@@ -693,8 +690,7 @@ class TestKnowledgeBaseAPI:
         record = await knowledge_base_service.create_record(
             user_id=active_user.id,
             name="DB_Only_KB",
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             backend_type="opensearch",
             backend_config={"index_name": "db_only_index"},
         )
@@ -1317,8 +1313,7 @@ class TestPerformIngestionTask:
             separator="\n",
             source_name="src",
             current_user=current_user,
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             task_job_id=uuid.uuid4(),
             job_service=AsyncMock(),
         )
@@ -1401,8 +1396,7 @@ class TestPerformIngestionTask:
             separator="\n",
             source_name="src",
             current_user=current_user,
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             task_job_id=uuid.uuid4(),
             job_service=AsyncMock(),
         )
@@ -1473,8 +1467,7 @@ class TestPerformIngestionTask:
             separator="\n",
             source_name="src",
             current_user=current_user,
-            embedding_provider="OpenAI",
-            embedding_model="model",
+            model_selection={"name": "model", "provider": "OpenAI"},
             task_job_id=uuid.uuid4(),
             job_service=AsyncMock(),
         )

@@ -19,8 +19,11 @@ Notable columns:
   every row is ``"chroma"`` + empty config and nothing reads those
   fields; adding them now keeps Phase 4 code-only.
 * ``model_selection`` — the full unified-models dict captured at
-  create time. Retrieval + ingestion reconstruct the embedding
-  function from this without re-resolving the catalog.
+  create time. Single source of truth for embedding config; the
+  ``get_embedding_provider`` / ``get_embedding_model`` helpers in
+  ``langflow.api.utils.knowledge_base_service`` read provider / model
+  name out of it for display, and retrieval + ingestion reconstruct
+  the embedding function from it without re-resolving the catalog.
 * ``column_config`` — column roles (vectorize / identifier) from the
   tabular ingestion component. JSON array.
 
@@ -73,8 +76,14 @@ class KnowledgeBaseRecordBase(SQLModel):
         ),
     )
 
-    embedding_provider: str = Field(nullable=False)
-    embedding_model: str = Field(nullable=False)
+    # ``model_selection`` is the canonical source of truth for embedding
+    # config. The legacy flat columns (``embedding_provider`` /
+    # ``embedding_model``) were removed in favor of the
+    # ``get_embedding_provider`` / ``get_embedding_model`` helpers in
+    # ``langflow.api.utils.knowledge_base_service`` that read from this
+    # dict. The API response shape still surfaces the flat fields as a
+    # convenience view (derived via those helpers in
+    # ``record_to_metadata_dict``).
     model_selection: dict[str, Any] = Field(
         default_factory=dict,
         sa_column=Column(JsonVariant, nullable=False),

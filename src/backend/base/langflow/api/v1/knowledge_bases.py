@@ -173,6 +173,55 @@ def _coerce_backend_config(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+async def _resolve_kb_asset_id(
+    *,
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    metadata: dict[str, Any],
+) -> uuid.UUID:
+    """Return the canonical ``asset_id`` for a KB.
+
+    Prefers ``KnowledgeBaseRecord.id`` from the ``knowledge_base`` table —
+    a btree-indexed UUID column — so downstream Job lookups can use the
+    indexed ``Job.asset_id`` path instead of doing a JSON-extract on
+    ``Job.job_metadata.kb_name``.
+
+    Falls back to ``metadata['id']`` (and finally a fresh UUID) only for
+    legacy KBs that exist on disk but haven't been backfilled into the
+    ``knowledge_base`` table yet — startup runs ``backfill_all_users_from_disk``
+    so this fallback should be rare. The fallback also persists the
+    generated UUID into ``embedding_metadata.json`` so subsequent calls
+    return a stable id.
+    """
+    kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if kb_record is not None:
+        return kb_record.id
+
+    # Legacy fallback: KB exists on disk only.
+    asset_id_str = metadata.get("id")
+    if asset_id_str:
+        try:
+            return uuid.UUID(asset_id_str)
+        except (ValueError, AttributeError):
+            pass
+
+    # No record, no metadata id — generate one and persist so the next
+    # request resolves to the same UUID. Best-effort write; failure
+    # falls through (the caller still gets a UUID, just one that won't
+    # round-trip).
+    asset_id = uuid.uuid4()
+    try:
+        kb_path = _resolve_kb_path(kb_name, current_user)
+        metadata_path = kb_path / "embedding_metadata.json"
+        if metadata_path.exists():
+            embedding_metadata = json.loads(metadata_path.read_text())
+            embedding_metadata["id"] = str(asset_id)
+            metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
+    except (OSError, json.JSONDecodeError, HTTPException):
+        await logger.awarning("Could not persist generated asset_id for kb=%r", kb_name)
+    return asset_id
+
+
 def _build_kb_info(
     *,
     kb_name: str,
@@ -502,12 +551,20 @@ async def create_knowledge_base(
         # partial success. Roll back the on-disk state and surface a
         # 500 regardless of backend type.
         try:
+            # ``model_selection`` is the canonical source of truth for
+            # embedding config; the request still carries
+            # ``embedding_provider`` / ``embedding_model`` as flat
+            # convenience fields (frontend back-compat) but those are
+            # derived views — folded into ``model_selection`` here
+            # when the request didn't carry one of its own.
+            persisted_selection = request.model_selection or {
+                "name": request.embedding_model,
+                "provider": request.embedding_provider,
+            }
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
                 name=kb_name,
-                embedding_provider=request.embedding_provider,
-                embedding_model=request.embedding_model,
-                model_selection=request.model_selection,
+                model_selection=persisted_selection,
                 column_config=column_config_dicts or [],
                 backend_type=backend_type_value,
                 backend_config=backend_config_value,
@@ -759,25 +816,19 @@ async def ingest_files_to_knowledge_base(
         embedding_provider = metadata.get("embedding_provider")
         embedding_model = metadata.get("embedding_model")
 
-        # Handle backward compatibility: generate asset_id if not present
-        asset_id_str = metadata.get("id")
-        if not asset_id_str:
-            # Generate new UUID for older KBs without asset_id
-            asset_id = uuid.uuid4()
-            # Persist the new ID to metadata
-            metadata_path = kb_path / "embedding_metadata.json"
-            if metadata_path.exists():
-                try:
-                    embedding_metadata = json.loads(metadata_path.read_text())
-                    embedding_metadata["id"] = str(asset_id)
-                    metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
-                except (OSError, json.JSONDecodeError):
-                    await logger.awarning("Could not update metadata with asset_id")
-        else:
-            asset_id = uuid.UUID(asset_id_str)
-
         if not embedding_provider or not embedding_model:
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+
+        # Use ``KnowledgeBaseRecord.id`` (when present) as the Job's
+        # ``asset_id`` so the read path can hit the indexed
+        # ``Job.asset_id`` column instead of doing a JSON-extract on
+        # ``Job.job_metadata.kb_name``. Falls back to legacy
+        # ``metadata['id']`` for KBs that exist on disk only.
+        asset_id = await _resolve_kb_asset_id(
+            kb_name=kb_name,
+            current_user=current_user,
+            metadata=metadata,
+        )
 
         # Get services and create job before async/sync split
         job_service = get_job_service()
@@ -917,8 +968,11 @@ async def ingest_folder_to_knowledge_base(
         if not embedding_provider or not embedding_model:
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
 
-        asset_id_str = metadata.get("id")
-        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+        asset_id = await _resolve_kb_asset_id(
+            kb_name=kb_name,
+            current_user=current_user,
+            metadata=metadata,
+        )
 
         # Build + validate the folder source up-front so invalid
         # configurations surface as a 4xx response before a background
@@ -1365,8 +1419,11 @@ async def ingest_via_connector(
         embedding_model = metadata.get("embedding_model")
         if not embedding_provider or not embedding_model:
             raise HTTPException(status_code=400, detail="Invalid embedding configuration")
-        asset_id_str = metadata.get("id")
-        asset_id = uuid.UUID(asset_id_str) if asset_id_str else uuid.uuid4()
+        asset_id = await _resolve_kb_asset_id(
+            kb_name=kb_name,
+            current_user=current_user,
+            metadata=metadata,
+        )
 
         try:
             source = create_source(
@@ -1695,17 +1752,15 @@ async def cancel_ingestion(
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
-        # Get KB metadata to extract asset_id
+        # ``asset_id`` is now sourced from ``KnowledgeBaseRecord.id``
+        # (the indexed column on ``job.asset_id``); legacy KBs that
+        # only exist on disk fall back to ``metadata['id']``.
         metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-        asset_id_str = metadata.get("id")
-
-        if not asset_id_str:
-            raise HTTPException(status_code=400, detail="Knowledge base missing asset ID")
-
-        try:
-            asset_id = uuid.UUID(asset_id_str)
-        except (ValueError, AttributeError) as e:
-            raise HTTPException(status_code=400, detail="Invalid asset ID") from e
+        asset_id = await _resolve_kb_asset_id(
+            kb_name=kb_name,
+            current_user=current_user,
+            metadata=metadata,
+        )
 
         # Fetch the latest ingestion job for this KB
         latest_jobs = await job_service.get_latest_jobs_by_asset_ids([asset_id])

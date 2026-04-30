@@ -9,6 +9,13 @@ Storage note: as of the unification onto the canonical ``job`` table,
 ingestion-run data lives on ``Job.job_metadata``. The URL ``run_id``
 path parameter is now the ``Job.job_id``; the response shape is
 unchanged so the frontend is unaffected.
+
+Asset-id semantics: ``Job.asset_id`` carries
+``KnowledgeBaseRecord.id`` (the indexed DB pk) so the read path
+(``list_runs_for_kb``) hits a btree-index lookup instead of a
+JSON-extract on ``Job.job_metadata.kb_name``. Tests therefore seed a
+matching ``KnowledgeBaseRecord`` alongside each ``Job`` so the new
+indexed read path is exercised.
 """
 
 from __future__ import annotations
@@ -19,6 +26,7 @@ from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
+from langflow.api.utils import knowledge_base_service
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionRunStatus
@@ -39,6 +47,26 @@ def _next_created_timestamp() -> datetime:
     return datetime.now(timezone.utc) + timedelta(seconds=_INSERT_OFFSET_SECONDS)
 
 
+async def _ensure_kb_record(*, user_id: uuid.UUID, kb_name: str) -> uuid.UUID:
+    """Create a minimal ``KnowledgeBaseRecord`` for ``kb_name`` if absent.
+
+    Returns the record's ``id`` so callers can wire it into the
+    ``Job.asset_id`` field — the indexed-read path filters on it.
+    """
+    existing = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if existing is not None:
+        return existing.id
+    record = await knowledge_base_service.create_record(
+        user_id=user_id,
+        name=kb_name,
+        model_selection={
+            "name": "sentence-transformers/all-MiniLM-L6-v2",
+            "provider": "HuggingFace",
+        },
+    )
+    return record.id
+
+
 async def _insert_run(
     *,
     user_id: uuid.UUID,
@@ -52,9 +80,14 @@ async def _insert_run(
 ) -> uuid.UUID:
     """Seed a ``Job`` row carrying KB ingestion-run data on its metadata.
 
-    Returns the ``job_id`` so callers can use it as the URL ``run_id``
-    — the two are equal post-unification.
+    Auto-provisions a matching ``KnowledgeBaseRecord`` (when ``kb_id``
+    is not supplied) so the new asset_id-indexed read path is
+    exercised. Returns the ``job_id`` so callers can use it as the
+    URL ``run_id`` — the two are equal post-unification.
     """
+    if kb_id is None:
+        kb_id = await _ensure_kb_record(user_id=user_id, kb_name=kb_name)
+
     run_id = uuid.uuid4()
     items_payload = items or [
         {
@@ -133,7 +166,18 @@ class TestListIngestionRuns:
 
         mine = await _insert_run(user_id=active_user.id, kb_name="only_mine")
         other_user_id = uuid.uuid4()
-        foreign_run_id = await _insert_run(user_id=other_user_id, kb_name="only_mine")
+        # Pass an explicit ``kb_id`` for the foreign-user run so
+        # ``_insert_run`` skips the auto-create-kb-record step (the
+        # foreign user has no User row, so the FK would reject it).
+        # Using a fresh UUID here also models reality: even if a
+        # foreign user did own a same-named KB, its record id would
+        # be distinct from active_user's, so the indexed asset_id
+        # lookup wouldn't match either way.
+        foreign_run_id = await _insert_run(
+            user_id=other_user_id,
+            kb_name="only_mine",
+            kb_id=uuid.uuid4(),
+        )
 
         response = await client.get(
             "api/v1/knowledge_bases/only_mine/runs",
@@ -222,7 +266,14 @@ class TestGetIngestionRun:
         kb_dir.mkdir(parents=True)
 
         other_user_id = uuid.uuid4()
-        foreign_run_id = await _insert_run(user_id=other_user_id, kb_name="secret_kb")
+        # Foreign user has no User row, so skip kb_record auto-create
+        # by passing an explicit kb_id (see notes in
+        # ``test_excludes_other_users_runs``).
+        foreign_run_id = await _insert_run(
+            user_id=other_user_id,
+            kb_name="secret_kb",
+            kb_id=uuid.uuid4(),
+        )
 
         response = await client.get(
             f"api/v1/knowledge_bases/secret_kb/runs/{foreign_run_id}",
