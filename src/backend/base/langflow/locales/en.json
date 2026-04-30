@@ -4222,6 +4222,8 @@
   "components.knowledgebase.inputs.include_metadata.info.90d816ef": "Whether to include all metadata in the output. If false, only content is returned.",
   "components.knowledgebase.inputs.knowledge_base.display_name.dcb3e1c0": "Knowledge",
   "components.knowledgebase.inputs.knowledge_base.info.692d74f2": "Select the knowledge to load data from.",
+  "components.knowledgebase.inputs.metadata_filter.display_name.0f51e842": "Metadata Filter",
+  "components.knowledgebase.inputs.metadata_filter.info.c20dc9f3": "Optional JSON object of user-metadata key/value pairs. Only chunks whose source_metadata matches every key are returned (e.g. {\"tag\": \"invoice\"} or {\"tag\": [\"invoice\", \"audit\"]} for OR-of-values). Backends without native filtering apply the match client-side after retrieval.",
   "components.knowledgebase.inputs.search_query.display_name.3ad6e0f4": "Search Query",
   "components.knowledgebase.inputs.search_query.info.e993cf82": "Optional search query to filter knowledge base data.",
   "components.knowledgebase.inputs.top_k.display_name.9bfd228f": "Top K Results",
