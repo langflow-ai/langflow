@@ -145,40 +145,40 @@ export default function DeploymentStepperModal({
         closeButtonClassName="top-5 right-4"
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
-        {isLoadingEditData ? (
-          <div className="flex flex-1 items-center justify-center">
-            <span className="text-sm text-muted-foreground">
-              Loading deployment data...
-            </span>
-          </div>
-        ) : (
-          <DeploymentStepperProvider
-            key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
-            initialState={{
-              projectId: resolvedProjectId,
-              initialFlowId,
-              selectedVersionByFlow:
-                initialVersionByFlow ?? editInitialState?.versionMap,
-              initialProvider,
-              initialInstance,
-              initialStep: isEditMode
-                ? 1
-                : initialProvider && initialInstance
-                  ? 2
-                  : 1,
-              editingDeployment: editingDeployment ?? undefined,
-              initialLlm: editInitialState?.llm,
-              initialToolNameByFlow: editInitialState?.toolNames,
-              initialConnectionsByFlow: editInitialState?.connectionsByFlow,
-            }}
-          >
+        <DeploymentStepperProvider
+          key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
+          initialState={{
+            projectId: resolvedProjectId,
+            initialFlowId,
+            selectedVersionByFlow:
+              initialVersionByFlow ?? editInitialState?.versionMap,
+            initialProvider,
+            initialInstance,
+            initialStep: isEditMode
+              ? 1
+              : initialProvider && initialInstance
+                ? 2
+                : 1,
+            editingDeployment: editingDeployment ?? undefined,
+            initialLlm: editInitialState?.llm,
+            initialToolNameByFlow: editInitialState?.toolNames,
+            initialConnectionsByFlow: editInitialState?.connectionsByFlow,
+          }}
+        >
+          {isLoadingEditData ? (
+            <div className="flex flex-1 items-center justify-center">
+              <span className="text-sm text-muted-foreground">
+                Loading deployment data...
+              </span>
+            </div>
+          ) : (
             <DeploymentStepperModalContent
               setOpen={setOpen}
               onTestDeployment={onTestDeployment}
               onDeployingChange={setIsDeploying}
             />
-          </DeploymentStepperProvider>
-        )}
+          )}
+        </DeploymentStepperProvider>
       </DialogContent>
     </Dialog>
   );
