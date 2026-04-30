@@ -280,16 +280,15 @@ describe("Flow configuration section", () => {
       [{ id: "flow-1", name: "Default Name Flow", folder_id: "folder-1" }],
     );
 
-    // The flow name appears in the attached column, in the EditableToolName
-    // (as placeholder fallback), and in the config sub-detail = 3 total
+    // The raw flow name appears in the attached column and the config sub-detail.
     const nameInstances = screen.getAllByText("Default Name Flow");
-    expect(nameInstances).toHaveLength(3);
+    expect(nameInstances).toHaveLength(2);
 
-    // Verify the EditableToolName specifically shows the flow name as placeholder
+    // Verify the tool-name row falls back to the generated default tool name
     const wrenchIcon = screen.getByTestId("icon-Wrench");
     const configRow = wrenchIcon.closest(".flex.items-center.gap-2")!;
     expect(
-      within(configRow as HTMLElement).getByText("Default Name Flow"),
+      within(configRow as HTMLElement).getByText("Default Name Flow 1"),
     ).toBeInTheDocument();
   });
 
@@ -313,7 +312,7 @@ describe("Connection details", () => {
         name: "New API Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { API_KEY: "my-secret-key" },
+        environmentVariables: { API_KEY: "my-secret-key" }, // pragma: allowlist secret
       },
     ];
 
@@ -341,7 +340,7 @@ describe("Connection details", () => {
         name: "New Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { SECRET_KEY: "actual-secret-value" },
+        environmentVariables: { SECRET_KEY: "actual-secret-value" }, // pragma: allowlist secret
       },
     ];
 
