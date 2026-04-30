@@ -23,6 +23,9 @@ EXTENSIONS = {".tsx", ".ts"}
 # Keys that are dynamic or intentionally not in en.json
 IGNORED_KEYS: set[str] = set()
 
+# Maximum number of locations to show per missing key
+MAX_LOCATIONS_TO_SHOW = 3
+
 
 def extract_keys_from_source(src_dir: Path) -> dict[str, list[str]]:
     """Return {key: [file:line, ...]} for all t() calls found in source files."""
@@ -30,7 +33,7 @@ def extract_keys_from_source(src_dir: Path) -> dict[str, list[str]]:
     for path in src_dir.rglob("*"):
         if path.suffix not in EXTENSIONS:
             continue
-        if any(part.startswith("__") or part == "node_modules" or part == "__tests__" for part in path.parts):
+        if any(part.startswith("__") or part in {"node_modules", "__tests__"} for part in path.parts):
             continue
         if path.name.endswith((".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")):
             continue
@@ -103,10 +106,11 @@ def build_report(
     lines += [
         "---",
         "",
-        "### ℹ️ Why `en.json` has more keys than detected in source",
+        "### Info: Why `en.json` has more keys than detected in source",
         "",
         'The static analysis only counts hardcoded `t("some.key")` string literals.',
-        f"`en.json` has {en_total} keys while the scanner detected {detected_total} — a gap of {gap}. This is expected for three reasons:",
+        f"`en.json` has {en_total} keys while the scanner detected {detected_total} — "
+        f"a gap of {gap}. This is expected for three reasons:",
         "",
         "**1. Pluralization suffixes**",
         "",
@@ -184,7 +188,8 @@ def main() -> int:
     if not missing:
         print(f"✓ All {len(used_keys)} detected i18n keys found in en.json")
         print(
-            f"  (en.json has {len(en_keys)} total keys; gap of {len(en_keys) - len(used_keys)} is expected — see report for details)"
+            f"  (en.json has {len(en_keys)} total keys; "
+            f"gap of {len(en_keys) - len(used_keys)} is expected — see report for details)"
         )
     else:
         print(f"✗ {len(missing)} key(s) used in source but missing from en.json:\n")
@@ -192,8 +197,8 @@ def main() -> int:
             print(f"  {key}")
             for loc in locations[:3]:
                 print(f"    → {loc}")
-            if len(locations) > 3:
-                print(f"    → ... and {len(locations) - 3} more")
+            if len(locations) > MAX_LOCATIONS_TO_SHOW:
+                print(f"    → ... and {len(locations) - MAX_LOCATIONS_TO_SHOW} more")
         print(f"\nAdd the missing keys to {en_json} and re-run.")
 
     return 1 if missing else 0
