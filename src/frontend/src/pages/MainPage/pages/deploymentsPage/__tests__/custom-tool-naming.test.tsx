@@ -61,7 +61,7 @@ describe("Custom tool naming", () => {
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlowItem = payload.provider_data.add_flows[0];
-    expect(addFlowItem.tool_name).toBeUndefined();
+    expect(addFlowItem.tool_name).toMatch(/^Flow [a-f0-9]{6}-1$/);
   });
 
   it("buildDeploymentPayload omits tool_name when whitespace-only", () => {
@@ -76,7 +76,7 @@ describe("Custom tool naming", () => {
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlowItem = payload.provider_data.add_flows[0];
-    expect(addFlowItem.tool_name).toBeUndefined();
+    expect(addFlowItem.tool_name).toMatch(/^Flow [a-f0-9]{6}-1$/);
   });
 
   it("tool name with special characters is preserved in payload", () => {

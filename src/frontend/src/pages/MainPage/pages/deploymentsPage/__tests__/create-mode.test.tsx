@@ -51,6 +51,10 @@ function renderCreateHook(
   return renderHook(() => useDeploymentStepper(), { wrapper });
 }
 
+function flowVersionKey(flowId: string, versionId: string) {
+  return getSelectedFlowVersionKey(flowId, versionId);
+}
+
 // ---------------------------------------------------------------------------
 // Create mode — basic state
 // ---------------------------------------------------------------------------
@@ -545,13 +549,20 @@ describe("Create mode — flow version selection", () => {
     });
 
     expect(result.current.selectedVersionByFlow.size).toBe(1);
-    expect(result.current.selectedVersionByFlow.get("flow-1")).toEqual({
+    expect(
+      result.current.selectedVersionByFlow.get(
+        flowVersionKey("flow-1", "ver-1"),
+      ),
+    ).toEqual({
+      key: flowVersionKey("flow-1", "ver-1"),
+      flowId: "flow-1",
+      flowName: "Flow",
       versionId: "ver-1",
       versionTag: "v1",
     });
   });
 
-  it("handleSelectVersion overwrites existing version for same flow", () => {
+  it("handleSelectVersion keeps multiple versions for the same flow", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -561,8 +572,26 @@ describe("Create mode — flow version selection", () => {
       result.current.handleSelectVersion("flow-1", "ver-2", "v2");
     });
 
-    expect(result.current.selectedVersionByFlow.size).toBe(1);
-    expect(result.current.selectedVersionByFlow.get("flow-1")).toEqual({
+    expect(result.current.selectedVersionByFlow.size).toBe(2);
+    expect(
+      result.current.selectedVersionByFlow.get(
+        flowVersionKey("flow-1", "ver-1"),
+      ),
+    ).toEqual({
+      key: flowVersionKey("flow-1", "ver-1"),
+      flowId: "flow-1",
+      flowName: "Flow",
+      versionId: "ver-1",
+      versionTag: "v1",
+    });
+    expect(
+      result.current.selectedVersionByFlow.get(
+        flowVersionKey("flow-1", "ver-2"),
+      ),
+    ).toEqual({
+      key: flowVersionKey("flow-1", "ver-2"),
+      flowId: "flow-1",
+      flowName: "Flow",
       versionId: "ver-2",
       versionTag: "v2",
     });
@@ -990,7 +1019,7 @@ describe("Create mode — multi-flow scenarios", () => {
     expect(flow2Op?.app_ids).toEqual(["conn-b"]);
 
     const flow3Op = addFlows.find((o) => o.flow_version_id === "ver-3");
-    expect(flow3Op?.tool_name).toBeUndefined();
+    expect(flow3Op?.tool_name).toMatch(/^Flow [a-f0-9]{6}-3$/);
     expect(flow3Op?.app_ids).toEqual(["conn-a", "conn-b"]);
 
     // Both connections are new, so both appear in connections
