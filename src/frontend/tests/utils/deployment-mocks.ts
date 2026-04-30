@@ -167,30 +167,30 @@ export const SNAPSHOTS_DUPLICATE_MOCK = {
   },
 };
 
-export const POST_EXECUTION_RESPONSE = {
+export const POST_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     thread_id: null,
     result: null,
   },
 };
 
-export const RUNNING_EXECUTION_RESPONSE = {
+export const RUNNING_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "running",
     result: null,
     thread_id: null,
   },
 };
 
-export const COMPLETED_EXECUTION_RESPONSE = {
+export const COMPLETED_RUN_RESPONSE = {
   deployment_id: "dep-1",
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "completed",
     thread_id: "thread-1",
     result: {

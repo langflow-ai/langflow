@@ -1,4 +1,5 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import VersionLabel from "@/components/common/versionLabelComponent";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,8 +43,12 @@ export default function VersionListItem({
           isSelected && "border-l-2 border-l-[#6366F1] !bg-[#6366F1]/10",
         )}
       >
-        <div className="flex flex-col items-start">
-          <span className="font-medium text-sm pb-1">{entry.version_tag}</span>
+        <div className="flex min-w-0 flex-col items-start">
+          <VersionLabel
+            versionTag={entry.version_tag}
+            description={entry.description}
+            className="w-full truncate font-medium text-sm pb-1"
+          />
           <span className="text-xs text-muted-foreground">
             {formatTimestamp(entry.created_at)}
           </span>

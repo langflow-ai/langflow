@@ -2,19 +2,19 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
-  COMPLETED_EXECUTION_RESPONSE,
+  COMPLETED_RUN_RESPONSE,
   DEPLOYMENTS_MOCK,
-  POST_EXECUTION_RESPONSE,
+  POST_RUN_RESPONSE,
   PROVIDERS_MOCK,
-  RUNNING_EXECUTION_RESPONSE,
+  RUNNING_RUN_RESPONSE,
 } from "../../utils/deployment-mocks";
 
 async function setupBaseRoutes(page: Page) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
     const url = route.request().url();
-    // Execution routes are handled per-test; fall through for those
-    if (url.includes("/dep-1/executions") || url.includes("/executions")) {
+    // Run routes are handled per-test; fall through for those
+    if (url.includes("/dep-1/runs") || url.includes("/runs")) {
       route.fallback();
       return;
     }
@@ -60,7 +60,7 @@ test(
 );
 
 test(
-  "Send message calls POST execution with correct body",
+  "Send message calls POST run with correct body",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
     test.skip(
@@ -69,46 +69,35 @@ test(
     );
 
     let capturedRequestBody: Record<string, unknown> | null = null;
-    let executionCallCount = 0;
+    let runCallCount = 0;
 
     await setupBaseRoutes(page);
 
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions/exec-1",
-      (route) => {
-        executionCallCount++;
-        const isCompleted = executionCallCount > 1;
+    await page.route("**/api/v1/deployments/dep-1/runs/exec-1", (route) => {
+      runCallCount++;
+      const isCompleted = runCallCount > 1;
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          isCompleted ? COMPLETED_RUN_RESPONSE : RUNNING_RUN_RESPONSE,
+        ),
+      });
+    });
+
+    await page.route("**/api/v1/deployments/dep-1/runs", async (route) => {
+      if (route.request().method() === "POST") {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        capturedRequestBody = body;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(
-            isCompleted
-              ? COMPLETED_EXECUTION_RESPONSE
-              : RUNNING_EXECUTION_RESPONSE,
-          ),
+          body: JSON.stringify(POST_RUN_RESPONSE),
         });
-      },
-    );
-
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions",
-      async (route) => {
-        if (route.request().method() === "POST") {
-          const body = route.request().postDataJSON() as Record<
-            string,
-            unknown
-          >;
-          capturedRequestBody = body;
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(POST_EXECUTION_RESPONSE),
-          });
-        } else {
-          route.fallback();
-        }
-      },
-    );
+      } else {
+        route.fallback();
+      }
+    });
 
     await navigateToDeploymentsPage(page);
 
@@ -135,41 +124,33 @@ test(
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
 
-    let executionCallCount = 0;
+    let runCallCount = 0;
 
     await setupBaseRoutes(page);
 
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions/exec-1",
-      (route) => {
-        executionCallCount++;
-        const isCompleted = executionCallCount > 1;
+    await page.route("**/api/v1/deployments/dep-1/runs/exec-1", (route) => {
+      runCallCount++;
+      const isCompleted = runCallCount > 1;
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          isCompleted ? COMPLETED_RUN_RESPONSE : RUNNING_RUN_RESPONSE,
+        ),
+      });
+    });
+
+    await page.route("**/api/v1/deployments/dep-1/runs", async (route) => {
+      if (route.request().method() === "POST") {
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(
-            isCompleted
-              ? COMPLETED_EXECUTION_RESPONSE
-              : RUNNING_EXECUTION_RESPONSE,
-          ),
+          body: JSON.stringify(POST_RUN_RESPONSE),
         });
-      },
-    );
-
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions",
-      async (route) => {
-        if (route.request().method() === "POST") {
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(POST_EXECUTION_RESPONSE),
-          });
-        } else {
-          route.fallback();
-        }
-      },
-    );
+      } else {
+        route.fallback();
+      }
+    });
 
     await navigateToDeploymentsPage(page);
 
@@ -182,7 +163,7 @@ test(
     await expect(page.getByText("Hello from AI")).toBeVisible({
       timeout: 30_000,
     });
-    expect(executionCallCount).toBeGreaterThanOrEqual(2);
+    expect(runCallCount).toBeGreaterThanOrEqual(2);
   },
 );
 
@@ -195,41 +176,33 @@ test(
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
 
-    let executionCallCount = 0;
+    let runCallCount = 0;
 
     await setupBaseRoutes(page);
 
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions/exec-1",
-      (route) => {
-        executionCallCount++;
-        const isCompleted = executionCallCount > 1;
+    await page.route("**/api/v1/deployments/dep-1/runs/exec-1", (route) => {
+      runCallCount++;
+      const isCompleted = runCallCount > 1;
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          isCompleted ? COMPLETED_RUN_RESPONSE : RUNNING_RUN_RESPONSE,
+        ),
+      });
+    });
+
+    await page.route("**/api/v1/deployments/dep-1/runs", async (route) => {
+      if (route.request().method() === "POST") {
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(
-            isCompleted
-              ? COMPLETED_EXECUTION_RESPONSE
-              : RUNNING_EXECUTION_RESPONSE,
-          ),
+          body: JSON.stringify(POST_RUN_RESPONSE),
         });
-      },
-    );
-
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions",
-      async (route) => {
-        if (route.request().method() === "POST") {
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(POST_EXECUTION_RESPONSE),
-          });
-        } else {
-          route.fallback();
-        }
-      },
-    );
+      } else {
+        route.fallback();
+      }
+    });
 
     await navigateToDeploymentsPage(page);
 
@@ -259,49 +232,38 @@ test(
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
 
-    let executionCallCount = 0;
+    let runCallCount = 0;
     const capturedBodies: Array<Record<string, unknown>> = [];
 
     await setupBaseRoutes(page);
 
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions/exec-1",
-      (route) => {
-        executionCallCount++;
-        const isCompleted = executionCallCount % 2 === 0;
+    await page.route("**/api/v1/deployments/dep-1/runs/exec-1", (route) => {
+      runCallCount++;
+      const isCompleted = runCallCount % 2 === 0;
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          isCompleted ? COMPLETED_RUN_RESPONSE : RUNNING_RUN_RESPONSE,
+        ),
+      });
+    });
+
+    await page.route("**/api/v1/deployments/dep-1/runs", async (route) => {
+      if (route.request().method() === "POST") {
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        capturedBodies.push(body);
+        // Reset poll counter for each new run so each returns running then completed
+        runCallCount = 0;
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(
-            isCompleted
-              ? COMPLETED_EXECUTION_RESPONSE
-              : RUNNING_EXECUTION_RESPONSE,
-          ),
+          body: JSON.stringify(POST_RUN_RESPONSE),
         });
-      },
-    );
-
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions",
-      async (route) => {
-        if (route.request().method() === "POST") {
-          const body = route.request().postDataJSON() as Record<
-            string,
-            unknown
-          >;
-          capturedBodies.push(body);
-          // Reset poll counter for each new execution so each returns running then completed
-          executionCallCount = 0;
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(POST_EXECUTION_RESPONSE),
-          });
-        } else {
-          route.fallback();
-        }
-      },
-    );
+      } else {
+        route.fallback();
+      }
+    });
 
     await navigateToDeploymentsPage(page);
 
@@ -346,41 +308,33 @@ test(
       "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
     );
 
-    let executionCallCount = 0;
+    let runCallCount = 0;
 
     await setupBaseRoutes(page);
 
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions/exec-1",
-      (route) => {
-        executionCallCount++;
-        const isCompleted = executionCallCount > 1;
+    await page.route("**/api/v1/deployments/dep-1/runs/exec-1", (route) => {
+      runCallCount++;
+      const isCompleted = runCallCount > 1;
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          isCompleted ? COMPLETED_RUN_RESPONSE : RUNNING_RUN_RESPONSE,
+        ),
+      });
+    });
+
+    await page.route("**/api/v1/deployments/dep-1/runs", async (route) => {
+      if (route.request().method() === "POST") {
         route.fulfill({
           status: 200,
           contentType: "application/json",
-          body: JSON.stringify(
-            isCompleted
-              ? COMPLETED_EXECUTION_RESPONSE
-              : RUNNING_EXECUTION_RESPONSE,
-          ),
+          body: JSON.stringify(POST_RUN_RESPONSE),
         });
-      },
-    );
-
-    await page.route(
-      "**/api/v1/deployments/dep-1/executions",
-      async (route) => {
-        if (route.request().method() === "POST") {
-          route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(POST_EXECUTION_RESPONSE),
-          });
-        } else {
-          route.fallback();
-        }
-      },
-    );
+      } else {
+        route.fallback();
+      }
+    });
 
     await navigateToDeploymentsPage(page);
 
@@ -403,7 +357,7 @@ test(
     await expect(page.getByPlaceholder("Message")).not.toBeVisible();
 
     // Reopen the modal
-    executionCallCount = 0;
+    runCallCount = 0;
     await page.getByTestId("test-deployment-dep-1").click();
     await expect(page.getByPlaceholder("Message")).toBeVisible();
 

@@ -20,8 +20,8 @@ async def load_registry(client: LangflowClient) -> dict[str, dict]:
     """
     data = await client.get("/all")
     registry: dict[str, dict] = {
-        name: comp_data
-        for items in data.values()
+        name: {**comp_data, "category": category}
+        for category, items in data.items()
         if isinstance(items, dict)
         for name, comp_data in items.items()
         if isinstance(comp_data, dict) and "template" in comp_data

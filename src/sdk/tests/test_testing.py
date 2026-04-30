@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import httpx
 import respx
+from _pytest.config.argparsing import Parser
 from langflow_sdk.client import AsyncLangflowClient, LangflowClient
 from langflow_sdk.models import RunOutput, RunResponse
-from langflow_sdk.testing import AsyncFlowRunner, FlowRunner
+from langflow_sdk.testing import AsyncFlowRunner, FlowRunner, pytest_addoption
 
 _BASE = "http://langflow.test"
 
@@ -307,3 +308,11 @@ def test_pytest_addoption_registers_options(pytestconfig):
         "--langflow-environments-file",
     ):
         assert pytestconfig.getoption(name) is None, f"Option {name!r} missing or has unexpected default"
+
+
+def test_pytest_addoption_is_idempotent():
+    """Registering the plugin twice should not fail when another plugin owns the same flags."""
+    parser = Parser(_ispytest=True)
+
+    pytest_addoption(parser)
+    pytest_addoption(parser)

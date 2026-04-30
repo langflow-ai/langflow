@@ -251,7 +251,7 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
     assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
     assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
     assert isinstance(result["feature_flags"], dict), "feature_flags must be an object"
-    assert result["feature_flags"].get("wxo_deployments") is False, "wxo_deployments flag should default to false"
+    assert result["feature_flags"].get("wxo_deployments") is True, "wxo_deployments flag should default to true"
     assert result["event_delivery"] in ["polling", "streaming", "direct"], (
         "event_delivery must be one of: polling, streaming, direct"
     )
@@ -329,3 +329,62 @@ async def test_get_config_mcp_base_url_from_settings(client: AsyncClient, logged
     result = response.json()
     assert response.status_code == status.HTTP_200_OK
     assert result["mcp_base_url"] == "https://langflow.example.com"
+
+
+async def test_deprecated_upload_rejects_unauthenticated(client: AsyncClient, flow):
+    """Regression: the deprecated /api/v1/upload/{flow_id} must require auth.
+
+    Previously this endpoint accepted uploads without any credentials, letting
+    anonymous callers write arbitrary files into a flow's cache folder.
+    """
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+    )
+    assert response.status_code != status.HTTP_201_CREATED, (
+        "Deprecated upload endpoint must reject unauthenticated requests"
+    )
+    assert response.status_code in {
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+    }, f"Expected 401/403, got {response.status_code}: {response.text}"
+
+
+async def test_deprecated_upload_authenticated_succeeds(client: AsyncClient, logged_in_headers: dict, flow):
+    """The deprecated endpoint still works for the flow's owner."""
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED, (
+        f"Expected 201 for authenticated owner, got {response.status_code}: {response.text}"
+    )
+    body = response.json()
+    assert body["flowId"] == str(flow.id)
+
+
+async def test_deprecated_upload_enforces_max_file_size(
+    client: AsyncClient, logged_in_headers: dict, flow, monkeypatch
+):
+    """Regression: the deprecated upload route must honor ``max_file_size_upload``.
+
+    Without this guard, an authenticated user could still fill disk through
+    this route by uploading arbitrarily large files, bypassing the limit the
+    non-deprecated twin at /api/v1/files/upload/{flow_id} already enforces.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "max_file_size_upload", 1)  # 1 MB
+    oversized = b"x" * (2 * 1024 * 1024)  # 2 MB, exceeds the limit
+
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("big.bin", oversized)},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, (
+        f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
+    )

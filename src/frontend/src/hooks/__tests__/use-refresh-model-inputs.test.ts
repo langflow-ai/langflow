@@ -56,6 +56,7 @@ jest.mock("@/stores/flowStore", () => ({
       componentsToUpdate: mockComponentsToUpdate,
     }),
   },
+  syncNodeTranslations: jest.fn(),
 }));
 
 jest.mock("@/stores/utilityStore", () => ({

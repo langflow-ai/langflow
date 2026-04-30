@@ -72,7 +72,7 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -112,7 +112,7 @@ class TestValidatingStepIncludesCode:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -239,7 +239,7 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -281,7 +281,7 @@ class TestRetryingStepIncludesError:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -327,7 +327,7 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -377,7 +377,7 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", side_effect=[mock_fail, mock_success]),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):
@@ -426,7 +426,7 @@ class TestProgressEventSequence:
             patch(f"{MODULE}.extract_component_code", return_value=component_code),
             patch(f"{MODULE}.validate_component_code", return_value=mock_validation),
             patch(f"{MODULE}.scan_code_security", return_value=_safe_security()),
-            patch(f"{MODULE}.validate_component_runtime", return_value=None),
+            patch(f"{MODULE}.validate_component_runtime", new_callable=AsyncMock, return_value=None),
             patch(f"{MODULE}.extract_response_text", return_value=response_text),
             patch("asyncio.sleep", new_callable=AsyncMock),
         ):

@@ -102,6 +102,27 @@ class TestExtractFriendlyError:
             assert "model" in result.lower()
             assert "not available" in result.lower() or "different" in result.lower()
 
+    def test_should_return_friendly_message_for_schema_validation_error_from_weak_model(self):
+        """Bug: pydantic InputSchema validation errors should surface a model-capability hint.
+
+        Weak models (llama3.2 et al.) emit malformed tool calls that trip pydantic
+        InputSchema validation downstream. The raw error is unactionable — users
+        should be told to pick a more capable model instead of seeing the raw
+        pydantic stack trace.
+        """
+        error_messages = [
+            "1 validation error for InputSchema\ninput_value\n  Input should be a valid string",
+            "pydantic.ValidationError: 1 validation error for InputSchema",
+            "Input should be a valid string [type=string_type, input_value={'description': '...'}]",
+        ]
+
+        for error in error_messages:
+            result = extract_friendly_error(error)
+            assert "model" in result.lower(), f"Expected 'model' in message for {error!r}, got: {result!r}"
+            assert "capable" in result.lower() or "different" in result.lower(), (
+                f"Expected 'capable' or 'different' in message for {error!r}, got: {result!r}"
+            )
+
     def test_should_return_friendly_message_for_content_policy_error(self):
         """Should return user-friendly message for content policy errors."""
         error_messages = [

@@ -208,6 +208,19 @@ describe("AssistantLoadingState", () => {
       );
       expect(screen.queryByText(/Attempt/)).not.toBeInTheDocument();
     });
+
+    it("should not render empty padded body for attempt 1 (pre-retry) with no streaming, error, code, or ready state", () => {
+      // Attempts are 1-indexed in the UI: attempt=1 is the first attempt, no retry yet.
+      // Bug: wrapper used progress.attempt > 0 while the retry counter used > 1,
+      // so attempt=1 painted px-4 pb-4 with no visible children below the header.
+      // Fix: wrapper now uses > 1 to match the retry counter.
+      const { container } = render(
+        <AssistantLoadingState
+          progress={createProgress({ attempt: 1, maxAttempts: 3 })}
+        />,
+      );
+      expect(container.querySelector(".pb-4")).toBeNull();
+    });
   });
 
   describe("Continue button", () => {

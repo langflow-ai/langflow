@@ -39,8 +39,11 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
+    DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -55,7 +58,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import PayloadSlot
+from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -72,9 +75,9 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 
 from .contracts import (
@@ -82,6 +85,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from .helpers import page_offset
@@ -218,23 +222,19 @@ class BaseDeploymentMapper:
         *,
         deployment_resource_key: str,
         db: AsyncSession,
-        payload: ExecutionCreateRequest,
+        payload: RunCreateRequest,
     ) -> ExecutionCreate:
         return ExecutionCreate(
             deployment_id=deployment_resource_key,
             provider_data=await self.resolve_execution_input(payload.provider_data, db),
         )
 
-    async def resolve_deployment_list_params(
-        self, raw: dict[str, Any] | None, db: AsyncSession
-    ) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.deployment_list_params, raw)
+    def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
+        """Return provider_params for provider-backed deployment listing.
 
-    async def resolve_config_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.config_list_params, raw)
-
-    async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
+        Default behavior applies no provider-specific filters.
+        """
+        return None
 
     def resolve_snapshot_update_artifact(
         self,
@@ -279,17 +279,30 @@ class BaseDeploymentMapper:
                 ),
             ) from exc
 
+    async def resolve_deployment_list_adapter_params(
+        self,
+        *,
+        deployment_type: DeploymentType | None,
+        names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+    ) -> DeploymentListParams | None:
+        if deployment_type is None and not names and provider_params is None:
+            return None
+        return DeploymentListParams(
+            deployment_types=[deployment_type] if deployment_type is not None else None,
+            deployment_names=names or None,
+            provider_params=provider_params,
+        )
+
     async def resolve_config_list_adapter_params(
         self,
         *,
         deployment_resource_key: str | None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> ConfigListParams:
-        resolved_provider_params = await self.resolve_config_list_params(provider_params, db)
         return ConfigListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     async def resolve_snapshot_list_adapter_params(
@@ -298,13 +311,11 @@ class BaseDeploymentMapper:
         deployment_resource_key: str | None,
         snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> SnapshotListParams:
-        resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
             snapshot_names=snapshot_names or None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     def shape_deployment_list_items(
@@ -313,7 +324,9 @@ class BaseDeploymentMapper:
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
         provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
     ) -> list[DeploymentListItem]:
+        _ = provider_data_by_resource_key
         return [
             DeploymentListItem(
                 id=row.id,
@@ -640,24 +653,78 @@ class BaseDeploymentMapper:
         _ = payload
         return FlowVersionPatch()
 
-    def util_snapshot_ids_to_verify(
+    def extract_snapshot_bindings(
         self,
-        attachments: list[Any],
-    ) -> list[str]:
-        """Extract provider snapshot IDs that should be verified against the provider.
+        provider_view: DeploymentListResult,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract per-deployment snapshot bindings from an already-fetched provider list response.
 
-        Called by read-path snapshot-level sync to determine which attachments
-        carry a provider-trackable snapshot identity.  The route passes the
-        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
-        deletes DB rows whose IDs are no longer present on the provider.
+        Returns a flat list of (resource_key, snapshot_id) pairs representing
+        the authoritative binding state on the provider. Deployments absent
+        from the response (e.g. deleted) produce no entries.
 
-        The base implementation returns an empty list, meaning snapshot-level
-        sync is a no-op for providers that do not track snapshots separately.
-        Provider mappers that assign ``provider_snapshot_id`` on attachments
-        must override this to extract those IDs.
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        these deployments." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for any provider that inherits the base implementation.
+        Raising ``NotImplementedError`` prevents that destructive
+        interpretation entirely: call sites either guard with
+        ``except NotImplementedError`` (skipping the destructive sync) or
+        surface a loud failure pointing at the unimplemented method.
         """
-        _ = attachments
-        return []
+        _ = provider_view
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Extract per-deployment list-item provider_data from an already-fetched provider list response.
+
+        Returns a {resource_key -> provider_data} dict. Base returns an empty
+        dict so providers without per-item list metadata omit provider_data.
+        """
+        _ = provider_view
+        return {}
+
+    def extract_snapshot_bindings_for_get(
+        self,
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract bindings from a single-deployment provider GET payload.
+
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        this deployment." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for the GETted deployment for any provider that inherits
+        the base implementation. Raising ``NotImplementedError`` prevents
+        that destructive interpretation entirely: the GET call site
+        guards with ``except NotImplementedError`` and skips the
+        destructive sync (returning unverified attachment counts) rather
+        than wiping local state.
+        """
+        _ = get_result, resource_key
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
 
     async def resolve_rollback_update(
         self,
@@ -784,11 +851,11 @@ class BaseDeploymentMapper:
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         provider_result = self.shape_execution_create_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -798,11 +865,11 @@ class BaseDeploymentMapper:
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         provider_result = self.shape_execution_status_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -820,6 +887,16 @@ class BaseDeploymentMapper:
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        """Shape provider_data for single-deployment GET responses."""
+        _ = provider_data
+        msg = (
+            "BaseDeploymentMapper does not implement shape_deployment_get_data; "
+            "must be implemented by subclasses (e.g. watsonx_orchestrate). "
+            "GET provider_data shaping is unavailable for this provider."
+        )
+        raise NotImplementedError(msg)
 
     def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data

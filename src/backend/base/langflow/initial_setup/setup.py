@@ -1269,6 +1269,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
     This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
 
+    The function only creates a new default folder on first initialization (when the user has no
+    folders at all). If the user has already been through initial setup and has at least one folder
+    — even if they renamed the default or only kept other folders — the existing folder is returned
+    instead of creating a new "Starter Project". This prevents a phantom default folder from being
+    forced back into the UI every time the user logs in or the server restarts.
+
     Args:
         session (AsyncSession): The active database session.
         user_id (UUID): The ID of the user who owns the folder.
@@ -1310,7 +1316,18 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     await session.rollback()
                     break
 
-    # If no existing folder found, create a new one
+    # Respect prior user intent: if the user already has folders (e.g. they renamed the
+    # default folder to something like "My Flows"), do not force a new "Starter Project" back
+    # into their UI on every login/server restart. Return any existing folder instead.
+    any_folder_stmt = (
+        select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)  # type: ignore[arg-type]
+    )
+    any_folder = (await session.exec(any_folder_stmt)).first()
+    if any_folder:
+        return FolderRead.model_validate(any_folder, from_attributes=True)
+
+    # No existing folder found for this user — this is the first-time setup path.
+    # Create the default folder.
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)

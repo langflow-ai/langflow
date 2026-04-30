@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGetDeploymentExecution } from "@/controllers/API/queries/deployments/use-get-deployment-execution";
-import { usePostDeploymentExecution } from "@/controllers/API/queries/deployments/use-post-deployment-execution";
+import { useGetDeploymentRun } from "@/controllers/API/queries/deployments/use-get-deployment-run";
+import { usePostDeploymentRun } from "@/controllers/API/queries/deployments/use-post-deployment-run";
 import type { ChatMessage } from "./types";
 import {
   extractTextFromResult,
@@ -53,8 +53,8 @@ export function useDeploymentChat({
     };
   }, []);
 
-  const { mutateAsync: postExecution } = usePostDeploymentExecution();
-  const { mutateAsync: getExecution } = useGetDeploymentExecution();
+  const { mutateAsync: postRun } = usePostDeploymentRun();
+  const { mutateAsync: getRun } = useGetDeploymentRun();
 
   const stopPolling = useCallback(() => {
     if (pollTimerRef.current !== null) {
@@ -93,10 +93,10 @@ export function useDeploymentChat({
       ]);
       setIsWaitingForResponse(true);
 
-      let executionId: string | null = null;
+      let runId: string | null = null;
 
       try {
-        const createResponse = await postExecution({
+        const createResponse = await postRun({
           deployment_id: deploymentId,
           provider_data: {
             input: text,
@@ -105,7 +105,7 @@ export function useDeploymentChat({
         });
 
         const providerData = createResponse.provider_data;
-        executionId = providerData?.execution_id ?? null;
+        runId = providerData?.id ?? null;
 
         const newThreadId = extractThreadId(
           providerData as Record<string, unknown> | null,
@@ -118,12 +118,12 @@ export function useDeploymentChat({
           isTerminalStatus(providerData?.status) ||
           !!providerData?.completed_at;
 
-        if (alreadyTerminal || !executionId) {
-          if (!executionId && !alreadyTerminal) {
+        if (alreadyTerminal || !runId) {
+          if (!runId && !alreadyTerminal) {
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,
-              error: "Execution started but no execution ID was returned.",
+              error: "Run started but no run ID was returned.",
             });
           } else {
             const result = providerData?.result as
@@ -148,7 +148,7 @@ export function useDeploymentChat({
         }
       } catch (err: unknown) {
         const message =
-          err instanceof Error ? err.message : "Failed to start execution";
+          err instanceof Error ? err.message : "Failed to start run";
         updateAssistantMessage(assistantMsgId, {
           content: "",
           isLoading: false,
@@ -162,7 +162,7 @@ export function useDeploymentChat({
       let attempts = 0;
       stopPolling();
 
-      const currentExecutionId = executionId as string;
+      const currentRunId = runId as string;
 
       const schedulePoll = () => {
         pollTimerRef.current = setTimeout(async () => {
@@ -174,16 +174,16 @@ export function useDeploymentChat({
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,
-              error: "Execution timed out. Please try again.",
+              error: "Run timed out. Please try again.",
             });
             if (isMountedRef.current) setIsWaitingForResponse(false);
             return;
           }
 
           try {
-            const statusResponse = await getExecution({
+            const statusResponse = await getRun({
               deployment_id: deploymentId,
-              execution_id: currentExecutionId,
+              run_id: currentRunId,
             });
 
             if (!isMountedRef.current) return;
@@ -209,7 +209,7 @@ export function useDeploymentChat({
             }
 
             if (providerData?.failed_at || providerData?.cancelled_at) {
-              const errorMsg = providerData?.last_error ?? "Execution failed.";
+              const errorMsg = providerData?.last_error ?? "Run failed.";
               updateAssistantMessage(assistantMsgId, {
                 content: "",
                 isLoading: false,
@@ -238,9 +238,7 @@ export function useDeploymentChat({
           } catch (err: unknown) {
             if (!isMountedRef.current) return;
             const message =
-              err instanceof Error
-                ? err.message
-                : "Failed to fetch execution status";
+              err instanceof Error ? err.message : "Failed to fetch run status";
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,
@@ -258,8 +256,8 @@ export function useDeploymentChat({
       threadId,
       providerId,
       deploymentId,
-      postExecution,
-      getExecution,
+      postRun,
+      getRun,
       stopPolling,
       updateAssistantMessage,
     ],

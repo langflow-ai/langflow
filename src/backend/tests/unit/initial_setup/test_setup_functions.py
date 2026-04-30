@@ -9,7 +9,8 @@ from langflow.initial_setup.setup import (
     update_projects_components_with_latest_component_versions,
 )
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
-from langflow.services.database.models.folder.model import FolderRead
+from langflow.services.database.models.folder.model import Folder, FolderRead
+from sqlmodel import select
 
 
 @pytest.mark.usefixtures("client")
@@ -56,6 +57,80 @@ async def test_get_or_create_default_folder_concurrent_calls() -> None:
     results = await asyncio.gather(get_folder(), get_folder(), get_folder())
     folder_ids = {folder.id for folder in results}
     assert len(folder_ids) == 1, "Concurrent calls must return a single, consistent folder instance."
+
+
+@pytest.mark.usefixtures("client")
+async def test_get_or_create_default_folder_respects_rename() -> None:
+    """Regression test: renaming the default folder must persist across calls.
+
+    Reproduces the reported bug where the server would recreate a "Starter Project" folder
+    on every login or server restart, even though the user had already renamed it to something
+    like "My Flows". After the fix, get_or_create_default_folder must detect the user's existing
+    (renamed) folder and return it instead of forcing a new default folder back into the UI.
+    """
+    test_user_id = uuid4()
+    renamed_folder_name = "My Flows"
+
+    # First call creates the default folder.
+    async with session_scope() as session:
+        folder_first = await get_or_create_default_folder(session, test_user_id)
+        assert folder_first.name == DEFAULT_FOLDER_NAME
+        original_id = folder_first.id
+
+    # Simulate the user renaming the default folder from the UI.
+    async with session_scope() as session:
+        stmt = select(Folder).where(Folder.id == original_id)
+        folder_row = (await session.exec(stmt)).first()
+        assert folder_row is not None
+        folder_row.name = renamed_folder_name
+        session.add(folder_row)
+        await session.flush()
+
+    # Second call (simulating next login / server restart) must honor the rename
+    # rather than creating a new "Starter Project" alongside the renamed one.
+    async with session_scope() as session:
+        folder_second = await get_or_create_default_folder(session, test_user_id)
+        assert folder_second.id == original_id, (
+            "The renamed folder should be returned instead of creating a new default."
+        )
+        assert folder_second.name == renamed_folder_name, (
+            "The folder's user-assigned name must be preserved across calls."
+        )
+
+        # There should still be exactly one folder for this user — no phantom duplicate.
+        all_folders_stmt = select(Folder).where(Folder.user_id == test_user_id)
+        all_folders = (await session.exec(all_folders_stmt)).all()
+        folder_names = sorted(f.name for f in all_folders)
+        assert folder_names == [renamed_folder_name], (
+            f"Expected only the renamed folder to exist, found: {folder_names}"
+        )
+
+
+@pytest.mark.usefixtures("client")
+async def test_get_or_create_default_folder_respects_other_existing_folder() -> None:
+    """Respect existing folders when the default folder is absent.
+
+    If the user already has any folder (e.g. they moved everything into 'Ideas' and
+    deleted the default), we must not resurrect the default folder on the next call.
+    """
+    test_user_id = uuid4()
+    other_folder_name = "Ideas"
+
+    # Simulate an existing user who has a non-default folder but no "Starter Project".
+    async with session_scope() as session:
+        session.add(Folder(user_id=test_user_id, name=other_folder_name, description="My ideas"))
+        await session.flush()
+
+    async with session_scope() as session:
+        returned = await get_or_create_default_folder(session, test_user_id)
+        assert returned.name == other_folder_name, (
+            "Should return the user's existing folder rather than creating a new default."
+        )
+
+        all_folders_stmt = select(Folder).where(Folder.user_id == test_user_id)
+        all_folders = (await session.exec(all_folders_stmt)).all()
+        folder_names = sorted(f.name for f in all_folders)
+        assert folder_names == [other_folder_name], f"No new default folder should be created; found: {folder_names}"
 
 
 def _make_all_types_dict():

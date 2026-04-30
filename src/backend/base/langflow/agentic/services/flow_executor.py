@@ -18,6 +18,7 @@ from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.agentic.services.flow_types import (
     STREAMING_QUEUE_MAX_SIZE,
+    FlowExecutionError,
     FlowExecutionResult,
 )
 from langflow.agentic.services.helpers.event_consumer import consume_streaming_events
@@ -246,9 +247,11 @@ async def execute_flow_file_streaming(
 
     if execution_result.has_error:
         logger.error(f"Flow execution error: {execution_result.error}")
-        raise HTTPException(
-            status_code=500,
-            detail="An internal error occurred while executing the flow.",
+        # Raise a FlowExecutionError that keeps the raw error internal:
+        # the public `detail` stays generic so no stack traces leak to HTTP clients,
+        # while internal callers read `original_error_message` to build friendly UX.
+        raise FlowExecutionError(
+            original_error_message=str(execution_result.error),
         ) from execution_result.error
 
     yield ("end", execution_result.result if execution_result.has_result else {})

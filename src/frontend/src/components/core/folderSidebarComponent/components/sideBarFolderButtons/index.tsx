@@ -1,5 +1,6 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
@@ -13,7 +14,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { useTranslation } from "react-i18next";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -37,6 +37,7 @@ import { getObjectsFromFilelist } from "@/helpers/get-objects-from-filelist";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
+import type { FlowType } from "@/types/flow";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -55,6 +56,9 @@ type SideBarFoldersButtonsComponentProps = {
   handleDeleteFolder?: (item: FolderType) => void;
   handleFilesClick?: () => void;
 };
+
+type UploadedFlowFile = FlowType | { flows: FlowType[] };
+
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
   handleDeleteFolder,
@@ -135,7 +139,7 @@ const SideBarFoldersButtonsComponent = ({
         return;
       }
 
-      getObjectsFromFilelist<any>(files)
+      getObjectsFromFilelist<UploadedFlowFile>(files)
         .then((objects) => {
           if (objects.every((flow) => flow.data?.nodes)) {
             uploadFlow({ files })
@@ -168,7 +172,10 @@ const SideBarFoldersButtonsComponent = ({
                     console.error(err);
                     setErrorData({
                       title: t("sidebar.projectUploadError"),
-                      list: [err["response"]["data"]["message"]],
+                      list: [
+                        err?.response?.data?.detail ??
+                          (err instanceof Error ? err.message : String(err)),
+                      ],
                     });
                   },
                 },

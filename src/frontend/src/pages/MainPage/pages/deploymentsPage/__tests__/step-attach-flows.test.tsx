@@ -230,14 +230,14 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Three-panel layout rendering", () => {
-  it("renders the Attach Flows heading", () => {
+  it("renders the Flows heading", () => {
     render(<StepAttachFlows />);
-    expect(screen.getByText("Attach Flows")).toBeInTheDocument();
+    expect(screen.getByText("Flows")).toBeInTheDocument();
   });
 
-  it("renders the Available Flows panel header", () => {
+  it("renders the Available panel header", () => {
     render(<StepAttachFlows />);
-    expect(screen.getByText("Available Flows")).toBeInTheDocument();
+    expect(screen.getByText("Available")).toBeInTheDocument();
   });
 
   it("renders flow items in the list", () => {

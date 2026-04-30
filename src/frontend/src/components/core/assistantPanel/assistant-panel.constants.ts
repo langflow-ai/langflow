@@ -8,7 +8,6 @@ export const ASSISTANT_SESSION_STORAGE_KEY_PREFIX =
 export const ASSISTANT_PLACEHOLDERS = [
   "Create an agent component...",
   "Build a RAG pipeline...",
-  "Make a chatbot with memory...",
   "Create a web scraper component...",
   "Build a document parser...",
   "Ask me anything about Langflow...",
