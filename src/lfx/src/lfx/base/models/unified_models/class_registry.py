@@ -48,6 +48,48 @@ EMBEDDING_PROVIDER_CLASS_MAPPING: dict[str, str] = {
     "IBM watsonx.ai": "WatsonxEmbeddings",  # Alias used by MODEL_PROVIDERS_DICT
 }
 
+# Provider → param-name mapping for embedding-model instantiation.
+# Keys are abstract slots ("model", "api_key", …); values are the actual
+# kwarg names each LangChain embedding class expects. Used both when
+# enriching catalog options and as the fallback inside
+# ``_instantiate_embeddings`` when the persisted ``model_selection``
+# was saved without the enriched metadata (e.g. picked via the generic
+# ``/models`` endpoint instead of ``get_embedding_model_options``).
+EMBEDDING_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
+    "OpenAI": {
+        "model": "model",
+        "api_key": "api_key",
+        "api_base": "base_url",
+        "dimensions": "dimensions",
+        "chunk_size": "chunk_size",
+        "request_timeout": "timeout",
+        "max_retries": "max_retries",
+        "show_progress_bar": "show_progress_bar",
+        "model_kwargs": "model_kwargs",
+    },
+    "Google Generative AI": {
+        "model": "model",
+        "api_key": "google_api_key",
+        "request_timeout": "request_options",
+        "model_kwargs": "client_options",
+    },
+    "Ollama": {
+        "model": "model",
+        "base_url": "base_url",
+        "num_ctx": "num_ctx",
+        "request_timeout": "request_timeout",
+        "model_kwargs": "model_kwargs",
+    },
+    "IBM WatsonX": {
+        "model_id": "model_id",
+        "url": "url",
+        "api_key": "apikey",
+        "project_id": "project_id",
+        "space_id": "space_id",
+        "request_timeout": "request_timeout",
+    },
+}
+
 # NOTE: These module-level caches are never invalidated.  This is intentional
 # for production, but tests that need to swap model/embedding classes should
 # patch `get_model_class` / `get_embedding_class` at the *call site* rather

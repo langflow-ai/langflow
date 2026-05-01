@@ -41,6 +41,7 @@ class SourceType(str, Enum):
 
     FILE_UPLOAD = "file_upload"
     FOLDER = "folder"
+    FLOW_COMPONENT = "flow_component"  # KnowledgeIngestion flow component
     TEMPLATE = "template"  # Reserved — existing flow-template ingestion path
     S3 = "s3"
     GOOGLE_DRIVE = "google_drive"  # Reserved for Phase 3B

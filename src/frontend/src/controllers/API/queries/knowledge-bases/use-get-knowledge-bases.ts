@@ -45,7 +45,11 @@ export const useGetKnowledgeBases: useQueryFunctionType<
     ["useGetKnowledgeBases"],
     getKnowledgeBasesFn,
     {
-      refetchOnWindowFocus: false,
+      // Refetch on tab focus so a KB ingestion run from a flow on
+      // another tab/window surfaces fresh stats when the user returns.
+      // Programmatic invalidation in flowStore.onBuildComplete handles
+      // the same-tab case (canvas → assets/knowledge-bases nav).
+      refetchOnWindowFocus: true,
       ...options,
     },
   );

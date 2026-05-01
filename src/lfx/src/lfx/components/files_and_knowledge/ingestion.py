@@ -16,6 +16,13 @@ from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend
+from lfx.base.knowledge_bases.ingestion_sources.base import (
+    IngestionItemResult,
+    IngestionItemStatus,
+    IngestionRunStatus,
+    IngestionSummary,
+)
+from lfx.base.knowledge_bases.ingestion_sources.flow_component import FlowComponentSource
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.components.files_and_knowledge._kb_paths import (
@@ -731,6 +738,18 @@ class KnowledgeIngestionComponent(Component):
         """Main ingestion routine → returns a dict with KB metadata."""
         # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
+
+        # Run-tracking handles. Set up before the main try so the finally
+        # block can finalize even if an early step (validation, kb_path
+        # resolution) raises. Failures inside ``_begin_ingestion_run``
+        # are swallowed and leave these as ``None`` — ingestion proceeds
+        # without a run-history entry rather than blocking on telemetry.
+        run_id: uuid.UUID | None = None
+        run_job_id: uuid.UUID | None = None
+        run_summary: IngestionSummary | None = None
+        run_status: IngestionRunStatus = IngestionRunStatus.SUCCEEDED
+        run_error: str | None = None
+        kb_record_id: uuid.UUID | None = None
         try:
             input_value = self.input_df[0] if isinstance(self.input_df, list) else self.input_df
             df_source: DataFrame = convert_to_dataframe(input_value, auto_parse=False)
@@ -828,6 +847,16 @@ class KnowledgeIngestionComponent(Component):
                 chunk_size=self.chunk_size,
             )
 
+            # Begin run tracking once we know we have everything we need
+            # to actually start writing. Done after embedding/model
+            # validation so a misconfigured KB doesn't pollute the run
+            # history with PENDING runs that never start.
+            run_id, run_job_id, run_summary, kb_record_id = await self._begin_ingestion_run(kb_path)
+            # Mirror Path A: flip the KB row to INGESTING so the UI shows
+            # an in-flight state instead of stale "ready".
+            if kb_record_id is not None:
+                await self._record_kb_status(kb_record_id, "ingesting")
+
             # Create vector store using the configured DB provider
             backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
@@ -858,14 +887,291 @@ class KnowledgeIngestionComponent(Component):
                 "timestamp": datetime.now(tz=timezone.utc).isoformat(),
             }
 
+            # Record the DataFrame as one succeeded item against the run
+            # so the run-history detail view shows row + chunk counts.
+            # No per-row breakdown — the flow component receives a single
+            # DataFrame and writes it as one logical batch.
+            if run_summary is not None:
+                run_summary.record_item(
+                    IngestionItemResult(
+                        item_id=self.knowledge_base,
+                        display_name=f"{self.knowledge_base} ({len(df_source)} rows)",
+                        status=IngestionItemStatus.SUCCEEDED,
+                        chunks_created=len(df_source),
+                    ),
+                )
+
+            # Mirror Path A: push the freshly-refreshed text/byte metrics
+            # from embedding_metadata.json back onto the KB DB row so the
+            # KB list page shows accurate counts. Without this, the UI
+            # reads stale row stats even though chunks landed correctly.
+            if kb_record_id is not None:
+                await self._record_kb_stats(kb_record_id, kb_path)
+                await self._record_kb_status(kb_record_id, "ready")
+
             # Set status message
             self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
 
             return Data(data=meta)
 
         except (OSError, ValueError, RuntimeError, KeyError) as e:
+            run_status = IngestionRunStatus.FAILED
+            run_error = str(e) or e.__class__.__name__
             msg = f"Error during KB ingestion: {e}"
             raise RuntimeError(msg) from e
+        except Exception as e:
+            run_status = IngestionRunStatus.FAILED
+            run_error = str(e) or e.__class__.__name__
+            raise
+        finally:
+            if run_id is not None and run_summary is not None:
+                await self._finalize_ingestion_run(
+                    run_id=run_id,
+                    job_id=run_job_id,
+                    summary=run_summary,
+                    status=run_status,
+                    error_message=run_error,
+                )
+            # Status sync runs unconditionally (independent of run-tracking
+            # success) — a KB stuck in INGESTING with no follow-up update
+            # is worse than a missed run-history entry.
+            if kb_record_id is not None and run_status is IngestionRunStatus.FAILED:
+                await self._record_kb_status(kb_record_id, "failed", failure_reason=run_error)
+
+    async def _begin_ingestion_run(
+        self,
+        kb_path: Path,
+    ) -> tuple[uuid.UUID | None, uuid.UUID | None, IngestionSummary | None, uuid.UUID | None]:
+        """Create a parent ``Job`` and seed an ingestion-run row.
+
+        Mirrors the ``perform_ingestion`` setup so flow-component
+        ingestions show up in the same run-history UI as file uploads.
+        Best-effort: any failure is logged and returns ``(None, None,
+        None)`` so the actual ingestion still proceeds — telemetry must
+        not block writing data to the vector store.
+
+        Returns ``(run_id, job_id, summary)``. ``run_id`` and ``job_id``
+        are equal post the ``ingestion_run`` table cutover, but the
+        helpers still take both so the contract matches Path A.
+        """
+        # Without a user we can't link the run to the requester, and
+        # ``Job.user_id IS NULL`` rows don't appear in the per-user
+        # runs list. Skip rather than write an orphaned row.
+        if not self.user_id:
+            self.log("No user_id on component; skipping ingestion-run tracking.")
+            return None, None, None, None
+
+        try:
+            user_uuid = uuid.UUID(str(self.user_id))
+        except (ValueError, TypeError) as exc:
+            self.log(f"Could not coerce user_id={self.user_id!r} to UUID; skipping run tracking ({exc}).")
+            return None, None, None, None
+
+        try:
+            from langflow.api.utils import ingestion_run_service, knowledge_base_service
+            from langflow.services.database.models.jobs.model import JobStatus, JobType
+            from langflow.services.deps import get_job_service
+        except ImportError as exc:
+            self.log(f"Run-history wiring unavailable; ingestion will not be recorded ({exc}).")
+            return None, None, None, None
+
+        try:
+            kb_record = await knowledge_base_service.get_by_user_and_name(
+                user_uuid, self.knowledge_base
+            )
+            kb_record_id = kb_record.id if kb_record is not None else None
+
+            user_metadata = self._parse_user_metadata_dict()
+
+            job_id = uuid.uuid4()
+            job_service = get_job_service()
+            # ``flow_id`` is required on Job; fall back to the job_id
+            # itself when the component is invoked outside a flow run
+            # (rare but legal — direct API instantiation, tests).
+            raw_flow_id = getattr(self, "flow_id", None)
+            flow_id_uuid = uuid.UUID(str(raw_flow_id)) if raw_flow_id else job_id
+            await job_service.create_job(
+                job_id=job_id,
+                flow_id=flow_id_uuid,
+                job_type=JobType.INGESTION,
+                asset_id=kb_record_id,
+                asset_type="knowledge_base",
+                user_id=user_uuid,
+            )
+            await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+            source = FlowComponentSource(
+                user_id=user_uuid,
+                source_config={
+                    "knowledge_base": self.knowledge_base,
+                    "kb_path": str(kb_path),
+                    "flow_id": str(flow_id_uuid),
+                },
+            )
+
+            run_id = await ingestion_run_service.create_run(
+                kb_name=self.knowledge_base,
+                source=source,
+                job_id=job_id,
+                user_id=user_uuid,
+                kb_id=kb_record_id,
+                user_metadata=user_metadata,
+            )
+            if run_id is None:
+                return None, job_id, None, kb_record_id
+            await ingestion_run_service.mark_running(run_id)
+
+            summary = IngestionSummary(
+                kb_name=self.knowledge_base,
+                source_type=source.source_type.value,
+                user_id=user_uuid,
+                job_id=job_id,
+                source_config=source.describe().get("config") or {},
+                user_metadata=user_metadata,
+            )
+            self.log(
+                f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} "
+                f"kb_id={kb_record_id}"
+            )
+        except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
+            self.log(f"Could not begin ingestion-run tracking: {exc}")
+            return None, None, None, None
+        else:
+            return run_id, job_id, summary, kb_record_id
+
+    async def _finalize_ingestion_run(
+        self,
+        *,
+        run_id: uuid.UUID,
+        job_id: uuid.UUID | None,
+        summary: IngestionSummary,
+        status: IngestionRunStatus,
+        error_message: str | None,
+    ) -> None:
+        """Persist the final summary and transition the parent Job.
+
+        Best-effort: errors are logged and never re-raised — the
+        ingestion has already succeeded (or already raised) by the time
+        we land here, so a missed status update should not change what
+        the caller sees.
+        """
+        try:
+            from langflow.api.utils import ingestion_run_service
+            from langflow.services.database.models.jobs.model import JobStatus
+            from langflow.services.deps import get_job_service
+        except ImportError as exc:
+            self.log(f"Run-history wiring unavailable; ingestion-run finalize skipped ({exc}).")
+            return
+
+        try:
+            await ingestion_run_service.finalize_run(
+                run_id,
+                summary=summary,
+                status=status,
+                error_message=error_message,
+            )
+            if job_id is not None:
+                terminal_status = (
+                    JobStatus.COMPLETED if status is not IngestionRunStatus.FAILED else JobStatus.FAILED
+                )
+                await get_job_service().update_job_status(
+                    job_id, terminal_status, finished_timestamp=True
+                )
+        except Exception as exc:  # noqa: BLE001 — telemetry must never re-raise
+            self.log(f"Could not finalize ingestion-run tracking: {exc}")
+
+    async def _record_kb_status(
+        self,
+        kb_record_id: uuid.UUID,
+        status_value: str,
+        *,
+        failure_reason: str | None = None,
+    ) -> None:
+        """Mirror Path A's KB-row status transitions.
+
+        ``status_value`` is the string form ("ingesting" / "ready" /
+        "failed") so the helper doesn't need to import
+        ``KnowledgeBaseStatus`` at module scope (langflow-only).
+        """
+        try:
+            from langflow.api.utils import knowledge_base_service
+            from langflow.services.database.models.knowledge_base.model import KnowledgeBaseStatus
+        except ImportError:
+            return
+        try:
+            await knowledge_base_service.update_status(
+                kb_record_id,
+                status=KnowledgeBaseStatus(status_value),
+                failure_reason=failure_reason,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not update KB status to {status_value}: {exc}")
+
+    async def _record_kb_stats(self, kb_record_id: uuid.UUID, kb_path: Path) -> None:
+        """Push freshly-refreshed metrics from embedding_metadata.json onto the DB row.
+
+        The component's ``_update_*_metadata_metrics`` methods rewrite
+        the on-disk JSON; this helper mirrors those values onto the
+        ``knowledge_base`` row so the KB list / detail UI doesn't show
+        stale chunk / word / character counts after a flow-driven
+        ingestion.
+        """
+        try:
+            from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            self.log("knowledge_base_service unavailable; KB stats will not sync to DB row.")
+            return
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            self.log(f"No embedding_metadata.json at {metadata_path}; skipping KB stats sync.")
+            return
+        try:
+            metadata = json.loads(metadata_path.read_text())
+        except (OSError, json.JSONDecodeError) as exc:
+            self.log(f"Could not read KB metadata for stats sync: {exc}")
+            return
+        chunks = int(metadata.get("chunks", 0) or 0)
+        words = int(metadata.get("words", 0) or 0)
+        characters = int(metadata.get("characters", 0) or 0)
+        try:
+            await knowledge_base_service.update_stats(
+                kb_record_id,
+                chunks=chunks,
+                words=words,
+                characters=characters,
+                size_bytes=int(metadata.get("size", 0) or 0),
+                source_types=list(metadata.get("source_types") or []),
+                chunk_size=metadata.get("chunk_size"),
+                chunk_overlap=metadata.get("chunk_overlap"),
+                separator=metadata.get("separator"),
+            )
+            self.log(
+                f"Synced KB stats to DB row {kb_record_id}: "
+                f"chunks={chunks} words={words} characters={characters}"
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.log(f"Could not sync KB stats to DB row {kb_record_id}: {exc}")
+
+    def _parse_user_metadata_dict(self) -> dict[str, Any]:
+        """Decode ``metadata_json`` to a dict, or ``{}`` on any error.
+
+        Distinct from ``_resolve_user_metadata_tag`` (which returns the
+        canonical JSON *string* stamped onto each chunk's
+        ``source_metadata`` key). The run-history layer wants a real
+        dict — that's what ``ingestion_run_service.create_run`` and
+        ``IngestionSummary.user_metadata`` expect.
+        """
+        raw = getattr(self, "metadata_json", None)
+        if not raw:
+            return {}
+        text = raw.strip() if isinstance(raw, str) else raw
+        if not text:
+            return {}
+        try:
+            decoded = json.loads(text)
+        except (TypeError, json.JSONDecodeError):
+            return {}
+        return decoded if isinstance(decoded, dict) else {}
 
     async def update_build_config(
         self,
