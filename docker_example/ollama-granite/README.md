@@ -8,6 +8,12 @@ Turnkey stack: Langflow, Postgres, and an Ollama server with `granite3.3:2b` pre
 docker compose up
 ```
 
+Or, with Podman:
+
+```bash
+podman compose up        # podman-compose / podman compose plugin
+```
+
 Open http://localhost:7860. The first start downloads the model (~1.5 GB), so allow a few minutes.
 
 ## Services

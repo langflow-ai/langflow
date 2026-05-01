@@ -237,9 +237,14 @@ ollama_up: ## start a local Ollama with granite3.3:2b for the bundled model prov
 	@bash scripts/setup/ollama_bootstrap.sh
 
 ollama_down: ## stop and remove the bundled Ollama container (keeps the model volume)
-	@if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -Fxq langflow-ollama; then \
-		echo 'Stopping langflow-ollama container...'; \
-		docker rm -f langflow-ollama >/dev/null; \
+	@engine=""; \
+	for c in docker podman; do \
+		if command -v $$c >/dev/null 2>&1 && $$c info >/dev/null 2>&1; then engine=$$c; break; fi; \
+	done; \
+	if [ -z "$$engine" ]; then echo 'No usable container engine (docker/podman) found.'; exit 0; fi; \
+	if $$engine ps -a --format '{{.Names}}' 2>/dev/null | grep -Fxq langflow-ollama; then \
+		echo "Stopping langflow-ollama container ($$engine)..."; \
+		$$engine rm -f langflow-ollama >/dev/null; \
 	else \
 		echo 'No langflow-ollama container found.'; \
 	fi
