@@ -868,3 +868,73 @@ async def clear_default_model(
         ) from e
 
     return {"default_model": None}
+
+
+# ---------------------------------------------------------------------------
+# HuggingFace local model management
+# ---------------------------------------------------------------------------
+
+
+class HuggingFaceDownloadRequest(BaseModel):
+    """Body for ``POST /huggingface/download``."""
+
+    model_id: str
+
+    @field_validator("model_id")
+    @classmethod
+    def _validate_model_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            msg = "model_id cannot be empty"
+            raise ValueError(msg)
+        if len(v) > MAX_STRING_LENGTH:
+            msg = f"model_id exceeds maximum length of {MAX_STRING_LENGTH}"
+            raise ValueError(msg)
+        return v.strip()
+
+
+@router.get("/huggingface/installed", status_code=200)
+async def list_huggingface_installed(current_user: CurrentActiveUser) -> dict[str, list[str]]:  # noqa: ARG001
+    """List HuggingFace models present in the local Hub cache."""
+    from lfx.base.models.huggingface_chat_model import list_installed_models
+
+    return {"installed": list_installed_models()}
+
+
+@router.post("/huggingface/download", status_code=200)
+async def download_huggingface_model(
+    request: HuggingFaceDownloadRequest,
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> dict[str, str]:
+    """Download a HuggingFace model into the local Hub cache.
+
+    Reuses the user's saved ``HUGGINGFACEHUB_API_TOKEN`` (if any) to authorize
+    pulls of gated/private repos. Public repos download without a token.
+    """
+    import asyncio
+
+    from lfx.base.models.huggingface_chat_model import download_model
+
+    api_key: str | None = None
+    variable_service = get_variable_service()
+    if isinstance(variable_service, DatabaseVariableService):
+        try:
+            api_key = await variable_service.get_variable(
+                user_id=current_user.id,
+                name="HUGGINGFACEHUB_API_TOKEN",
+                field=GENERIC_TYPE,
+                session=session,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("HUGGINGFACEHUB_API_TOKEN not configured for user %s: %s", current_user.id, e)
+
+    try:
+        path = await asyncio.to_thread(download_model, request.model_id, api_key=api_key)
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Failed to download HuggingFace model %s", request.model_id)
+        raise HTTPException(status_code=400, detail=f"Failed to download model: {e}") from e
+
+    return {"model_id": request.model_id, "path": str(path)}

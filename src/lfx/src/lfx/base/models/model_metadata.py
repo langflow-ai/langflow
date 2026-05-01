@@ -225,6 +225,37 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             "model_param": "model",
         },
     },
+    "HuggingFace": {
+        "icon": "HuggingFace",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "HuggingFace Hub API Token",
+                "variable_key": "HUGGINGFACEHUB_API_TOKEN",
+                # Local inference does not require a token; one is only needed
+                # to download gated/private repos (e.g. Llama, Gemma).
+                "required": False,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": (
+                        "Optional. Required only to download gated models from the Hub. "
+                        "Falls back to HUGGINGFACEHUB_API_TOKEN environment variable."
+                    ),
+                },
+            }
+        ],
+        "api_docs_url": "https://huggingface.co/docs/transformers",
+        "mapping": {
+            "model_class": "ChatHuggingFace",
+            "model_param": "model",
+        },
+    },
     "IBM WatsonX": {
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",

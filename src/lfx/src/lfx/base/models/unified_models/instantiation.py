@@ -63,8 +63,8 @@ def get_llm(
     # Get API key from user input or global variables
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
 
-    # Validate API key (Ollama doesn't require one)
-    if not api_key and provider != "Ollama":
+    # Validate API key (local providers don't require one)
+    if not api_key and provider not in ("Ollama", "HuggingFace"):
         # Get the correct variable name from the provider variable mapping
         provider_variable_map = unified_models_module.get_model_provider_variable_mapping()
         variable_name = provider_variable_map.get(provider, f"{provider.upper().replace(' ', '_')}_API_KEY")

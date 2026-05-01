@@ -24,6 +24,11 @@ _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     ),
     "ChatOllama": ("langchain_ollama", "ChatOllama", None),
     "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
+    "ChatHuggingFace": (
+        "lfx.base.models.huggingface_chat_model",
+        "ChatHuggingFace",
+        "langchain-openai",
+    ),
 }
 
 _EMBEDDING_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {

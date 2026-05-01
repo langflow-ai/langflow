@@ -9,6 +9,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.huggingface_constants import HUGGINGFACE_MODELS_DETAILED
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 from lfx.base.models.ollama_constants import (
     OLLAMA_EMBEDDING_MODELS_DETAILED,
@@ -42,6 +43,7 @@ def get_models_detailed() -> list[list[dict]]:
         OLLAMA_MODELS_DETAILED,
         OLLAMA_EMBEDDING_MODELS_DETAILED,
         WATSONX_MODELS_DETAILED,
+        HUGGINGFACE_MODELS_DETAILED,
     ]
 
 
