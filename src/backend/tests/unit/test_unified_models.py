@@ -420,7 +420,8 @@ def test_get_embeddings_missing_model_name_raises(mock_get_api_key):
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
     """Unknown providers can't be looked up in EMBEDDING_PROVIDER_CLASS_MAPPING,
-    so missing ``embedding_class`` metadata still raises."""
+    so missing ``embedding_class`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",
@@ -434,7 +435,8 @@ def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_empty_param_mapping_raises(mock_get_api_key):
     """Unknown providers can't be looked up in EMBEDDING_PARAM_MAPPINGS,
-    so empty ``param_mapping`` metadata still raises."""
+    so empty ``param_mapping`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",

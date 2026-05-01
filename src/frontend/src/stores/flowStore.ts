@@ -9,6 +9,7 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import { queryClient } from "@/contexts";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -18,7 +19,6 @@ import {
   trackDataLoaded,
   trackFlowBuild,
 } from "@/customization/utils/analytics";
-import { queryClient } from "@/contexts";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -1054,7 +1054,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // refetch if a component is actively reading them.
         queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
         queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
-        queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBaseChunks"] });
+        queryClient.invalidateQueries({
+          queryKey: ["useGetKnowledgeBaseChunks"],
+        });
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
           flowId: get().currentFlow?.id,
         });

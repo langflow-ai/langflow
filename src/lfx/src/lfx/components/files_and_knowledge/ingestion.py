@@ -976,9 +976,7 @@ class KnowledgeIngestionComponent(Component):
             return None, None, None, None
 
         try:
-            kb_record = await knowledge_base_service.get_by_user_and_name(
-                user_uuid, self.knowledge_base
-            )
+            kb_record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
             kb_record_id = kb_record.id if kb_record is not None else None
 
             user_metadata = self._parse_user_metadata_dict()
@@ -1029,10 +1027,7 @@ class KnowledgeIngestionComponent(Component):
                 source_config=source.describe().get("config") or {},
                 user_metadata=user_metadata,
             )
-            self.log(
-                f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} "
-                f"kb_id={kb_record_id}"
-            )
+            self.log(f"Started ingestion run job_id={job_id} kb_name={self.knowledge_base} kb_id={kb_record_id}")
         except Exception as exc:  # noqa: BLE001 — telemetry must never abort ingestion
             self.log(f"Could not begin ingestion-run tracking: {exc}")
             return None, None, None, None
@@ -1071,12 +1066,8 @@ class KnowledgeIngestionComponent(Component):
                 error_message=error_message,
             )
             if job_id is not None:
-                terminal_status = (
-                    JobStatus.COMPLETED if status is not IngestionRunStatus.FAILED else JobStatus.FAILED
-                )
-                await get_job_service().update_job_status(
-                    job_id, terminal_status, finished_timestamp=True
-                )
+                terminal_status = JobStatus.COMPLETED if status is not IngestionRunStatus.FAILED else JobStatus.FAILED
+                await get_job_service().update_job_status(job_id, terminal_status, finished_timestamp=True)
         except Exception as exc:  # noqa: BLE001 — telemetry must never re-raise
             self.log(f"Could not finalize ingestion-run tracking: {exc}")
 
@@ -1145,10 +1136,7 @@ class KnowledgeIngestionComponent(Component):
                 chunk_overlap=metadata.get("chunk_overlap"),
                 separator=metadata.get("separator"),
             )
-            self.log(
-                f"Synced KB stats to DB row {kb_record_id}: "
-                f"chunks={chunks} words={words} characters={characters}"
-            )
+            self.log(f"Synced KB stats to DB row {kb_record_id}: chunks={chunks} words={words} characters={characters}")
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not sync KB stats to DB row {kb_record_id}: {exc}")
 
