@@ -95,25 +95,16 @@ def get_unified_models_detailed(
             }
         )
 
-    # Default-model selection per provider:
-    #
-    # - If the provider's catalog already declares one or more models with
-    #   ``default=True`` (set via ``create_model_metadata(default=True)``),
-    #   honour that selection exactly.
-    # - Otherwise fall back to marking the first 5 models in list order as
-    #   defaults (preserves the historic behavior for providers that haven't
-    #   been migrated to explicit per-model defaults yet).
-    fallback_default_count = 5
+    # Mark the first 5 models in each provider as default (based on list order)
+    # and optionally filter to only defaults
+    default_model_count = 5  # Number of default models per provider
 
     for prov, models in provider_map.items():
-        explicit_defaults = [m for m in models if m["metadata"].get("default", False)]
-        if explicit_defaults:
-            for model in models:
-                # Already-True entries stay True; everything else is forced False.
-                model["metadata"]["default"] = bool(model["metadata"].get("default", False))
-        else:
-            for i, model in enumerate(models):
-                model["metadata"]["default"] = i < fallback_default_count
+        for i, model in enumerate(models):
+            if i < default_model_count:
+                model["metadata"]["default"] = True
+            else:
+                model["metadata"]["default"] = False
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
