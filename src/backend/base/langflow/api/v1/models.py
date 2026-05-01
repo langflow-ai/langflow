@@ -33,6 +33,11 @@ DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
 MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
+# Module-level set of in-flight HuggingFace background downloads. Holding
+# strong refs prevents the event loop from garbage-collecting the tasks
+# mid-flight (RUF006); entries auto-discard on completion.
+_HF_INFLIGHT_DOWNLOADS: set = set()
+
 
 def get_provider_from_variable_name(variable_name: str) -> str | None:
     """Get provider name from a model provider variable name.
@@ -675,11 +680,62 @@ async def update_enabled_models(
         variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
     )
 
+    # Side effect: when the user enables a HuggingFace model, eagerly pull
+    # the weights into the local Hub cache in the background so the first
+    # flow invocation doesn't pay the download latency.
+    await _maybe_schedule_huggingface_downloads(updates, session=session, current_user=current_user)
+
     # Return the updated model status
     return {
         "disabled_models": list(disabled_models),
         "enabled_models": list(explicitly_enabled_models),
     }
+
+
+async def _maybe_schedule_huggingface_downloads(
+    updates: list[ModelStatusUpdate],
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> None:
+    """Kick off background ``snapshot_download`` for newly-enabled HF models.
+
+    No-op for non-HuggingFace providers and for toggle-off updates. Failures
+    here are logged but never bubble up — a download problem must not block
+    the toggle from being saved.
+    """
+    import asyncio
+
+    hf_targets = [u.model_id for u in updates if u.enabled and u.provider == "HuggingFace"]
+    if not hf_targets:
+        return
+
+    api_key: str | None = None
+    variable_service = get_variable_service()
+    if isinstance(variable_service, DatabaseVariableService):
+        try:
+            api_key = await variable_service.get_variable(
+                user_id=current_user.id,
+                name="HUGGINGFACEHUB_API_TOKEN",
+                field=GENERIC_TYPE,
+                session=session,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("HUGGINGFACEHUB_API_TOKEN not set for user %s: %s", current_user.id, e)
+
+    from lfx.base.models.huggingface_chat_model import download_model
+
+    async def _download(model_id: str) -> None:
+        try:
+            await asyncio.to_thread(download_model, model_id, api_key=api_key)
+            logger.info("HuggingFace model %s downloaded for user %s", model_id, current_user.id)
+        except Exception:  # noqa: BLE001
+            logger.exception("Background download of HuggingFace model %s failed", model_id)
+
+    for model_id in hf_targets:
+        task = asyncio.create_task(_download(model_id))
+        _HF_INFLIGHT_DOWNLOADS.add(task)
+        task.add_done_callback(_HF_INFLIGHT_DOWNLOADS.discard)
 
 
 class DefaultModelRequest(BaseModel):
