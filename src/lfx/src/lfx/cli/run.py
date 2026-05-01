@@ -102,6 +102,13 @@ async def run(
         show_default=True,
         help="Include detailed timing information in output",
     ),
+    session_id: str | None = typer.Option(
+        None,
+        "--session-id",
+        help=(
+            "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
+        ),
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -121,6 +128,7 @@ async def run(
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
+        session_id: Optional session ID; auto-generated if not supplied
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
@@ -139,6 +147,7 @@ async def run(
             verbose_full=verbose_full,
             timing=timing,
             global_variables=None,
+            session_id=session_id,
         )
 
         # Output based on format
