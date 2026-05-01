@@ -458,6 +458,7 @@ function ProviderListItem({
   onSelect: () => void;
 }) {
   const isComingSoon = provider.status === "coming_soon";
+  const isMuted = (!isConfigured || isComingSoon) && !provider.defaultEnabled;
 
   return (
     <button
@@ -475,16 +476,14 @@ function ProviderListItem({
           name={provider.icon}
           className={cn(
             "h-5 w-5 flex-shrink-0",
-            !isConfigured && !provider.defaultEnabled && "opacity-50 grayscale",
+            isMuted && "opacity-50 grayscale",
           )}
         />
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span
             className={cn(
               "truncate text-sm font-medium",
-              !isConfigured &&
-                !provider.defaultEnabled &&
-                "text-muted-foreground",
+              isMuted && "text-muted-foreground",
             )}
           >
             {provider.label}

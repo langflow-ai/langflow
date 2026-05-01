@@ -79,7 +79,7 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
     label: "OpenSearch",
     description:
       "External OpenSearch k-NN index for self-hosted or managed clusters.",
-    icon: "Search",
+    icon: "OpenSearch",
     status: "available",
     configFields: [
       {
