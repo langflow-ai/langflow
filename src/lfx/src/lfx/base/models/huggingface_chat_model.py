@@ -39,7 +39,22 @@ def build_local_chat_huggingface(
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> Any:
-    """Construct a ``ChatHuggingFace`` backed by a local transformers pipeline."""
+    """Construct a ``ChatHuggingFace`` backed by a local transformers pipeline.
+
+    Implementation notes:
+
+    - We force ``device=-1`` (CPU) so the pipeline doesn't try to negotiate
+      MPS / CUDA devices on first load. MPS in particular has triggered
+      worker SIGSEGVs on macOS arm64 + Python 3.12 when torch is imported
+      inside a forked uvicorn worker.
+    - ``low_cpu_mem_usage=True`` reduces peak RAM during ``from_pretrained``
+      by streaming weights into the model instead of materializing them
+      twice. Helps on machines with limited RAM.
+    - On macOS, set ``OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES`` *before*
+      starting the server if you still see SIGSEGV at first load — that's
+      a torch+Objective-C fork-safety interaction, not specific to this
+      adapter.
+    """
     try:
         from langchain_huggingface import ChatHuggingFace as LCChatHuggingFace
         from langchain_huggingface import HuggingFacePipeline
@@ -60,9 +75,17 @@ def build_local_chat_huggingface(
         pipeline_kwargs["temperature"] = float(temperature)
         pipeline_kwargs["do_sample"] = True
 
+    model_kwargs: dict[str, Any] = {
+        # Stream weights into the model during from_pretrained instead of
+        # double-buffering them — cuts peak RAM on the load path.
+        "low_cpu_mem_usage": True,
+    }
+
     llm = HuggingFacePipeline.from_model_id(
         model_id=model_id,
         task="text-generation",
+        device=-1,
+        model_kwargs=model_kwargs,
         pipeline_kwargs=pipeline_kwargs or None,
     )
     return LCChatHuggingFace(llm=llm, model_id=model_id)
