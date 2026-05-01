@@ -149,9 +149,7 @@ def upgrade() -> None:
             # ``ON DELETE SET NULL`` keeps run history readable after a
             # KB is deleted (runs show "deleted KB" rather than
             # disappearing) while guaranteeing no dangling ``kb_id``.
-            sa.ForeignKeyConstraint(
-                ["kb_id"], [f"{KB_TABLE}.id"], name=RUN_FK_NAME, ondelete="SET NULL"
-            ),
+            sa.ForeignKeyConstraint(["kb_id"], [f"{KB_TABLE}.id"], name=RUN_FK_NAME, ondelete="SET NULL"),
             # Value allow-list mirrors ``IngestionRunStatus``. Prevents
             # typos ("Running" vs "running") from silently storing an
             # invalid state that list filters can't match.
@@ -172,9 +170,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------ #
     #  job.job_metadata                                                  #
     # ------------------------------------------------------------------ #
-    if migration.table_exists(JOB_TABLE, conn) and not migration.column_exists(
-        JOB_TABLE, JOB_METADATA_COLUMN, conn
-    ):
+    if migration.table_exists(JOB_TABLE, conn) and not migration.column_exists(JOB_TABLE, JOB_METADATA_COLUMN, conn):
         # Per-domain progress / outcome data written from inside
         # ``execute_with_status``. Old code simply ignores it.
         op.add_column(JOB_TABLE, sa.Column(JOB_METADATA_COLUMN, JsonVariant, nullable=True))
@@ -184,9 +180,7 @@ def downgrade() -> None:
     conn = op.get_bind()
 
     # job.job_metadata --------------------------------------------------- #
-    if migration.table_exists(JOB_TABLE, conn) and migration.column_exists(
-        JOB_TABLE, JOB_METADATA_COLUMN, conn
-    ):
+    if migration.table_exists(JOB_TABLE, conn) and migration.column_exists(JOB_TABLE, JOB_METADATA_COLUMN, conn):
         with op.batch_alter_table(JOB_TABLE, schema=None) as batch_op:
             batch_op.drop_column(JOB_METADATA_COLUMN)
 
