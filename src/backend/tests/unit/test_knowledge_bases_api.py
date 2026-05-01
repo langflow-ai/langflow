@@ -1179,6 +1179,85 @@ class TestKnowledgeBaseAPI:
 
         assert response.status_code == 404
 
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    async def test_get_chunks_metadata_filter(
+        self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """``meta_<key>`` query params filter chunks by user-supplied tags.
+
+        Each chunk's user metadata is stored as a JSON string under
+        ``source_metadata``. The endpoint decodes that JSON, then AND-matches
+        every ``meta_<key>`` value passed by the client. Repeating the same
+        key OR-s its values.
+        """
+        import json as _json
+
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / "activeuser" / "KB1"
+        kb_dir.mkdir(parents=True, exist_ok=True)
+        (kb_dir / "chroma.sqlite3").write_text("dummy")
+
+        documents = [
+            IngestedDocument(
+                content="invoice doc",
+                metadata={"_id": "1", "source_metadata": _json.dumps({"tag": "invoice", "year": 2026})},
+            ),
+            IngestedDocument(
+                content="report doc",
+                metadata={"_id": "2", "source_metadata": _json.dumps({"tag": "report"})},
+            ),
+            IngestedDocument(
+                content="invoice doc 2",
+                metadata={"_id": "3", "source_metadata": _json.dumps({"tag": ["invoice", "audit"]})},
+            ),
+            IngestedDocument(
+                content="legacy chunk",
+                metadata={"_id": "4"},  # pre-metadata era — no source_metadata at all
+            ),
+        ]
+
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield documents
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        # Single-key string match returns both invoice chunks (one literal, one array).
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/chunks",
+            params={"meta_tag": "invoice"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        data = response.json()
+        assert sorted(chunk["id"] for chunk in data["chunks"]) == ["1", "3"]
+
+        # AND filter: tag=invoice + year=2026 narrows to id 1.
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/chunks",
+            params=[("meta_tag", "invoice"), ("meta_year", "2026")],
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        data = response.json()
+        assert [chunk["id"] for chunk in data["chunks"]] == ["1"]
+
+        # OR within a key: tag in {report, audit} returns the report doc and
+        # the audit-tagged invoice doc.
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/chunks",
+            params=[("meta_tag", "report"), ("meta_tag", "audit")],
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        data = response.json()
+        assert sorted(chunk["id"] for chunk in data["chunks"]) == ["2", "3"]
+
 
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""

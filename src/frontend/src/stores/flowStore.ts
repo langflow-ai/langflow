@@ -9,7 +9,6 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import i18n from "../i18n";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -21,6 +20,7 @@ import {
 } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
+import i18n from "../i18n";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import type { ChatInputType, ChatOutputType } from "../types/chat";
 import type {
@@ -1370,13 +1370,13 @@ export function syncNodeTranslations(): void {
     }
   }
 
-  let noteIndex = 0;
+  let _noteIndex = 0;
   const updatedNodes = nodes.map((node) => {
     const nodeType = node.data.type;
 
     // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
     if (node.type === "noteNode") {
-      noteIndex += 1;
+      _noteIndex += 1;
       return node;
     }
 

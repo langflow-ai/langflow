@@ -27,6 +27,12 @@ interface GetKnowledgeBaseChunksParams {
   source_type?: string;
   file_name?: string;
   job_id?: string;
+  /**
+   * User-metadata filter as a {key: [values]} map. Each entry serializes
+   * to one or more ``meta_<key>=<value>`` query params; the backend
+   * AND-s across keys and OR-s across values for the same key.
+   */
+  metadata_filter?: Record<string, string[]>;
 }
 
 export const useGetKnowledgeBaseChunks: useQueryFunctionType<
@@ -55,6 +61,13 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     if (params?.job_id) {
       queryParams.append("job_id", params.job_id);
     }
+    if (params?.metadata_filter) {
+      for (const [key, values] of Object.entries(params.metadata_filter)) {
+        for (const value of values) {
+          queryParams.append(`meta_${key}`, value);
+        }
+      }
+    }
 
     const url = `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -74,6 +87,7 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
       params?.source_type,
       params?.file_name,
       params?.job_id,
+      params?.metadata_filter,
     ],
     getChunksFn,
     {

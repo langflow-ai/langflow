@@ -142,6 +142,11 @@ class IngestionSummary:
     chunks_created: int = 0
     items: list[IngestionItemResult] = field(default_factory=list)
     source_config: dict[str, Any] = field(default_factory=dict)
+    # User-supplied run-level metadata (tags, categories, custom fields).
+    # Populated when the API caller supplied a ``metadata`` payload;
+    # persisted onto the ``ingestion_run`` row alongside ``source_config``
+    # so the run-history UI can render the tags applied to the batch.
+    user_metadata: dict[str, Any] = field(default_factory=dict)
 
     def record_item(self, result: IngestionItemResult, *, size_bytes: int = 0) -> None:
         """Register ``result`` and update aggregate counters.

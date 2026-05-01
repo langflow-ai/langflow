@@ -66,6 +66,7 @@ class RunRow:
     total_bytes: int
     chunks_created: int
     items: list[dict[str, Any]]
+    user_metadata: dict[str, Any]
     started_at: datetime
     finished_at: datetime | None
 
@@ -77,14 +78,21 @@ async def create_run(
     job_id: UUID | None,
     user_id: UUID | None,  # noqa: ARG001 — kept for caller signature compatibility
     kb_id: UUID | None = None,
+    user_metadata: dict | None = None,
 ) -> UUID | None:
     """Initialise a KB-ingestion run on the job-metadata side.
 
     The parent ``job`` row is created upstream by the API layer (see
     ``knowledge_bases.py::ingest_files`` and friends) before
     ``execute_with_status`` is invoked. This call seeds ``job_metadata``
-    with the static config (kb_name, kb_id, source_type, source_config)
-    and a PENDING status.
+    with the static config (kb_name, kb_id, source_type, source_config,
+    user_metadata) and a PENDING status.
+
+    ``user_metadata`` carries the run-level tags supplied at the API
+    boundary (already validated by ``parse_user_metadata``). Persisted
+    onto the same ``job_metadata`` blob as the rest of the run state
+    so the run-history UI can render the tags without decoding the
+    per-chunk ``source_metadata`` blobs.
 
     Returns the ``job_id`` so callers can use it as the legacy
     ``run_id`` handle. Returns ``None`` when ``job_id`` is missing —
@@ -107,6 +115,7 @@ async def create_run(
             "kb_id": str(kb_id) if kb_id is not None else None,
             "source_type": source.source_type.value,
             "source_config": source_config,
+            "user_metadata": user_metadata or {},
             "status": IngestionRunStatus.PENDING.value,
             "started_at": datetime.now(timezone.utc).isoformat(),
             # Legacy alias preserved for any code path still referring
@@ -274,6 +283,7 @@ def _job_to_run_row(job: Job) -> RunRow:
         total_bytes=int(metadata.get("total_bytes", 0) or 0),
         chunks_created=int(metadata.get("chunks_created", 0) or 0),
         items=list(metadata.get("items") or []),
+        user_metadata=dict(metadata.get("user_metadata") or {}),
         started_at=job.created_timestamp,
         finished_at=job.finished_timestamp,
     )

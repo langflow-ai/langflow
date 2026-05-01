@@ -12,6 +12,7 @@ Delegates to the same two abstractions ingestion uses:
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -80,6 +81,17 @@ class KnowledgeBaseComponent(Component):
             display_name="Include Embeddings",
             info="Whether to include embeddings in the output. Only applicable if 'Include Metadata' is enabled.",
             value=False,
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="metadata_filter",
+            display_name="Metadata Filter",
+            info=(
+                "Optional JSON object of user-metadata key/value pairs. Only chunks "
+                'whose source_metadata matches every key are returned (e.g. {"tag": "invoice"} '
+                'or {"tag": ["invoice", "audit"]} for OR-of-values). Backends without '
+                "native filtering apply the match client-side after retrieval."
+            ),
             advanced=True,
         ),
     ]
@@ -288,12 +300,27 @@ class KnowledgeBaseComponent(Component):
             user_id=self.user_id,
         )
         try:
+            user_metadata_filter = _parse_metadata_filter(getattr(self, "metadata_filter", None))
             use_scores = bool(self.search_query)
+            # similarity_search runs first without a backend filter — every
+            # supported backend has a different DSL, so a uniform Python
+            # post-filter on ``source_metadata`` keeps behaviour consistent
+            # while we wait on per-backend translators (P3 work).
+            #
+            # Retrieve a wider window when a filter is active so the post-
+            # filter doesn't starve the result set; the original ``top_k``
+            # is enforced after filtering.
+            search_k = self.top_k * 4 if user_metadata_filter else self.top_k
             results = await backend.similarity_search(
                 query=self.search_query or "",
-                k=self.top_k,
+                k=search_k,
                 with_scores=use_scores,
             )
+            if user_metadata_filter:
+                results = [
+                    (doc, score) for doc, score in results if _chunk_matches_filter(doc.metadata, user_metadata_filter)
+                ]
+                results = results[: self.top_k]
 
             # Build an id → embedding map via the backend-agnostic iterator
             # rather than reaching into backend-specific private APIs.
@@ -324,3 +351,60 @@ class KnowledgeBaseComponent(Component):
             return DataFrame(data=data_list)
         finally:
             await backend.teardown()
+
+
+def _parse_metadata_filter(raw: str | None) -> dict[str, list[str]]:
+    """Decode the ``metadata_filter`` input into a {key: [values]} map.
+
+    Empty or malformed input maps to an empty filter so retrieval falls back
+    to the unfiltered path. We intentionally swallow JSON errors here rather
+    than raise: surfacing component-config errors at the canvas node would
+    break a flow run for what is meant to be an optional refinement.
+    """
+    if not raw:
+        return {}
+    text = raw.strip() if isinstance(raw, str) else raw
+    if not text:
+        return {}
+    try:
+        decoded = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        logger.warning("KnowledgeBaseComponent: metadata_filter is not valid JSON; ignoring filter.")
+        return {}
+    if not isinstance(decoded, dict):
+        logger.warning("KnowledgeBaseComponent: metadata_filter must be a JSON object; ignoring filter.")
+        return {}
+    result: dict[str, list[str]] = {}
+    for key, value in decoded.items():
+        if not isinstance(key, str):
+            continue
+        if isinstance(value, list):
+            result[key] = [str(entry) for entry in value]
+        else:
+            result[key] = [str(value)]
+    return result
+
+
+def _chunk_matches_filter(metadata: dict[str, Any] | None, filt: dict[str, list[str]]) -> bool:
+    """AND across keys, OR within key values, mirroring the chunks endpoint."""
+    if not filt:
+        return True
+    if not metadata:
+        return False
+    raw = metadata.get("source_metadata")
+    if not raw:
+        return False
+    try:
+        stored = json.loads(raw) if isinstance(raw, str) else raw
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(stored, dict):
+        return False
+    for key, expected_values in filt.items():
+        actual = stored.get(key)
+        if actual is None:
+            return False
+        actual_set = {str(entry) for entry in actual} if isinstance(actual, list) else {str(actual)}
+        if not actual_set & set(expected_values):
+            return False
+    return True

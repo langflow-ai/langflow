@@ -84,7 +84,7 @@ export const useProviderConfiguration = ({
   const [isFetchingAfterSave, setIsFetchingAfterSave] = useState(false);
   const [isFetchingAfterDisconnect, setIsFetchingAfterDisconnect] =
     useState(false);
-  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+  const _validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
@@ -107,7 +107,7 @@ export const useProviderConfiguration = ({
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
-      {},
+      { includeDeprecated: true },
       {
         refetchInterval:
           syncedSelectedProvider?.provider?.toLowerCase() === "ollama"

@@ -204,6 +204,19 @@ class KnowledgeIngestionComponent(Component):
             advanced=True,
             value=False,
         ),
+        StrInput(
+            name="metadata_json",
+            display_name="Metadata",
+            info=(
+                "Optional JSON object of user metadata applied to every chunk produced by this "
+                'run (e.g. {"tag": "invoice", "year": "2026"}). Same shape as the upload modal '
+                "Metadata section so chunks browser filters + KnowledgeBaseComponent.metadata_filter "
+                "work uniformly across upload, folder, and flow-driven ingestion. Malformed JSON is "
+                "ignored with a warning rather than failing the run."
+            ),
+            advanced=True,
+            required=False,
+        ),
     ]
 
     # ------ Outputs -------------------------------------------------------
@@ -528,10 +541,19 @@ class KnowledgeIngestionComponent(Component):
         # Convert DataFrame to Data objects (following Local DB pattern)
         data_objects = await self._convert_df_to_data_objects(df_source, config_list, existing_ids=existing_ids)
 
+        # Resolve user-supplied metadata once per run so the chunks share the
+        # same source_metadata tag the API path writes. Bad JSON logs + skips
+        # — never breaks the flow run.
+        user_metadata_tag = self._resolve_user_metadata_tag()
+
         # Convert Data objects to LangChain Documents
         documents = []
         for data_obj in data_objects:
             doc = data_obj.to_lc_document()
+            if user_metadata_tag:
+                # Match the chunk-metadata key the chunks endpoint and
+                # KnowledgeBaseComponent.metadata_filter both look up.
+                doc.metadata["source_metadata"] = user_metadata_tag
             documents.append(doc)
 
         # Add documents to vector store
@@ -671,6 +693,35 @@ class KnowledgeIngestionComponent(Component):
         self._cached_kb_path = kb_root / kb_user / self.knowledge_base
 
         return self._cached_kb_path
+
+    def _resolve_user_metadata_tag(self) -> str:
+        """Return the JSON-encoded user metadata tag for chunk writes.
+
+        Mirrors the API-path contract: every chunk gets a single
+        ``source_metadata`` key whose value is a JSON-string holding the
+        run-level user metadata. Empty / missing / malformed input
+        returns ``""`` so downstream code can do a falsy check and skip
+        the metadata stamp entirely.
+        """
+        raw = getattr(self, "metadata_json", None)
+        if not raw:
+            return ""
+        text = raw.strip() if isinstance(raw, str) else raw
+        if not text:
+            return ""
+        try:
+            decoded = json.loads(text)
+        except (TypeError, json.JSONDecodeError) as exc:
+            self.log(f"KnowledgeIngestionComponent: metadata_json is not valid JSON ({exc}); skipping metadata stamp.")
+            return ""
+        if not isinstance(decoded, dict):
+            self.log(
+                "KnowledgeIngestionComponent: metadata_json must decode to a JSON object; skipping metadata stamp."
+            )
+            return ""
+        # Re-encode after parse so the stored value is canonical (no
+        # leading whitespace, sorted keys for stable equality).
+        return json.dumps(decoded, sort_keys=True)
 
     # ---------------------------------------------------------------------
     #                         OUTPUT METHODS

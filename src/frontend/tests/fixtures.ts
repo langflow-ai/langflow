@@ -57,14 +57,10 @@ export const test = base.extend({
           url.includes("/auto_login") ||
           url.includes("/logout");
         if (!isAuth) {
-          console.log(
-            `🚨 Backend Error: ${status} ${response.statusText()} - ${url}`,
-          );
           let responseBody: string | undefined;
           try {
             responseBody = await response.text();
-            console.log(`   Response: ${responseBody}`);
-          } catch (e) {
+          } catch (_e) {
             responseBody = "Could not read response";
           }
           errors.push({
@@ -97,9 +93,6 @@ export const test = base.extend({
             contentType.includes(hint),
           );
           if (isStreamLike) {
-            console.log(
-              `Skipping streaming response body parsing for ${url} (${contentType || "unknown content-type"})`,
-            );
             return;
           }
 
@@ -176,12 +169,12 @@ export const test = base.extend({
                     hasError = true;
                     break;
                   }
-                } catch (lineParseErr) {
+                } catch (_lineParseErr) {
                   // Skip lines that aren't valid JSON
                 }
               }
             }
-          } catch (parseErr) {
+          } catch (_parseErr) {
             // Fallback to string search if JSON parsing completely fails
           }
 
@@ -208,9 +201,6 @@ export const test = base.extend({
           }
 
           if (hasError && errorPreview) {
-            console.log(`🚨 Flow Error Detected in Event Stream - ${url}`);
-            console.log(`   Error: ${errorPreview}`);
-
             const error = {
               url,
               status: 200,
@@ -253,15 +243,9 @@ export const test = base.extend({
       const flowErrors = errors.filter((e) => e.type === "flow_error");
       const httpErrors = errors.filter((e) => e.type === "http_error");
 
-      console.log(`\n📋 Found ${errors.length} backend error(s) during test`);
-
       if (flowErrors.length > 0) {
-        console.log(
-          `   ⚠️  ${flowErrors.length} flow execution error(s) detected`,
-        );
       }
       if (httpErrors.length > 0) {
-        console.log(`   ⚠️  ${httpErrors.length} HTTP error(s) detected`);
       }
 
       // Fail the test if flow errors occurred and weren't allowed

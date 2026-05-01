@@ -61,7 +61,7 @@ export default function KnowledgeBaseUploadModal({
             separator={form.separator}
             onSeparatorChange={form.setSeparator}
             showAdvanced={form.showAdvanced}
-            toggleAdvanced={form.toggleAdvanced}
+            hasFiles={form.files.length > 0}
             onFileSelect={form.handleFileSelect}
             onFolderSelect={form.handleFolderSelect}
             validationErrors={form.validationErrors}
@@ -72,6 +72,8 @@ export default function KnowledgeBaseUploadModal({
             onBackendTypeChange={form.setBackendType}
             onBackendConfigChange={form.setBackendConfig}
             globalVariables={form.globalVariables}
+            metadataPairs={form.metadataPairs}
+            onMetadataPairsChange={form.setMetadataPairs}
           />
         );
 
@@ -92,17 +94,18 @@ export default function KnowledgeBaseUploadModal({
             separator={form.separator}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
             backendType={form.backendType}
+            metadataPairs={form.metadataPairs}
+            perFileMetadata={form.perFileMetadata}
           />
         );
     }
   };
 
   const errorCount = Object.keys(form.validationErrors).length;
-  const modalBase =
-    !hideAdvanced && form.showAdvanced
-      ? MODAL_HEIGHT_WITH_ADVANCED
-      : MODAL_HEIGHT_DEFAULT;
-  const modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
+  const modalBase = hideAdvanced
+    ? MODAL_HEIGHT_DEFAULT
+    : MODAL_HEIGHT_WITH_ADVANCED;
+  const _modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
 
   const showHelpButton = !hideAdvanced && form.currentStep === 1;
 
@@ -134,13 +137,18 @@ export default function KnowledgeBaseUploadModal({
       width="w-[700px]"
       showProgress={false}
       sidePanel={
-        <FilesPanel files={form.files} onRemoveFile={form.handleRemoveFile} />
+        <FilesPanel
+          files={form.files}
+          onRemoveFile={form.handleRemoveFile}
+          perFileMetadata={form.perFileMetadata}
+          onPerFileMetadataChange={form.setPerFileMetadata}
+        />
       }
       sidePanelOpen={form.files.length > 0}
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
-          totalSteps={!hideAdvanced && form.showAdvanced ? 2 : 1}
+          totalSteps={hideAdvanced ? 1 : 2}
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
