@@ -21,6 +21,16 @@ import os
 from pathlib import Path
 from typing import Any
 
+# Disable huggingface_hub's accelerated/multi-threaded download backends
+# *before* the library is imported anywhere in this process. xet and
+# hf_transfer both spawn worker threads/processes that have triggered
+# SIGSEGV inside forked uvicorn workers on macOS arm64. The plain
+# single-threaded HTTP path is more than fast enough for ~270MB GGUFs.
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
+os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+
 # Default bundled model. Q4_K_M-quantized SmolLM2-360M (~270MB), fast on CPU.
 DEFAULT_HUGGINGFACE_MODEL = "bartowski/SmolLM2-360M-Instruct-GGUF"
 DEFAULT_GGUF_FILENAME = "SmolLM2-360M-Instruct-Q4_K_M.gguf"
@@ -110,7 +120,13 @@ def build_local_chat_huggingface(
 
 
 def _ensure_gguf_cached(repo_id: str, filename: str, *, api_key: str | None) -> Path:
-    """Download a single GGUF file from HF Hub if it isn't already cached."""
+    """Download a single GGUF file from HF Hub if it isn't already cached.
+
+    Tries an in-process ``hf_hub_download`` first. If that crashes or
+    fails, retries the same call inside an isolated subprocess so a hard
+    crash (SIGSEGV from xet/torch transitive imports) cannot take down
+    the parent uvicorn worker.
+    """
     try:
         from huggingface_hub import hf_hub_download
     except ImportError as exc:
@@ -121,11 +137,62 @@ def _ensure_gguf_cached(repo_id: str, filename: str, *, api_key: str | None) -> 
         raise ImportError(msg) from exc
 
     _set_hf_token(api_key)
-    # hf_hub_download is single-file, single-thread by nature: no parallel
-    # fetcher means none of the worker-fork crashes that snapshot_download
-    # hit on macOS arm64.
-    path = hf_hub_download(repo_id=repo_id, filename=filename)
-    return Path(path)
+    try:
+        path = hf_hub_download(repo_id=repo_id, filename=filename)
+        return Path(path)
+    except Exception as exc:  # noqa: BLE001
+        from lfx.log.logger import logger
+
+        logger.warning(
+            "In-process hf_hub_download for %s failed (%s); retrying in subprocess.",
+            repo_id,
+            exc,
+        )
+        return _download_via_subprocess(repo_id, filename, api_key=api_key)
+
+
+def _download_via_subprocess(repo_id: str, filename: str, *, api_key: str | None) -> Path:
+    """Run ``hf_hub_download`` in a separate Python process.
+
+    A subprocess can't crash the parent uvicorn worker. We capture stdout
+    (the cached path) and forward stderr only on failure.
+    """
+    import subprocess
+    import sys
+
+    script = (
+        "import os\n"
+        "os.environ.setdefault('HF_HUB_DISABLE_XET', '1')\n"
+        "os.environ.setdefault('HF_HUB_ENABLE_HF_TRANSFER', '0')\n"
+        "from huggingface_hub import hf_hub_download\n"
+        f"print(hf_hub_download(repo_id={repo_id!r}, filename={filename!r}))\n"
+    )
+    env = os.environ.copy()
+    env.setdefault("HF_HUB_DISABLE_XET", "1")
+    env.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
+    if api_key:
+        env["HUGGINGFACEHUB_API_TOKEN"] = api_key
+        env["HF_TOKEN"] = api_key
+
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=600,
+    )
+    if result.returncode != 0:
+        msg = (
+            f"Subprocess hf_hub_download failed for {repo_id} (exit {result.returncode}): "
+            f"{result.stderr.strip() or 'no stderr captured'}"
+        )
+        raise RuntimeError(msg)
+    out = result.stdout.strip().splitlines()
+    if not out:
+        msg = f"Subprocess hf_hub_download returned no path for {repo_id}"
+        raise RuntimeError(msg)
+    return Path(out[-1])
 
 
 class ChatHuggingFace:
