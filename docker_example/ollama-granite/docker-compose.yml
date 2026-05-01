@@ -58,7 +58,7 @@ services:
     environment:
       - OLLAMA_HOST=http://ollama:11434
     command: >
-      "ollama pull granite3.3:2b && echo 'granite3.3:2b ready'"
+      "ollama pull granite4:350m && echo 'granite4:350m ready'"
     restart: "no"
 
 volumes:

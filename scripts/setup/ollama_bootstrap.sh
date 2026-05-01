@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstrap a local Ollama server with the granite3.3:2b model so that
+# Bootstrap a local Ollama server with the granite4:350m model so that
 # `make run_cli` exposes a pre-configured Ollama provider in Langflow.
 #
 # Resolution order:
@@ -16,7 +16,7 @@
 # Environment variables:
 #   OLLAMA_PORT                 default 11434
 #   OLLAMA_HOST                 default 127.0.0.1
-#   LANGFLOW_OLLAMA_MODEL       default granite3.3:2b
+#   LANGFLOW_OLLAMA_MODEL       default granite4:350m
 #   LANGFLOW_OLLAMA_ENGINE      override container engine: docker | podman
 #                               (auto-detected when unset)
 #   LANGFLOW_OLLAMA_NO_INSTALL  set to 1 to disable brew autoinstall
@@ -28,7 +28,7 @@ set -euo pipefail
 
 OLLAMA_PORT="${OLLAMA_PORT:-11434}"
 OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1}"
-OLLAMA_MODEL="${LANGFLOW_OLLAMA_MODEL:-granite3.3:2b}"
+OLLAMA_MODEL="${LANGFLOW_OLLAMA_MODEL:-granite4:350m}"
 CONTAINER_NAME="langflow-ollama"
 VOLUME_NAME="langflow-ollama-data"
 HEALTH_TIMEOUT_S=60

@@ -233,7 +233,7 @@ lint: install_backend ## run linters
 
 
 
-ollama_up: ## start a local Ollama with granite3.3:2b for the bundled model provider
+ollama_up: ## start a local Ollama with granite4:350m for the bundled model provider
 	@bash scripts/setup/ollama_bootstrap.sh
 
 ollama_down: ## stop and remove the bundled Ollama container (keeps the model volume)

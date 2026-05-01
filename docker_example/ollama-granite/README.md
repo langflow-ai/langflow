@@ -1,6 +1,6 @@
-# Langflow + Ollama (granite3.3:2b) preset
+# Langflow + Ollama (granite4:350m) preset
 
-Turnkey stack: Langflow, Postgres, and an Ollama server with `granite3.3:2b` pre-pulled. The Langflow service sees `OLLAMA_BASE_URL=http://ollama:11434`, so the Ollama provider is auto-enabled in **Model Providers** on first login.
+Turnkey stack: Langflow, Postgres, and an Ollama server with `granite4:350m` pre-pulled. The Langflow service sees `OLLAMA_BASE_URL=http://ollama:11434`, so the Ollama provider is auto-enabled in **Model Providers** on first login.
 
 ## Run
 
@@ -14,14 +14,14 @@ Or, with Podman:
 podman compose up        # podman-compose / podman compose plugin
 ```
 
-Open http://localhost:7860. The first start downloads the model (~1.5 GB), so allow a few minutes.
+Open http://localhost:7860. The first start downloads the model (a few hundred MB for `granite4:350m`).
 
 ## Services
 
 - **langflow** — `localhost:7860`, with `OLLAMA_BASE_URL` already set
 - **postgres** — `localhost:5432` (`langflow/langflow`)
 - **ollama** — `localhost:11434`
-- **ollama-init** — one-shot, pulls `granite3.3:2b` then exits
+- **ollama-init** — one-shot, pulls `granite4:350m` then exits
 
 ## GPU
 
