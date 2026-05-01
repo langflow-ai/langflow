@@ -204,12 +204,12 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByText("Embedding Model")).toBeInTheDocument();
     });
 
-    it("renders knowledge backend selector defaulting to Chroma", () => {
+    it("renders DB Provider selector defaulting to Chroma", () => {
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      expect(screen.getByText("Knowledge Backend")).toBeInTheDocument();
-      expect(screen.getByTestId("kb-knowledge-backend")).toHaveTextContent(
+      expect(screen.getByText("DB Provider")).toBeInTheDocument();
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
         "Chroma",
       );
     });
@@ -871,7 +871,7 @@ describe("KnowledgeBaseUploadModal", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("shows the existing knowledge backend as read-only", async () => {
+    it("shows the existing DB Provider as read-only", async () => {
       render(
         <KnowledgeBaseUploadModal
           open={true}
@@ -882,9 +882,9 @@ describe("KnowledgeBaseUploadModal", () => {
       );
 
       await waitFor(() =>
-        expect(screen.getByTestId("kb-knowledge-backend")).toBeDisabled(),
+        expect(screen.getByTestId("kb-db-provider")).toBeDisabled(),
       );
-      expect(screen.getByTestId("kb-knowledge-backend")).toHaveTextContent(
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
         "OpenSearch",
       );
     });

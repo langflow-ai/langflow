@@ -28,7 +28,7 @@ from lfx.io import (
     DropdownInput,
     HandleInput,
     IntInput,
-    KnowledgeBackendInput,
+    DBProviderInput,
     ModelInput,
     Output,
     SecretStrInput,
@@ -106,12 +106,12 @@ class KnowledgeIngestionComponent(Component):
                                 required=True,
                                 model_type="embedding",
                             ),
-                            "03_knowledge_backend": KnowledgeBackendInput(
+                            "03_knowledge_backend": DBProviderInput(
                                 name="knowledge_backend",
-                                display_name="Knowledge Backend",
+                                display_name="DB Provider",
                                 info=(
                                     "Select where this knowledge base stores vectors. "
-                                    "OpenSearch uses the global Knowledge Backends settings."
+                                    "OpenSearch uses the global DB Providers settings."
                                 ),
                                 value={"backend_type": BackendType.CHROMA.value, "backend_config": {}},
                                 required=True,
@@ -276,7 +276,7 @@ class KnowledgeIngestionComponent(Component):
             model_selection: Model selection list from ModelInput
                 (e.g. [{'name': ..., 'provider': ..., 'metadata': ...}])
             api_key: Optional runtime API key override.
-            backend_type: Knowledge backend identifier for vector storage.
+            backend_type: DB provider identifier for vector storage.
             backend_config: Backend-specific config persisted with the KB.
         """
         model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
@@ -386,7 +386,7 @@ class KnowledgeIngestionComponent(Component):
 
     @staticmethod
     def _normalize_backend_selection(value: Any) -> tuple[str, dict[str, Any]]:
-        """Normalize a KnowledgeBackendInput value into backend type/config."""
+        """Normalize a DBProviderInput value into backend type/config."""
         if not value:
             return BackendType.CHROMA.value, {}
 
@@ -510,7 +510,7 @@ class KnowledgeIngestionComponent(Component):
         config_list: list[dict[str, Any]],
         embedding_function,
     ) -> BaseVectorStoreBackend:
-        """Create vector store using the configured knowledge backend."""
+        """Create vector store using the configured DB provider."""
         # Set up vector store directory
         vector_store_dir = await self._kb_path()
         if not vector_store_dir:
@@ -827,7 +827,7 @@ class KnowledgeIngestionComponent(Component):
                 chunk_size=self.chunk_size,
             )
 
-            # Create vector store using the configured knowledge backend
+            # Create vector store using the configured DB provider
             backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
             # Save KB files (using File Component storage patterns)

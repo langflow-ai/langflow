@@ -48,7 +48,7 @@ export const MAX_TOTAL_FILE_SIZE = 1024 * 1024 * 1024; // 1 GB
 
 // Modal height constants
 export const MODAL_HEIGHT_WITH_ADVANCED = 760;
-// Step 1 stacks Name + Embedding Model + Knowledge Backend (with helper
+// Step 1 stacks Name + Embedding Model + DB Provider (with helper
 // text). 455 forced an inner scrollbar on standard viewports — bumped so
 // the three required fields fit comfortably without scrolling.
 export const MODAL_HEIGHT_DEFAULT = 580;

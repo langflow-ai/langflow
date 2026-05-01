@@ -1,6 +1,9 @@
 import type { GlobalVariable } from "@/types/global_variables";
 
-export const ACTIVE_KNOWLEDGE_BACKEND_VARIABLE = "LANGFLOW_KNOWLEDGE_BACKEND";
+// The stored value (env-var key) intentionally keeps its legacy name so
+// existing user installations continue to read the same global variable
+// after the UI rename from "Knowledge Backends" to "DB Providers".
+export const ACTIVE_DB_PROVIDER_VARIABLE = "LANGFLOW_KNOWLEDGE_BACKEND";
 
 export const OPENSEARCH_VARIABLES = {
   URL: "OPENSEARCH_URL",
@@ -11,24 +14,24 @@ export const OPENSEARCH_VARIABLES = {
   TEXT_FIELD: "OPENSEARCH_TEXT_FIELD",
   // Boolean toggles for TLS connection behavior. Persisted as
   // "true"/"false" strings via the global-variable pipeline and
-  // coerced back to booleans inside ``getKnowledgeBackendConfig``.
+  // coerced back to booleans inside ``getDBProviderConfig``.
   USE_SSL: "OPENSEARCH_USE_SSL",
   VERIFY_CERTS: "OPENSEARCH_VERIFY_CERTS",
 } as const;
 
-export type KnowledgeBackendId =
+export type DBProviderId =
   | "chroma"
   | "opensearch"
   | "astra"
   | "mongodb"
   | "postgres";
 
-export type AvailableKnowledgeBackendId = Extract<
-  KnowledgeBackendId,
+export type AvailableDBProviderId = Extract<
+  DBProviderId,
   "chroma" | "opensearch"
 >;
 
-export interface KnowledgeBackendTextField {
+export interface DBProviderTextField {
   kind?: "text";
   label: string;
   variableKey: string;
@@ -38,7 +41,7 @@ export interface KnowledgeBackendTextField {
   defaultValue?: string;
 }
 
-export interface KnowledgeBackendBooleanField {
+export interface DBProviderBooleanField {
   kind: "boolean";
   label: string;
   variableKey: string;
@@ -46,21 +49,21 @@ export interface KnowledgeBackendBooleanField {
   defaultValue: boolean;
 }
 
-export type KnowledgeBackendConfigField =
-  | KnowledgeBackendTextField
-  | KnowledgeBackendBooleanField;
+export type DBProviderConfigField =
+  | DBProviderTextField
+  | DBProviderBooleanField;
 
-export interface KnowledgeBackendOption {
-  id: KnowledgeBackendId;
+export interface DBProviderOption {
+  id: DBProviderId;
   label: string;
   description: string;
   icon: string;
   status: "available" | "coming_soon";
   defaultEnabled?: boolean;
-  configFields: KnowledgeBackendConfigField[];
+  configFields: DBProviderConfigField[];
 }
 
-export const KNOWLEDGE_BACKEND_OPTIONS: KnowledgeBackendOption[] = [
+export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
   {
     id: "chroma",
     label: "Chroma",
@@ -167,14 +170,13 @@ export const KNOWLEDGE_BACKEND_OPTIONS: KnowledgeBackendOption[] = [
   },
 ];
 
-export const AVAILABLE_KNOWLEDGE_BACKEND_OPTIONS =
-  KNOWLEDGE_BACKEND_OPTIONS.filter(
-    (
-      backend,
-    ): backend is KnowledgeBackendOption & {
-      id: AvailableKnowledgeBackendId;
-    } => backend.status === "available",
-  );
+export const AVAILABLE_DB_PROVIDER_OPTIONS = DB_PROVIDER_OPTIONS.filter(
+  (
+    provider,
+  ): provider is DBProviderOption & {
+    id: AvailableDBProviderId;
+  } => provider.status === "available",
+);
 
 export function getGlobalVariableValue(
   variables: GlobalVariable[],
@@ -207,32 +209,32 @@ export function parseBooleanGlobalVariable(
   return defaultValue;
 }
 
-export function getActiveKnowledgeBackend(
+export function getActiveDBProvider(
   variables: GlobalVariable[],
-): AvailableKnowledgeBackendId {
-  const configuredBackend = getGlobalVariableValue(
+): AvailableDBProviderId {
+  const configuredProvider = getGlobalVariableValue(
     variables,
-    ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
+    ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  return configuredBackend === "opensearch" ? "opensearch" : "chroma";
+  return configuredProvider === "opensearch" ? "opensearch" : "chroma";
 }
 
-export function getKnowledgeBackendOption(
-  backendId: KnowledgeBackendId | string | undefined,
-): KnowledgeBackendOption {
+export function getDBProviderOption(
+  providerId: DBProviderId | string | undefined,
+): DBProviderOption {
   return (
-    KNOWLEDGE_BACKEND_OPTIONS.find((backend) => backend.id === backendId) ??
-    KNOWLEDGE_BACKEND_OPTIONS[0]
+    DB_PROVIDER_OPTIONS.find((provider) => provider.id === providerId) ??
+    DB_PROVIDER_OPTIONS[0]
   );
 }
 
-export type KnowledgeBackendConfigValue = string | boolean;
+export type DBProviderConfigValue = string | boolean;
 
-export function getKnowledgeBackendConfig(
-  backendType: AvailableKnowledgeBackendId,
+export function getDBProviderConfig(
+  providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
-): Record<string, KnowledgeBackendConfigValue> {
-  if (backendType !== "opensearch") {
+): Record<string, DBProviderConfigValue> {
+  if (providerType !== "opensearch") {
     return {};
   }
 
@@ -264,20 +266,20 @@ export function getKnowledgeBackendConfig(
   };
 }
 
-export function isKnowledgeBackendConfigured(
-  backendType: AvailableKnowledgeBackendId,
+export function isDBProviderConfigured(
+  providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
 ): boolean {
-  if (backendType === "chroma") {
+  if (providerType === "chroma") {
     return true;
   }
 
-  const backend = getKnowledgeBackendOption(backendType);
+  const provider = getDBProviderOption(providerType);
   // Boolean fields always have a defined default, so they don't gate
   // "configured" status — only required text fields do.
-  return backend.configFields
+  return provider.configFields
     .filter(
-      (field): field is KnowledgeBackendTextField =>
+      (field): field is DBProviderTextField =>
         field.kind !== "boolean" && field.required,
     )
     .every((field) =>
@@ -285,13 +287,13 @@ export function isKnowledgeBackendConfigured(
     );
 }
 
-export function getDefaultKnowledgeBackendConfig(variables: GlobalVariable[]): {
-  backendType: AvailableKnowledgeBackendId;
-  backendConfig: Record<string, KnowledgeBackendConfigValue>;
+export function getDefaultDBProviderConfig(variables: GlobalVariable[]): {
+  backendType: AvailableDBProviderId;
+  backendConfig: Record<string, DBProviderConfigValue>;
 } {
-  const backendType = getActiveKnowledgeBackend(variables);
+  const backendType = getActiveDBProvider(variables);
   return {
     backendType,
-    backendConfig: getKnowledgeBackendConfig(backendType, variables),
+    backendConfig: getDBProviderConfig(backendType, variables),
   };
 }

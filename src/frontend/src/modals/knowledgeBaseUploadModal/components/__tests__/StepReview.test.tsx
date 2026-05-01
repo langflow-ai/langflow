@@ -149,9 +149,9 @@ describe("StepReview", () => {
       expect(screen.getByText("Not selected")).toBeInTheDocument();
     });
 
-    it("shows the selected knowledge backend", () => {
+    it("shows the selected DB Provider", () => {
       render(<StepReview {...propsWithFile} backendType="opensearch" />);
-      expect(screen.getByText("Knowledge Backend")).toBeInTheDocument();
+      expect(screen.getByText("DB Provider")).toBeInTheDocument();
       expect(screen.getByText("OpenSearch")).toBeInTheDocument();
     });
   });

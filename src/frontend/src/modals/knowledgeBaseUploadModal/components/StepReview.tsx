@@ -8,9 +8,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  type AvailableKnowledgeBackendId,
-  getKnowledgeBackendOption,
-} from "@/constants/knowledgeBackendConstants";
+  type AvailableDBProviderId,
+  getDBProviderOption,
+} from "@/constants/dbProviderConstants";
 import { cn } from "@/utils/utils";
 import type { ChunkPreview } from "../types";
 import { ChunkPreviewCard } from "./ChunkPreviewCard";
@@ -31,7 +31,7 @@ interface StepReviewProps {
   chunkOverlap: number;
   separator: string;
   selectedEmbeddingModel: ModelOption[];
-  backendType: AvailableKnowledgeBackendId;
+  backendType: AvailableDBProviderId;
   metadataPairs?: MetadataPair[];
   perFileMetadata?: Record<string, MetadataPair[]>;
 }
@@ -54,7 +54,7 @@ export function StepReview({
   metadataPairs = [],
   perFileMetadata = {},
 }: StepReviewProps) {
-  const selectedBackend = getKnowledgeBackendOption(backendType);
+  const selectedBackend = getDBProviderOption(backendType);
   const populatedRunPairs = metadataPairs.filter(
     (pair) => pair.key.trim() && pair.value.trim(),
   );
@@ -241,7 +241,7 @@ export function StepReview({
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <ForwardedIconComponent name="Database" className="h-4 w-4" />
-            <span>Knowledge Backend</span>
+            <span>DB Provider</span>
           </div>
           <div className="flex items-center gap-1.5">
             <ForwardedIconComponent

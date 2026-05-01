@@ -1,6 +1,7 @@
 from lfx.inputs import (
     BoolInput,
     CodeInput,
+    DBProviderInput,
     DataFrameInput,
     DataInput,
     DefaultPromptField,
@@ -11,7 +12,6 @@ from lfx.inputs import (
     HandleInput,
     IntInput,
     JSONInput,
-    KnowledgeBackendInput,
     LinkInput,
     McpInput,
     MessageInput,
@@ -35,6 +35,7 @@ from lfx.template import Output
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "DBProviderInput",
     "DataFrameInput",
     "DataInput",
     "DefaultPromptField",
@@ -46,7 +47,6 @@ __all__ = [
     "HandleInput",
     "IntInput",
     "JSONInput",
-    "KnowledgeBackendInput",
     "LinkInput",
     "LinkInput",
     "McpInput",

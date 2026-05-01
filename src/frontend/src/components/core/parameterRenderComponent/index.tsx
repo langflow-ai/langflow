@@ -1,6 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
-import KnowledgeBackendInputComponent from "@/components/core/parameterRenderComponent/components/knowledgeBackendInputComponent";
+import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
@@ -341,9 +341,9 @@ export function ParameterRenderComponent({
         );
       case "knowledge_backend":
         return (
-          <KnowledgeBackendInputComponent
+          <DBProviderInputComponent
             {...baseInputProps}
-            id={`knowledgebackend_${id}`}
+            id={`dbprovider_${id}`}
           />
         );
       default:

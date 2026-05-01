@@ -11,42 +11,43 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  type AvailableKnowledgeBackendId,
-  getDefaultKnowledgeBackendConfig,
-  getKnowledgeBackendConfig,
-  getKnowledgeBackendOption,
-  isKnowledgeBackendConfigured,
-  KNOWLEDGE_BACKEND_OPTIONS,
-  type KnowledgeBackendConfigValue,
-  type KnowledgeBackendId,
-  type KnowledgeBackendOption,
-} from "@/constants/knowledgeBackendConstants";
+  type AvailableDBProviderId,
+  DB_PROVIDER_OPTIONS,
+  type DBProviderConfigValue,
+  type DBProviderId,
+  type DBProviderOption,
+  getDBProviderConfig,
+  getDBProviderOption,
+  getDefaultDBProviderConfig,
+  isDBProviderConfigured,
+} from "@/constants/dbProviderConstants";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 
-export type KnowledgeBackendSelection = {
-  backend_type: AvailableKnowledgeBackendId;
-  backend_config: Record<string, KnowledgeBackendConfigValue>;
+export type DBProviderSelection = {
+  // Wire keys stay snake_case to match the backend payload format.
+  backend_type: AvailableDBProviderId;
+  backend_config: Record<string, DBProviderConfigValue>;
 };
 
-interface KnowledgeBackendInputProps {
+interface DBProviderInputProps {
   id: string;
-  value: AvailableKnowledgeBackendId;
+  value: AvailableDBProviderId;
   globalVariables: GlobalVariable[];
   disabled?: boolean;
   onValueChange: (
-    backendType: AvailableKnowledgeBackendId,
-    backendConfig: Record<string, KnowledgeBackendConfigValue>,
+    backendType: AvailableDBProviderId,
+    backendConfig: Record<string, DBProviderConfigValue>,
   ) => void;
 }
 
-export default function KnowledgeBackendInputComponent({
+export default function DBProviderInputComponent({
   id,
   value,
   disabled,
   handleOnNewValue,
-}: BaseInputProps<KnowledgeBackendSelection | AvailableKnowledgeBackendId>) {
+}: BaseInputProps<DBProviderSelection | AvailableDBProviderId>) {
   const {
     data: globalVariables = [],
     isFetched,
@@ -55,22 +56,22 @@ export default function KnowledgeBackendInputComponent({
   const hasInitializedDefaultRef = useRef(false);
 
   const currentValue = useMemo(
-    () => normalizeKnowledgeBackendValue(value, globalVariables),
+    () => normalizeDBProviderValue(value, globalVariables),
     [value, globalVariables],
   );
-  const hasBackendValue =
+  const hasProviderValue =
     typeof value === "string" ||
     (typeof value === "object" && Boolean(value?.backend_type));
 
   useEffect(() => {
-    if (hasBackendValue || hasInitializedDefaultRef.current) return;
+    if (hasProviderValue || hasInitializedDefaultRef.current) return;
     if (!isFetched && isFetching) return;
     hasInitializedDefaultRef.current = true;
     handleOnNewValue({ value: currentValue });
-  }, [currentValue, handleOnNewValue, hasBackendValue, isFetched, isFetching]);
+  }, [currentValue, handleOnNewValue, hasProviderValue, isFetched, isFetching]);
 
   return (
-    <KnowledgeBackendInput
+    <DBProviderInput
       id={id}
       value={currentValue.backend_type}
       globalVariables={globalVariables}
@@ -87,31 +88,28 @@ export default function KnowledgeBackendInputComponent({
   );
 }
 
-export function KnowledgeBackendInput({
+export function DBProviderInput({
   id,
   value,
   globalVariables,
   disabled,
   onValueChange,
-}: KnowledgeBackendInputProps) {
+}: DBProviderInputProps) {
   const navigate = useNavigate();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
-  const selectedBackend = getKnowledgeBackendOption(value);
-  const selectedIsConfigured = isKnowledgeBackendConfigured(
-    value,
-    globalVariables,
-  );
+  const selectedProvider = getDBProviderOption(value);
+  const selectedIsConfigured = isDBProviderConfigured(value, globalVariables);
 
   const selectableOptions = useMemo(
     () =>
-      KNOWLEDGE_BACKEND_OPTIONS.map((backend) => ({
-        backend,
+      DB_PROVIDER_OPTIONS.map((provider) => ({
+        provider,
         configured:
-          backend.status === "available"
-            ? isKnowledgeBackendConfigured(
-                backend.id as AvailableKnowledgeBackendId,
+          provider.status === "available"
+            ? isDBProviderConfigured(
+                provider.id as AvailableDBProviderId,
                 globalVariables,
               )
             : false,
@@ -119,22 +117,19 @@ export function KnowledgeBackendInput({
     [globalVariables],
   );
 
-  const handleSelect = (backend: KnowledgeBackendOption) => {
-    if (backend.status !== "available") return;
+  const handleSelect = (provider: DBProviderOption) => {
+    if (provider.status !== "available") return;
 
-    const backendType = backend.id as AvailableKnowledgeBackendId;
-    if (!isKnowledgeBackendConfigured(backendType, globalVariables)) return;
+    const backendType = provider.id as AvailableDBProviderId;
+    if (!isDBProviderConfigured(backendType, globalVariables)) return;
 
-    onValueChange(
-      backendType,
-      getKnowledgeBackendConfig(backendType, globalVariables),
-    );
+    onValueChange(backendType, getDBProviderConfig(backendType, globalVariables));
     setOpen(false);
   };
 
-  const handleManageBackends = () => {
+  const handleManageProviders = () => {
     setOpen(false);
-    navigate("/settings/knowledge-backends");
+    navigate("/settings/db-providers");
   };
 
   return (
@@ -158,12 +153,12 @@ export function KnowledgeBackendInput({
             data-testid={`value-dropdown-${id}`}
           >
             <ForwardedIconComponent
-              name={selectedBackend.icon}
+              name={selectedProvider.icon}
               className="h-4 w-4 flex-shrink-0"
             />
             <div className="truncate">
               <div className="flex items-center gap-2 truncate">
-                <span className="truncate">{selectedBackend.label}</span>
+                <span className="truncate">{selectedProvider.label}</span>
                 {!selectedIsConfigured && (
                   <Badge
                     variant="secondaryStatic"
@@ -195,24 +190,24 @@ export function KnowledgeBackendInput({
       >
         <Command className="flex flex-col">
           <CommandList className="max-h-[300px] overflow-y-auto">
-            {selectableOptions.map(({ backend, configured }) => (
-              <KnowledgeBackendOptionItem
-                key={backend.id}
-                backend={backend}
+            {selectableOptions.map(({ provider, configured }) => (
+              <DBProviderOptionItem
+                key={provider.id}
+                provider={provider}
                 configured={configured}
-                selected={backend.id === value}
-                onSelect={() => handleSelect(backend)}
+                selected={provider.id === value}
+                onSelect={() => handleSelect(provider)}
               />
             ))}
           </CommandList>
           <Button
             className="w-full flex cursor-pointer items-center justify-start gap-2 truncate py-2 text-xs text-muted-foreground px-3 hover:bg-accent group"
             unstyled
-            data-testid="manage-knowledge-backends"
-            onClick={handleManageBackends}
+            data-testid="manage-db-providers"
+            onClick={handleManageProviders}
           >
             <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-              Manage Knowledge Backends
+              Manage DB Providers
               <ForwardedIconComponent
                 name="Settings"
                 className="w-4 h-4 text-muted-foreground group-hover:text-primary"
@@ -225,31 +220,31 @@ export function KnowledgeBackendInput({
   );
 }
 
-function KnowledgeBackendOptionItem({
-  backend,
+function DBProviderOptionItem({
+  provider,
   configured,
   selected,
   onSelect,
 }: {
-  backend: KnowledgeBackendOption;
+  provider: DBProviderOption;
   configured: boolean;
   selected: boolean;
   onSelect: () => void;
 }) {
-  const isComingSoon = backend.status === "coming_soon";
+  const isComingSoon = provider.status === "coming_soon";
   const isDisabled = isComingSoon || !configured;
 
   return (
     <CommandItem
-      value={backend.label}
+      value={provider.label}
       disabled={isDisabled}
       onSelect={onSelect}
       className="w-full items-center rounded-none"
-      data-testid={`${backend.id}-backend-option`}
+      data-testid={`${provider.id}-provider-option`}
     >
       <div className="flex w-full items-center gap-2">
         <ForwardedIconComponent
-          name={backend.icon || "Database"}
+          name={provider.icon || "Database"}
           className={cn(
             "h-4 w-4 shrink-0 ml-2",
             isDisabled ? "text-muted-foreground" : "text-primary",
@@ -257,7 +252,7 @@ function KnowledgeBackendOptionItem({
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[13px]">{backend.label}</span>
+            <span className="truncate text-[13px]">{provider.label}</span>
             {isComingSoon && (
               <Badge variant="secondaryStatic" size="sq" className="text-xs">
                 Coming soon
@@ -270,7 +265,7 @@ function KnowledgeBackendOptionItem({
             )}
           </div>
           <span className="truncate text-[11px] text-muted-foreground">
-            {backend.description}
+            {provider.description}
           </span>
         </div>
         <ForwardedIconComponent
@@ -285,19 +280,15 @@ function KnowledgeBackendOptionItem({
   );
 }
 
-function normalizeKnowledgeBackendValue(
-  value:
-    | KnowledgeBackendSelection
-    | AvailableKnowledgeBackendId
-    | null
-    | undefined,
+function normalizeDBProviderValue(
+  value: DBProviderSelection | AvailableDBProviderId | null | undefined,
   globalVariables: GlobalVariable[],
-): KnowledgeBackendSelection {
+): DBProviderSelection {
   if (typeof value === "string") {
     const backendType = value === "opensearch" ? "opensearch" : "chroma";
     return {
       backend_type: backendType,
-      backend_config: getKnowledgeBackendConfig(backendType, globalVariables),
+      backend_config: getDBProviderConfig(backendType, globalVariables),
     };
   }
 
@@ -307,17 +298,16 @@ function normalizeKnowledgeBackendValue(
     return {
       backend_type: backendType,
       backend_config:
-        value.backend_config ??
-        getKnowledgeBackendConfig(backendType, globalVariables),
+        value.backend_config ?? getDBProviderConfig(backendType, globalVariables),
     };
   }
 
-  const defaults = getDefaultKnowledgeBackendConfig(globalVariables);
+  const defaults = getDefaultDBProviderConfig(globalVariables);
   return {
     backend_type: defaults.backendType,
     backend_config: defaults.backendConfig,
   };
 }
 
-export type BackendValue = AvailableKnowledgeBackendId;
-export type KnowledgeBackendValue = KnowledgeBackendId;
+export type ProviderValue = AvailableDBProviderId;
+export type DBProviderValue = DBProviderId;

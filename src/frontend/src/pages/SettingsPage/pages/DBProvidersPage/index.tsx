@@ -5,20 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
-  ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
-  type AvailableKnowledgeBackendId,
-  getActiveKnowledgeBackend,
+  ACTIVE_DB_PROVIDER_VARIABLE,
+  type AvailableDBProviderId,
+  DB_PROVIDER_OPTIONS,
+  type DBProviderBooleanField,
+  type DBProviderConfigField,
+  type DBProviderOption,
+  type DBProviderTextField,
+  getActiveDBProvider,
   getGlobalVariableValue,
-  KNOWLEDGE_BACKEND_OPTIONS,
-  type KnowledgeBackendBooleanField,
-  type KnowledgeBackendConfigField,
-  type KnowledgeBackendOption,
-  type KnowledgeBackendTextField,
   OPENSEARCH_VARIABLES,
   parseBooleanGlobalVariable,
-} from "@/constants/knowledgeBackendConstants";
+} from "@/constants/dbProviderConstants";
 import { VARIABLE_CATEGORY } from "@/constants/providerConstants";
-import { useTestKnowledgeBackendConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
+import { useTestDBProviderConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
 import {
   useGetGlobalVariables,
   usePatchGlobalVariables,
@@ -42,12 +42,12 @@ const getErrorDetail = (error: unknown) =>
   (error as ApiError)?.response?.data?.detail ||
   "An unexpected error occurred. Please try again.";
 
-export default function KnowledgeBackendsPage() {
+export default function DBProvidersPage() {
   const { data: globalVariables = [] } = useGetGlobalVariables();
-  const [selectedBackendId, setSelectedBackendId] = useState(
-    getActiveKnowledgeBackend(globalVariables),
+  const [selectedProviderId, setSelectedProviderId] = useState(
+    getActiveDBProvider(globalVariables),
   );
-  const [hasManuallySelectedBackend, setHasManuallySelectedBackend] =
+  const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
     useState(false);
   const [variableValues, setVariableValues] = useState<Record<string, string>>(
     {},
@@ -60,27 +60,27 @@ export default function KnowledgeBackendsPage() {
     usePostGlobalVariables();
   const { mutateAsync: updateGlobalVariable, isPending: isUpdating } =
     usePatchGlobalVariables();
-  const { mutateAsync: testBackendConnection, isPending: isTesting } =
-    useTestKnowledgeBackendConnection();
+  const { mutateAsync: testProviderConnection, isPending: isTesting } =
+    useTestDBProviderConnection();
 
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
-  const activeBackendId = useMemo(
-    () => getActiveKnowledgeBackend(globalVariables),
+  const activeProviderId = useMemo(
+    () => getActiveDBProvider(globalVariables),
     [globalVariables],
   );
 
   useEffect(() => {
-    if (!hasManuallySelectedBackend) {
-      setSelectedBackendId(activeBackendId);
+    if (!hasManuallySelectedProvider) {
+      setSelectedProviderId(activeProviderId);
     }
-  }, [activeBackendId, hasManuallySelectedBackend]);
+  }, [activeProviderId, hasManuallySelectedProvider]);
 
-  const selectedBackend =
-    KNOWLEDGE_BACKEND_OPTIONS.find(
-      (backend) => backend.id === selectedBackendId,
-    ) ?? KNOWLEDGE_BACKEND_OPTIONS[0];
+  const selectedProvider =
+    DB_PROVIDER_OPTIONS.find(
+      (provider) => provider.id === selectedProviderId,
+    ) ?? DB_PROVIDER_OPTIONS[0];
 
   const isPending = isCreating || isUpdating;
 
@@ -111,28 +111,26 @@ export default function KnowledgeBackendsPage() {
     });
   };
 
-  const activateBackend = async (backend: KnowledgeBackendOption) => {
-    const activeBackendVariable = findVariable(
-      ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
-    );
-    if (activeBackendVariable) {
+  const activateProvider = async (provider: DBProviderOption) => {
+    const activeProviderVariable = findVariable(ACTIVE_DB_PROVIDER_VARIABLE);
+    if (activeProviderVariable) {
       await updateGlobalVariable({
-        id: activeBackendVariable.id,
-        value: backend.id,
+        id: activeProviderVariable.id,
+        value: provider.id,
       });
       return;
     }
 
     await createGlobalVariable({
-      name: ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
-      value: backend.id,
+      name: ACTIVE_DB_PROVIDER_VARIABLE,
+      value: provider.id,
       type: "Generic",
       category: VARIABLE_CATEGORY.SETTINGS,
       default_fields: [],
     });
   };
 
-  const getFieldValue = (field: KnowledgeBackendConfigField): string => {
+  const getFieldValue = (field: DBProviderConfigField): string => {
     if (field.variableKey in variableValues) {
       return variableValues[field.variableKey];
     }
@@ -156,9 +154,9 @@ export default function KnowledgeBackendsPage() {
 
   // Boolean fields always have a defined value (toggle is never blank),
   // so they don't gate the save button — only required text fields do.
-  const canSave = selectedBackend.configFields
+  const canSave = selectedProvider.configFields
     .filter(
-      (field): field is KnowledgeBackendTextField =>
+      (field): field is DBProviderTextField =>
         field.kind !== "boolean" && field.required,
     )
     .every((field) => getFieldValue(field).trim());
@@ -169,14 +167,14 @@ export default function KnowledgeBackendsPage() {
   const handleSave = async (options?: {
     silent?: boolean;
   }): Promise<boolean> => {
-    if (selectedBackend.status !== "available") return false;
+    if (selectedProvider.status !== "available") return false;
     if (!canSave) {
       setErrorData({
         title: "Missing required configuration",
         list: [
-          `${selectedBackend.label} requires ${selectedBackend.configFields
+          `${selectedProvider.label} requires ${selectedProvider.configFields
             .filter(
-              (field): field is KnowledgeBackendTextField =>
+              (field): field is DBProviderTextField =>
                 field.kind !== "boolean" &&
                 field.required &&
                 !getFieldValue(field).trim(),
@@ -189,7 +187,7 @@ export default function KnowledgeBackendsPage() {
     }
 
     try {
-      const fieldsToSave = selectedBackend.configFields.filter((field) => {
+      const fieldsToSave = selectedProvider.configFields.filter((field) => {
         if (field.kind === "boolean") {
           // Persist booleans only when the user actually flipped them
           // this session — otherwise we'd write the default to a
@@ -216,22 +214,22 @@ export default function KnowledgeBackendsPage() {
           });
         }),
       );
-      await activateBackend(selectedBackend);
+      await activateProvider(selectedProvider);
       setVariableValues({});
       setEditingSecret({});
-      setHasManuallySelectedBackend(false);
+      setHasManuallySelectedProvider(false);
       if (!options?.silent) {
         setSuccessData({
           title:
-            selectedBackend.id === "chroma"
+            selectedProvider.id === "chroma"
               ? "Chroma selected"
-              : `${selectedBackend.label} configuration saved`,
+              : `${selectedProvider.label} configuration saved`,
         });
       }
       return true;
     } catch (error: unknown) {
       setErrorData({
-        title: "Error saving knowledge backend",
+        title: "Error saving DB Provider",
         list: [getErrorDetail(error)],
       });
       return false;
@@ -239,14 +237,14 @@ export default function KnowledgeBackendsPage() {
   };
 
   const handleTestConnection = async () => {
-    if (selectedBackend.status !== "available") return;
+    if (selectedProvider.status !== "available") return;
     if (!canSave) {
       setErrorData({
         title: "Missing required configuration",
         list: [
-          `${selectedBackend.label} requires ${selectedBackend.configFields
+          `${selectedProvider.label} requires ${selectedProvider.configFields
             .filter(
-              (field): field is KnowledgeBackendTextField =>
+              (field): field is DBProviderTextField =>
                 field.kind !== "boolean" &&
                 field.required &&
                 !getFieldValue(field).trim(),
@@ -267,7 +265,7 @@ export default function KnowledgeBackendsPage() {
     // them.
     const literalFields: Record<string, string> = {};
     const booleanFields: Record<string, boolean> = {};
-    for (const field of selectedBackend.configFields) {
+    for (const field of selectedProvider.configFields) {
       const raw = getFieldValue(field);
       if (field.kind === "boolean") {
         booleanFields[field.variableKey] = raw === "true";
@@ -286,12 +284,12 @@ export default function KnowledgeBackendsPage() {
 
     try {
       const backendConfig = buildBackendConfigPayload(
-        selectedBackend.id as AvailableKnowledgeBackendId,
+        selectedProvider.id as AvailableDBProviderId,
         literalFields,
         booleanFields,
       );
-      const response = await testBackendConnection({
-        backend_type: selectedBackend.id,
+      const response = await testProviderConnection({
+        backend_type: selectedProvider.id,
         backend_config: backendConfig,
       });
       if (response.ok) {
@@ -305,23 +303,23 @@ export default function KnowledgeBackendsPage() {
       } else {
         setErrorData({
           title: "Connection failed",
-          list: [response.message || "The backend rejected the connection."],
+          list: [response.message || "The provider rejected the connection."],
         });
       }
     } catch (error: unknown) {
       setErrorData({
-        title: "Error testing backend connection",
+        title: "Error testing provider connection",
         list: [getErrorDetail(error)],
       });
     }
   };
 
   const handleUseChroma = async () => {
-    const chromaBackend = KNOWLEDGE_BACKEND_OPTIONS[0];
+    const chromaProvider = DB_PROVIDER_OPTIONS[0];
     try {
-      await activateBackend(chromaBackend);
-      setSelectedBackendId("chroma");
-      setHasManuallySelectedBackend(false);
+      await activateProvider(chromaProvider);
+      setSelectedProviderId("chroma");
+      setHasManuallySelectedProvider(false);
       setSuccessData({ title: "Chroma selected" });
     } catch (error: unknown) {
       setErrorData({
@@ -339,14 +337,14 @@ export default function KnowledgeBackendsPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Knowledge Backends
+            DB Providers
             <ForwardedIconComponent
               name="Database"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configure vector-store backends for Knowledge Bases.
+            Configure vector-store providers for Knowledge Bases.
           </p>
         </div>
       </div>
@@ -355,27 +353,27 @@ export default function KnowledgeBackendsPage() {
         <div
           className={cn(
             "flex flex-col gap-1 p-2 transition-all duration-300 ease-in-out",
-            selectedBackend ? "w-1/3 border-r" : "w-full",
+            selectedProvider ? "w-1/3 border-r" : "w-full",
           )}
         >
-          {KNOWLEDGE_BACKEND_OPTIONS.map((backend) => (
-            <BackendListItem
-              key={backend.id}
-              backend={backend}
-              isActive={activeBackendId === backend.id}
-              isSelected={selectedBackend.id === backend.id}
+          {DB_PROVIDER_OPTIONS.map((provider) => (
+            <ProviderListItem
+              key={provider.id}
+              provider={provider}
+              isActive={activeProviderId === provider.id}
+              isSelected={selectedProvider.id === provider.id}
               isConfigured={
-                backend.id === "chroma" ||
-                backend.configFields
+                provider.id === "chroma" ||
+                provider.configFields
                   .filter(
-                    (field): field is KnowledgeBackendTextField =>
+                    (field): field is DBProviderTextField =>
                       field.kind !== "boolean" && field.required,
                   )
                   .every((field) => hasConfiguredValue(field.variableKey))
               }
               onSelect={() => {
-                setHasManuallySelectedBackend(true);
-                setSelectedBackendId(backend.id);
+                setHasManuallySelectedProvider(true);
+                setSelectedProviderId(provider.id);
               }}
             />
           ))}
@@ -383,9 +381,9 @@ export default function KnowledgeBackendsPage() {
 
         <div className="flex min-h-0 w-2/3 flex-col overflow-hidden">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
-            <BackendConfigurationPanel
-              backend={selectedBackend}
-              activeBackendId={activeBackendId}
+            <ProviderConfigurationPanel
+              provider={selectedProvider}
+              activeProviderId={activeProviderId}
               globalVariables={globalVariables}
               variableValues={variableValues}
               editingSecret={editingSecret}
@@ -399,14 +397,14 @@ export default function KnowledgeBackendsPage() {
                 setEditingSecret((prev) => ({ ...prev, [key]: editing }))
               }
               onSave={
-                selectedBackend.id === "chroma"
+                selectedProvider.id === "chroma"
                   ? handleUseChroma
                   : () => {
                       void handleSave();
                     }
               }
               onTestConnection={
-                selectedBackend.id === "chroma"
+                selectedProvider.id === "chroma"
                   ? undefined
                   : handleTestConnection
               }
@@ -426,11 +424,11 @@ export default function KnowledgeBackendsPage() {
 // using the variable-name fields below — those names are stable
 // constants and don't depend on what the user typed.
 function buildBackendConfigPayload(
-  backendId: AvailableKnowledgeBackendId,
+  providerId: AvailableDBProviderId,
   literalFields: Record<string, string>,
   booleanFields: Record<string, boolean>,
 ): Record<string, unknown> {
-  if (backendId !== "opensearch") {
+  if (providerId !== "opensearch") {
     return {};
   }
   return {
@@ -446,25 +444,25 @@ function buildBackendConfigPayload(
   };
 }
 
-function BackendListItem({
-  backend,
+function ProviderListItem({
+  provider,
   isActive,
   isSelected,
   isConfigured,
   onSelect,
 }: {
-  backend: KnowledgeBackendOption;
+  provider: DBProviderOption;
   isActive: boolean;
   isSelected: boolean;
   isConfigured: boolean;
   onSelect: () => void;
 }) {
-  const isComingSoon = backend.status === "coming_soon";
+  const isComingSoon = provider.status === "coming_soon";
 
   return (
     <button
       type="button"
-      data-testid={`knowledge-backend-item-${backend.id}`}
+      data-testid={`db-provider-item-${provider.id}`}
       className={cn(
         "flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-3 text-left transition-colors hover:bg-muted/50",
         isSelected && "bg-muted/50",
@@ -474,10 +472,10 @@ function BackendListItem({
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <ForwardedIconComponent
-          name={backend.icon}
+          name={provider.icon}
           className={cn(
             "h-5 w-5 flex-shrink-0",
-            !isConfigured && !backend.defaultEnabled && "opacity-50 grayscale",
+            !isConfigured && !provider.defaultEnabled && "opacity-50 grayscale",
           )}
         />
         <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -485,11 +483,11 @@ function BackendListItem({
             className={cn(
               "truncate text-sm font-medium",
               !isConfigured &&
-                !backend.defaultEnabled &&
+                !provider.defaultEnabled &&
                 "text-muted-foreground",
             )}
           >
-            {backend.label}
+            {provider.label}
           </span>
           {isComingSoon && (
             <Badge variant="secondaryStatic" size="sq" className="text-xs">
@@ -516,9 +514,9 @@ function BackendListItem({
   );
 }
 
-function BackendConfigurationPanel({
-  backend,
-  activeBackendId,
+function ProviderConfigurationPanel({
+  provider,
+  activeProviderId,
   globalVariables,
   variableValues,
   editingSecret,
@@ -531,34 +529,36 @@ function BackendConfigurationPanel({
   onTestConnection,
   isTesting,
 }: {
-  backend: KnowledgeBackendOption;
-  activeBackendId: "chroma" | "opensearch";
+  provider: DBProviderOption;
+  activeProviderId: "chroma" | "opensearch";
   globalVariables: GlobalVariable[];
   variableValues: Record<string, string>;
   editingSecret: Record<string, boolean>;
   isPending: boolean;
   canSave: boolean;
-  getFieldValue: (field: KnowledgeBackendConfigField) => string;
+  getFieldValue: (field: DBProviderConfigField) => string;
   onVariableChange: (key: string, value: string) => void;
   onSecretEditingChange: (key: string, editing: boolean) => void;
   onSave: () => void;
   onTestConnection?: () => void;
   isTesting: boolean;
 }) {
-  const isComingSoon = backend.status === "coming_soon";
-  const isActive = activeBackendId === backend.id;
+  const isComingSoon = provider.status === "coming_soon";
+  const isActive = activeProviderId === provider.id;
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <ForwardedIconComponent
-            name={backend.icon}
+            name={provider.icon}
             className="h-6 w-6 flex-shrink-0 text-primary"
           />
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] font-semibold">{backend.label}</span>
+              <span className="text-[13px] font-semibold">
+                {provider.label}
+              </span>
               {isActive && !isComingSoon && (
                 <Badge variant="secondary" size="sq" className="text-xs">
                   Active
@@ -571,7 +571,7 @@ function BackendConfigurationPanel({
               )}
             </div>
             <span className="pt-1 text-[13px] text-muted-foreground">
-              {backend.description}
+              {provider.description}
             </span>
           </div>
         </div>
@@ -579,15 +579,15 @@ function BackendConfigurationPanel({
 
       {isComingSoon ? (
         <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
-          This backend is stubbed in the Knowledge Base backend registry and
+          This provider is stubbed in the Knowledge Base backend registry and
           will become configurable after the provider implementation is wired
           through end-to-end.
         </div>
-      ) : backend.id === "chroma" ? (
+      ) : provider.id === "chroma" ? (
         <div className="flex flex-col gap-3">
           <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
             Chroma stores vectors on disk next to Langflow and is enabled by
-            default. Selecting it here makes it the default backend for new
+            default. Selecting it here makes it the default provider for new
             Knowledge Bases.
           </div>
           <div className="flex justify-end">
@@ -603,7 +603,7 @@ function BackendConfigurationPanel({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {backend.configFields.map((field) =>
+          {provider.configFields.map((field) =>
             field.kind === "boolean" ? (
               <BooleanFieldRow
                 key={field.variableKey}
@@ -660,7 +660,7 @@ function BackendConfigurationPanel({
                 variant="outline"
                 loading={isTesting}
                 disabled={!canSave || isPending || isTesting}
-                data-testid="knowledge-backend-test-connection"
+                data-testid="db-provider-test-connection"
               >
                 Test connection
               </Button>
@@ -671,7 +671,7 @@ function BackendConfigurationPanel({
               loading={isPending}
               disabled={!canSave || isPending || isTesting}
             >
-              {isActive ? "Save" : `Save and use ${backend.label}`}
+              {isActive ? "Save" : `Save and use ${provider.label}`}
             </Button>
           </div>
         </div>
@@ -691,7 +691,7 @@ function TextFieldRow({
   onFocus,
   onBlur,
 }: {
-  field: KnowledgeBackendTextField;
+  field: DBProviderTextField;
   value: string;
   hasNewValue: boolean;
   isEditingSecret: boolean;
@@ -739,7 +739,7 @@ function BooleanFieldRow({
   disabled,
   onChange,
 }: {
-  field: KnowledgeBackendBooleanField;
+  field: DBProviderBooleanField;
   value: boolean;
   disabled: boolean;
   onChange: (checked: boolean) => void;
@@ -763,7 +763,7 @@ function BooleanFieldRow({
         onCheckedChange={onChange}
         disabled={disabled}
         aria-label={field.label}
-        data-testid={`knowledge-backend-toggle-${field.variableKey}`}
+        data-testid={`db-provider-toggle-${field.variableKey}`}
       />
     </div>
   );

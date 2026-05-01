@@ -244,15 +244,15 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         return self
 
 
-class KnowledgeBackendInput(BaseInputMixin, InputTraceMixin, ToolModeMixin):
-    """Represents the Knowledge Backend selector.
+class DBProviderInput(BaseInputMixin, InputTraceMixin, ToolModeMixin):
+    """Represents the DB Provider selector.
 
     Value format:
     - {"backend_type": "chroma", "backend_config": {}}
     - {"backend_type": "opensearch", "backend_config": {...}}
     """
 
-    field_type: SerializableFieldTypes = FieldTypes.KNOWLEDGE_BACKEND
+    field_type: SerializableFieldTypes = FieldTypes.DB_PROVIDER
     value: dict = Field(default_factory=lambda: {"backend_type": "chroma", "backend_config": {}})
     input_types: list[str] = Field(default_factory=list)
 

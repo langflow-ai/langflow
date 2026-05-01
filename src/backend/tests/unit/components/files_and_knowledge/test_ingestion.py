@@ -117,7 +117,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "03_api_key" not in dialog_inputs["template"]
         assert "configured credentials" in embedding_model_input.info
         assert backend_input.field_type.value == "knowledge_backend"
-        assert backend_input.display_name == "Knowledge Backend"
+        assert backend_input.display_name == "DB Provider"
         assert backend_input.value == {"backend_type": "chroma", "backend_config": {}}
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")

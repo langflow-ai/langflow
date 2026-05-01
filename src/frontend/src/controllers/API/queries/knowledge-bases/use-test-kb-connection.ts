@@ -15,7 +15,7 @@ export interface TestBackendConnectionResponse {
   details?: Record<string, unknown>;
 }
 
-export const useTestKnowledgeBackendConnection: useMutationFunctionType<
+export const useTestDBProviderConnection: useMutationFunctionType<
   undefined,
   TestBackendConnectionRequest,
   TestBackendConnectionResponse
@@ -36,7 +36,7 @@ export const useTestKnowledgeBackendConnection: useMutationFunctionType<
     TestBackendConnectionResponse,
     Error,
     TestBackendConnectionRequest
-  > = mutate(["useTestKnowledgeBackendConnection"], testBackendConnectionFn, {
+  > = mutate(["useTestDBProviderConnection"], testBackendConnectionFn, {
     ...options,
   });
 

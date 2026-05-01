@@ -3,12 +3,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import {
-  type AvailableKnowledgeBackendId,
-  getDefaultKnowledgeBackendConfig,
-  getKnowledgeBackendOption,
-  isKnowledgeBackendConfigured,
-  type KnowledgeBackendConfigValue,
-} from "@/constants/knowledgeBackendConstants";
+  type AvailableDBProviderId,
+  type DBProviderConfigValue,
+  getDBProviderOption,
+  getDefaultDBProviderConfig,
+  isDBProviderConfigured,
+} from "@/constants/dbProviderConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useCreateKnowledgeBase } from "@/controllers/API/queries/knowledge-bases/use-create-knowledge-base";
@@ -43,14 +43,14 @@ import { formatFileSize } from "../utils";
  * server-side validation in each backend's ``_build_vector_store`` so
  * the user sees the problem inline before the request ever lands.
  *
- * Only the actively-registered backends (Chroma + OpenSearch) are
- * validated here — see ``KnowledgeBackendInput`` for the UI side. Stubbed
- * backends (mongodb / astra / postgres) are rejected up front by the
+ * Only the actively-registered providers (Chroma + OpenSearch) are
+ * validated here — see ``DBProviderInput`` for the UI side. Stubbed
+ * providers (mongodb / astra / postgres) are rejected up front by the
  * server schema validator.
  */
 function validateBackendConfig(
-  backendType: AvailableKnowledgeBackendId,
-  config: Record<string, KnowledgeBackendConfigValue>,
+  backendType: AvailableDBProviderId,
+  config: Record<string, DBProviderConfigValue>,
 ): string | null {
   if (backendType === "opensearch") {
     const indexName = config.index_name;
@@ -136,15 +136,15 @@ export function useKnowledgeBaseForm({
   // Defaults keep existing KBs on the local Chroma store. Backend is immutable
   // after create, so add-sources mode displays the existing backend read-only.
   const [backendType, setBackendType] =
-    useState<AvailableKnowledgeBackendId>("chroma");
+    useState<AvailableDBProviderId>("chroma");
   const [backendConfig, setBackendConfig] = useState<
-    Record<string, KnowledgeBackendConfigValue>
+    Record<string, DBProviderConfigValue>
   >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
   const defaultBackendSelection = useMemo(
-    () => getDefaultKnowledgeBackendConfig(globalVariables),
+    () => getDefaultDBProviderConfig(globalVariables),
     [globalVariables],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
@@ -235,7 +235,7 @@ export function useKnowledgeBaseForm({
       setBackendConfig(
         (existingKnowledgeBase.backendConfig as Record<
           string,
-          KnowledgeBackendConfigValue
+          DBProviderConfigValue
         >) || {},
       );
     }
@@ -373,9 +373,9 @@ export function useKnowledgeBaseForm({
       errors.embeddingModel = t("knowledge.validationEmbeddingRequired");
     }
     if (!isAddSourcesMode) {
-      const selectedBackend = getKnowledgeBackendOption(backendType);
-      if (!isKnowledgeBackendConfigured(backendType, globalVariables)) {
-        errors.backend = `${selectedBackend.label} must be configured in Knowledge Backends settings before it can be used.`;
+      const selectedProvider = getDBProviderOption(backendType);
+      if (!isDBProviderConfigured(backendType, globalVariables)) {
+        errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
       } else {
         const backendErrors = validateBackendConfig(backendType, backendConfig);
         if (backendErrors) {

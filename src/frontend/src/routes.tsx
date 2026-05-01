@@ -35,7 +35,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
-import KnowledgeBackendsPage from "./pages/SettingsPage/pages/KnowledgeBackendsPage";
+import DBProvidersPage from "./pages/SettingsPage/pages/DBProvidersPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
@@ -157,8 +157,8 @@ const router = createBrowserRouter(
                     element={<ModelProvidersPage />}
                   />
                   <Route
-                    path="knowledge-backends"
-                    element={<KnowledgeBackendsPage />}
+                    path="db-providers"
+                    element={<DBProvidersPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="mcp-client" element={<McpClientPage />} />

@@ -1,10 +1,10 @@
 import {
-  ACTIVE_KNOWLEDGE_BACKEND_VARIABLE,
-  getActiveKnowledgeBackend,
-  getDefaultKnowledgeBackendConfig,
-  isKnowledgeBackendConfigured,
+  ACTIVE_DB_PROVIDER_VARIABLE,
+  getActiveDBProvider,
+  getDefaultDBProviderConfig,
+  isDBProviderConfigured,
   OPENSEARCH_VARIABLES,
-} from "../knowledgeBackendConstants";
+} from "../dbProviderConstants";
 
 const variable = (name: string, value: string) => ({
   id: name,
@@ -14,27 +14,27 @@ const variable = (name: string, value: string) => ({
   default_fields: [],
 });
 
-describe("knowledgeBackendConstants", () => {
-  it("defaults to Chroma when no backend is configured", () => {
-    expect(getActiveKnowledgeBackend([])).toBe("chroma");
-    expect(getDefaultKnowledgeBackendConfig([])).toEqual({
+describe("dbProviderConstants", () => {
+  it("defaults to Chroma when no provider is configured", () => {
+    expect(getActiveDBProvider([])).toBe("chroma");
+    expect(getDefaultDBProviderConfig([])).toEqual({
       backendType: "chroma",
       backendConfig: {},
     });
   });
 
-  it("falls back to Chroma for unsupported configured backend values", () => {
+  it("falls back to Chroma for unsupported configured provider values", () => {
     expect(
-      getActiveKnowledgeBackend([
-        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "astra"),
+      getActiveDBProvider([
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "astra"),
       ]),
     ).toBe("chroma");
   });
 
-  it("builds OpenSearch backend config from saved global variables", () => {
+  it("builds OpenSearch provider config from saved global variables", () => {
     expect(
-      getDefaultKnowledgeBackendConfig([
-        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "opensearch"),
+      getDefaultDBProviderConfig([
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "opensearch"),
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
         variable(OPENSEARCH_VARIABLES.VECTOR_FIELD, "embedding"),
         variable(OPENSEARCH_VARIABLES.TEXT_FIELD, "content"),
@@ -57,8 +57,8 @@ describe("knowledgeBackendConstants", () => {
 
   it("emits SSL toggle booleans from stored global variables", () => {
     expect(
-      getDefaultKnowledgeBackendConfig([
-        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "opensearch"),
+      getDefaultDBProviderConfig([
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "opensearch"),
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
         variable(OPENSEARCH_VARIABLES.USE_SSL, "false"),
         variable(OPENSEARCH_VARIABLES.VERIFY_CERTS, "false"),
@@ -71,8 +71,8 @@ describe("knowledgeBackendConstants", () => {
 
   it("treats unrecognized SSL variable values as the default", () => {
     expect(
-      getDefaultKnowledgeBackendConfig([
-        variable(ACTIVE_KNOWLEDGE_BACKEND_VARIABLE, "opensearch"),
+      getDefaultDBProviderConfig([
+        variable(ACTIVE_DB_PROVIDER_VARIABLE, "opensearch"),
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
         variable(OPENSEARCH_VARIABLES.USE_SSL, "yeah"),
         variable(OPENSEARCH_VARIABLES.VERIFY_CERTS, "1"),
@@ -85,13 +85,13 @@ describe("knowledgeBackendConstants", () => {
 
   it("requires OpenSearch required settings before it can be selected", () => {
     expect(
-      isKnowledgeBackendConfigured("opensearch", [
+      isDBProviderConfigured("opensearch", [
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
       ]),
     ).toBe(false);
 
     expect(
-      isKnowledgeBackendConfigured("opensearch", [
+      isDBProviderConfigured("opensearch", [
         variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
       ]),

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { KnowledgeBackendInput } from "@/components/core/parameterRenderComponent/components/knowledgeBackendInputComponent";
+import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent, {
   type ModelOption,
 } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -21,9 +21,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type {
-  AvailableKnowledgeBackendId,
-  KnowledgeBackendConfigValue,
-} from "@/constants/knowledgeBackendConstants";
+  AvailableDBProviderId,
+  DBProviderConfigValue,
+} from "@/constants/dbProviderConstants";
 import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
@@ -53,10 +53,10 @@ interface StepConfigurationProps {
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
-  backendType: AvailableKnowledgeBackendId;
-  onBackendTypeChange: (value: AvailableKnowledgeBackendId) => void;
+  backendType: AvailableDBProviderId;
+  onBackendTypeChange: (value: AvailableDBProviderId) => void;
   onBackendConfigChange: (
-    value: Record<string, KnowledgeBackendConfigValue>,
+    value: Record<string, DBProviderConfigValue>,
   ) => void;
   globalVariables: GlobalVariable[];
   metadataPairs: MetadataPair[];
@@ -171,7 +171,7 @@ export function StepConfiguration({
         {/* Backend Selection */}
         <div className="flex flex-col gap-2 pt-4">
           <Label className="text-sm font-medium">
-            Knowledge Backend <span className="text-destructive">*</span>
+            DB Provider <span className="text-destructive">*</span>
           </Label>
           <div
             className={cn(
@@ -179,8 +179,8 @@ export function StepConfiguration({
               validationErrors.backend && "[&_button]:border-destructive",
             )}
           >
-            <KnowledgeBackendInput
-              id="kb-knowledge-backend"
+            <DBProviderInput
+              id="kb-db-provider"
               value={backendType}
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}

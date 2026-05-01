@@ -81,8 +81,8 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Knowledge Backends",
-      href: "/settings/knowledge-backends",
+      title: "DB Providers",
+      href: "/settings/db-providers",
       icon: (
         <ForwardedIconComponent
           name="Database"
