@@ -113,7 +113,8 @@ class KnowledgeIngestionComponent(Component):
                                     "Select where this knowledge base stores vectors. "
                                     "OpenSearch uses the global DB Providers settings."
                                 ),
-                                value={"backend_type": BackendType.CHROMA.value, "backend_config": {}},
+                                # Leave value empty so the frontend defaults to the
+                                # user's configured active DB Provider on first render.
                                 required=True,
                             ),
                         },

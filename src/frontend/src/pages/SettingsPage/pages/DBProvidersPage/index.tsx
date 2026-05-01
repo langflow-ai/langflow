@@ -221,10 +221,15 @@ export default function DBProvidersPage() {
       );
       if (!options?.skipActivation) {
         await activateProvider(selectedProvider);
+        // Resetting these on a non-activating save would re-snap the
+        // selected panel back to the active provider via the
+        // ``activeProviderId`` useEffect — that's correct after a real
+        // Save, but wrong when we're only persisting credentials for
+        // a Test Connection round-trip on a non-active provider.
+        setVariableValues({});
+        setEditingSecret({});
+        setHasManuallySelectedProvider(false);
       }
-      setVariableValues({});
-      setEditingSecret({});
-      setHasManuallySelectedProvider(false);
       if (!options?.silent) {
         setSuccessData({
           title:

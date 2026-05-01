@@ -118,7 +118,9 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "configured credentials" in embedding_model_input.info
         assert backend_input.field_type.value == "knowledge_backend"
         assert backend_input.display_name == "DB Provider"
-        assert backend_input.value == {"backend_type": "chroma", "backend_config": {}}
+        # Default is empty so the frontend can populate it from the user's
+        # configured active DB Provider on first render.
+        assert backend_input.value == {}
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")
     @patch("lfx.components.files_and_knowledge.ingestion.encrypt_api_key")
