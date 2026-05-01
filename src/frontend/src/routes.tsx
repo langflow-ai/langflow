@@ -33,9 +33,9 @@ import SourceChunksPage from "./pages/MainPage/pages/knowledgePage/sourceChunksP
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
+import DBProvidersPage from "./pages/SettingsPage/pages/DBProvidersPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
-import DBProvidersPage from "./pages/SettingsPage/pages/DBProvidersPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
 import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
@@ -156,10 +156,7 @@ const router = createBrowserRouter(
                     path="model-providers"
                     element={<ModelProvidersPage />}
                   />
-                  <Route
-                    path="db-providers"
-                    element={<DBProvidersPage />}
-                  />
+                  <Route path="db-providers" element={<DBProvidersPage />} />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
                   <Route path="mcp-client" element={<McpClientPage />} />
 

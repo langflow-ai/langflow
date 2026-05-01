@@ -123,7 +123,10 @@ export function DBProviderInput({
     const backendType = provider.id as AvailableDBProviderId;
     if (!isDBProviderConfigured(backendType, globalVariables)) return;
 
-    onValueChange(backendType, getDBProviderConfig(backendType, globalVariables));
+    onValueChange(
+      backendType,
+      getDBProviderConfig(backendType, globalVariables),
+    );
     setOpen(false);
   };
 
@@ -298,7 +301,8 @@ function normalizeDBProviderValue(
     return {
       backend_type: backendType,
       backend_config:
-        value.backend_config ?? getDBProviderConfig(backendType, globalVariables),
+        value.backend_config ??
+        getDBProviderConfig(backendType, globalVariables),
     };
   }
 

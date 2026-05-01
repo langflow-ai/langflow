@@ -209,9 +209,7 @@ describe("KnowledgeBaseUploadModal", () => {
         wrapper: createWrapper(),
       });
       expect(screen.getByText("DB Provider")).toBeInTheDocument();
-      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent(
-        "Chroma",
-      );
+      expect(screen.getByTestId("kb-db-provider")).toHaveTextContent("Chroma");
     });
 
     it("renders Configure Sources section open by default", () => {

@@ -55,9 +55,7 @@ interface StepConfigurationProps {
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
   backendType: AvailableDBProviderId;
   onBackendTypeChange: (value: AvailableDBProviderId) => void;
-  onBackendConfigChange: (
-    value: Record<string, DBProviderConfigValue>,
-  ) => void;
+  onBackendConfigChange: (value: Record<string, DBProviderConfigValue>) => void;
   globalVariables: GlobalVariable[];
   metadataPairs: MetadataPair[];
   onMetadataPairsChange: (pairs: MetadataPair[]) => void;

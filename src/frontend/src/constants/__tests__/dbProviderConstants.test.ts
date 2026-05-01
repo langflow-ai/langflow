@@ -25,9 +25,7 @@ describe("dbProviderConstants", () => {
 
   it("falls back to Chroma for unsupported configured provider values", () => {
     expect(
-      getActiveDBProvider([
-        variable(ACTIVE_DB_PROVIDER_VARIABLE, "astra"),
-      ]),
+      getActiveDBProvider([variable(ACTIVE_DB_PROVIDER_VARIABLE, "astra")]),
     ).toBe("chroma");
   });
 

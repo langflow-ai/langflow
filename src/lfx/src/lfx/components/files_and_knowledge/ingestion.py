@@ -25,10 +25,10 @@ from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
     BoolInput,
+    DBProviderInput,
     DropdownInput,
     HandleInput,
     IntInput,
-    DBProviderInput,
     ModelInput,
     Output,
     SecretStrInput,

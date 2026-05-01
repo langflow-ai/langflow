@@ -1,9 +1,9 @@
 from lfx.inputs import (
     BoolInput,
     CodeInput,
-    DBProviderInput,
     DataFrameInput,
     DataInput,
+    DBProviderInput,
     DefaultPromptField,
     DictInput,
     DropdownInput,
