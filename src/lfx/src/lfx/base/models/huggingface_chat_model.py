@@ -148,7 +148,14 @@ def download_model(model_id: str, *, api_key: str | None = None) -> Path:
     """Eagerly download model weights to the local HF cache.
 
     Uses ``huggingface_hub.snapshot_download`` which is light (no torch
-    needed) and pulls only the files required for inference.
+    needed) and pulls only the files required for inference. To stay
+    robust on macOS arm64 we:
+
+    - restrict the download to ``safetensors`` weights + tokenizer/config
+      (skipping ``pytorch_model.bin``, ONNX, GGML, etc.); a single repo
+      can ship 4-6 GB of redundant formats otherwise.
+    - serialize parallel downloads (``max_workers=1``) - the multi-thread
+      path has triggered worker SIGSEGV inside forked uvicorn workers.
     """
     try:
         from huggingface_hub import snapshot_download
@@ -162,7 +169,15 @@ def download_model(model_id: str, *, api_key: str | None = None) -> Path:
     _set_hf_token(api_key)
     path = snapshot_download(
         repo_id=model_id,
-        # Skip large optional files that the runtime doesn't load.
-        ignore_patterns=["*.bin.index.json.bak", "*.msgpack", "*.h5", "*.ot"],
+        allow_patterns=[
+            "*.safetensors",
+            "*.json",
+            "tokenizer.*",
+            "tokenizer_config.*",
+            "vocab.*",
+            "merges.txt",
+            "special_tokens_map.json",
+        ],
+        max_workers=1,
     )
     return Path(path)

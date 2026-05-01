@@ -150,12 +150,17 @@ def warn_about_future_cors_changes(settings):
 async def _prefetch_default_huggingface_model() -> None:
     """Best-effort warm-up of the HF Hub cache for the bundled default model.
 
-    Runs in a background task during lifespan startup. Uses
-    ``huggingface_hub.snapshot_download`` (no torch import) so it cannot
-    trigger the macOS arm64 worker-fork SIGSEGV that affects the inference
-    path. Skippable via LANGFLOW_SKIP_HF_DEFAULT_DOWNLOAD=true.
+    **Opt-in** via ``LANGFLOW_PREFETCH_HF_DEFAULT=true`` (also accepts
+    ``1``/``yes``). Default is OFF because the underlying
+    ``huggingface_hub.snapshot_download`` path has triggered worker SIGSEGV
+    on macOS arm64 + Python 3.12, and a crashing prefetch combined with
+    uvicorn auto-reload produces a server crash loop.
+
+    When enabled, runs as a background task during lifespan startup. Uses
+    ``huggingface_hub.snapshot_download`` (no torch import) and downloads
+    only the weights / tokenizer files we actually need.
     """
-    if os.environ.get("LANGFLOW_SKIP_HF_DEFAULT_DOWNLOAD", "").lower() in {"1", "true", "yes"}:
+    if os.environ.get("LANGFLOW_PREFETCH_HF_DEFAULT", "").lower() not in {"1", "true", "yes"}:
         return
     try:
         from lfx.base.models.huggingface_chat_model import download_model
