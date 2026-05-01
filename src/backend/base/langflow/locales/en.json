@@ -4243,6 +4243,8 @@
   "components.knowledgeingestion.inputs.input_df.info.ea2004db": "Table with all original columns (already chunked / processed). Accepts Message, Data, or DataFrame. If Message or Data is provided, it is converted to a DataFrame automatically.",
   "components.knowledgeingestion.inputs.knowledge_base.display_name.dcb3e1c0": "Knowledge",
   "components.knowledgeingestion.inputs.knowledge_base.info.692d74f2": "Select the knowledge to load data from.",
+  "components.knowledgeingestion.inputs.metadata_json.display_name.9eddf573": "Metadata",
+  "components.knowledgeingestion.inputs.metadata_json.info.fadb3442": "Optional JSON object of user metadata applied to every chunk produced by this run (e.g. {\"tag\": \"invoice\", \"year\": \"2026\"}). Same shape as the upload modal Metadata section so chunks browser filters + KnowledgeBaseComponent.metadata_filter work uniformly across upload, folder, and flow-driven ingestion. Malformed JSON is ignored with a warning rather than failing the run.",
   "components.knowledgeingestion.outputs.dataframe_output.display_name.219c4a6c": "Results",
   "components.langchainfakeembeddings.description.cf2e5d4f": "Generate fake embeddings, useful for initial testing and connecting components.",
   "components.langchainfakeembeddings.display_name.6353cc11": "Fake Embeddings",
