@@ -60,18 +60,6 @@ class _ApiExecutionInput(BaseModel):
     invocation_id: str
 
 
-class _ApiDeploymentListParams(BaseModel):
-    env: str
-
-
-class _ApiConfigListParams(BaseModel):
-    config_tag: str
-
-
-class _ApiSnapshotListParams(BaseModel):
-    snapshot_tag: str
-
-
 class _TypedMapper(BaseDeploymentMapper):
     api_payloads = DeploymentApiPayloads(
         deployment_create=PayloadSlot(_ApiCreate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
@@ -79,9 +67,6 @@ class _TypedMapper(BaseDeploymentMapper):
         deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_update=PayloadSlot(_ApiUpdate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         execution_input=PayloadSlot(_ApiExecutionInput, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        deployment_list_params=PayloadSlot(_ApiDeploymentListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        config_list_params=PayloadSlot(_ApiConfigListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        snapshot_list_params=PayloadSlot(_ApiSnapshotListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
     )
 
 
@@ -95,9 +80,6 @@ INBOUND_METHOD_CASES = [
     ("resolve_deployment_spec", {"region": "us-east-1"}),
     ("resolve_deployment_config", {"retries": 3}),
     ("resolve_execution_input", {"invocation_id": "inv-1"}),
-    ("resolve_deployment_list_params", {"env": "prod"}),
-    ("resolve_config_list_params", {"config_tag": "release"}),
-    ("resolve_snapshot_list_params", {"snapshot_tag": "nightly"}),
 ]
 
 INBOUND_SLOT_NAMES = [
@@ -105,9 +87,6 @@ INBOUND_SLOT_NAMES = [
     "deployment_config",
     "deployment_update",
     "execution_input",
-    "deployment_list_params",
-    "config_list_params",
-    "snapshot_list_params",
 ]
 
 OUTBOUND_SLOT_NAMES = [
@@ -339,6 +318,90 @@ async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_dat
         )
 
 
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["A", "B"],
+        provider_params={"env": "prod"},
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+    assert params.deployment_names == ["A", "B"]
+    assert params.provider_params == {"env": "prod"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_returns_none_when_unfiltered() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=None,
+        names=None,
+        provider_params=None,
+    )
+    assert params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        provider_params={"tag": "release"},
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.provider_params == {"tag": "release"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key=None,
+        provider_params=None,
+    )
+    assert params.deployment_ids is None
+    assert params.provider_params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=["snap-a", "snap-b"],
+        provider_params={"tag": "nightly"},
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names == ["snap-a", "snap-b"]
+    assert params.provider_params == {"tag": "nightly"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_normalizes_empty_names_to_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=[],
+        provider_params=None,
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key=None,
+        snapshot_names=None,
+        provider_params=None,
+    )
+    assert params.deployment_ids is None
+    assert params.snapshot_names is None
+    assert params.provider_params is None
+
+
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
     for slot_name in INBOUND_SLOT_NAMES:
         assert hasattr(BaseDeploymentMapper, f"resolve_{slot_name}")
@@ -363,6 +426,12 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     shaper = getattr(mapper, method_name)
     shaped = shaper(payload)
     assert shaped is payload
+
+
+def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    with pytest.raises(NotImplementedError, match="shape_deployment_get_data"):
+        mapper.shape_deployment_get_data({"ok": True})
 
 
 def test_base_mapper_shapes_deployment_create_result() -> None:
@@ -518,6 +587,7 @@ def test_shape_deployment_list_items_without_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids is None
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter() -> None:
@@ -544,6 +614,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == [fv_id]
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
@@ -569,6 +640,7 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == []
+    assert items[0].provider_data is None
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:

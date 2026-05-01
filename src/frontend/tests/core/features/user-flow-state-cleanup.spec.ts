@@ -46,7 +46,13 @@ test(
     });
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Create User A
+    // Create User A — wait for the homepage Loading state to clear before
+    // checking mainpage_title (mainpage_title only renders after data load,
+    // which can outlast a 30s wait on slower runners like Windows CI).
+    await page.waitForSelector('text="Loading"', {
+      state: "hidden",
+      timeout: 60000,
+    });
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
@@ -106,11 +112,15 @@ test(
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 3000,
-    });
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 30000,
+    });
+    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    // Match the canvas_controls_dropdown wait used elsewhere in the suite
+    // (tests/core/features/token-usage.spec.ts, chatInputOutput.spec.ts):
+    // the new-flow canvas can take well over 30s to mount on slower runners.
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
     });
 
     await renameFlow(page, { flowName: userAFlowName });

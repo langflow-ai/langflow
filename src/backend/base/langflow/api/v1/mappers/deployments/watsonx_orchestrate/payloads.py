@@ -479,7 +479,7 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
     created_at: datetime | None = None
     updated_at: datetime | None = None
     tool_ids: list[str] = Field(default_factory=list)
-    environment: str | None = None
+    environments: list[str] = Field(default_factory=list)
 
     @field_validator("tool_ids", mode="before")
     @classmethod
@@ -488,11 +488,13 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
             return []
         return [normalized for tool_id in value if (normalized := str(tool_id).strip())]
 
-    @field_validator("environment", mode="before")
-    @classmethod
-    def normalize_environment(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
+
+class WatsonxApiDeploymentListItemProviderData(BaseModel):
+    """Per-item provider_data surfaced on synced wxO deployment list rows."""
+
+    model_config = {"extra": "forbid"}
+
+    environments: list[str]
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

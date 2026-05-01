@@ -37,6 +37,7 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Install langflow-base with all extras except dev (which includes Playwright)
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 

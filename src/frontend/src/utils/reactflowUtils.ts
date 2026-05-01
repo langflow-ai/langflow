@@ -1698,6 +1698,11 @@ export function mergeNodeTemplates({
     const nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
+      .filter(
+        (field_name) =>
+          typeof nodeTemplate[field_name] === "object" &&
+          nodeTemplate[field_name] !== null,
+      )
       .forEach((key) => {
         if (
           node.type === "genericNode" &&
@@ -2377,7 +2382,7 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "New Flow",
+    name: flow?.name ? flow.name : i18n.t("flow.defaultName"),
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,

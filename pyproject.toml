@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.0"
+version = "1.10.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.14"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.0",
+    "langflow-base[complete]>=0.10.0",
 ]
 
 
@@ -114,7 +114,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]
@@ -146,8 +145,6 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
-    "aiohttp>=3.13.4",
-    "litellm>=1.83.0",
     "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
@@ -166,7 +163,13 @@ timeout_method = "signal"
 minversion = "6.0"
 testpaths = ["src/backend/tests", "src/lfx/tests"]
 console_output_style = "progress"
-filterwarnings = ["ignore::DeprecationWarning", "ignore::ResourceWarning"]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::ResourceWarning",
+    "ignore:Skipped unsupported reflection:sqlalchemy.exc.SAWarning",
+    "ignore:.*SQL-parsed foreign key constraint:sqlalchemy.exc.SAWarning",
+    "ignore:autogenerate skipping metadata-specified expression-based index:UserWarning",
+]
 log_cli = true
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"

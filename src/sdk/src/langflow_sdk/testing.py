@@ -30,6 +30,7 @@ Usage inside a test file::
 
 from __future__ import annotations
 
+import contextlib
 import os
 from typing import TYPE_CHECKING, Any
 
@@ -54,34 +55,39 @@ if TYPE_CHECKING:
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register Langflow-specific CLI options."""
     group = parser.getgroup("langflow", "Langflow integration testing options")
-    group.addoption(
-        "--langflow-env",
-        dest="langflow_env",
-        default=None,
-        metavar="NAME",
-        help="Environment name from langflow-environments.toml to use for integration tests.",
-    )
-    group.addoption(
-        "--langflow-url",
-        dest="langflow_url",
-        default=None,
-        metavar="URL",
-        help="Base URL of the Langflow instance (overrides --langflow-env).",
-    )
-    group.addoption(
-        "--langflow-api-key",
-        dest="langflow_api_key",
-        default=None,
-        metavar="KEY",
-        help="API key for the Langflow instance (overrides environment config).",
-    )
-    group.addoption(
-        "--langflow-environments-file",
-        dest="langflow_environments_file",
-        default=None,
-        metavar="PATH",
-        help="Path to langflow-environments.toml (overrides default discovery).",
-    )
+    options = {
+        "--langflow-env": {
+            "dest": "langflow_env",
+            "default": None,
+            "metavar": "NAME",
+            "help": "Environment name from langflow-environments.toml to use for integration tests.",
+        },
+        "--langflow-url": {
+            "dest": "langflow_url",
+            "default": None,
+            "metavar": "URL",
+            "help": "Base URL of the Langflow instance (overrides --langflow-env).",
+        },
+        "--langflow-api-key": {
+            "dest": "langflow_api_key",
+            "default": None,
+            "metavar": "KEY",
+            "help": "API key for the Langflow instance (overrides environment config).",
+        },
+        "--langflow-environments-file": {
+            "dest": "langflow_environments_file",
+            "default": None,
+            "metavar": "PATH",
+            "help": "Path to langflow-environments.toml (overrides default discovery).",
+        },
+    }
+
+    # langflow-sdk and lfx can both be installed in the same environment and
+    # expose the same remote-testing flags. Keep registration idempotent so
+    # pytest plugin auto-discovery can load both entry points safely.
+    for flag, kwargs in options.items():
+        with contextlib.suppress(ValueError):
+            group.addoption(flag, **kwargs)
 
 
 # ---------------------------------------------------------------------------
