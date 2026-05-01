@@ -164,8 +164,13 @@ export default function DBProvidersPage() {
   // Returns ``true`` if the save fully succeeded so callers (the Test
   // Connection button) can chain a follow-up step. Errors are surfaced
   // via toast inside the function — callers should not duplicate them.
+  //
+  // ``skipActivation`` lets the Test Connection flow persist credentials
+  // (so server-side variable_service can resolve them) without switching
+  // the active provider — testing should never silently change settings.
   const handleSave = async (options?: {
     silent?: boolean;
+    skipActivation?: boolean;
   }): Promise<boolean> => {
     if (selectedProvider.status !== "available") return false;
     if (!canSave) {
@@ -214,7 +219,9 @@ export default function DBProvidersPage() {
           });
         }),
       );
-      await activateProvider(selectedProvider);
+      if (!options?.skipActivation) {
+        await activateProvider(selectedProvider);
+      }
       setVariableValues({});
       setEditingSecret({});
       setHasManuallySelectedProvider(false);
@@ -275,8 +282,9 @@ export default function DBProvidersPage() {
     }
 
     // Persist the variables first; the server-side test reads
-    // OPENSEARCH_URL etc. through ``variable_service``.
-    const saved = await handleSave({ silent: true });
+    // OPENSEARCH_URL etc. through ``variable_service``. Skip the
+    // activation step — testing must not switch the active provider.
+    const saved = await handleSave({ silent: true, skipActivation: true });
     if (!saved) {
       // ``handleSave`` already surfaced an error toast.
       return;
