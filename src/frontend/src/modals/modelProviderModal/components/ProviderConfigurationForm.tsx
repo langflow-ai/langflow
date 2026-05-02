@@ -347,18 +347,26 @@ const ProviderConfigurationForm = ({
             </Button>
           </div>
         </div>
+      ) : showDisconnectWarning ? (
+        <DisconnectWarning
+          show
+          message={`Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`}
+          onCancel={() => setShowDisconnectWarning(false)}
+          onConfirm={() => {
+            onDeactivateAllModels();
+            setShowDisconnectWarning(false);
+          }}
+          isLoading={isDeleting}
+          className="bg-background mt-2"
+        />
       ) : (
         <div className="flex flex-row items-center justify-end gap-2 pt-1">
-          {/* Credentialless providers (e.g. HuggingFace local) toggle in a
-              single click — there's nothing destructive to confirm because
-              no API key is being thrown away. The DisconnectWarning dialog
-              is reserved for the credentialed branch above. */}
           <Button
             variant={selectedProvider.is_enabled ? "outline" : "primary"}
             size="sm"
             onClick={
               selectedProvider.is_enabled
-                ? onDeactivateAllModels
+                ? () => setShowDisconnectWarning(true)
                 : onActivateDefaultModels
             }
             loading={isPending || isDeleting}
@@ -379,21 +387,19 @@ const ProviderConfigurationForm = ({
         </div>
       )}
 
-      <DisconnectWarning
-        show={showDisconnectWarning}
-        message={
-          requiresConfiguration
-            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
-            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
-        }
-        onCancel={() => setShowDisconnectWarning(false)}
-        onConfirm={() => {
-          onDisconnect();
-          setShowDisconnectWarning(false);
-        }}
-        isLoading={isDeleting}
-        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
-      />
+      {requiresConfiguration && (
+        <DisconnectWarning
+          show={showDisconnectWarning}
+          message="Disconnecting an API key will disable all of the provider's models being used in a flow."
+          onCancel={() => setShowDisconnectWarning(false)}
+          onConfirm={() => {
+            onDisconnect();
+            setShowDisconnectWarning(false);
+          }}
+          isLoading={isDeleting}
+          className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
+        />
+      )}
     </div>
   );
 };
