@@ -1,12 +1,7 @@
 import { useMemo } from "react";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-
-// Providers whose models run locally inside the langflow process and don't
-// (yet) support the agentic assistant code path. They're hidden from the
-// assistant's model picker so the auto-default never lands on a local model.
-// Once the assistant gains support for local inference, drop the entry.
-const LOCAL_INFERENCE_PROVIDERS = new Set(["HuggingFace"]);
+import { isCredentiallessProvider } from "@/utils/providerCategories";
 
 interface FilteredProviderModel {
   model_name: string;
@@ -32,10 +27,13 @@ export function useEnabledModels(): UseEnabledModelsReturn {
   const filteredProviders = useMemo(() => {
     const enabledModels = enabledModelsData?.enabled_models || {};
 
+    // Hide credentialless (local-inference) providers from the assistant
+    // until it learns to route through their adapters — the auto-default
+    // shouldn't land on a model the assistant code path can't run.
     return providersData
       .filter(
         (provider) =>
-          provider.is_enabled && !LOCAL_INFERENCE_PROVIDERS.has(provider.provider),
+          provider.is_enabled && !isCredentiallessProvider(provider.provider),
       )
       .map((provider) => {
         const providerEnabledModels = enabledModels[provider.provider] || {};
