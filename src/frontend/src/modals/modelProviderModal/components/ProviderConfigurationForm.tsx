@@ -3,11 +3,18 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
-import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
 
 const PROVIDER_KEY_PREVIEW: Record<
@@ -131,12 +138,7 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    // ``relative`` anchors the absolutely-positioned DisconnectWarning to
-    // this form so it doesn't bleed into the per-model toggle list rendered
-    // beneath it. Required for the credentialless branch in particular,
-    // whose form is short — without an anchor, ``inset-0`` defaults to a
-    // bigger ancestor and the overlay extends past the form's bottom edge.
-    <div className="relative flex flex-col gap-1 px-4 pt-4">
+    <div className="flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
           {isSingleVariableProvider && requiresConfiguration ? (
@@ -380,30 +382,49 @@ const ProviderConfigurationForm = ({
         </div>
       )}
 
-      <DisconnectWarning
-        show={showDisconnectWarning}
-        message={
-          requiresConfiguration
-            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
-            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
-        }
-        onCancel={() => setShowDisconnectWarning(false)}
-        onConfirm={() => {
-          if (requiresConfiguration) {
-            onDisconnect();
-          } else {
-            onDeactivateAllModels();
-          }
-          setShowDisconnectWarning(false);
-        }}
-        isLoading={isDeleting}
-        // ``inset-x-0 top-0`` pins the warning to the top of the now-anchored
-        // form; height is left to ``h-fit`` (set on DisconnectWarning itself)
-        // so it sizes to its message + buttons regardless of how tall the
-        // underlying form happens to be — the previous fixed h-[165px]
-        // overflowed the credentialless form by ~50px.
-        className="absolute inset-x-0 top-0 m-4 bg-background z-50 border-destructive border"
-      />
+      <Dialog
+        open={showDisconnectWarning}
+        onOpenChange={setShowDisconnectWarning}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <ForwardedIconComponent
+                name="Circle"
+                className="text-destructive w-3 h-3 fill-destructive animate-pulse"
+              />
+              Warning
+            </DialogTitle>
+            <DialogDescription>
+              {requiresConfiguration
+                ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
+                : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setShowDisconnectWarning(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              loading={isDeleting}
+              onClick={() => {
+                if (requiresConfiguration) {
+                  onDisconnect();
+                } else {
+                  onDeactivateAllModels();
+                }
+                setShowDisconnectWarning(false);
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
