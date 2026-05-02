@@ -23,7 +23,7 @@ export const McpAuthSection = ({
 }: McpAuthSectionProps) => {
   const { t } = useTranslation();
   return (
-    <div className="flex justify-between">
+    <div className="flex items-center justify-between">
       <span className="flex gap-2 items-center text-sm cursor-default">
         <span className=" font-medium">{t("mcp.auth")}</span>
         {!hasAuthentication ? (
