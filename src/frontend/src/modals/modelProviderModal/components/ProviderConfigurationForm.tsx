@@ -131,7 +131,12 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    <div className="flex flex-col gap-1 px-4 pt-4">
+    // ``relative`` anchors the absolutely-positioned DisconnectWarning to
+    // this form so it doesn't bleed into the per-model toggle list rendered
+    // beneath it. Required for the credentialless branch in particular,
+    // whose form is short — without an anchor, ``inset-0`` defaults to a
+    // bigger ancestor and the overlay extends past the form's bottom edge.
+    <div className="relative flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
           {isSingleVariableProvider && requiresConfiguration ? (
@@ -392,7 +397,12 @@ const ProviderConfigurationForm = ({
           setShowDisconnectWarning(false);
         }}
         isLoading={isDeleting}
-        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
+        // ``inset-x-0 top-0`` pins the warning to the top of the now-anchored
+        // form; height is left to ``h-fit`` (set on DisconnectWarning itself)
+        // so it sizes to its message + buttons regardless of how tall the
+        // underlying form happens to be — the previous fixed h-[165px]
+        // overflowed the credentialless form by ~50px.
+        className="absolute inset-x-0 top-0 m-4 bg-background z-50 border-destructive border"
       />
     </div>
   );
