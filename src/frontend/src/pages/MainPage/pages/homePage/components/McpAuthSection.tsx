@@ -20,7 +20,7 @@ export const McpAuthSection = ({
   currentAuthSettings,
   setAuthModalOpen,
 }: McpAuthSectionProps) => (
-  <div className="flex justify-between">
+  <div className="flex items-center justify-between">
     <span className="flex gap-2 items-center text-sm cursor-default">
       <span className=" font-medium">Auth:</span>
       {!hasAuthentication ? (
