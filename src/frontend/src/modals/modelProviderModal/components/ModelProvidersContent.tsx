@@ -30,7 +30,6 @@ const ModelProvidersContent = ({
     isFetchingAfterDisconnect,
     handleVariableChange,
     handleSaveAllVariables,
-    handleActivateProvider,
     handleDisconnect,
     isVariableConfigured,
     getConfiguredValue,
@@ -42,6 +41,8 @@ const ModelProvidersContent = ({
     handleModelToggle,
     flushPendingChanges,
     requiresConfiguration,
+    handleDeactivateAllModels,
+    handleActivateDefaultModels,
   } = useProviderConfiguration({
     selectedProvider,
   });
@@ -96,8 +97,9 @@ const ModelProvidersContent = ({
           getConfiguredValue={getConfiguredValue}
           onVariableChange={handleVariableChange}
           onSave={handleSaveAllVariables}
-          onActivate={handleActivateProvider}
           onDisconnect={handleDisconnect}
+          onDeactivateAllModels={handleDeactivateAllModels}
+          onActivateDefaultModels={handleActivateDefaultModels}
           isSaving={isSaving}
           isPending={isPending}
           isDeleting={isDeleting}

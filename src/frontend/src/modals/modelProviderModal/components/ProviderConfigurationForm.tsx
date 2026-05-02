@@ -37,8 +37,15 @@ export interface ProviderConfigurationFormProps {
   getConfiguredValue: (key: string) => string | null;
   onVariableChange: (key: string, value: string) => void;
   onSave: () => void;
-  onActivate: () => void;
   onDisconnect: () => void;
+  /** Toggle every model the provider ships off. Used by the credentialless
+   * branch where there's no API key to delete — flipping all models off is
+   * what makes the provider's ``is_enabled`` flag flip back to false. */
+  onDeactivateAllModels: () => void;
+  /** Re-enable the catalog's default models for the provider. Mirrors the
+   * credentialless deactivate path: there's no credential to (re)create,
+   * so flipping defaults back on is what re-flips ``is_enabled``. */
+  onActivateDefaultModels: () => void;
   isSaving: boolean;
   isPending: boolean;
   isDeleting: boolean;
@@ -81,8 +88,9 @@ const ProviderConfigurationForm = ({
   getConfiguredValue,
   onVariableChange,
   onSave,
-  onActivate,
   onDisconnect,
+  onDeactivateAllModels,
+  onActivateDefaultModels,
   isSaving,
   isPending,
   isDeleting,
@@ -341,13 +349,17 @@ const ProviderConfigurationForm = ({
         </div>
       ) : (
         <div className="flex flex-row items-center justify-end gap-2 pt-1">
+          {/* Credentialless providers (e.g. HuggingFace local) toggle in a
+              single click — there's nothing destructive to confirm because
+              no API key is being thrown away. The DisconnectWarning dialog
+              is reserved for the credentialed branch above. */}
           <Button
             variant={selectedProvider.is_enabled ? "outline" : "primary"}
             size="sm"
             onClick={
               selectedProvider.is_enabled
-                ? () => setShowDisconnectWarning(true)
-                : onActivate
+                ? onDeactivateAllModels
+                : onActivateDefaultModels
             }
             loading={isPending || isDeleting}
             disabled={isDeleting || isPending}
