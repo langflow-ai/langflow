@@ -3,18 +3,11 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
+import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
 
 const PROVIDER_KEY_PREVIEW: Record<
@@ -382,49 +375,25 @@ const ProviderConfigurationForm = ({
         </div>
       )}
 
-      <Dialog
-        open={showDisconnectWarning}
-        onOpenChange={setShowDisconnectWarning}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <ForwardedIconComponent
-                name="Circle"
-                className="text-destructive w-3 h-3 fill-destructive animate-pulse"
-              />
-              Warning
-            </DialogTitle>
-            <DialogDescription>
-              {requiresConfiguration
-                ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
-                : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setShowDisconnectWarning(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              loading={isDeleting}
-              onClick={() => {
-                if (requiresConfiguration) {
-                  onDisconnect();
-                } else {
-                  onDeactivateAllModels();
-                }
-                setShowDisconnectWarning(false);
-              }}
-            >
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DisconnectWarning
+        show={showDisconnectWarning}
+        message={
+          requiresConfiguration
+            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
+            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
+        }
+        onCancel={() => setShowDisconnectWarning(false)}
+        onConfirm={() => {
+          if (requiresConfiguration) {
+            onDisconnect();
+          } else {
+            onDeactivateAllModels();
+          }
+          setShowDisconnectWarning(false);
+        }}
+        isLoading={isDeleting}
+        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
+      />
     </div>
   );
 };
