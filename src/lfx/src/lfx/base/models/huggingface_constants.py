@@ -2,9 +2,8 @@
 
 Curated list of small/efficient GGUF models that run well on a typical laptop
 (8-16 GB RAM, CPU-only). Each entry uses a short slug (``display_name``) for
-the UI - matching the Ollama convention - while ``name`` keeps the canonical
-HuggingFace repo id needed for downloads. ``url`` points at the model card so
-the UI can offer a "open on HF" affordance.
+the UI — matching the Ollama convention — while ``name`` keeps the canonical
+HuggingFace repo id needed for downloads.
 
 Onboarding still ships exactly one ``default=True`` entry so a fresh user
 sees a single toggle. The rest light up on demand: flip them on in the
@@ -19,11 +18,6 @@ SIGSEGVs at first device init).
 from .huggingface_chat_model import DEFAULT_HUGGINGFACE_MODEL
 from .model_metadata import create_model_metadata
 
-
-def _hf_url(repo_id: str) -> str:
-    return f"https://huggingface.co/{repo_id}"
-
-
 # Curated, laptop-friendly GGUF catalog. Sizes are Q4_K_M unless noted.
 # Tool-calling flags reflect what the underlying base model supports
 # reasonably well — small models that *advertise* tool calling but trip on
@@ -34,7 +28,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name=DEFAULT_HUGGINGFACE_MODEL,
         display_name="smollm2",
-        url=_hf_url(DEFAULT_HUGGINGFACE_MODEL),
         icon="HuggingFace",
         tool_calling=False,
         default=True,
@@ -44,7 +37,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/granite-3.1-2b-instruct-GGUF",
         display_name="granite3.1:2b",
-        url=_hf_url("bartowski/granite-3.1-2b-instruct-GGUF"),
         icon="HuggingFace",
         tool_calling=True,
     ),
@@ -52,7 +44,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/granite-3.1-8b-instruct-GGUF",
         display_name="granite3.1:8b",
-        url=_hf_url("bartowski/granite-3.1-8b-instruct-GGUF"),
         icon="HuggingFace",
         tool_calling=True,
     ),
@@ -61,7 +52,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/Qwen2.5-1.5B-Instruct-GGUF",
         display_name="qwen2.5:1.5b",
-        url=_hf_url("bartowski/Qwen2.5-1.5B-Instruct-GGUF"),
         icon="HuggingFace",
         tool_calling=True,
     ),
@@ -69,7 +59,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/Qwen2.5-3B-Instruct-GGUF",
         display_name="qwen2.5:3b",
-        url=_hf_url("bartowski/Qwen2.5-3B-Instruct-GGUF"),
         icon="HuggingFace",
         tool_calling=True,
     ),
@@ -79,7 +68,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/Hermes-3-Llama-3.2-3B-GGUF",
         display_name="hermes3",
-        url=_hf_url("bartowski/Hermes-3-Llama-3.2-3B-GGUF"),
         icon="HuggingFace",
         tool_calling=True,
     ),
@@ -88,7 +76,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         provider="HuggingFace",
         name="bartowski/Phi-3.5-mini-instruct-GGUF",
         display_name="phi3.5",
-        url=_hf_url("bartowski/Phi-3.5-mini-instruct-GGUF"),
         icon="HuggingFace",
         tool_calling=False,
     ),

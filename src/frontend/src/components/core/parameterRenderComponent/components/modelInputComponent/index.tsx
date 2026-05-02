@@ -160,10 +160,10 @@ export default function ModelInputComponent({
       if (!grouped[provider]) {
         grouped[provider] = [];
       }
-      // Lift display_name / url out of metadata so ModelTrigger and ModelList
-      // can render them without each having to peek at metadata themselves.
-      // Saved options round-tripped through build_config carry these fields
-      // inside metadata; older saved options simply won't have them.
+      // Lift display_name out of metadata so ModelTrigger and ModelList
+      // can render the short slug without each having to peek at metadata
+      // themselves. Saved options round-tripped through build_config carry
+      // it inside metadata; older saved options simply won't have it.
       const optionMetadata = (option.metadata ?? {}) as Record<string, unknown>;
       grouped[provider].push({
         ...option,
@@ -171,11 +171,6 @@ export default function ModelInputComponent({
           option.display_name ??
           (typeof optionMetadata.display_name === "string"
             ? (optionMetadata.display_name as string)
-            : undefined),
-        url:
-          option.url ??
-          (typeof optionMetadata.url === "string"
-            ? (optionMetadata.url as string)
             : undefined),
       });
       seen.add(`${provider}::${option.name}`);
@@ -233,10 +228,6 @@ export default function ModelInputComponent({
               typeof augmentedMetadata.display_name === "string"
                 ? (augmentedMetadata.display_name as string)
                 : undefined,
-            url:
-              typeof augmentedMetadata.url === "string"
-                ? (augmentedMetadata.url as string)
-                : undefined,
             icon: providerInfo.icon || "Bot",
             provider: providerName,
             metadata: augmentedMetadata,
@@ -268,11 +259,6 @@ export default function ModelInputComponent({
             (savedValue as Partial<ModelOption>).display_name ??
             (typeof savedMetadata.display_name === "string"
               ? (savedMetadata.display_name as string)
-              : undefined),
-          url:
-            (savedValue as Partial<ModelOption>).url ??
-            (typeof savedMetadata.url === "string"
-              ? (savedMetadata.url as string)
               : undefined),
           icon: savedValue.icon || "Bot",
           provider: providerName,
@@ -336,11 +322,6 @@ export default function ModelInputComponent({
           (saved as Partial<SelectedModel>).display_name ??
           (typeof savedMetadata.display_name === "string"
             ? (savedMetadata.display_name as string)
-            : undefined),
-        url:
-          (saved as Partial<SelectedModel>).url ??
-          (typeof savedMetadata.url === "string"
-            ? (savedMetadata.url as string)
             : undefined),
         icon: saved.icon || "Bot",
         provider: saved.provider || "Unknown",

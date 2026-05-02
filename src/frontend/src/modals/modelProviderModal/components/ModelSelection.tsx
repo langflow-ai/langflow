@@ -33,12 +33,8 @@ const ModelRow = ({
     typeof model.metadata?.display_name === "string"
       ? (model.metadata.display_name as string)
       : model.model_name;
-  const url =
-    typeof model.metadata?.url === "string"
-      ? (model.metadata.url as string)
-      : undefined;
   return (
-    <div className="group flex flex-row items-center justify-between h-[24px]">
+    <div className="flex flex-row items-center justify-between h-[24px]">
       <div className="flex flex-row items-center gap-2 min-w-0">
         <ForwardedIconComponent
           name={model.metadata?.icon || "Bot"}
@@ -52,22 +48,6 @@ const ModelRow = ({
         >
           {displayName}
         </span>
-        {url && (
-          <a
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-testid={`${testIdPrefix}-link-${model.model_name}`}
-            aria-label={`Open ${displayName} model page`}
-            title={url}
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-primary"
-          >
-            <ForwardedIconComponent
-              name="ExternalLink"
-              className="h-3.5 w-3.5"
-            />
-          </a>
-        )}
       </div>
       {isEnabledModel && (
         <Switch

@@ -221,14 +221,11 @@ def get_language_model_options(
             if "max_tokens_field_name" in provider_meta:
                 option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
 
-            # Forward optional catalog fields the dropdown UI cares about
-            # (display_name keeps long ids like ``bartowski/...-GGUF`` from
-            # leaking into the trigger; url backs the "open model card"
-            # affordance). Skipped silently when not set so legacy catalogs
-            # stay unchanged.
-            for forwarded_key in ("display_name", "url"):
-                if forwarded_key in metadata:
-                    option_metadata[forwarded_key] = metadata[forwarded_key]
+            # Forward display_name so long canonical ids (HF repo paths)
+            # don't leak into the trigger when the catalog provides a short
+            # slug. Silent no-op when the catalog didn't set one.
+            if "display_name" in metadata:
+                option_metadata["display_name"] = metadata["display_name"]
 
             option = {
                 "name": model_name,
