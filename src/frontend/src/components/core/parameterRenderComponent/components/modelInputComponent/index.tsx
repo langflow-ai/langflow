@@ -144,6 +144,17 @@ export default function ModelInputComponent({
       // selection stays visible and selectable in the dropdown.
       const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
 
+      // The sticky flag gets baked into a flow's saved options when an
+      // earlier update_build_config call ran while the model wasn't in the
+      // enabled list. If the model is enabled *now* (e.g. the user enabled
+      // its provider after saving) the flag is stale and would falsely
+      // render the "Configure" wrench next to a perfectly valid selection.
+      // Detect that case and treat the option as a normal enabled entry.
+      const providerModelsForOption =
+        enabledModelsData?.enabled_models?.[provider];
+      const stickyFlagIsStale =
+        isStickyNotEnabled && providerModelsForOption?.[option.name] === true;
+
       // Filter against client-side enabled models data. This is the source of
       // truth for what the current user has enabled — stale `options` saved in
       // an imported flow may include models from providers the current user
@@ -165,13 +176,21 @@ export default function ModelInputComponent({
       // themselves. Saved options round-tripped through build_config carry
       // it inside metadata; older saved options simply won't have it.
       const optionMetadata = (option.metadata ?? {}) as Record<string, unknown>;
+      const cleanedMetadata = stickyFlagIsStale
+        ? Object.fromEntries(
+            Object.entries(optionMetadata).filter(
+              ([k]) => k !== "not_enabled_locally",
+            ),
+          )
+        : optionMetadata;
       grouped[provider].push({
         ...option,
         display_name:
           option.display_name ??
-          (typeof optionMetadata.display_name === "string"
-            ? (optionMetadata.display_name as string)
+          (typeof cleanedMetadata.display_name === "string"
+            ? (cleanedMetadata.display_name as string)
             : undefined),
+        metadata: cleanedMetadata,
       });
       seen.add(`${provider}::${option.name}`);
     }

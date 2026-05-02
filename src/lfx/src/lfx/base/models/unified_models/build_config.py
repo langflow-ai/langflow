@@ -170,6 +170,29 @@ def apply_provider_variable_config_to_build_config(
                         "Skipping auto-set for field %s - user has already supplied a value",
                         field_name,
                     )
+        elif skip_optional:
+            # Optional variable that the user hasn't configured. Clear any stale
+            # cross-provider state (e.g. ``OPENAI_API_KEY`` carried over after
+            # switching to a credentialless provider) so the runtime doesn't
+            # try to resolve a key the new provider doesn't actually need.
+            current_value = field_config.get("value")
+            current_load_from_db = field_config.get("load_from_db", False)
+            is_stale_cross_provider_var = current_load_from_db and current_value != var_key
+            # Also clear when the previous resolver pointed at *this* provider's
+            # var_key — because skip_optional fires precisely when the user
+            # hasn't configured it, so attempting to load it would raise
+            # "<VAR> variable not found." at runtime.
+            points_at_unconfigured_var = current_load_from_db and current_value == var_key
+            if is_stale_cross_provider_var or points_at_unconfigured_var:
+                field_config["value"] = ""
+                field_config["load_from_db"] = False
+                logger.debug(
+                    "Cleared optional field %s for provider %s (was %r/load_from_db=%s)",
+                    field_name,
+                    provider,
+                    current_value,
+                    current_load_from_db,
+                )
 
     return build_config
 
