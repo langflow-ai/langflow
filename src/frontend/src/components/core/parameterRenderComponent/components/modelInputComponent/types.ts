@@ -1,6 +1,8 @@
 export interface ModelOption {
   id?: string;
   name: string;
+  display_name?: string;
+  url?: string;
   icon: string;
   provider: string;
   metadata?: Record<string, unknown>;

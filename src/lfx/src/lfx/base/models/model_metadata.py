@@ -5,7 +5,9 @@ class ModelMetadata(TypedDict, total=False):
     """Simple model metadata structure."""
 
     provider: str  # Provider name (e.g., "anthropic", "groq", "openai")
-    name: str  # Model name/ID
+    name: str  # Canonical model identifier (e.g. HF repo id, OpenAI model name).
+    display_name: str  # Optional short label shown in UI dropdowns when ``name`` is too long.
+    url: str  # Optional external URL for the model's docs/page (e.g. HF model card).
     icon: str  # Icon name for UI
     tool_calling: bool  # Whether model supports tool calling (defaults to False)
     reasoning: bool  # Reasoning models (defaults to False)
@@ -22,6 +24,8 @@ def create_model_metadata(
     name: str,
     icon: str,
     *,
+    display_name: str | None = None,
+    url: str | None = None,
     tool_calling: bool = False,
     reasoning: bool = False,
     search: bool = False,
@@ -32,7 +36,7 @@ def create_model_metadata(
     model_type: str = "llm",
 ) -> ModelMetadata:
     """Helper function to create ModelMetadata with explicit defaults."""
-    return ModelMetadata(
+    md = ModelMetadata(
         provider=provider,
         name=name,
         icon=icon,
@@ -45,6 +49,11 @@ def create_model_metadata(
         default=default,
         model_type=model_type,
     )
+    if display_name:
+        md["display_name"] = display_name
+    if url:
+        md["url"] = url
+    return md
 
 
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]

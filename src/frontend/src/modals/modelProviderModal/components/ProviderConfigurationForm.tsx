@@ -342,23 +342,24 @@ const ProviderConfigurationForm = ({
       ) : (
         <div className="flex flex-col gap-2">
           <Button
-            onClick={onActivate}
-            loading={isPending}
-            disabled={selectedProvider.is_enabled}
+            variant={selectedProvider.is_enabled ? "destructive" : "primary"}
+            onClick={
+              selectedProvider.is_enabled
+                ? () => setShowDisconnectWarning(true)
+                : onActivate
+            }
+            loading={isPending || isDeleting}
+            disabled={isDeleting || isPending}
+            data-testid={
+              selectedProvider.is_enabled
+                ? `deactivate-${selectedProvider.provider.toLowerCase()}`
+                : `activate-${selectedProvider.provider.toLowerCase()}`
+            }
           >
             {selectedProvider.is_enabled
-              ? `${selectedProvider.provider} Activated`
+              ? `Deactivate ${selectedProvider.provider}`
               : `Activate ${selectedProvider.provider}`}
           </Button>
-          {selectedProvider.is_enabled && (
-            <Button
-              variant="destructive"
-              onClick={() => setShowDisconnectWarning(true)}
-              disabled={isDeleting || isPending}
-            >
-              Deactivate {selectedProvider.provider}
-            </Button>
-          )}
         </div>
       )}
 

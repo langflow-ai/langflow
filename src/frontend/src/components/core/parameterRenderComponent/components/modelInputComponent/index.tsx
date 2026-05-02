@@ -206,11 +206,23 @@ export default function ModelInputComponent({
           if (!grouped[providerName]) {
             grouped[providerName] = [];
           }
+          const augmentedMetadata = (model.metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
           grouped[providerName].push({
             name: modelName,
+            display_name:
+              typeof augmentedMetadata.display_name === "string"
+                ? (augmentedMetadata.display_name as string)
+                : undefined,
+            url:
+              typeof augmentedMetadata.url === "string"
+                ? (augmentedMetadata.url as string)
+                : undefined,
             icon: providerInfo.icon || "Bot",
             provider: providerName,
-            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+            metadata: augmentedMetadata,
           });
         }
       }
@@ -227,14 +239,28 @@ export default function ModelInputComponent({
     const savedValue = value?.[0];
     if (!hasAnyGrouped && savedValue?.name) {
       const providerName = savedValue.provider || "Unknown";
+      const savedMetadata = (savedValue.metadata ?? {}) as Record<
+        string,
+        unknown
+      >;
       grouped[providerName] = [
         {
           ...(savedValue.id && { id: savedValue.id }),
           name: savedValue.name,
+          display_name:
+            (savedValue as Partial<ModelOption>).display_name ??
+            (typeof savedMetadata.display_name === "string"
+              ? (savedMetadata.display_name as string)
+              : undefined),
+          url:
+            (savedValue as Partial<ModelOption>).url ??
+            (typeof savedMetadata.url === "string"
+              ? (savedMetadata.url as string)
+              : undefined),
           icon: savedValue.icon || "Bot",
           provider: providerName,
           metadata: {
-            ...(savedValue.metadata ?? {}),
+            ...savedMetadata,
             not_enabled_locally: true,
           },
         } as ModelOption,
@@ -285,13 +311,24 @@ export default function ModelInputComponent({
     // model. The wrench affordance in the dropdown handles configuration.
     const saved = value?.[0];
     if (saved) {
+      const savedMetadata = (saved.metadata ?? {}) as Record<string, unknown>;
       return {
         ...(saved.id && { id: saved.id }),
         name: saved.name,
+        display_name:
+          (saved as Partial<SelectedModel>).display_name ??
+          (typeof savedMetadata.display_name === "string"
+            ? (savedMetadata.display_name as string)
+            : undefined),
+        url:
+          (saved as Partial<SelectedModel>).url ??
+          (typeof savedMetadata.url === "string"
+            ? (savedMetadata.url as string)
+            : undefined),
         icon: saved.icon || "Bot",
         provider: saved.provider || "Unknown",
         metadata: {
-          ...(saved.metadata ?? {}),
+          ...savedMetadata,
           not_enabled_locally: true,
         },
       } as SelectedModel;
