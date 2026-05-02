@@ -347,18 +347,6 @@ const ProviderConfigurationForm = ({
             </Button>
           </div>
         </div>
-      ) : showDisconnectWarning ? (
-        <DisconnectWarning
-          show
-          message={`Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`}
-          onCancel={() => setShowDisconnectWarning(false)}
-          onConfirm={() => {
-            onDeactivateAllModels();
-            setShowDisconnectWarning(false);
-          }}
-          isLoading={isDeleting}
-          className="bg-background mt-2"
-        />
       ) : (
         <div className="flex flex-row items-center justify-end gap-2 pt-1">
           <Button
@@ -387,19 +375,25 @@ const ProviderConfigurationForm = ({
         </div>
       )}
 
-      {requiresConfiguration && (
-        <DisconnectWarning
-          show={showDisconnectWarning}
-          message="Disconnecting an API key will disable all of the provider's models being used in a flow."
-          onCancel={() => setShowDisconnectWarning(false)}
-          onConfirm={() => {
+      <DisconnectWarning
+        show={showDisconnectWarning}
+        message={
+          requiresConfiguration
+            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
+            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
+        }
+        onCancel={() => setShowDisconnectWarning(false)}
+        onConfirm={() => {
+          if (requiresConfiguration) {
             onDisconnect();
-            setShowDisconnectWarning(false);
-          }}
-          isLoading={isDeleting}
-          className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
-        />
-      )}
+          } else {
+            onDeactivateAllModels();
+          }
+          setShowDisconnectWarning(false);
+        }}
+        isLoading={isDeleting}
+        className="absolute inset-0 m-4 bg-background z-50 border-destructive border h-[165px]"
+      />
     </div>
   );
 };
