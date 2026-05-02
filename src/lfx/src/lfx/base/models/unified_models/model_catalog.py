@@ -95,16 +95,26 @@ def get_unified_models_detailed(
             }
         )
 
-    # Mark the first 5 models in each provider as default (based on list order)
-    # and optionally filter to only defaults
-    default_model_count = 5  # Number of default models per provider
+    # Mark default models per provider:
+    #   - If the catalog set ``default=True`` on any entry for the provider,
+    #     trust that as the explicit allow-list (only those stay default-on).
+    #     Used by providers like HuggingFace where we ship one bundled model
+    #     and don't want every catalogued repo auto-enabled (which would
+    #     trigger surprise downloads / disk usage).
+    #   - Otherwise fall back to position-based first-N defaults so legacy
+    #     catalogs (OpenAI, Anthropic, Ollama, ...) keep their pre-PR
+    #     behavior without each one needing to opt-in explicitly.
+    default_model_count = 5  # Used only as the fallback for catalogs without explicit defaults.
 
     for prov, models in provider_map.items():
-        for i, model in enumerate(models):
-            if i < default_model_count:
-                model["metadata"]["default"] = True
-            else:
-                model["metadata"]["default"] = False
+        catalog_explicit = any(m["metadata"].get("default") is True for m in models)
+        if catalog_explicit:
+            for model in models:
+                # Normalize: only entries the catalog flagged stay True.
+                model["metadata"]["default"] = model["metadata"].get("default") is True
+        else:
+            for i, model in enumerate(models):
+                model["metadata"]["default"] = i < default_model_count
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -210,6 +220,15 @@ def get_language_model_options(
             }
             if "max_tokens_field_name" in provider_meta:
                 option_metadata["max_tokens_field_name"] = provider_meta["max_tokens_field_name"]
+
+            # Forward optional catalog fields the dropdown UI cares about
+            # (display_name keeps long ids like ``bartowski/...-GGUF`` from
+            # leaking into the trigger; url backs the "open model card"
+            # affordance). Skipped silently when not set so legacy catalogs
+            # stay unchanged.
+            for forwarded_key in ("display_name", "url"):
+                if forwarded_key in metadata:
+                    option_metadata[forwarded_key] = metadata[forwarded_key]
 
             option = {
                 "name": model_name,

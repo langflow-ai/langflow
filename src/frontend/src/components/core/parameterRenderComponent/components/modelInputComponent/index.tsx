@@ -160,7 +160,24 @@ export default function ModelInputComponent({
       if (!grouped[provider]) {
         grouped[provider] = [];
       }
-      grouped[provider].push(option);
+      // Lift display_name / url out of metadata so ModelTrigger and ModelList
+      // can render them without each having to peek at metadata themselves.
+      // Saved options round-tripped through build_config carry these fields
+      // inside metadata; older saved options simply won't have them.
+      const optionMetadata = (option.metadata ?? {}) as Record<string, unknown>;
+      grouped[provider].push({
+        ...option,
+        display_name:
+          option.display_name ??
+          (typeof optionMetadata.display_name === "string"
+            ? (optionMetadata.display_name as string)
+            : undefined),
+        url:
+          option.url ??
+          (typeof optionMetadata.url === "string"
+            ? (optionMetadata.url as string)
+            : undefined),
+      });
       seen.add(`${provider}::${option.name}`);
     }
 

@@ -126,7 +126,7 @@ const ProviderConfigurationForm = ({
     <div className="flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
-          {isSingleVariableProvider ? (
+          {isSingleVariableProvider && requiresConfiguration ? (
             <>
               {providerVariables[0].variable_name}
               {providerVariables[0].required && (
@@ -134,7 +134,7 @@ const ProviderConfigurationForm = ({
               )}
             </>
           ) : (
-            `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`
+            `${selectedProvider.provider || "Unknown Provider"}${requiresConfiguration ? " Configuration" : ""}`
           )}
         </span>
       </div>
@@ -155,7 +155,7 @@ const ProviderConfigurationForm = ({
             to enable these models
           </>
         ) : (
-          <>Activate {selectedProvider.provider} to enable these models</>
+          <>Runs locally — no credentials needed.</>
         )}
       </span>
       {requiresConfiguration ? (
@@ -340,9 +340,10 @@ const ProviderConfigurationForm = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-center justify-end gap-2 pt-1">
           <Button
-            variant={selectedProvider.is_enabled ? "destructive" : "primary"}
+            variant={selectedProvider.is_enabled ? "outline" : "primary"}
+            size="sm"
             onClick={
               selectedProvider.is_enabled
                 ? () => setShowDisconnectWarning(true)
@@ -355,10 +356,13 @@ const ProviderConfigurationForm = ({
                 ? `deactivate-${selectedProvider.provider.toLowerCase()}`
                 : `activate-${selectedProvider.provider.toLowerCase()}`
             }
+            className={
+              selectedProvider.is_enabled
+                ? "text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
+                : ""
+            }
           >
-            {selectedProvider.is_enabled
-              ? `Deactivate ${selectedProvider.provider}`
-              : `Activate ${selectedProvider.provider}`}
+            {selectedProvider.is_enabled ? "Deactivate" : "Activate"}
           </Button>
         </div>
       )}

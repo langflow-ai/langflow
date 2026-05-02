@@ -28,30 +28,59 @@ const ModelRow = ({
   enabled,
   testIdPrefix,
   isEnabledModel,
-}: ModelRowProps) => (
-  <div className="flex flex-row items-center justify-between h-[24px]">
-    <div className="flex flex-row items-center gap-2">
-      <ForwardedIconComponent
-        name={model.metadata?.icon || "Bot"}
-        className={cn("w-5 h-5", { grayscale: !isEnabledModel })}
-      />
-      <span
-        className={cn("text-sm", { "text-muted-foreground": !isEnabledModel })}
-      >
-        {model.model_name}
-      </span>
+}: ModelRowProps) => {
+  const displayName =
+    typeof model.metadata?.display_name === "string"
+      ? (model.metadata.display_name as string)
+      : model.model_name;
+  const url =
+    typeof model.metadata?.url === "string"
+      ? (model.metadata.url as string)
+      : undefined;
+  return (
+    <div className="group flex flex-row items-center justify-between h-[24px]">
+      <div className="flex flex-row items-center gap-2 min-w-0">
+        <ForwardedIconComponent
+          name={model.metadata?.icon || "Bot"}
+          className={cn("w-5 h-5 shrink-0", { grayscale: !isEnabledModel })}
+        />
+        <span
+          className={cn("text-sm truncate", {
+            "text-muted-foreground": !isEnabledModel,
+          })}
+          title={model.model_name}
+        >
+          {displayName}
+        </span>
+        {url && (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid={`${testIdPrefix}-link-${model.model_name}`}
+            aria-label={`Open ${displayName} model page`}
+            title={url}
+            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-primary"
+          >
+            <ForwardedIconComponent
+              name="ExternalLink"
+              className="h-3.5 w-3.5"
+            />
+          </a>
+        )}
+      </div>
+      {isEnabledModel && (
+        <Switch
+          checked={enabled}
+          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+          data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+          aria-label={`${enabled ? "Disable" : "Enable"} ${displayName}`}
+          stopPropagation
+        />
+      )}
     </div>
-    {isEnabledModel && (
-      <Switch
-        checked={enabled}
-        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-        data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
-        stopPropagation
-      />
-    )}
-  </div>
-);
+  );
+};
 
 /**
  * Displays lists of LLM and embedding models with toggle switches.
