@@ -47,15 +47,14 @@ const ModelRow = ({
           {displayName}
         </span>
       </div>
-      {isEnabledModel && (
-        <Switch
-          checked={enabled}
-          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-          data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-          aria-label={`${enabled ? "Disable" : "Enable"} ${displayName}`}
-          stopPropagation
-        />
-      )}
+      <Switch
+        checked={enabled}
+        disabled={!isEnabledModel}
+        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+        data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${displayName}`}
+        stopPropagation
+      />
     </div>
   );
 };

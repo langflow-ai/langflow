@@ -119,12 +119,13 @@ const ModelProvidersContent = ({
               availableModels={syncedSelectedProvider?.models || []}
               onModelToggle={handleModelToggle}
               providerName={syncedSelectedProvider?.provider}
-              isEnabledModel={
-                !!(
-                  syncedSelectedProvider?.is_enabled ||
-                  syncedSelectedProvider?.is_configured
-                )
-              }
+              // Only let the per-model switches react when the provider is
+              // actually active (has any enabled model). The previous
+              // ``is_enabled || is_configured`` fallback meant credentialless
+              // providers (e.g. HuggingFace) kept the switches interactive
+              // even after the user clicked Deactivate, which let toggling
+              // an individual model silently re-activate the provider.
+              isEnabledModel={!!syncedSelectedProvider?.is_enabled}
             />
           </div>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background via-background/70 to-transparent" />
