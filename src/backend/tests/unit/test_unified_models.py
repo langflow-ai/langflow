@@ -1,9 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.models.unified_models import (
     _get_all_provider_mapped_fields,
     apply_provider_variable_config_to_build_config,
+    get_embedding_model_options,
     get_embeddings,
     get_unified_models_detailed,
     handle_model_input_update,
@@ -87,6 +88,22 @@ def test_filter_by_model_type_embeddings():
     assert models, "Expected at least one embedding model"
     for model in models:
         assert model["metadata"].get("model_type", "llm") == "embeddings"
+
+
+@patch("lfx.base.models.unified_models.model_catalog._fetch_enabled_providers_for_user", new_callable=AsyncMock)
+@patch("lfx.base.models.unified_models.model_catalog._get_model_status", new_callable=AsyncMock)
+def test_google_embedding_options_map_dimensions_to_output_dimensionality(mock_get_model_status, mock_fetch_providers):
+    mock_get_model_status.return_value = (set(), set())
+    mock_fetch_providers.return_value = {"Google Generative AI"}
+
+    options = get_embedding_model_options(user_id="test-user")
+
+    google_embedding = next(
+        option
+        for option in options
+        if option["provider"] == "Google Generative AI" and option["name"] == "models/gemini-embedding-001"
+    )
+    assert google_embedding["metadata"]["param_mapping"]["dimensions"] == "output_dimensionality"
 
 
 def test_update_model_options_with_custom_field_name():
@@ -484,7 +501,7 @@ def test_get_embeddings_optional_params_only_added_when_mapped(mock_get_class, m
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 def test_get_embeddings_google_timeout_wrapped_in_dict(mock_get_class, mock_get_api_key):
-    """For Google Generative AI, request_timeout should be wrapped as {'timeout': value}."""
+    """For Google Generative AI, request_timeout is wrapped and dimensions are passed through."""
     mock_get_api_key.return_value = "google-key"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -497,14 +514,21 @@ def test_get_embeddings_google_timeout_wrapped_in_dict(mock_get_class, mock_get_
             "param_mapping": {
                 "model": "model",
                 "api_key": "google_api_key",  # pragma: allowlist secret
+                "dimensions": "output_dimensionality",
                 "request_timeout": "request_options",
             },
         },
     }
 
-    get_embeddings([google_model], api_key="google-key", request_timeout=30.0)  # pragma: allowlist secret
+    get_embeddings(
+        [google_model],
+        api_key="google-key",  # pragma: allowlist secret
+        dimensions=768,
+        request_timeout=30.0,
+    )
 
     kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("output_dimensionality") == 768
     assert kwargs.get("request_options") == {"timeout": 30.0}
 
 
@@ -701,7 +725,7 @@ def test_get_embeddings_watsonx_error_wraps_message(mock_get_vars, mock_get_clas
 
 
 def test_handle_model_input_update_hides_all_provider_fields_by_default():
-    """Provider-specific fields should be hidden when no model is selected (except api_key which is always visible)."""
+    """Provider-specific fields should be hidden when no model is selected."""
     component = _make_mock_component()
     provider_fields = _get_all_provider_mapped_fields()
 
@@ -717,12 +741,75 @@ def test_handle_model_input_update_hides_all_provider_fields_by_default():
     )
 
     for f in provider_fields:
-        if f == "api_key":
-            # api_key is always forced visible at the end of handle_model_input_update
-            assert result[f]["show"] is True
-        else:
-            assert result[f]["show"] is False
+        assert result[f]["show"] is False, f"Field {f} should be hidden when no model is selected"
         assert result[f]["required"] is False
+
+
+def test_handle_model_input_update_ollama_hides_and_clears_api_key():
+    """Selecting Ollama (which has no api_key variable) must hide AND clear api_key.
+
+    Regression test: api_key was previously forced visible for every provider,
+    leaving a stale cross-provider credential (e.g. ``OPENAI_API_KEY``) sitting
+    behind the hidden field when switching to Ollama.
+    """
+    component = _make_mock_component()
+    selected_model = [{"name": "llama3", "provider": "Ollama", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": True,
+            "required": False,
+            "value": "OPENAI_API_KEY",
+            "load_from_db": True,
+            "_input_type": "SecretStrInput",
+        },
+        "ollama_base_url": {
+            "show": False,
+            "required": False,
+            "value": "",
+            "_input_type": "StrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is False, "api_key must be hidden for Ollama"
+    assert result["api_key"]["value"] == "", "stale cross-provider api_key must be cleared for Ollama"
+    assert result["api_key"]["load_from_db"] is False, "load_from_db must be reset when clearing api_key"
+    # Ollama's own variable is shown and configured.
+    assert result["ollama_base_url"]["show"] is True
+
+
+def test_handle_model_input_update_openai_keeps_api_key_visible():
+    """Providers that map a variable to api_key must keep it visible."""
+    component = _make_mock_component()
+    selected_model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+    build_config = {
+        "model": _make_model_field(value=selected_model),
+        "api_key": {
+            "show": False,  # start hidden to prove apply_provider_... re-shows it
+            "required": False,
+            "value": "",
+            "load_from_db": False,
+            "_input_type": "SecretStrInput",
+        },
+    }
+
+    result = handle_model_input_update(
+        component,
+        build_config,
+        field_value=selected_model,
+        field_name="model",
+        get_options_func=lambda user_id=None: selected_model,  # noqa: ARG005
+    )
+
+    assert result["api_key"]["show"] is True, "api_key must stay visible for OpenAI"
 
 
 def test_handle_model_input_update_uses_language_model_options_by_default():

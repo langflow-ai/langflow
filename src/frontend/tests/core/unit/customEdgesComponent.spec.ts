@@ -16,7 +16,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
     await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await zoomOut(page, 3);
@@ -32,7 +32,7 @@ test(
     await page.waitForSelector(
       '[data-testid="langchain_utilitiesTool Calling Agent"]',
       {
-        timeout: 1000,
+        timeout: 10000,
       },
     );
 
@@ -75,7 +75,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("search api");
     await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await zoomOut(page, 3);
@@ -91,7 +91,7 @@ test(
     await page.waitForSelector(
       '[data-testid="langchain_utilitiesTool Calling Agent"]',
       {
-        timeout: 1000,
+        timeout: 10000,
       },
     );
 

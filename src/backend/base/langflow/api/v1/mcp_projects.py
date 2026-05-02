@@ -21,7 +21,11 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
-from lfx.services.mcp_composer.service import MCPComposerError, MCPComposerService
+from lfx.services.mcp_composer.service import (
+    COMPOSER_BACKEND_AUTH_HEADER,
+    MCPComposerError,
+    MCPComposerService,
+)
 from lfx.services.schema import ServiceType
 from mcp import types
 from mcp.server import NotificationOptions, Server
@@ -66,7 +70,7 @@ from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
-from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
+from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
@@ -80,8 +84,9 @@ router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
-    query_param: str,
-    header_param: str,
+    query_param: str | None,
+    header_param: str | None,
+    composer_backend_token: str | None = None,
 ) -> User:
     """MCP-specific user authentication that allows fallback to username lookup when not using API key auth.
 
@@ -89,7 +94,6 @@ async def verify_project_auth(
     or checks if the API key is valid.
     """
     settings_service = get_settings_service()
-    result: ApiKey | User | None
 
     project = (await db.exec(select(Folder).where(Folder.id == project_id))).first()
 
@@ -101,14 +105,42 @@ async def verify_project_auth(
     if project.auth_settings:
         auth_settings = AuthSettings(**project.auth_settings)
 
-    if (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
-        auth_settings and auth_settings.auth_type == "apikey"
-    ):
+    project_auth_type = auth_settings.auth_type if auth_settings else None
+    if project_auth_type == "oauth" and composer_backend_token:
+        mcp_composer_service: MCPComposerService = cast(
+            MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+        )
+        if mcp_composer_service.validate_backend_auth_token(str(project_id), composer_backend_token):
+            if project.user_id:
+                project_user = await db.get(User, project.user_id)
+                if project_user:
+                    return project_user
+            raise HTTPException(status_code=404, detail="Project owner not found")
+
+    # OAuth projects must present a valid API key at the Langflow transport endpoint: network-level
+    # trust (loopback / same-host proxy) is unsafe because it cannot distinguish the local MCP
+    # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
+    # composer-to-Langflow hop should be authenticated explicitly once mcp-composer can forward
+    # a project-scoped backend credential; until then, direct backend access requires a key.
+    requires_api_key = (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
+        project_auth_type in {"apikey", "oauth"}
+    )
+
+    if requires_api_key:
         api_key = query_param or header_param
         if not api_key:
+            if project_auth_type == "oauth":
+                detail = (
+                    "This project is configured for OAuth authentication, but the MCP transport endpoint "
+                    "currently requires a valid x-api-key header or query parameter for backend access. "
+                    "Credential forwarding from MCP Composer is not yet available; use an API key in the "
+                    "meantime."
+                )
+            else:
+                detail = "API key required for this project. Provide x-api-key header or query parameter."
             raise HTTPException(
                 status_code=401,
-                detail="API key required for this project. Provide x-api-key header or query parameter.",
+                detail=detail,
             )
 
         # Validate the API key
@@ -126,13 +158,16 @@ async def verify_project_auth(
 
         return user
 
-    # Get the first user
+    return await _superuser_fallback(db, settings_service)
+
+
+async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
+    """Resolve the configured superuser for unauthenticated MCP paths that allow fallback."""
     if not settings_service.auth_settings.SUPERUSER:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing superuser username in auth settings",
         )
-    # For MCP endpoints, always fall back to username lookup when no API key is provided
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
@@ -169,10 +204,17 @@ async def verify_project_auth_conditional(
         # Extract API keys
         api_key_query_value = request.query_params.get("x-api-key")
         api_key_header_value = request.headers.get("x-api-key")
+        composer_backend_token = request.headers.get(COMPOSER_BACKEND_AUTH_HEADER)
 
         # Check if this project requires API key only authentication
         if get_settings_service().settings.mcp_composer_enabled:
-            return await verify_project_auth(session, project_id, api_key_query_value, api_key_header_value)
+            return await verify_project_auth(
+                session,
+                project_id,
+                api_key_query_value,
+                api_key_header_value,
+                composer_backend_token,
+            )
 
         # For all other cases, use standard MCP authentication (allows JWT + API keys)
         # Call the MCP auth function directly
@@ -345,7 +387,7 @@ async def handle_project_sse(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -386,7 +428,7 @@ async def _handle_project_sse_messages(
     """Handle POST messages for a project-specific MCP server using SSE transport."""
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     req_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -443,7 +485,7 @@ async def _dispatch_project_streamable_http(
 
     user_token = current_user_ctx.set(current_user)
     project_token = current_project_ctx.set(project_id)
-    variables = extract_global_variables_from_headers(request.headers)
+    variables = extract_global_variables_from_headers(request.headers, include_auth_headers=True)
     request_vars_token = current_request_variables_ctx.set(variables or None)
 
     try:
@@ -508,6 +550,8 @@ async def update_project_mcp_settings(
             should_handle_mcp_composer = False
             should_start_composer = False
             should_stop_composer = False
+            new_auth_type: str | None = None
+            auth_settings_updated = False
 
             # Store original auth settings in case we need to rollback
             original_auth_settings = project.auth_settings
@@ -522,6 +566,8 @@ async def update_project_mcp_settings(
                 should_handle_mcp_composer = auth_result["should_handle_composer"]
                 should_start_composer = auth_result["should_start_composer"]
                 should_stop_composer = auth_result["should_stop_composer"]
+                new_auth_type = auth_result["new_auth_type"]
+                auth_settings_updated = True
 
             # Query flows in the project
             flows = (await session.exec(select(Flow).where(Flow.folder_id == project_id))).all()
@@ -627,12 +673,34 @@ async def update_project_mcp_settings(
                         "uses_composer": False,
                     }
 
+            # Sync MCP server config for apikey/none auth; OAuth is handled by MCP Composer above.
+            if auth_settings_updated and new_auth_type in {"apikey", "none"}:
+                from langflow.api.v1.projects_mcp_helpers import reconcile_mcp_server_for_auth_update
+
+                try:
+                    await reconcile_mcp_server_for_auth_update(
+                        project,
+                        new_auth_type,
+                        current_user,
+                        session,
+                    )
+                except HTTPException:
+                    raise
+                except Exception as e:  # noqa: BLE001
+                    await logger.awarning(
+                        "Failed to reconcile MCP server config for project %s after auth update: %s",
+                        project_id,
+                        e,
+                    )
+
             # Only commit if composer started successfully (or wasn't needed)
             session.add(project)
             await session.commit()
 
             return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         msg = f"Error updating project MCP settings: {e!s}"
         await logger.aexception(msg)
@@ -1249,7 +1317,7 @@ class ProjectMCPServer:
         @self.server.read_resource()
         async def handle_read_project_resource(uri: str) -> bytes:
             """Handle resource read requests for this specific project."""
-            return await handle_read_resource(uri=uri)
+            return await handle_read_resource(uri=uri, project_id=self.project_id)
 
         @self.server.call_tool()
         @handle_mcp_errors
@@ -1440,6 +1508,34 @@ async def register_project_with_composer(project: Folder):
         await logger.awarning(f"Failed to register project {project.id} with MCP Composer: {e}")
 
 
+def _get_startup_project_auth_settings(
+    project: Folder,
+    *,
+    auto_login: bool,
+    mcp_composer_enabled: bool,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Return the auth state startup should enforce for this project.
+
+    Returns:
+        A tuple of:
+        - target auth settings used for MCP reconciliation and optional persistence
+        - a reason string when the project auth settings should be persisted
+    """
+    auth_type = project.auth_settings.get("auth_type") if project.auth_settings else None
+
+    if not auto_login and auth_type in {None, "none"}:
+        return {"auth_type": "apikey"}, "auto_enable_apikey"
+
+    if not mcp_composer_enabled and auth_type == "oauth":
+        fallback_auth_type = "apikey" if not auto_login else "none"
+        return {"auth_type": fallback_auth_type}, "oauth_fallback"
+
+    if auth_type in {"apikey", "none"}:
+        return {"auth_type": auth_type}, None
+
+    return None, None
+
+
 async def init_mcp_servers():
     """Initialize MCP servers for all projects."""
     try:
@@ -1450,42 +1546,55 @@ async def init_mcp_servers():
 
             for project in projects:
                 try:
-                    # Auto-enable API key auth for projects without auth settings or with "none" auth
-                    # when AUTO_LOGIN is false
-                    if not settings_service.auth_settings.AUTO_LOGIN:
-                        should_update_to_apikey = False
+                    target_auth_settings, persist_reason = _get_startup_project_auth_settings(
+                        project,
+                        auto_login=settings_service.auth_settings.AUTO_LOGIN,
+                        mcp_composer_enabled=settings_service.settings.mcp_composer_enabled,
+                    )
+                    reconciled_mcp_server = False
 
-                        if not project.auth_settings:
-                            # No auth settings at all
-                            should_update_to_apikey = True
-                        # Check if existing auth settings have auth_type "none"
-                        elif project.auth_settings.get("auth_type") == "none":
-                            should_update_to_apikey = True
-
-                        if should_update_to_apikey:
-                            default_auth = {"auth_type": "apikey"}
-                            project.auth_settings = encrypt_auth_settings(default_auth)
+                    async with session.begin_nested():
+                        if persist_reason is not None and target_auth_settings is not None:
+                            project.auth_settings = encrypt_auth_settings(target_auth_settings)
                             session.add(project)
-                            await logger.ainfo(
-                                f"Auto-enabled API key authentication for existing project {project.name} "
-                                f"({project.id}) due to AUTO_LOGIN=false"
-                            )
+                            await session.flush()
 
-                    # WARN: If oauth projects exist in the database and the MCP Composer is disabled,
-                    # these projects will be reset to "apikey" or "none" authentication, erasing all oauth settings.
-                    if (
-                        not settings_service.settings.mcp_composer_enabled
-                        and project.auth_settings
-                        and project.auth_settings.get("auth_type") == "oauth"
-                    ):
-                        # Reset OAuth projects to appropriate auth type based on AUTO_LOGIN setting
-                        fallback_auth_type = "apikey" if not settings_service.auth_settings.AUTO_LOGIN else "none"
-                        clean_auth = AuthSettings(auth_type=fallback_auth_type)
-                        project.auth_settings = clean_auth.model_dump(exclude_none=True)
-                        session.add(project)
+                        should_reconcile_project_server = (
+                            target_auth_settings is not None
+                            and target_auth_settings.get("auth_type") in {"apikey", "none"}
+                            and settings_service.settings.add_projects_to_mcp_servers
+                            and project.user_id is not None
+                        )
+                        if should_reconcile_project_server:
+                            from langflow.api.v1.projects_mcp_helpers import register_mcp_servers_for_project
+
+                            project_user = await session.get(User, project.user_id)
+                            if project_user is not None:
+                                reconciled_mcp_server = await register_mcp_servers_for_project(
+                                    project,
+                                    target_auth_settings,
+                                    project_user,
+                                    session,
+                                    raise_on_error=True,
+                                )
+
+                    if persist_reason == "auto_enable_apikey":
+                        await logger.ainfo(
+                            f"Auto-enabled API key authentication for existing project {project.name} "
+                            f"({project.id}) due to AUTO_LOGIN=false"
+                        )
+                    elif persist_reason == "oauth_fallback" and target_auth_settings is not None:
+                        fallback_auth_type = target_auth_settings["auth_type"]
                         await logger.adebug(
                             f"Updated OAuth project {project.name} ({project.id}) to use {fallback_auth_type} "
                             f"authentication because MCP Composer is disabled"
+                        )
+
+                    if reconciled_mcp_server:
+                        await logger.adebug(
+                            "Reconciled MCP server config for project %s (%s) on startup",
+                            project.name,
+                            project.id,
                         )
 
                     get_project_sse(project.id)
@@ -1493,7 +1602,7 @@ async def init_mcp_servers():
                     await logger.adebug(f"Initialized MCP server for project: {project.name} ({project.id})")
 
                     # Only register with MCP Composer if OAuth authentication is configured
-                    if get_settings_service().settings.mcp_composer_enabled and project.auth_settings:
+                    if settings_service.settings.mcp_composer_enabled and project.auth_settings:
                         auth_type = project.auth_settings.get("auth_type")
                         if auth_type == "oauth":
                             await logger.adebug(

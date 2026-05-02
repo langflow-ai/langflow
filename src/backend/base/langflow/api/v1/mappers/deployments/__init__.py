@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from langflow.services.database.utils import require_non_empty
+
 from .base import BaseDeploymentMapper, DeploymentApiPayloads
 from .contracts import (
     CreatedSnapshotIds,
@@ -35,4 +37,5 @@ __all__ = [
     "get_mapper",
     "get_mapper_registry",
     "register_mapper",
+    "require_non_empty",
 ]

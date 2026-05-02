@@ -102,6 +102,7 @@ let mockVersionsData: {
   }>;
 } | null = null;
 let mockIsLoadingVersions = false;
+const mockCreateSnapshot = jest.fn();
 
 jest.mock(
   "@/controllers/API/queries/flow-version/use-get-flow-versions",
@@ -109,6 +110,16 @@ jest.mock(
     useGetFlowVersions: () => ({
       data: mockVersionsData,
       isLoading: mockIsLoadingVersions,
+    }),
+  }),
+);
+
+jest.mock(
+  "@/controllers/API/queries/flow-version/use-post-create-snapshot",
+  () => ({
+    usePostCreateSnapshot: () => ({
+      mutateAsync: mockCreateSnapshot,
+      isPending: false,
     }),
   }),
 );
@@ -223,6 +234,10 @@ beforeEach(() => {
     ],
   };
   mockIsLoadingVersions = false;
+  mockCreateSnapshot.mockResolvedValue({
+    id: "ver-new",
+    version_tag: "v3",
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -230,14 +245,14 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("Three-panel layout rendering", () => {
-  it("renders the Attach Flows heading", () => {
+  it("renders the Flows heading", () => {
     render(<StepAttachFlows />);
-    expect(screen.getByText("Attach Flows")).toBeInTheDocument();
+    expect(screen.getByText("Flows")).toBeInTheDocument();
   });
 
-  it("renders the Available Flows panel header", () => {
+  it("renders the Available panel header", () => {
     render(<StepAttachFlows />);
-    expect(screen.getByText("Available Flows")).toBeInTheDocument();
+    expect(screen.getByText("Available")).toBeInTheDocument();
   });
 
   it("renders flow items in the list", () => {
@@ -304,7 +319,33 @@ describe("Version panel", () => {
   it("shows empty state when no versions available", () => {
     mockVersionsData = { entries: [] };
     render(<StepAttachFlows />);
-    expect(screen.getByText("No versions found")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Deploy this flow by creating a version from current Draft",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("creates version from draft and opens connection panel", async () => {
+    const user = userEvent.setup();
+    mockVersionsData = { entries: [] };
+    render(<StepAttachFlows />);
+
+    await user.click(screen.getByTestId("create-version-from-draft"));
+
+    await waitFor(() => {
+      expect(mockCreateSnapshot).toHaveBeenCalledWith({ flowId: "flow-1" });
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Select or Create New Connection"),
+      ).toBeInTheDocument();
+    });
+
+    expect(mockDetectEnvVars).toHaveBeenCalledWith({
+      flow_version_ids: ["ver-new"],
+    });
   });
 
   it("shows ATTACHED badge for already-attached versions", () => {

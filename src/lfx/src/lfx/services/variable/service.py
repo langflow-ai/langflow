@@ -22,14 +22,23 @@ class VariableService(Service):
         self.set_ready()
         logger.debug("Variable service initialized (env vars only)")
 
-    def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
+    async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
 
         First checks in-memory cache, then environment variables.
 
+        Async to match the call signature in custom_component.get_variable
+        (`await variable_service.get_variable(...)`), which is the path used
+        by component variable resolution. The lookup itself is sync — no I/O —
+        but the coroutine wrapper is required so callers can `await` it
+        regardless of which variable service implementation is registered
+        (lfx env-fallback vs langflow DB-backed).
+
         Args:
             name: Variable name
-            **kwargs: Additional arguments (ignored in minimal implementation)
+            **kwargs: Additional arguments (ignored; user_id/field/session
+                from langflow's call signature are absorbed and not used,
+                since this implementation has no per-user scope).
 
         Returns:
             Variable value or None if not found

@@ -159,5 +159,11 @@ async def delete_user(
     if not user_db:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # IMPORTANT:
+    # This endpoint intentionally performs a DB-cascade delete only and does
+    # not issue provider-side teardown across all user deployments.
+    # The trade-off is to avoid destructive bulk deletion of external
+    # deployment resources during user deletion.
     await session.delete(user_db)
+    await session.flush()
     return {"detail": "User deleted"}
