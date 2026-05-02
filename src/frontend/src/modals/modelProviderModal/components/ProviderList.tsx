@@ -42,6 +42,9 @@ const ProviderList = ({
         model_count: matchingModels.length,
         models: matchingModels,
         api_docs_url: provider.api_docs_url,
+        // Forward variables so downstream components can derive
+        // credentialless/credentialed classification without a hardcoded list.
+        variables: provider.variables,
       };
     });
 
@@ -53,7 +56,7 @@ const ProviderList = ({
     // not-yet-set-up providers, matching the visual gating in
     // ``ProviderListItem``.
     const isActive = (p: Provider): boolean =>
-      isCredentiallessProvider(p.provider)
+      isCredentiallessProvider(p)
         ? !!p.is_enabled
         : !!(p.is_enabled || p.is_configured);
 

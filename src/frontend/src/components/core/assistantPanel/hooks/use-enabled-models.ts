@@ -33,7 +33,7 @@ export function useEnabledModels(): UseEnabledModelsReturn {
     return providersData
       .filter(
         (provider) =>
-          provider.is_enabled && !isCredentiallessProvider(provider.provider),
+          provider.is_enabled && !isCredentiallessProvider(provider),
       )
       .map((provider) => {
         const providerEnabledModels = enabledModels[provider.provider] || {};

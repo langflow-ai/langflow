@@ -27,7 +27,7 @@ const ProviderListItem = ({
   // Drop the configured fallback for those so deactivated credentialless
   // providers visually match deactivated credentialed ones (no badge,
   // grayscale icon, plus indicator).
-  const isActive = isCredentiallessProvider(provider.provider)
+  const isActive = isCredentiallessProvider(provider)
     ? isEnabled
     : isEnabled || isConfigured;
 

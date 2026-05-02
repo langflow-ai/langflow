@@ -12,6 +12,16 @@ export interface ModelProviderInfo {
   is_enabled: boolean;
   is_configured?: boolean;
   api_docs_url?: string;
+  /** Per-variable metadata declared by ``MODEL_PROVIDER_METADATA`` on the
+   * backend. Surfaced so the UI can derive credentialless/credentialed
+   * classification (no required variables = credentialless).
+   */
+  variables?: Array<{
+    variable_name?: string;
+    variable_key?: string;
+    required?: boolean;
+    is_secret?: boolean;
+  }>;
 }
 
 export interface ModelProviderWithStatus extends ModelProviderInfo {
