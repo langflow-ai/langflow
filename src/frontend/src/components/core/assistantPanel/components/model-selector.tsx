@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { readModelDisplayName } from "@/utils/modelDisplay";
 import { cn } from "@/utils/utils";
 import {
   DropdownMenu,
@@ -25,14 +26,17 @@ export function ModelSelector({
   const [isOpen, setIsOpen] = useState(false);
   const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
 
-  // Flatten all models for easy selection
+  // Flatten all models for easy selection. ``displayName`` follows the
+  // catalog's short slug (e.g. ``smollm2``) when present and falls back to
+  // the canonical model id so older catalogs without the field keep working.
   const allModels = useMemo(() => {
     return enabledProviders.flatMap((provider) =>
       provider.models.map((model) => ({
         id: `${provider.provider}-${model.model_name}`,
         name: model.model_name,
         provider: provider.provider,
-        displayName: model.model_name,
+        displayName:
+          readModelDisplayName(model.metadata) ?? model.model_name,
         icon: provider.icon,
       })),
     );
@@ -142,6 +146,8 @@ export function ModelSelector({
               {provider.models.map((model) => {
                 const modelId = `${provider.provider}-${model.model_name}`;
                 const isSelected = currentModel?.id === modelId;
+                const displayName =
+                  readModelDisplayName(model.metadata) ?? model.model_name;
                 return (
                   <DropdownMenuItem
                     key={modelId}
@@ -150,7 +156,7 @@ export function ModelSelector({
                         id: modelId,
                         name: model.model_name,
                         provider: provider.provider,
-                        displayName: model.model_name,
+                        displayName,
                         icon: provider.icon,
                       })
                     }
@@ -161,8 +167,11 @@ export function ModelSelector({
                         name={provider.icon}
                         className="h-4 w-4 shrink-0 text-primary ml-2"
                       />
-                      <div className="truncate text-[13px]">
-                        {model.model_name}
+                      <div
+                        className="truncate text-[13px]"
+                        title={model.model_name}
+                      >
+                        {displayName}
                       </div>
                       <div className="pl-2 ml-auto">
                         <ForwardedIconComponent

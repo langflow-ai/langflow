@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
+import { readModelDisplayName } from "@/utils/modelDisplay";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
@@ -176,20 +177,15 @@ export default function ModelInputComponent({
       // themselves. Saved options round-tripped through build_config carry
       // it inside metadata; older saved options simply won't have it.
       const optionMetadata = (option.metadata ?? {}) as Record<string, unknown>;
+      const { not_enabled_locally: _drop, ...metadataMinusStickyFlag } =
+        optionMetadata;
       const cleanedMetadata = stickyFlagIsStale
-        ? Object.fromEntries(
-            Object.entries(optionMetadata).filter(
-              ([k]) => k !== "not_enabled_locally",
-            ),
-          )
+        ? metadataMinusStickyFlag
         : optionMetadata;
       grouped[provider].push({
         ...option,
         display_name:
-          option.display_name ??
-          (typeof cleanedMetadata.display_name === "string"
-            ? (cleanedMetadata.display_name as string)
-            : undefined),
+          option.display_name ?? readModelDisplayName(cleanedMetadata),
         metadata: cleanedMetadata,
       });
       seen.add(`${provider}::${option.name}`);
@@ -243,10 +239,7 @@ export default function ModelInputComponent({
           >;
           grouped[providerName].push({
             name: modelName,
-            display_name:
-              typeof augmentedMetadata.display_name === "string"
-                ? (augmentedMetadata.display_name as string)
-                : undefined,
+            display_name: readModelDisplayName(augmentedMetadata),
             icon: providerInfo.icon || "Bot",
             provider: providerName,
             metadata: augmentedMetadata,
@@ -276,9 +269,7 @@ export default function ModelInputComponent({
           name: savedValue.name,
           display_name:
             (savedValue as Partial<ModelOption>).display_name ??
-            (typeof savedMetadata.display_name === "string"
-              ? (savedMetadata.display_name as string)
-              : undefined),
+            readModelDisplayName(savedMetadata),
           icon: savedValue.icon || "Bot",
           provider: providerName,
           metadata: {
@@ -339,9 +330,7 @@ export default function ModelInputComponent({
         name: saved.name,
         display_name:
           (saved as Partial<SelectedModel>).display_name ??
-          (typeof savedMetadata.display_name === "string"
-            ? (savedMetadata.display_name as string)
-            : undefined),
+          readModelDisplayName(savedMetadata),
         icon: saved.icon || "Bot",
         provider: saved.provider || "Unknown",
         metadata: {

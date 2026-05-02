@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
+import { readModelDisplayName } from "@/utils/modelDisplay";
 import { cn } from "@/utils/utils";
 
 export interface ModelProviderSelectionProps {
@@ -29,10 +30,7 @@ const ModelRow = ({
   testIdPrefix,
   isEnabledModel,
 }: ModelRowProps) => {
-  const displayName =
-    typeof model.metadata?.display_name === "string"
-      ? (model.metadata.display_name as string)
-      : model.model_name;
+  const displayName = readModelDisplayName(model.metadata) ?? model.model_name;
   return (
     <div className="flex flex-row items-center justify-between h-[24px]">
       <div className="flex flex-row items-center gap-2 min-w-0">
