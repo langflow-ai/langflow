@@ -135,16 +135,21 @@ export default function ToolsComponent({
           </div>
         ) : (
           visibleActions.length === 0 &&
-          isAction && (
+          isAction &&
+          (hideButton ? (
+            <span className="py-1.5 text-sm text-muted-foreground">
+              No tools added to this server
+            </span>
+          ) : (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
-                No actions added to this server
+                No tools added to this server
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
-                <span>Add actions</span>
+                <span>Add tools</span>
               </Button>
             </div>
-          )
+          ))
         )}
 
         {visibleActions.length === 0 && !isAction && value && (
