@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
 import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
 
@@ -131,7 +132,17 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    <div className="flex flex-col gap-1 px-4 pt-4">
+    // While the DisconnectWarning overlay is open we reserve enough height
+    // on the form (~165px overlay + 32px of inset margins ≈ 200px) so the
+    // ModelSelection list rendered as the next flex sibling slides down
+    // and isn't covered by the overlay. Credentialed forms are already
+    // taller than this so the min-h is a no-op there.
+    <div
+      className={cn(
+        "flex flex-col gap-1 px-4 pt-4",
+        showDisconnectWarning && "min-h-[200px]",
+      )}
+    >
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
           {isSingleVariableProvider && requiresConfiguration ? (
