@@ -426,9 +426,9 @@ body {
   object-fit: contain;
 }
 
-/* Default size for most images */
+/* Default size for most images — min() ensures container is always respected */
 .markdown img:not(.resized-image) {
-  max-width: 600px;
+  max-width: min(100%, 600px);
   width: auto;
 }
 
