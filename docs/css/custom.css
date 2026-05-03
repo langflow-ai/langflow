@@ -1141,7 +1141,7 @@ html[data-theme="light"] .sidebar-group-label {
   border-left: 1px solid var(--ifm-color-emphasis-200);
 }
 
-/* Não visitado — branco/claro */
+/* Unvisited — white/light */
 .table-of-contents__link {
   color: #2f2f38;
   transition: color 0.2s ease;
@@ -1151,7 +1151,7 @@ html[data-theme="light"] .sidebar-group-label {
   color: #e0e0e8;
 }
 
-/* Já passou — cinza muted */
+/* Passed — muted gray */
 .table-of-contents__link--passed {
   color: #9090a0;
 }
@@ -1165,7 +1165,7 @@ html[data-theme="light"] .sidebar-group-label {
   color: var(--ifm-color-primary);
 }
 
-/* Ativo — rosa, bold simulado via text-shadow para não causar reflow */
+/* Active — pink, bold simulated via text-shadow to avoid reflow */
 .table-of-contents__link--active {
   color: var(--ifm-color-primary) !important;
   text-shadow: 0 0 0.4px var(--ifm-color-primary);
