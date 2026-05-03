@@ -926,6 +926,41 @@ html[data-theme="light"] .sidebar-group-label {
   height: 2.25rem !important;
 }
 
+/* Shrink search to icon-only as navbar gets tight */
+@media (max-width: 1100px) {
+  .DocSearch-Button {
+    min-width: 160px !important;
+  }
+}
+
+@media (max-width: 996px) {
+  .DocSearch-Button {
+    min-width: 100px !important;
+  }
+
+  .header-github-link,
+  .header-twitter-link,
+  .header-discord-link {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .DocSearch-Button {
+    min-width: 0 !important;
+    width: 2.25rem !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  .DocSearch-Button-Placeholder,
+  .DocSearch-Button-Keys {
+    display: none !important;
+  }
+  .DocSearch-Search-Icon {
+    margin: 0 !important;
+  }
+}
+
 [data-theme="dark"] .DocSearch-Button {
   border-color: #303038 !important;
   background: rgba(255, 255, 255, 0.03) !important;
