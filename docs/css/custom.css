@@ -143,6 +143,25 @@ html[data-theme="light"] .navbar__logo {
   margin: 0 auto;
 }
 
+/* Mobile layout fixes — all at the Docusaurus mobile breakpoint (996px) */
+@media (max-width: 996px) {
+  /* docsWrapper has flex:1 0 auto (flex-shrink:0), preventing it from
+     shrinking below content width. Constrain it to the viewport. */
+  [class*="docsWrapper"] {
+    max-width: 100vw;
+    min-width: 0;
+  }
+
+  [class*="docRoot"] {
+    min-width: 0;
+  }
+
+  [class*="docMainContainer"] {
+    min-width: 0;
+    padding: 0 1rem;
+  }
+}
+
 @media (min-width: 1600px) {
   .main-wrapper {
     max-width: 1760px;
@@ -997,7 +1016,6 @@ html[data-theme="light"] .sidebar-group-label {
 }
 
 .markdown .ch-codeblock .ch-code-wrapper {
-  overflow: visible;
   min-width: 0;
   box-sizing: border-box;
   height: fit-content !important;
