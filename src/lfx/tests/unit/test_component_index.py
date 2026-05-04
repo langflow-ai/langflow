@@ -601,7 +601,7 @@ class TestComponentCacheLazyLock:
                 # Reset lock + dict per thread so each thread's event loop creates
                 # its own asyncio.Lock on first access, rather than reusing an instance
                 # bound to a different event loop. This is the multi-event-loop contract
-                # the threading test is asserting on -- see 02-RESEARCH.md T-02-01-03.
+                # the threading test is asserting on.
                 ci.component_cache.all_types_dict = None
                 ci.component_cache._lock = None
                 asyncio.run(ci.get_and_cache_all_types_dict(_fake_settings_service()))
@@ -928,18 +928,16 @@ class TestComponentIndexAtomicWriteParity:
 
 @pytest.mark.asyncio
 class TestComponentIndexAsyncRead:
-    """/ async _read_component_index with asyncio.to_thread-wrapped read_bytes.
+    """Async _read_component_index with asyncio.to_thread-wrapped read_bytes.
 
-    The refactor converts ``_read_component_index`` from sync to async and wraps
-    both ``index_path.read_bytes()`` call sites in ``await asyncio.to_thread(...)``
-    so the event loop is not blocked during the ~50ms read of the shipped 5.7MB
-    ``_assets/component_index.json`` built-in index (and arbitrary time for user
-    cache files). See .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md
-    Pitfall 3 for the full rationale.
+    ``_read_component_index`` wraps both ``index_path.read_bytes()`` call sites in
+    ``await asyncio.to_thread(...)`` so the event loop is not blocked during the
+    ~50 ms read of the shipped 5.7 MB ``_assets/component_index.json`` built-in
+    index (and arbitrary time for user cache files).
     """
 
     def test_is_coroutine_function(self):
-        """_read_component_index must be an async def (refactor)."""
+        """_read_component_index must be an async def."""
         import inspect as _inspect
 
         from lfx.interface import components as ci
@@ -1233,8 +1231,8 @@ def prebuilt_cache_file(tmp_path_factory):
 
     Built once per module: calls _save_generated_index with a minimal
     synthetic modules_dict so the file carries the real installed lfx version
-    and a non-empty entries list.  Both conditions are required for the
-    short-circuit to fire (D-01: version match AND non-empty entries).
+    and a non-empty entries list. Both conditions are required for the cache-hit
+    short-circuit to fire (version match AND non-empty entries).
     """
     from importlib.metadata import version as _version
 
@@ -1261,13 +1259,13 @@ def prebuilt_cache_file(tmp_path_factory):
     assert blob.get("version") == installed, (
         f"prebuilt cache version {blob.get('version')!r} != installed {installed!r}"
     )
-    assert blob.get("entries"), "prebuilt cache has empty entries short-circuit will not fire"
+    assert blob.get("entries"), "prebuilt cache has empty entries; cache-hit short-circuit will not fire"
     return cache_file
 
 
 @pytest.mark.asyncio
 class TestComponentIndexCacheHit:
-    """/ + read-path short-circuit on version-matched cache hit."""
+    """Read-path short-circuit on version-matched cache hit."""
 
     async def test_cache_hit_populates_all_types_dict(self, tmp_path, monkeypatch, prebuilt_cache_file):
         """Cache-hit path populates all_types_dict and type_to_current_hash; skips import_langflow_components."""
@@ -1331,7 +1329,7 @@ class TestComponentIndexCacheHit:
         )
 
     async def test_cache_hit_skips_telemetry(self, tmp_path, monkeypatch, prebuilt_cache_file):
-        """D-07: no build work -> no log_component_index on cache-hit."""
+        """No build work -> no log_component_index on cache-hit."""
         import shutil
         from unittest.mock import AsyncMock
 
@@ -1350,7 +1348,7 @@ class TestComponentIndexCacheHit:
         telemetry.log_component_index.assert_not_called()
 
     async def test_parity_cache_hit_vs_miss(self, tmp_path, monkeypatch, prebuilt_cache_file):
-        """D-04: byte-identical vertex_order + final_text on both paths, via helper."""
+        """Byte-identical vertex_order + final_text on both cache-hit and cache-miss paths."""
         import shutil
 
         from lfx.interface import components as ci
@@ -1384,7 +1382,7 @@ class TestComponentIndexCacheHit:
         )
 
     def test_cache_hit_perf_under_500ms(self, tmp_path, monkeypatch, prebuilt_cache_file):
-        """D-05: unit-level perf ceiling on the cache-hit path.
+        """Unit-level perf ceiling on the cache-hit path.
 
         Not a CI-wide perf gate (the benchmark harness owns the public 500ms claim);
         this asserts the call path is cheap enough that a regression (e.g. reading the

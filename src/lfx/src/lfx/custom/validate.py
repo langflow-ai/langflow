@@ -6,10 +6,8 @@ import warnings
 from types import FunctionType
 from typing import Optional, Union
 
-from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
-from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
 _LANGFLOW_IS_INSTALLED = False
@@ -267,6 +265,8 @@ def create_class(code, class_name):
         "from langflow.custom import CustomComponent",
     )
 
+    from lfx.field_typing.constants import DEFAULT_IMPORT_STRING
+
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
@@ -308,11 +308,12 @@ def create_type_ignore_class():
 def _import_module_with_warnings(module_name):
     """Import module with appropriate warning suppression."""
     if "langchain" in module_name:
+        from langchain_core._api.deprecation import LangChainDeprecationWarning
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", LangChainDeprecationWarning)
             return importlib.import_module(module_name)
-    else:
-        return importlib.import_module(module_name)
+    return importlib.import_module(module_name)
 
 
 def _resolve_attribute(imported_module, module_name, attr_name):
@@ -537,6 +538,8 @@ def get_default_imports(code_string):
         "Dict": dict,
         "Union": Union,
     }
+    from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+
     langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
     necessary_imports = find_names_in_code(code_string, langflow_imports)
     langflow_module = importlib.import_module("lfx.field_typing")

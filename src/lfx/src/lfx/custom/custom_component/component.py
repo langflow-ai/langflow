@@ -21,7 +21,6 @@ from lfx.base.tools.constants import (
 )
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
-from lfx.field_typing import Tool  # noqa: TC001
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
@@ -47,6 +46,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     import pandas as pd
+
+    from lfx.field_typing import Tool
 
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager

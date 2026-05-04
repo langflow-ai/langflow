@@ -46,10 +46,9 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
-        # lazily created on first access inside a running event loop.
+        # Lazily created on first access inside a running event loop.
         # Constructing asyncio.Lock() at import time raises RuntimeError on Python 3.13/3.14
-        # because the singleton ComponentCache() below runs at module import. See
-        # .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md Pitfall 1.
+        # because the singleton ComponentCache() below runs at module import.
         self._lock: asyncio.Lock | None = None
 
     @property
@@ -125,7 +124,6 @@ async def _read_component_index(custom_path: str | None = None) -> dict | None:
                 import httpx
 
                 try:
-                    # Out of scope for URL fetch path (see CONCERNS.md §1.7; tracked for a later phase).
                     # The sync call is only reached when the user explicitly points components_index_path
                     # at an http(s) URL; the 5.7MB built-in read path (the common case) is now async.
                     response = httpx.get(custom_path, timeout=10.0)  # noqa: ASYNC210
@@ -427,9 +425,8 @@ async def _load_components_dynamically(
     if not module_names:
         return modules_dict
 
-    # bound concurrent scans with a semaphore so the thread pool is not exhausted
-    # under high module-count workloads. Pattern: wrap each asyncio.to_thread in an
-    # async helper that acquires the semaphore. See 02-RESEARCH.md Pattern 2 / Pitfall 2.
+    # Bound concurrent scans with a semaphore so the thread pool is not exhausted
+    # under high module-count workloads.
     semaphore = asyncio.Semaphore(_MODULE_SCAN_CONCURRENCY)
 
     async def _bounded(modname: str):
@@ -698,25 +695,14 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
-        # read-time stale-index warning. Fires ONLY when the user's
-        # disk cache exists AND its version differs from the installed lfx
-        # version. Clean installs that hit only the built-in shipped index
-        # never fire this warning (the shipped _assets/component_index.json
-        # lives at a different path and is never compared here). Corrupt /
-        # unreadable cache is handled downstream by _read_component_index
-        # (and swallowed here so the user does not see redundant noise).
-        #
-        # Placed OUTSIDE the lock-critical section per 02-RESEARCH.md "
-        # stale warning" recommendation: the peek is idempotent and read-only,
-        # so holding the lock while doing a ~5MB disk read unnecessarily
-        # widens the lock-hold window and reliably exposes a latent race in
-        # the ComponentCache lazy-lock reset pattern exercised by the
-        # multi-event-loop threading test (TestIDX01LazyLock::
-        # test_cache_built_once_threading). Running the peek before
-        # lock acquisition keeps that test at its  sub-second
-        # runtime. In the rare case where two callers cold-start simultaneously
-        # and both observe a stale cache, they will each emit the warning once
-        # -- acceptable cosmetic redundancy, not a correctness issue.
+        # Stale-index peek runs OUTSIDE the lock: it is idempotent and read-only,
+        # and holding the lock while doing a ~5MB disk read widens the lock-hold
+        # window and exposes a latent race in the lazy-lock reset pattern
+        # exercised by the multi-event-loop threading test in
+        # TestComponentCacheLazyLock. The warning fires only when a user disk
+        # cache exists AND its version differs from the installed lfx version;
+        # clean installs hit only the shipped built-in index and never warn.
+        # Corrupt/unreadable cache is logged downstream by _read_component_index.
         from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
         from importlib.metadata import version as _version
 
@@ -725,8 +711,8 @@ async def get_and_cache_all_types_dict(
         except _PackageNotFoundError:
             installed_version = None
 
-        # blob promoted here if ALL conditions pass; used to
-        # short-circuit the rebuild inside the lock (see below).
+        # Promoted here when the cache is fresh and matches the installed
+        # version; used to short-circuit the rebuild inside the lock.
         _pending_cache_hit: dict | None = None
 
         if installed_version is not None:
@@ -754,8 +740,6 @@ async def get_and_cache_all_types_dict(
                         and isinstance(cached_blob.get("entries"), list)
                         and cached_blob["entries"]
                     ):
-                        # All conditions satisfied: promote the blob for
-                        # the short-circuit inside the lock.
                         _pending_cache_hit = cached_blob
                 except Exception:  # noqa: BLE001, S110
                     # Corrupt or unreadable cache: downstream _read_component_index
@@ -766,9 +750,8 @@ async def get_and_cache_all_types_dict(
             # Double-check: another task may have populated while we awaited the lock.
             if component_cache.all_types_dict is None:
                 if _pending_cache_hit is not None:
-                    # cache-hit short-circuit. Reconstruct flat dict from entries
-                    # (same pattern as _load_from_index_or_cache at components.py:348-354).
-                    #: no telemetry -- no build work happened.
+                    # Cache-hit short-circuit: reconstruct flat dict from entries.
+                    # No telemetry emitted because no build work happened.
                     merged: dict[str, Any] = {}
                     for top_level, components in _pending_cache_hit["entries"]:
                         if top_level not in merged:
