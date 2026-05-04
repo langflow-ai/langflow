@@ -41,14 +41,21 @@ async def test_streams_step_results_then_run_complete_for_real_graph():
 
 @pytest.mark.asyncio
 async def test_run_complete_outputs_match_arun_shape():
+    """Legacy path: dict inputs + flag yields list[RunOutputs] from _arun_legacy."""
+    from lfx.graph.schema import RunOutputs
+
     graph = _simple_graph()
-    unit = Unit(graph=graph, inputs=[{"input_value": "hello world"}])
+    unit = Unit(
+        graph=graph,
+        inputs=[{"input_value": "hello world"}],
+        runtime_options={"_use_arun_legacy": True},
+    )
 
     items = [item async for item in InProcessExecutor().execute(unit)]
     rc = items[-1]
     assert isinstance(rc, RunComplete)
-    assert isinstance(rc.outputs, list)
-    assert rc.outputs
+    assert len(rc.outputs) == 1
+    assert isinstance(rc.outputs[0], RunOutputs)
 
 
 @pytest.mark.asyncio
@@ -90,28 +97,36 @@ async def test_propagates_graph_errors():
 
     graph._arun_legacy = boom
 
-    unit = Unit(graph=graph, inputs=[{}])
+    unit = Unit(graph=graph, inputs=[{}], runtime_options={"_use_arun_legacy": True})
     with pytest.raises(RuntimeError, match="boom"):
         async for _ in InProcessExecutor().execute(unit):
             pass
 
 
 @pytest.mark.asyncio
-async def test_concurrent_runs_on_same_graph_dont_share_runtime_options():
-    graph = _simple_graph()
+async def test_concurrent_runs_on_separate_graphs_keep_runtime_options_isolated():
+    """Concurrent executor calls on separate Graph instances must each see their own options.
 
-    seen_session_ids: list[str | None] = []
+    Same-instance concurrency is unsafe due to shared state mutations inside _arun_legacy
+    (self.session_id and others); the seam doesn't promise to fix that. Separate instances,
+    however, must remain isolated through the executor layer.
+    """
+    seen: list[str | None] = []
 
     async def patched_arun_legacy(*, inputs, **kwargs):  # noqa: ARG001
-        seen_session_ids.append(kwargs.get("session_id"))
+        seen.append(kwargs.get("session_id"))
         await asyncio.sleep(0.01)
         return []
 
-    graph._arun_legacy = patched_arun_legacy
-
     async def run_with(session_id):
-        unit = Unit(graph=graph, inputs=[{}], runtime_options={"session_id": session_id})
+        graph = _simple_graph()
+        graph._arun_legacy = patched_arun_legacy
+        unit = Unit(
+            graph=graph,
+            inputs=[{}],
+            runtime_options={"session_id": session_id, "_use_arun_legacy": True},
+        )
         [_ async for _ in InProcessExecutor().execute(unit)]
 
     await asyncio.gather(run_with("A"), run_with("B"))
-    assert sorted(seen_session_ids) == ["A", "B"]
+    assert sorted(seen) == ["A", "B"]

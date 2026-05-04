@@ -49,7 +49,7 @@ async def test_run_to_completion_propagates_executor_errors():
     graph._arun_legacy = boom
 
     with pytest.raises(RuntimeError, match="boom"):
-        await coordinator.run_to_completion(graph, inputs=[{"input_value": "hi"}])
+        await coordinator.run_to_completion(graph, inputs=[{"input_value": "hi"}], _use_arun_legacy=True)
 
 
 @pytest.mark.asyncio
