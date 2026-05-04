@@ -28,7 +28,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from pydantic import BaseModel
-from sqlmodel import col, select
+from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.database.models.memory_base.model import (
@@ -38,7 +38,6 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseSessionRead,
     MemoryBaseUpdate,
 )
-from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_memory_base_service, session_scope
 from langflow.services.jobs import DuplicateJobError
 
@@ -193,37 +192,44 @@ async def list_session_messages(
 
     Returns 404 if the Memory Base does not belong to the current user.
     """
-    from sqlalchemy import and_
-
-    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
-
+    service = get_memory_base_service()
     async with session_scope() as db:
         mb_stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == current_user.id)
         result = await db.exec(mb_stmt)
-        if result.first() is None:
+        mb = result.first()
+        if mb is None:
             raise HTTPException(status_code=404, detail="Memory base not found")
 
-        # INNER JOIN — only messages that were actually ingested into this MB/session pair.
-        # No extra WHERE filters needed:
-        #   - mir.session_id == session_id in the JOIN guarantees msg.session_id == session_id
-        #     (session_id is denormalized from the message at ingestion time — immutable).
-        #   - flow_id is implicitly correct: ingestion only ever touches messages from mb.flow_id,
-        #     and MB ownership is already verified above.
-        msg_stmt = (
-            select(MessageTable, MessageIngestionRecord)
-            .join(
-                MessageIngestionRecord,
-                and_(
-                    MessageIngestionRecord.message_id == MessageTable.id,
-                    MessageIngestionRecord.memory_base_id == memory_base_id,
-                    MessageIngestionRecord.session_id == session_id,
-                ),
+        if mb.preprocessing:
+            # Preprocessing MBs: the KB holds LLM-distilled output, so the
+            # surface for "what's in the KB" is MemoryBasePreprocessingOutput,
+            # not MessageTable.  Project the row into the same response shape
+            # so the API contract is identical from the frontend's perspective.
+            stmt = service.session_preprocessed_outputs_stmt(memory_base_id, session_id)
+            return await apaginate(
+                db,
+                stmt,
+                params=params,
+                transformer=lambda rows: [
+                    MessageReadResponse(
+                        id=row.id,
+                        timestamp=row.created_at,
+                        sender="Machine",
+                        sender_name="Preprocessor",
+                        session_id=row.session_id,
+                        text=row.output_text or "",
+                        content_blocks=[],
+                        job_id=row.job_id,
+                        ingested_at=row.created_at,
+                    )
+                    for row in rows
+                ],
             )
-            .order_by(col(MessageTable.timestamp).asc())
-        )
+
+        stmt = service.session_raw_messages_stmt(memory_base_id, session_id)
         return await apaginate(
             db,
-            msg_stmt,
+            stmt,
             params=params,
             transformer=lambda rows: [
                 MessageReadResponse(
