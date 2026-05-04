@@ -4,12 +4,11 @@ import en from "./locales/en.json";
 
 const SUPPORTED_LANGUAGES = [
   "en",
+  "de",
   "es",
   "fr",
-  "pt",
-  "ru",
   "ja",
-  "ko",
+  "pt",
   "zh-Hans",
 ] as const;
 
