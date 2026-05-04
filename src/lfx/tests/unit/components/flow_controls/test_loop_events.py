@@ -82,7 +82,7 @@ class TestEventManagerPropagation:
         received_event_manager = None
 
         # Create a mock subgraph that captures the event_manager
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, **kwargs):  # noqa: ARG001
             nonlocal received_event_manager
             received_event_manager = event_manager
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
@@ -119,7 +119,7 @@ class TestEventManagerPropagation:
         mock_event_manager = MagicMock()
         event_manager_calls = []
 
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, **kwargs):  # noqa: ARG001
             event_manager_calls.append(event_manager)
             yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
 

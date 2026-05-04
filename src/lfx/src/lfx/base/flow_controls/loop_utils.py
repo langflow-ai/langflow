@@ -265,8 +265,13 @@ async def execute_loop_body(
 
             # Execute subgraph and collect results
             # Pass event_manager so UI receives events from subgraph execution
+            from lfx.execution import StepResult, get_default_coordinator
+
             results = []
-            async for result in iteration_subgraph.async_start(event_manager=event_manager):
+            async for step in get_default_coordinator().run(iteration_subgraph, inputs=[], event_manager=event_manager):
+                if not isinstance(step, StepResult):
+                    continue
+                result = step.payload
                 results.append(result)
                 # Stop all on error (as per design decision)
                 if hasattr(result, "valid") and not result.valid:
