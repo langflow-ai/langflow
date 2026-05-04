@@ -8,6 +8,14 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
+:::tip
+As of Langflow 1.9.2, the IBM watsonx Orchestrate deployments feature is behind a feature flag. To enable it, set the following environment variable before starting Langflow:
+
+```bash
+LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true
+```
+:::
+
 Create a flow and deploy it to [IBM watsonx Orchestrate](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate).
 
 Deploying a flow on IBM watsonx Orchestrate is different from the other Langflow deployment options.

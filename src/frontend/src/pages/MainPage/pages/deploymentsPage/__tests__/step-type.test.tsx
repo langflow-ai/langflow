@@ -241,6 +241,20 @@ describe("Name input", () => {
     );
   });
 
+  it("does not show available state when format error is active", () => {
+    mockDeploymentName = "1";
+    mockHasDeploymentNameFormatError = true;
+
+    render(<StepType />);
+
+    expect(
+      screen.getByText("Agent name must start with a letter."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Agent name is available."),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not show validation error for empty name", () => {
     render(<StepType />);
     expect(
