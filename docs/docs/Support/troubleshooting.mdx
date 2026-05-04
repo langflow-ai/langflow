@@ -99,13 +99,12 @@ For more information, including alternative installation methods, see the [Proto
 
 ### Langflow Installation Error: langflow-install-error
 
-Langflow Desktop installed Langflow OSS but couldn't verify the installation. You may see error messages like `Langflow Installation Error: langflow-install-error`.
+Langflow Desktop installed Langflow OSS but couldn't verify the installation. You might see error messages like `Langflow Installation Error: langflow-install-error`.
 
-To resolve this error, do the following:
+To resolve this error, clear Langflow Desktop's Python virtual environment:
 
 1. Close Langflow Desktop.
-2. Clear Langflow Desktop's Python virtual environment.
-    Navigate to Langflow Desktop's data directory at `%LOCALAPPDATA%\com.LangflowDesktop` on Windows, or `~/Library/Application Support/com.LangflowDesktop` on macOS.
+2. Navigate to Langflow Desktop's data directory at `%LOCALAPPDATA%\com.LangflowDesktop` on Windows, or `~/Library/Application Support/com.LangflowDesktop` on macOS.
 3. Delete the `venv` or `python_env` folder.
 4. Restart Langflow Desktop.
 
@@ -113,7 +112,7 @@ If the issue persists, ensure you have installed Python version 3.10 or later, a
 
 ### Langflow Health Check Error: Timeout after 80 attempts
 
-Langflow Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You may see an error message like `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready`.
+Langflow Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You might see an error message like `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready`.
 
 To resolve this error, do the following:
 
@@ -124,7 +123,7 @@ To resolve this error, do the following:
 
 ### Failed to install uv or unable to find uv
 
-The following error messages mean that Langflow Desktop can't locate the `uv` executable on your system, even though it may be installed:
+The following error messages mean that Langflow Desktop can't locate the `uv` executable on your system, even if it is installed:
 
 * `Failed to install uv: Unable to find uv executable`
 * `Unable to find uv executable for Python virtual environment setup`
@@ -172,7 +171,7 @@ To resolve this error, do the following:
 
 ### Python Environment Error: Creation failed
 
-Langflow Desktop failed to create the Python virtual environment required for Langflow OSS. You may see error messages like `Python Environment Error: Creation failed:` followed by error details, `Python Environment Error: error_dns`, or other `Python Environment Error:` messages.
+Langflow Desktop failed to create the Python virtual environment required for Langflow OSS. You might see error messages like `Python Environment Error: Creation failed:` followed by error details, `Python Environment Error: error_dns`, or other `Python Environment Error:` messages.
 
 To resolve this error, do the following:
 
@@ -184,17 +183,17 @@ To resolve this error, do the following:
 4. Delete the `venv` or `python_env` folder in the Langflow Desktop data directory.
 5. Restart Langflow Desktop.
 
-If the issue persists, ensure Python version >=3.10 is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
+If the issue persists, ensure Python version 3.10 or later is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
 
 ### Python Environment Error: Python check failed
 
-Langflow Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You may see error messages like `Python Environment Error: Python check failed:` followed by error details, or other `Python Environment Error:` messages.
+Langflow Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You might see error messages like `Python Environment Error: Python check failed:` followed by error details, or other `Python Environment Error:` messages.
 
 To resolve this error, see [Python Environment Error: Creation failed](#python-environment-error-creation-failed).
 
 ### Langflow Installation Error: error_xcode
 
-Langflow Desktop requires [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) to install Langflow OSS on macOS. You may see error messages like `Langflow Installation Error: error_xcode` or a detailed message with the title `Xcode Command Line Tools required!`.
+Langflow Desktop requires [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) to install Langflow OSS on macOS. You might see error messages like `Langflow Installation Error: error_xcode` or a detailed message with the title `Xcode Command Line Tools required!`.
 
 To resolve this error, do the following:
 
@@ -204,12 +203,12 @@ To resolve this error, do the following:
 
 ### Langflow Installation Error: error_cpp
 
-Microsoft Windows installations of Langflow Desktop require a C++ compiler that may not be present on your system.
+Microsoft Windows installations of Langflow Desktop require a C++ compiler that might not be present on your system.
 If you receive a `Langflow Installation Error: error_cpp` error or a detailed message with the title `C++ Build Tools required!`, follow the on-screen prompt to install Microsoft C++ Build Tools, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
 
 ### UV Installation Error: uv-manual-install-required
 
-Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You may see error messages like `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
+Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You might see error messages like `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
 
 To resolve this error, do the following:
 
