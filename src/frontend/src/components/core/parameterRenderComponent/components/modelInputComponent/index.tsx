@@ -14,11 +14,7 @@ import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverContentWithoutPortal,
-} from "../../../../ui/popover";
+import { Popover, PopoverContent } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
@@ -41,8 +37,6 @@ export default function ModelInputComponent({
   handleNodeClass,
   externalOptions,
   showParameter = true,
-  editNode,
-  inspectionPanel,
   showEmptyState = false,
 }: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -473,15 +467,11 @@ export default function ModelInputComponent({
   );
 
   const renderPopoverContent = () => {
-    const PopoverContentInput =
-      editNode || inspectionPanel
-        ? PopoverContent
-        : PopoverContentWithoutPortal;
     return (
-      <PopoverContentInput
+      <PopoverContent
         side="bottom"
         avoidCollisions={true}
-        className="noflow nowheel nopan nodelete nodrag p-0"
+        className="noflow nowheel nopan nodelete nodrag z-[60] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
         <Command className="flex flex-col">
@@ -509,7 +499,7 @@ export default function ModelInputComponent({
             </div>
           )}
         </Command>
-      </PopoverContentInput>
+      </PopoverContent>
     );
   };
 
