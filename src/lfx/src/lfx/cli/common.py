@@ -338,7 +338,15 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
+        from lfx.execution import StepResult, get_default_coordinator
+
+        results = [
+            item.payload
+            async for item in get_default_coordinator().run(
+                graph, inputs=[], initial_inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            )
+            if isinstance(item, StepResult)
+        ]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()
