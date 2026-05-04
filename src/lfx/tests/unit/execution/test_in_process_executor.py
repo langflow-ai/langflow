@@ -22,8 +22,15 @@ def test_in_process_executor_kind():
 
 @pytest.mark.asyncio
 async def test_streams_step_results_then_run_complete_for_real_graph():
+    """Streaming path: empty inputs forces async_start, multiple StepResults yielded."""
+    from lfx.schema.schema import InputValueRequest
+
     graph = _simple_graph()
-    unit = Unit(graph=graph, inputs=[{"input_value": "hello"}])
+    unit = Unit(
+        graph=graph,
+        inputs=[],
+        runtime_options={"initial_inputs": InputValueRequest(input_value="hello")},
+    )
 
     items = [item async for item in InProcessExecutor().execute(unit)]
 
@@ -46,6 +53,9 @@ async def test_run_complete_outputs_match_arun_shape():
 
 @pytest.mark.asyncio
 async def test_event_manager_in_runtime_options_is_used():
+    """Streaming path forwards event_manager into async_start so vertex events fire."""
+    from lfx.schema.schema import InputValueRequest
+
     graph = _simple_graph()
     queue: asyncio.Queue = asyncio.Queue()
     em = EventManager(queue=queue)
@@ -59,8 +69,11 @@ async def test_event_manager_in_runtime_options_is_used():
 
     unit = Unit(
         graph=graph,
-        inputs=[{"input_value": "hi"}],
-        runtime_options={"event_manager": em},
+        inputs=[],
+        runtime_options={
+            "event_manager": em,
+            "initial_inputs": InputValueRequest(input_value="hi"),
+        },
     )
     [_ async for _ in InProcessExecutor().execute(unit)]
 

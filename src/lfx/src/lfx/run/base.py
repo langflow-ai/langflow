@@ -443,9 +443,18 @@ async def run_flow(
         # fall through to os.environ on miss instead of erroring the build).
         fallback_to_env_vars = resolve_fallback_to_env_vars()
 
-        async for result in graph.async_start(
-            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+        from lfx.execution import StepResult, get_default_coordinator
+
+        async for _item in get_default_coordinator().run(
+            graph,
+            inputs=[],
+            initial_inputs=inputs,
+            event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         ):
+            if not isinstance(_item, StepResult):
+                continue
+            result = _item.payload
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")
