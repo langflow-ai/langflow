@@ -5,9 +5,7 @@ import {
   type SetStateAction,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
@@ -220,28 +218,6 @@ export function DeploymentStepperProvider({
   );
   const initialToolNameByFlow = normalizedInitialToolNames;
   const initialConnectionsByFlow = normalizedInitialConnections;
-  const hasHydratedEditStateRef = useRef(false);
-
-  useEffect(() => {
-    if (!isEditMode) return;
-    if (hasHydratedEditStateRef.current) return;
-    if (
-      normalizedInitialVersions.size === 0 &&
-      normalizedInitialToolNames.size === 0 &&
-      normalizedInitialConnections.size === 0
-    ) {
-      return;
-    }
-    hasHydratedEditStateRef.current = true;
-    setSelectedVersionByFlow(normalizedInitialVersions);
-    setToolNameByFlow(normalizedInitialToolNames);
-    setAttachedConnectionByFlow(normalizedInitialConnections);
-  }, [
-    isEditMode,
-    normalizedInitialConnections,
-    normalizedInitialToolNames,
-    normalizedInitialVersions,
-  ]);
 
   const handleRemoveAttachedFlow = useCallback(
     (attachmentKeyOrFlowId: string) => {

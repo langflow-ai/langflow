@@ -147,7 +147,7 @@ export default function DeploymentStepperModal({
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
         <DeploymentStepperProvider
-          key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
+          key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}-${isLoadingEditData}`}
           initialState={{
             projectId: resolvedProjectId,
             initialFlowId,
