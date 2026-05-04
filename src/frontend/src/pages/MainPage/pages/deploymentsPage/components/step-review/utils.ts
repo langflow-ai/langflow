@@ -2,13 +2,10 @@ import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
 } from "../../helpers/version-scope";
+import { normalizeWxoName } from "../../helpers/wxo-name";
 import type { ConnectionItem } from "../../types";
 import { getDefaultDeploymentToolName, UNKNOWN_FLOW_NAME } from "../../types";
 import type { ReviewFlowItem } from "./types";
-
-export function normalizeWxoName(value: string): string {
-  return value.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-}
 
 function getToolNameForReview(
   toolNameByFlow: Map<string, string>,
