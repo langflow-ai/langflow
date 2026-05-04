@@ -737,5 +737,139 @@ describe("ModelInputComponent", () => {
         screen.queryByTestId(`${defaultProps.id}-configure`),
       ).not.toBeInTheDocument();
     });
+
+    it("does not render Configure when the saved model's provider is configured but the model was deactivated", async () => {
+      // Bug repro: user has provider X configured, then deactivates all models
+      // from X (including the one currently saved on the flow). The backend
+      // still injects the saved value as a sticky-default (not_enabled_locally)
+      // so the trigger displays a name. We must hide the wrench because the
+      // provider doesn't need configuring — instead we should default to a
+      // model the user actually has enabled.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            icon: "OpenAI",
+            models: [{ model_name: "gpt-4", metadata: {} }],
+          },
+          {
+            provider: "Anthropic",
+            is_enabled: true,
+            is_configured: true,
+            icon: "Anthropic",
+            models: [{ model_name: "claude-3-opus", metadata: {} }],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: { "gpt-4": true, "gpt-3.5-turbo": false },
+            Anthropic: { "claude-3-opus": true },
+          },
+        },
+        isLoading: false,
+      });
+
+      const handleOnNewValue = jest.fn();
+      // Saved value references gpt-3.5-turbo, which the user has deactivated.
+      const savedValue = [
+        {
+          id: "gpt-3.5-turbo",
+          name: "gpt-3.5-turbo",
+          icon: "Bot",
+          provider: "OpenAI",
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+      const optionsWithSticky = [
+        ...mockOptions,
+        {
+          id: "gpt-3.5-turbo",
+          name: "gpt-3.5-turbo",
+          icon: "Bot",
+          provider: "OpenAI",
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={optionsWithSticky}
+          value={savedValue}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      // The Configure wrench must NOT appear — the provider is already set up.
+      expect(
+        screen.queryByTestId(`${defaultProps.id}-configure`),
+      ).not.toBeInTheDocument();
+
+      // The component must default to a different (valid) model so the flow
+      // doesn't run with a deactivated selection.
+      await waitFor(() => {
+        expect(handleOnNewValue).toHaveBeenCalled();
+      });
+      const newValue = handleOnNewValue.mock.calls[0][0].value;
+      expect(newValue[0].name).not.toBe("gpt-3.5-turbo");
+    });
+
+    it("hides the deactivated provider's models from the dropdown when the provider is still configured", async () => {
+      // Companion to the bug fix above: the sticky-default option must not
+      // appear in the rendered list when the provider is configured.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            icon: "OpenAI",
+            models: [{ model_name: "gpt-4", metadata: {} }],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: { "gpt-4": true, "gpt-3.5-turbo": false },
+          },
+        },
+        isLoading: false,
+      });
+
+      const optionsWithSticky = [
+        ...mockOptions,
+        {
+          id: "gpt-3.5-turbo-sticky",
+          name: "gpt-3.5-turbo-sticky",
+          icon: "Bot",
+          provider: "OpenAI",
+          metadata: { not_enabled_locally: true },
+        },
+      ];
+
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={optionsWithSticky}
+          value={[]}
+        />,
+      );
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      // The sticky-default option for the configured provider must be hidden.
+      expect(
+        screen.queryByTestId("gpt-3.5-turbo-sticky-option"),
+      ).not.toBeInTheDocument();
+    });
   });
 });
