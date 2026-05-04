@@ -202,8 +202,6 @@ export default function StepAttachFlows() {
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const preSelected = initialFlowId
       ? Array.from(selectedVersionByFlow.values()).find(
