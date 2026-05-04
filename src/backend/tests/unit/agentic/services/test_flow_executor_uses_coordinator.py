@@ -9,6 +9,7 @@ import pytest
 from lfx.execution import (
     Coordinator,
     ExecutorRegistry,
+    reset_default_coordinator,
     set_default_coordinator,
 )
 from lfx.execution.executor import Executor
@@ -23,26 +24,21 @@ class _Recording(Executor):
 
     async def execute(self, unit):
         self.units_seen.append(unit)
-        # Yield a fake vertex result with no .vertex attr so extract_structured_result
-        # falls through to the default "no response" branch (still a dict).
         yield StepResult(payload=object())
         yield RunComplete(outputs=[])
 
 
 @pytest.fixture(autouse=True)
 def _reset_singleton():
-    from lfx import execution
-
-    execution._default_registry = None
-    execution._default_coordinator = None
+    reset_default_coordinator()
     yield
-    execution._default_registry = None
-    execution._default_coordinator = None
+    reset_default_coordinator()
 
 
 @pytest.mark.asyncio
 async def test_run_graph_uses_default_coordinator():
-    """Coordinator dispatch on _run_graph_with_events."""
+    from dataclasses import dataclass, field
+
     from langflow.agentic.services.flow_executor import _run_graph_with_events
     from langflow.agentic.services.flow_types import FlowExecutionResult
 
@@ -51,12 +47,13 @@ async def test_run_graph_uses_default_coordinator():
     registry.register(recording)
     set_default_coordinator(Coordinator(registry=registry))
 
+    @dataclass
     class _FakeGraph:
         flow_id: str | None = None
         flow_name: str | None = None
         user_id: str | None = None
         session_id: str | None = None
-        context: dict = {}
+        context: dict = field(default_factory=dict)
 
         def prepare(self):
             pass
