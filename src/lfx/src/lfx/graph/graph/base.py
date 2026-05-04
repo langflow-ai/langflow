@@ -874,6 +874,7 @@ class Graph:
             stream=stream,
             fallback_to_env_vars=fallback_to_env_vars,
             event_manager=event_manager,
+            _use_arun_legacy=True,
         )
 
     async def _arun_legacy(

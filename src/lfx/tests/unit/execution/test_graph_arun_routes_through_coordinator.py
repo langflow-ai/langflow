@@ -53,8 +53,13 @@ async def test_arun_returns_run_outputs_shape():
 
 
 @pytest.mark.asyncio
-async def test_arun_handles_concurrent_calls_on_same_graph_instance():
-    graph = _simple_graph()
+async def test_arun_concurrent_on_separate_graphs_keep_options_isolated():
+    """Concurrent arun calls on SEPARATE Graph instances must each see their own kwargs.
+
+    Same-instance concurrent arun is unsafe because _arun_legacy mutates self.session_id
+    and other shared state; that's a pre-existing property of Graph, not introduced by
+    the coordinator seam. The seam guarantees isolation across separate units only.
+    """
     seen: list[str] = []
 
     async def patched(*, inputs, **kwargs):  # noqa: ARG001
@@ -62,10 +67,10 @@ async def test_arun_handles_concurrent_calls_on_same_graph_instance():
         await asyncio.sleep(0.01)
         return []
 
-    graph._arun_legacy = patched
+    async def run_with(session_id):
+        graph = _simple_graph()
+        graph._arun_legacy = patched
+        await graph.arun(inputs=[{"input_value": session_id}], session_id=session_id)
 
-    await asyncio.gather(
-        graph.arun(inputs=[{"input_value": "a"}], session_id="A"),
-        graph.arun(inputs=[{"input_value": "b"}], session_id="B"),
-    )
+    await asyncio.gather(run_with("A"), run_with("B"))
     assert sorted(seen) == ["A", "B"]

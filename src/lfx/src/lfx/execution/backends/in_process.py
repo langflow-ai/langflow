@@ -1,4 +1,4 @@
-"""In-process executor — wraps today's graph runner."""
+"""In-process executor: wraps today's graph runner."""
 
 from __future__ import annotations
 
@@ -21,9 +21,9 @@ class InProcessExecutor(Executor):
         graph = unit.graph
         opts = unit.runtime_options
 
-        legacy = getattr(graph, "_arun_legacy", None)
-        if legacy is not None and unit.inputs and isinstance(unit.inputs[0], dict):
-            outputs = await legacy(inputs=unit.inputs, **opts)
+        if opts.get("_use_arun_legacy") and hasattr(graph, "_arun_legacy"):
+            legacy_kwargs = {k: v for k, v in opts.items() if not k.startswith("_")}
+            outputs = await graph._arun_legacy(inputs=unit.inputs, **legacy_kwargs)  # noqa: SLF001
             yield RunComplete(outputs=list(outputs))
             return
 
@@ -33,18 +33,10 @@ class InProcessExecutor(Executor):
             config=opts.get("config"),
             event_manager=opts.get("event_manager"),
             reset_output_values=opts.get("reset_output_values", True),
+            fallback_to_env_vars=opts.get("fallback_to_env_vars", False),
         ):
             yield StepResult(payload=result)
             if isinstance(result, Finish):
                 break
 
-        outputs_filter = opts.get("outputs") or []
-        final = []
-        for vertex in graph.vertices:
-            if not vertex.built:
-                continue
-            if (not outputs_filter and vertex.is_output) or (
-                vertex.display_name in outputs_filter or vertex.id in outputs_filter
-            ):
-                final.append(vertex.result)
-        yield RunComplete(outputs=final)
+        yield RunComplete(outputs=[])
