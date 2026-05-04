@@ -34,6 +34,13 @@ def set_default_coordinator(coordinator: Coordinator) -> None:
     _default_coordinator = coordinator
 
 
+def reset_default_coordinator() -> None:
+    """Drop the module-level singletons; next access rebuilds them. For tests."""
+    global _default_registry, _default_coordinator  # noqa: PLW0603
+    _default_registry = None
+    _default_coordinator = None
+
+
 __all__ = [
     "Coordinator",
     "Executor",
@@ -45,5 +52,6 @@ __all__ = [
     "get_default_coordinator",
     "get_default_registry",
     "identity_partition",
+    "reset_default_coordinator",
     "set_default_coordinator",
 ]
