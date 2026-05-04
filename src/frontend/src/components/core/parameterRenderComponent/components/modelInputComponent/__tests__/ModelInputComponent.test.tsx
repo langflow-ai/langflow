@@ -90,12 +90,30 @@ jest.mock("@/CustomNodes/helpers/mutate-template", () => ({
 // Mock ModelProviderModal
 jest.mock("@/modals/modelProviderModal", () => ({
   __esModule: true,
-  default: ({ open, onClose }: { open: boolean; onClose: () => void }) =>
+  default: ({
+    open,
+    onClose,
+  }: {
+    open: boolean;
+    onClose: (opts?: { hasChanges?: boolean }) => void;
+  }) =>
     open ? (
       <div data-testid="model-provider-modal">
         Model Provider Modal
-        <button onClick={onClose} data-testid="close-provider-modal">
+        <button onClick={() => onClose()} data-testid="close-provider-modal">
           Close
+        </button>
+        <button
+          onClick={() => onClose({ hasChanges: false })}
+          data-testid="close-provider-modal-no-changes"
+        >
+          Close (no changes)
+        </button>
+        <button
+          onClick={() => onClose({ hasChanges: true })}
+          data-testid="close-provider-modal-with-changes"
+        >
+          Close (with changes)
         </button>
       </div>
     ) : null,
@@ -321,6 +339,67 @@ describe("ModelInputComponent", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("should NOT show loading state after closing modal without changes", async () => {
+      // Reproduces the bug where every modal close triggered an unnecessary
+      // refetch + loading affordance even when the user changed nothing.
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("manage-model-providers"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("close-provider-modal-no-changes"));
+
+      // Modal closes and we go straight back to the combobox — no loading flash.
+      await waitFor(() => {
+        expect(
+          screen.queryByTestId("model-provider-modal"),
+        ).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("should show loading state after closing modal with changes", async () => {
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("manage-model-providers"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("close-provider-modal-with-changes"));
+
+      // With changes, the post-close refetch is in flight — the loading
+      // affordance should be visible until the refetch settles.
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
       });
     });
   });

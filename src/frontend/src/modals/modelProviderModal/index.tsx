@@ -6,7 +6,7 @@ import ModelProvidersContent from "./components/ModelProvidersContent";
 
 interface ModelProviderModalProps {
   open: boolean;
-  onClose: () => void;
+  onClose: (opts?: { hasChanges?: boolean }) => void;
   modelType: "llm" | "embeddings" | "all";
 }
 
@@ -18,16 +18,24 @@ const ModelProviderModal = ({
   const { t } = useTranslation();
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const flushRef = useRef<(() => Promise<void>) | null>(null);
+  const hasChangesRef = useRef<(() => boolean) | null>(null);
 
   const handleClose = async () => {
+    // Read the change flag synchronously BEFORE onClose unmounts the modal
+    // content (which would null out the ref). When the user closes without
+    // touching anything, skip both the model-input refresh and the parent's
+    // post-close loading state — there's nothing to refetch.
+    const hasChanges = hasChangesRef.current?.() ?? false;
     // Capture the flush promise BEFORE onClose unmounts the modal content.
     // flushPendingChanges sends any pending model toggle mutations via
     // mutateAsync and awaits the backend response, so the DB is up-to-date
     // by the time we refresh nodes below.
     const flushPromise = flushRef.current?.();
-    onClose();
+    onClose({ hasChanges });
     await flushPromise;
-    refreshAllModelInputs({ silent: true });
+    if (hasChanges) {
+      refreshAllModelInputs({ silent: true });
+    }
   };
 
   return (
@@ -42,7 +50,11 @@ const ModelProviderModal = ({
         </DialogHeader>
 
         <div className="h-[513px] overflow-hidden">
-          <ModelProvidersContent modelType={modelType} onFlushRef={flushRef} />
+          <ModelProvidersContent
+            modelType={modelType}
+            onFlushRef={flushRef}
+            onHasChangesRef={hasChangesRef}
+          />
         </div>
       </DialogContent>
     </Dialog>

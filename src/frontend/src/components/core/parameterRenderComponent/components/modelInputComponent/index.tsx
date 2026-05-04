@@ -437,10 +437,19 @@ export default function ModelInputComponent({
     }
   }, [refreshAllModelInputs]);
 
-  const handleManageProvidersDialogClose = useCallback(() => {
-    setOpenManageProvidersDialog(false);
-    setIsRefreshingAfterClose(true);
-  }, []);
+  const handleManageProvidersDialogClose = useCallback(
+    (opts?: { hasChanges?: boolean }) => {
+      setOpenManageProvidersDialog(false);
+      // Only enter the post-close loading state when the modal will actually
+      // refresh model inputs. When the user opens the dialog and closes it
+      // without touching anything, there's no refetch to wait on, so the
+      // dropdown should not flicker through "Loading models…".
+      if (opts?.hasChanges) {
+        setIsRefreshingAfterClose(true);
+      }
+    },
+    [],
+  );
 
   // Clear the refreshing indicator after the providers query completes a full
   // refetch cycle (isFetchingProviders: false → true → false). We track whether
