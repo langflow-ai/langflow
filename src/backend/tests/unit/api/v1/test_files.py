@@ -1130,7 +1130,7 @@ async def test_delete_file_forward_slash_traversal_blocked(
         ("龙.txt", "%E9%BE%99.txt"),
         ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt"),
         ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"),
-        ("arquivo_com_acentuação.txt", "arquivo_com_acentua%C3%A7%C3%A3o.txt"),
+        ("naïve_résumé.txt", "na%C3%AFve_r%C3%A9sum%C3%A9.txt"),
         ("normal_file.txt", "normal_file.txt"),
     ],
 )
