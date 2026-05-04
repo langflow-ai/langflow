@@ -138,6 +138,7 @@ class TestGetApiKeyForProviderDbFallback:
 
         assert result == "sk-direct"
 
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
     def test_should_fallback_to_env_when_user_id_is_none(self, mock_mapping, monkeypatch):
         """No user_id (lfx run) must still resolve credentials from os.environ.
 
