@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import importlib.util
 import inspect
+import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -179,8 +180,14 @@ def _iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
     Symlinks are followed only if they stay inside ``bundle_root`` (the
     validate pass already guards this for static analysis; we re-check at
     load time to catch symlinks introduced after validate).
+
+    ``bundle_root`` has already been resolved + existence-checked by
+    :func:`_resolve_bundle_path`; we use ``strict=False`` here so a
+    concurrent removal in the narrow window between the two calls produces
+    an empty walk rather than an unexpected ``FileNotFoundError`` escaping
+    the loader's public boundary.
     """
-    bundle_resolved = bundle_root.resolve(strict=True)
+    bundle_resolved = bundle_root.resolve(strict=False)
 
     # Sort sibling directories and files at every level for platform-independent
     # walk order.  ``Path.iterdir`` order is filesystem-dependent.
@@ -248,7 +255,11 @@ def _import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modu
             hint="Confirm that the path points at a regular .py file.",
         )
     module = importlib.util.module_from_spec(spec)
-    # Install in sys.modules so intra-bundle relative imports work.
+    # Install in sys.modules so absolute imports of this module from within
+    # the bundle resolve.  Relative imports (``from .sibling import X``) are
+    # NOT supported in v0: the intermediate package entries are not
+    # registered as packages, so authors must use absolute references between
+    # bundle modules until that lands in a later milestone.
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
@@ -601,8 +612,6 @@ def _read_inline_bundle_json(bundle_root: Path) -> dict[str, str]:
     if not candidate.is_file():
         return {}
     try:
-        import json
-
         data = json.loads(candidate.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
@@ -788,8 +797,12 @@ def installed_extension_roots(
     if distributions is None:
         distributions = importlib_metadata.distributions()
 
+    # Two distributions with the same canonical name (rare but possible in
+    # broken venvs) are resolved by keeping the lexicographically-first
+    # manifest path for determinism.  LE-1022 will surface the conflict as
+    # a typed warning when it owns the startup-time discovery flow; in this
+    # primitive we only return the resolved mapping, never an error.
     found: dict[str, tuple[Path, str]] = {}
-    duplicates: dict[str, list[Path]] = {}
     for dist in distributions:
         manifest_path = _distribution_manifest_path(dist)
         if manifest_path is None:
@@ -799,15 +812,8 @@ def installed_extension_roots(
             continue
         root = manifest_path.parent
         existing = found.get(canonical)
-        if existing is None:
+        if existing is None or str(manifest_path) < existing[1]:
             found[canonical] = (root, str(manifest_path))
-        else:
-            # Same distribution name installed twice (rare, but venv
-            # mishaps make it possible).  Keep the lexicographically-first
-            # path and record the duplicate for the caller.
-            duplicates.setdefault(canonical, [existing[0]]).append(root)
-            if str(manifest_path) < existing[1]:
-                found[canonical] = (root, str(manifest_path))
 
     return {name: root for name, (root, _) in found.items()}
 
