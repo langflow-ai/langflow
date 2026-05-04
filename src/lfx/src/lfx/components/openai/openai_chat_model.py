@@ -1,7 +1,6 @@
 from typing import Any
 
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
@@ -9,6 +8,7 @@ from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.log.logger import logger
+from lfx.utils.secrets import secret_value_to_str
 
 
 class OpenAIModelComponent(LCModelComponent):
@@ -95,14 +95,8 @@ class OpenAIModelComponent(LCModelComponent):
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
         logger.debug(f"Executing request with model: {self.model_name}")
-        # Handle api_key - it can be string or SecretStr
-        api_key_value = None
-        if self.api_key:
-            logger.debug(f"API key type: {type(self.api_key)}, value: {'***' if self.api_key else None}")
-            if isinstance(self.api_key, SecretStr):
-                api_key_value = self.api_key.get_secret_value()
-            else:
-                api_key_value = str(self.api_key)
+        logger.debug(f"API key type: {type(self.api_key)}, value: {'***' if self.api_key else None}")
+        api_key_value = secret_value_to_str(self.api_key) if self.api_key else None
         logger.debug(f"Final api_key_value type: {type(api_key_value)}, value: {'***' if api_key_value else None}")
 
         # Handle model_kwargs and ensure api_key doesn't conflict
@@ -133,9 +127,6 @@ class OpenAIModelComponent(LCModelComponent):
             params_str = ", ".join(unsupported_params_for_reasoning_models)
             logger.debug(f"{self.model_name} is a reasoning model, {params_str} are not configurable. Ignoring.")
 
-        # Ensure all parameter values are the correct types
-        if isinstance(parameters.get("api_key"), SecretStr):
-            parameters["api_key"] = parameters["api_key"].get_secret_value()
         parameters["stream_usage"] = True
         output = ChatOpenAI(**parameters)
         if self.json_mode:

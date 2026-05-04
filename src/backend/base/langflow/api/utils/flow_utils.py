@@ -135,6 +135,26 @@ def compute_virtual_flow_id(identifier: str | uuid.UUID, flow_id: uuid.UUID) -> 
     return uuid.uuid5(uuid.NAMESPACE_DNS, f"{identifier}_{flow_id}")
 
 
+def scope_session_to_namespace(session: str | None, namespace: str) -> str | None:
+    """Wrap a caller-supplied session ID under a (client_id, flow_id) namespace.
+
+    Mitigates CVE-2026-33017: an unauthenticated public-flow caller cannot
+    address a session that lives outside its own namespace through a Memory
+    component, regardless of whether the caller supplies a non-empty,
+    pre-prefixed, or empty string.
+
+    Returns ``None`` unchanged. Returns the value unchanged when it equals the
+    namespace or already starts with ``f"{namespace}:"``. Otherwise prefixes
+    it -- including the empty-string case, which becomes ``f"{namespace}:"``.
+    """
+    if session is None:
+        return session
+    prefix = f"{namespace}:"
+    if session == namespace or session.startswith(prefix):
+        return session
+    return f"{prefix}{session}"
+
+
 async def verify_public_flow_and_get_user(
     flow_id: uuid.UUID,
     client_id: str | None,
