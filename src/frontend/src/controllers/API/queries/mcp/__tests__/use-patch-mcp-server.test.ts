@@ -97,8 +97,7 @@ describe("usePatchMCPServer", () => {
     });
 
     const setQueryDataCall = mockQueryClient.setQueryData.mock.calls.find(
-      ([key]: [unknown]) =>
-        Array.isArray(key) && key[0] === "useGetMCPServers",
+      ([key]: [unknown]) => Array.isArray(key) && key[0] === "useGetMCPServers",
     );
     expect(setQueryDataCall).toBeDefined();
 
