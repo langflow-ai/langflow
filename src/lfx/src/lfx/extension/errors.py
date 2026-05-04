@@ -61,6 +61,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "duplicate-component-name",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        # init / dev CLI codes (LE-1016)
+        "extension-target-exists",
+        "extension-target-invalid",
+        "local-extension-missing",
     }
 )
 # NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
@@ -190,6 +194,11 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "extension-target-exists": ("Cannot create extension at {location}: directory already exists and is not empty."),
+    "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
+    "local-extension-missing": (
+        "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
     ),
 }
 

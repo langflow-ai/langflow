@@ -79,6 +79,9 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
     "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
     "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
+    "extension-target-exists": "error[extension-target-exists]: Cannot create extension at loc: directory already exists and is not empty.",  # noqa: E501
+    "extension-target-invalid": "error[extension-target-invalid]: Cannot create extension at loc: msg",
+    "local-extension-missing": "error[local-extension-missing]: Registered dev extension at loc is missing or no longer a directory; skipping until it reappears.",  # noqa: E501
 }
 
 
