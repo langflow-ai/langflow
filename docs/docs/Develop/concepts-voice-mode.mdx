@@ -63,30 +63,22 @@ This option changes both the expected input language and the response language.
 
 ## Develop applications with websockets endpoints
 
-Langflow exposes two OpenAI Realtime API-compatible websocket endpoints for your flows.
-You can build applications against these endpoints the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
+Langflow exposes an OpenAI Realtime API-compatible websocket endpoint for your flows.
+You can build applications against this endpoint the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
 
-The Langflow API's websockets endpoints require an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and they support an optional [ElevenLabs](https://elevenlabs.io) integration with an ElevenLabs API key.
+The Langflow API's websocket endpoint requires an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and supports an optional [ElevenLabs](https://elevenlabs.io) integration with an ElevenLabs API key.
 
-Additionally, both endpoints require that you provide the flow ID in the endpoint path.
-
-### Voice-to-voice audio streaming
-
-The `/ws/flow_as_tool/$FLOW_ID` endpoint establishes a connection to OpenAI Realtime voice, and then invokes the specified flow as a tool according to the [OpenAI Realtime model](https://platform.openai.com/docs/guides/realtime-conversations#handling-audio-with-websockets).
-
-This approach is ideal for low latency applications, but it is less deterministic because the OpenAI voice-to-voice model determines when to call your flow.
+Additionally, the endpoint requires that you provide the flow ID in the endpoint path.
 
 ### Speech-to-text audio transcription
 
 The `/ws/flow_tts/$FLOW_ID` endpoint converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then directly invokes the specified flow for each transcript.
 
-This approach is more deterministic but has higher latency.
-
 This is the mode used in the Langflow **Playground**.
 
 ### Session IDs for websockets endpoints
 
-Both endpoints accept an optional `/$SESSION_ID` path parameter to provide a unique ID for the conversation.
+The endpoint accepts an optional `/$SESSION_ID` path parameter to provide a unique ID for the conversation.
 If omitted, Langflow uses the flow ID as the [session ID](/session-id).
 
 However, be aware that voice mode only maintains context within the current conversation instance.
@@ -95,3 +87,4 @@ When you close the **Playground** or end a chat, verbal chat history is discarde
 ## See also
 
 * [Test flows in the Playground](/concepts-playground)
+* [Voice mode troubleshooting](/troubleshoot#voice-mode)
