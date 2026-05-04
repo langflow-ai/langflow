@@ -849,3 +849,313 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
             service._cleanup_task.cancel()
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await service._cleanup_task
+
+
+# ---------------------------------------------------------------------------
+# CVE-2026-33017: session-id namespacing on build_public_tmp
+# ---------------------------------------------------------------------------
+
+
+def _stub_start_flow_build(monkeypatch, captured: dict) -> None:
+    """Capture the kwargs that would be dispatched to start_flow_build without running the build."""
+    import langflow.api.v1.chat as chat_module
+
+    async def _fake_start_flow_build(**kwargs):
+        captured.update(kwargs)
+        return "00000000-0000-0000-0000-00000000ffff"
+
+    monkeypatch.setattr(chat_module, "start_flow_build", _fake_start_flow_build)
+
+
+def _send_unauthenticated(client, client_id: str) -> None:
+    """Drop login cookies and set the public client_id cookie.
+
+    The shared AsyncClient persists access-token cookies from logged_in_headers
+    that would otherwise let get_current_user_optional resolve a user and
+    namespace under user_id -- not the unauthenticated shape the CVE targets.
+    """
+    client.cookies.clear()
+    client.cookies.set("client_id", client_id)
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_namespaces_caller_session(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Caller-supplied session equal to the real flow UUID is wrapped under the namespace.
+
+    The threat: /api/v1/run hands out session_id == flow_id by default, and the
+    flow UUID is visible in URLs. Without namespacing, an unauthenticated caller
+    can pass that UUID as inputs.session and a Memory component reads its history.
+    """
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-test-client"
+    _send_unauthenticated(client, client_id)
+    victim_session = str(flow_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": victim_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    sent_inputs = captured["inputs"]
+    assert sent_inputs is not None
+    assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
+    assert sent_inputs.session != victim_session
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_session_already_namespaced_unchanged(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Idempotency: a value already in-namespace is forwarded as-is, not double-wrapped."""
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-passthrough-client"
+    _send_unauthenticated(client, client_id)
+    namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    already_scoped = f"{namespace}:thread-1"
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": already_scoped}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+    assert captured["inputs"].session == already_scoped
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_isolates_disjoint_clients(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Different client_ids submitting the same session string land in disjoint namespaces."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    shared_session = "shared-session-name"
+
+    _send_unauthenticated(client, "client-A")
+    response_a = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": shared_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response_a.status_code == codes.OK
+    session_a = captured["inputs"].session
+
+    captured.clear()
+    _send_unauthenticated(client, "client-B")
+    response_b = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": shared_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response_b.status_code == codes.OK
+    session_b = captured["inputs"].session
+
+    assert session_a != session_b
+    assert session_a.endswith(f":{shared_session}")
+    assert session_b.endswith(f":{shared_session}")
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_no_session_passthrough(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """No inputs supplied: namespacing is skipped; downstream falls back to the virtual flow ID."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    _send_unauthenticated(client, "ns-default-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": None},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+    assert captured["inputs"] is None
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_empty_session_is_namespaced(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """An empty-string session is scoped, not forwarded as-is.
+
+    Empty string is currently *coincidentally* safe (downstream `or virtual_id`
+    fallbacks save it), but a refactor of either branch would silently regress.
+    Pin the contract here: empty becomes ``f"{namespace}:"``.
+    """
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client_id = "ns-empty-client"
+    _send_unauthenticated(client, client_id)
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": ""}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(client_id, flow_id))
+    sent_session = captured["inputs"].session
+    assert sent_session != ""
+    assert sent_session == f"{expected_namespace}:"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_authenticated_namespace_uses_user_id(
+    client, json_memory_chatbot_no_llm, logged_in_headers, active_user, monkeypatch
+):
+    """AUTO_LOGIN=False (prod-like) + valid bearer: the namespace is derived from user.id."""
+    from langflow.api.utils.flow_utils import compute_virtual_flow_id
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+
+    client.cookies.set("client_id", "should-be-ignored")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "thread-A"}},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    expected_namespace = str(compute_virtual_flow_id(active_user.id, flow_id))
+    assert captured["inputs"].session == f"{expected_namespace}:thread-A"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_namespacing_blocks_memory_query_collision(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """End-to-end proof that namespacing prevents Memory query collision.
+
+    A victim message stored under ``session_id == flow_id`` is unreachable via a
+    Memory query keyed on the namespaced session that build_public_tmp forwards.
+    This is the test that catches a regression in either the endpoint guard or
+    the helper -- the shape-only tests above would still pass if the rewrite
+    was applied but the downstream query stopped honoring it.
+    """
+    from lfx.memory import aadd_messages, aget_messages
+    from lfx.schema.message import Message
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    victim_session = str(flow_id)
+    await aadd_messages(
+        Message(text="victim-secret", sender="User", sender_name="User", session_id=victim_session),
+        flow_id=flow_id,
+    )
+    seeded = await aget_messages(session_id=victim_session)
+    assert any(m.text == "victim-secret" for m in seeded)
+
+    captured: dict = {}
+    _stub_start_flow_build(monkeypatch, captured)
+    _send_unauthenticated(client, "leak-test-client")
+
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": victim_session}},
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.OK
+
+    namespaced_session = captured["inputs"].session
+    assert namespaced_session != victim_session
+
+    leaked = await aget_messages(session_id=namespaced_session)
+    assert all(m.text != "victim-secret" for m in leaked)
+
+    still_seeded = await aget_messages(session_id=victim_session)
+    assert any(m.text == "victim-secret" for m in still_seeded)
+
+
+def test_scope_session_to_namespace_helper():
+    from langflow.api.utils import scope_session_to_namespace
+
+    ns = "namespace-A"
+    assert scope_session_to_namespace(None, ns) is None
+    assert scope_session_to_namespace("", ns) == f"{ns}:"
+    assert scope_session_to_namespace(ns, ns) == ns
+    assert scope_session_to_namespace(f"{ns}:thread-1", ns) == f"{ns}:thread-1"
+    assert scope_session_to_namespace("victim-session", ns) == f"{ns}:victim-session"
+    assert scope_session_to_namespace("victim-session", "namespace-B") == "namespace-B:victim-session"
+    # A foreign-namespace prefix is treated as out-of-namespace and gets re-wrapped.
+    assert scope_session_to_namespace("namespace-B:victim", "namespace-A") == "namespace-A:namespace-B:victim"
