@@ -1,11 +1,22 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
+import {
+  type PaginatedIngestionRunResponse,
+  useGetIngestionRuns,
+} from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import IngestionRunDetailModal from "./IngestionRunDetailModal";
 
 interface IngestionRunsSectionProps {
   kbName: string;
 }
+
+const TERMINAL_RUN_STATUSES = new Set([
+  "succeeded",
+  "partial",
+  "failed",
+  "cancelled",
+]);
+const RUN_POLL_INTERVAL_MS = 5000;
 
 const STATUS_STYLES: Record<string, string> = {
   succeeded: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -46,11 +57,27 @@ function formatRelativeTime(iso: string): string {
 
 const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const { data, isLoading, isError } = useGetIngestionRuns({
-    kb_name: kbName,
-    page: 1,
-    limit: 10,
-  });
+  const { data, isLoading, isError } = useGetIngestionRuns(
+    {
+      kb_name: kbName,
+      page: 1,
+      limit: 10,
+    },
+    {
+      refetchOnMount: "always",
+      refetchIntervalInBackground: false,
+      refetchInterval: (query) => {
+        const runs = (
+          query.state.data as PaginatedIngestionRunResponse | undefined
+        )?.runs;
+        if (!runs?.length) return false;
+        const hasActive = runs.some(
+          (run) => !TERMINAL_RUN_STATUSES.has(run.status),
+        );
+        return hasActive ? RUN_POLL_INTERVAL_MS : false;
+      },
+    },
+  );
 
   return (
     <div className="space-y-3 px-4">
