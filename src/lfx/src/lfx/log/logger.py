@@ -1,5 +1,6 @@
 """Logging configuration for Langflow using structlog."""
 
+import contextlib
 import json
 import logging
 import logging.handlers
@@ -13,6 +14,7 @@ from typing import Any, TypedDict
 
 import orjson
 import structlog
+from loguru import logger as loguru_logger
 from platformdirs import user_cache_dir
 from typing_extensions import NotRequired
 
@@ -158,6 +160,8 @@ class SizedLogBuffer:
 
 # log buffer for capturing log messages
 log_buffer = SizedLogBuffer()
+_file_handler: logging.handlers.RotatingFileHandler | None = None
+_loguru_handler_id: int | None = None
 
 
 def add_serialized(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
@@ -190,6 +194,54 @@ def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -
         serialized_bytes = event_dict["serialized"]
         log_buffer.write(serialized_bytes.decode("utf-8"))
     return event_dict
+
+
+def _forward_loguru_message(message) -> None:
+    """Forward Loguru messages through Langflow's configured structlog pipeline."""
+    record = message.record
+    structlog_logger = structlog.get_logger(record["name"])
+    level_name = record["level"].name.lower()
+    log_method = getattr(structlog_logger, level_name, structlog_logger.info)
+    if record["exception"]:
+        log_method(record["message"], exc_info=record["exception"])
+    else:
+        log_method(record["message"])
+
+
+def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
+    """Route Loguru's default logger through Langflow logging."""
+    global _loguru_handler_id  # noqa: PLW0603
+
+    if _loguru_handler_id is not None:
+        with contextlib.suppress(ValueError):
+            loguru_logger.remove(_loguru_handler_id)
+    else:
+        with contextlib.suppress(ValueError):
+            loguru_logger.remove(0)
+
+    _loguru_handler_id = loguru_logger.add(
+        _forward_loguru_message,
+        level=log_level.upper(),
+        enqueue=enqueue,
+        format="{message}",
+    )
+
+
+def setup_log_file(log_file: Path, *, max_bytes: int) -> None:
+    """Set up Langflow's rotating file handler."""
+    global _file_handler  # noqa: PLW0603
+
+    if _file_handler is not None:
+        logging.root.removeHandler(_file_handler)
+        _file_handler.close()
+
+    _file_handler = logging.handlers.RotatingFileHandler(
+        log_file,
+        maxBytes=max_bytes,
+        backupCount=5,
+    )
+    _file_handler.setFormatter(logging.Formatter("%(message)s"))
+    logging.root.addHandler(_file_handler)
 
 
 class LogConfig(TypedDict):
@@ -229,7 +281,7 @@ def configure(
     if current_min_level == requested_min_level:
         return
 
-    if log_level is None:
+    if log_level is None or log_level.upper() not in LOG_LEVEL_MAP:
         log_level = "ERROR"
 
     if log_file is None:
@@ -338,15 +390,7 @@ def configure(
             max_bytes = 10 * 1024 * 1024  # Default 10MB
 
         # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output
-        file_handler = logging.handlers.RotatingFileHandler(
-            log_file,
-            maxBytes=max_bytes,
-            backupCount=5,
-        )
-        file_handler.setFormatter(logging.Formatter("%(message)s"))
-
-        # Add file handler to root logger
-        logging.root.addHandler(file_handler)
+        setup_log_file(log_file, max_bytes=max_bytes)
         logging.root.setLevel(numeric_level)
 
     # Set up interceptors for uvicorn and gunicorn
@@ -356,6 +400,7 @@ def configure(
     # Create the global logger instance
     global logger  # noqa: PLW0603
     logger = structlog.get_logger()
+    setup_loguru_logger(log_level)
 
     if disable:
         # In structlog, we can set a very high filter level to effectively disable logging

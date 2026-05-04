@@ -111,17 +111,23 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all():
+async def get_all(request: Request):
     """Retrieve all component types with compression for better performance.
 
-    Returns a compressed response containing all available component types.
+    Returns a compressed response containing all available component types,
+    with display_names translated to the locale indicated by Accept-Language.
     """
     from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
-        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-        # Return compressed response using our utility function
-        return compress_response(all_types)
+        all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+
+        locale = getattr(request.state, "locale", "en")
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+
+        component_display_names = build_component_display_names(all_types_en)
+        return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

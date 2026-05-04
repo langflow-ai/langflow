@@ -126,6 +126,7 @@
             "description": "# 📖 README\nRun an Agent with URL and Calculator tools available for its use. \nThe Agent decides which tool to use to solve a problem.\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Open the Playground and chat with the Agent. Request some information about a recipe, and then ask to add two numbers together. In the responses, the Agent will use different tools to solve different problems.\n\n## Next steps\nConnect more tools to the Agent to create your perfect assistant.\n\nFor more, see the [Langflow docs](https://docs.langflow.org/agents-tool-calling-agent-component).",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.simple_agent.89c2ae6b",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -152,6 +153,7 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.simple_agent.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
             }
@@ -944,7 +946,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.3"
                   },
                   {
                     "name": "lfx",
@@ -952,7 +954,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.3.1"
+                    "version": "1.3.2"
                   }
                 ],
                 "total_dependencies": 3

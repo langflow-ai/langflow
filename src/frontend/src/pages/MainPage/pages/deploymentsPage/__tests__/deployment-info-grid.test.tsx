@@ -52,6 +52,12 @@ function renderGrid(
 // ---------------------------------------------------------------------------
 
 describe("DeploymentInfoGrid", () => {
+  it("renders environment label and selected environment name", () => {
+    renderGrid(makeDeployment(), "Production");
+    expect(screen.getByText("Environment")).toBeInTheDocument();
+    expect(screen.getByText("Production")).toBeInTheDocument();
+  });
+
   describe("date formatting", () => {
     it("formats ISO date strings to a localized date", () => {
       const iso = "2025-05-15T12:00:00Z";
