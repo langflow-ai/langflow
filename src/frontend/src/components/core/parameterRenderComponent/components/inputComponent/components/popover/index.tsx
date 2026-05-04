@@ -74,17 +74,24 @@ const CommandItemContent = ({
   optionButton,
   nodeStyle,
   commandWidth,
+  disabledReason,
 }: {
   option: string;
   isSelected: boolean;
   optionButton: (option: string) => ReactNode;
   nodeStyle?: string;
   commandWidth?: string;
+  disabledReason?: string;
 }) => (
-  <div className="group flex w-full items-center justify-between">
+  <div
+    className={cn(
+      "group flex w-full items-center justify-between",
+      disabledReason && "cursor-not-allowed opacity-50",
+    )}
+  >
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
-      <ShadTooltip content={option} side="left">
+      <ShadTooltip content={disabledReason || option} side="left">
         <div
           className={cn("w-full truncate pr-2", nodeStyle && "max-w-52")}
           style={{
@@ -176,6 +183,7 @@ const CustomInputPopover = ({
   onChange,
   blurOnEnter,
   options,
+  disabledOptions,
   optionsPlaceholder,
   optionsButton,
   handleKeyDown,
@@ -220,6 +228,9 @@ const CustomInputPopover = ({
   };
 
   const handleOptionSelect = (currentValue: string) => {
+    if (disabledOptions?.[currentValue]) {
+      return;
+    }
     if (setSelectedOption) {
       setSelectedOption(currentValue === selectedOption ? "" : currentValue);
     }
@@ -350,25 +361,34 @@ const CustomInputPopover = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup>
-              {Array.from(memoizedOptions).map((option, id) => (
-                <CommandItem
-                  key={option + id}
-                  value={option}
-                  onSelect={handleOptionSelect}
-                  className="group"
-                >
-                  <CommandItemContent
-                    option={option}
-                    isSelected={
-                      selectedOption === option ||
-                      selectedOptions?.includes(option)
+              {Array.from(memoizedOptions).map((option, id) => {
+                const disabledReason = disabledOptions?.[option];
+                return (
+                  <CommandItem
+                    key={option + id}
+                    value={option}
+                    onSelect={handleOptionSelect}
+                    className="group"
+                    data-testid={
+                      disabledReason
+                        ? `disabled-option-${option}`
+                        : `option-${option}`
                     }
-                    optionButton={optionButton}
-                    nodeStyle={nodeStyle}
-                    commandWidth={commandWidth}
-                  />
-                </CommandItem>
-              ))}
+                  >
+                    <CommandItemContent
+                      option={option}
+                      isSelected={
+                        selectedOption === option ||
+                        selectedOptions?.includes(option)
+                      }
+                      optionButton={optionButton}
+                      nodeStyle={nodeStyle}
+                      commandWidth={commandWidth}
+                      disabledReason={disabledReason}
+                    />
+                  </CommandItem>
+                );
+              })}
               {optionsButton}
             </CommandGroup>
           </CommandList>
