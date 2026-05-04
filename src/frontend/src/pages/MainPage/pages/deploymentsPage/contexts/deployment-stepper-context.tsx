@@ -11,21 +11,14 @@ import {
   useState,
 } from "react";
 import type { ProviderAccountCreateRequest } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import type {
-  DeploymentUpdateFlowItem,
-  DeploymentUpdateProviderData,
-  DeploymentUpdateRequest,
-} from "@/controllers/API/queries/deployments/use-patch-deployment";
-import type {
-  DeploymentConnectionPayload,
-  DeploymentCreateRequest,
-} from "@/controllers/API/queries/deployments/use-post-deployment";
+import type { DeploymentUpdateRequest } from "@/controllers/API/queries/deployments/use-patch-deployment";
+import type { DeploymentCreateRequest } from "@/controllers/API/queries/deployments/use-post-deployment";
 import {
-  getFlowVersionCount,
-  getScopedValueForUniqueFlowVersion,
-  getValueByAttachmentKeyOrFlowId,
-  normalizeSelectedFlowVersions,
-} from "../helpers/version-scope";
+  buildDeploymentPayload as buildDeploymentPayloadValue,
+  buildDeploymentUpdatePayload as buildDeploymentUpdatePayloadValue,
+  buildProviderAccountPayload as buildProviderAccountPayloadValue,
+} from "../helpers/deployment-payload-builders";
+import { normalizeSelectedFlowVersions } from "../helpers/version-scope";
 import type {
   ConnectionItem,
   Deployment,
@@ -37,7 +30,6 @@ import type {
 } from "../types";
 import {
   createDeploymentToolNameScopeId,
-  getDefaultDeploymentToolName,
   getSelectedFlowVersionKey,
 } from "../types";
 
@@ -138,20 +130,6 @@ interface DeploymentStepperContextType {
 
 const DeploymentStepperContext =
   createContext<DeploymentStepperContextType | null>(null);
-
-function getScopedToolName(
-  map: Map<string, string>,
-  attachmentKey: string,
-  flowId: string,
-  versionMap: Map<string, SelectedFlowVersion>,
-): string | undefined {
-  return getScopedValueForUniqueFlowVersion(
-    map,
-    attachmentKey,
-    flowId,
-    getFlowVersionCount(versionMap.values(), flowId),
-  );
-}
 
 export function DeploymentStepperProvider({
   children,
@@ -397,292 +375,79 @@ export function DeploymentStepperProvider({
   const needsProviderAccountCreation =
     selectedInstance === null && hasValidCredentials;
 
-  const buildProviderAccountPayload =
-    useCallback((): ProviderAccountCreateRequest | null => {
-      if (!hasValidCredentials) return null;
-      return {
-        name: credentials.name.trim(),
-        provider_key: "watsonx-orchestrate",
-        provider_data: {
-          url: credentials.url.trim(),
-          api_key: credentials.api_key.trim(),
-        },
-      };
-    }, [credentials, hasValidCredentials]);
-
-  const buildConnectionPayloads = useCallback(
-    (
-      connectionIds: Iterable<string>,
-    ): DeploymentCreateRequest["provider_data"]["connections"] => {
-      const payloads: DeploymentCreateRequest["provider_data"]["connections"] =
-        [];
-      const uniqueIds = Array.from(new Set(connectionIds));
-
-      for (const id of uniqueIds) {
-        const conn = connections.find((item) => item.id === id);
-        if (!conn?.isNew) continue;
-
-        const credentials: DeploymentConnectionPayload["credentials"] =
-          Object.entries(conn.environmentVariables).map(([key, value]) => {
-            const isGlobalVar = conn.globalVarKeys?.has(key) ?? false;
-            return {
-              key,
-              value,
-              source: isGlobalVar ? "variable" : "raw",
-            };
-          });
-
-        payloads.push({
-          app_id: id,
-          credentials,
-        });
-      }
-
-      return payloads;
-    },
-    [connections],
+  const buildProviderAccountPayload = useCallback(
+    () =>
+      buildProviderAccountPayloadValue({
+        credentials,
+        hasValidCredentials,
+      }),
+    [credentials, hasValidCredentials],
   );
 
   const buildDeploymentPayload = useCallback(
-    (providerId: string): DeploymentCreateRequest => {
-      if (!isDeploymentNameValid) {
-        throw new Error("Deployment name must start with a letter");
-      }
-      const allConnectionIds = new Set<string>();
-      Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
-        ids.forEach((id) => allConnectionIds.add(id));
-      });
-
-      const addFlows: DeploymentCreateRequest["provider_data"]["add_flows"] =
-        [];
-      for (const [attachmentKey, versionEntry] of Array.from(
+    (providerId: string): DeploymentCreateRequest =>
+      buildDeploymentPayloadValue({
+        attachedConnectionByFlow,
+        connections,
+        defaultToolNameScopeId,
+        deploymentDescription,
+        deploymentName,
+        deploymentType,
+        isDeploymentNameValid,
+        projectId: initialState?.projectId,
+        providerId,
+        removedFlowIds,
+        selectedLlm,
         selectedVersionByFlow,
-      )) {
-        if (removedFlowIds.has(attachmentKey)) continue;
-        const connectionIds =
-          getValueByAttachmentKeyOrFlowId(
-            attachedConnectionByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-          ) ?? [];
-        const strictToolName = getScopedToolName(
-          toolNameByFlow,
-          attachmentKey,
-          versionEntry.flowId,
-          selectedVersionByFlow,
-        )?.trim();
-        const resolvedToolName =
-          strictToolName ||
-          getDefaultDeploymentToolName(
-            versionEntry.flowName ?? "Flow",
-            versionEntry.versionId,
-            defaultToolNameScopeId,
-          );
-        addFlows.push({
-          flow_version_id: versionEntry.versionId,
-          app_ids: connectionIds,
-          tool_name: resolvedToolName,
-        });
-      }
-
-      const connectionPayloads = buildConnectionPayloads(allConnectionIds);
-
-      return {
-        provider_id: providerId,
-        ...(initialState?.projectId
-          ? { project_id: initialState.projectId }
-          : {}),
-        name: trimmedDeploymentName,
-        description: deploymentDescription,
-        type: deploymentType,
-        provider_data: {
-          llm: selectedLlm,
-          add_flows: addFlows,
-          connections: connectionPayloads,
-        },
-      };
-    },
+        toolNameByFlow,
+      }),
     [
       attachedConnectionByFlow,
-      buildConnectionPayloads,
-      initialState?.projectId,
+      connections,
       defaultToolNameScopeId,
       deploymentDescription,
+      deploymentName,
       deploymentType,
+      initialState?.projectId,
       isDeploymentNameValid,
       removedFlowIds,
       selectedLlm,
       selectedVersionByFlow,
-      trimmedDeploymentName,
       toolNameByFlow,
     ],
   );
 
   const buildDeploymentUpdatePayload =
     useCallback((): DeploymentUpdateRequest => {
-      if (!editingDeployment) {
-        throw new Error(
-          "buildDeploymentUpdatePayload called outside edit mode",
-        );
-      }
-      if (!isDeploymentNameValid) {
-        throw new Error("Deployment name must start with a letter");
-      }
-
-      const result: DeploymentUpdateRequest = {
-        deployment_id: editingDeployment.id,
-      };
-
-      // Metadata changes (description only — name is not editable after creation).
-      const descriptionChanged =
-        deploymentDescription !== (editingDeployment.description ?? "");
-      if (descriptionChanged) {
-        result.description = deploymentDescription;
-      }
-
-      const upsertFlows: DeploymentUpdateFlowItem[] = [];
-
-      // New flows attached during this edit session.
-      for (const [attachmentKey, versionEntry] of Array.from(
+      return buildDeploymentUpdatePayloadValue({
+        attachedConnectionByFlow,
+        connections,
+        defaultToolNameScopeId,
+        deploymentDescription,
+        editingDeployment,
+        initialConnectionsByFlow,
+        initialToolNameByFlow,
+        initialVersionByFlow,
+        isDeploymentNameValid,
+        removedFlowIds,
+        selectedLlm,
         selectedVersionByFlow,
-      )) {
-        if (removedFlowIds.has(attachmentKey)) continue;
-        if (initialVersionByFlow.has(attachmentKey)) continue;
-        const connectionIds =
-          getValueByAttachmentKeyOrFlowId(
-            attachedConnectionByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-          ) ?? [];
-        const strictToolName = getScopedToolName(
-          toolNameByFlow,
-          attachmentKey,
-          versionEntry.flowId,
-          selectedVersionByFlow,
-        )?.trim();
-        const resolvedToolName =
-          strictToolName ||
-          getDefaultDeploymentToolName(
-            versionEntry.flowName ?? "Flow",
-            versionEntry.versionId,
-            defaultToolNameScopeId,
-          );
-        upsertFlows.push({
-          flow_version_id: versionEntry.versionId,
-          add_app_ids: connectionIds,
-          remove_app_ids: [],
-          tool_name: resolvedToolName,
-        });
-      }
-
-      // Changes on pre-existing flows (tool name and/or connections).
-      for (const [attachmentKey, versionEntry] of Array.from(
-        selectedVersionByFlow,
-      )) {
-        if (removedFlowIds.has(attachmentKey)) continue;
-        if (!initialVersionByFlow.has(attachmentKey)) continue;
-        const currentName =
-          getScopedToolName(
-            toolNameByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-            selectedVersionByFlow,
-          )?.trim() ?? "";
-        const originalName =
-          getScopedToolName(
-            initialToolNameByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-            initialVersionByFlow,
-          )?.trim() ?? "";
-        const nameChanged = currentName && currentName !== originalName;
-
-        const currentConnections =
-          getValueByAttachmentKeyOrFlowId(
-            attachedConnectionByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-          ) ?? [];
-        const originalConnections =
-          getValueByAttachmentKeyOrFlowId(
-            initialConnectionsByFlow,
-            attachmentKey,
-            versionEntry.flowId,
-          ) ?? [];
-        const originalSet = new Set(originalConnections);
-        const currentSet = new Set(currentConnections);
-        const addAppIds = currentConnections.filter(
-          (id) => !originalSet.has(id),
-        );
-        const removeAppIds = originalConnections.filter(
-          (id) => !currentSet.has(id),
-        );
-        const connectionsChanged =
-          addAppIds.length > 0 || removeAppIds.length > 0;
-
-        if (nameChanged || connectionsChanged) {
-          upsertFlows.push({
-            flow_version_id: versionEntry.versionId,
-            add_app_ids: addAppIds,
-            remove_app_ids: removeAppIds,
-            ...(nameChanged && { tool_name: currentName }),
-          });
-        }
-      }
-
-      const removeFlows: string[] = [];
-      for (const attachmentKey of Array.from(removedFlowIds)) {
-        const originalVersion = initialVersionByFlow.get(attachmentKey);
-        if (originalVersion) {
-          removeFlows.push(originalVersion.versionId);
-        }
-      }
-
-      // Collect connection details for newly added binds only.
-      const newConnectionIds = new Set<string>();
-      upsertFlows.forEach((flowItem) => {
-        flowItem.add_app_ids.forEach((id) => newConnectionIds.add(id));
+        toolNameByFlow,
       });
-      const connectionPayloads = buildConnectionPayloads(newConnectionIds);
-
-      const llmToSend = selectedLlm;
-      if (
-        llmToSend ||
-        upsertFlows.length > 0 ||
-        removeFlows.length > 0 ||
-        connectionPayloads.length > 0
-      ) {
-        const providerData: DeploymentUpdateProviderData = {
-          ...(llmToSend && { llm: llmToSend }),
-          ...(upsertFlows.length > 0 && { upsert_flows: upsertFlows }),
-          ...(removeFlows.length > 0 && { remove_flows: removeFlows }),
-          ...(connectionPayloads.length > 0 && {
-            connections: connectionPayloads,
-          }),
-        };
-        result.provider_data = providerData;
-      }
-
-      // Backend requires at least one field.
-      if (result.description === undefined && !result.provider_data) {
-        result.description = deploymentDescription;
-      }
-
-      return result;
     }, [
-      editingDeployment,
-      deploymentDescription,
+      attachedConnectionByFlow,
+      connections,
       defaultToolNameScopeId,
-      isDeploymentNameValid,
-      selectedLlm,
-      initialVersionByFlow,
-      initialToolNameByFlow,
+      deploymentDescription,
+      editingDeployment,
       initialConnectionsByFlow,
+      initialToolNameByFlow,
+      initialVersionByFlow,
+      isDeploymentNameValid,
       removedFlowIds,
+      selectedLlm,
       selectedVersionByFlow,
       toolNameByFlow,
-      attachedConnectionByFlow,
-      buildConnectionPayloads,
     ]);
 
   const value = useMemo<DeploymentStepperContextType>(
