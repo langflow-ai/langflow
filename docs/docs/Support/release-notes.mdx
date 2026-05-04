@@ -54,10 +54,10 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### Deprecations
 
-- Voice-to-voice audio streaming removed
+- Voice mode is removed
 
-    The voice-to-voice feature and its associated `/ws/flow_as_tool/{flow_id}` WebSocket endpoint have been removed.
-    The speech-to-text microphone button in the **Playground** and the `/ws/flow_tts/{flow_id}` endpoint remain available.
+    The <Icon name="Mic" aria-hidden="true"/> **Microphone** button in the **Playground** now only enables speech-to-text, with no additional voice mode functionality.
+    The bi-directional `/v1/voice/ws/flow_as_tool/{flow_id}` voice-to-voice endpoints are deprecated.
     For more information, see [Use voice mode](/concepts-voice-mode).
 
 ## 1.9.x
