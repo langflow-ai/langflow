@@ -31,6 +31,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
+    scope_session_to_namespace,
     verify_public_flow_and_get_user,
 )
 from langflow.api.v1.schemas import (
@@ -661,6 +662,9 @@ async def build_public_tmp(
     - The 'data' parameter is NOT accepted to prevent flow definition tampering
     - Public flows must execute the stored flow definition only
     - The flow definition is always loaded from the database
+    - Caller-supplied 'inputs.session' is namespaced under the (client_id,
+      flow_id) virtual flow ID so an unauthenticated caller cannot address a
+      session that lives outside its own namespace (CVE-2026-33017)
 
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
@@ -702,6 +706,12 @@ async def build_public_tmp(
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
         )
+
+        # Defends CVE-2026-33017: scope caller session into the (client_id, flow_id) namespace.
+        if inputs is not None and inputs.session is not None:
+            scoped_session = scope_session_to_namespace(inputs.session, str(new_flow_id))
+            if scoped_session != inputs.session:
+                inputs = inputs.model_copy(update={"session": scoped_session})
 
         # Validate the stored flow data after the public-access boundary.
         # Public flows never accept client-supplied data.

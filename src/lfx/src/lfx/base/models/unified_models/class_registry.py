@@ -70,6 +70,7 @@ EMBEDDING_PARAM_MAPPINGS: dict[str, dict[str, str]] = {
     "Google Generative AI": {
         "model": "model",
         "api_key": "google_api_key",
+        "dimensions": "output_dimensionality",
         "request_timeout": "request_options",
         "model_kwargs": "client_options",
     },

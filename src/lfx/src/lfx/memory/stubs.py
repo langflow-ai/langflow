@@ -41,10 +41,20 @@ async def astore_message(
         )
         raise ValueError(msg)
 
-    # Set flow_id if provided
+    # Set flow_id if provided. The stub is the fallback when no real database is
+    # registered, so be tolerant of non-UUID flow_ids (e.g. synthetic IDs from tests
+    # or callers that pass a string identifier). UUID parsing here only normalizes
+    # format; an invalid string is preserved verbatim, but logged so downstream
+    # UUID-expecting code paths have a breadcrumb if they later fail.
     if flow_id:
         if isinstance(flow_id, str):
-            flow_id = UUID(flow_id)
+            try:
+                flow_id = UUID(flow_id)
+            except ValueError:
+                logger.warning(
+                    f"flow_id {flow_id!r} is not a valid UUID; preserving verbatim. "
+                    "Downstream code that expects a UUID may surface a confusing error."
+                )
         message.flow_id = str(flow_id)
 
     # In lfx, we use the service architecture - this is a simplified implementation
