@@ -39,6 +39,35 @@ class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
 
 
+def chunk_text_for_ingestion(
+    text: str,
+    *,
+    chunk_size: int = 1000,
+    chunk_overlap: int = 100,
+    separator: str | None = None,
+) -> list[str]:
+    r"""Split text into chunks using ``RecursiveCharacterTextSplitter``.
+
+    Single source of truth for chunking config used by every ingestion path —
+    KB file ingestion and Memory Base raw / preprocessed message ingestion.
+    Centralizing this keeps chunk-size / overlap behavior identical so a
+    chunk that fits in one path won't suddenly overflow in another.
+
+    ``separator``: when provided, escaped newlines (``"\\n"``) are unescaped
+    and the value is passed as a single-element ``separators`` list, matching
+    the behavior of ``KBIngestionHelper.perform_ingestion``.
+
+    Returns ``[]`` for empty / whitespace-only input.
+    """
+    if not text or not text.strip():
+        return []
+    splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
+    if separator:
+        splitter_kwargs["separators"] = [separator.replace("\\n", "\n")]
+    splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
+    return splitter.split_text(text)
+
+
 class KBStorageHelper:
     """Helper class for Knowledge Base storage and path management."""
 
@@ -439,12 +468,6 @@ class KBIngestionHelper:
             processed_files = []
             total_chunks_created = 0
 
-            splitter_kwargs: dict = {"chunk_size": chunk_size, "chunk_overlap": chunk_overlap}
-            if separator:
-                resolved_separator = separator.replace("\\n", "\n")
-                splitter_kwargs["separators"] = [resolved_separator]
-            text_splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
-
             embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, current_user)
 
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
@@ -461,7 +484,12 @@ class KBIngestionHelper:
                 if not content.strip():
                     continue
 
-                chunks = text_splitter.split_text(content)
+                chunks = chunk_text_for_ingestion(
+                    content,
+                    chunk_size=chunk_size,
+                    chunk_overlap=chunk_overlap,
+                    separator=separator,
+                )
                 docs = [
                     Document(
                         page_content=c,

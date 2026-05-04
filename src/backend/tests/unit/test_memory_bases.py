@@ -517,7 +517,7 @@ class TestMemoryBaseServiceRegenerate:
             mock_mb_result.first = MagicMock(return_value=mb)
             mock_session_result = MagicMock()
             mock_session_result.all = MagicMock(return_value=[mbs1, mbs2])
-            mock_db.exec = AsyncMock(side_effect=[mock_mb_result, mock_session_result, MagicMock()])
+            mock_db.exec = AsyncMock(side_effect=[mock_mb_result, mock_session_result, MagicMock(), MagicMock()])
             mock_db.add = MagicMock()
             mock_db.commit = AsyncMock()
 
@@ -1293,6 +1293,46 @@ class TestMemoriesAPIHandlers:
 
         assert exc_info.value.status_code == 409
 
+    @pytest.mark.asyncio
+    async def test_create_missing_api_key_returns_422(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services.memory_base.service import PreprocessingValidationError
+
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), user_id=mock_user.id, kb_name="kb")
+
+        svc = MagicMock()
+        svc.create = AsyncMock(side_effect=PreprocessingValidationError("No API key found for provider 'OpenAI'"))
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 422
+        assert "API key" in exc_info.value.detail
+
+    @pytest.mark.asyncio
+    async def test_update_missing_api_key_returns_422(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.memory_base.service import PreprocessingValidationError
+
+        svc = MagicMock()
+        svc.update = AsyncMock(side_effect=PreprocessingValidationError("No API key found for provider 'OpenAI'"))
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await update_memory_base(
+                memory_base_id=uuid.uuid4(),
+                current_user=mock_user,
+                patch=MemoryBaseUpdate(preprocessing=True, preproc_model="gpt-4o"),
+            )
+
+        assert exc_info.value.status_code == 422
+        assert "API key" in exc_info.value.detail
+
     # ---------------------------------------------------------------- #
     #  get_memory_base                                                  #
     # ---------------------------------------------------------------- #
@@ -1629,6 +1669,165 @@ class TestMemoriesAPIHandlers:
 
         ids = ["a", "b", "c"]
         assert RegenerateResponse(job_ids=ids).job_ids == ids
+
+
+# ------------------------------------------------------------------ #
+#  Preprocessing API key validation tests                              #
+# ------------------------------------------------------------------ #
+
+
+class TestPreprocessingApiKeyValidation:
+    """_validate_preprocessing_api_key raises PreprocessingValidationError when key is absent."""
+
+    def test_no_op_when_preproc_model_is_none(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        # Should not raise — no model means no key needed.
+        _validate_preprocessing_api_key(uuid.uuid4(), None)
+
+    def test_raises_when_api_key_missing(self):
+        from langflow.services.memory_base.service import (
+            PreprocessingValidationError,
+            _validate_preprocessing_api_key,
+        )
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_passes_when_api_key_present(self):
+        from langflow.services.memory_base.service import _validate_preprocessing_api_key
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value="sk-valid-key",
+            ),
+        ):
+            # Should not raise.
+            _validate_preprocessing_api_key(uuid.uuid4(), "gpt-4o")
+
+    def test_raises_when_provider_unknown(self):
+        from langflow.services.memory_base.service import (
+            PreprocessingValidationError,
+            _validate_preprocessing_api_key,
+        )
+
+        with (
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                side_effect=ValueError("Unknown model 'ghost-model'"),
+            ),
+            pytest.raises(PreprocessingValidationError, match="Unknown model"),
+        ):
+            _validate_preprocessing_api_key(uuid.uuid4(), "ghost-model")
+
+    @pytest.mark.asyncio
+    async def test_service_create_raises_preprocessing_validation_error_on_missing_key(self):
+        """create() raises PreprocessingValidationError before touching the filesystem."""
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.memory_base.service import (
+            MemoryBaseService,
+            PreprocessingValidationError,
+        )
+
+        service = MemoryBaseService()
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=flow_id,
+            preprocessing=True,
+            preproc_model="gpt-4o",
+        )
+
+        owned_flow = Flow(id=flow_id, user_id=user_id, name="my flow")
+        exec_result = MagicMock()
+        exec_result.first.return_value = owned_flow
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=exec_result)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        fake_scope = MagicMock(return_value=FakeCtx())
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            await service.create(payload, user_id=user_id)
+
+    @pytest.mark.asyncio
+    async def test_service_update_raises_preprocessing_validation_error_on_missing_key(self):
+        """update() raises PreprocessingValidationError when enabling preprocessing without a key."""
+        from langflow.services.memory_base.service import (
+            MemoryBaseService,
+            PreprocessingValidationError,
+        )
+
+        service = MemoryBaseService()
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id)
+        mb.preprocessing = False
+        mb.preproc_model = None
+
+        exec_result = MagicMock()
+        exec_result.first.return_value = mb
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=exec_result)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        fake_scope = MagicMock(return_value=FakeCtx())
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", fake_scope),
+            patch(
+                "langflow.services.memory_base.service.infer_llm_provider",
+                return_value="OpenAI",
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value=None,
+            ),
+            pytest.raises(PreprocessingValidationError, match="No API key"),
+        ):
+            await service.update(
+                mb.id,
+                user_id,
+                MemoryBaseUpdate(preprocessing=True, preproc_model="gpt-4o"),
+            )
 
 
 # ------------------------------------------------------------------ #

@@ -17,17 +17,21 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.models.unified_models import get_api_key_for_provider
 from sqlmodel import col, select
 
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
     MemoryBaseCreate,
+    MemoryBasePreprocessingOutput,
     MemoryBaseSession,
     MemoryBaseUpdate,
+    MessageIngestionRecord,
 )
+from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
-from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+from langflow.services.memory_base.embedding_helpers import infer_embedding_provider, infer_llm_provider
 from langflow.services.memory_base.ingestion import (
     cancel_active_jobs,
 )
@@ -54,6 +58,27 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+class PreprocessingValidationError(ValueError):
+    """Raised when preprocessing is enabled but the provider API key is absent."""
+
+
+def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
+    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+    if not preproc_model:
+        return
+    try:
+        provider = infer_llm_provider(preproc_model)
+    except ValueError as exc:
+        raise PreprocessingValidationError(str(exc)) from exc
+    api_key = get_api_key_for_provider(user_id, provider)
+    if not api_key:
+        msg = (
+            f"No API key found for provider '{provider}' (required for preprocessing model "
+            f"'{preproc_model}'). Add the key to your global variables before enabling preprocessing."
+        )
+        raise PreprocessingValidationError(msg)
+
+
 class MemoryBaseService(Service):
     """Service layer for MemoryBase CRUD and session state management."""
 
@@ -72,6 +97,10 @@ class MemoryBaseService(Service):
             if flow_result.first() is None:
                 msg = f"Flow {payload.flow_id} not found"
                 raise PermissionError(msg)
+
+        # 1b. Validate preprocessing API key before touching the filesystem.
+        if payload.preprocessing:
+            _validate_preprocessing_api_key(user_id, payload.preproc_model)
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
@@ -151,6 +180,13 @@ class MemoryBaseService(Service):
             mb = result.first()
             if mb is None:
                 return None
+
+            # Validate API key before committing if preprocessing will be active after the patch.
+            effective_preprocessing = patch.preprocessing if patch.preprocessing is not None else mb.preprocessing
+            effective_preproc_model = patch.preproc_model if patch.preproc_model is not None else mb.preproc_model
+            if effective_preprocessing:
+                _validate_preprocessing_api_key(user_id, effective_preproc_model)
+
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)
             db.add(mb)
@@ -189,6 +225,49 @@ class MemoryBaseService(Service):
         """Raise ValueError if the Memory Base does not belong to user_id."""
         async with session_scope() as db:
             await self.get_memory_base_or_404(db, memory_base_id, user_id)
+
+    def session_raw_messages_stmt(self, memory_base_id: uuid.UUID, session_id: str):  # type: ignore[return]
+        """Statement for paginating raw ingested messages for a non-preprocessing MB.
+
+        INNER JOIN — only messages actually ingested into this MB/session pair.
+        ``session_id`` denormalized on ``MessageIngestionRecord`` is immutable, so
+        no extra ``MessageTable.session_id`` filter is needed.
+
+        Caller (the controller) verifies MB ownership before invoking — keeping
+        ownership in the API layer where ``CurrentActiveUser`` is materialized.
+        """
+        from sqlalchemy import and_
+
+        return (
+            select(MessageTable, MessageIngestionRecord)
+            .join(
+                MessageIngestionRecord,
+                and_(
+                    MessageIngestionRecord.message_id == MessageTable.id,
+                    MessageIngestionRecord.memory_base_id == memory_base_id,
+                    MessageIngestionRecord.session_id == session_id,
+                ),
+            )
+            .order_by(col(MessageTable.timestamp).asc())
+        )
+
+    def session_preprocessed_outputs_stmt(  # type: ignore[return]
+        self, memory_base_id: uuid.UUID, session_id: str
+    ):
+        """Statement for paginating preprocessed (LLM-distilled) outputs.
+
+        Used in place of ``session_raw_messages_stmt`` when ``mb.preprocessing``
+        is True — for those MBs the KB stores the LLM output, not the raw rows.
+        Only ``ingested`` rows are returned; ``processed`` rows are not yet in
+        the KB and ``skipped`` rows have no content to surface.
+        """
+        return (
+            select(MemoryBasePreprocessingOutput)
+            .where(MemoryBasePreprocessingOutput.memory_base_id == memory_base_id)
+            .where(MemoryBasePreprocessingOutput.session_id == session_id)
+            .where(MemoryBasePreprocessingOutput.status == "ingested")
+            .order_by(col(MemoryBasePreprocessingOutput.created_at).asc())
+        )
 
     def sessions_stmt(self, memory_base_id: uuid.UUID, user_id: uuid.UUID):  # type: ignore[return]
         """Return the select statement for persisted sessions, for use with apaginate.
