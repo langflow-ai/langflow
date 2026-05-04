@@ -224,6 +224,55 @@ describe("Attached flows section", () => {
     expect(versionLabels.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("uses entry keys so all sidebar-attached flows appear in review", () => {
+    setup(
+      {
+        selectedVersionByFlow: new Map([
+          [
+            "legacy-basic",
+            {
+              key: "flow-basic:ver-2",
+              flowId: "flow-basic",
+              flowName: "Basic Prompting",
+              versionId: "ver-2",
+              versionTag: "v2",
+            },
+          ],
+          [
+            "legacy-blog",
+            {
+              key: "flow-blog:ver-1",
+              flowId: "flow-blog",
+              flowName: "Blog Writer",
+              versionId: "ver-1",
+              versionTag: "v1",
+            },
+          ],
+          [
+            "legacy-new",
+            {
+              key: "flow-new:ver-2",
+              flowId: "flow-new",
+              flowName: "New Flow",
+              versionId: "ver-2",
+              versionTag: "v2",
+            },
+          ],
+        ]),
+        removedFlowIds: new Set(["legacy-blog"]),
+      },
+      [
+        { id: "flow-basic", name: "Basic Prompting", folder_id: "folder-1" },
+        { id: "flow-blog", name: "Blog Writer", folder_id: "folder-1" },
+        { id: "flow-new", name: "New Flow", folder_id: "folder-1" },
+      ],
+    );
+
+    expect(screen.getAllByText("Basic Prompting").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Blog Writer").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("New Flow").length).toBeGreaterThan(0);
+  });
+
   it("shows 'Unknown' for flows not found in flowsData", () => {
     setup(
       {

@@ -608,6 +608,30 @@ describe("Create mode — flow version selection", () => {
 
     expect(result.current.selectedVersionByFlow.size).toBe(3);
   });
+
+  it("handleRemoveAttachedFlow removes newly attached flow-version data", () => {
+    const { result } = renderCreateHook();
+    const attachmentKey = flowVersionKey("flow-1", "ver-1");
+
+    act(() => {
+      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.setToolNameByFlow(new Map([[attachmentKey, "Flow v1"]]));
+      result.current.setAttachedConnectionByFlow(
+        new Map([[attachmentKey, ["conn-1"]]]),
+      );
+    });
+
+    act(() => {
+      result.current.handleRemoveAttachedFlow(attachmentKey);
+    });
+
+    expect(result.current.selectedVersionByFlow.has(attachmentKey)).toBe(false);
+    expect(result.current.toolNameByFlow.has(attachmentKey)).toBe(false);
+    expect(result.current.attachedConnectionByFlow.has(attachmentKey)).toBe(
+      false,
+    );
+    expect(result.current.removedFlowIds.has(attachmentKey)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

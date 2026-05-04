@@ -76,14 +76,17 @@ export default function StepReview() {
   const removedReviewFlows = useMemo(
     () =>
       Array.from(selectedVersionByFlow.entries())
-        .filter(([attachmentKey]) => removedFlowIds.has(attachmentKey))
+        .filter(([attachmentKey, entry]) =>
+          removedFlowIds.has(entry.key ?? attachmentKey),
+        )
         .map(([attachmentKey, entry]) => {
+          const normalizedAttachmentKey = entry.key ?? attachmentKey;
           const flowName =
             allFlows.find((flow) => flow.id === entry.flowId)?.name ??
             entry.flowName ??
             "Unknown flow";
           return {
-            attachmentKey,
+            attachmentKey: normalizedAttachmentKey,
             flowName,
             versionLabel: entry.versionTag || entry.versionId,
           };

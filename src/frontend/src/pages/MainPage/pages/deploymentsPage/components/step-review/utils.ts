@@ -57,6 +57,7 @@ interface BuildReviewFlowsParams {
   selectedVersionByFlow: Map<
     string,
     {
+      key?: string;
       flowId?: string;
       flowName?: string;
       versionId: string;
@@ -77,19 +78,21 @@ export function buildReviewFlows({
 }: BuildReviewFlowsParams): ReviewFlowItem[] {
   const selectedItems = Array.from(selectedVersionByFlow.entries()).map(
     ([attachmentKey, entry]) => ({
-      attachmentKey,
+      attachmentKey: entry.key ?? attachmentKey,
       flowId: entry.flowId ?? attachmentKey,
     }),
   );
 
   return Array.from(selectedVersionByFlow.entries())
     .map(([attachmentKey, entry]) => {
-      if (removedFlowIds.has(attachmentKey)) {
+      const normalizedAttachmentKey = entry.key ?? attachmentKey;
+      if (removedFlowIds.has(normalizedAttachmentKey)) {
         return null;
       }
       const flowId = entry.flowId ?? attachmentKey;
       const flow = allFlows.find((item) => item.id === flowId);
       const connectionIds =
+        attachedConnectionByFlow.get(normalizedAttachmentKey) ??
         attachedConnectionByFlow.get(attachmentKey) ??
         attachedConnectionByFlow.get(flowId) ??
         [];
@@ -124,7 +127,7 @@ export function buildReviewFlows({
       );
 
       return {
-        attachmentKey,
+        attachmentKey: normalizedAttachmentKey,
         flowId,
         flowName,
         toolName:

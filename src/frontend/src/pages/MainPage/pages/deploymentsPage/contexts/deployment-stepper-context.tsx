@@ -302,9 +302,29 @@ export function DeploymentStepperProvider({
             (entry) => entry.flowId === attachmentKeyOrFlowId,
           )?.key;
       if (!resolvedKey) return;
-      setRemovedFlowIds((prev) => new Set([...Array.from(prev), resolvedKey]));
+      if (preExistingFlowIds.has(resolvedKey)) {
+        setRemovedFlowIds(
+          (prev) => new Set([...Array.from(prev), resolvedKey]),
+        );
+        return;
+      }
+      setSelectedVersionByFlow((prev) => {
+        const next = new Map(prev);
+        next.delete(resolvedKey);
+        return next;
+      });
+      setToolNameByFlow((prev) => {
+        const next = new Map(prev);
+        next.delete(resolvedKey);
+        return next;
+      });
+      setAttachedConnectionByFlow((prev) => {
+        const next = new Map(prev);
+        next.delete(resolvedKey);
+        return next;
+      });
     },
-    [selectedVersionByFlow],
+    [preExistingFlowIds, selectedVersionByFlow],
   );
 
   const handleUndoRemoveFlow = useCallback((attachmentKey: string) => {
