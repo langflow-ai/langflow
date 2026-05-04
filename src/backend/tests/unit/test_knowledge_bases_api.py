@@ -919,6 +919,58 @@ class TestKnowledgeBaseAPI:
         assert "NonExistent" in data["not_found"]
         assert mock_delete.called
 
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_skips_memory_base_kbs(
+        self,
+        mock_root,
+        mock_delete,
+        mock_meta,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        # Memory-Base KBs in a bulk request must be reported back as
+        # ``memory_base_skipped`` and NOT touched on disk; non-MB KBs in
+        # the same request still delete normally.
+        mock_root.return_value = tmp_path
+        kb_user_path = tmp_path / "activeuser"
+        kb_user_path.mkdir(parents=True)
+        (kb_user_path / "PlainKB").mkdir()
+        (kb_user_path / "MBKB").mkdir()
+
+        def fake_meta(kb_path, **_kwargs):
+            if kb_path.name == "MBKB":
+                return {
+                    "id": "00000000-0000-0000-0000-0000000000cc",
+                    "embedding_provider": "OpenAI",
+                    "embedding_model": "text-embedding-3-small",
+                    "source_types": ["memory"],
+                }
+            return {
+                "id": "00000000-0000-0000-0000-0000000000dd",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            }
+
+        mock_meta.side_effect = fake_meta
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["PlainKB", "MBKB"]},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["deleted_count"] == 1
+        assert data.get("memory_base_skipped") == "MBKB"
+        # delete_storage must only have been called for the non-MB KB.
+        deleted_paths = [call.args[0].name for call in mock_delete.call_args_list]
+        assert "PlainKB" in deleted_paths
+        assert "MBKB" not in deleted_paths
+
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_bulk_delete_path_traversal_single_level(
         self, mock_root, client: AsyncClient, logged_in_headers, tmp_path

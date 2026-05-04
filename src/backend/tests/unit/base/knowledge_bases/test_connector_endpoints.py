@@ -255,3 +255,67 @@ class TestFolderIngest:
 
         assert response.status_code == 422
         assert "chunk_size" in response.text
+
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_folder_ingest_blocked_for_memory_base_kb(
+        self,
+        mock_root,
+        mock_meta,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        # Memory-Base-managed KBs must not be mutable through the
+        # generic folder-ingest endpoint — they are owned by the
+        # Memory Base APIs.
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "mb_kb"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-0000000000aa",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+            "source_types": ["memory"],
+        }
+
+        response = await client.post(
+            "api/v1/knowledge_bases/mb_kb/ingest/folder",
+            headers=logged_in_headers,
+            json={"path": str(tmp_path), "chunk_size": 500, "chunk_overlap": 100},
+        )
+
+        assert response.status_code == 403
+        assert "managed by a Memory Base" in response.json()["detail"]
+
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_connector_ingest_blocked_for_memory_base_kb(
+        self,
+        mock_root,
+        mock_meta,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        # Same guard for the generic connector dispatcher.
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "mb_connector_kb"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-0000000000bb",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+            "source_types": ["memory"],
+        }
+
+        response = await client.post(
+            "api/v1/knowledge_bases/mb_connector_kb/ingest/connector",
+            headers=logged_in_headers,
+            json={"source_type": "folder", "source_config": {"path": str(tmp_path)}},
+        )
+
+        assert response.status_code == 403
+        assert "managed by a Memory Base" in response.json()["detail"]

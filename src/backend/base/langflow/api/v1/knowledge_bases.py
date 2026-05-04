@@ -919,7 +919,11 @@ class IngestFolderRequest(BaseModel):
     )
 
 
-@router.post("/{kb_name}/ingest/folder", status_code=HTTPStatus.OK)
+@router.post(
+    "/{kb_name}/ingest/folder",
+    status_code=HTTPStatus.OK,
+    dependencies=[Depends(_check_memory_base_association)],
+)
 async def ingest_folder_to_knowledge_base(
     kb_name: str,
     current_user: CurrentActiveUser,
@@ -928,10 +932,10 @@ async def ingest_folder_to_knowledge_base(
     """Ingest every matching file from a server-side folder.
 
     Uses ``FolderSource`` with the allow-list configured in
-    ``settings.kb_allowed_folder_roots`` (defaults to the user's home
-    directory). The resolved path must be equal to or inside one of
-    those roots — symlink escapes are blocked because ``Path.resolve()``
-    is applied before the containment check.
+    ``settings.kb_allowed_folder_roots`` (defaults to an empty list —
+    operators must opt in). The resolved path must be equal to or
+    inside one of those roots — symlink escapes are blocked because
+    ``Path.resolve()`` is applied before the containment check.
 
     Returns a ``TaskResponse`` pointing at the ingestion job; track it
     via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
@@ -1398,7 +1402,11 @@ async def get_knowledge_base_chunks(
             KBStorageHelper.release_chroma_resources(kb_path)
 
 
-@router.post("/{kb_name}/ingest/connector", status_code=HTTPStatus.OK)
+@router.post(
+    "/{kb_name}/ingest/connector",
+    status_code=HTTPStatus.OK,
+    dependencies=[Depends(_check_memory_base_association)],
+)
 async def ingest_via_connector(
     kb_name: str,
     payload: ConnectorIngestRequest,
@@ -1675,6 +1683,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         deleted_count = 0
         not_found_kbs = []
         failed_kbs = []
+        memory_base_kbs: list[str] = []
         remote_warnings: list[str] = []
 
         for kb_name in request.kb_names:
@@ -1700,6 +1709,15 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                     continue
                 raise  # Re-raise 403 (traversal) and 500 errors
 
+            # Mirror the per-KB Memory-Base guard the single-delete /
+            # ingest / chunks routes apply via dependency. Memory-Base
+            # KBs are managed through the Memory Base APIs and must
+            # not be deletable through the generic bulk endpoint.
+            kb_metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+            if _is_memory_base_associated(kb_metadata):
+                memory_base_kbs.append(kb_name)
+                continue
+
             try:
                 remote_warning = await _delete_remote_backend_collection(
                     kb_name=kb_name,
@@ -1722,7 +1740,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 # Continue with other deletions even if one fails
                 failed_kbs.append(kb_name)
 
-        if not_found_kbs and deleted_count == 0:
+        if not_found_kbs and deleted_count == 0 and not memory_base_kbs:
             raise HTTPException(
                 status_code=404, detail="Knowledge bases not found: {}".format(", ".join(not_found_kbs))
             )
@@ -1736,6 +1754,8 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
             result["not_found"] = ", ".join(not_found_kbs)
         if failed_kbs:
             result["failed"] = ", ".join(failed_kbs)
+        if memory_base_kbs:
+            result["memory_base_skipped"] = ", ".join(memory_base_kbs)
         if remote_warnings:
             result["warnings"] = remote_warnings
 
