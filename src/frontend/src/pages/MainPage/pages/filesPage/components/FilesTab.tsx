@@ -77,12 +77,14 @@ const FilesTab = ({
       const filesIds = await uploadFile({
         files: files,
       });
-      setSuccessData({
+      if (filesIds.length > 0) {
+        setSuccessData({
         title:
           filesIds.length > 1
             ? t("files.filesUploadedSuccessfully")
             : t("files.uploadedSuccessfully"),
-      });
+        });
+      }
     } catch (error: any) {
       setErrorData({
         title: t("files.errorUploading"),
