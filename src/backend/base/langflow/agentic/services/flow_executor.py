@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
-from lfx.execution import StepResult, get_default_coordinator
+from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
@@ -61,11 +61,10 @@ async def _run_graph_with_events(
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
         results = [
-            item.payload
-            async for item in get_default_coordinator().run(
-                graph, inputs=[], initial_inputs=inputs, event_manager=event_manager
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph, initial_inputs=inputs, event_manager=event_manager
             )
-            if isinstance(item, StepResult)
         ]
         execution_result.result = extract_structured_result(results)
     except Exception as e:  # noqa: BLE001
@@ -138,11 +137,7 @@ async def execute_flow_file(
         graph.prepare()
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-        results = [
-            item.payload
-            async for item in get_default_coordinator().run(graph, inputs=[], initial_inputs=inputs)
-            if isinstance(item, StepResult)
-        ]
+        results = [payload async for payload in get_default_coordinator().stream(graph, initial_inputs=inputs)]
         flow_result = extract_structured_result(results)
     except HTTPException:
         raise

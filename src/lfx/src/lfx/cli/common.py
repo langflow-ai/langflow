@@ -29,6 +29,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
+from lfx.execution import get_default_coordinator
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
@@ -349,14 +350,11 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        from lfx.execution import StepResult, get_default_coordinator
-
         results = [
-            item.payload
-            async for item in get_default_coordinator().run(
-                graph, inputs=[], initial_inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph, initial_inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
             )
-            if isinstance(item, StepResult)
         ]
     except Exception as exc:
         # Capture any error output that was written to stderr
