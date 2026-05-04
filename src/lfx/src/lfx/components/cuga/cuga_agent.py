@@ -368,7 +368,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 sender_name="Cuga",
                 properties={"icon": "Bot", "state": "partial"},
                 content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-                session_id=self.graph.session_id,
+                session_id=self.graph.session_id or str(uuid.uuid4()),
             )
 
             # Pre-assign an ID for event processing, following the base agent pattern

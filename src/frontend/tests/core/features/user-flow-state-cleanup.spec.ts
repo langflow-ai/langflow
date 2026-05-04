@@ -115,13 +115,34 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    // Match the canvas_controls_dropdown wait used elsewhere in the suite
-    // (tests/core/features/token-usage.spec.ts, chatInputOutput.spec.ts):
-    // the new-flow canvas can take well over 30s to mount on slower runners.
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
+
+    const basicPromptingHeading = page.getByRole("heading", {
+      name: "Basic Prompting",
     });
+    await basicPromptingHeading.waitFor({ state: "visible", timeout: 30000 });
+
+    // Retry the template click if the canvas never mounts: on Windows CI the
+    // first click occasionally lands before the template grid is interactive.
+    let canvasMounted = false;
+    const maxClickAttempts = 3;
+    for (let attempt = 1; attempt <= maxClickAttempts; attempt++) {
+      await basicPromptingHeading.click();
+      try {
+        await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+          timeout: attempt === maxClickAttempts ? 100000 : 45000,
+        });
+        canvasMounted = true;
+        break;
+      } catch (_error) {
+        if (attempt === maxClickAttempts) throw _error;
+        const modalStillOpen =
+          (await page.getByTestId("modal-title").count()) > 0;
+        if (!modalStillOpen) throw _error;
+      }
+    }
+    if (!canvasMounted) {
+      throw new Error("canvas_controls_dropdown never appeared");
+    }
 
     await renameFlow(page, { flowName: userAFlowName });
 
