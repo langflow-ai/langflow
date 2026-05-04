@@ -1,3 +1,7 @@
+import {
+  getFlowVersionCount,
+  getScopedValueForUniqueFlowVersion,
+} from "../../helpers/version-scope";
 import type { ConnectionItem } from "../../types";
 import { getDefaultDeploymentToolName } from "../../types";
 import type { ReviewFlowItem } from "./types";
@@ -12,19 +16,12 @@ function getToolNameForReview(
   flowId: string,
   items: Array<{ attachmentKey: string; flowId: string }>,
 ) {
-  const strictValue = toolNameByFlow.get(attachmentKey)?.trim();
-  if (strictValue) {
-    return strictValue;
-  }
-
-  const flowVersionCount = items.filter(
-    (item) => item.flowId === flowId,
-  ).length;
-  if (flowVersionCount > 1) {
-    return undefined;
-  }
-
-  return toolNameByFlow.get(flowId)?.trim();
+  return getScopedValueForUniqueFlowVersion(
+    toolNameByFlow,
+    attachmentKey,
+    flowId,
+    getFlowVersionCount(items, flowId),
+  )?.trim();
 }
 
 function getInitialToolNameForReview(
@@ -33,19 +30,12 @@ function getInitialToolNameForReview(
   flowId: string,
   items: ReviewFlowItem[],
 ) {
-  const strictValue = initialToolNameByFlow.get(attachmentKey);
-  if (strictValue !== undefined) {
-    return strictValue;
-  }
-
-  const flowVersionCount = items.filter(
-    (item) => item.flowId === flowId,
-  ).length;
-  if (flowVersionCount > 1) {
-    return undefined;
-  }
-
-  return initialToolNameByFlow.get(flowId);
+  return getScopedValueForUniqueFlowVersion(
+    initialToolNameByFlow,
+    attachmentKey,
+    flowId,
+    getFlowVersionCount(items, flowId),
+  );
 }
 
 interface BuildReviewFlowsParams {

@@ -20,6 +20,12 @@ import type {
   DeploymentConnectionPayload,
   DeploymentCreateRequest,
 } from "@/controllers/API/queries/deployments/use-post-deployment";
+import {
+  getFlowVersionCount,
+  getScopedValueForUniqueFlowVersion,
+  getValueByAttachmentKeyOrFlowId,
+  normalizeSelectedFlowVersions,
+} from "../helpers/version-scope";
 import type {
   ConnectionItem,
   Deployment,
@@ -131,55 +137,18 @@ interface DeploymentStepperContextType {
 const DeploymentStepperContext =
   createContext<DeploymentStepperContextType | null>(null);
 
-function normalizeSelectedFlowVersions(
-  versions?: Map<string, SelectedFlowVersion>,
-): Map<string, SelectedFlowVersion> {
-  const next = new Map<string, SelectedFlowVersion>();
-  for (const [key, value] of versions ?? new Map()) {
-    const flowId = value.flowId ?? key;
-    const versionId = value.versionId;
-    const normalizedKey = value.flowId
-      ? getSelectedFlowVersionKey(flowId, versionId)
-      : key;
-    next.set(normalizedKey, {
-      key: normalizedKey,
-      flowId,
-      flowName: value.flowName,
-      versionId,
-      versionTag: value.versionTag,
-    });
-  }
-  return next;
-}
-
-function getScopedValue<T>(
-  map: Map<string, T>,
-  attachmentKey: string,
-  flowId: string,
-): T | undefined {
-  return map.get(attachmentKey) ?? map.get(flowId);
-}
-
 function getScopedToolName(
   map: Map<string, string>,
   attachmentKey: string,
   flowId: string,
   versionMap: Map<string, SelectedFlowVersion>,
 ): string | undefined {
-  const strictValue = map.get(attachmentKey);
-  if (strictValue !== undefined) {
-    return strictValue;
-  }
-
-  const flowVersionCount = Array.from(versionMap.values()).filter(
-    (entry) => entry.flowId === flowId,
-  ).length;
-
-  if (flowVersionCount > 1) {
-    return undefined;
-  }
-
-  return map.get(flowId);
+  return getScopedValueForUniqueFlowVersion(
+    map,
+    attachmentKey,
+    flowId,
+    getFlowVersionCount(versionMap.values(), flowId),
+  );
 }
 
 export function DeploymentStepperProvider({
@@ -499,7 +468,7 @@ export function DeploymentStepperProvider({
       )) {
         if (removedFlowIds.has(attachmentKey)) continue;
         const connectionIds =
-          getScopedValue(
+          getValueByAttachmentKeyOrFlowId(
             attachedConnectionByFlow,
             attachmentKey,
             versionEntry.flowId,
@@ -588,7 +557,7 @@ export function DeploymentStepperProvider({
         if (removedFlowIds.has(attachmentKey)) continue;
         if (initialVersionByFlow.has(attachmentKey)) continue;
         const connectionIds =
-          getScopedValue(
+          getValueByAttachmentKeyOrFlowId(
             attachedConnectionByFlow,
             attachmentKey,
             versionEntry.flowId,
@@ -637,13 +606,13 @@ export function DeploymentStepperProvider({
         const nameChanged = currentName && currentName !== originalName;
 
         const currentConnections =
-          getScopedValue(
+          getValueByAttachmentKeyOrFlowId(
             attachedConnectionByFlow,
             attachmentKey,
             versionEntry.flowId,
           ) ?? [];
         const originalConnections =
-          getScopedValue(
+          getValueByAttachmentKeyOrFlowId(
             initialConnectionsByFlow,
             attachmentKey,
             versionEntry.flowId,
