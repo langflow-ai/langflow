@@ -86,4 +86,60 @@ describe("usePatchMCPServer", () => {
       queryKey: ["useGetMCPServer", "my-server"],
     });
   });
+
+  it("clears cached error and mode in the optimistic update so a stuck error state refreshes", async () => {
+    mockApiPatch.mockResolvedValue({ data: {} });
+
+    const mutation = usePatchMCPServer();
+    await mutation.mutate({
+      name: "my-server",
+      url: "http://host/sse",
+    });
+
+    const setQueryDataCall = mockQueryClient.setQueryData.mock.calls.find(
+      ([key]: [unknown]) =>
+        Array.isArray(key) && key[0] === "useGetMCPServers",
+    );
+    expect(setQueryDataCall).toBeDefined();
+
+    const updater = setQueryDataCall![1] as (
+      data: Array<{
+        name: string;
+        toolsCount: number | null;
+        mode: string | null;
+        error?: string;
+      }>,
+    ) => Array<{
+      name: string;
+      toolsCount: number | null;
+      mode: string | null;
+      error?: string;
+    }>;
+
+    const updated = updater([
+      {
+        name: "my-server",
+        toolsCount: null,
+        mode: null,
+        error: "Connection refused",
+      },
+      {
+        name: "other-server",
+        toolsCount: 5,
+        mode: "streamable_http",
+      },
+    ]);
+
+    expect(updated[0]).toEqual({
+      name: "my-server",
+      toolsCount: null,
+      mode: null,
+      error: undefined,
+    });
+    expect(updated[1]).toEqual({
+      name: "other-server",
+      toolsCount: 5,
+      mode: "streamable_http",
+    });
+  });
 });
