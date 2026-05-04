@@ -166,6 +166,10 @@ class TestTraceSummaryReadIoFields:
         summary = TraceSummaryRead(**{**_TRACE_SUMMARY_DEFAULTS, "input": "plain string"})
         assert summary.input == "plain string"
 
+    def test_should_accept_arbitrary_string_as_output(self):
+        summary = TraceSummaryRead(**{**_TRACE_SUMMARY_DEFAULTS, "output": "plain string"})
+        assert summary.output == "plain string"
+
     def test_should_default_input_and_output_to_none(self):
         summary = TraceSummaryRead(**_TRACE_SUMMARY_DEFAULTS)
         assert summary.input is None
