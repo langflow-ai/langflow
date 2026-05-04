@@ -132,7 +132,11 @@ export default function KnowledgeBaseUploadModal({
       }
       icon="Database"
       height={
-        !hideAdvanced && form.showAdvanced ? "min-h-[690px]" : "min-h-[347px]"
+        form.currentStep === 2
+          ? "h-[690px]"
+          : !hideAdvanced && form.showAdvanced
+            ? "min-h-[690px]"
+            : "min-h-[347px]"
       }
       width="w-[700px]"
       showProgress={false}
