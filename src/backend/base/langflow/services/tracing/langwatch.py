@@ -116,19 +116,17 @@ class LangWatchTracer(BaseTracer):
 
     def _uninstrument_http_clients(self) -> None:
         """Uninstrument HTTP clients."""
-        try:
+        import contextlib
+
+        with contextlib.suppress(ImportError, Exception):
             from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
             RequestsInstrumentor().uninstrument()
-        except (ImportError, Exception):  # noqa: BLE001
-            pass
 
-        try:
+        with contextlib.suppress(ImportError, Exception):
             from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
 
             URLLib3Instrumentor().uninstrument()
-        except (ImportError, Exception):  # noqa: BLE001
-            pass
 
     @override
     def add_trace(
@@ -199,10 +197,11 @@ class LangWatchTracer(BaseTracer):
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client._api_key:
-            try:
+            import contextlib
+
+            with contextlib.suppress(ValueError):
+                # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
-            except ValueError:  # ignoring token was created in a different Context errors
-                pass
 
         self._uninstrument_http_clients()
 

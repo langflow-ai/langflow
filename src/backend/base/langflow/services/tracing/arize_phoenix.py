@@ -239,19 +239,17 @@ class ArizePhoenixTracer(BaseTracer):
 
     def _uninstrument_http_clients(self) -> None:
         """Uninstrument HTTP clients."""
-        try:
+        import contextlib
+
+        with contextlib.suppress(ImportError, Exception):
             from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
             RequestsInstrumentor().uninstrument()
-        except (ImportError, Exception):  # noqa: BLE001
-            pass
 
-        try:
+        with contextlib.suppress(ImportError, Exception):
             from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
 
             URLLib3Instrumentor().uninstrument()
-        except (ImportError, Exception):  # noqa: BLE001
-            pass
 
     @override
     def add_trace(
