@@ -936,9 +936,7 @@ class TestIDX03ReadPath:
 
         from lfx.interface import components as ci
 
-        assert _inspect.iscoroutinefunction(ci._read_component_index), (
-            "_read_component_index should be async def"
-        )
+        assert _inspect.iscoroutinefunction(ci._read_component_index), "_read_component_index should be async def"
 
     async def test_read_does_not_block_event_loop(self, tmp_path):
         """While _read_component_index runs, a concurrent task still makes progress.
