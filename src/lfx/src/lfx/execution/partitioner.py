@@ -1,4 +1,4 @@
-"""Identity partitioner — one unit per graph."""
+"""Identity partitioner: one unit per graph."""
 
 from __future__ import annotations
 

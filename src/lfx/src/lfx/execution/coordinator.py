@@ -5,13 +5,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from lfx.execution.partitioner import identity_partition
-from lfx.execution.types import RunComplete
+from lfx.execution.types import RunComplete, StepResult
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from lfx.execution.registry import ExecutorRegistry
-    from lfx.execution.types import StepResult
 
 
 class Coordinator:
@@ -49,3 +48,14 @@ class Coordinator:
                 return item.outputs
         msg = "Executor stream ended without a RunComplete"
         raise RuntimeError(msg)
+
+    async def stream(
+        self,
+        graph: Any,
+        *,
+        inputs: list[dict[str, Any]] | None = None,
+        **runtime_options: Any,
+    ) -> AsyncIterator[Any]:
+        async for item in self.run(graph, inputs=inputs or [], **runtime_options):
+            if isinstance(item, StepResult):
+                yield item.payload
