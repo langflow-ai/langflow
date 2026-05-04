@@ -97,9 +97,9 @@ To resolve this issue, install `protoc` using `brew install protobuf`.
 
 For more information, including alternative installation methods, see the [Protocol buffers installation documentation](https://protobuf.dev/installation/).
 
-### Langflow Installation Error: langflow-install-error
+### Langflow installation failed
 
-Langflow Desktop installed Langflow OSS but couldn't verify the installation. You might see error messages like `Langflow Installation Error: langflow-install-error`.
+Langflow Desktop installed Langflow OSS but couldn't verify the installation. You might see an error dialog with the title `Langflow Installation Failed` and the message `Langflow installation failed. Please check your internet connection and try again. If the problem persists, restart the application.`
 
 To resolve this error, clear Langflow Desktop's Python virtual environment:
 
@@ -110,9 +110,9 @@ To resolve this error, clear Langflow Desktop's Python virtual environment:
 
 If the issue persists, ensure you have installed Python version 3.10 or later, and it is accessible by your Langflow installation. If the Python version is correct, try reinstalling Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
 
-### Langflow Health Check Error: Timeout after 80 attempts
+### Langflow startup failed
 
-Langflow Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You might see an error message like `Langflow Health Check Error: Timeout after 80 attempts - Langflow did not become ready`.
+Langflow Desktop installed Langflow OSS but the OSS backend isn't responding to health checks. You might see an error dialog with the title `Langflow Startup Failed` and the message `Langflow failed to start properly. Please restart the application and try again.`
 
 To resolve this error, do the following:
 
@@ -123,12 +123,7 @@ To resolve this error, do the following:
 
 ### Failed to install uv or unable to find uv
 
-The following error messages mean that Langflow Desktop can't locate the `uv` executable on your system, even if it is installed:
-
-* `Failed to install uv: Unable to find uv executable`
-* `Unable to find uv executable for Python virtual environment setup`
-* `UV Installation Error: UV installation failed - binary not found after installation`
-* `Python Environment Error: UV binary not found at`
+Langflow Desktop can't locate or install the `uv` executable. You might see an error dialog with the title `UV Installation Failed` and the message `UV installation failed. Please check your internet connection and try again. If the problem persists, restart the application.`
 
 To resolve this error, do the following:
 
@@ -169,9 +164,9 @@ To resolve this error, do the following:
 
 3. Restart Langflow Desktop.
 
-### Python Environment Error: Creation failed
+### Python environment failed
 
-Langflow Desktop failed to create the Python virtual environment required for Langflow OSS. You might see error messages like `Python Environment Error: Creation failed:` followed by error details, `Python Environment Error: error_dns`, or other `Python Environment Error:` messages.
+Langflow Desktop failed to create the Python virtual environment required for Langflow OSS. You might see an error dialog with the title `Python Environment Failed` and the message `Python environment setup failed. Please ensure you have sufficient disk space and try again.`
 
 To resolve this error, do the following:
 
@@ -185,15 +180,15 @@ To resolve this error, do the following:
 
 If the issue persists, ensure Python version 3.10 or later is installed and accessible, or reinstall Langflow Desktop from [langflow.org/desktop](https://langflow.org/desktop).
 
-### Python Environment Error: Python check failed
+### Python environment failed: Python check failed
 
-Langflow Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You might see error messages like `Python Environment Error: Python check failed:` followed by error details, or other `Python Environment Error:` messages.
+Langflow Desktop created the Python virtual environment but couldn't verify that Python is working correctly. You might see an error dialog with the title `Python Environment Failed` and a message about Python verification.
 
-To resolve this error, see [Python Environment Error: Creation failed](#python-environment-error-creation-failed).
+To resolve this error, see [Python environment failed](#python-environment-failed).
 
-### Langflow Installation Error: error_xcode
+### Xcode Command Line Tools required
 
-Langflow Desktop requires [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) to install Langflow OSS on macOS. You might see error messages like `Langflow Installation Error: error_xcode` or a detailed message with the title `Xcode Command Line Tools required!`.
+Langflow Desktop requires [Xcode Command Line Tools](https://developer.apple.com/xcode/resources/) to install Langflow OSS on macOS. You might see an error dialog with the title `Xcode Command Line Tools required!` and instructions to run `xcode-select --install`.
 
 To resolve this error, do the following:
 
@@ -201,14 +196,14 @@ To resolve this error, do the following:
 2. Launch Xcode at least once. Xcode performs additional setup on first startup that other tools such as Git, VS Code, and Langflow Desktop depend on.
 3. Restart Langflow Desktop.
 
-### Langflow Installation Error: error_cpp
+### C++ build tools required
 
 Microsoft Windows installations of Langflow Desktop require a C++ compiler that might not be present on your system.
-If you receive a `Langflow Installation Error: error_cpp` error or a detailed message with the title `C++ Build Tools required!`, follow the on-screen prompt to install Microsoft C++ Build Tools, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
+You might see an error dialog with the title `C++ Build Tools required!` with instructions to install Microsoft C++ Build Tools. Follow the on-screen prompt, or install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/).
 
-### UV Installation Error: uv-manual-install-required
+### Manual UV installation required
 
-Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You might see error messages like `UV Installation Error: uv-manual-install-required` or a detailed manual installation message.
+Langflow Desktop tried multiple methods to automatically install `uv` but all attempts failed. Desktop requires `uv` to manage Python packages and virtual environments. You might see an error dialog with the title `Manual UV Installation Required` and instructions to install `uv` manually.
 
 To resolve this error, do the following:
 
