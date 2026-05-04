@@ -282,7 +282,8 @@ When running multiple local Langflow OSS instances on different ports, such as `
 For example:
 
 ```text
-[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - utils - User not found or inactive.
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - User not found
+[07/22/25 10:57:07] INFO     2025-07-22 10:57:07 - INFO     - User is inactive
 ```
 
 To resolve this error, use separate browser instances or browser profiles to access each Langflow instance.
@@ -307,7 +308,14 @@ To resolve this issue, remove `asyncpg` from your installation and use `psycopg2
 
 ### PostgreSQL version mismatch: `UNIQUE NULLS DISTINCT` syntax error
 
-The following error can occur when initializing Langflow with a PostgreSQL database:
+The following error can occur when initializing Langflow with a PostgreSQL database.
+Langflow logs a clear message and then exits:
+
+```text
+Langflow requires PostgreSQL 15 or higher when using PostgreSQL as the database. The current PostgreSQL version does not support the syntax used by Langflow's schema. Please upgrade your PostgreSQL instance to version 15 or higher.
+```
+
+You may also see the underlying SQL error in the traceback:
 
 ```text
 (psycopg.errors.SyntaxError) syntax error at or near "NULLS"
@@ -339,15 +347,21 @@ The following issues can occur when upgrading your Langflow version.
 
 For information about managing Langflow versions, see [Install Langflow](/get-started-installation).
 
-### Something went wrong running migrations
+### There's a mismatch between the models and the database
 
-The following error can occur during Langflow upgrades when the new version can't override `langflow-pre.db` in the Langflow cache folder:
+The following error can occur during Langflow upgrades when the database schema doesn't match the current version's models:
 
 ```bash
-> Something went wrong running migrations. Please, run 'langflow migration --fix'
+There's a mismatch between the models and the database.
 ```
 
-To resolve this error, clear the cache by deleting the contents of your Langflow cache folder.
+To resolve this error, run the migration fix command:
+
+```bash
+uv run langflow migration --fix
+```
+
+If the migration fix doesn't resolve the issue, clear the cache by deleting the contents of your Langflow cache folder.
 The filepath depends on your operating system, installation type, and configuration options.
 For more information and default filepaths, see [Memory management options](/memory).
 
