@@ -1,41 +1,21 @@
-from pathlib import Path
-from types import SimpleNamespace
+"""Regression tests for the cache factory after diskcache removal."""
 
-from langflow.services.cache.disk import AsyncDiskCache
-from langflow.services.cache.factory import CacheServiceFactory
+from __future__ import annotations
+
+import pytest
 from lfx.services.settings.base import Settings
+from pydantic import ValidationError
 
 
-def test_disk_cache_uses_cache_dir_setting(monkeypatch, tmp_path):
-    config_dir = tmp_path / "config"
-    cache_dir = tmp_path / "cache"
-    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_dir))
+def test_cache_type_disk_is_rejected(monkeypatch):
+    """LANGFLOW_CACHE_TYPE=disk must fail validation now that the disk backend is gone."""
     monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "disk")
-    monkeypatch.setenv("LANGFLOW_CACHE_DIR", str(cache_dir))
+    with pytest.raises(ValidationError):
+        Settings()
 
+
+@pytest.mark.parametrize("cache_type", ["async", "memory", "redis"])
+def test_supported_cache_types_validate(monkeypatch, cache_type):
+    monkeypatch.setenv("LANGFLOW_CACHE_TYPE", cache_type)
     settings = Settings()
-    cache = CacheServiceFactory().create(SimpleNamespace(settings=settings))
-
-    try:
-        assert isinstance(cache, AsyncDiskCache)
-        assert Path(settings.cache_dir) == cache_dir.resolve()
-        assert Path(cache.cache.directory) == cache_dir.resolve()
-    finally:
-        cache.cache.close()
-
-
-def test_disk_cache_falls_back_to_config_dir(monkeypatch, tmp_path):
-    config_dir = tmp_path / "config"
-    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_dir))
-    monkeypatch.setenv("LANGFLOW_CACHE_TYPE", "disk")
-    monkeypatch.delenv("LANGFLOW_CACHE_DIR", raising=False)
-
-    settings = Settings()
-    cache = CacheServiceFactory().create(SimpleNamespace(settings=settings))
-
-    try:
-        assert isinstance(cache, AsyncDiskCache)
-        assert settings.cache_dir is None
-        assert Path(cache.cache.directory) == config_dir.resolve()
-    finally:
-        cache.cache.close()
+    assert settings.cache_type == cache_type

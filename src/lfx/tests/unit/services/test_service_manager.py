@@ -427,7 +427,7 @@ class TestRealWorldScenarios:
         await service_manager.teardown()
         assert ServiceType.STORAGE_SERVICE not in service_manager.services
 
-    def test_multiple_services_working_together(self, service_manager):
+    async def test_multiple_services_working_together(self, service_manager):
         """Test multiple services can coexist and work together."""
         # Register all minimal services
         service_manager.register_service_class(ServiceType.STORAGE_SERVICE, LocalStorageService)
@@ -450,7 +450,7 @@ class TestRealWorldScenarios:
         # All should be usable
         tracing.add_log("test_trace", {"message": "test"})
         variables.set_variable("TEST_KEY", "test_value")
-        assert variables.get_variable("TEST_KEY") == "test_value"
+        assert await variables.get_variable("TEST_KEY") == "test_value"
 
     def test_config_file_with_all_minimal_services(self, service_manager, temp_config_dir):
         """Test loading all minimal services from config file."""
