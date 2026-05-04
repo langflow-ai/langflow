@@ -79,6 +79,10 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
     "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
     "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
+    "reload-in-progress": "error[reload-in-progress]: Reload already in progress for bundle 'content'; refuse to start a second concurrent reload.",  # noqa: E501
+    "reload-bundle-not-installed": "error[reload-bundle-not-installed]: Cannot reload bundle 'content': it is not registered. Install the extension first or pass an explicit source path.",  # noqa: E501
+    "reload-bundle-name-mismatch": "error[reload-bundle-name-mismatch]: Reload source at loc declares bundle name 'content', which does not match the registered bundle being reloaded.",  # noqa: E501
+    "reload-source-missing": "error[reload-source-missing]: Reload source path 'content' for bundle 'loc' does not exist or is not a directory.",  # noqa: E501
 }
 
 

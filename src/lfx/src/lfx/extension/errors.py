@@ -61,6 +61,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         "duplicate-component-name",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        # Reload-specific codes (LE-1018)
+        "reload-in-progress",
+        "reload-bundle-not-installed",
+        "reload-bundle-name-mismatch",
+        "reload-source-missing",
     }
 )
 # NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
@@ -190,6 +195,20 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "reload-in-progress": (
+        "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
+    ),
+    "reload-bundle-not-installed": (
+        "Cannot reload bundle {content!r}: it is not registered. "
+        "Install the extension first or pass an explicit source path."
+    ),
+    "reload-bundle-name-mismatch": (
+        "Reload source at {location} declares bundle name {content!r}, "
+        "which does not match the registered bundle being reloaded."
+    ),
+    "reload-source-missing": (
+        "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
     ),
 }
 

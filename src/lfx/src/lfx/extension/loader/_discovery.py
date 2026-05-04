@@ -90,16 +90,34 @@ def iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
 # ---------------------------------------------------------------------------
 
 
-def module_name_for(file_path: Path, bundle_root: Path, bundle_name: str, slot: str) -> str:
+DEFAULT_MODULE_NAMESPACE: str = "_lfx_ext"
+"""Default top-level package name for bundle modules in ``sys.modules``.
+
+Reload (LE-1018) overrides this with ``__reload_staging__.<reload_id>`` so a
+parallel load lands in an isolated namespace and Stage 3 can swap it in
+atomically without ever touching the live modules.
+"""
+
+
+def module_name_for(
+    file_path: Path,
+    bundle_root: Path,
+    bundle_name: str,
+    slot: str,
+    namespace: str = DEFAULT_MODULE_NAMESPACE,
+) -> str:
     """Build a stable, collision-resistant module name for a bundle file.
 
-    Shape: ``_lfx_ext.<slot>.<bundle>.<dotted relative path without .py>``.
-    The leading underscore-prefixed package keeps these out of the regular
+    Shape: ``<namespace>.<slot>.<bundle>.<dotted relative path without .py>``.
+    With the default namespace this is ``_lfx_ext.<slot>.<bundle>.<dotted>``;
+    the leading underscore-prefixed package keeps these out of the regular
     import namespace so a bundle named ``json`` doesn't shadow the stdlib.
+    Reload supplies a ``__reload_staging__.<id>`` namespace so Stage 1 lands
+    in an isolated subtree of ``sys.modules`` (LE-1018).
     """
     rel = file_path.relative_to(bundle_root).with_suffix("")
     dotted = ".".join(rel.parts)
-    return f"_lfx_ext.{slot}.{bundle_name}.{dotted}"
+    return f"{namespace}.{slot}.{bundle_name}.{dotted}"
 
 
 def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.ModuleType | None, ExtensionError | None]:

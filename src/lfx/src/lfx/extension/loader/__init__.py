@@ -52,6 +52,7 @@ small files now keeps each follow-on ticket touching one banner-section at
 a time.
 """
 
+from lfx.extension.loader._discovery import DEFAULT_MODULE_NAMESPACE
 from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
     load_extension,
@@ -70,6 +71,7 @@ from lfx.extension.loader._types import (
 )
 
 __all__ = [
+    "DEFAULT_MODULE_NAMESPACE",
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
     "SLOT_VALUES",
