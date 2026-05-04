@@ -18,6 +18,7 @@ from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
 from lfx.components.langchain_utilities.ibm_granite_handler import (
+    _ahandle_placeholder_in_response,
     _handle_placeholder_in_response,
     _limit_to_single_tool_call,
 )
@@ -61,11 +62,15 @@ class WatsonXAgentMiddleware(AgentMiddleware):
         REQUIRED because LCAgentComponent.run_agent invokes the graph via
         `astream_events` (async). Without this, the base AgentMiddleware raises
         NotImplementedError and the entire WatsonX flow fails.
+
+        Post-processing also runs async — see `_apost_process_response`.
+        Calling the sync variant here was a latent deadlock with async-only
+        providers (langchain-ibm) when the placeholder branch fires.
         """
         new_request = self._prepare_request(request)
         response = await handler(new_request)
         _log_response(response, num_steps=_count_tool_messages(request))
-        return _post_process_response(response, new_request, self._llm_auto)
+        return await _apost_process_response(response, new_request, self._llm_auto)
 
     def _prepare_request(self, request: Any) -> Any:
         """Return a new request with the bound model swapped to required/auto.
@@ -101,9 +106,25 @@ def _post_process_response(response: Any, request: Any, llm_auto: Any) -> Any:
     if not isinstance(response, AIMessage):
         return response
     response = _limit_to_single_tool_call(response)
+    messages = _extract_request_messages(request)
+    return _handle_placeholder_in_response(response, _MessagesContainer(messages), llm_auto)
+
+
+async def _apost_process_response(response: Any, request: Any, llm_auto: Any) -> Any:
+    """Async sibling of `_post_process_response` — awaits placeholder re-invoke."""
+    if not isinstance(response, AIMessage):
+        return response
+    response = _limit_to_single_tool_call(response)
+    messages = _extract_request_messages(request)
+    return await _ahandle_placeholder_in_response(response, _MessagesContainer(messages), llm_auto)
+
+
+def _extract_request_messages(request: Any) -> list:
     state = getattr(request, "state", None)
+    if state is None:
+        return []
     messages = state.get("messages") if isinstance(state, dict) else getattr(state, "messages", [])
-    return _handle_placeholder_in_response(response, _MessagesContainer(messages or []), llm_auto)
+    return list(messages or [])
 
 
 def _log_response(response: Any, *, num_steps: int) -> None:

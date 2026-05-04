@@ -282,3 +282,44 @@ async def test_should_swap_to_auto_in_async_path_after_forced_iterations() -> No
 
     assert request.model is None  # original untouched
     assert captured[0].model is middleware._llm_auto
+
+
+# ===== Placeholder re-invoke (S12) — REGRESSION ===============================
+
+
+@pytest.mark.asyncio
+async def test_should_use_ainvoke_when_placeholder_detected_in_async_path() -> None:
+    """Regression: async path must NOT call sync `.invoke()` on the LLM.
+
+    Bug: when the LLM emits tool args with placeholder syntax
+    (`<result-from-...>`), the middleware re-invokes the LLM with a corrective
+    message. The original implementation called `llm_auto.invoke(...)` (sync)
+    from inside `awrap_model_call` (async), blocking the event loop and
+    crashing async-only providers (langchain-ibm) with
+    `RuntimeError: asyncio.run() cannot be called from a running event loop`.
+
+    Expected: the async path uses `await llm_auto.ainvoke(...)`.
+    """
+    from unittest.mock import AsyncMock
+
+    middleware = WatsonXAgentMiddleware(llm=_llm_supporting_bind_tools(), tools=[])
+
+    corrected = AIMessage(content="actual values from previous results")
+    # Replace mocked async/sync invocation paths so we can observe which one was used.
+    middleware._llm_auto.invoke = MagicMock(return_value=corrected)
+    middleware._llm_auto.ainvoke = AsyncMock(return_value=corrected)
+
+    response_with_placeholder = AIMessage(
+        content="",
+        tool_calls=[{"id": "1", "name": "fetch", "args": {"url": "<result-from-search>"}}],
+    )
+    request = _FakeModelRequest(state={"messages": [HumanMessage(content="q")]}, model=None)
+
+    async def handler(req):  # noqa: ARG001
+        return response_with_placeholder
+
+    result = await middleware.awrap_model_call(request, handler)
+
+    middleware._llm_auto.ainvoke.assert_awaited_once()
+    middleware._llm_auto.invoke.assert_not_called()
+    assert result is corrected

@@ -35,7 +35,7 @@ def build_initial_messages(
         for item in history_items:
             if _has_blank_text(item):
                 continue
-            messages.append(_to_lc_message(item))
+            messages.append(item.to_lc_message())
 
     appended_input = _append_input(messages, input_value)
 
@@ -61,12 +61,6 @@ def _normalize_history(
 def _has_blank_text(item: Data | Message) -> bool:
     text = getattr(item, "text", None)
     return isinstance(text, str) and not text.strip()
-
-
-def _to_lc_message(item: Data | Message) -> BaseMessage:
-    if isinstance(item, Message):
-        return item.to_lc_message()
-    return item.to_lc_message()
 
 
 def _append_input(messages: list[BaseMessage], input_value: Message | str | None) -> bool:

@@ -152,6 +152,32 @@ def _handle_placeholder_in_response(llm_response, messages, llm_auto):
         return llm_response
 
     logger.warning("[WatsonX] Placeholder detected, requesting actual values")
+    messages_list = _build_corrective_messages(messages)
+    return llm_auto.invoke(messages_list)
+
+
+async def _ahandle_placeholder_in_response(llm_response, messages, llm_auto):
+    """Async sibling of `_handle_placeholder_in_response`.
+
+    REQUIRED because `WatsonXAgentMiddleware.awrap_model_call` runs in an
+    active event loop. The sync `llm_auto.invoke(...)` either blocks the loop
+    or, with async-only providers (langchain-ibm), raises
+    `RuntimeError: asyncio.run() cannot be called from a running event loop`.
+    """
+    if not hasattr(llm_response, "tool_calls") or not llm_response.tool_calls:
+        return llm_response
+
+    has_placeholder, _ = detect_placeholder_in_args(llm_response.tool_calls)
+    if not has_placeholder:
+        return llm_response
+
+    logger.warning("[WatsonX] Placeholder detected, requesting actual values")
+    messages_list = _build_corrective_messages(messages)
+    return await llm_auto.ainvoke(messages_list)
+
+
+def _build_corrective_messages(messages) -> list:
+    """Append the corrective SystemMessage to the message history."""
     from langchain_core.messages import SystemMessage
 
     corrective_msg = SystemMessage(
@@ -159,7 +185,7 @@ def _handle_placeholder_in_response(llm_response, messages, llm_auto):
     )
     messages_list = list(messages.messages) if hasattr(messages, "messages") else list(messages)
     messages_list.append(corrective_msg)
-    return llm_auto.invoke(messages_list)
+    return messages_list
 
 
 def create_granite_agent(llm, tools: list, prompt: ChatPromptTemplate, forced_iterations: int = 2):

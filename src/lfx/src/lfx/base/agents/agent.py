@@ -3,10 +3,7 @@ import uuid
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
-from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
-from langchain_classic.agents.agent import RunnableAgent
 from langchain_core.callbacks.base import BaseCallbackHandler
-from langchain_core.messages import BaseMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
@@ -84,7 +81,7 @@ class LCAgentComponent(Component):
         return self.shared_callbacks
 
     @abstractmethod
-    def build_agent(self) -> AgentExecutor:
+    def build_agent(self) -> Runnable:
         """Create the agent."""
 
     async def message_response(self) -> Message:
@@ -127,27 +124,9 @@ class LCAgentComponent(Component):
         # might be overridden in subclasses
         return None
 
-    def _data_to_messages_skip_empty(self, data: list[Data]) -> list[BaseMessage]:
-        """Convert data to messages, filtering only empty text while preserving non-text content.
-
-        Note: added to fix issue with certain providers failing when given empty text as input.
-        """
-        messages = []
-        for value in data:
-            # Only skip if the message has a text attribute that is empty/whitespace
-            text = getattr(value, "text", None)
-            if isinstance(text, str) and not text.strip():
-                # Skip only messages with empty/whitespace-only text strings
-                continue
-
-            lc_message = value.to_lc_message()
-            messages.append(lc_message)
-
-        return messages
-
     async def run_agent(
         self,
-        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
+        agent: Runnable,
     ) -> Message:
         runnable = self._resolve_runnable(agent)
         graph_input = self._build_graph_input()
@@ -221,28 +200,15 @@ class LCAgentComponent(Component):
         self.status = result
         return result
 
-    def _resolve_runnable(
-        self,
-        agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
-    ) -> Runnable:
-        """Return the agent as-is when it is already a runnable graph or AgentExecutor.
+    def _resolve_runnable(self, agent: Runnable) -> Runnable:
+        """Return the agent as-is.
 
-        Legacy callers may still pass a `BaseSingleActionAgent` / `BaseMultiActionAgent`;
-        wrap them in `AgentExecutor` for backward compatibility (kept as a transition shim).
+        Kept as a thin pass-through hook so subclasses can intercept the runnable
+        before it is fed to `astream_events` (e.g., to wrap with extra middleware).
+        Under create_agent the input is always already a `Runnable`
+        (`CompiledStateGraph`); the legacy wrapping path was removed.
         """
-        if isinstance(agent, (Runnable, AgentExecutor)):
-            return agent
-        # Legacy fallback path: wrap raw agent objects in AgentExecutor (deprecated).
-        handle_parsing_errors = bool(getattr(self, "handle_parsing_errors", False))
-        verbose = bool(getattr(self, "verbose", False))
-        max_iterations = getattr(self, "max_iterations", None)
-        return AgentExecutor.from_agent_and_tools(
-            agent=agent,
-            tools=self.tools or [],
-            handle_parsing_errors=handle_parsing_errors,
-            verbose=verbose,
-            max_iterations=max_iterations,
-        )
+        return agent
 
     def _build_graph_input(self) -> dict:
         """Construct the `{"messages": [...]}` payload expected by `create_agent` graphs."""
@@ -283,14 +249,18 @@ class LCToolsAgentComponent(LCAgentComponent):
         *LCAgentComponent.get_base_inputs(),
     ]
 
-    def build_agent(self) -> AgentExecutor:
+    def build_agent(self) -> Runnable:
+        """Return the agent runnable consumed by the "Agent" output port.
+
+        Under the create_agent migration `create_agent_runnable()` returns a
+        `CompiledStateGraph` whose input shape is `{"messages": [...]}`. The
+        previous implementation wrapped that graph in
+        `RunnableAgent(input_keys_arg=["input"]) + AgentExecutor`, producing a
+        key-mismatched executor that silently broke any downstream consumer
+        of this output port.
+        """
         self.validate_tool_names()
-        agent = self.create_agent_runnable()
-        return AgentExecutor.from_agent_and_tools(
-            agent=RunnableAgent(runnable=agent, input_keys_arg=["input"], return_keys_arg=["output"]),
-            tools=self.tools,
-            **self.get_agent_kwargs(flatten=True),
-        )
+        return self.create_agent_runnable()
 
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:

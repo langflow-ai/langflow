@@ -8,7 +8,6 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 # IBM WatsonX-specific behavior is implemented as a middleware (see ibm_granite_middleware.py).
 from lfx.components.langchain_utilities.ibm_granite_handler import (
     get_enhanced_system_prompt,
-    is_granite_model,
     is_watsonx_model,
 )
 from lfx.components.langchain_utilities.ibm_granite_middleware import build_watsonx_middleware
@@ -113,9 +112,11 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         tools = self.tools or []
         effective_system_prompt = (self.system_prompt or "").strip()
 
-        # WatsonX models still need their tool-usage hints injected directly into the system prompt
-        # because some providers behave better when the prompt itself describes how to call tools.
-        if is_granite_model(llm) and tools:
+        # WatsonX models (granite, llama, mistral) need their tool-usage hints injected directly
+        # into the system prompt: the platform's tool-calling issues are not granite-specific
+        # (see ibm_granite_handler.is_watsonx_model docstring). Aligning the scope here with the
+        # middleware on line below — both fire on `is_watsonx_model`.
+        if is_watsonx_model(llm) and tools:
             effective_system_prompt = get_enhanced_system_prompt(effective_system_prompt, tools)
             self._effective_system_prompt = effective_system_prompt
 
