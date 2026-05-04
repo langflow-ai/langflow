@@ -75,6 +75,11 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "import-star-disallowed": "error[import-star-disallowed]: Top-level wildcard import in loc: content",
     "top-level-io-disallowed": "error[top-level-io-disallowed]: Top-level I/O primitive 'content' used in loc; bundle module import must be side-effect free.",  # noqa: E501
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
+    "module-import-failed": "error[module-import-failed]: Failed to import bundle module loc: msg",
+    "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
+    "duplicate-distribution": "error[duplicate-distribution]: Two installed distributions both ship a manifest with extension id 'content' (locations: loc).",  # noqa: E501
+    "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
+    "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
 }
 
 

@@ -56,6 +56,12 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
+        # Loader-specific codes (LE-1015)
+        "module-import-failed",
+        "duplicate-component-name",
+        "duplicate-distribution",
+        "duplicate-inline-bundle",
+        "inline-bundle-name-invalid",
     }
 )
 
@@ -171,6 +177,21 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Top-level I/O primitive {content!r} used in {location}; bundle module import must be side-effect free."
     ),
     "execute-imports-failed": ("Subprocess import probe (--execute-imports) failed for {location}: {message}"),
+    "module-import-failed": ("Failed to import bundle module {location}: {message}"),
+    "duplicate-component-name": (
+        "Duplicate Component class name {content!r} in bundle {location}; "
+        "component class names must be unique within a bundle."
+    ),
+    "duplicate-distribution": (
+        "Two installed distributions both ship a manifest with extension id {content!r} (locations: {location})."
+    ),
+    "duplicate-inline-bundle": (
+        "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
+        "first wins. Locations: {location}."
+    ),
+    "inline-bundle-name-invalid": (
+        "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
 }
 
 
