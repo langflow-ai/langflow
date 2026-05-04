@@ -1,5 +1,9 @@
 export type DeploymentProviderType = "watsonx" | "kubernetes";
 
+export const DEFAULT_FLOW_NAME = "Flow";
+export const UNKNOWN_FLOW_NAME = "Unknown flow";
+export const WXO_PROVIDER_KEY = "watsonx-orchestrate";
+
 export interface EnvVarEntry {
   id: string;
   key: string;
@@ -76,7 +80,7 @@ export function getDefaultDeploymentToolName(
   uniqueId: string,
   scopeId?: string | null,
 ) {
-  const trimmedFlowName = flowName.trim() || "Flow";
+  const trimmedFlowName = flowName.trim() || DEFAULT_FLOW_NAME;
   const shortId = getShortIdentifier(uniqueId);
   const shortScopeId = scopeId ? getShortIdentifier(scopeId).slice(0, 6) : "";
   return shortScopeId

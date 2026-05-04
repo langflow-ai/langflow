@@ -12,6 +12,7 @@ import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import { useConnectionPanelState } from "../hooks/use-connection-panel-state";
 import {
   type ConnectionItem,
+  DEFAULT_FLOW_NAME,
   getDefaultDeploymentToolName,
   getSelectedFlowVersionKey,
 } from "../types";
@@ -218,7 +219,8 @@ export default function StepAttachFlows() {
         return prev;
       }
       const flowName =
-        flows.find((flow) => flow.id === preSelected.flowId)?.name ?? "Flow";
+        flows.find((flow) => flow.id === preSelected.flowId)?.name ??
+        DEFAULT_FLOW_NAME;
       const next = new Map(prev);
       next.set(
         preSelected.key,
@@ -314,7 +316,7 @@ export default function StepAttachFlows() {
       const version = versions.find((v) => v.id === versionId);
       await openConnectionPanelForVersion(
         effectiveFlowId,
-        selectedFlow?.name ?? "Flow",
+        selectedFlow?.name ?? DEFAULT_FLOW_NAME,
         versionId,
         version?.version_tag ?? "",
       );
@@ -329,7 +331,7 @@ export default function StepAttachFlows() {
       const snapshot = await createSnapshot({ flowId: effectiveFlowId });
       await openConnectionPanelForVersion(
         effectiveFlowId,
-        selectedFlow?.name ?? "Flow",
+        selectedFlow?.name ?? DEFAULT_FLOW_NAME,
         snapshot.id,
         snapshot.version_tag,
       );

@@ -5,6 +5,7 @@ import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+import { UNKNOWN_FLOW_NAME } from "../types";
 import { ReviewDetachingSection } from "./step-review/review-detaching-section";
 import { ReviewFlowConfigCard } from "./step-review/review-flow-config-card";
 import { ReviewSummaryCard } from "./step-review/review-summary-card";
@@ -84,7 +85,7 @@ export default function StepReview() {
           const flowName =
             allFlows.find((flow) => flow.id === entry.flowId)?.name ??
             entry.flowName ??
-            "Unknown flow";
+            UNKNOWN_FLOW_NAME;
           return {
             attachmentKey: normalizedAttachmentKey,
             flowName,

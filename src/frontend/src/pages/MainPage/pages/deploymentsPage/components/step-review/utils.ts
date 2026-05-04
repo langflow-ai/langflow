@@ -3,7 +3,7 @@ import {
   getScopedValueForUniqueFlowVersion,
 } from "../../helpers/version-scope";
 import type { ConnectionItem } from "../../types";
-import { getDefaultDeploymentToolName } from "../../types";
+import { getDefaultDeploymentToolName, UNKNOWN_FLOW_NAME } from "../../types";
 import type { ReviewFlowItem } from "./types";
 
 export function normalizeWxoName(value: string): string {
@@ -109,7 +109,7 @@ export function buildReviewFlows({
         };
       });
 
-      const flowName = flow?.name ?? entry.flowName ?? "Unknown";
+      const flowName = flow?.name ?? entry.flowName ?? UNKNOWN_FLOW_NAME;
       const defaultToolName = getDefaultDeploymentToolName(
         flowName,
         entry.versionId,

@@ -283,7 +283,7 @@ describe("Attached flows section", () => {
       [], // no flows in data
     );
 
-    const unknowns = screen.getAllByText("Unknown");
+    const unknowns = screen.getAllByText("Unknown flow");
     expect(unknowns.length).toBeGreaterThanOrEqual(1);
   });
 });

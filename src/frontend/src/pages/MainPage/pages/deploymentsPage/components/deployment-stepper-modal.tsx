@@ -19,6 +19,7 @@ import {
 } from "../contexts/deployment-stepper-context";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import {
+  DEFAULT_FLOW_NAME,
   type Deployment,
   type DeploymentProvider,
   getSelectedFlowVersionKey,
@@ -105,7 +106,7 @@ export default function DeploymentStepperModal({
       versionMap.set(key, {
         key,
         flowId: fv.flow_id,
-        flowName: fv.flow_name ?? "Flow",
+        flowName: fv.flow_name ?? DEFAULT_FLOW_NAME,
         versionId: fv.id,
         versionTag: `v${fv.version_number}`,
       });
@@ -123,7 +124,7 @@ export default function DeploymentStepperModal({
 
     const llm =
       typeof deploymentDetail?.provider_data?.llm === "string"
-        ? (deploymentDetail.provider_data.llm as string)
+        ? deploymentDetail.provider_data.llm
         : "";
 
     return { versionMap, llm, toolNames, connectionsByFlow };

@@ -15,7 +15,11 @@ import type {
   ProviderCredentials,
   SelectedFlowVersion,
 } from "../types";
-import { getDefaultDeploymentToolName } from "../types";
+import {
+  DEFAULT_FLOW_NAME,
+  getDefaultDeploymentToolName,
+  WXO_PROVIDER_KEY,
+} from "../types";
 import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
@@ -46,7 +50,7 @@ export function buildProviderAccountPayload({
   if (!hasValidCredentials) return null;
   return {
     name: credentials.name.trim(),
-    provider_key: "watsonx-orchestrate",
+    provider_key: WXO_PROVIDER_KEY,
     provider_data: {
       url: credentials.url.trim(),
       api_key: credentials.api_key.trim(),
@@ -144,7 +148,7 @@ export function buildDeploymentPayload({
     const resolvedToolName =
       strictToolName ||
       getDefaultDeploymentToolName(
-        versionEntry.flowName ?? "Flow",
+        versionEntry.flowName ?? DEFAULT_FLOW_NAME,
         versionEntry.versionId,
         defaultToolNameScopeId,
       );
@@ -242,7 +246,7 @@ export function buildDeploymentUpdatePayload({
     const resolvedToolName =
       strictToolName ||
       getDefaultDeploymentToolName(
-        versionEntry.flowName ?? "Flow",
+        versionEntry.flowName ?? DEFAULT_FLOW_NAME,
         versionEntry.versionId,
         defaultToolNameScopeId,
       );
