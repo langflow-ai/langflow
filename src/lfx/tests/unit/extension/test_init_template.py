@@ -83,25 +83,35 @@ def test_generated_test_file_runs_against_generated_component(tmp_path: Path) ->
     We do NOT exec the generated test via pytest here (that would require
     pytest-in-pytest gymnastics); instead we mirror the test's assertions
     against the same component to confirm the contract is real.
+
+    Cleans up sys.path AND sys.modules in the finally block so a later
+    test importing the same dotted path does not pick up this test's
+    cached module from a now-deleted tmp_path.
     """
     target = tmp_path / "my-ext"
     init_extension(_options(target))
 
-    # Add the bundle dir to sys.path and import the component as if from
-    # the generated test's perspective.  This proves the test file's
-    # ``from components.my_ext.hello import ...`` line is resolvable when
-    # run from the extension root.
+    import importlib
     import sys
 
     sys.path.insert(0, str(target))
     try:
-        from components.my_ext.hello import MyExtHelloComponent  # type: ignore[import-not-found]
+        module = importlib.import_module("components.my_ext.hello")
+        component_class = module.MyExtHelloComponent
+        # Component's __init__ does inspect.getsourcefile() against
+        # ``self.__class__``; that lookup needs the module to still be in
+        # sys.modules, so we instantiate INSIDE the try block before the
+        # finally cleanup runs.
+        component = component_class()
+        component.name = "Eric"
+        assert component.build() == "Hello, Eric!"
     finally:
         sys.path.remove(str(target))
-
-    component = MyExtHelloComponent()
-    component.name = "Eric"
-    assert component.build() == "Hello, Eric!"
+        # Drop every cached module under ``components`` so the next test
+        # to import this path gets a fresh load against its own tmp_path.
+        for key in list(sys.modules):
+            if key == "components" or key.startswith("components."):
+                del sys.modules[key]
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +219,21 @@ def test_manifest_carries_schema_pointer(tmp_path: Path) -> None:
     payload = (target / "extension.json").read_text(encoding="utf-8")
     assert '"$schema"' in payload
     assert "schemas.langflow.org/extension/v1.json" in payload
+
+
+def test_init_template_regexes_match_manifest_schema() -> None:
+    """Drift guard: the init template's identifier regexes mirror the schema's.
+
+    The init template copies the patterns rather than importing the
+    manifest module's underscore-prefixed symbols.  This test catches
+    drift the AC round-trip would eventually catch but earlier and with
+    a clearer error message.
+    """
+    from lfx.extension import manifest as manifest_mod
+    from lfx.extension.init_template import _BUNDLE_NAME_RE, _EXTENSION_ID_RE
+
+    assert _BUNDLE_NAME_RE.pattern == manifest_mod._BUNDLE_NAME_RE.pattern
+    assert _EXTENSION_ID_RE.pattern == manifest_mod._EXTENSION_ID_RE.pattern
 
 
 def test_files_written_list_is_complete(tmp_path: Path) -> None:

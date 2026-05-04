@@ -316,27 +316,42 @@ def dev_extension_component_paths(*, state_dir: Path | None = None) -> tuple[lis
     bundle_paths: list[Path] = []
     errors: list[ExtensionError] = []
     for result in load_dev_extensions(state_dir=state_dir):
-        errors.extend(w for w in result.warnings if w.code == "local-extension-missing")
+        # Forward EVERY warning, not just local-extension-missing: the
+        # caller (Langflow's lifespan hook) is the only thing that turns
+        # these into a log line, so dropping any of them silences a real
+        # signal (e.g. duplicate-component-name, duplicate-inline-bundle).
+        errors.extend(result.warnings)
         if result.errors:
             errors.extend(result.errors)
             continue
         if not result.components:
             continue
-        # Every component in a single LoadResult lives under the same bundle
-        # directory; take the parent of the first .py and walk up to the
-        # bundle root recorded on the LoadedComponent.
+
+        if result.source_path is None:
+            # Defensive: the loader currently always sets ``source_path``,
+            # but a future caller that builds LoadResult by hand could
+            # produce a non-empty components list without one.  Surface a
+            # typed warning rather than dropping the extension silently.
+            errors.append(
+                ExtensionError(
+                    code="local-extension-missing",
+                    message=(
+                        "Dev extension produced components but no source_path; the loader "
+                        "contract was violated.  Skipping until the loader is fixed."
+                    ),
+                    location="<unknown>",
+                    hint=("File a bug against lfx.extension.loader: LoadResult had components but no source_path."),
+                )
+            )
+            continue
+
+        # Pick the bundle root: the shallowest path *under the extension
+        # root* that any registered component lives in.  We measure depth
+        # against ``source_path`` (the extension root) rather than absolute
+        # part count so siblings at different absolute depths still resolve
+        # correctly.
+        source_root = result.source_path
         bundle_dirs = {component.file_path.parent for component in result.components}
-        # Climb to the actual bundle root: we recorded the deepest dir per
-        # component, but the loader's ``_load_bundle_directory`` walked
-        # recursively from a single bundle root.  The shallowest common
-        # ancestor under the source_path is what we want, but for the v0
-        # discovery path (one bundle per extension) any of these dirs is
-        # under the bundle root, and ``components_path`` discovery walks
-        # recursively, so adding the source_path's bundle is sufficient.
-        if result.source_path is not None:
-            # ``source_path`` is the extension root; the bundle dir lives
-            # under it.  Walk to the top-most ancestor of any component
-            # file that's still inside the extension root.
-            top = min(bundle_dirs, key=lambda p: len(p.parts))
-            bundle_paths.append(top)
+        top = min(bundle_dirs, key=lambda p: len(p.relative_to(source_root).parts))
+        bundle_paths.append(top)
     return bundle_paths, errors

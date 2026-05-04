@@ -235,6 +235,109 @@ def test_dev_extension_component_paths_surfaces_missing_dir(tmp_path: Path) -> N
     assert "local-extension-missing" in codes
 
 
+def test_dev_extension_component_paths_forwards_all_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A duplicate-component-name warning must reach the caller.
+
+    Previously the helper only forwarded ``local-extension-missing``,
+    silently dropping every other warning code.  This test pins the new
+    "forward everything" contract so a duplicate-component-name (or any
+    future code) shows up in the lifespan hook's logs.
+    """
+    extension_dir = _scaffold(tmp_path)
+    register_dev_extension(extension_dir)
+
+    # Stub load_dev_extensions to inject a synthetic warning of a
+    # different code, simulating what a future loader pass might emit.
+    from lfx.extension import dev_registry as dr
+    from lfx.extension.errors import ExtensionError
+    from lfx.extension.loader._types import LoadResult
+
+    fake = LoadResult(
+        slot="official",
+        source_path=extension_dir,
+        extension_id="my-ext",
+        bundle="my_ext",
+    )
+    fake.warnings.append(
+        ExtensionError(
+            code="duplicate-component-name",
+            message="synthetic",
+            location="my_ext",
+            content="HelloComponent",
+            hint="rename",
+        )
+    )
+    monkeypatch.setattr(dr, "load_dev_extensions", lambda *_, **__: [fake])
+
+    _paths, errors = dev_extension_component_paths()
+    codes = [e.code for e in errors]
+    # The non-missing-dir warning is forwarded, not silently dropped.
+    assert "duplicate-component-name" in codes
+
+
+def test_dev_extension_component_paths_defends_against_missing_source_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A LoadResult with components but no source_path is a contract bug.
+
+    The helper used to silently drop such results, hiding the problem.
+    Now it surfaces a typed local-extension-missing error and skips the
+    extension explicitly.
+    """
+    extension_dir = _scaffold(tmp_path)
+    register_dev_extension(extension_dir)
+
+    from lfx.extension import dev_registry as dr
+    from lfx.extension.loader._types import LoadResult
+
+    # Build a LoadResult that's structurally invalid: components present,
+    # source_path None.
+    fake = LoadResult(
+        slot="official",
+        source_path=None,
+        extension_id="my-ext",
+        bundle="my_ext",
+    )
+    # Borrow the component the real loader produced.
+    real_results = dr.load_dev_extensions()
+    real_components = real_results[0].components
+    fake.components.extend(real_components)
+    monkeypatch.setattr(dr, "load_dev_extensions", lambda *_, **__: [fake])
+
+    paths, errors = dev_extension_component_paths()
+    assert paths == []
+    codes = [e.code for e in errors]
+    assert "local-extension-missing" in codes
+
+
+def test_dev_extension_component_paths_uses_relative_depth_for_bundle_root(
+    tmp_path: Path,
+) -> None:
+    """The shallowest-ancestor-under-source_root algorithm picks the right dir.
+
+    With a bundle laid out at ``my-ext/components/my_ext/`` and a real
+    component at ``my-ext/components/my_ext/hello.py``, the returned
+    bundle path must be the components/my_ext directory, NOT something
+    higher up (which would cause the existing palette discovery to miss
+    sub-modules) and NOT the file's parent directly (it happens to be
+    the same here, but the algorithm should be correct).
+    """
+    extension_dir = _scaffold(tmp_path)
+    register_dev_extension(extension_dir)
+    paths, errors = dev_extension_component_paths()
+    assert errors == []
+    assert len(paths) == 1
+    bundle_root = paths[0]
+    # Path resolves to <ext>/components/my_ext (the bundle dir).
+    assert bundle_root.name == "my_ext"
+    assert bundle_root.parent.name == "components"
+    assert bundle_root.is_relative_to(extension_dir.resolve())
+
+
 # ---------------------------------------------------------------------------
 # Override env var
 # ---------------------------------------------------------------------------

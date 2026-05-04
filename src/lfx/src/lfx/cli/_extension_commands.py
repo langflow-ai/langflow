@@ -334,8 +334,12 @@ def dev_command(
 
     env = os.environ.copy()
     # Force eager loading so dev-extension components show up in the
-    # palette without a manual cache-clear; lazy mode is fine for prod.
-    env.setdefault("LANGFLOW_LAZY_LOAD_COMPONENTS", "false")
+    # palette within AC #4's 5s budget.  Use unconditional assignment
+    # (not setdefault) so a developer who has lazy loading exported in
+    # their shell does not silently lose dev components from the palette
+    # -- the dev workflow needs eager loading regardless of the global
+    # default.
+    env["LANGFLOW_LAZY_LOAD_COMPONENTS"] = "false"
 
     # Replace the current process so Ctrl-C in the launched langflow
     # propagates without an extra pty/job-control hop.  When ``langflow``
