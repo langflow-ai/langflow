@@ -40,7 +40,7 @@ const normalizeLanguage = (lang?: string | null): string => {
   return "en";
 };
 
-const detectedLang = normalizeLanguage(
+export const detectedLang = normalizeLanguage(
   localStorage.getItem("languagePreference") || navigator.language,
 );
 
