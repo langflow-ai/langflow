@@ -126,12 +126,12 @@ export default function StepAttachFlows() {
 
   const commitPendingAttachment = useCallback(() => {
     if (pendingAttachment) {
-      onSelectVersion(
-        pendingAttachment.flowId,
-        pendingAttachment.flowName,
-        pendingAttachment.versionId,
-        pendingAttachment.versionTag,
-      );
+      onSelectVersion({
+        flowId: pendingAttachment.flowId,
+        flowName: pendingAttachment.flowName,
+        versionId: pendingAttachment.versionId,
+        versionTag: pendingAttachment.versionTag,
+      });
       setToolNameByFlow((prev) => {
         if (prev.has(pendingAttachment.key)) {
           return prev;

@@ -41,7 +41,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", "My Custom Tool"]]));
     });
 
@@ -56,7 +61,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
@@ -70,7 +80,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", "   "]]));
     });
 
@@ -85,7 +100,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(
         new Map([["flow-1", "my-tool_v2.0 (beta) [test]"]]),
       );
@@ -103,7 +123,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(
         new Map([["flow-1", "ferramenta_análise"]]),
       );
@@ -122,7 +147,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", longName]]));
     });
 
@@ -137,8 +167,18 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      result.current.handleSelectVersion("flow-2", "ver-2", "v2");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-2",
+        flowName: "Flow",
+        versionId: "ver-2",
+        versionTag: "v2",
+      });
       result.current.setToolNameByFlow(
         new Map([
           ["flow-1", "Same Name"],
@@ -160,8 +200,18 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      result.current.handleSelectVersion("flow-2", "ver-2", "v2");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-2",
+        flowName: "Flow",
+        versionId: "ver-2",
+        versionTag: "v2",
+      });
       result.current.setToolNameByFlow(
         new Map([
           ["flow-1", "Tool Alpha"],
@@ -187,7 +237,12 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("1 Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
     });
 
     expect(() => result.current.buildDeploymentPayload("provider-1")).toThrow(

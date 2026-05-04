@@ -58,6 +58,13 @@ interface DeploymentStepperInitialState {
   initialConnectionsByFlow?: Map<string, string[]>;
 }
 
+interface SelectFlowVersionParams {
+  flowId: string;
+  flowName: string;
+  versionId: string;
+  versionTag: string;
+}
+
 interface DeploymentStepperContextType {
   // Mode
   isEditMode: boolean;
@@ -96,12 +103,7 @@ interface DeploymentStepperContextType {
   connections: ConnectionItem[];
   setConnections: Dispatch<SetStateAction<ConnectionItem[]>>;
   selectedVersionByFlow: Map<string, SelectedFlowVersion>;
-  handleSelectVersion: (
-    flowId: string,
-    flowNameOrVersionId: string,
-    versionIdOrVersionTag: string,
-    versionTag?: string,
-  ) => void;
+  handleSelectVersion: (params: SelectFlowVersionParams) => void;
   attachedConnectionByFlow: Map<string, string[]>;
   setAttachedConnectionByFlow: Dispatch<SetStateAction<Map<string, string[]>>>;
   /** User-provided tool names per attached version. Key = attachment key. */
@@ -375,17 +377,7 @@ export function DeploymentStepperProvider({
   }, []);
 
   const handleSelectVersion = useCallback(
-    (
-      flowId: string,
-      flowNameOrVersionId: string,
-      versionIdOrVersionTag: string,
-      versionTag?: string,
-    ) => {
-      const flowName = versionTag ? flowNameOrVersionId : "Flow";
-      const versionId = versionTag
-        ? versionIdOrVersionTag
-        : flowNameOrVersionId;
-      const resolvedVersionTag = versionTag ?? versionIdOrVersionTag;
+    ({ flowId, flowName, versionId, versionTag }: SelectFlowVersionParams) => {
       setSelectedVersionByFlow((prev) => {
         const next = new Map(prev);
         const key = getSelectedFlowVersionKey(flowId, versionId);
@@ -394,7 +386,7 @@ export function DeploymentStepperProvider({
           flowId,
           flowName,
           versionId,
-          versionTag: resolvedVersionTag,
+          versionTag,
         });
         return next;
       });

@@ -172,7 +172,12 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
@@ -214,7 +219,12 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(
         new Map([[flowNewKey, "Custom Tool Name"]]),
       );
@@ -240,7 +250,12 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
@@ -304,7 +319,12 @@ describe("Edit mode — no-op and partial update payloads", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentUpdatePayload();
@@ -324,7 +344,12 @@ describe("Edit mode — newly attached flow connections", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
       result.current.setAttachedConnectionByFlow(
         new Map([
           [flow1Key, ["app-1"]], // unchanged
