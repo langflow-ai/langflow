@@ -31,7 +31,13 @@ import {
   CommandList,
   CommandSeparator,
 } from "../../ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverContentWithoutPortal,
+  PopoverTrigger,
+} from "../../ui/popover";
+import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import type { BaseInputProps } from "../parameterRenderComponent/types";
 
 export default function Dropdown({
@@ -69,6 +75,10 @@ export default function Dropdown({
   const [waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const nodes = useFlowStore((state) => state.nodes);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const showingBuildPanel =
+    isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -100,6 +110,10 @@ export default function Dropdown({
   const sourceOptions = dialogInputs?.fields ? dialogInputs : externalOptions;
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
+  const PopoverContentDropdown =
+    children || editNode || inspectionPanel
+      ? PopoverContent
+      : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -630,10 +644,13 @@ export default function Dropdown({
   );
 
   const renderPopoverContent = () => (
-    <PopoverContent
+    <PopoverContentDropdown
       side="bottom"
-      avoidCollisions={!!children || inspectionPanel}
-      className="noflow nowheel nopan nodelete nodrag z-[60] p-0"
+      avoidCollisions
+      collisionPadding={{
+        bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
+      }}
+      className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }
       }
@@ -664,7 +681,7 @@ export default function Dropdown({
           </div>
         )}
       </Command>
-    </PopoverContent>
+    </PopoverContentDropdown>
   );
 
   // Loading state
