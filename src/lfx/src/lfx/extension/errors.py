@@ -59,11 +59,13 @@ ERROR_CODES: frozenset[str] = frozenset(
         # Loader-specific codes (LE-1015)
         "module-import-failed",
         "duplicate-component-name",
-        "duplicate-distribution",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
     }
 )
+# NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
+# discovery) once there is a startup flow + events surface that can actually
+# emit it.  We hold the line that every registered code must have a producer.
 
 
 # ---------------------------------------------------------------------------
@@ -181,9 +183,6 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "duplicate-component-name": (
         "Duplicate Component class name {content!r} in bundle {location}; "
         "component class names must be unique within a bundle."
-    ),
-    "duplicate-distribution": (
-        "Two installed distributions both ship a manifest with extension id {content!r} (locations: {location})."
     ),
     "duplicate-inline-bundle": (
         "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
