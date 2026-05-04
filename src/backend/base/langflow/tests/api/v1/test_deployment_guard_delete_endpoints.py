@@ -15,8 +15,9 @@ from langflow.services.database.models.deployment.exceptions import DeploymentGu
 
 
 class _ExecResult:
-    def __init__(self, value):
+    def __init__(self, value, rowcount: int = 0):
         self._value = value
+        self.rowcount = rowcount
 
     def first(self):
         return self._value
@@ -152,7 +153,7 @@ async def test_cascade_delete_flow_raises_guard_error_from_app_level_check():
         ),
     ):
         await cascade_delete_flow(session, flow_id)
-    assert session.exec.await_count == 1
+    assert session.exec.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -163,9 +164,8 @@ async def test_cascade_delete_flow_prunes_orphan_attachments_before_delete_state
     session = AsyncMock()
     session.exec = AsyncMock(
         side_effect=[
+            _ExecResult(None, rowcount=1),  # prune orphan attachments
             _ExecResult(None),  # live deployment attachment lookup
-            _ExecResult([uuid4()]),  # stale attachment lookup
-            _ExecResult(None),  # stale attachment delete
             _ExecResult(None),  # message delete
             _ExecResult(None),  # transaction delete
             _ExecResult(None),  # vertex_build delete
@@ -177,7 +177,7 @@ async def test_cascade_delete_flow_prunes_orphan_attachments_before_delete_state
 
     await cascade_delete_flow(session, flow_id)
 
-    assert session.exec.await_count == 9
+    assert session.exec.await_count == 8
 
 
 @pytest.mark.asyncio

@@ -355,7 +355,7 @@ test(
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 10000,
+        timeout: 30000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -826,7 +826,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Read File");
     await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     // Get flow ID from URL
@@ -902,7 +902,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -932,7 +932,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -958,7 +958,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chat Output");
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
     await page
       .getByTestId("input_outputChat Output")

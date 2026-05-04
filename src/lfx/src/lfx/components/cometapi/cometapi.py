@@ -2,7 +2,6 @@ import json
 
 import requests
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from lfx.base.models.cometapi_constants import MODEL_NAMES
@@ -18,6 +17,7 @@ from lfx.inputs.inputs import (
     SliderInput,
     StrInput,
 )
+from lfx.utils.secrets import secret_value_to_str
 
 
 class CometAPIComponent(LCModelComponent):
@@ -92,10 +92,10 @@ class CometAPIComponent(LCModelComponent):
         url = f"{base_url}/models"
 
         headers = {"Content-Type": "application/json"}
-        # Add Bearer Authorization when API key is available
+        # Add Bearer Authorization when API key is available.
         api_key_source = token_override if token_override else getattr(self, "api_key", None)
         if api_key_source:
-            token = api_key_source.get_secret_value() if isinstance(api_key_source, SecretStr) else str(api_key_source)
+            token = secret_value_to_str(api_key_source)
             headers["Authorization"] = f"Bearer {token}"
 
         try:
@@ -144,8 +144,7 @@ class CometAPIComponent(LCModelComponent):
             msg = "Please select a valid CometAPI model."
             raise ValueError(msg)
         try:
-            # Extract raw API key safely
-            _api_key = api_key.get_secret_value() if isinstance(api_key, SecretStr) else api_key
+            _api_key = secret_value_to_str(api_key)
             output = ChatOpenAI(
                 model=model_name,
                 api_key=_api_key or None,

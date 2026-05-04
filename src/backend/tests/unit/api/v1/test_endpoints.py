@@ -251,7 +251,7 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
     assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
     assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
     assert isinstance(result["feature_flags"], dict), "feature_flags must be an object"
-    assert result["feature_flags"].get("wxo_deployments") is True, "wxo_deployments flag should default to true"
+    assert result["feature_flags"].get("wxo_deployments") is False, "wxo_deployments flag should default to false"
     assert result["event_delivery"] in ["polling", "streaming", "direct"], (
         "event_delivery must be one of: polling, streaming, direct"
     )
@@ -385,6 +385,6 @@ async def test_deprecated_upload_enforces_max_file_size(
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, (
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
         f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
     )

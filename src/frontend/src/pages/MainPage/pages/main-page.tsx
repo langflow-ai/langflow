@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -23,6 +24,7 @@ export default function CollectionPage(): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { t } = useTranslation();
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const folders = useFolderStore((state) => state.folders);
   const queryClient = useQueryClient();
@@ -41,15 +43,14 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Project deleted successfully.",
+            title: t("project.deletedSuccessfully"),
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting project.",
-            list: [getAxiosErrorMessage(err, "Error deleting project.")],
+            title: t("project.errorDeleting"),
           });
         },
       },

@@ -32,7 +32,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.37",
-    "pydantic~=2.12.5",
+    "pydantic>=2.13.0,<3.0.0",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.13.0,<1.0.0",
@@ -73,7 +73,6 @@ dependencies = [
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
@@ -176,7 +175,6 @@ postgresql = [
 ]
 
 local = [
-    "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
 ]
@@ -224,7 +222,6 @@ sambanova = ["langchain-sambanova~=1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 
 # Individual local LLM providers
-llama-cpp = ["llama-cpp-python~=0.2.0"]
 sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
@@ -242,7 +239,6 @@ pytube = ["pytube==15.0.0"]
 # Individual agent frameworks
 # crewai is commented out due to httpx version conflict
 # crewai = ["crewai>=0.126.0"]
-dspy = ["dspy-ai==2.5.41"]
 smolagents = ["smolagents>=1.8.0"]
 
 # Individual tools
@@ -261,7 +257,7 @@ fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython==3.1.43"]
+gitpython = ["GitPython==3.1.47"]
 nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
@@ -399,7 +395,6 @@ complete = [
     "langflow-base[docx]",
     "langflow-base[pytube]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
-    "langflow-base[dspy]",
     "langflow-base[smolagents]",
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",

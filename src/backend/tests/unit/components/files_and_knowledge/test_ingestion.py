@@ -21,7 +21,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     @pytest.fixture(autouse=True)
     def mock_knowledge_base_path(self, tmp_path):
         """Mock the knowledge base root path directly."""
-        with patch("lfx.components.files_and_knowledge.ingestion._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+        with patch("lfx.components.files_and_knowledge._kb_paths._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture

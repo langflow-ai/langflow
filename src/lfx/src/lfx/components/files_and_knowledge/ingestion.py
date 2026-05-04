@@ -7,7 +7,6 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -18,6 +17,9 @@ from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.components.files_and_knowledge._kb_paths import (
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+)
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -40,25 +42,12 @@ from lfx.services.deps import (
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+    from pathlib import Path
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+    from lfx.schema.dataframe import DataFrame
 
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
-
-
-def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
-        settings = get_settings_service().settings
-        knowledge_directory = settings.knowledge_bases_dir
-        if not knowledge_directory:
-            msg = "Knowledge bases directory is not set in the settings."
-            raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeIngestionComponent(Component):

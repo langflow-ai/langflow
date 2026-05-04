@@ -257,6 +257,7 @@ def test_shape_deployment_list_items_basic() -> None:
     assert item.name == "My Dep"
     assert item.attached_count == 3
     assert item.flow_version_ids is None
+    assert item.provider_data is None
 
 
 def test_shape_deployment_list_items_with_flow_filter() -> None:
@@ -271,6 +272,7 @@ def test_shape_deployment_list_items_with_flow_filter() -> None:
     )
 
     assert items[0].flow_version_ids == [fv_id]
+    assert items[0].provider_data is None
 
 
 # ---------------------------------------------------------------------------
