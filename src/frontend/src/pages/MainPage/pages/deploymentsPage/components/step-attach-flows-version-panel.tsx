@@ -95,14 +95,7 @@ export const VersionPanel = memo(function VersionPanel({
                 version.id,
               );
               const isAttachedVersion =
-                selectedVersionByFlow.has(attachmentKey) ||
-                selectedVersionByFlow.get(selectedFlow.id)?.versionId ===
-                  version.id ||
-                Array.from(selectedVersionByFlow.values()).some(
-                  (entry) =>
-                    entry.flowId === selectedFlow.id &&
-                    entry.versionId === version.id,
-                );
+                selectedVersionByFlow.has(attachmentKey);
               const isRemoved = removedFlowIds?.has(attachmentKey) ?? false;
               const connectionNames = (
                 attachedConnectionByFlow.get(attachmentKey) ?? []
