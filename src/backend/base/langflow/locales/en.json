@@ -70,6 +70,7 @@
   "components.agent.inputs.tools.info.9b5405d0": "These are the tools that the agent can use to help with tasks.",
   "components.agent.inputs.verbose.display_name.2cd57109": "Verbose",
   "components.agent.outputs.response.display_name.9061383b": "Response",
+  "components.agent.outputs.structured_response.display_name.5a6b7c37": "Structured Response",
   "components.agentql.description.074554d3": "Extracts structured data from a web page using an AgentQL query or a Natural Language description.",
   "components.agentql.display_name.459480e9": "Extract Web Data",
   "components.agentql.inputs.api_key.display_name.5ca30e26": "AgentQL API Key",
