@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -67,6 +68,10 @@ export default function Dropdown({
   const [_waitingForResponse, setWaitingForResponse] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const _nodes = useFlowStore((state) => state.nodes);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const showingBuildPanel =
+    isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
   const [filteredOptions, setFilteredOptions] = useState(() => {
     // Include the current value in filteredOptions if it's a custom value not in validOptions
@@ -634,7 +639,10 @@ export default function Dropdown({
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
-      avoidCollisions={!!children || inspectionPanel}
+      avoidCollisions
+      collisionPadding={{
+        bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
+      }}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }

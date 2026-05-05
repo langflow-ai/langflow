@@ -10,6 +10,21 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export type getMCPServersResponse = Array<MCPServerInfoType>;
 
+export const mergeMCPServerCounts = (
+  oldData: getMCPServersResponse = [],
+  countsData: getMCPServersResponse,
+): getMCPServersResponse =>
+  oldData.map((server) => {
+    const updated = countsData.find((s) => s.name === server.name);
+    if (!updated) return server;
+
+    return {
+      ...server,
+      ...updated,
+      error: updated.error ?? undefined,
+    };
+  });
+
 export const useGetMCPServers: useQueryFunctionType<
   undefined,
   getMCPServersResponse,
@@ -77,10 +92,7 @@ export const useGetMCPServers: useQueryFunctionType<
         queryClient.setQueryData(
           ["useGetMCPServers"],
           (oldData: getMCPServersResponse = []) => {
-            return oldData.map((server) => {
-              const updated = countsData.find((s) => s.name === server.name);
-              return updated ? { ...server, ...updated } : server;
-            });
+            return mergeMCPServerCounts(oldData, countsData);
           },
         );
       });
