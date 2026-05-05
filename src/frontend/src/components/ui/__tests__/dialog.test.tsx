@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import type { ReactElement } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -59,5 +58,21 @@ describe("DialogContent", () => {
 
     // Assert — custom handler was called
     expect(customHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it("should_hide_close_button_when_requested", () => {
+    renderWithProviders(
+      <Dialog open>
+        <DialogContent hideCloseButton>
+          <DialogTitle>Test Dialog</DialogTitle>
+          <DialogDescription>Test description</DialogDescription>
+          <p>Content</p>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /close/i }),
+    ).not.toBeInTheDocument();
   });
 });
