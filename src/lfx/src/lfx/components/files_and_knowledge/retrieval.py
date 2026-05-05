@@ -6,7 +6,6 @@ import chromadb
 import chromadb.api.client
 from langchain_chroma import Chroma
 from langflow.services.database.models.user.crud import get_user_by_id
-from pydantic import SecretStr
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import (
@@ -25,6 +24,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
@@ -149,8 +149,9 @@ class KnowledgeBaseComponent(Component):
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        result[var_key] = str(value)
+                    value = secret_value_to_str(value, strip=True)
+                    if value:
+                        result[var_key] = value
                 except (ValueError, KeyError, AttributeError) as e:
                     logger.debug(f"Variable service lookup failed for '{var_key}', falling back to environment: {e}")
                     env_value = os.environ.get(var_key)
@@ -174,12 +175,13 @@ class KnowledgeBaseComponent(Component):
             if variable_service is None:
                 return None
             try:
-                return await variable_service.get_variable(
+                value = await variable_service.get_variable(
                     user_id=user_id,
                     name=variable_name,
                     field="",
                     session=session,
                 )
+                return secret_value_to_str(value, strip=True)
             except (ValueError, KeyError, AttributeError):
                 return None
 
@@ -300,7 +302,7 @@ class KnowledgeBaseComponent(Component):
 
         # Resolve API key: user override > metadata (decrypted) > global variable
         provider = metadata.get("embedding_provider")
-        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
+        runtime_api_key = secret_value_to_str(self.api_key)
         api_key = runtime_api_key or metadata.get("api_key")
         if not api_key and provider:
             api_key = await self._resolve_api_key(provider)
