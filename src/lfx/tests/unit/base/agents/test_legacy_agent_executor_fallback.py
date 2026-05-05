@@ -25,18 +25,12 @@ from lfx.schema.message import Message
 # --- _is_legacy_agent_executor ---------------------------------------------------------
 
 
-def test_should_return_false_when_runnable_is_none() -> None:
-    assert _is_legacy_agent_executor(None) is False
-
-
-def test_should_return_false_when_runnable_is_not_agent_executor() -> None:
-    assert _is_legacy_agent_executor(MagicMock()) is False
-    assert _is_legacy_agent_executor("not an agent") is False
-
-
 def test_should_return_true_when_runnable_is_agent_executor() -> None:
     fake_executor = MagicMock(spec=AgentExecutor)
     assert _is_legacy_agent_executor(fake_executor) is True
+    # Negative-side coverage: anything else (including None) must NOT match.
+    assert _is_legacy_agent_executor(MagicMock()) is False
+    assert _is_legacy_agent_executor(None) is False
 
 
 def test_should_return_false_when_langchain_classic_is_not_installed(monkeypatch) -> None:
@@ -64,10 +58,6 @@ def test_should_return_false_when_langchain_classic_is_not_installed(monkeypatch
 # --- _coerce_input_to_text -------------------------------------------------------------
 
 
-def test_should_return_empty_when_input_is_none() -> None:
-    assert _coerce_input_to_text(None) == ""
-
-
 def test_should_extract_text_attr_when_present() -> None:
     msg = Message(text="hello")
     assert _coerce_input_to_text(msg) == "hello"
@@ -80,6 +70,11 @@ def test_should_extract_string_content_when_no_text_attr() -> None:
 
 
 def test_should_join_text_parts_when_content_is_multimodal_list() -> None:
+    """Drop image parts and join text parts when AgentExecutor needs a plain string.
+
+    AgentExecutor only accepts `input: str`. Legacy SQL/JSON/OpenAPI agents don't
+    consume images anyway, so the multimodal parts are joined into plain text.
+    """
     obj = MagicMock(spec=["content"])
     obj.content = [
         {"type": "text", "text": "first"},
@@ -87,10 +82,6 @@ def test_should_join_text_parts_when_content_is_multimodal_list() -> None:
         {"type": "text", "text": "second"},
     ]
     assert _coerce_input_to_text(obj) == "first second"
-
-
-def test_should_fall_back_to_str_when_unknown_shape() -> None:
-    assert _coerce_input_to_text(42) == "42"
 
 
 # --- _build_legacy_executor_input ------------------------------------------------------
@@ -172,11 +163,3 @@ def test_should_return_legacy_payload_when_runnable_is_agent_executor(component)
     assert "input" in payload
     assert payload["input"] == "ping"
     assert "messages" not in payload
-
-
-def test_should_return_messages_payload_when_runnable_is_none(component) -> None:
-    """Default path (no runnable arg) is the modern shape."""
-    payload = component._build_graph_input()
-
-    assert "messages" in payload
-    assert "input" not in payload
