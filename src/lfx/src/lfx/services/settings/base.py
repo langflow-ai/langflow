@@ -196,6 +196,15 @@ class Settings(BaseSettings):
 
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
+
+    executor_kind: str = "in-process"
+    """The default executor kind used by the execution coordinator.
+
+    Must match the `kind` of an Executor registered with the executor service. The built-in
+    `in-process` executor runs graphs in the current process; third-party executors registered
+    via the `lfx.executors` entry-point group can be selected by setting this to their kind.
+    """
+
     components_path: list[str] = []
     """List of paths to custom components.
 
