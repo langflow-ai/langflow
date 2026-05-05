@@ -1,9 +1,20 @@
+"""Modern JSON agent built on `langchain.agents.create_agent`.
+
+Replaces the legacy `JsonAgentComponent` (`json_agent.py`) which depended on
+`langchain_classic.AgentExecutor` and `langchain_community.create_json_agent`.
+
+Preserves the original S3/local file-loading behavior and the `JSON_PREFIX`
+prompt; only the agent factory changes.
+"""
+
 import contextlib
 import tempfile
 from pathlib import Path
 
 import yaml
-from langchain_classic.agents import AgentExecutor
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
+from langchain_core.runnables import Runnable
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.data.storage_utils import read_file_bytes
@@ -12,12 +23,15 @@ from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 
 
-class JsonAgentComponent(LCAgentComponent):
+class JSONDataAgentComponent(LCAgentComponent):
+    # display_name matches the legacy JsonAgentComponent so users see the same
+    # label in the sidebar and in flows after the swap. Internal `name` is
+    # different to avoid a collision in the components dict.
     display_name = "JsonAgent"
-    description = "Construct a json agent from an LLM and tools."
-    name = "JsonAgent"
-    legacy: bool = True
-    replacement = ["langchain_utilities.JSONDataAgent"]
+    description = "Construct a JSON agent from an LLM and a JSON/YAML document (LangGraph create_agent)."
+    name = "JSONDataAgent"
+    icon = "LangChain"
+    documentation: str = "https://python.langchain.com/docs/integrations/toolkits/json/"
 
     inputs = [
         *LCAgentComponent.get_base_inputs(),
@@ -25,10 +39,6 @@ class JsonAgentComponent(LCAgentComponent):
             name="llm",
             display_name="Language Model",
             input_types=["LanguageModel"],
-            info=(
-                "Connect a Language Model. "
-                "Note: this legacy agent uses `stop` sequences — gpt-5 rejects them, pin to gpt-4o-mini / gpt-4o."
-            ),
             required=True,
         ),
         FileInput(
@@ -40,42 +50,32 @@ class JsonAgentComponent(LCAgentComponent):
     ]
 
     def _get_local_path(self) -> Path:
-        """Get a local file path, downloading from S3 storage if necessary.
-
-        Returns:
-            Path: Local file path that can be used by LangChain
-        """
+        """Resolve the source file to a local path, downloading from S3 when needed."""
         file_path = self.path
         settings = get_settings_service().settings
 
-        # If using S3 storage, download the file to temp
         if settings.storage_type == "s3":
-            # Download from S3 to temp file
             file_bytes = run_until_complete(read_file_bytes(file_path))
 
-            # Create temp file with appropriate extension
             suffix = Path(file_path.split("/")[-1]).suffix or ".json"
             with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
                 tmp_file.write(file_bytes)
                 temp_path = tmp_file.name
 
-            # Store temp path for cleanup
             self._temp_file_path = temp_path
             return Path(temp_path)
 
-        # Local storage - return as Path
         return Path(file_path)
 
     def _cleanup_temp_file(self) -> None:
-        """Clean up temporary file if one was created."""
+        """Delete any temporary file allocated by `_get_local_path`."""
         if hasattr(self, "_temp_file_path"):
             with contextlib.suppress(Exception):
-                Path(self._temp_file_path).unlink()  # Ignore cleanup errors
+                Path(self._temp_file_path).unlink()
 
-    def build_agent(self) -> AgentExecutor:
-        """Build the JSON agent executor."""
+    def build_agent(self) -> Runnable:
         try:
-            from langchain_community.agent_toolkits import create_json_agent
+            from langchain_community.agent_toolkits.json.prompt import JSON_PREFIX
             from langchain_community.agent_toolkits.json.toolkit import JsonToolkit
             from langchain_community.tools.json.tool import JsonSpec
         except ImportError as e:
@@ -83,7 +83,6 @@ class JsonAgentComponent(LCAgentComponent):
             raise ImportError(msg) from e
 
         try:
-            # Get local path (downloads from S3 if needed)
             path = self._get_local_path()
 
             if path.suffix in {".yaml", ".yml"}:
@@ -91,16 +90,27 @@ class JsonAgentComponent(LCAgentComponent):
                     yaml_dict = yaml.safe_load(file)
                 spec = JsonSpec(dict_=yaml_dict)
             else:
-                # JsonSpec.from_file calls `.exists()` on its argument — must be Path, not str.
+                # JsonSpec.from_file expects a Path (calls .exists() on it).
                 spec = JsonSpec.from_file(path)
             toolkit = JsonToolkit(spec=spec)
+            tools = list(toolkit.get_tools())
 
-            agent = create_json_agent(llm=self.llm, toolkit=toolkit, **self.get_agent_kwargs())
+            middleware = []
+            max_iterations = getattr(self, "max_iterations", None)
+            if max_iterations:
+                middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+            if getattr(self, "handle_parsing_errors", False):
+                middleware.append(ToolRetryMiddleware(max_retries=2))
+
+            agent = create_agent(
+                model=self.llm,
+                tools=tools,
+                system_prompt=JSON_PREFIX,
+                middleware=middleware or None,
+            )
         except Exception:
-            # Make sure to clean up temp file on error
             self._cleanup_temp_file()
             raise
         else:
-            # Clean up temp file after agent is created
             self._cleanup_temp_file()
             return agent

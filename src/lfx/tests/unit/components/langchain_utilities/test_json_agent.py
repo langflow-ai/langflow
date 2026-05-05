@@ -7,6 +7,35 @@ import pytest
 from lfx.components.langchain_utilities.json_agent import JsonAgentComponent
 
 
+def test_should_build_agent_when_path_is_local_json_without_mocking_json_spec(tmp_path):
+    """Regression check: pass `Path` (not `str`) to `JsonSpec.from_file`.
+
+    The legacy JsonAgent passed `str(path)` to `JsonSpec.from_file`, which calls
+    `.exists()` on its argument and crashes with
+    `AttributeError: 'str' object has no attribute 'exists'`. The fix passes the
+    `Path` directly. The existing tests don't catch this because they mock
+    `JsonSpec.from_file`; this test uses the REAL `JsonSpec.from_file`.
+    """
+    json_file = tmp_path / "users.json"
+    json_file.write_text('{"users": [{"name": "Alice"}]}', encoding="utf-8")
+
+    component = JsonAgentComponent()
+    component.set_attributes({"llm": MagicMock(), "path": str(json_file), "verbose": False})
+
+    with patch("lfx.components.langchain_utilities.json_agent.get_settings_service") as mock_settings:
+        mock_settings.return_value.settings.storage_type = "local"
+        # MUST NOT raise AttributeError. (Downstream `create_json_agent` may still
+        # raise on a MagicMock LLM — that's fine, we only assert the path bug is gone.)
+        try:
+            component.build_agent()
+        except AttributeError as e:
+            if "'str' object has no attribute 'exists'" in str(e):
+                pytest.fail(f"Legacy path bug regressed: {e}")
+            raise
+        except Exception:  # noqa: S110 - any non-AttributeError is OK for this regression check
+            pass
+
+
 class TestJsonAgentComponent:
     @pytest.fixture
     def component_class(self):
@@ -213,8 +242,10 @@ class TestJsonAgentComponent:
                 agent = component.build_agent()
 
                 assert agent == mock_agent
-                # Verify real file was used
-                mock_json_spec.from_file.assert_called_once_with(json_file)
+                # Verify real file was used. JsonSpec.from_file expects a Path
+                # (calls .exists() on its argument); the component must pass Path,
+                # not str — see test_should_build_agent_when_path_is_local_json_*.
+                mock_json_spec.from_file.assert_called_once_with(Path(json_file))
         finally:
             Path(json_file).unlink()
 
@@ -294,15 +325,18 @@ class TestJsonAgentComponent:
 
             assert agent == mock_agent
 
-            # Verify temp file was created and cleaned up
+            # Verify temp file was created and cleaned up. The component now
+            # passes a Path (not str) to JsonSpec.from_file — see the regression
+            # test test_should_build_agent_when_path_is_local_json_*.
             call_path = mock_json_spec.from_file.call_args[0][0]
+            assert isinstance(call_path, Path)
             import tempfile
 
             temp_dir = tempfile.gettempdir()
-            assert call_path.startswith(temp_dir)
-            assert call_path.endswith(".json")
+            assert str(call_path).startswith(temp_dir)
+            assert call_path.suffix == ".json"
             # Cleanup should have been called
-            assert not Path(call_path).exists()
+            assert not call_path.exists()
 
     def test_build_agent_cleans_up_on_error(self, component_class, mock_langchain_community):
         """Test that temp file is cleaned up even when agent creation fails."""

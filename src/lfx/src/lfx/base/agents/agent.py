@@ -25,11 +25,72 @@ from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
+
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
 DEFAULT_AGENT_NAME = "Agent ({tools_names})"
+
+_DEFAULT_LEGACY_INPUT = "Continue the conversation."
+
+
+def _is_legacy_agent_executor(runnable: object) -> bool:
+    """Return True when `runnable` is a `langchain_classic.AgentExecutor` instance.
+
+    Imported lazily so the modern stack does not pay the langchain_classic import
+    cost when no legacy components are in play.
+    """
+    if runnable is None:
+        return False
+    try:
+        from langchain_classic.agents import AgentExecutor
+    except ImportError:
+        return False
+    return isinstance(runnable, AgentExecutor)
+
+
+def _coerce_input_to_text(input_value: object) -> str:
+    """Best-effort extraction of plain text from heterogeneous input shapes.
+
+    `AgentExecutor`'s `input_keys=["input"]` only accepts a string. When the
+    upstream Component supplies a multimodal `Message`, drop the non-text parts
+    (legacy agents like SQL/JSON do not consume them anyway).
+    """
+    if input_value is None:
+        return ""
+    text_attr = getattr(input_value, "text", None)
+    if isinstance(text_attr, str):
+        return text_attr
+    content = getattr(input_value, "content", None)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = [part.get("text", "") for part in content if isinstance(part, dict) and part.get("type") == "text"]
+        return " ".join(p for p in text_parts if p)
+    return str(input_value)
+
+
+def _build_legacy_executor_input(input_value: object, chat_history: object) -> dict:
+    """Construct the legacy `AgentExecutor` input dict (`{"input": str, "chat_history": [...]}`)."""
+    text = _coerce_input_to_text(input_value).strip() or _DEFAULT_LEGACY_INPUT
+
+    history_messages: list[BaseMessage] = []
+    if chat_history:
+        items = chat_history if isinstance(chat_history, list) else [chat_history]
+        for item in items:
+            text_attr = getattr(item, "text", None)
+            if isinstance(text_attr, str) and not text_attr.strip():
+                continue
+            to_lc = getattr(item, "to_lc_message", None)
+            if callable(to_lc):
+                history_messages.append(to_lc())
+
+    payload: dict = {"input": text}
+    if history_messages:
+        payload["chat_history"] = history_messages
+    return payload
 
 
 class LCAgentComponent(Component):
@@ -129,7 +190,7 @@ class LCAgentComponent(Component):
         agent: Runnable,
     ) -> Message:
         runnable = self._resolve_runnable(agent)
-        graph_input = self._build_graph_input()
+        graph_input = self._build_graph_input(runnable)
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
@@ -210,9 +271,19 @@ class LCAgentComponent(Component):
         """
         return agent
 
-    def _build_graph_input(self) -> dict:
-        """Construct the `{"messages": [...]}` payload expected by `create_agent` graphs."""
+    def _build_graph_input(self, runnable: Runnable | None = None) -> dict:
+        """Construct the input payload, switching shape based on runnable type.
+
+        Modern `create_agent` graphs expect `{"messages": [...]}`. Legacy
+        `AgentExecutor`-based agents (kept as a transitional path for
+        components like SQL/JSON/OpenAPI/VectorStoreRouter) expect
+        `{"input": str, "chat_history": [BaseMessage]}`.
+        """
         chat_history = getattr(self, "chat_history", None)
+
+        if _is_legacy_agent_executor(runnable):
+            return _build_legacy_executor_input(self.input_value, chat_history)
+
         messages = build_initial_messages(
             input_value=self.input_value,
             chat_history=chat_history,

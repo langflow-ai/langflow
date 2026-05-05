@@ -17,6 +17,10 @@ class VectorStoreRouterAgentComponent(LCAgentComponent):
             name="llm",
             display_name="Language Model",
             input_types=["LanguageModel"],
+            info=(
+                "Connect a Language Model. "
+                "Note: this legacy agent uses `stop` sequences — gpt-5 rejects them, pin to gpt-4o-mini / gpt-4o."
+            ),
             required=True,
         ),
         HandleInput(

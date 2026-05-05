@@ -1,7 +1,18 @@
-from langchain_classic.agents import AgentExecutor
+"""Modern SQL agent built on `langchain.agents.create_agent`.
+
+Replaces the legacy `SQLAgentComponent` (`sql.py`) which depended on
+`langchain_classic.AgentExecutor` and `langchain_community.create_sql_agent`.
+
+The toolkit (`SQLDatabaseToolkit`) and the prompt prefix (`SQL_PREFIX`) are
+preserved; only the agent factory changes.
+"""
+
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
-from langchain_community.agent_toolkits.sql.base import create_sql_agent
+from langchain_community.agent_toolkits.sql.prompt import SQL_PREFIX
 from langchain_community.utilities import SQLDatabase
+from langchain_core.runnables import Runnable
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
@@ -9,24 +20,26 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.inputs.inputs import DropdownInput, HandleInput, MessageTextInput, ModelInput
 from lfx.io import Output, SecretStrInput, StrInput
 
+# Default top_k mirrors langchain_classic.create_sql_agent's default.
+_DEFAULT_TOP_K = 10
 
-class SQLAgentComponent(LCAgentComponent):
+
+class SQLDatabaseAgentComponent(LCAgentComponent):
+    # display_name matches the legacy SQLAgentComponent so users see the same
+    # label in the sidebar and in flows after the swap. Internal `name` is
+    # different to avoid a collision in the components dict.
     display_name = "SQLAgent"
-    description = "Construct an SQL agent from an LLM and tools."
-    name = "SQLAgent"
+    description = "Construct an SQL agent from an LLM and tools (LangGraph create_agent)."
+    name = "SQLDatabaseAgent"
     icon = "LangChain"
-    legacy: bool = True
-    replacement = ["langchain_utilities.SQLDatabaseAgent"]
+    documentation: str = "https://python.langchain.com/docs/integrations/toolkits/sql_database/"
 
     inputs = [
         *LCAgentComponent.get_base_inputs(),
         ModelInput(
             name="model",
             display_name="Language Model",
-            info=(
-                "Select your model provider or connect a Language Model component. "
-                "Note: this legacy agent uses `stop` sequences — gpt-5 rejects them, pick gpt-4o-mini / gpt-4o."
-            ),
+            info="Select your model provider or connect a Language Model component.",
             real_time_refresh=True,
             required=True,
         ),
@@ -69,7 +82,6 @@ class SQLAgentComponent(LCAgentComponent):
     ]
 
     def _get_llm(self):
-        """Resolve the language model from dropdown selection or connected component."""
         return get_llm(
             model=self.model,
             user_id=self.user_id,
@@ -79,7 +91,6 @@ class SQLAgentComponent(LCAgentComponent):
         )
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Dynamically update build config with user-filtered model options (tool-calling capable models)."""
         return handle_model_input_update(
             self,
             dict(build_config),
@@ -89,11 +100,25 @@ class SQLAgentComponent(LCAgentComponent):
             get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
 
-    def build_agent(self) -> AgentExecutor:
+    def _build_system_prompt(self, db: SQLDatabase) -> str:
+        return SQL_PREFIX.format(dialect=db.dialect, top_k=_DEFAULT_TOP_K)
+
+    def build_agent(self) -> Runnable:
         llm = self._get_llm()
         db = SQLDatabase.from_uri(self.database_uri)
         toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-        agent_args = self.get_agent_kwargs()
-        agent_args["max_iterations"] = agent_args["agent_executor_kwargs"]["max_iterations"]
-        del agent_args["agent_executor_kwargs"]["max_iterations"]
-        return create_sql_agent(llm=llm, toolkit=toolkit, extra_tools=self.extra_tools or [], **agent_args)
+        tools = list(toolkit.get_tools()) + list(self.extra_tools or [])
+
+        middleware = []
+        max_iterations = getattr(self, "max_iterations", None)
+        if max_iterations:
+            middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+        if getattr(self, "handle_parsing_errors", False):
+            middleware.append(ToolRetryMiddleware(max_retries=2))
+
+        return create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=self._build_system_prompt(db),
+            middleware=middleware or None,
+        )

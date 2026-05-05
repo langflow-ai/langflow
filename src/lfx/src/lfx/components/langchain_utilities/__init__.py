@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .fake_embeddings import FakeEmbeddingsComponent
     from .html_link_extractor import HtmlLinkExtractorComponent
     from .json_agent import JsonAgentComponent
+    from .json_data_agent import JSONDataAgentComponent
     from .langchain_hub import LangChainHubPromptComponent
     from .language_recursive import LanguageRecursiveTextSplitterComponent
     from .language_semantic import SemanticTextSplitterComponent
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from .natural_language import NaturalLanguageTextSplitterComponent
     from .openai_tools import OpenAIToolsAgentComponent
     from .openapi import OpenAPIAgentComponent
+    from .openapi_spec_agent import OpenAPISpecAgentComponent
     from .recursive_character import RecursiveCharacterTextSplitterComponent
     from .retrieval_qa import RetrievalQAComponent
     from .runnable_executor import RunnableExecComponent
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
     from .spider import SpiderTool
     from .sql import SQLAgentComponent
     from .sql_database import SQLDatabaseComponent
+    from .sql_database_agent import SQLDatabaseAgentComponent
     from .sql_generator import SQLGeneratorComponent
     from .tool_calling import ToolCallingAgentComponent
     from .vector_store_info import VectorStoreInfoComponent
@@ -39,6 +42,7 @@ _dynamic_imports = {
     "FakeEmbeddingsComponent": "fake_embeddings",
     "HtmlLinkExtractorComponent": "html_link_extractor",
     "JsonAgentComponent": "json_agent",
+    "JSONDataAgentComponent": "json_data_agent",
     "LangChainHubPromptComponent": "langchain_hub",
     "LanguageRecursiveTextSplitterComponent": "language_recursive",
     "LLMCheckerChainComponent": "llm_checker",
@@ -46,6 +50,7 @@ _dynamic_imports = {
     "NaturalLanguageTextSplitterComponent": "natural_language",
     "OpenAIToolsAgentComponent": "openai_tools",
     "OpenAPIAgentComponent": "openapi",
+    "OpenAPISpecAgentComponent": "openapi_spec_agent",
     "RecursiveCharacterTextSplitterComponent": "recursive_character",
     "RetrievalQAComponent": "retrieval_qa",
     "RunnableExecComponent": "runnable_executor",
@@ -53,6 +58,7 @@ _dynamic_imports = {
     "SemanticTextSplitterComponent": "language_semantic",
     "SpiderTool": "spider",
     "SQLAgentComponent": "sql",
+    "SQLDatabaseAgentComponent": "sql_database_agent",
     "SQLDatabaseComponent": "sql_database",
     "SQLGeneratorComponent": "sql_generator",
     "ToolCallingAgentComponent": "tool_calling",
@@ -67,6 +73,7 @@ __all__ = [
     "ConversationChainComponent",
     "FakeEmbeddingsComponent",
     "HtmlLinkExtractorComponent",
+    "JSONDataAgentComponent",
     "JsonAgentComponent",
     "LLMCheckerChainComponent",
     "LLMMathChainComponent",
@@ -75,10 +82,12 @@ __all__ = [
     "NaturalLanguageTextSplitterComponent",
     "OpenAIToolsAgentComponent",
     "OpenAPIAgentComponent",
+    "OpenAPISpecAgentComponent",
     "RecursiveCharacterTextSplitterComponent",
     "RetrievalQAComponent",
     "RunnableExecComponent",
     "SQLAgentComponent",
+    "SQLDatabaseAgentComponent",
     "SQLDatabaseComponent",
     "SQLGeneratorComponent",
     "SelfQueryRetrieverComponent",

@@ -1,11 +1,19 @@
+"""Modern OpenAPI agent built on `langchain.agents.create_agent`.
+
+Replaces the legacy `OpenAPIAgentComponent` (`openapi.py`) which depended on
+`langchain_classic.AgentExecutor` and `langchain_community.create_openapi_agent`.
+"""
+
 from pathlib import Path
 
 import yaml
-from langchain_classic.agents import AgentExecutor
-from langchain_community.agent_toolkits import create_openapi_agent
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
+from langchain_community.agent_toolkits.openapi.prompt import OPENAPI_PREFIX
 from langchain_community.agent_toolkits.openapi.toolkit import OpenAPIToolkit
 from langchain_community.tools.json.tool import JsonSpec
 from langchain_community.utilities.requests import TextRequestsWrapper
+from langchain_core.runnables import Runnable
 
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
@@ -13,23 +21,22 @@ from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.inputs.inputs import BoolInput, DropdownInput, FileInput, ModelInput, SecretStrInput, StrInput
 
 
-class OpenAPIAgentComponent(LCAgentComponent):
+class OpenAPISpecAgentComponent(LCAgentComponent):
+    # display_name matches the legacy OpenAPIAgentComponent so users see the
+    # same label in the sidebar and in flows after the swap. Internal `name`
+    # is different to avoid a collision in the components dict.
     display_name = "OpenAPI Agent"
-    description = "Agent to interact with OpenAPI API."
-    name = "OpenAPIAgent"
+    description = "Agent to interact with OpenAPI API (LangGraph create_agent)."
+    name = "OpenAPISpecAgent"
     icon = "LangChain"
-    legacy: bool = True
-    replacement = ["langchain_utilities.OpenAPISpecAgent"]
+    documentation: str = "https://python.langchain.com/docs/integrations/toolkits/openapi/"
 
     inputs = [
         *LCAgentComponent.get_base_inputs(),
         ModelInput(
             name="model",
             display_name="Language Model",
-            info=(
-                "Select your model provider or connect a Language Model component. "
-                "Note: this legacy agent uses `stop` sequences — gpt-5 rejects them, pick gpt-4o-mini / gpt-4o."
-            ),
+            info="Select your model provider or connect a Language Model component.",
             real_time_refresh=True,
             required=True,
         ),
@@ -61,7 +68,6 @@ class OpenAPIAgentComponent(LCAgentComponent):
     ]
 
     def _get_llm(self):
-        """Resolve the language model from dropdown selection or connected component."""
         return get_llm(
             model=self.model,
             user_id=self.user_id,
@@ -71,7 +77,6 @@ class OpenAPIAgentComponent(LCAgentComponent):
         )
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
-        """Dynamically update build config with user-filtered model options (tool-calling capable models)."""
         return handle_model_input_update(
             self,
             dict(build_config),
@@ -81,34 +86,34 @@ class OpenAPIAgentComponent(LCAgentComponent):
             get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
 
-    def build_agent(self) -> AgentExecutor:
+    def build_agent(self) -> Runnable:
         llm = self._get_llm()
         path = Path(self.path)
-        # `Path.suffix` returns `.yaml` / `.yml` with the leading dot.
         if path.suffix in {".yaml", ".yml"}:
             with path.open(encoding="utf-8") as file:
                 yaml_dict = yaml.safe_load(file)
             spec = JsonSpec(dict_=yaml_dict)
         else:
-            spec = JsonSpec.from_file(path)
+            spec = JsonSpec.from_file(str(path))
         requests_wrapper = TextRequestsWrapper()
-        # Propagate `handle_parsing_errors` to the nested `json_explorer` AgentExecutor
-        # built inside `OpenAPIToolkit.from_llm`. Without this, the inner executor
-        # stays at the default `handle_parsing_errors=False` and any LLM response
-        # outside the ReAct format (very common with gpt-4o) crashes the flow with
-        # "An output parsing error occurred. ... pass `handle_parsing_errors=True`".
         toolkit = OpenAPIToolkit.from_llm(
             llm=llm,
             json_spec=spec,
             requests_wrapper=requests_wrapper,
             allow_dangerous_requests=self.allow_dangerous_requests,
-            agent_executor_kwargs={"handle_parsing_errors": self.handle_parsing_errors},
         )
+        tools = list(toolkit.get_tools())
 
-        agent_args = self.get_agent_kwargs()
+        middleware = []
+        max_iterations = getattr(self, "max_iterations", None)
+        if max_iterations:
+            middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+        if getattr(self, "handle_parsing_errors", False):
+            middleware.append(ToolRetryMiddleware(max_retries=2))
 
-        # This is bit weird - generally other create_*_agent functions have max_iterations in the
-        # `agent_executor_kwargs`, but openai has this parameter passed directly.
-        agent_args["max_iterations"] = agent_args["agent_executor_kwargs"]["max_iterations"]
-        del agent_args["agent_executor_kwargs"]["max_iterations"]
-        return create_openapi_agent(llm=llm, toolkit=toolkit, **agent_args)
+        return create_agent(
+            model=llm,
+            tools=tools,
+            system_prompt=OPENAPI_PREFIX,
+            middleware=middleware or None,
+        )
