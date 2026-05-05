@@ -1,6 +1,6 @@
 """Tests for handle_on_chain_start / handle_on_chain_end accepting the create_agent shape.
 
-Slices S5–S6 of langchain_classic.AgentExecutor → langchain.agents.create_agent migration.
+Slices S5-S6 of langchain_classic.AgentExecutor -> langchain.agents.create_agent migration.
 
 Under create_agent (CompiledStateGraph), `astream_events(version='v2')` emits:
   - on_chain_start.data.input  = {"messages": [HumanMessage, ...]}
@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
-
 from lfx.base.agents.events import process_agent_events
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent

@@ -9,7 +9,6 @@ import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
 from langgraph.graph.state import CompiledStateGraph
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 
 
@@ -24,8 +23,10 @@ class _ToolCapableFakeChatModel(FakeMessagesListChatModel):
 
 
 class _ToolCapableFakeWatsonxModel(_ToolCapableFakeChatModel):
-    """Class name contains 'watsonx' so `is_watsonx_model(llm)` returns True;
-    no `model_id` set so `is_granite_model(llm)` returns False — used to
+    """Non-granite WatsonX fake model (`is_watsonx_model=True`, `is_granite_model=False`).
+
+    Class name contains 'watsonx' so `is_watsonx_model(llm)` returns True;
+    no `model_id` set so `is_granite_model(llm)` returns False - used to
     exercise the non-granite WatsonX branch (Llama/Mistral hosted on WatsonX).
     """
 
@@ -142,10 +143,12 @@ def test_should_omit_system_prompt_when_blank(monkeypatch) -> None:
 
 
 def test_should_inject_enhanced_system_prompt_for_non_granite_watsonx_models(monkeypatch) -> None:
-    """Bug: enhanced system prompt (TOOL USAGE GUIDELINES) was Granite-only,
+    """Enhanced system prompt must fire for any WatsonX model, not just Granite.
+
+    Bug: enhanced system prompt (TOOL USAGE GUIDELINES) was Granite-only,
     but the WatsonX platform tool-calling issues affect ALL WatsonX models
     (Llama, Mistral, etc.). The middleware that handles those issues already
-    fires on `is_watsonx_model` — the system prompt enhancement must align.
+    fires on `is_watsonx_model` - the system prompt enhancement must align.
 
     Acceptance: a non-granite, WatsonX-hosted model with 2+ tools must receive
     the TOOL USAGE GUIDELINES injection, matching the middleware's scope.
@@ -182,16 +185,17 @@ def test_should_inject_enhanced_system_prompt_for_non_granite_watsonx_models(mon
 
     system_prompt = captured.get("system_prompt") or ""
     assert "TOOL USAGE GUIDELINES" in system_prompt, (
-        f"Non-granite WatsonX models should receive TOOL USAGE GUIDELINES; "
-        f"got system_prompt={system_prompt!r}"
+        f"Non-granite WatsonX models should receive TOOL USAGE GUIDELINES; got system_prompt={system_prompt!r}"
     )
 
 
 def test_should_return_compiled_state_graph_when_build_agent_called(monkeypatch) -> None:
-    """Bug: LCToolsAgentComponent.build_agent() wraps the new CompiledStateGraph
+    """build_agent() must return the CompiledStateGraph directly, not wrap it.
+
+    Bug: LCToolsAgentComponent.build_agent() wraps the new CompiledStateGraph
     (returned by create_agent_runnable) in RunnableAgent + AgentExecutor with
     `input_keys_arg=["input"]`. The graph expects `{"messages": [...]}`, not
-    `{"input": str}` — any flow consuming the "Agent" output port silently gets
+    `{"input": str}` - any flow consuming the "Agent" output port silently gets
     a key-mismatched executor.
 
     Expected: build_agent() returns the CompiledStateGraph directly (the same

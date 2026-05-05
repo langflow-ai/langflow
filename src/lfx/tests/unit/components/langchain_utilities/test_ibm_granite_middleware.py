@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-
 from lfx.components.langchain_utilities.ibm_granite_middleware import (
     DEFAULT_FORCED_ITERATIONS,
     WatsonXAgentMiddleware,
@@ -135,7 +134,9 @@ def test_should_keep_response_unchanged_when_zero_or_one_tool_calls() -> None:
 
 
 def test_should_swap_model_to_required_variant_when_no_tool_messages_yet() -> None:
-    """The handler must receive a NEW request whose model is the required variant —
+    """Handler receives a new request with the required model variant via `override`.
+
+    The handler must receive a NEW request whose model is the required variant -
     using `request.override(model=...)` (immutable), NOT mutating in place.
     """
     llm = _llm_supporting_bind_tools()
@@ -182,7 +183,9 @@ def test_should_swap_model_to_auto_variant_after_forced_iterations() -> None:
 
 
 def test_should_not_mutate_original_request_when_using_override() -> None:
-    """Regression: `request.model = ...` is deprecated. The middleware MUST use
+    """Middleware must not mutate the original request when swapping the model.
+
+    Regression: `request.model = ...` is deprecated. The middleware MUST use
     `request.override(model=...)` which returns a new request, leaving the
     original unchanged. Direct mutation can break streaming sessions because the
     framework retains a reference to the original request.

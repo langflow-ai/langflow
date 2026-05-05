@@ -12,14 +12,13 @@ from typing import Any
 
 from lfx.base.agents.exception_formatting import format_exception_for_message
 
-
 # ---- IBM watsonx shape: body = {"errors": [{"code": ..., "message": ...}]} ----
 
 
 def test_should_extract_message_from_ibm_watsonx_429_body() -> None:
-    """IBM watsonx returns: {'errors': [{'code': 'consumption_limit_reached', 'message': '...'}]}"""
+    """IBM watsonx returns: {'errors': [{'code': 'consumption_limit_reached', 'message': '...'}]}."""
 
-    class _ApiRequestFailure(Exception):
+    class _ApiRequestFailureError(Exception):
         def __init__(self) -> None:
             super().__init__("Failure during achat.")
             self.status_code = 429
@@ -37,7 +36,7 @@ def test_should_extract_message_from_ibm_watsonx_429_body() -> None:
                 ],
             }
 
-    formatted = format_exception_for_message(_ApiRequestFailure())
+    formatted = format_exception_for_message(_ApiRequestFailureError())
 
     assert "consumption_limit_reached" in formatted or "limit 10" in formatted
     assert "Failure during achat" in formatted
@@ -45,7 +44,7 @@ def test_should_extract_message_from_ibm_watsonx_429_body() -> None:
 
 
 def test_should_concatenate_multiple_error_messages_when_body_has_many() -> None:
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("multi error")
             self.body = {
@@ -55,7 +54,7 @@ def test_should_concatenate_multiple_error_messages_when_body_has_many() -> None
                 ],
             }
 
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
 
     assert "first error" in formatted
     assert "second error" in formatted
@@ -65,9 +64,9 @@ def test_should_concatenate_multiple_error_messages_when_body_has_many() -> None
 
 
 def test_should_extract_message_from_openai_style_error_body() -> None:
-    """OpenAI/Anthropic shape: {'error': {'message': '...', 'type': '...'}}"""
+    """OpenAI/Anthropic shape: {'error': {'message': '...', 'type': '...'}}."""
 
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("Bad Request")
             self.status_code = 400
@@ -78,7 +77,7 @@ def test_should_extract_message_from_openai_style_error_body() -> None:
                 }
             }
 
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
 
     assert "exceeded your current quota" in formatted
     assert "Bad Request" in formatted
@@ -92,12 +91,12 @@ def test_should_extract_message_from_response_json_when_body_attr_absent() -> No
         def json(self) -> dict[str, Any]:
             return {"error": {"message": "missing API key"}}
 
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("Authentication failed")
             self.response = _FakeResponse()
 
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
 
     assert "missing API key" in formatted
 
@@ -118,13 +117,13 @@ def test_should_return_type_name_when_exception_has_empty_message() -> None:
 
 
 def test_should_not_crash_when_body_is_not_a_dict() -> None:
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("weird")
             self.body = "this is a string body"
 
     # Should not raise — degrade gracefully.
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
     assert "weird" in formatted
 
 
@@ -134,24 +133,24 @@ def test_should_not_crash_when_response_json_raises() -> None:
             msg = "not parseable"
             raise ValueError(msg)
 
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("transient")
             self.response = _BadResponse()
 
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
     assert "transient" in formatted
 
 
 def test_should_not_duplicate_main_text_when_api_message_is_a_substring() -> None:
     """If the str(exc) already contains the API message, don't append it again."""
 
-    class _Exc(Exception):
+    class _ExcError(Exception):
         def __init__(self) -> None:
             super().__init__("rate_limit_exceeded: too many requests")
             self.body = {"error": {"message": "too many requests"}}
 
-    formatted = format_exception_for_message(_Exc())
+    formatted = format_exception_for_message(_ExcError())
 
     # "too many requests" should appear only once.
     assert formatted.count("too many requests") == 1

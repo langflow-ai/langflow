@@ -6,7 +6,6 @@ instead of the legacy `AgentFinish`.
 """
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-
 from lfx.base.agents.graph_event_extractor import extract_final_text
 
 

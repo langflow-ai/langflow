@@ -76,5 +76,3 @@ def _append_input(messages: list[BaseMessage], input_value: Message | str | None
         messages.append(HumanMessage(content=input_value))
         return True
     return False
-
-

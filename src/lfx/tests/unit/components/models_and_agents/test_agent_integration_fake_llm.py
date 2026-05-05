@@ -23,15 +23,14 @@ import pytest
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
-from pydantic import Field
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from pydantic import Field
 
 # ============================================================================
 # Test infrastructure: scripted fake LLM that records inputs
@@ -120,9 +119,7 @@ def _make_component(
     component._user_id = None
     component.cache = {}
     component._token_usage = None
-    component._vertex = SimpleNamespace(
-        graph=SimpleNamespace(session_id="test-session", flow_id=None, user_id=None)
-    )
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session", flow_id=None, user_id=None))
     component._event_manager = None
     component.status = None
     component.send_message = AsyncMock(side_effect=_persisting_send)
@@ -149,7 +146,7 @@ def _make_component(
 _send_call_counter: dict[str, int] = {"count": 0}
 
 
-async def _persisting_send(message: Message, skip_db_update: bool = False) -> Message:  # noqa: ARG001
+async def _persisting_send(message: Message, *, skip_db_update: bool = False) -> Message:  # noqa: ARG001
     """Mimic the production send_message: assigns an ID on first persist."""
     _send_call_counter["count"] += 1
     if _send_call_counter["count"] == 1:
@@ -160,7 +157,6 @@ async def _persisting_send(message: Message, skip_db_update: bool = False) -> Me
 @pytest.fixture(autouse=True)
 def _reset_send_counter():
     _send_call_counter["count"] = 0
-    yield
 
 
 # ============================================================================
@@ -215,9 +211,7 @@ async def test_should_pass_full_chat_history_to_llm_when_history_is_provided() -
         Data(text="My favorite color is purple.", sender=MESSAGE_SENDER_USER),
         Data(text="Got it — purple is a great color.", sender=MESSAGE_SENDER_AI),
     ]
-    component = _make_component(
-        llm=llm, tools=[], chat_history=history, input_value="What is my favorite color?"
-    )
+    component = _make_component(llm=llm, tools=[], chat_history=history, input_value="What is my favorite color?")
 
     graph = component.create_agent_runnable()
     await component.run_agent(graph)
@@ -239,7 +233,9 @@ async def test_should_pass_full_chat_history_to_llm_when_history_is_provided() -
 
 @pytest.mark.asyncio
 async def test_should_stop_after_max_iterations_model_calls_when_llm_keeps_emitting_tool_calls() -> None:
-    """Smoke #6 contract: with max_iterations=2 and a model that always emits
+    """Agent halts after `max_iterations` model calls when the LLM keeps emitting tool calls.
+
+    Smoke #6 contract: with max_iterations=2 and a model that always emits
     tool_calls, the agent halts after 2 model calls (does not loop forever).
 
     NOTE: max_iterations counts MODEL CALLS, not tool calls. Documented behavior.
@@ -261,9 +257,7 @@ async def test_should_stop_after_max_iterations_model_calls_when_llm_keeps_emitt
     result = await component.run_agent(graph)
 
     # Model was called at most 2 times (the run_limit).
-    assert len(llm.received_inputs) <= 2, (
-        f"max_iterations=2 must cap LLM calls; got {len(llm.received_inputs)}"
-    )
+    assert len(llm.received_inputs) <= 2, f"max_iterations=2 must cap LLM calls; got {len(llm.received_inputs)}"
     # Run terminated; result is a complete Message (no infinite spinner).
     assert result is not None
     assert result.properties.state in ("complete", "partial")  # both acceptable; not stuck
@@ -271,7 +265,9 @@ async def test_should_stop_after_max_iterations_model_calls_when_llm_keeps_emitt
 
 @pytest.mark.asyncio
 async def test_should_make_unbounded_model_calls_when_max_iterations_is_none() -> None:
-    """When max_iterations is unset (None), no ModelCallLimitMiddleware is wired
+    """No iteration limit is enforced when `max_iterations` is None.
+
+    When max_iterations is unset (None), no ModelCallLimitMiddleware is wired
     and the agent terminates only when the LLM stops emitting tool calls.
     """
     llm = ScriptedFakeChatModel(
@@ -295,7 +291,9 @@ async def test_should_make_unbounded_model_calls_when_max_iterations_is_none() -
 
 @pytest.mark.asyncio
 async def test_should_render_tool_block_in_content_blocks_when_llm_emits_tool_call() -> None:
-    """Smoke #1 contract: a single tool_call produces one ToolContent block in
+    """A single tool_call produces one ToolContent block in `content_blocks`.
+
+    Smoke #1 contract: a single tool_call produces one ToolContent block in
     `content_blocks[0].contents`, with `name`, `tool_input`, `output` populated.
     """
     llm = ScriptedFakeChatModel(
@@ -322,7 +320,9 @@ async def test_should_render_tool_block_in_content_blocks_when_llm_emits_tool_ca
 
 @pytest.mark.asyncio
 async def test_should_render_two_tool_blocks_when_llm_emits_parallel_tool_calls() -> None:
-    """Smoke #2 contract: parallel tool calls in a single AIMessage produce
+    """Parallel tool calls in a single AIMessage produce multiple ToolContent blocks.
+
+    Smoke #2 contract: parallel tool calls in a single AIMessage produce
     multiple ToolContent blocks, all executed.
     """
     llm = ScriptedFakeChatModel(
@@ -357,7 +357,9 @@ async def test_should_render_two_tool_blocks_when_llm_emits_parallel_tool_calls(
 
 @pytest.mark.asyncio
 async def test_should_render_final_text_block_when_llm_returns_no_tool_calls() -> None:
-    """When the LLM returns a single AIMessage with content (no tools), the
+    """A no-tool AIMessage produces final text plus a TextContent("Output") block.
+
+    When the LLM returns a single AIMessage with content (no tools), the
     final text shows up in `result.text` and a TextContent("Output") block is
     appended to content_blocks.
     """
@@ -369,8 +371,7 @@ async def test_should_render_final_text_block_when_llm_returns_no_tool_calls() -
 
     assert result.text == "Hello, world."
     output_blocks = [
-        c for c in result.content_blocks[0].contents
-        if isinstance(c, TextContent) and c.header.get("title") == "Output"
+        c for c in result.content_blocks[0].contents if isinstance(c, TextContent) and c.header.get("title") == "Output"
     ]
     assert len(output_blocks) == 1
 
@@ -380,7 +381,9 @@ async def test_should_render_final_text_block_when_llm_returns_no_tool_calls() -
 
 @pytest.mark.asyncio
 async def test_should_pass_multimodal_content_to_llm_when_input_message_has_list_content() -> None:
-    """Multimodal smoke contract: when input_value is a Message whose
+    """Multimodal list-content is forwarded to the LLM unchanged.
+
+    Multimodal smoke contract: when input_value is a Message whose
     to_lc_message() returns list-content (text + image_url), the LLM receives
     the SAME list-content unchanged.
 
@@ -416,15 +419,20 @@ async def test_should_pass_multimodal_content_to_llm_when_input_message_has_list
 
 
 class ScriptedFakeWatsonxModel(ScriptedFakeChatModel):
-    """Fake chat model whose class name contains 'watsonx' so `is_watsonx_model`
-    detects it as a WatsonX provider — triggers the WatsonXAgentMiddleware path."""
+    """Fake chat model that triggers the WatsonXAgentMiddleware path.
+
+    Class name contains 'watsonx' so `is_watsonx_model` detects it as a WatsonX
+    provider, which wires the WatsonXAgentMiddleware in the agent build.
+    """
 
 
 @pytest.mark.asyncio
 async def test_should_run_watsonx_agent_through_async_path_without_not_implemented_error() -> None:
-    """Regression: when the WatsonX middleware is wired and the agent is invoked
+    """WatsonX middleware must implement `awrap_model_call` for async astream_events.
+
+    Regression: when the WatsonX middleware is wired and the agent is invoked
     via `astream_events` (async), the middleware's `awrap_model_call` must be
-    implemented — not just `wrap_model_call`. Otherwise the entire WatsonX flow
+    implemented - not just `wrap_model_call`. Otherwise the entire WatsonX flow
     blows up with `NotImplementedError` (production block, caught manually).
     """
     llm = ScriptedFakeWatsonxModel(
@@ -449,9 +457,11 @@ async def test_should_run_watsonx_agent_through_async_path_without_not_implement
 
 @pytest.mark.asyncio
 async def test_should_send_tool_messages_back_to_llm_on_next_call() -> None:
-    """Verify the LangGraph loop: after the first AIMessage (with tool_calls)
+    """Second model call must include ToolMessages from the first round of tool execution.
+
+    Verify the LangGraph loop: after the first AIMessage (with tool_calls)
     triggers tool execution, the SECOND model call must include ToolMessages
-    in the `messages` list — that is the agent loop's contract.
+    in the `messages` list - that is the agent loop's contract.
     """
     llm = ScriptedFakeChatModel(
         responses=[

@@ -13,7 +13,6 @@ from unittest.mock import MagicMock
 from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 
 
@@ -44,7 +43,7 @@ def _component_with(monkeypatch, **kwargs) -> ToolCallingAgentComponent:
         chat_history=[],
         handle_parsing_errors=kwargs.get("handle_parsing_errors", False),
         verbose=kwargs.get("verbose", False),
-        max_iterations=kwargs.get("max_iterations", None),
+        max_iterations=kwargs.get("max_iterations"),
         api_key=None,
     )
     return component
