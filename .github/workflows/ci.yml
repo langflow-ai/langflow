@@ -186,6 +186,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       database: ${{ steps.filter.outputs.database }}
       docker: ${{ steps.filter.outputs.docker }}
+      design-md: ${{ steps.filter.outputs.design-md }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -345,6 +346,27 @@ jobs:
       DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
+  lint-design-md:
+    needs: path-filter
+    name: Lint DESIGN.md
+    if: ${{ inputs.run-all-tests || needs.path-filter.outputs.design-md == 'true' }}
+    runs-on: ubuntu-latest
+    env:
+      DESIGN_MD_CLI_VERSION: "0.1.1"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Lint DESIGN.md
+        run: npx --yes @google/design.md@${{ env.DESIGN_MD_CLI_VERSION }} lint DESIGN.md
+
   merge-frontend-coverage:
     name: Merge Frontend Jest + Playwright Coverage Reports
     needs: [path-filter, set-ci-condition, test-frontend-unit, test-frontend]
@@ -411,6 +433,7 @@ jobs:
         test-docs-build,
         test-templates,
         test-docker,
+        lint-design-md,
         set-ci-condition,
         path-filter,
         check-nightly-status,
@@ -465,6 +488,8 @@ jobs:
                   "  - Template Tests: Check starter project templates"
                 elif $job == "test-docker" then
                   "  - Docker Tests: Check Docker image builds and version verification"
+                elif $job == "lint-design-md" then
+                  "  - DESIGN.md Lint: Check token references, WCAG contrast, and spec compliance"
                 elif $job == "path-filter" then
                   "  - Path Filter: File path filtering failed"
                 elif $job == "set-ci-condition" then
