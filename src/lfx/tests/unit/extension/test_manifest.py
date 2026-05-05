@@ -115,10 +115,11 @@ def test_extra_top_level_field_rejected() -> None:
 
 
 def test_schema_version_field_is_dropped() -> None:
-    """``schema_version`` was removed; the version is pinned by ``$id`` /
-    ``$schema``.  An author who copies a stale fixture with ``schema_version: 1``
-    in it gets a clear ``extra="forbid"`` rejection rather than silently
-    accepted-and-ignored.
+    """``schema_version`` is no longer accepted on the manifest.
+
+    The version is pinned by ``$id`` / ``$schema``.  An author who copies a
+    stale fixture with ``schema_version: 1`` in it must get a clear
+    ``extra="forbid"`` rejection rather than silent acceptance.
     """
     bad = _with(_VALID, schema_version=1)
     with pytest.raises(ValidationError):

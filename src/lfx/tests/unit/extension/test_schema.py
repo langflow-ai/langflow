@@ -39,17 +39,17 @@ def test_schema_metadata_published_form() -> None:
 
 
 def _published_deferred_names() -> list[str]:
-    """Resolve DEFERRED_FIELDS to the names third-party consumers actually see
-    in the published schema (alias-aware)."""
+    """Resolve DEFERRED_FIELDS to the alias-aware names seen in the published schema."""
     fields = ExtensionManifest.model_fields
     return [(fields[name].alias or name) for name in DEFERRED_FIELDS]
 
 
 def test_published_schema_does_not_carry_schema_version() -> None:
-    """The schema's major version is pinned by ``$id`` (and by the author's
+    """``schema_version`` must NOT appear in the published schema's properties.
+
+    The schema's major version is pinned by ``$id`` (and by the author's
     ``$schema`` URL when present); a separate in-band ``schema_version`` field
-    is redundant and would create a second source of truth at every version
-    bump.  Lock that in: it must NOT appear in ``properties``.
+    would create a second source of truth at every version bump.
     """
     schema = build_schema()
     assert "schema_version" not in schema["properties"]
@@ -75,22 +75,26 @@ def test_published_schema_strips_deferred_fields() -> None:
     assert set(schema["x-deferred-fields"].keys()) == set(deferred)
     # Every entry must carry a non-empty description so tooling can render it.
     for name, description in schema["x-deferred-fields"].items():
-        assert isinstance(description, str) and description, f"x-deferred-fields[{name!r}] missing description"
+        assert isinstance(description, str), f"x-deferred-fields[{name!r}] description must be a string"
+        assert description, f"x-deferred-fields[{name!r}] description must be non-empty"
 
 
 @pytest.mark.parametrize("deferred_name", _published_deferred_names())
 def test_published_schema_rejects_each_deferred_field_via_additional_properties(
     deferred_name: str,
 ) -> None:
-    """Each deferred field must be rejected at the schema level, with the
-    error landing on ``additionalProperties`` (not ``type`` / "expected null")."""
+    """Each deferred field must be rejected via ``additionalProperties``.
+
+    The error must NOT come from a ``type`` mismatch (which would surface to
+    third-party validators as "expected null" — the older shape we replaced).
+    """
     validator = _validator()
     case = {**_VALID, deferred_name: {"foo": "bar"}}
     errors = list(validator.iter_errors(case))
     assert errors, f"manifest with {deferred_name!r} unexpectedly passed schema validation"
-    assert any(
-        deferred_name in err.message and err.validator == "additionalProperties" for err in errors
-    ), f"{deferred_name!r} did not produce an additionalProperties error: {[(e.validator, e.message) for e in errors]}"
+    assert any(deferred_name in err.message and err.validator == "additionalProperties" for err in errors), (
+        f"{deferred_name!r} did not produce an additionalProperties error: {[(e.validator, e.message) for e in errors]}"
+    )
 
 
 def test_schema_json_is_serializable_and_stable() -> None:
