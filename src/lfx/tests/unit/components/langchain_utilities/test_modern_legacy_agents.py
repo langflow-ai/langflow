@@ -21,9 +21,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
-from langchain_core.messages import AIMessage
-from langgraph.graph.state import CompiledStateGraph
+
+# All components exercised here (`sql_database_agent`, `json_data_agent`,
+# `openapi_spec_agent`) depend on `langchain_community`, which lives in lfx's
+# `integration` dep group — not installed by `uv sync --dev` in unit-test envs.
+pytest.importorskip("langchain_community")
+
+from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel  # noqa: E402
+from langchain_core.messages import AIMessage  # noqa: E402
+from langgraph.graph.state import CompiledStateGraph  # noqa: E402
 
 
 class _ToolCapableFakeChatModel(FakeMessagesListChatModel):
