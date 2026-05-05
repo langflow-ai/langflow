@@ -538,10 +538,9 @@ def get_default_imports(code_string):
         "Dict": dict,
         "Union": Union,
     }
-    from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES
+    from lfx.field_typing.names import SUPPORTED_TYPE_NAMES
 
-    langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
-    necessary_imports = find_names_in_code(code_string, langflow_imports)
+    necessary_imports = find_names_in_code(code_string, SUPPORTED_TYPE_NAMES)
     langflow_module = importlib.import_module("lfx.field_typing")
     default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
 
