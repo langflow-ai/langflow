@@ -340,9 +340,21 @@ def _resolve_attribute(imported_module, module_name, attr_name):
 
 
 def _handle_module_attributes(imported_module, node, module_name, exec_globals):
-    """Handle importing specific attributes from a module."""
+    """Bind names from `from <module_name> import ...` into `exec_globals`.
+
+    Honors `alias.asname` (`from X import Y as Z` binds Z, not Y) and expands `*` to the
+    module's public surface (its `__all__` if defined, otherwise every non-underscore attr).
+    """
     for alias in node.names:
-        exec_globals[alias.name] = _resolve_attribute(imported_module, module_name, alias.name)
+        if alias.name == "*":
+            public_names = getattr(imported_module, "__all__", None)
+            if public_names is None:
+                public_names = [name for name in dir(imported_module) if not name.startswith("_")]
+            for name in public_names:
+                exec_globals[name] = _resolve_attribute(imported_module, module_name, name)
+            continue
+        binding_name = alias.asname or alias.name
+        exec_globals[binding_name] = _resolve_attribute(imported_module, module_name, alias.name)
 
 
 class _MissingModulePlaceholder:
@@ -379,14 +391,21 @@ def _get_module_fallbacks(module_name: str) -> list[str]:
     return names
 
 
+# Sentinel for the resolution cache; distinguishes "not yet resolved" from a legitimately
+# resolved `None` (e.g. `from some_module import some_optional_constant` where the value is None).
+_UNSET: object = object()
+
+
 class _LazyImportProxy:
     """Stand-in object placed in exec_globals that resolves its underlying import on first use.
 
     CPython bypasses `__missing__` / `__getitem__` on dict subclasses for name lookups at
     class-body scope (see CPython #33128), so the lazy mechanism cannot live on the globals
     dict itself. Instead each deferred name is bound to a proxy instance that triggers the
-    real importlib.import_module() the first time something actually touches it (via attribute
-    access, call, subclass, or isinstance check).
+    real importlib.import_module() the first time something actually touches it through one
+    of the explicitly-forwarded dunders (attribute access, call, subclass-base, isinstance
+    rhs, iteration). Untouched dunders (truthiness, len, hash, equality, ...) remain on the
+    proxy itself; the proxy is intentionally not a transparent wrapper.
 
     Two shapes are supported:
       - `attr_name=None`: `import X` / `import X as Y` -- the proxy resolves to the bound
@@ -399,15 +418,17 @@ class _LazyImportProxy:
     __slots__ = ("_attr_name", "_is_module_binding", "_module_name", "_resolved", "_top_level")
 
     def __init__(self, module_name: str, attr_name: str | None, *, is_module_binding: bool, top_level: bool) -> None:
+        # `object.__setattr__` bypasses our own `__getattr__` machinery, which delegates to
+        # `_resolve()` and would crash before construction completes.
         object.__setattr__(self, "_module_name", module_name)
         object.__setattr__(self, "_attr_name", attr_name)
         object.__setattr__(self, "_is_module_binding", is_module_binding)
         object.__setattr__(self, "_top_level", top_level)
-        object.__setattr__(self, "_resolved", None)
+        object.__setattr__(self, "_resolved", _UNSET)
 
     def _resolve(self):
         resolved = object.__getattribute__(self, "_resolved")
-        if resolved is not None:
+        if resolved is not _UNSET:
             return resolved
 
         module_name = object.__getattribute__(self, "_module_name")
@@ -415,77 +436,105 @@ class _LazyImportProxy:
         is_module_binding = object.__getattribute__(self, "_is_module_binding")
         top_level = object.__getattribute__(self, "_top_level")
 
-        if is_module_binding:
-            # "import X" / "import X as Y" / "import X.Y.Z"
-            module_obj = None
-            for candidate in _get_module_fallbacks(module_name):
-                try:
-                    module_obj = importlib.import_module(candidate)
-                    break
-                except ModuleNotFoundError:
-                    continue
+        try:
+            if is_module_binding:
+                # "import X" / "import X as Y" / "import X.Y.Z"
+                last_error: ModuleNotFoundError | None = None
+                module_obj = None
+                for candidate in _get_module_fallbacks(module_name):
+                    try:
+                        module_obj = importlib.import_module(candidate)
+                        break
+                    except ModuleNotFoundError as exc:
+                        last_error = exc
+                        continue
 
-            if module_obj is None:
-                if sys.platform == "win32":
-                    placeholder = _MissingModulePlaceholder(module_name)
-                    object.__setattr__(self, "_resolved", placeholder)
-                    logger.debug("Module '%s' unavailable on Windows; inserted placeholder", module_name)
-                    return placeholder
-                # Non-Windows: re-raise the real error to surface the missing dep.
-                module_obj = importlib.import_module(module_name)
+                if module_obj is None:
+                    if sys.platform == "win32":
+                        placeholder = _MissingModulePlaceholder(module_name)
+                        object.__setattr__(self, "_resolved", placeholder)
+                        logger.debug("Module '%s' unavailable on Windows; inserted placeholder", module_name)
+                        return placeholder
+                    # Non-Windows: surface the real error from the last candidate so the
+                    # traceback names the package that actually failed (not just the canonical name).
+                    if last_error is not None:
+                        raise last_error
+                    msg = f"Module {module_name} not found. Please install it and try again"
+                    raise ModuleNotFoundError(msg)
 
-            if top_level:
-                top = module_name.split(".")[0]
-                resolved = sys.modules.get(top, module_obj)
+                if top_level:
+                    top = module_name.split(".")[0]
+                    resolved = sys.modules.get(top, module_obj)
+                else:
+                    resolved = module_obj
             else:
-                resolved = module_obj
-        else:
-            # "from X import Y" -- reuse the eager-path helpers so fallbacks stay identical.
-            last_error: ModuleNotFoundError | None = None
-            imported_module = None
-            resolved_module_name = module_name
-            for candidate in _get_module_fallbacks(module_name):
-                try:
-                    imported_module = _import_module_with_warnings(candidate)
-                    resolved_module_name = candidate
-                    break
-                except ModuleNotFoundError as exc:
-                    last_error = exc
-                    continue
+                # "from X import Y" -- reuse the eager-path helpers so fallbacks stay identical.
+                last_error = None
+                imported_module = None
+                resolved_module_name = module_name
+                for candidate in _get_module_fallbacks(module_name):
+                    try:
+                        imported_module = _import_module_with_warnings(candidate)
+                        resolved_module_name = candidate
+                        break
+                    except ModuleNotFoundError as exc:
+                        last_error = exc
+                        continue
 
-            if imported_module is None:
-                if last_error is not None:
-                    raise last_error
-                msg = f"Module {module_name} not found. Please install it and try again"
-                raise ModuleNotFoundError(msg)
+                if imported_module is None:
+                    if last_error is not None:
+                        raise last_error
+                    msg = f"Module {module_name} not found. Please install it and try again"
+                    raise ModuleNotFoundError(msg)
 
-            resolved = _resolve_attribute(imported_module, resolved_module_name, attr_name)
+                resolved = _resolve_attribute(imported_module, resolved_module_name, attr_name)
+        except (ImportError, AttributeError):
+            # Deferred imports surface their failure at first use, not at parse time. The
+            # exception itself is correct, but the traceback points at the user's usage
+            # site (e.g. `agent.from_agent_and_tools(...)`) rather than at the originating
+            # `from X import Y` line. Log the target name so debugging has a starting point;
+            # let the exception propagate unchanged.
+            target = f"{module_name}.{attr_name}" if attr_name else module_name
+            logger.exception("Deferred import of '%s' failed at first use", target)
+            raise
 
         object.__setattr__(self, "_resolved", resolved)
         return resolved
 
-    # -- Fall-through dunders: anything touched by user code resolves the real object. --
+    # The dunders below must be defined explicitly because Python looks up special methods
+    # on the *type*, not via `__getattr__` on the instance — so a missing `__call__` on the
+    # class would not delegate to the resolved object even if `_resolve()` returned a callable.
+    # Each entry forwards an access pattern actually exercised by component code.
 
     def __mro_entries__(self, bases):
+        # Invoked when the proxy appears in a class's `bases` tuple, so `class Foo(LazyName):`
+        # resolves the proxy at class-creation time and the generated class inherits from the
+        # real target rather than from the proxy.
         return (self._resolve(),)
 
     def __call__(self, *args, **kwargs):
         return self._resolve()(*args, **kwargs)
 
     def __getattr__(self, name: str):
-        # Only called for attributes not already defined on the proxy itself.
         return getattr(self._resolve(), name)
 
     def __instancecheck__(self, instance):
+        # Only fires when the proxy is the *right-hand side* of `isinstance(x, proxy)`.
+        # `isinstance(proxy_instance, RealClass)` does NOT trigger this — it inspects
+        # `type(proxy_instance)`, which is `_LazyImportProxy`.
         return isinstance(instance, self._resolve())
 
     def __subclasscheck__(self, subclass):
+        # Symmetric to __instancecheck__: only fires when the proxy is the rhs of
+        # `issubclass(cls, proxy)`.
         return issubclass(subclass, self._resolve())
 
     def __iter__(self):
         return iter(self._resolve())
 
     def __repr__(self) -> str:
+        # Intentionally does NOT resolve — useful for logging while debugging the lazy path
+        # without forcing every `repr()` to import the underlying module.
         module_name = object.__getattribute__(self, "_module_name")
         attr_name = object.__getattribute__(self, "_attr_name")
         target = f"{module_name}.{attr_name}" if attr_name else module_name
@@ -493,27 +542,32 @@ class _LazyImportProxy:
 
 
 class _LazyExecGlobals(dict):
-    """Globals mapping for `prepare_global_scope` with deferred `importlib.import_module` calls.
+    """Globals mapping for `prepare_global_scope` that holds deferred imports as `_LazyImportProxy` values.
 
-    AST-walks of `DEFAULT_IMPORT_STRING + <component_code>` used to call
-    `importlib.import_module(...)` eagerly for every `import` / `from X import Y` node.
-    That pulled the whole langchain_classic / langchain_core surface (and transitively
-    transformers + torch) on every component instantiation, regardless of whether the
-    component body ever referenced those names (IMP-11).
+    Nominal subclass of `dict` (no behavioral overrides on lookup) because CPython bypasses
+    `__missing__` / `__getitem__` on dict subclasses for name lookups at class-body scope
+    (CPython #33128). The laziness therefore lives in the *values* (proxies bound by
+    `prepare_global_scope` for each deferred `import` / `from X import Y` node), not the
+    container. `importlib.import_module(...)` only fires on first real use of a proxy
+    (attribute access, call, class base, isinstance rhs, iteration). Components that never
+    reference `AgentExecutor` never import `langchain_classic.agents`, so transformers and
+    torch never load on paths that do not need them.
 
-    This mapping is a plain dict at the C-API level (so CPython's fast-path name lookup
-    sees it), pre-populated with `_LazyImportProxy` sentinels for every `import` /
-    `from X import Y` node. The proxies trigger `importlib.import_module(...)` only on
-    first real use (attribute access, call, subclass, isinstance). Components that never
-    reference `AgentExecutor` never import `langchain_classic.agents`, so transformers
-    and torch never load on paths that do not need them.
+    The class also serves as a marker type for tests that want to assert
+    `prepare_global_scope` returned a lazy mapping rather than a plain dict.
 
-    Star imports (`from X import *`) are still resolved eagerly because by definition they
-    depend on the full module namespace, matching today's semantics.
+    Star imports (`from X import *`) are still resolved eagerly because they depend on the
+    full module namespace, matching the pre-existing semantics.
     """
 
     def __init__(self, base: dict | None = None) -> None:
         super().__init__(base or {})
+
+    def copy(self) -> "_LazyExecGlobals":
+        # `dict.copy()` returns a plain `dict`, which would silently strip the marker type.
+        # Preserve it so callers that copy `exec_globals` (e.g. for nested exec scopes) keep
+        # the laziness contract intact.
+        return _LazyExecGlobals(self)
 
 
 # Module prefixes whose imports we defer. These are the heavy langchain entrypoints that
@@ -533,19 +587,16 @@ _LAZY_MODULE_PREFIXES: tuple[str, ...] = (
 def _should_defer_module(module_name: str) -> bool:
     """Return True if imports from `module_name` should go through `_LazyImportProxy`.
 
-    Only langchain-family modules are deferred (see IMP-11). Lazy proxies are incompatible
-    with strict Pydantic type validation on string / enum constants, and non-langchain
-    imports from `DEFAULT_IMPORT_STRING` (lfx.io, lfx.schema.*) are cheap to load eagerly.
+    Only langchain-family modules are deferred. Lazy proxies are incompatible with strict
+    Pydantic type validation on string / enum constants, and non-langchain imports from
+    `DEFAULT_IMPORT_STRING` (lfx.io, lfx.schema.*) are cheap to load eagerly.
     """
     top = module_name.split(".", 1)[0]
     return top in _LAZY_MODULE_PREFIXES
 
 
 def _eager_import(node: ast.Import, exec_globals: dict) -> None:
-    """Eager fallback for `import X` / `import X.Y.Z` / `import X as Y` nodes.
-
-    Matches the pre-IMP-11 behavior byte-for-byte.
-    """
+    """Eager fallback for `import X` / `import X.Y.Z` / `import X as Y` nodes."""
     for alias in node.names:
         module_name = alias.name
 
@@ -573,7 +624,7 @@ def _eager_import(node: ast.Import, exec_globals: dict) -> None:
 
 
 def _eager_import_from(node: ast.ImportFrom, exec_globals: dict) -> None:
-    """Eager fallback for `from X import Y` nodes. Matches the pre-IMP-11 behavior."""
+    """Eager fallback for `from X import Y` nodes."""
     module_names_to_try = _get_module_fallbacks(node.module)
 
     last_error: ModuleNotFoundError | None = None
@@ -596,13 +647,13 @@ def _eager_import_from(node: ast.ImportFrom, exec_globals: dict) -> None:
 def prepare_global_scope(module):
     """Prepares the global scope for the provided code module with lazy langchain imports.
 
-    Walks `module.body` and sorts nodes into `imports`, `import_froms`, and `definitions`.
-    For imports whose module is in `_LAZY_MODULE_PREFIXES` (langchain family), binds a
-    `_LazyImportProxy` into `exec_globals` so `importlib.import_module(...)` only fires on
-    first real use. For all other imports, resolves eagerly to preserve backward-compat
-    with strict Pydantic validators and other call sites that expect real objects
-    (e.g. string constants from `lfx.utils.constants`). This is IMP-11: targeted deferral
-    of the langchain heavy surface without disturbing cheap / constant imports.
+    Walks `module.body` once for `Import` / `ImportFrom` nodes (binding either a
+    `_LazyImportProxy` or a real object into `exec_globals` per alias), then executes class /
+    function / assignment definitions against that scope. For imports whose module is in
+    `_LAZY_MODULE_PREFIXES` (langchain family), the proxy defers
+    `importlib.import_module(...)` to first real use. For all other imports, resolution is
+    eager to preserve backward-compat with strict Pydantic validators and other call sites
+    that expect real objects (e.g. string constants from `lfx.utils.constants`).
 
     Star imports (`from X import *`) always resolve eagerly because they require the full
     module namespace. The Windows `_MissingModulePlaceholder` path is preserved for both
@@ -612,17 +663,19 @@ def prepare_global_scope(module):
         module: AST parsed module.
 
     Returns:
-        `_LazyExecGlobals` mapping suitable for passing to `exec(compiled_class, globals, locals)`.
+        `_LazyExecGlobals` mapping suitable for passing to `exec(compiled_code, exec_globals)`.
 
     Raises:
         ModuleNotFoundError: If an eagerly-resolved module is missing. Lazy imports surface
             their error at first use of the proxy instead.
     """
+    # Seed the exec namespace with this module's globals so helpers referenced from
+    # `DEFAULT_IMPORT_STRING` (e.g. typing aliases) are visible to the compiled class body.
     exec_globals = _LazyExecGlobals(globals())
 
     for node in module.body:
         if isinstance(node, ast.Import):
-            # `import X` / `import X.Y.Z` / `import X as Y` -- decide per-alias whether to defer.
+            # Each alias on a single `import` node decides independently whether to defer.
             lazy_aliases = [a for a in node.names if _should_defer_module(a.name)]
             eager_aliases = [a for a in node.names if not _should_defer_module(a.name)]
 
