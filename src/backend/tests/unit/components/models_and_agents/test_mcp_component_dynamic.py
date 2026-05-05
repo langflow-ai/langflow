@@ -291,6 +291,65 @@ class TestSharedServersCacheEviction:
         assert "old-2" in final
 
 
+class TestUpdateBuildConfigRefresh:
+    """MCP node refresh should force a fresh connection attempt and surface failures."""
+
+    @staticmethod
+    def _build_config(**overrides):
+        config = {
+            "mcp_server": {"value": {"name": "srv", "config": {"command": "uvx test"}}},
+            "tool": {"show": True, "options": ["stale"], "value": "", "placeholder": "Select a tool"},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+            "use_cache": {"value": True},
+            "verify_ssl": {"value": True},
+            "headers": {"value": []},
+        }
+        config.update(overrides)
+        return config
+
+    @pytest.mark.asyncio
+    async def test_refresh_bypasses_existing_options(self) -> None:
+        component = MCPToolsComponent()
+        component.use_cache = True
+        tool = _make_tool("fresh")
+
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "srv")
+        with patch.object(
+            component,
+            "update_tool_list",
+            new=AsyncMock(return_value=([tool], {"name": "srv", "config": {"command": "uvx test"}})),
+        ) as mocked_update:
+            build_config = await component.update_build_config(
+                self._build_config(is_refresh=True),
+                {"name": "srv", "config": {"command": "uvx test"}},
+                "mcp_server",
+            )
+
+        mocked_update.assert_awaited_once()
+        assert build_config["tool"]["options"] == ["fresh"]
+        assert build_config["tool"]["placeholder"] == "Select a tool"
+
+    @pytest.mark.asyncio
+    async def test_mcp_server_error_placeholder_includes_root_cause(self) -> None:
+        component = MCPToolsComponent()
+        component.use_cache = False
+
+        with patch.object(
+            component,
+            "update_tool_list",
+            new=AsyncMock(side_effect=ValueError("Connection refused")),
+        ):
+            build_config = await component.update_build_config(
+                self._build_config(),
+                {"name": "srv", "config": {"command": "uvx test"}},
+                "mcp_server",
+            )
+
+        assert build_config["tool"]["options"] == []
+        assert "Connection refused" in build_config["tool"]["placeholder"]
+
+
 class TestToolsetOutputNotCached:
     """Saved flows must not memoize the Toolset output."""
 

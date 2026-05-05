@@ -183,8 +183,10 @@ export function FlowInsightsContent({
   }, []);
 
   const totalRuns = tracesData?.total ?? rows.length;
-  const totalPages =
-    tracesData?.pages ?? Math.max(1, Math.ceil(totalRuns / pageSize));
+  const totalPages = Math.max(
+    1,
+    tracesData?.pages ?? Math.ceil(totalRuns / pageSize),
+  );
 
   useEffect(() => {
     if (pageIndex > totalPages) {
