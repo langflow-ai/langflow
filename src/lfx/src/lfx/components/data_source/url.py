@@ -266,13 +266,15 @@ class URLComponent(Component):
         }
         extractor = extractors.get(self.format, self._text_extractor)
 
-        proxy_url = None
-        for key in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"):
-            value = os.environ.get(key)
-            if value is not None and value.strip():
-                proxy_url = value.strip()
-                break
-        has_proxy = proxy_url is not None
+        proxy_env_keys = (
+            "http_proxy",
+            "HTTP_PROXY",
+            "https_proxy",
+            "HTTPS_PROXY",
+            "all_proxy",
+            "ALL_PROXY",
+        )
+        has_proxy = any((os.environ.get(key) or "").strip() for key in proxy_env_keys)
 
         final_use_async = self.use_async
         if has_proxy and self.use_async:
