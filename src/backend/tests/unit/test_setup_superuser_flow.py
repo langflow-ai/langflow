@@ -216,6 +216,16 @@ async def test_setup_superuser_auto_login_lock_timeout_raises_when_no_superuser(
     settings = get_settings_service()
     settings.auth_settings.AUTO_LOGIN = True
 
+    # The fixture initializes services with AUTO_LOGIN=false, which creates the default
+    # superuser via the credentials-fallback path. Remove it so we exercise the
+    # "lock timed out and no superuser exists" branch.
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        if user is not None:
+            await session.delete(user)
+            await session.commit()
+
     class _FailingLock:
         def __init__(self, *args, **kwargs):
             pass
