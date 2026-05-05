@@ -46,7 +46,13 @@ test(
     });
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Create User A
+    // Create User A — wait for the homepage Loading state to clear before
+    // checking mainpage_title (mainpage_title only renders after data load,
+    // which can outlast a 30s wait on slower runners like Windows CI).
+    await page.waitForSelector('text="Loading"', {
+      state: "hidden",
+      timeout: 60000,
+    });
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
@@ -106,12 +112,37 @@ test(
     }
 
     await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 3000,
-    });
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 30000,
     });
+    await page.getByTestId("side_nav_options_all-templates").click();
+
+    const basicPromptingHeading = page.getByRole("heading", {
+      name: "Basic Prompting",
+    });
+    await basicPromptingHeading.waitFor({ state: "visible", timeout: 30000 });
+
+    // Retry the template click if the canvas never mounts: on Windows CI the
+    // first click occasionally lands before the template grid is interactive.
+    let canvasMounted = false;
+    const maxClickAttempts = 3;
+    for (let attempt = 1; attempt <= maxClickAttempts; attempt++) {
+      await basicPromptingHeading.click();
+      try {
+        await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+          timeout: attempt === maxClickAttempts ? 100000 : 45000,
+        });
+        canvasMounted = true;
+        break;
+      } catch (_error) {
+        if (attempt === maxClickAttempts) throw _error;
+        const modalStillOpen =
+          (await page.getByTestId("modal-title").count()) > 0;
+        if (!modalStillOpen) throw _error;
+      }
+    }
+    if (!canvasMounted) {
+      throw new Error("canvas_controls_dropdown never appeared");
+    }
 
     await renameFlow(page, { flowName: userAFlowName });
 

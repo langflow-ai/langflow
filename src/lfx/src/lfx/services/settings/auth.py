@@ -81,9 +81,11 @@ class AuthSettings(BaseSettings):
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
     This will be removed in v2.0"""
 
-    WEBHOOK_AUTH_ENABLE: bool = False
+    WEBHOOK_AUTH_ENABLE: bool = True
     """If True, webhook endpoints will require API key authentication.
-    If False, webhooks run as flow owner without authentication."""
+    If False, webhooks run as flow owner without authentication.
+    Defaults to True for secure-by-default behavior; set to False only in
+    trusted environments where unauthenticated webhook execution is acceptable."""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,

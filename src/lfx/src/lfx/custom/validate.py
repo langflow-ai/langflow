@@ -272,8 +272,9 @@ def create_class(code, class_name):
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
 
+        future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
+        compiled_class = compile_class_code(class_code, future_imports)
 
         return build_class_constructor(compiled_class, exec_globals, class_name)
 
@@ -341,7 +342,8 @@ def _resolve_attribute(imported_module, module_name, attr_name):
 def _handle_module_attributes(imported_module, node, module_name, exec_globals):
     """Handle importing specific attributes from a module."""
     for alias in node.names:
-        exec_globals[alias.name] = _resolve_attribute(imported_module, module_name, alias.name)
+        key = alias.asname or alias.name
+        exec_globals[key] = _resolve_attribute(imported_module, module_name, alias.name)
 
 
 class _MissingModulePlaceholder:
@@ -393,11 +395,15 @@ def prepare_global_scope(module):
     exec_globals = globals().copy()
     imports = []
     import_froms = []
+    future_imports = []
     definitions = []
 
     for node in module.body:
         if isinstance(node, ast.Import):
             imports.append(node)
+        elif isinstance(node, ast.ImportFrom) and node.module == "__future__":
+            # __future__ imports are compiler directives — collect separately
+            future_imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
@@ -467,7 +473,8 @@ def prepare_global_scope(module):
             raise ModuleNotFoundError(msg)
 
     if definitions:
-        combined_module = ast.Module(body=definitions, type_ignores=[])
+        # Prepend __future__ imports so compiler directives (e.g. PEP 563 annotations) take effect
+        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         exec(compiled_code, exec_globals)
 
@@ -490,16 +497,18 @@ def extract_class_code(module, class_name):
     return class_code
 
 
-def compile_class_code(class_code):
+def compile_class_code(class_code, future_imports=None):
     """Compiles the AST node of a class into a code object.
 
     Args:
         class_code: AST node of the class
+        future_imports: Optional list of __future__ ImportFrom nodes to prepend as compiler directives
 
     Returns:
         Compiled code object of the class
     """
-    return compile(ast.Module(body=[class_code], type_ignores=[]), "<string>", "exec")
+    body = (future_imports or []) + [class_code]
+    return compile(ast.Module(body=body, type_ignores=[]), "<string>", "exec")
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):

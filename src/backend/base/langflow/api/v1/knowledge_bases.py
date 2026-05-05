@@ -74,6 +74,30 @@ def _resolve_kb_path(kb_name: str, current_user: CurrentActiveUser) -> Path:
     return kb_path
 
 
+def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
+    """Return True if the KB metadata indicates an association with a Memory Base."""
+    source_types = metadata.get("source_types")
+    return isinstance(source_types, list) and "memory" in source_types
+
+
+def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
+    """Raise 403 if the KB is associated with a Memory Base.
+
+    Designed as a FastAPI dependency for per-KB routes — FastAPI injects
+    ``kb_name`` from the path parameter and ``current_user`` via its own
+    dependency.  The list endpoint filters memory KBs inline using
+    ``_is_memory_base_associated`` directly.
+    """
+    kb_path = _resolve_kb_path(kb_name, current_user)
+
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    if _is_memory_base_associated(metadata):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
+        )
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_knowledge_base(
@@ -275,7 +299,7 @@ async def preview_chunks(
         return {"files": file_previews}
 
 
-@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK)
+@router.post("/{kb_name}/ingest", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def ingest_files_to_knowledge_base(
     kb_name: str,
     current_user: CurrentActiveUser,
@@ -427,6 +451,8 @@ async def list_knowledge_bases(
             try:
                 # Use deep update (fast=False) to ensure legacy KBs are migrated on first view
                 metadata = KBAnalysisHelper.get_metadata(kb_dir, fast=False)
+                if _is_memory_base_associated(metadata):
+                    continue  # Skip KBs that are associated with a Memory Base
 
                 # Extract KB ID from metadata (stored as string, convert to UUID)
                 kb_id_str = metadata.get("id")
@@ -503,7 +529,7 @@ async def list_knowledge_bases(
         return knowledge_bases
 
 
-@router.get("/{kb_name}", status_code=HTTPStatus.OK)
+@router.get("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     try:
@@ -543,7 +569,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
         raise HTTPException(status_code=500, detail="Error getting knowledge base.") from e
 
 
-@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK)
+@router.get("/{kb_name}/chunks", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base_chunks(
     kb_name: str,
     current_user: CurrentActiveUser,
@@ -636,7 +662,7 @@ async def get_knowledge_base_chunks(
             KBStorageHelper.release_chroma_resources(kb_path)
 
 
-@router.delete("/{kb_name}", status_code=HTTPStatus.OK)
+@router.delete("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
@@ -703,7 +729,7 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
         return result
 
 
-@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK)
+@router.post("/{kb_name}/cancel", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def cancel_ingestion(
     kb_name: str,
     current_user: CurrentActiveUser,

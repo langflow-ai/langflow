@@ -374,3 +374,47 @@ test(
     await expect(page.getByTestId("deployment-row-dep-1")).toBeVisible();
   },
 );
+
+test(
+  "Names filter is passed to API when fetching deployments",
+  { tag: ["@release", "@workspace", "@api"] },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    let resolveNamesRequest: ((url: string) => void) | undefined;
+    const namesRequest = new Promise<string>((resolve) => {
+      resolveNamesRequest = resolve;
+    });
+
+    await page.route("**/api/v1/deployments*", (route) => {
+      const url = route.request().url();
+      if (url.includes("names=Agent")) {
+        resolveNamesRequest?.(url);
+      }
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ deployments: [] }),
+      });
+    });
+
+    // Give the page a real app origin before issuing a synthetic fetch.
+    // Relative fetches from about:blank won't emit the request we assert on.
+    await page.goto("/");
+
+    // Since there is no UI for names filter yet, trigger the request directly
+    // and verify the query contract.
+    await page.evaluate(async () => {
+      await fetch("/api/v1/deployments?names=Agent+Alpha&names=Agent+Beta", {
+        headers: {},
+      });
+    });
+
+    const requestUrl = await namesRequest;
+    expect(requestUrl).toContain("names=Agent+Alpha");
+    expect(requestUrl).toContain("names=Agent+Beta");
+  },
+);

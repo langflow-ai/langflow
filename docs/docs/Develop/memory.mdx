@@ -119,7 +119,7 @@ If you want to use a non-default cache setting, you can use the following enviro
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`, `disk`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. |
+| `LANGFLOW_CACHE_TYPE` | String | `async` | Set the cache type for Langflow's internal caching system. Possible values: `async`, `redis`, `memory`. If you set the type to `redis`, then you must also set the `LANGFLOW_REDIS_*` environment variables. The `disk` backend was removed in 1.10 — switch to `async` for in-memory or `redis` for cross-worker. |
 | `LANGFLOW_LANGCHAIN_CACHE` | String | `InMemoryCache` | Set the cache storage type for the LangChain caching system (a Langflow dependency), either `InMemoryCache` or `SQLiteCache`. |
 | `LANGFLOW_REDIS_HOST` | String | `localhost` | Redis server hostname if `LANGFLOW_CACHE_TYPE=redis`. |
 | `LANGFLOW_REDIS_PORT` | Integer | `6379` | Redis server port if `LANGFLOW_CACHE_TYPE=redis`. |

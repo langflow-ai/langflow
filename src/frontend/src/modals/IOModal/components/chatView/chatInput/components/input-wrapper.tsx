@@ -75,6 +75,10 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("textarea")) {
+      return;
+    }
     if (e.key !== "Enter" && e.key !== " ") {
       return;
     }
@@ -90,7 +94,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        className="flex w-full flex-col rounded-md border cursor-text border-input bg-muted p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
         onKeyDown={onKeyDown}

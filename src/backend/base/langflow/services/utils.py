@@ -165,6 +165,12 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         if user is not None:
             await logger.adebug("Superuser created successfully.")
             outcome = SetupSuperuserResult.SUPERUSER_CREATED
+            # When the default superuser is recreated (e.g. after a DB reset in
+            # AUTO_LOGIN mode) the per-user MCP servers config file saved under the
+            # previous UUID becomes orphaned on disk. Best-effort recover it so
+            # users don't lose their MCP server configuration across restarts.
+            if is_default and settings_service.auth_settings.AUTO_LOGIN:
+                await migrate_orphaned_mcp_servers_config(session, settings_service, user)
         else:
             outcome = SetupSuperuserResult.SUPERUSER_UNCHANGED
     except Exception as exc:
