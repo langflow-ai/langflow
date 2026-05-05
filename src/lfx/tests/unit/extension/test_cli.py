@@ -16,7 +16,7 @@ _BASE_MANIFEST = {
     "id": "lfx-openai",
     "version": "1.2.3",
     "name": "OpenAI Bundle",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "openai", "path": "openai"}],
 }
 

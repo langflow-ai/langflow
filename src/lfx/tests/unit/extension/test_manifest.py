@@ -1,4 +1,4 @@
-"""Schema round-trip + edge-case tests for the v0 ExtensionManifest (LE-1014)."""
+"""Schema round-trip + edge-case tests for the v0 ExtensionManifest."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from lfx.extension.manifest import (
     EXTENSION_SCHEMA_URL,
     BundleRef,
     ExtensionManifest,
-    LangflowCompat,
+    LfxCompat,
     load_manifest,
 )
 from pydantic import ValidationError
@@ -29,7 +29,7 @@ _VALID = {
     "version": "1.2.3",
     "name": "OpenAI Bundle",
     "description": "OpenAI components",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "openai", "path": "openai"}],
     "capabilities": {"requiresCredentials": True},
 }
@@ -54,7 +54,7 @@ def test_round_trip_every_v0_field() -> None:
     manifest = ExtensionManifest.model_validate(_VALID)
     dumped = manifest.model_dump(by_alias=True, mode="json")
     # Defaults / Nones for deferred fields are added; strip those for parity.
-    for k in (*DEFERRED_FIELDS, "schema_version"):
+    for k in DEFERRED_FIELDS:
         dumped.pop(k, None)
     # The schema_field/$schema alias should round-trip.
     assert dumped["$schema"] == EXTENSION_SCHEMA_URL
@@ -71,7 +71,7 @@ def test_minimal_manifest_round_trip() -> None:
         "id": "lfx-x",
         "version": "0.1.0",
         "name": "X",
-        "lfx": {"bundle_api": [1]},
+        "lfx": {"compat": ["1"]},
         "bundles": [{"name": "xx", "path": "xx"}],
     }
     manifest = ExtensionManifest.model_validate(minimal)
@@ -92,8 +92,8 @@ def test_minimal_manifest_round_trip() -> None:
         ({"id": ""}, "id"),
         ({"version": "not-semver"}, "version"),
         ({"name": ""}, "name"),
-        ({"lfx": {"bundle_api": []}}, "bundle_api"),
-        ({"lfx": {"bundle_api": [0]}}, "bundle_api"),
+        ({"lfx": {"compat": []}}, "compat"),
+        ({"lfx": {"compat": ["0"]}}, "compat"),
         ({"bundles": []}, "bundles"),
         ({"bundles": [{"name": "Bad-Name", "path": "x"}]}, "name"),
         ({"bundles": [{"name": "x", "path": "/abs/path"}]}, "path"),
@@ -110,6 +110,18 @@ def test_rejects_malformed_manifest(override_or_missing: dict, must_mention: str
 
 def test_extra_top_level_field_rejected() -> None:
     bad = _with(_VALID, mystery_field="surprise")
+    with pytest.raises(ValidationError):
+        ExtensionManifest.model_validate(bad)
+
+
+def test_schema_version_field_is_dropped() -> None:
+    """``schema_version`` is no longer accepted on the manifest.
+
+    The version is pinned by ``$id`` / ``$schema``.  An author who copies a
+    stale fixture with ``schema_version: 1`` in it must get a clear
+    ``extra="forbid"`` rejection rather than silent acceptance.
+    """
+    bad = _with(_VALID, schema_version=1)
     with pytest.raises(ValidationError):
         ExtensionManifest.model_validate(bad)
 
@@ -146,7 +158,15 @@ def test_deferred_field_accepted_when_omitted(field_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_bundle_rejected_with_dedicated_message() -> None:
+def test_multi_bundle_rejected_at_model_level() -> None:
+    """Pydantic rejects multi-bundle via the field-level ``max_length=1``.
+
+    The dedicated ``multi-bundle-deferred-in-this-milestone`` discriminant is
+    surfaced by the validator pipeline in ``lfx.extension.validate`` (covered by
+    ``test_validate.py``); at the model level we only need to confirm the
+    constraint is enforced on the ``bundles`` field, which also means it lands
+    in the published JSON Schema.
+    """
     bad = _with(
         _VALID,
         bundles=[
@@ -156,7 +176,9 @@ def test_multi_bundle_rejected_with_dedicated_message() -> None:
     )
     with pytest.raises(ValidationError) as exc_info:
         ExtensionManifest.model_validate(bad)
-    assert "more than one bundle" in str(exc_info.value).lower()
+    error = exc_info.value.errors()[0]
+    assert error["loc"] == ("bundles",)
+    assert error["type"] == "too_long"
 
 
 def test_duplicate_bundle_names_rejected() -> None:
@@ -189,7 +211,7 @@ version = "1.2.3"
 name = "OpenAI Bundle"
 
 [tool.langflow.extension.lfx]
-bundle_api = [1]
+compat = ["1"]
 
 [[tool.langflow.extension.bundles]]
 name = "openai"
@@ -238,12 +260,20 @@ def test_bundle_ref_path_safety_sufficient_for_static_use() -> None:
         BundleRef(name="ok", path="/abs")
 
 
-def test_langflow_compat_rejects_zero_or_negative() -> None:
-    LangflowCompat(bundle_api=[1])
-    LangflowCompat(bundle_api=[1, 2])
+def test_lfx_compat_rejects_invalid_versions() -> None:
+    LfxCompat(compat=["1"])
+    LfxCompat(compat=["1", "2"])
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[])
+        LfxCompat(compat=[])
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[0])
+        LfxCompat(compat=["0"])  # version 0 is not valid
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[1, 1])  # duplicate
+        LfxCompat(compat=["01"])  # leading zero rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=["v1"])  # non-numeric prefix rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=[""])  # empty string rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=[1])  # type: ignore[list-item] # int rejected by StrictStr
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=["1", "1"])  # duplicate
