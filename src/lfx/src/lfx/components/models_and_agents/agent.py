@@ -439,6 +439,9 @@ class AgentComponent(ToolCallingAgentComponent):
         `adapt_graph_events_to_executor_shape` so the legacy `process_agent_events`
         (in `lfx.base.agents.events`) can be reused unchanged.
         """
+        # TEMP DEBUG — remove after verifying code path is hit
+        logger.warning("[CZL_DEBUG] AgentComponent.run_agent (create_agent path) invoked")
+
         messages = build_initial_messages(
             input_value=self.input_value,
             chat_history=getattr(self, "chat_history", None),
@@ -486,13 +489,17 @@ class AgentComponent(ToolCallingAgentComponent):
             raise
 
         usage_data = token_usage_handler.get_usage()
+        # TEMP DEBUG — remove after verifying token tracking
+        logger.warning(f"[CZL_DEBUG] usage_data after process_agent_events: {usage_data!r}")
         if usage_data:
             self._token_usage = usage_data
             result.properties.usage = usage_data
             # Only round-trip the DB when the message was stored (Chat Output wired).
             # `_should_skip_message=True` leaves `result.get_id()` empty; persisting
             # then would create a phantom row.
-            if result.get_id():
+            stored_id = result.get_id()
+            logger.warning(f"[CZL_DEBUG] result.get_id()={stored_id!r}")
+            if stored_id:
                 stored_result = await self._update_stored_message(result)
                 await self._send_message_event(stored_result)
                 result = stored_result
