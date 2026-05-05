@@ -54,7 +54,7 @@ def test_round_trip_every_v0_field() -> None:
     manifest = ExtensionManifest.model_validate(_VALID)
     dumped = manifest.model_dump(by_alias=True, mode="json")
     # Defaults / Nones for deferred fields are added; strip those for parity.
-    for k in (*DEFERRED_FIELDS, "schema_version"):
+    for k in DEFERRED_FIELDS:
         dumped.pop(k, None)
     # The schema_field/$schema alias should round-trip.
     assert dumped["$schema"] == EXTENSION_SCHEMA_URL
@@ -110,6 +110,17 @@ def test_rejects_malformed_manifest(override_or_missing: dict, must_mention: str
 
 def test_extra_top_level_field_rejected() -> None:
     bad = _with(_VALID, mystery_field="surprise")
+    with pytest.raises(ValidationError):
+        ExtensionManifest.model_validate(bad)
+
+
+def test_schema_version_field_is_dropped() -> None:
+    """``schema_version`` was removed; the version is pinned by ``$id`` /
+    ``$schema``.  An author who copies a stale fixture with ``schema_version: 1``
+    in it gets a clear ``extra="forbid"`` rejection rather than silently
+    accepted-and-ignored.
+    """
+    bad = _with(_VALID, schema_version=1)
     with pytest.raises(ValidationError):
         ExtensionManifest.model_validate(bad)
 

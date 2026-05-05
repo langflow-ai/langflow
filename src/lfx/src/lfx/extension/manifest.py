@@ -251,11 +251,6 @@ class ExtensionManifest(BaseModel):
         description="Optional JSON-Schema URL pointer for editor tooling.",
     )
 
-    schema_version: Literal[1] = Field(
-        default=1,
-        description="Manifest schema major version. v0 fixes this at 1.",
-    )
-
     id: StrictStr = Field(
         ...,
         pattern=_EXTENSION_ID_RE.pattern,
