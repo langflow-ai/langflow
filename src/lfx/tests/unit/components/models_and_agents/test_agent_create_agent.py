@@ -120,6 +120,286 @@ async def test_should_omit_tool_retry_middleware_when_handle_parsing_errors_is_f
 
 
 @pytest.mark.asyncio
+async def test_should_attach_token_usage_handler_and_set_usage_on_result_properties() -> None:
+    """Parity with `LCAgentComponent.run_agent`: TokenUsageCallbackHandler must be wired.
+
+    Legacy behavior at base/agents/agent.py:265-308:
+      1. TokenUsageCallbackHandler() is added to callbacks.
+      2. After process_agent_events, handler.get_usage() is read.
+      3. Usage is set on `self._token_usage` AND `result.properties.usage`.
+    Without this, billing/observability that reads `result.properties.usage` breaks.
+    """
+    from lfx.schema.message import Message as _Msg
+
+    fake_usage = {"input_tokens": 12, "output_tokens": 34, "total_tokens": 46}
+    handler_instance = MagicMock()
+    handler_instance.get_usage.return_value = fake_usage
+    captured_callbacks: list = []
+
+    def _capture_astream(_input_dict, *, config, **_kwargs):
+        captured_callbacks.extend(config.get("callbacks") or [])
+        return _empty_event_stream()
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = _capture_astream
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+    final_message = _Msg(text="bye")
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch(
+            "lfx.components.models_and_agents.agent.TokenUsageCallbackHandler",
+            return_value=handler_instance,
+        ),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(return_value=final_message),
+        ),
+    ):
+        result = await component.run_agent(fake_graph)
+
+    assert handler_instance in captured_callbacks
+    assert result.properties.usage == fake_usage
+    assert getattr(component, "_token_usage", None) == fake_usage
+
+
+@pytest.mark.asyncio
+async def test_should_update_stored_message_and_send_event_when_token_usage_and_result_has_id() -> None:
+    """Parity with legacy lines 304-308: only round-trip the DB when the message was stored.
+
+    A message has an `id` only when emitted to a Chat Output (otherwise `_should_skip_message`
+    is True). Skipping this branch means the stored Message in the DB never gets the usage
+    field — observability sees an empty `usage` even when tokens were consumed.
+    """
+    fake_usage = {"input_tokens": 5, "output_tokens": 7, "total_tokens": 12}
+    handler_instance = MagicMock()
+    handler_instance.get_usage.return_value = fake_usage
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    initial_result = MagicMock()
+    initial_result.get_id.return_value = "msg-stored-123"
+    initial_result.properties = MagicMock()
+    stored_result = MagicMock()
+    stored_result.get_id.return_value = "msg-stored-123"
+    stored_result.properties = MagicMock()
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+
+    update_stored = AsyncMock(return_value=stored_result)
+    send_event = AsyncMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch.object(type(component), "_update_stored_message", new=update_stored),
+        patch.object(type(component), "_send_message_event", new=send_event),
+        patch(
+            "lfx.components.models_and_agents.agent.TokenUsageCallbackHandler",
+            return_value=handler_instance,
+        ),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(return_value=initial_result),
+        ),
+    ):
+        result = await component.run_agent(fake_graph)
+
+    update_stored.assert_awaited_once_with(initial_result)
+    send_event.assert_awaited_once_with(stored_result)
+    assert result is stored_result
+
+
+@pytest.mark.asyncio
+async def test_should_skip_db_round_trip_when_result_has_no_id() -> None:
+    """Regression guard: when the Message wasn't stored (no ID) we must NOT hit the DB.
+
+    `_should_skip_message=True` happens when AgentComponent isn't wired to a Chat Output;
+    calling `_update_stored_message` on an unstored message would create a phantom row.
+    """
+    fake_usage = {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3}
+    handler_instance = MagicMock()
+    handler_instance.get_usage.return_value = fake_usage
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    unstored_result = MagicMock()
+    unstored_result.get_id.return_value = None
+    unstored_result.properties = MagicMock()
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+
+    update_stored = AsyncMock()
+    send_event = AsyncMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch.object(type(component), "_update_stored_message", new=update_stored),
+        patch.object(type(component), "_send_message_event", new=send_event),
+        patch(
+            "lfx.components.models_and_agents.agent.TokenUsageCallbackHandler",
+            return_value=handler_instance,
+        ),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(return_value=unstored_result),
+        ),
+    ):
+        result = await component.run_agent(fake_graph)
+
+    update_stored.assert_not_awaited()
+    send_event.assert_not_awaited()
+    # Usage is still set on the in-memory result even when not persisted.
+    assert unstored_result.properties.usage == fake_usage
+    assert result is unstored_result
+
+
+@pytest.mark.asyncio
+async def test_should_pass_event_manager_on_token_callback_to_process_agent_events() -> None:
+    """Parity with legacy lines 261-263, 283: stream tokens to the event manager.
+
+    When the component is wired to an event_manager (typical when running inside the
+    Langflow runtime), `process_agent_events` must receive a callback that pipes each
+    token chunk to `event_manager.on_token`. Without this, the frontend's live-typing
+    view stops working for the AgentComponent.
+    """
+    captured: dict = {}
+
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+        # consume the stream so the adapter doesn't leak
+        async for _ in stream:
+            pass
+        captured["on_token"] = on_token_callback
+        return MagicMock(get_id=lambda: None, properties=MagicMock())
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    on_token_fn = MagicMock(name="event_manager_on_token")
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+    component._event_manager = MagicMock()
+    component._event_manager.on_token = on_token_fn
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch("lfx.components.models_and_agents.agent.process_agent_events", side_effect=_capture_process),
+    ):
+        await component.run_agent(fake_graph)
+
+    assert captured.get("on_token") is on_token_fn
+
+
+@pytest.mark.asyncio
+async def test_should_pass_none_on_token_callback_when_event_manager_is_absent() -> None:
+    """Regression guard: no event_manager → on_token_callback must be None, not a stub."""
+    captured: dict = {}
+
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+        async for _ in stream:
+            pass
+        captured["on_token"] = on_token_callback
+        return MagicMock(get_id=lambda: None, properties=MagicMock())
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+    component._event_manager = None
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch("lfx.components.models_and_agents.agent.process_agent_events", side_effect=_capture_process),
+    ):
+        await component.run_agent(fake_graph)
+
+    assert captured.get("on_token") is None
+
+
+@pytest.mark.asyncio
+async def test_should_delete_stored_message_and_emit_remove_event_on_exception_with_message_error() -> None:
+    """Parity with legacy lines 285-293: clean up half-stored messages on hard failure.
+
+    When `process_agent_events` raises `ExceptionWithMessageError`, the partial agent
+    Message may already exist in the DB. Without cleanup, the orphaned row stays
+    visible in the chat history. The legacy run_agent deletes it AND fires a
+    `remove_message` event so the frontend drops the stale bubble.
+    """
+    from lfx.base.agents.events import ExceptionWithMessageError as _ExcWithMsg
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    # Use a MagicMock for agent_message — Pydantic's Message restricts instance-level
+    # method overrides, but ExceptionWithMessageError doesn't enforce the type at runtime.
+    half_stored = MagicMock()
+    half_stored.get_id.return_value = "msg-half-stored-456"
+    raised_exc = _ExcWithMsg(half_stored, "boom")
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+
+    delete_message_mock = AsyncMock()
+    send_event = AsyncMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch.object(type(component), "_send_message_event", new=send_event),
+        patch("lfx.components.models_and_agents.agent.delete_message", new=delete_message_mock),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(side_effect=raised_exc),
+        ),
+        pytest.raises(_ExcWithMsg),
+    ):
+        await component.run_agent(fake_graph)
+
+    delete_message_mock.assert_awaited_once_with(id_="msg-half-stored-456")
+    send_event.assert_awaited_once_with(half_stored, category="remove_message")
+
+
+@pytest.mark.asyncio
+async def test_should_skip_delete_message_on_exception_when_message_was_not_stored() -> None:
+    """Regression guard: don't call delete_message on a Message with no ID."""
+    from lfx.base.agents.events import ExceptionWithMessageError as _ExcWithMsg
+
+    fake_graph = MagicMock()
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    unstored = MagicMock()
+    unstored.get_id.return_value = None
+    raised_exc = _ExcWithMsg(unstored, "boom")
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+
+    delete_message_mock = AsyncMock()
+    send_event = AsyncMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch.object(type(component), "_send_message_event", new=send_event),
+        patch("lfx.components.models_and_agents.agent.delete_message", new=delete_message_mock),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(side_effect=raised_exc),
+        ),
+        pytest.raises(_ExcWithMsg),
+    ):
+        await component.run_agent(fake_graph)
+
+    delete_message_mock.assert_not_awaited()
+    # The remove_message event still fires so the frontend drops the partial bubble.
+    send_event.assert_awaited_once_with(unstored, category="remove_message")
+
+
+@pytest.mark.asyncio
 async def test_should_return_final_ai_text_when_message_response_runs_end_to_end() -> None:
     """Smoke: full path from message_response → graph → final Message.
 

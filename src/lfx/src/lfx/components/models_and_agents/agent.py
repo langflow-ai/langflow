@@ -19,11 +19,12 @@ from lfx.components.models_and_agents.memory import MemoryComponent
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
-    from lfx.schema.log import SendMessageFunctionType
+    from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -39,6 +40,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
+from lfx.memory import delete_message
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
@@ -444,19 +446,56 @@ class AgentComponent(ToolCallingAgentComponent):
         input_dict = {"messages": messages}
 
         agent_message = self._build_initial_agent_message()
+        token_usage_handler = TokenUsageCallbackHandler()
+
+        # Stream tokens to the event manager when running inside the Langflow runtime.
+        # This is what powers the live-typing view in the chat UI.
+        on_token_callback: OnTokenFunctionType | None = None
+        if getattr(self, "_event_manager", None):
+            on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
 
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(
                 input_dict,
-                config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
+                config={
+                    "callbacks": [
+                        AgentAsyncHandler(self.log),
+                        token_usage_handler,
+                        *self._get_shared_callbacks(),
+                    ]
+                },
                 version="v2",
             )
         )
-        result = await process_agent_events(
-            stream,
-            agent_message,
-            cast("SendMessageFunctionType", self.send_message),
-        )
+        try:
+            result = await process_agent_events(
+                stream,
+                agent_message,
+                cast("SendMessageFunctionType", self.send_message),
+                on_token_callback,
+            )
+        except ExceptionWithMessageError as e:
+            # Drop the half-stored partial message from the DB (only if it was
+            # actually persisted) and tell the frontend to remove the stale bubble.
+            if hasattr(e, "agent_message"):
+                msg_id = e.agent_message.get_id()
+                if msg_id:
+                    await delete_message(id_=msg_id)
+                await self._send_message_event(e.agent_message, category="remove_message")
+            logger.error(f"ExceptionWithMessageError: {e}")
+            raise
+
+        usage_data = token_usage_handler.get_usage()
+        if usage_data:
+            self._token_usage = usage_data
+            result.properties.usage = usage_data
+            # Only round-trip the DB when the message was stored (Chat Output wired).
+            # `_should_skip_message=True` leaves `result.get_id()` empty; persisting
+            # then would create a phantom row.
+            if result.get_id():
+                stored_result = await self._update_stored_message(result)
+                await self._send_message_event(stored_result)
+                result = stored_result
 
         self.status = result
         return result
