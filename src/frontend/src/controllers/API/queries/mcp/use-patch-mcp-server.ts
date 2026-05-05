@@ -50,7 +50,7 @@ export const usePatchMCPServer: useMutationFunctionType<
         (oldData: getMCPServersResponse = []) => {
           return oldData.map((server) => {
             return server.name === body.name
-              ? { ...server, toolsCount: null }
+              ? { ...server, toolsCount: null, mode: null, error: undefined }
               : server;
           });
         },

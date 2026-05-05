@@ -1,8 +1,8 @@
 # Investigation: Deprecated macOS Support — Impact on Langflow
 
-**Jira:** LE-265  
-**Date:** 2026-04-02  
-**Status:** Complete  
+**Jira:** LE-265
+**Date:** 2026-04-02
+**Status:** Complete
 **Related:** LE-172 (PyTorch macOS x86_64 + Python 3.13 — resolved in PR #12469)
 
 ---
@@ -99,7 +99,6 @@ The following extras have platform markers excluding macOS x86_64 (**as of PR #1
 | Workaround | Location | Purpose |
 |------------|----------|---------|
 | `OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES` | `__main__.py`, `langflow_launcher.py`, CI workflows | Prevents Objective-C fork safety crashes with gunicorn multiprocessing |
-| `os.environ["no_proxy"] = "*"` | `__main__.py`, `langflow_launcher.py` | Avoids proxy-related errors with gunicorn on macOS |
 | `os.execv()` re-exec pattern | `langflow_launcher.py` | Sets env vars before Objective-C runtime initializes |
 | `brew install protobuf` | CI workflow (AMD64 only) | protoc not available on Intel CI runners |
 
@@ -157,7 +156,7 @@ Langflow **core functionality** (flow builder, API, database, all non-ML compone
 PR #12469 has already addressed the most critical issue:
 - ✅ `altk` and `langchain-huggingface` excluded on macOS x86_64
 - ✅ `docling` and `easyocr` already excluded (pre-existing)
-- ✅ `mlx`, `cuga` are ARM64-only  
+- ✅ `mlx`, `cuga` are ARM64-only
 - ✅ Experimental CI uses `continue-on-error: true`
 
 ### 4.2 Short-Term (Langflow 1.10 / Q2 2026)
