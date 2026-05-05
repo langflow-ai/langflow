@@ -18,7 +18,6 @@ from unittest.mock import AsyncMock
 import pytest
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessage, HumanMessage
-
 from lfx.base.agents.events import process_agent_events
 from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import TextContent

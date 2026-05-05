@@ -14,7 +14,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-
 from lfx.components.langchain_utilities.ibm_granite_middleware import (
     DEFAULT_FORCED_ITERATIONS,
     WatsonXAgentMiddleware,

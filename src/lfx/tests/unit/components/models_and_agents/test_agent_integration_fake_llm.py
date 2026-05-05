@@ -23,15 +23,14 @@ import pytest
 from langchain_core.callbacks import CallbackManagerForLLMRun
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
-from langchain_core.outputs import ChatGeneration, ChatResult
+from langchain_core.outputs import ChatResult
 from langchain_core.tools import BaseTool
-from pydantic import Field
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from pydantic import Field
 
 # ============================================================================
 # Test infrastructure: scripted fake LLM that records inputs
@@ -120,9 +119,7 @@ def _make_component(
     component._user_id = None
     component.cache = {}
     component._token_usage = None
-    component._vertex = SimpleNamespace(
-        graph=SimpleNamespace(session_id="test-session", flow_id=None, user_id=None)
-    )
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session", flow_id=None, user_id=None))
     component._event_manager = None
     component.status = None
     component.send_message = AsyncMock(side_effect=_persisting_send)
@@ -160,7 +157,6 @@ async def _persisting_send(message: Message, skip_db_update: bool = False) -> Me
 @pytest.fixture(autouse=True)
 def _reset_send_counter():
     _send_call_counter["count"] = 0
-    yield
 
 
 # ============================================================================
@@ -215,9 +211,7 @@ async def test_should_pass_full_chat_history_to_llm_when_history_is_provided() -
         Data(text="My favorite color is purple.", sender=MESSAGE_SENDER_USER),
         Data(text="Got it — purple is a great color.", sender=MESSAGE_SENDER_AI),
     ]
-    component = _make_component(
-        llm=llm, tools=[], chat_history=history, input_value="What is my favorite color?"
-    )
+    component = _make_component(llm=llm, tools=[], chat_history=history, input_value="What is my favorite color?")
 
     graph = component.create_agent_runnable()
     await component.run_agent(graph)
@@ -261,9 +255,7 @@ async def test_should_stop_after_max_iterations_model_calls_when_llm_keeps_emitt
     result = await component.run_agent(graph)
 
     # Model was called at most 2 times (the run_limit).
-    assert len(llm.received_inputs) <= 2, (
-        f"max_iterations=2 must cap LLM calls; got {len(llm.received_inputs)}"
-    )
+    assert len(llm.received_inputs) <= 2, f"max_iterations=2 must cap LLM calls; got {len(llm.received_inputs)}"
     # Run terminated; result is a complete Message (no infinite spinner).
     assert result is not None
     assert result.properties.state in ("complete", "partial")  # both acceptable; not stuck
@@ -369,8 +361,7 @@ async def test_should_render_final_text_block_when_llm_returns_no_tool_calls() -
 
     assert result.text == "Hello, world."
     output_blocks = [
-        c for c in result.content_blocks[0].contents
-        if isinstance(c, TextContent) and c.header.get("title") == "Output"
+        c for c in result.content_blocks[0].contents if isinstance(c, TextContent) and c.header.get("title") == "Output"
     ]
     assert len(output_blocks) == 1
 
@@ -417,7 +408,8 @@ async def test_should_pass_multimodal_content_to_llm_when_input_message_has_list
 
 class ScriptedFakeWatsonxModel(ScriptedFakeChatModel):
     """Fake chat model whose class name contains 'watsonx' so `is_watsonx_model`
-    detects it as a WatsonX provider — triggers the WatsonXAgentMiddleware path."""
+    detects it as a WatsonX provider — triggers the WatsonXAgentMiddleware path.
+    """
 
 
 @pytest.mark.asyncio

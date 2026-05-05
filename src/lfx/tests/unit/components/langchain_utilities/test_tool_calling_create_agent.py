@@ -9,7 +9,6 @@ import pytest
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
 from langgraph.graph.state import CompiledStateGraph
-
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 
 
@@ -182,8 +181,7 @@ def test_should_inject_enhanced_system_prompt_for_non_granite_watsonx_models(mon
 
     system_prompt = captured.get("system_prompt") or ""
     assert "TOOL USAGE GUIDELINES" in system_prompt, (
-        f"Non-granite WatsonX models should receive TOOL USAGE GUIDELINES; "
-        f"got system_prompt={system_prompt!r}"
+        f"Non-granite WatsonX models should receive TOOL USAGE GUIDELINES; got system_prompt={system_prompt!r}"
     )
 
 

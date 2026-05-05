@@ -7,7 +7,6 @@ See CZL/PLAN_create_agent_migration.md.
 from unittest.mock import patch
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-
 from lfx.base.agents.messages_input_builder import build_initial_messages
 from lfx.schema.data import Data
 from lfx.schema.message import Message
@@ -237,7 +236,8 @@ def test_should_append_continue_message_when_input_is_blank_message_and_history_
 def test_should_not_double_inject_continue_message_when_history_already_ends_with_human_message() -> None:
     """Regression guard: when input is blank and history happens to end with a HumanMessage
     (rare — usually only when the LLM call failed previously), still inject exactly ONE
-    continuation, not two."""
+    continuation, not two.
+    """
     history = [
         Data(text="lonely user question", sender=MESSAGE_SENDER_USER),
     ]

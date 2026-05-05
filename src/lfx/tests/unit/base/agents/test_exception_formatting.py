@@ -12,7 +12,6 @@ from typing import Any
 
 from lfx.base.agents.exception_formatting import format_exception_for_message
 
-
 # ---- IBM watsonx shape: body = {"errors": [{"code": ..., "message": ...}]} ----
 
 

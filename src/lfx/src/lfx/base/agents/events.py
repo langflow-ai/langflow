@@ -110,9 +110,7 @@ def _last_human_text(messages: object) -> str:
                 return content
             if isinstance(content, list):
                 parts = [
-                    part.get("text", "")
-                    for part in content
-                    if isinstance(part, dict) and part.get("type") == "text"
+                    part.get("text", "") for part in content if isinstance(part, dict) and part.get("type") == "text"
                 ]
                 return "".join(parts)
     return ""

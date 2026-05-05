@@ -16,7 +16,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import HumanMessage
 from langchain_core.runnables import Runnable
-
 from lfx.base.agents.agent import LCAgentComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message

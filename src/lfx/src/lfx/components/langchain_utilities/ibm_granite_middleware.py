@@ -83,10 +83,7 @@ class WatsonXAgentMiddleware(AgentMiddleware):
         num_steps = _count_tool_messages(request)
         choice = self.select_tool_choice(num_steps)
         new_model = self._llm_required if choice == "required" else self._llm_auto
-        logger.info(
-            f"[WatsonX] step={num_steps} tool_choice={choice} "
-            f"(forced_iterations={self._forced_iterations})"
-        )
+        logger.info(f"[WatsonX] step={num_steps} tool_choice={choice} (forced_iterations={self._forced_iterations})")
         return request.override(model=new_model)
 
 
