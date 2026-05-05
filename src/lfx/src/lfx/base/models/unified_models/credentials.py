@@ -12,6 +12,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import secret_value_to_str
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -19,13 +20,16 @@ from .provider_queries import (
 )
 
 
-def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
 
     When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
+    # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
+    # stringification. Unwrap here because provider clients need the raw value.
+    api_key = secret_value_to_str(api_key, strip=True)
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
@@ -50,8 +54,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
 
             value = run_until_complete(_get_by_var_name())
-            if value and str(value).strip():
-                return str(value).strip()
+            value = secret_value_to_str(value, strip=True)
+            if value:
+                return value
         return None
 
     if api_key and api_key.strip():
@@ -67,37 +72,40 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         # Literal API key (e.g. sk-...)
         return var_name
 
-    # If no user_id or user_id is the string "None", we can't look up global variables
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
-
     # Get primary variable (first required secret) from provider metadata
     provider_variable_map = get_model_provider_variable_mapping()
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
 
-    # Try to get from global variables, fall back to environment
-    async def _get_variable():
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return None
-            try:
-                return await variable_service.get_variable(
-                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                    name=variable_name,
-                    field="",
-                    session=session,
-                )
-            except ValueError:
-                return None
+    # Try the database-backed variable service first when a user_id is available.
+    # Fall through to os.environ regardless so lfx run (no user_id) can still pick
+    # up canonical credentials from the shell.
+    has_user = user_id is not None and not (isinstance(user_id, str) and user_id == "None")
+    api_key = None
+    if has_user:
 
-    try:
-        api_key = run_until_complete(_get_variable())
-    except (ValueError, Exception):  # noqa: BLE001
-        api_key = None
+        async def _get_variable():
+            async with session_scope() as session:
+                variable_service = get_variable_service()
+                if variable_service is None:
+                    return None
+                try:
+                    return await variable_service.get_variable(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        name=variable_name,
+                        field="",
+                        session=session,
+                    )
+                except ValueError:
+                    return None
 
+        try:
+            api_key = run_until_complete(_get_variable())
+        except (ValueError, Exception):  # noqa: BLE001
+            api_key = None
+
+    api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
         return api_key
 
@@ -145,8 +153,9 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        values[var_key] = str(value)
+                    value = secret_value_to_str(value, strip=True)
+                    if value:
+                        values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001
                     # Variable not found - check environment
                     env_value = os.environ.get(var_key)
