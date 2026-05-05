@@ -31,9 +31,13 @@ os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
 os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
 os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
 
-# Default bundled model. Q4_K_M-quantized SmolLM2-360M (~270MB), fast on CPU.
-DEFAULT_HUGGINGFACE_MODEL = "bartowski/SmolLM2-360M-Instruct-GGUF"
-DEFAULT_GGUF_FILENAME = "SmolLM2-360M-Instruct-Q4_K_M.gguf"
+# Default bundled model. Q4_K_M-quantized Qwen2.5-0.5B-Instruct (~400MB).
+# Picked over SmolLM2-360M because the Qwen2.5 family is fine-tuned for
+# tool calling — the Agent component filters its model dropdown by
+# ``tool_calling=True``, so the bundled default has to satisfy that
+# filter or HF-only setups land on an empty Agent dropdown.
+DEFAULT_HUGGINGFACE_MODEL = "bartowski/Qwen2.5-0.5B-Instruct-GGUF"
+DEFAULT_GGUF_FILENAME = "Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
 
 # Per-repo override of which GGUF file to fetch. Anything not listed here
 # falls back to the ``*-Q4_K_M.gguf`` heuristic in ``_pick_gguf_filename``.

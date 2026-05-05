@@ -23,13 +23,17 @@ from .model_metadata import create_model_metadata
 # reasonably well — small models that *advertise* tool calling but trip on
 # real-world tools are left as ``False``.
 HUGGINGFACE_MODELS_DETAILED = [
-    # Bundled default — tiny, ~270MB, CPU-fast, no tool calling.
+    # Bundled default — Qwen2.5-0.5B-Instruct, ~400MB Q4_K_M. The Qwen2.5
+    # family is fine-tuned for tool calling, so the bundled default
+    # satisfies the Agent component's ``tool_calling=True`` filter and
+    # users with HuggingFace as their only provider can drop an Agent
+    # node without configuring anything else.
     create_model_metadata(
         provider="HuggingFace",
         name=DEFAULT_HUGGINGFACE_MODEL,
-        display_name="smollm2",
+        display_name="qwen2.5:0.5b",
         icon="HuggingFace",
-        tool_calling=False,
+        tool_calling=True,
         default=True,
     ),
 ]
