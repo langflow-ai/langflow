@@ -1,5 +1,7 @@
 """remove fk constraint in message transaction and vertex build
 
+Phase: CONTRACT
+
 Revision ID: 1b8b740a6fa3
 Revises: f3b2d1f1002d
 Create Date: 2025-04-10 10:17:32.493181
@@ -11,9 +13,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
-
 from langflow.utils import migration
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "1b8b740a6fa3"
@@ -57,6 +58,53 @@ def constraint_exists(constraint_name: str, conn) -> bool:
     return False
 
 
+def _drop_inbound_fks(conn, table_name: str) -> list[dict]:
+    """Drop FK constraints on OTHER tables that reference `table_name`.
+
+    The table-rebuild pattern used here (create temp → copy → drop original →
+    rename) fails on Postgres when a newer migration has added an FK to this
+    table that is still live (e.g. after a branch switch left the DB ahead of
+    the alembic_version stamp). Drops those inbound FKs and returns enough
+    info to restore them with _restore_inbound_fks after the rename.
+    """
+    if conn.dialect.name != "postgresql":
+        return []
+    inspector = sa.inspect(conn)
+    dropped: list[dict] = []
+    for ref_table in inspector.get_table_names():
+        for fk in inspector.get_foreign_keys(ref_table):
+            if fk.get("referred_table") == table_name:
+                name = fk.get("name")
+                if name:
+                    op.execute(sa.text(f'ALTER TABLE "{ref_table}" DROP CONSTRAINT IF EXISTS "{name}"'))
+                    dropped.append(
+                        {
+                            "ref_table": ref_table,
+                            "fk_name": name,
+                            "constrained_columns": fk["constrained_columns"],
+                            "referred_table": table_name,
+                            "referred_columns": fk["referred_columns"],
+                            "options": fk.get("options", {}),
+                        }
+                    )
+    return dropped
+
+
+def _restore_inbound_fks(dropped_fks: list[dict]) -> None:
+    """Re-add FKs that were removed by _drop_inbound_fks after the table rename."""
+    for info in dropped_fks:
+        cols = ", ".join(f'"{c}"' for c in info["constrained_columns"])
+        ref_cols = ", ".join(f'"{c}"' for c in info["referred_columns"])
+        on_delete = info["options"].get("ondelete", "")
+        on_delete_clause = f" ON DELETE {on_delete}" if on_delete else ""
+        op.execute(
+            sa.text(
+                f'ALTER TABLE "{info["ref_table"]}" ADD CONSTRAINT "{info["fk_name"]}" '
+                f'FOREIGN KEY ({cols}) REFERENCES "{info["referred_table"]}" ({ref_cols}){on_delete_clause}'
+            )
+        )
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
@@ -90,8 +138,9 @@ def upgrade() -> None:
 
         # Copy data - use a window function to ensure build_id uniqueness across SQLite, PostgreSQL and MySQL
         # Filter out rows where the original 'id' (vertex id) is NULL, as the new table requires it.
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+        op.execute(
+            """
+            INSERT INTO "temp_vertex_build" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
                 SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
@@ -100,11 +149,15 @@ def upgrade() -> None:
                 WHERE id IS NOT NULL -- Ensure vertex id is not NULL
             ) sub
             WHERE rn = 1
-        """)
+        """
+        )
+
+        # Verify data was migrated - COUNT check
+        conn.execute(sa.text('SELECT COUNT(*) FROM "temp_vertex_build"')).scalar()
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
-        op.rename_table(temp_table_name, "vertex_build")
+        op.execute(sa.text('ALTER TABLE "temp_vertex_build" RENAME TO "vertex_build"'))
 
     # 2. Handle transaction table
     if migration.table_exists("transaction", conn):
@@ -133,16 +186,19 @@ def upgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
+        op.execute(
+            """
+            INSERT INTO "temp_transaction" (timestamp, vertex_id, target_id, inputs,
+                outputs, status, id, flow_id, error)
             SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             FROM "transaction"
             WHERE id IS NOT NULL
-        """)
+        """
+        )
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
-        op.rename_table(temp_table_name, "transaction")
+        op.execute(sa.text('ALTER TABLE "temp_transaction" RENAME TO "transaction"'))
 
     # 3. Handle message table
     if migration.table_exists("message", conn):
@@ -175,16 +231,27 @@ def upgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
-            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
+        op.execute(
+            """
+            INSERT INTO "temp_message" (timestamp, sender, sender_name, session_id, text,
+                id, flow_id, files, error, edit, properties, category, content_blocks)
+            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error,
+                edit, properties, category, content_blocks
             FROM "message"
             WHERE id IS NOT NULL
-        """)
+        """
+        )
 
-        # Drop original table and rename temp table
-        op.drop_table("message")
-        op.rename_table(temp_table_name, "message")
+        # Drop original table and rename temp table.
+        # On Postgres, FKs from other tables that reference "message" (e.g.
+        # message_ingestion_record_message_id_fkey from a newer migration
+        # applied before this revision was stamped back) block a plain DROP.
+        # Save, drop, rebuild, then restore so the referencing tables stay
+        # consistent and don't cause a model/DB drift error on next startup.
+        dropped_fks = _drop_inbound_fks(conn, "message")
+        op.execute(sa.text('DROP TABLE IF EXISTS "message" CASCADE'))
+        op.execute(sa.text('ALTER TABLE "temp_message" RENAME TO "message"'))
+        _restore_inbound_fks(dropped_fks)
 
 
 def downgrade() -> None:
@@ -228,8 +295,9 @@ def downgrade() -> None:
         # Copy data - use a window function to ensure build_id uniqueness.
         # Filter out rows where build_id is NULL (PK constraint)
         # No need to filter by 'id' here as the target column allows NULLs.
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+        op.execute(
+            """
+            INSERT INTO "temp_vertex_build" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
                 SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
@@ -238,7 +306,8 @@ def downgrade() -> None:
                 WHERE build_id IS NOT NULL -- Ensure primary key is not NULL
             ) sub
             WHERE rn = 1
-        """)
+        """
+        )
 
         # Drop original table and rename temp table
         op.drop_table("vertex_build")
@@ -279,12 +348,15 @@ def downgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error)
+        op.execute(
+            """
+            INSERT INTO "temp_transaction" (timestamp, vertex_id, target_id, inputs,
+                outputs, status, id, flow_id, error)
             SELECT timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             FROM "transaction"
             WHERE id IS NOT NULL
-        """)
+        """
+        )
 
         # Drop original table and rename temp table
         op.drop_table("transaction")
@@ -329,14 +401,20 @@ def downgrade() -> None:
         )
 
         # Copy data - explicitly list columns and filter out rows where id is NULL
-        op.execute(f"""
-            INSERT INTO "{temp_table_name}" (timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks)
-            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit, properties, category, content_blocks
+        op.execute(
+            """
+            INSERT INTO "temp_message" (timestamp, sender, sender_name, session_id, text,
+                id, flow_id, files, error, edit, properties, category, content_blocks)
+            SELECT timestamp, sender, sender_name, session_id, text, id, flow_id, files, error,
+                edit, properties, category, content_blocks
             FROM "message"
             WHERE id IS NOT NULL
-        """)
+        """
+        )
 
-        # Drop original table and rename temp table
-        op.drop_table("message")
+        # Drop original table and rename temp table (same inbound-FK guard as upgrade).
+        dropped_fks = _drop_inbound_fks(conn, "message")
+        op.execute(sa.text('DROP TABLE IF EXISTS "message" CASCADE'))
         op.rename_table(temp_table_name, "message")
+        _restore_inbound_fks(dropped_fks)
     # ### end Alembic commands ###

@@ -190,31 +190,74 @@ def upgrade() -> None:
         op.create_index("ix_mbwr_ingestion_job_id", "memory_base_workflow_run", ["ingestion_job_id"])
 
 
+def _drop_foreign_keys_pg(conn, table_name: str) -> None:
+    """Drop every FK on `table_name` via raw SQL with IF EXISTS (Postgres only).
+
+    `ON DELETE CASCADE` on a FK only cascades row deletes, not DDL drops, so
+    a downstream migration that drops a referenced table (e.g. the message-
+    table rebuild in 1b8b740a6fa3) fails with DependentObjectsStillExist if
+    any inbound FK survives. We use raw `ALTER TABLE ... DROP CONSTRAINT IF
+    EXISTS` rather than `op.drop_constraint`: the latter emits non-idempotent
+    SQL and can trip Postgres' dependency checker if the constraint is
+    referenced by an auto-generated trigger that hasn't been cleaned up.
+    For SQLite/MySQL, FK constraints go away with the table itself, so no
+    pre-step is needed.
+    """
+    if conn.dialect.name != "postgresql":
+        return
+    inspector = sa.inspect(conn)
+    for fk in inspector.get_foreign_keys(table_name):
+        name = fk.get("name")
+        if name:
+            op.execute(sa.text(f'ALTER TABLE "{table_name}" DROP CONSTRAINT IF EXISTS "{name}"'))
+
+
+def _drop_table_safely(conn, table_name: str, index_names: list[str]) -> None:
+    """Drop a table, its FKs, and its indexes idempotently."""
+    if not migration.table_exists(table_name, conn):
+        return
+
+    _drop_foreign_keys_pg(conn, table_name)
+
+    existing = {idx["name"] for idx in sa.inspect(conn).get_indexes(table_name)}
+    for idx in index_names:
+        if idx in existing:
+            op.drop_index(idx, table_name=table_name)
+
+    if conn.dialect.name == "postgresql":
+        op.execute(sa.text(f'DROP TABLE IF EXISTS "{table_name}" CASCADE'))
+    else:
+        op.drop_table(table_name)
+
+
 def downgrade() -> None:
     conn = op.get_bind()
 
     # Children first (FK dependencies) ----------------------------------- #
-    if migration.table_exists("memory_base_workflow_run", conn):
-        op.drop_index("ix_mbwr_ingestion_job_id", table_name="memory_base_workflow_run")
-        op.drop_index("ix_mbwr_mb_session", table_name="memory_base_workflow_run")
-        op.drop_table("memory_base_workflow_run")
-
-    if migration.table_exists("message_ingestion_record", conn):
-        op.drop_index("ix_mir_memory_base_session", table_name="message_ingestion_record")
-        op.drop_index("ix_mir_job_id", table_name="message_ingestion_record")
-        op.drop_index("ix_mir_message_id", table_name="message_ingestion_record")
-        op.drop_table("message_ingestion_record")
-
-    if migration.table_exists("memory_base_session", conn):
-        op.drop_index("ix_memory_base_session_lookup", table_name="memory_base_session")
-        op.drop_index("ix_memory_base_session_session_id", table_name="memory_base_session")
-        op.drop_index("ix_memory_base_session_memory_base_id", table_name="memory_base_session")
-        op.drop_table("memory_base_session")
-
-    if migration.table_exists("memory_base", conn):
-        op.drop_index("ix_memory_base_user_id", table_name="memory_base")
-        op.drop_index("ix_memory_base_flow_id", table_name="memory_base")
-        op.drop_table("memory_base")
+    _drop_table_safely(
+        conn,
+        "memory_base_workflow_run",
+        ["ix_mbwr_ingestion_job_id", "ix_mbwr_mb_session"],
+    )
+    _drop_table_safely(
+        conn,
+        "message_ingestion_record",
+        ["ix_mir_memory_base_session", "ix_mir_job_id", "ix_mir_message_id"],
+    )
+    _drop_table_safely(
+        conn,
+        "memory_base_session",
+        [
+            "ix_memory_base_session_lookup",
+            "ix_memory_base_session_session_id",
+            "ix_memory_base_session_memory_base_id",
+        ],
+    )
+    _drop_table_safely(
+        conn,
+        "memory_base",
+        ["ix_memory_base_user_id", "ix_memory_base_flow_id"],
+    )
 
     # Message column/index ----------------------------------------------- #
     existing_message_indexes = {idx["name"] for idx in sa.inspect(conn).get_indexes("message")}
