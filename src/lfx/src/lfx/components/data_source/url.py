@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import importlib
 import io
 import re
@@ -5,13 +7,15 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import RecursiveUrlLoader
-from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.helpers.data import safe_convert
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SliderInput, TableInput
 from lfx.log.logger import logger
+
+# DataFrame imported eagerly: lfx.schema.dataframe.DataFrame is a lazy proxy
+# (see lfx/schema/dataframe.py), so this import does NOT load pandas.
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.utils.request_utils import get_user_agent
@@ -201,6 +205,9 @@ class URLComponent(Component):
     @staticmethod
     def _markdown_extractor(x: str) -> str:
         """Convert HTML to Markdown format."""
+        # Lazy import: markitdown pulls in pandas via _xlsx_converter (~10s cold).
+        from markitdown import MarkItDown
+
         stream = io.BytesIO(x.encode("utf-8"))
         result = MarkItDown(enable_plugins=False).convert_stream(stream)
         return result.markdown

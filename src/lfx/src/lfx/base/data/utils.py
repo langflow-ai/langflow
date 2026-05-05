@@ -12,7 +12,6 @@ import chardet
 import orjson
 import yaml
 from defusedxml import ElementTree
-from pypdf import PdfReader
 
 from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
@@ -284,6 +283,8 @@ def extract_text_from_bytes(file_name: str, file_content: bytes) -> str:
     """
     lower_name = file_name.lower()
     if lower_name.endswith(".pdf"):
+        from pypdf import PdfReader
+
         try:
             with BytesIO(file_content) as f, PdfReader(f) as reader:
                 return "\n\n".join(page.extract_text() or "" for page in reader.pages)
@@ -303,6 +304,8 @@ def extract_text_from_bytes(file_name: str, file_content: bytes) -> str:
 
 
 def parse_pdf_to_text(file_path: str) -> str:
+    from pypdf import PdfReader
+
     with Path(file_path).open("rb") as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
@@ -318,6 +321,8 @@ async def parse_pdf_to_text_async(file_path: str) -> str:
     Returns:
         str: Extracted text from all pages
     """
+    from pypdf import PdfReader
+
     content = await read_file_bytes(file_path)
     with BytesIO(content) as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
