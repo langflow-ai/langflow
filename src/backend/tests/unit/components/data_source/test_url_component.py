@@ -1,3 +1,4 @@
+import os
 from unittest.mock import Mock, patch
 
 import pytest
@@ -327,3 +328,103 @@ class TestURLComponentSSRFProtection:
 
             with pytest.raises(ValueError, match="SSRF Protection"):
                 component.fetch_content()
+
+
+class TestURLComponentProxyHandling:
+    """Test proxy detection in URLComponent._create_loader."""
+
+    @patch.dict(os.environ, {}, clear=True)
+    @patch("lfx.components.data_source.url.RecursiveUrlLoader")
+    def test_url_component_proxy_disabled_when_no_proxy_env(self, mock_recursive_loader_class):
+        """Test that use_async remains True when no proxy environment variables exist."""
+        component = URLComponent()
+        component.set_attributes(
+            {
+                "urls": ["https://example.com"],
+                "use_async": True,
+                "max_depth": 1,
+                "timeout": 30,
+                "format": "Text",
+                "prevent_outside": True,
+                "headers": [{"key": "User-Agent", "value": "test"}],
+            }
+        )
+
+        component._create_loader("https://example.com")
+
+        mock_recursive_loader_class.assert_called_once()
+        called_kwargs = mock_recursive_loader_class.call_args.kwargs
+        assert called_kwargs["use_async"] is True
+
+    @patch.dict(os.environ, {"HTTP_PROXY": "http://127.0.0.1:8080"}, clear=True)
+    @patch("lfx.components.data_source.url.RecursiveUrlLoader")
+    @patch("lfx.components.data_source.url.logger")
+    def test_url_component_proxy_forces_sync_mode(self, mock_logger, mock_recursive_loader_class):
+        """Test that use_async is forced to False and a warning is logged when a proxy is detected."""
+        component = URLComponent()
+        component.set_attributes(
+            {
+                "urls": ["https://example.com"],
+                "use_async": True,
+                "max_depth": 1,
+                "timeout": 30,
+                "format": "Text",
+                "prevent_outside": True,
+                "headers": [{"key": "User-Agent", "value": "test"}],
+            }
+        )
+
+        component._create_loader("https://example.com")
+
+        mock_recursive_loader_class.assert_called_once()
+        called_kwargs = mock_recursive_loader_class.call_args.kwargs
+        assert called_kwargs["use_async"] is False
+
+        mock_logger.warning.assert_called_once()
+        assert "Proxy environment variables detected" in mock_logger.warning.call_args[0][0]
+
+    @patch.dict(os.environ, {"HTTPS_PROXY": ""}, clear=True)
+    @patch("lfx.components.data_source.url.RecursiveUrlLoader")
+    def test_url_component_empty_proxy_is_ignored(self, mock_recursive_loader_class):
+        """Test that an empty string in a proxy environment variable does not disable async mode."""
+        component = URLComponent()
+        component.set_attributes(
+            {
+                "urls": ["https://example.com"],
+                "use_async": True,
+                "max_depth": 1,
+                "timeout": 30,
+                "format": "Text",
+                "prevent_outside": True,
+                "headers": [{"key": "User-Agent", "value": "test"}],
+            }
+        )
+
+        component._create_loader("https://example.com")
+
+        mock_recursive_loader_class.assert_called_once()
+        called_kwargs = mock_recursive_loader_class.call_args.kwargs
+        assert called_kwargs["use_async"] is True
+
+    @patch.dict(os.environ, {"HTTP_PROXY": "   ", "HTTPS_PROXY": " \t "}, clear=True)
+    @patch("lfx.components.data_source.url.RecursiveUrlLoader")
+    def test_url_component_whitespace_proxy_is_ignored(self, mock_recursive_loader_class):
+        """Test that whitespace-only strings in proxy environment variables do not disable async mode."""
+        component = URLComponent()
+        component.set_attributes(
+            {
+                "urls": ["https://example.com"],
+                "use_async": True,
+                "max_depth": 1,
+                "timeout": 30,
+                "format": "Text",
+                "prevent_outside": True,
+                "headers": [{"key": "User-Agent", "value": "test"}],
+            }
+        )
+
+        component._create_loader("https://example.com")
+
+        mock_recursive_loader_class.assert_called_once()
+        called_kwargs = mock_recursive_loader_class.call_args.kwargs
+        assert called_kwargs["use_async"] is True
