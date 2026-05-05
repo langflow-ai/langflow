@@ -3,52 +3,55 @@ import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
-import type { AddMessagesToMemoryParams, MemoryInfo } from "./types";
+import { mapMemoryApiToMemoryInfo } from "./mappers";
+import { memoriesRetryDelay } from "./memoriesQueryConfig";
+import type {
+  AddMessagesToMemoryParams,
+  MemoryApiDTO,
+  MemoryInfo,
+} from "./types";
+import { ensureRequiredParam } from "./validation";
 
 export const useAddMessagesToMemory: useMutationFunctionType<
   undefined,
-  AddMessagesToMemoryParams
+  AddMessagesToMemoryParams,
+  MemoryInfo
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
   const addMessagesFn = async (
     params: AddMessagesToMemoryParams,
   ): Promise<MemoryInfo> => {
-    if (!params?.memoryId) {
-      throw new Error("addMessagesToMemory: missing memoryId");
-    }
-    if (!Array.isArray(params.message_ids) || params.message_ids.length === 0) {
+    ensureRequiredParam(params?.memoryId, "memoryId");
+    if (!Array.isArray(params.messageIds) || params.messageIds.length === 0) {
       throw new Error(
         "addMessagesToMemory: message_ids must be a non-empty array",
       );
     }
-    const response = isMockMemoriesEnabled()
-      ? {
-          data: await mockMemoriesApi.addMessages(
-            params.memoryId,
-            params.message_ids,
-          ),
-        }
-      : await api.post<MemoryInfo>(
-          `${getURL("MEMORIES")}/${params.memoryId}/add-messages`,
-          {
-            message_ids: params.message_ids,
-          },
-        );
+    const response = await api.post<MemoryApiDTO>(
+      `${getURL("MEMORIES")}/${params.memoryId}/add-messages`,
+      {
+        message_ids: params.messageIds,
+      },
+    );
 
-    queryClient.invalidateQueries({ queryKey: ["useGetMemories"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetMemoriesInfinite"] });
     queryClient.invalidateQueries({
       queryKey: ["useGetMemory", params.memoryId],
     });
-    return response.data;
+    return mapMemoryApiToMemoryInfo(response.data);
   };
 
   const mutation: UseMutationResult<
     MemoryInfo,
-    any,
+    Error,
     AddMessagesToMemoryParams
-  > = mutate(["useAddMessagesToMemory"], addMessagesFn, options);
+  > = mutate(["useAddMessagesToMemory"], addMessagesFn, {
+    // POST is not safe to retry by default (risk of duplicates).
+    retry: false,
+    retryDelay: memoriesRetryDelay,
+    ...options,
+  });
 
   return mutation;
 };

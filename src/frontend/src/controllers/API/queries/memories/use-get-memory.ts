@@ -3,8 +3,13 @@ import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import { isMockMemoriesEnabled, mockMemoriesApi } from "../../mocks/memories";
-import type { GetMemoryParams, MemoryInfo } from "./types";
+import { mapMemoryApiToMemoryInfo } from "./mappers";
+import {
+  MEMORIES_RETRY_MAX_ATTEMPTS,
+  memoriesRetryDelay,
+} from "./memoriesQueryConfig";
+import { ensureRequiredParam } from "./validation";
+import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
 
 export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   params,
@@ -13,24 +18,22 @@ export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   const { query } = UseRequestProcessor();
 
   const getMemoryFn = async (): Promise<MemoryInfo> => {
-    if (!params?.memoryId) {
-      throw new Error("memoryId is required");
-    }
+    ensureRequiredParam(params?.memoryId, "memoryId");
 
-    if (isMockMemoriesEnabled()) {
-      return await mockMemoriesApi.get(params.memoryId);
-    }
-
-    const res = await api.get(`${getURL("MEMORIES")}/${params.memoryId}`);
-    return res.data;
+    const res = await api.get<MemoryApiDTO>(
+      `${getURL("MEMORIES")}/${params.memoryId}`,
+    );
+    return mapMemoryApiToMemoryInfo(res.data);
   };
 
-  const queryResult: UseQueryResult<MemoryInfo, any> = query(
+  const queryResult: UseQueryResult<MemoryInfo, Error> = query(
     ["useGetMemory", params?.memoryId],
     getMemoryFn,
     {
       enabled: !!params?.memoryId,
       refetchOnWindowFocus: false,
+      retry: MEMORIES_RETRY_MAX_ATTEMPTS,
+      retryDelay: memoriesRetryDelay,
       ...options,
     },
   );

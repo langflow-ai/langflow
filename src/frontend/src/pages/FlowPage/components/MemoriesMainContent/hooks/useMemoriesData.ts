@@ -1,14 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
-import useAlertStore from "@/stores/alertStore";
-import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
-import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
-import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
-import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
-import { UseMemoriesDataProps } from "../types";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
 } from "@/controllers/API/queries/memories/types";
+import { useDeleteMemory } from "@/controllers/API/queries/memories/use-delete-memory";
+import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memories";
+import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
+import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
+import useAlertStore from "@/stores/alertStore";
+import { UseMemoriesDataProps } from "../types";
+import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
+import { useMemoryDocuments } from "./useMemoryDocuments";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { useMemorySessionResolver } from "./useMemorySessionResolver";
+
+const EMPTY_MEMORIES: MemoryInfo[] = [];
 
 export function useMemoriesData({
   currentFlowId,
@@ -19,43 +25,53 @@ export function useMemoriesData({
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeSearch, setActiveSearch] = useState("");
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [documentPanelOpen, setDocumentPanelOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] =
     useState<MemoryDocumentItem | null>(null);
 
-  const { data: memories } = useGetMemories(
+  const {
+    data: memoriesInfinite,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch: refetchMemories,
+  } = useGetMemories(
     { flowId: currentFlowId ?? undefined },
     { enabled: !!currentFlowId },
   );
 
+  const memories = useMemo(() => {
+    const pages = memoriesInfinite?.pages ?? [];
+    if (pages.length === 0) return EMPTY_MEMORIES;
+    const items = pages.flatMap((p) => p?.items ?? []);
+    return items.length ? items : EMPTY_MEMORIES;
+  }, [memoriesInfinite]);
+
   useEffect(() => {
-    if (!memories || memories.length === 0) {
+    if (memories.length === 0) {
       if (selectedMemoryId) onSelectMemory?.(null);
       return;
     }
 
     if (!selectedMemoryId || !memories.some((m) => m.id === selectedMemoryId)) {
-      onSelectMemory?.(memories[0].id);
+      const nextId = memories[0].id;
+      if (selectedMemoryId !== nextId) {
+        onSelectMemory?.(nextId);
+      }
     }
   }, [memories, selectedMemoryId, onSelectMemory]);
 
   useEffect(() => {
-    setSelectedSession(null);
     setSelectedDocument(null);
     setDocumentPanelOpen(false);
   }, [selectedMemoryId]);
 
   const filteredMemories = useMemo(() => {
-    const list = memories ?? [];
     const q = memoriesSearch.trim().toLowerCase();
-    if (!q) return list;
-    return list.filter((m) => {
+    if (!q) return memories;
+    return memories.filter((m) => {
       const name = (m.name ?? "").toLowerCase();
-      const description = (m.description ?? "").toLowerCase();
-      return name.includes(q) || description.includes(q);
+      return name.includes(q);
     });
   }, [memories, memoriesSearch]);
 
@@ -67,15 +83,58 @@ export function useMemoriesData({
     { memoryId: selectedMemoryId ?? "" },
     {
       enabled: !!selectedMemoryId,
-      refetchInterval: (query) => {
-        const data = query.state.data as MemoryInfo | undefined;
-        return data?.status === "generating" || data?.status === "updating"
-          ? 2000
-          : false;
-      },
-      retry: false,
     },
   );
+
+  const {
+    memorySessions,
+    selectedSession,
+    setSelectedSession,
+    effectiveSessionId,
+    refetchMemorySessions,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
+  } = useMemorySessionResolver({ memoryId: selectedMemoryId });
+
+  const deleteMutation = useDeleteMemory({
+    onSuccess: () => {
+      setSuccessData({ title: "Memory deleted" });
+      onSelectMemory?.(null);
+    },
+    onError: (error: unknown) =>
+      setErrorData({
+        title: "Failed to delete memory",
+        list: extractApiErrorMessages(error),
+      }),
+  });
+
+  const updateMemoryMutation = useUpdateMemory({
+    onError: (error: unknown) =>
+      setErrorData({
+        title: "Failed to update memory",
+        list: extractApiErrorMessages(error),
+      }),
+  });
+
+  const { autoCaptureDraft, handleToggleActive } =
+    useAutoCaptureDebouncedToggle({
+      memory,
+      updateMemoryMutation,
+    });
+
+  const {
+    docsData,
+    memoryMessagesLoading,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
+    refetchMessages,
+  } = useMemoryDocuments({
+    memoryId: selectedMemoryId,
+    sessionId: effectiveSessionId,
+    memorySessions,
+  });
 
   useEffect(() => {
     if (isError && selectedMemoryId) {
@@ -83,72 +142,35 @@ export function useMemoriesData({
     }
   }, [isError, selectedMemoryId, onSelectMemory]);
 
-  const docsData = useMemo(() => {
-    const rawDocuments = memory?.documents ?? [];
-    const q = activeSearch.trim().toLowerCase();
+  const docsLoading = isLoading || memoryMessagesLoading;
 
-    const filteredDocuments = !q
-      ? rawDocuments
-      : rawDocuments.filter((doc) => {
-          const content = (doc.content ?? "").toLowerCase();
-          const sender = (doc.sender ?? "").toLowerCase();
-          const sessionId = (doc.session_id ?? "").toLowerCase();
-          const messageId = (doc.message_id ?? "").toLowerCase();
-          return (
-            content.includes(q) ||
-            sender.includes(q) ||
-            sessionId.includes(q) ||
-            messageId.includes(q)
-          );
-        });
+  const resolvedMemory = useMemo(() => {
+    if (!memory) return memory;
 
-    const sessions =
-      memory?.document_sessions ??
-      Array.from(
-        new Set(rawDocuments.map((doc) => doc.session_id).filter(Boolean)),
-      );
+    const selectedStats = effectiveSessionId
+      ? (memorySessions ?? []).find((s) => s.session_id === effectiveSessionId)
+      : null;
 
-    return {
-      documents: filteredDocuments,
-      total: filteredDocuments.length,
-      sessions,
+    const nextMemory: MemoryInfo = {
+      ...memory,
+      ...(autoCaptureDraft === null ? {} : { is_active: autoCaptureDraft }),
+      ...(selectedStats
+        ? {
+            total_messages_processed: selectedStats.total_processed ?? 0,
+            pending_messages_count: selectedStats.pending_count ?? 0,
+            last_generated_at: selectedStats.last_sync_at ?? undefined,
+          }
+        : {}),
     };
-  }, [memory, activeSearch]);
 
-  const docsLoading = isLoading;
+    return nextMemory;
+  }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
-  const deleteMutation = useDeleteMemory({
-    onSuccess: () => {
-      setSuccessData({ title: "Memory deleted" });
-      onSelectMemory?.(null);
-    },
-    onError: (error: any) =>
-      setErrorData({
-        title: "Failed to delete memory",
-        list: [error?.response?.data?.detail || error?.message],
-      }),
-  });
-
-  const updateMemoryMutation = useUpdateMemory({
-    onError: (error: any) =>
-      setErrorData({
-        title: "Failed to update memory",
-        list: [error?.response?.data?.detail || error?.message],
-      }),
-  });
-
-  const handleToggleActive = () => {
-    if (!memory) return;
-    updateMemoryMutation.mutate({
-      memoryId: memory.id,
-      is_active: !memory.is_active,
-    });
-  };
-
-  const handleSearch = () => {
-    setActiveSearch(searchQuery);
-    setSelectedSession(null);
-  };
+  const onRefresh = useCallback(() => {
+    refetchMemories();
+    refetchMemorySessions();
+    refetchMessages();
+  }, [refetchMemories, refetchMemorySessions, refetchMessages]);
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {
     setSelectedDocument(doc);
@@ -160,30 +182,30 @@ export function useMemoriesData({
     const map = new Map<string, MemoryDocumentItem[]>();
     for (const doc of docsData.documents) {
       const sid = doc.session_id || "(no session)";
-      if (selectedSession && sid !== selectedSession) continue;
       const list = map.get(sid) || [];
       list.push(doc);
       map.set(sid, list);
     }
     return map;
-  }, [docsData, selectedSession]);
+  }, [docsData]);
 
   return {
     memories,
     filteredMemories,
     memoriesSearch,
     setMemoriesSearch,
-    memory,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    memory: resolvedMemory,
     isLoading,
     docsData,
     docsLoading,
-    searchQuery,
-    setSearchQuery,
-    activeSearch,
-    setActiveSearch,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
     selectedSession,
     setSelectedSession,
-    handleSearch,
     groupedBySession,
     documentPanelOpen,
     setDocumentPanelOpen,
@@ -193,6 +215,10 @@ export function useMemoriesData({
     deleteMutation,
     updateMemoryMutation,
     handleToggleActive,
+    onRefresh,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
     createModalOpen,
     setCreateModalOpen,
   };
