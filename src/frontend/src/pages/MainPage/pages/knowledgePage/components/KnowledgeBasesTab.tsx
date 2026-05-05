@@ -165,12 +165,15 @@ const KnowledgeBasesTab = ({
     [knowledgeBases],
   );
 
-  const columnDefs = createKnowledgeBaseColumns({
-    onViewChunks: onRowClick,
-    onDelete: actions.handleDelete,
-    onAddSources: handleAddSources,
-    onStopIngestion: actions.handleStopIngestion,
-  });
+  const columnDefs = createKnowledgeBaseColumns(
+    {
+      onViewChunks: onRowClick,
+      onDelete: actions.handleDelete,
+      onAddSources: handleAddSources,
+      onStopIngestion: actions.handleStopIngestion,
+    },
+    t,
+  );
 
   // --- Error handling ---
 
