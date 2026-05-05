@@ -59,11 +59,13 @@ const defaultProps = {
   selectedFlow: selectedFlow as FlowType | undefined,
   versions,
   isLoadingVersions: false,
+  isCreatingDraftVersion: false,
   selectedVersionByFlow: new Map<
     string,
     { versionId: string; versionTag: string }
   >(),
   onAttach: jest.fn(),
+  onCreateFromDraft: jest.fn(),
 };
 
 function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
@@ -106,7 +108,21 @@ describe("Loading state", () => {
 describe("No versions found", () => {
   it("shows empty state when no versions exist", () => {
     renderPanel({ versions: [] });
-    expect(screen.getByText("No versions found")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Deploy this flow by creating a version from current Draft",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("create-version-from-draft")).toBeInTheDocument();
+  });
+
+  it("calls onCreateFromDraft when clicking empty-state CTA", async () => {
+    const user = userEvent.setup();
+    const onCreateFromDraft = jest.fn();
+    renderPanel({ versions: [], onCreateFromDraft });
+
+    await user.click(screen.getByTestId("create-version-from-draft"));
+    expect(onCreateFromDraft).toHaveBeenCalled();
   });
 });
 

@@ -15,7 +15,7 @@ from lfx.log.logger import logger
 from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
-from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -572,10 +572,11 @@ async def download_files_batch(
         current_time = datetime.now(tz=ZoneInfo("UTC")).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_files.zip"
 
+        cd = build_content_disposition(filename)
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": cd},
         )
 
     except FileNotFoundError as e:
@@ -674,10 +675,11 @@ async def download_file(
         filename_with_extension = f"{file.name}{file_extension}"
 
         # Return the file as a streaming response
+        cd = build_content_disposition(filename_with_extension)
         return StreamingResponse(
             byte_stream,
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f'attachment; filename="{filename_with_extension}"'},
+            headers={"Content-Disposition": cd},
         )
 
     except HTTPException:

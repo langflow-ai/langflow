@@ -249,7 +249,7 @@ def create_real_graph():
     """Helper function to create a real LFX graph with nodes/edges for serve_app."""
     # Load real JSON data and create graph using from_payload
     json_data = simple_chat_json()
-    return Graph.from_payload(json_data, flow_id="test-flow-id")
+    return Graph.from_payload(json_data, flow_id="00000000-0000-0000-0000-000000000001")
 
 
 class TestFastAPIAppCreation:
