@@ -11,7 +11,10 @@ test(
     let numberOfOutdatedComponents = 0;
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.waitForLoadState("networkidle", { timeout: 30000 });
+    // Avoid waitForLoadState("networkidle"): persistent connections
+    // (MCP refresh, websockets) keep network busy and force the full 30s
+    // timeout on every iteration. The toBeVisible() below already
+    // auto-waits for actual readiness.
     await expect(page.getByTestId("text_card_container").first()).toBeVisible({
       timeout: 20000,
     });
@@ -42,7 +45,7 @@ test(
     for (const template of templatesData) {
       console.log(`Testing template ${template.index}: ${template.name}`);
 
-      await page.goto("/", { waitUntil: "networkidle", timeout: 30000 });
+      await page.goto("/", { waitUntil: "domcontentloaded", timeout: 30000 });
       await expect(page.getByTestId("mainpage_title")).toBeVisible({
         timeout: 30000,
       });
@@ -51,7 +54,6 @@ test(
       await page.waitForLoadState("domcontentloaded");
 
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.waitForLoadState("networkidle", { timeout: 30000 });
       await expect(page.getByTestId("text_card_container").first()).toBeVisible(
         { timeout: 20000 },
       );
@@ -62,7 +64,6 @@ test(
       await expect(targetTemplate).toBeVisible({ timeout: 15000 });
       await targetTemplate.click();
 
-      await page.waitForLoadState("networkidle", { timeout: 30000 });
       await expect(
         page.locator('[data-testid="div-generic-node"]').first(),
       ).toBeVisible({ timeout: 25000 });

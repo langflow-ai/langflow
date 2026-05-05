@@ -21,7 +21,7 @@ from lfx.log import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import normalize_flow_for_export, remove_api_keys
+from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.model import (
@@ -579,9 +579,10 @@ def _build_flows_download_response(
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_flows.zip"
 
+        cd = build_content_disposition(filename)
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": cd},
         )
     return normalised_flows[0]
