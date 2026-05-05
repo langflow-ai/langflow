@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
@@ -54,6 +55,10 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const showingBuildPanel =
+    isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
   // Connection mode: local state for reactivity, persisted in node data for reload
   const [isConnectionMode, setIsConnectionMode] = useState(() => {
@@ -528,7 +533,10 @@ export default function ModelInputComponent({
     return (
       <PopoverContentInput
         side="bottom"
-        avoidCollisions={true}
+        avoidCollisions
+        collisionPadding={{
+          bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
+        }}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
