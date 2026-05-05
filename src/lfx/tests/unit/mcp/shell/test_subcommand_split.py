@@ -29,6 +29,32 @@ def test_should_split_on_background_ampersand():
     assert split_subcommands("foo & bar") == ["foo", "bar"]
 
 
+def test_should_split_on_newline():
+    r"""POSIX sh treats an unquoted newline as a command terminator equivalent to ``;``.
+
+    Regression guard for the read_only bypass where ``"ls\nrm x"`` was fed to the
+    validator as a single subcommand and classification keyed only on ``ls``.
+    """
+    assert split_subcommands("ls\nrm somefile") == ["ls", "rm somefile"]
+
+
+def test_should_split_on_carriage_return():
+    r"""Treat ``\r`` as a separator so CRLF line endings don't survive a single subcommand.
+
+    Windows-origin payloads carry CRLF; without this, ``"ls\r\nrm x"`` would
+    persist as a single embedded literal.
+    """
+    assert split_subcommands("ls\r\nrm somefile") == ["ls", "rm somefile"]
+
+
+def test_should_skip_newline_inside_double_quotes():
+    """Quoted newlines are literal data, not separators.
+
+    Symmetric to the existing ``;`` / ``|`` behavior inside quotes.
+    """
+    assert split_subcommands('echo "a\nb" && pwd') == ['echo "a\nb"', "pwd"]
+
+
 def test_should_skip_operators_inside_double_quotes():
     assert split_subcommands('echo "a; b" && pwd') == ['echo "a; b"', "pwd"]
 
