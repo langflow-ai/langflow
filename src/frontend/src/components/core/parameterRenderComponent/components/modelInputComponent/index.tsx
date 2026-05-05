@@ -44,7 +44,8 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
-}: BaseInputProps<any> & ModelInputComponentType): JSX.Element | null {
+}: BaseInputProps<ModelOption[] | undefined> &
+  ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
@@ -142,8 +143,18 @@ export default function ModelInputComponent({
       // the user's saved selection injected into the options list by the
       // unified-models build_config helper even though they aren't in the
       // enabled list. They must always pass the client-side filter so the
-      // selection stays visible and selectable in the dropdown.
+      // selection stays visible and selectable in the dropdown — UNLESS
+      // the user has the provider configured locally, in which case the
+      // sticky default reflects a model they've actively deactivated (not a
+      // provider that needs setup). Hide it so the dropdown defaults to a
+      // valid option instead of surfacing the stale selection with a wrench.
       const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+      if (isStickyNotEnabled) {
+        const providerConfigured = providersData?.some(
+          (p) => p.provider === provider && p.is_configured,
+        );
+        if (providerConfigured) continue;
+      }
 
       // Filter against client-side enabled models data. This is the source of
       // truth for what the current user has enabled — stale `options` saved in
@@ -284,34 +295,62 @@ export default function ModelInputComponent({
     // lacks the sticky-default metadata. Preserve the saved selection in the
     // trigger so it doesn't visually "snap" to the user's first enabled
     // model. The wrench affordance in the dropdown handles configuration.
+    //
+    // EXCEPTION: when the saved provider is configured locally, the saved
+    // model has been actively deactivated (not missing-because-unconfigured).
+    // Fall through to the first available option so the user isn't shown a
+    // wrench for a provider that doesn't need configuring.
     const saved = value?.[0];
     if (saved) {
-      return {
-        ...(saved.id && { id: saved.id }),
-        name: saved.name,
-        icon: saved.icon || "Bot",
-        provider: saved.provider || "Unknown",
-        metadata: {
-          ...(saved.metadata ?? {}),
-          not_enabled_locally: true,
-        },
-      } as SelectedModel;
+      const savedProviderConfigured = providersData?.some(
+        (p) => p.provider === saved.provider && p.is_configured,
+      );
+      if (!savedProviderConfigured) {
+        return {
+          ...(saved.id && { id: saved.id }),
+          name: saved.name,
+          icon: saved.icon || "Bot",
+          provider: saved.provider || "Unknown",
+          metadata: {
+            ...(saved.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as SelectedModel;
+      }
     }
 
     return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions]);
+  }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
     if (hasProcessedEmptyRef.current) return;
 
     const isEmpty = !value || value.length === 0;
+
+    // Detect a stale saved value: the saved model isn't in flatOptions AND
+    // the saved provider is configured locally (the user has actively
+    // deactivated this specific model rather than missing the provider
+    // entirely). Reset the persisted value so the flow doesn't reference a
+    // model the user can no longer run.
+    let isSavedValueStale = false;
+    if (!isEmpty) {
+      const saved = value[0];
+      const inOptions = flatOptions.some((opt) => opt.name === saved.name);
+      if (!inOptions && saved.provider) {
+        isSavedValueStale =
+          providersData?.some(
+            (p) => p.provider === saved.provider && p.is_configured,
+          ) ?? false;
+      }
+    }
+
     // Sticky-default: if the component has a saved value, keep it as-is. The
     // backend injects any selection that isn't in the user's enabled list
     // back into `options` tagged with `not_enabled_locally`, so the saved
     // value remains visible and runnable. Only auto-select the first option
-    // when there's no saved value at all.
-    if (!isEmpty) return;
+    // when there's no saved value at all OR when the saved value is stale.
+    if (!isEmpty && !isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
     // Construct the new value object
@@ -326,7 +365,7 @@ export default function ModelInputComponent({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providersData]);
 
   /**
    * Handles model selection from the dropdown.
@@ -398,10 +437,19 @@ export default function ModelInputComponent({
     }
   }, [refreshAllModelInputs]);
 
-  const handleManageProvidersDialogClose = useCallback(() => {
-    setOpenManageProvidersDialog(false);
-    setIsRefreshingAfterClose(true);
-  }, []);
+  const handleManageProvidersDialogClose = useCallback(
+    (opts?: { hasChanges?: boolean }) => {
+      setOpenManageProvidersDialog(false);
+      // Only enter the post-close loading state when the modal will actually
+      // refresh model inputs. When the user opens the dialog and closes it
+      // without touching anything, there's no refetch to wait on, so the
+      // dropdown should not flicker through "Loading models…".
+      if (opts?.hasChanges) {
+        setIsRefreshingAfterClose(true);
+      }
+    },
+    [],
+  );
 
   // Clear the refreshing indicator after the providers query completes a full
   // refetch cycle (isFetchingProviders: false → true → false). We track whether

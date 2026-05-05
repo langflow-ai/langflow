@@ -45,7 +45,7 @@ export default function PaginatorComponent({
   return (
     <div className="flex flex-1 items-center justify-between px-6">
       <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
-        {(pageIndex - 1) * pageSize + 1}-
+        {totalRowsCount === 0 ? 0 : (pageIndex - 1) * pageSize + 1}-
         {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
         <span className="text-muted-foreground">
           of {totalRowsCount}{" "}
