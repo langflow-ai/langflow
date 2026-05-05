@@ -748,6 +748,8 @@
   "node.errorUpdatingCode": "更新组件代码时发生错误",
   "node.errorUpdatingCodeDetail": "更新组件时发生错误。",
   "node.errorUpdatingCodeReport": "如果错误仍然存在，请在我们的 Discord 频道或 GitHub 上反馈。",
+  "node.runComponent": "运行组件",
+  "node.stopBuild": "停止构建",
   "nodeToolbar.code": "代码",
   "nodeToolbar.controls": "控件",
   "nodeToolbar.copy": "副本",

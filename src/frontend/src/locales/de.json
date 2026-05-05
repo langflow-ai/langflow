@@ -748,6 +748,8 @@
   "node.errorUpdatingCode": "Fehler beim Aktualisieren des Komponentencodes",
   "node.errorUpdatingCodeDetail": "Beim Aktualisieren der Komponente ist ein Fehler aufgetreten.",
   "node.errorUpdatingCodeReport": "Sollte der Fehler weiterhin auftreten, melde ihn bitte auf unserem Discord-Server oder unter GitHub.",
+  "node.runComponent": "Komponente ausführen",
+  "node.stopBuild": "Build stoppen",
   "nodeToolbar.code": "Code erstellen",
   "nodeToolbar.controls": "Kontrollmechanismen",
   "nodeToolbar.copy": "Kopieren",

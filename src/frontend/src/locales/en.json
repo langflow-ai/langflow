@@ -1094,5 +1094,7 @@
   "misc.fetchErrorMessage": "Unable to reach the server",
   "misc.timeoutErrorDescription": "The server is taking too long to respond.",
   "misc.timeoutErrorMessage": "Connection timed out",
-  "store.results": "result(s)"
+  "store.results": "result(s)",
+  "node.runComponent": "Run component",
+  "node.stopBuild": "Stop build"
 }

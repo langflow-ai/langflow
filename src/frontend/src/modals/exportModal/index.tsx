@@ -98,7 +98,7 @@ const ExportModal = forwardRef(
       >
         <BaseModal.Trigger asChild>{props.children ?? <></>}</BaseModal.Trigger>
         <BaseModal.Header description={t("dialog.export")}>
-          <span className="pr-2">Export</span>
+          <span className="pr-2">{t("misc.export")}</span>
           <IconComponent
             name="Download"
             className="h-6 w-6 pl-1 text-foreground"
@@ -133,7 +133,7 @@ const ExportModal = forwardRef(
 
         <BaseModal.Footer
           submit={{
-            label: "Export",
+            label: t("misc.export"),
             loading: isBuilding,
             dataTestId: "modal-export-button",
           }}

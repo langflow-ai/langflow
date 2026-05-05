@@ -748,6 +748,8 @@
   "node.errorUpdatingCode": "コンポーネントコードの更新に失敗しました",
   "node.errorUpdatingCodeDetail": "コンポーネントの更新中にエラーが発生しました。",
   "node.errorUpdatingCodeReport": "それでもエラーが解消されない場合は、Discordまたは GitHub までご連絡ください。",
+  "node.runComponent": "コンポーネントを実行",
+  "node.stopBuild": "ビルドの停止",
   "nodeToolbar.code": "コード",
   "nodeToolbar.controls": "コントロール",
   "nodeToolbar.copy": "コピー",

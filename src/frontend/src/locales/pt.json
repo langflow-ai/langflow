@@ -748,6 +748,8 @@
   "node.errorUpdatingCode": "Erro ao atualizar o código do componente",
   "node.errorUpdatingCodeDetail": "Ocorreu um erro ao atualizar o componente.",
   "node.errorUpdatingCodeReport": "Se o erro persistir, por favor, informe-nos no nosso Discord ou pelo e-mail GitHub.",
+  "node.runComponent": "Executar componente",
+  "node.stopBuild": "Parar construção",
   "nodeToolbar.code": "Código",
   "nodeToolbar.controls": "Controles",
   "nodeToolbar.copy": "Copiar",

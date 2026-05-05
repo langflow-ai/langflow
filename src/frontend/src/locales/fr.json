@@ -748,6 +748,8 @@
   "node.errorUpdatingCode": "Erreur lors de la mise à jour du code du composant",
   "node.errorUpdatingCodeDetail": "Une erreur s'est produite lors de la mise à jour du composant.",
   "node.errorUpdatingCodeReport": "Si l'erreur persiste, merci de la signaler sur notre Discord ou à l'adresse GitHub.",
+  "node.runComponent": "Exécuter le composant",
+  "node.stopBuild": "Arrêter la génération",
   "nodeToolbar.code": "Coder",
   "nodeToolbar.controls": "Contrôles",
   "nodeToolbar.copy": "Copier",
