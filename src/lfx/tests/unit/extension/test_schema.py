@@ -19,7 +19,7 @@ _VALID = {
     "id": "lfx-openai",
     "version": "1.2.3",
     "name": "OpenAI Bundle",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "openai", "path": "openai"}],
 }
 
@@ -68,12 +68,12 @@ _MALFORMED_CASES: list[tuple[str, dict[str, Any]]] = [
     ("version", {**_VALID, "version": "v1"}),
     # 5. name empty
     ("name", {**_VALID, "name": ""}),
-    # 6. lfx.bundle_api missing
+    # 6. lfx.compat missing
     ("lfx", {**_VALID, "lfx": {}}),
-    # 7. lfx.bundle_api empty
-    ("lfx", {**_VALID, "lfx": {"bundle_api": []}}),
-    # 8. lfx.bundle_api wrong element type
-    ("lfx", {**_VALID, "lfx": {"bundle_api": ["1"]}}),
+    # 7. lfx.compat empty
+    ("lfx", {**_VALID, "lfx": {"compat": []}}),
+    # 8. lfx.compat wrong element type (must be a string, not int)
+    ("lfx", {**_VALID, "lfx": {"compat": [1]}}),
     # 9. bundles empty
     ("bundles", {**_VALID, "bundles": []}),
     # 10. bundles[0].path wrong type

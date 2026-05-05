@@ -11,7 +11,7 @@ from lfx.extension.manifest import (
     EXTENSION_SCHEMA_URL,
     BundleRef,
     ExtensionManifest,
-    LangflowCompat,
+    LfxCompat,
     load_manifest,
 )
 from pydantic import ValidationError
@@ -29,7 +29,7 @@ _VALID = {
     "version": "1.2.3",
     "name": "OpenAI Bundle",
     "description": "OpenAI components",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "openai", "path": "openai"}],
     "capabilities": {"requiresCredentials": True},
 }
@@ -71,7 +71,7 @@ def test_minimal_manifest_round_trip() -> None:
         "id": "lfx-x",
         "version": "0.1.0",
         "name": "X",
-        "lfx": {"bundle_api": [1]},
+        "lfx": {"compat": ["1"]},
         "bundles": [{"name": "xx", "path": "xx"}],
     }
     manifest = ExtensionManifest.model_validate(minimal)
@@ -92,8 +92,8 @@ def test_minimal_manifest_round_trip() -> None:
         ({"id": ""}, "id"),
         ({"version": "not-semver"}, "version"),
         ({"name": ""}, "name"),
-        ({"lfx": {"bundle_api": []}}, "bundle_api"),
-        ({"lfx": {"bundle_api": [0]}}, "bundle_api"),
+        ({"lfx": {"compat": []}}, "compat"),
+        ({"lfx": {"compat": ["0"]}}, "compat"),
         ({"bundles": []}, "bundles"),
         ({"bundles": [{"name": "Bad-Name", "path": "x"}]}, "name"),
         ({"bundles": [{"name": "x", "path": "/abs/path"}]}, "path"),
@@ -189,7 +189,7 @@ version = "1.2.3"
 name = "OpenAI Bundle"
 
 [tool.langflow.extension.lfx]
-bundle_api = [1]
+compat = ["1"]
 
 [[tool.langflow.extension.bundles]]
 name = "openai"
@@ -238,12 +238,20 @@ def test_bundle_ref_path_safety_sufficient_for_static_use() -> None:
         BundleRef(name="ok", path="/abs")
 
 
-def test_langflow_compat_rejects_zero_or_negative() -> None:
-    LangflowCompat(bundle_api=[1])
-    LangflowCompat(bundle_api=[1, 2])
+def test_lfx_compat_rejects_invalid_versions() -> None:
+    LfxCompat(compat=["1"])
+    LfxCompat(compat=["1", "2"])
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[])
+        LfxCompat(compat=[])
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[0])
+        LfxCompat(compat=["0"])  # version 0 is not valid
     with pytest.raises(ValidationError):
-        LangflowCompat(bundle_api=[1, 1])  # duplicate
+        LfxCompat(compat=["01"])  # leading zero rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=["v1"])  # non-numeric prefix rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=[""])  # empty string rejected
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=[1])  # type: ignore[list-item] # int rejected by StrictStr
+    with pytest.raises(ValidationError):
+        LfxCompat(compat=["1", "1"])  # duplicate

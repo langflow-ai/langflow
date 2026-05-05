@@ -61,6 +61,18 @@ SCHEMA_VERSION: int = 1
 """The integer version of the manifest schema.  Bumped only when a v0 manifest
 becomes invalid against the new shape."""
 
+BUNDLE_API_VERSION: int = 1
+"""The integer version of the BUNDLE_API.md contract that this lfx package
+implements.  Manifests declare the contract versions they support via
+``lfx.compat`` (a list of stringified integers); a manifest that does not
+include ``str(BUNDLE_API_VERSION)`` is rejected at install time with
+``version-constraint-unsatisfied``.
+
+This is a different concept from :data:`SCHEMA_VERSION` (which versions the
+manifest's own shape) and from the ``"v0"`` initial-state marker in
+BUNDLE_API.md's changelog (which is documentation prose); the integer
+contract version is ``1`` from day one."""
+
 EXTENSION_SCHEMA_URL: str = f"https://schemas.langflow.org/extension/v{SCHEMA_VERSION}.json"
 """Canonical hosting URL for the published JSON Schema.  Authors point their
 ``$schema`` field here for editor autocompletion."""
@@ -94,43 +106,43 @@ DEFERRED_FIELDS: tuple[str, ...] = (
 
 
 # ---------------------------------------------------------------------------
-# LangflowCompat
+# LfxCompat
 # ---------------------------------------------------------------------------
 
+_COMPAT_VERSION_RE: re.Pattern[str] = re.compile(r"^[1-9]\d*$")
+"""Manifest ``lfx.compat`` entries are stringified positive integers (no leading
+zeros) that name a frozen BUNDLE_API.md revision.  v0 only knows ``"1"``."""
 
-class LangflowCompat(BaseModel):
+
+class LfxCompat(BaseModel):
     """Declares which BUNDLE_API.md contract version(s) this Extension supports.
 
-    Each integer in ``bundle_api`` corresponds to a frozen revision of
-    BUNDLE_API.md.  Mismatch with the running Langflow surfaces as
-    ``version-constraint-unsatisfied`` at install time.
+    Each entry in ``compat`` is the string form of a frozen BUNDLE_API.md
+    revision (e.g. ``"1"``).  At install time the loader compares
+    ``str(BUNDLE_API_VERSION)`` against this list; a mismatch surfaces as
+    ``version-constraint-unsatisfied``.
 
-    v0 ships only ``bundle_api=1``; the model is a list to allow future
-    forward-compatible declarations like ``[1, 2]``.
+    v0 ships only ``compat=["1"]``; the field is a list so future bundles can
+    declare forward-compatible support like ``["1", "2"]``.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    bundle_api: list[int] = Field(
+    compat: list[StrictStr] = Field(
         ...,
-        description="Supported BUNDLE_API.md major versions.  Must be non-empty.",
+        description="Supported BUNDLE_API.md contract versions, as strings.  Must be non-empty.",
         min_length=1,
     )
 
-    @field_validator("bundle_api")
+    @field_validator("compat")
     @classmethod
-    def _bundle_api_positive(cls, value: list[int]) -> list[int]:
+    def _compat_well_formed(cls, value: list[str]) -> list[str]:
         for v in value:
-            # ``bool`` is a subclass of ``int``; reject it explicitly so a
-            # trailing ``[true]`` does not silently parse as ``[1]``.
-            if not isinstance(v, int) or isinstance(v, bool):
-                msg = "bundle_api entries must be integers"
-                raise TypeError(msg)
-            if v < 1:
-                msg = "bundle_api entries must be >= 1"
+            if not _COMPAT_VERSION_RE.fullmatch(v):
+                msg = f"compat entries must be positive-integer strings (got {v!r})"
                 raise ValueError(msg)
         if len(set(value)) != len(value):
-            msg = "bundle_api entries must be unique"
+            msg = "compat entries must be unique"
             raise ValueError(msg)
         return value
 
@@ -266,7 +278,7 @@ class ExtensionManifest(BaseModel):
         description="Optional human-readable summary of what the extension provides.",
     )
 
-    lfx: LangflowCompat = Field(
+    lfx: LfxCompat = Field(
         ...,
         description="Compatibility declaration vs. the BUNDLE_API.md contract.",
     )
