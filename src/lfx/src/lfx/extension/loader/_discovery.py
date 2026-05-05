@@ -1,4 +1,4 @@
-"""Filesystem walk + module import for the extension loader (LE-1015).
+"""Filesystem walk + module import for the extension loader.
 
 This module owns the "find files / build module names / actually import"
 half of the loader pipeline.  It deliberately knows nothing about Component

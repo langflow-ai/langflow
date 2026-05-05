@@ -57,16 +57,17 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
-        # Loader-specific codes (LE-1015)
+        # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
     }
 )
-# NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
-# discovery) once there is a startup flow + events surface that can actually
-# emit it.  We hold the line that every registered code must have a producer.
+# NOTE: ``duplicate-distribution`` will be added with the installed-package
+# discovery flow once there is a startup path + events surface that can
+# actually emit it.  We hold the line that every registered code must have a
+# producer.
 
 
 # ---------------------------------------------------------------------------

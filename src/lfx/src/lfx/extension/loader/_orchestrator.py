@@ -1,4 +1,4 @@
-"""Load orchestration: turn a directory tree into a :class:`LoadResult` (LE-1015).
+"""Load orchestration: turn a directory tree into a :class:`LoadResult`.
 
 This module wires the discovery + detection layers together and exposes the
 two public entry points the rest of Langflow consumes:
@@ -37,7 +37,7 @@ from lfx.extension.loader._types import (
     LoadResult,
 )
 from lfx.extension.manifest import (
-    _BUNDLE_NAME_RE,
+    BUNDLE_NAME_RE,
     BundleRef,
     ExtensionManifest,
     load_manifest,
@@ -306,7 +306,7 @@ def load_extension(
 
 # Inline-bundle metadata, optionally provided as ``bundle.json`` at the
 # bundle's root.  Only ``version`` is read in v0; ``name`` is derived from
-# the directory name and validated against _BUNDLE_NAME_RE so that the
+# the directory name and validated against BUNDLE_NAME_RE so that the
 # namespaced ID is well-formed.  This is intentionally a tiny shape; full
 # manifest support belongs at the @official slot.
 _INLINE_BUNDLE_DEFAULT_VERSION = "0.0.0"
@@ -382,7 +382,7 @@ def discover_inline_bundles(
                 continue
             result = LoadResult(slot=SLOT_EXTRA, source_path=child)
 
-            if not _BUNDLE_NAME_RE.match(name):
+            if not BUNDLE_NAME_RE.match(name):
                 result.errors.append(
                     ExtensionError(
                         code="inline-bundle-name-invalid",

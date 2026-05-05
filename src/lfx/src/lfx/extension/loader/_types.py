@@ -1,4 +1,4 @@
-"""Public dataclasses and slot constants for the extension loader (LE-1015).
+"""Public dataclasses and slot constants for the extension loader.
 
 Kept module-level so consumers (events pipeline, registry, tests) can import
 them without paying the cost of dragging in the discovery / detection /
@@ -41,10 +41,10 @@ class LoadedComponent:
     """A successfully loaded Component class plus its registry coordinates.
 
     Frozen so callers can place these in sets / dicts and emit them across
-    the events pipeline (LE-1017) without worrying about mutation.
+    the events pipeline without worrying about mutation.
 
     The :attr:`namespaced_id` is the canonical address used by saved flows
-    after the migration table (LE-1020) rewrites legacy references.
+    after the migration table rewrites legacy references.
     """
 
     extension_id: str

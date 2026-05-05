@@ -1,4 +1,4 @@
-"""Tests for manifest-first precedence over ``langflow.plugins`` (LE-1015).
+"""Tests for manifest-first precedence over ``langflow.plugins``.
 
 Covers the AC item: "package with manifest + legacy component entry-point
 loads its components ONCE via the manifest, not twice."  We model "loaded
