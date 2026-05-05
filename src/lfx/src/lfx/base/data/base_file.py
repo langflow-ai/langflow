@@ -702,7 +702,10 @@ class BaseFileComponent(Component, ABC):
             data = file.data
 
             if path.is_dir():
-                # Recurse into directories
+                # Recurse into directories. Skip symlinks defensively so that a
+                # link planted in a previously-extracted bundle (or a directory
+                # the user pointed at) cannot be dereferenced into an arbitrary
+                # host file (GHSA-ccv6-r384-xp75).
                 collected_files.extend(
                     [
                         BaseFileComponent.BaseFile(
@@ -711,7 +714,7 @@ class BaseFileComponent(Component, ABC):
                             delete_after_processing=delete_after_processing,
                         )
                         for sub_path in path.rglob("*")
-                        if sub_path.is_file()
+                        if sub_path.is_file() and not sub_path.is_symlink()
                     ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
@@ -720,7 +723,11 @@ class BaseFileComponent(Component, ABC):
                 self._temp_dirs.append(temp_dir)
                 temp_dir_path = Path(temp_dir.name)
                 self._unpack_bundle(path, temp_dir_path)
-                subpaths = list(temp_dir_path.iterdir())
+                # Drop any symlink that may have slipped through extraction.
+                # `_unpack_bundle` rejects link members for TAR archives, but
+                # this guard keeps the contract in place for any future bundle
+                # type added to SUPPORTED_BUNDLE_EXTENSIONS.
+                subpaths = [p for p in temp_dir_path.iterdir() if not p.is_symlink()]
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 collected_files.extend(
                     [
@@ -768,11 +775,24 @@ class BaseFileComponent(Component, ABC):
                 bundle.extract(member, path=output_dir)
 
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
-            """Safely extract TAR files."""
+            """Safely extract TAR files.
+
+            Only regular files and directories are extracted. Symlinks, hardlinks,
+            and device/FIFO members are rejected because they could be made to
+            point at arbitrary locations on the host filesystem and lead to
+            arbitrary file read once the extracted entries are subsequently
+            ingested by `process_files()` (GHSA-ccv6-r384-xp75).
+            """
             for member in bundle.getmembers():
                 # Filter out resource fork information for automatic production of mac
                 if Path(member.name).name.startswith("._"):
                     continue
+                if member.issym() or member.islnk():
+                    msg = f"Refusing to extract link member from TAR File: {member.name!r} -> {member.linkname!r}"
+                    raise ValueError(msg)
+                if not (member.isfile() or member.isdir()):
+                    msg = f"Refusing to extract non-regular TAR member: {member.name!r}"
+                    raise ValueError(msg)
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):

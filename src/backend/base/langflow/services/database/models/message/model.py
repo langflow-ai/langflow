@@ -10,7 +10,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -32,17 +32,18 @@ class MessageBase(SQLModel):
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
+    session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         if isinstance(value, str):
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            dt = str_to_timestamp(value)  # unified, UTC-normalized
+            return dt.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         return value
 
@@ -59,7 +60,7 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
+    def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
@@ -84,10 +85,15 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.ffffff UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
-                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
+                # Fallback for ISO format if the above fails; astimezone preserves offset if present
+                parsed = datetime.fromisoformat(message.timestamp)
+                timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
 
@@ -114,6 +120,13 @@ class MessageBase(SQLModel):
                 msg = f"Flow ID {flow_id} is not a valid UUID"
                 raise ValueError(msg) from exc
 
+        if isinstance(run_id, str):
+            try:
+                run_id = UUID(run_id)
+            except ValueError as exc:
+                msg = f"Run ID {run_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -123,6 +136,7 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            run_id=run_id,
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
@@ -149,6 +163,8 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
+    run_id: UUID | None = Field(default=None, index=True)
+    is_output: bool = Field(default=False)
 
     files: list[str] = Field(sa_column=Column(JSON))
     properties: dict | Properties = Field(  # type: ignore[assignment]
@@ -207,11 +223,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @field_serializer("properties", "content_blocks", "session_metadata")
     @classmethod
-    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict] | None:
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         # Redundant sanitization here acts as a defensive measure for rows
         # already in the database that might contain NaN/Infinity values.
-        if value is None:
-            return None
         if isinstance(value, list):
             value = [cls.serialize_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
@@ -224,8 +238,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: UUID | None = Field()
+    flow_id: UUID | None = None
     session_metadata: dict | None = None
+    run_id: UUID | None = None
 
 
 class MessageCreate(MessageBase):
@@ -243,3 +258,5 @@ class MessageUpdate(SQLModel):
     error: bool | None = None
     properties: Properties | None = None
     session_metadata: dict | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None

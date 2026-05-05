@@ -2,6 +2,7 @@ import importlib
 import json
 import warnings
 from abc import abstractmethod
+from typing import Any
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
@@ -12,6 +13,7 @@ from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing import LanguageModel
 from lfx.inputs.inputs import BoolInput, InputTypes, MessageInput, MultilineInput
+from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import extract_usage_from_message
@@ -22,6 +24,28 @@ from lfx.utils.constants import MESSAGE_SENDER_AI
 #
 # Models are trained with this exact string. Do not update.
 DETAILED_THINKING_PREFIX = "detailed thinking on\n\n"
+
+
+def _normalize_message_content(content: Any) -> Any:
+    """Flatten LangChain content blocks into a plain string.
+
+    Gemini 3 (and other modern LangChain chat models) return ``AIMessage.content``
+    as a list of content blocks such as
+    ``[{"type": "text", "text": "...", "thought_signature": "..."}]`` instead of a
+    plain string. Join the ``text`` blocks and drop non-text blocks so the result
+    can populate ``Message.text``. Non-list inputs are returned unchanged.
+    """
+    if not isinstance(content, list):
+        return content
+    parts: list[str] = []
+    for block in content:
+        if isinstance(block, str):
+            parts.append(block)
+        elif isinstance(block, dict) and block.get("type") == "text":
+            text = block.get("text")
+            if isinstance(text, str):
+                parts.append(text)
+    return "".join(parts)
 
 
 class LCModelComponent(Component):
@@ -268,6 +292,7 @@ class LCModelComponent(Component):
             else:
                 message = await runnable.ainvoke(inputs)
                 result = message.content if hasattr(message, "content") else message
+                result = _normalize_message_content(result)
             if isinstance(message, AIMessage):
                 status_message = self.build_status_message(message)
                 self.status = status_message
@@ -316,19 +341,44 @@ class LCModelComponent(Component):
                 session_id = self._session_id
             else:
                 session_id = None
-            model_message = Message(
-                text=runnable.astream(inputs),
-                sender=MESSAGE_SENDER_AI,
-                sender_name="AI",
-                properties={"icon": self.icon, "state": "partial"},
-                session_id=session_id,
-            )
-            model_message.properties.source = self._build_source(self._id, self.display_name, self)
-            lf_message = await self.send_message(model_message)
-            result = lf_message.text or ""
+            # Streaming requires both a session_id and an event_manager:
+            #   - session_id is required so astore_message validation passes when send_message
+            #     persists the placeholder Message.
+            #   - event_manager is required so the chunk iterator that backs Message.text gets
+            #     drained; without one, no consumer iterates astream(), the iterator is stored
+            #     verbatim, and downstream readers see empty text.
+            # If either is missing, fall back to a non-streaming ainvoke.
+            event_manager = getattr(self, "_event_manager", None)
+            if session_id and event_manager:
+                model_message = Message(
+                    text=runnable.astream(inputs),
+                    sender=MESSAGE_SENDER_AI,
+                    sender_name="AI",
+                    properties={"icon": self.icon, "state": "partial"},
+                    session_id=session_id,
+                )
+                model_message.properties.source = self._build_source(self._id, self.display_name, self)
+                lf_message = await self.send_message(model_message)
+                result = lf_message.text or ""
+            else:
+                missing = []
+                if not session_id:
+                    missing.append("session_id")
+                if not event_manager:
+                    missing.append("event_manager")
+                component_label = getattr(self, "display_name", None) or getattr(self, "_id", "<unknown>")
+                logger.warning(
+                    f"Streaming fallback to ainvoke for component '{component_label}' "
+                    f"(id={getattr(self, '_id', '<unknown>')}): missing {', '.join(missing)}. "
+                    "UI will not see token-by-token streaming for this run."
+                )
+                ai_message = await runnable.ainvoke(inputs)
+                result = ai_message.content if hasattr(ai_message, "content") else ai_message
+                result = _normalize_message_content(result)
         else:
             ai_message = await runnable.ainvoke(inputs)
             result = ai_message.content if hasattr(ai_message, "content") else ai_message
+            result = _normalize_message_content(result)
         return lf_message, result, ai_message
 
     @abstractmethod

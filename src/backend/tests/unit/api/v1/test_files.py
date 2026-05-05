@@ -1122,3 +1122,45 @@ async def test_delete_file_forward_slash_traversal_blocked(
     assert response.status_code == 404, (
         f"Forward slash traversal should be blocked by routing: {malicious_filename}, got {response.status_code}"
     )
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_rfc5987"),
+    [
+        ("龙.txt", "%E9%BE%99.txt"),
+        ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt"),
+        ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"),
+        ("naïve_résumé.txt", "na%C3%AFve_r%C3%A9sum%C3%A9.txt"),
+        ("normal_file.txt", "normal_file.txt"),
+    ],
+)
+async def test_download_file_non_ascii_content_disposition(
+    files_client, files_created_api_key, files_flow, filename, expected_rfc5987
+):
+    """Non-ASCII filenames must be RFC 5987 encoded in Content-Disposition."""
+    from urllib.parse import unquote
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": (filename, b"content")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+
+    stored_name = upload_response.json()["file_path"].split("/")[-1]
+    download_response = await files_client.get(
+        f"api/v1/files/download/{files_flow.id}/{stored_name}",
+        headers=headers,
+    )
+    assert download_response.status_code == 200
+
+    content_disposition = download_response.headers["content-disposition"]
+    assert "attachment" in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+    # RFC 5987 part must contain the URL-encoded filename
+    assert expected_rfc5987 in content_disposition
+    # The decoded filename must match the original
+    rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
+    assert unquote(rfc5987_value) == stored_name

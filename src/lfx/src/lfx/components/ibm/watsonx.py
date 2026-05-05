@@ -2,7 +2,6 @@ import json
 from typing import Any
 
 from langchain_ibm import ChatWatsonx
-from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.model_utils import get_watsonx_llm_models
@@ -11,6 +10,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.secrets import secret_value_to_str
 
 
 class WatsonxAIComponent(LCModelComponent):
@@ -198,10 +198,8 @@ class WatsonxAIComponent(LCModelComponent):
         }
 
         # Pass API key as plain string to avoid SecretStr serialization issues
-        # when model is configured with with_config() or used in batch operations
-        api_key_value = self.api_key
-        if isinstance(api_key_value, SecretStr):
-            api_key_value = api_key_value.get_secret_value()
+        # when model is configured with with_config() or used in batch operations.
+        api_key_value = secret_value_to_str(self.api_key)
 
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"
