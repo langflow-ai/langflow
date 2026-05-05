@@ -130,7 +130,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.10.15"
                   },
                   {
                     "name": "fastapi",
