@@ -144,7 +144,12 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)
     files = dir_reader.get_files()
     # json_response is a dict of dicts
-    all_names = [component_name for _, components in response.json().items() for component_name in components]
+    all_names = [
+        component_name
+        for key, components in response.json().items()
+        if key != "component_display_names"
+        for component_name in components
+    ]
     json_response = response.json()
     # We need to test the custom nodes
     assert len(all_names) <= len(

@@ -961,6 +961,7 @@
             "description": "# 📖 README\n\nWelcome to the Research Agent! This flow helps you conduct in-depth research on various topics using AI-powered tools and analysis.\n\n## Quick start\n- Configure your **Model Provider** with your API credentials.\n- Add your **Tavily API Key** to the Tavily AI Search component.\n \n## Using the Flow\n   - Type your research question or topic into the Chat Input node.\n   - Be specific and clear about what you want to investigate.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.research_agent.f5853a2c",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -2816,7 +2817,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.3"
                   },
                   {
                     "name": "lfx",
@@ -2824,7 +2825,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.3.1"
+                    "version": "1.3.2"
                   }
                 ],
                 "total_dependencies": 3

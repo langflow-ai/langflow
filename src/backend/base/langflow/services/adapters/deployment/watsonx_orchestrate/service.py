@@ -367,6 +367,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if params and params.deployment_ids and "ids" not in query_params:
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
 
+            if params and params.deployment_names and "names" not in query_params:
+                query_params["names"] = list(params.deployment_names)
+
             # if different deployment types
             # are distinct resources in wxO
             # then we should probably raise an error if
