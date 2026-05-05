@@ -212,16 +212,16 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByTestId("kb-db-provider")).toHaveTextContent("Chroma");
     });
 
-    it("renders Configure Sources section open by default", () => {
-      // Section heading + add-button labels switched to i18n strings
-      // during the kb-v1-db-connectors merge — the previous
-      // hardcoded "Ingest Content" / "Add Files" copy is gone.
+    it("renders Ingest Content section open by default", () => {
+      // Section heading + add-button labels are now driven by i18n keys
+      // (knowledge.configureSources / knowledge.addSources) but the English
+      // copy is intentionally kept as "Ingest Content" / "Add Files".
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
       });
-      expect(screen.getByText(/Configure Sources/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ingest Content/i)).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /Add Sources/i }),
+        screen.getByRole("button", { name: /Add Files/i }),
       ).toBeInTheDocument();
     });
 
@@ -233,7 +233,7 @@ describe("KnowledgeBaseUploadModal", () => {
         screen.queryByRole("button", { name: /Hide Configuration/i }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /^Configure Sources$/i }),
+        screen.queryByRole("button", { name: /^Ingest Content$/i }),
       ).not.toBeInTheDocument();
     });
 
@@ -262,7 +262,7 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(screen.getByTestId("kb-separator-input")).not.toBeDisabled();
     });
 
-    it('shows "Add Sources" title in add-sources mode', async () => {
+    it('shows "Add Files" title in add-sources mode', async () => {
       render(
         <KnowledgeBaseUploadModal
           open={true}
@@ -273,7 +273,7 @@ describe("KnowledgeBaseUploadModal", () => {
       );
       await waitFor(() =>
         expect(
-          screen.getByRole("heading", { name: /Add Sources/i }),
+          screen.getByRole("heading", { name: /Add Files/i }),
         ).toBeInTheDocument(),
       );
     });
@@ -543,7 +543,7 @@ describe("KnowledgeBaseUploadModal", () => {
       expect(input).toHaveValue("");
     });
 
-    it("opens file-upload dropdown when Add Sources button is clicked", async () => {
+    it("opens file-upload dropdown when Add Files button is clicked", async () => {
       const user = userEvent.setup();
       render(<KnowledgeBaseUploadModal open={true} setOpen={jest.fn()} />, {
         wrapper: createWrapper(),
@@ -836,7 +836,7 @@ describe("KnowledgeBaseUploadModal", () => {
       );
     });
 
-    it('displays "Add Sources" as the modal title', async () => {
+    it('displays "Add Files" as the modal title', async () => {
       render(
         <KnowledgeBaseUploadModal
           open={true}
@@ -847,7 +847,7 @@ describe("KnowledgeBaseUploadModal", () => {
       );
       await waitFor(() =>
         expect(
-          screen.getByRole("heading", { name: /Add Sources/i }),
+          screen.getByRole("heading", { name: /Add Files/i }),
         ).toBeInTheDocument(),
       );
     });
@@ -887,7 +887,7 @@ describe("KnowledgeBaseUploadModal", () => {
       );
     });
 
-    it('labels the submit button "Add Sources"', async () => {
+    it('labels the submit button "Add Files"', async () => {
       render(
         <KnowledgeBaseUploadModal
           open={true}
@@ -899,7 +899,7 @@ describe("KnowledgeBaseUploadModal", () => {
       );
       await waitFor(() =>
         expect(screen.getByTestId("kb-create-button")).toHaveTextContent(
-          "Add Sources",
+          "Add Files",
         ),
       );
     });
