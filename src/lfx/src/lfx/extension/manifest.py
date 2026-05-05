@@ -286,7 +286,12 @@ class ExtensionManifest(BaseModel):
     bundles: list[BundleRef] = Field(
         ...,
         min_length=1,
-        description="Bundles shipped by this extension. v0 accepts exactly one.",
+        max_length=1,
+        description=(
+            "Bundles shipped by this extension. v0 accepts exactly one; the "
+            "constraint is encoded as ``minItems``/``maxItems`` in the published "
+            "JSON Schema so third-party manifest tools agree with the runtime."
+        ),
     )
 
     capabilities: Capabilities = Field(
@@ -328,15 +333,12 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
 
     @model_validator(mode="after")
-    def _validate_bundle_count(self) -> ExtensionManifest:
-        # Multi-bundle is reserved.  Validator-enforced here so that the schema
-        # itself communicates the constraint; the loader re-checks at install
-        # time with the same code.
-        if len(self.bundles) > 1:
-            msg = "Manifest declares more than one bundle; multi-bundle extensions are deferred in this milestone."
-            raise ValueError(msg)
-        # Bundle names must be unique even though only one is allowed today --
-        # the loader uses this list directly when multi-bundle ships.
+    def _validate_bundle_uniqueness(self) -> ExtensionManifest:
+        # The list-length constraint (exactly one bundle in v0) is encoded on
+        # the field above so it lands in the JSON Schema.  This validator covers
+        # what Field constraints can't express: bundle names must be unique
+        # within an extension.  The check is cheap and forward-compatible -- the
+        # loader uses this list directly when multi-bundle ships.
         names = [bundle.name for bundle in self.bundles]
         if len(set(names)) != len(names):
             msg = "Bundle names must be unique within an extension"

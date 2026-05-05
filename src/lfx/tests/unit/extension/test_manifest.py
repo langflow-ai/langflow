@@ -146,7 +146,15 @@ def test_deferred_field_accepted_when_omitted(field_name: str) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_multi_bundle_rejected_with_dedicated_message() -> None:
+def test_multi_bundle_rejected_at_model_level() -> None:
+    """Pydantic rejects multi-bundle via the field-level ``max_length=1``.
+
+    The dedicated ``multi-bundle-deferred-in-this-milestone`` discriminant is
+    surfaced by the validator pipeline in ``lfx.extension.validate`` (covered by
+    ``test_validate.py``); at the model level we only need to confirm the
+    constraint is enforced on the ``bundles`` field, which also means it lands
+    in the published JSON Schema.
+    """
     bad = _with(
         _VALID,
         bundles=[
@@ -156,7 +164,9 @@ def test_multi_bundle_rejected_with_dedicated_message() -> None:
     )
     with pytest.raises(ValidationError) as exc_info:
         ExtensionManifest.model_validate(bad)
-    assert "more than one bundle" in str(exc_info.value).lower()
+    error = exc_info.value.errors()[0]
+    assert error["loc"] == ("bundles",)
+    assert error["type"] == "too_long"
 
 
 def test_duplicate_bundle_names_rejected() -> None:

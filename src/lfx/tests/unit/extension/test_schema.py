@@ -77,9 +77,21 @@ _MALFORMED_CASES: list[tuple[str, dict[str, Any]]] = [
     ("bundles", {**_VALID, "bundles": []}),
     # 10. bundles[0].path wrong type
     ("bundles", {**_VALID, "bundles": [{"name": "x", "path": 7}]}),
-    # 11. capabilities extra field
+    # 11. multi-bundle (must be encoded as maxItems in the published schema, not
+    # only as a model_validator that lives behind the JSON Schema export)
+    (
+        "bundles",
+        {
+            **_VALID,
+            "bundles": [
+                {"name": "a", "path": "a"},
+                {"name": "b", "path": "b"},
+            ],
+        },
+    ),
+    # 12. capabilities extra field
     ("capabilities", {**_VALID, "capabilities": {"requiresCredentials": True, "extra": 1}}),
-    # 12. id missing entirely
+    # 13. id missing entirely
     ("id", {k: v for k, v in _VALID.items() if k != "id"}),
 ]
 
