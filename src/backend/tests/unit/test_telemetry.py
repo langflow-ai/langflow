@@ -4,6 +4,83 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import pytest
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
+from langflow.services.telemetry.schema import DeploymentPayload
+from langflow.services.telemetry.service import TelemetryService
+
+
+@pytest.fixture
+def mock_settings_service(mocker):
+    settings = mocker.MagicMock()
+    settings.settings.telemetry_base_url = "http://test.telemetry"
+    settings.settings.prometheus_enabled = False
+    settings.settings.do_not_track = False
+    return settings
+
+
+@pytest.fixture
+def telemetry_service(mock_settings_service):
+    return TelemetryService(mock_settings_service)
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment(telemetry_service):
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    await telemetry_service.log_package_deployment(payload)
+    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    assert func == telemetry_service.send_telemetry_data
+    assert queued_payload == payload
+    assert path == "deployment"
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment_provider(telemetry_service):
+    payload = DeploymentPayload(
+        deployment_action="provider.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    await telemetry_service.log_package_deployment_provider(payload)
+    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    assert func == telemetry_service.send_telemetry_data
+    assert queued_payload == payload
+    assert path == "deployment_provider"
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment_run(telemetry_service):
+    payload = DeploymentPayload(
+        deployment_action="deployment.run",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    await telemetry_service.log_package_deployment_run(payload)
+    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    assert func == telemetry_service.send_telemetry_data
+    assert queued_payload == payload
+    assert path == "deployment_run"
+
+
+@pytest.mark.asyncio
+async def test_log_package_deployment_do_not_track(telemetry_service):
+    telemetry_service.do_not_track = True
+    payload = DeploymentPayload(
+        deployment_action="deployment.create",
+        deployment_provider="test_provider",
+        deployment_seconds=1.0,
+        deployment_success=True,
+    )
+    await telemetry_service.log_package_deployment(payload)
+    await telemetry_service.log_package_deployment_provider(payload)
+    await telemetry_service.log_package_deployment_run(payload)
+    assert telemetry_service.telemetry_queue.empty()
+
 
 fixed_labels = {"flow_id": "this_flow_id", "service": "this", "user": "that"}
 

@@ -41,6 +41,9 @@ class ResultData(BaseModel):
                 if message is None:
                     continue
 
+                if not isinstance(message, dict):
+                    continue
+
                 if "stream_url" in message and "type" in message:
                     stream_url = StreamURL(location=message["stream_url"])
                     values["outputs"].update({key: OutputValue(message=stream_url, type=message["type"])})

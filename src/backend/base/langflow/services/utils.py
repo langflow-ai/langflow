@@ -94,6 +94,12 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
         )
         if user is not None:
             await logger.adebug("Superuser created successfully.")
+            # When the default superuser is recreated (e.g. after a DB reset in
+            # AUTO_LOGIN mode) the per-user MCP servers config file saved under the
+            # previous UUID becomes orphaned on disk. Best-effort recover it so
+            # users don't lose their MCP server configuration across restarts.
+            if is_default and settings_service.auth_settings.AUTO_LOGIN:
+                await migrate_orphaned_mcp_servers_config(session, settings_service, user)
     except Exception as exc:
         logger.exception(exc)
         msg = "Could not create superuser. Please create a superuser manually."
@@ -101,6 +107,149 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
     finally:
         # Scrub credentials from in-memory settings after setup
         settings_service.auth_settings.reset_credentials()
+
+
+async def migrate_orphaned_mcp_servers_config(
+    session: AsyncSession,
+    settings_service: SettingsService,
+    current_user,
+) -> bool:
+    """Best-effort recovery of MCP servers config files orphaned by a DB reset.
+
+    The MCP servers config is persisted on disk at
+    ``{config_dir}/{user_id}/_mcp_servers_{user_id}.json`` and tracked in the DB
+    via a ``File`` row. When Langflow starts with a fresh database but the same
+    config directory (common in containerized deployments without a persisted
+    DB volume), the default superuser is recreated with a new UUID and the
+    previously saved MCP config files become unreachable.
+
+    Recovery rules (intentionally conservative to avoid importing another user's
+    config — MCP server entries can contain ``env`` and ``headers`` auth material):
+
+    * If the new user already has an MCP config file on disk without a matching
+      ``File`` row, re-register the row (self-heal a partial previous migration).
+    * If exactly one orphaned ``_mcp_servers_{uuid}.json`` is found in the config
+      directory, migrate it.
+    * If multiple orphans are found, skip and log — we can't safely identify the
+      previous default superuser's file without extra metadata, so leave manual
+      recovery to the operator.
+
+    Returns True when a file was migrated or a missing DB row was restored.
+    """
+    from pathlib import Path
+    from uuid import UUID
+
+    import aiofiles
+    import anyio
+
+    from langflow.services.database.models.file.model import File as UserFile
+
+    try:
+        config_dir_value = settings_service.settings.config_dir
+        if not config_dir_value:
+            return False
+
+        config_dir = Path(config_dir_value)
+        if not config_dir.exists() or not config_dir.is_dir():
+            return False
+
+        # The current user's DB record is fresh; nothing to migrate if they
+        # somehow already have an MCP config row (defensive guard).
+        name_without_ext = f"_mcp_servers_{current_user.id}"
+        existing_stmt = (
+            select(UserFile).where(UserFile.user_id == current_user.id).where(UserFile.name == name_without_ext)
+        )
+        if (await session.exec(existing_stmt)).first() is not None:
+            return False
+
+        current_user_dir = str(current_user.id)
+        new_dir = config_dir / current_user_dir
+        new_filename = f"_mcp_servers_{current_user.id}.json"
+        new_file_path = new_dir / new_filename
+        db_path = f"{current_user.id}/{new_filename}"
+
+        # Case 1: a previous migration attempt copied the file but failed before
+        # committing the DB row. Re-register the existing file instead of
+        # returning early and leaving the user with an invisible config.
+        if new_file_path.exists():
+            try:
+                size = new_file_path.stat().st_size
+            except OSError as exc:
+                await logger.awarning(
+                    "Cannot stat existing MCP config %s while self-healing DB row: %s",
+                    new_file_path,
+                    exc,
+                )
+                return False
+            session.add(UserFile(user_id=current_user.id, name=name_without_ext, path=db_path, size=size))
+            await session.commit()
+            await logger.ainfo(
+                "Restored missing MCP servers config DB row for user %s from existing file %s",
+                current_user.id,
+                new_file_path,
+            )
+            return True
+
+        def _find_orphans() -> list[tuple[float, Path]]:
+            orphans: list[tuple[float, Path]] = []
+            for entry in config_dir.iterdir():
+                if not entry.is_dir() or entry.name == current_user_dir:
+                    continue
+                try:
+                    UUID(entry.name)
+                except ValueError:
+                    continue
+                mcp_path = entry / f"_mcp_servers_{entry.name}.json"
+                if mcp_path.is_file():
+                    try:
+                        mtime = mcp_path.stat().st_mtime
+                    except OSError:
+                        continue
+                    orphans.append((mtime, mcp_path))
+            return orphans
+
+        orphans = await anyio.to_thread.run_sync(_find_orphans)
+        if not orphans:
+            return False
+
+        # Ambiguous: more than one candidate could belong to different users.
+        # Refuse to migrate rather than risk importing unrelated auth material.
+        if len(orphans) > 1:
+            orphan_paths = ", ".join(str(p) for _, p in sorted(orphans, key=lambda i: i[0], reverse=True))
+            await logger.awarning(
+                "Found %d orphaned MCP servers config files in %s; skipping automatic "
+                "migration to avoid restoring the wrong one. Move the intended file to "
+                "%s to recover. Candidates: %s",
+                len(orphans),
+                config_dir,
+                new_file_path,
+                orphan_paths,
+            )
+            return False
+
+        _, orphan_path = orphans[0]
+
+        async with aiofiles.open(str(orphan_path), "rb") as src:
+            data = await src.read()
+
+        await anyio.to_thread.run_sync(lambda: new_dir.mkdir(parents=True, exist_ok=True))
+        async with aiofiles.open(str(new_file_path), "wb") as dst:
+            await dst.write(data)
+
+        session.add(UserFile(user_id=current_user.id, name=name_without_ext, path=db_path, size=len(data)))
+        await session.commit()
+
+        await logger.ainfo(
+            "Migrated orphaned MCP servers config from %s to user %s",
+            orphan_path,
+            current_user.id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Never let migration failure block startup.
+        await logger.awarning("Failed to migrate orphaned MCP servers config: %s", exc)
+        return False
+    else:
+        return True
 
 
 async def teardown_superuser(settings_service, session: AsyncSession) -> None:

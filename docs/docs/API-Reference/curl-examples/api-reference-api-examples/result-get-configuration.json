@@ -13,7 +13,7 @@
   "public_flow_cleanup_interval": 3600,
   "public_flow_expiration": 86400,
   "event_delivery": "streaming",
-  "webhook_auth_enable": false,
+  "webhook_auth_enable": true,
   "voice_mode_available": false,
   "default_folder_name": "Starter Project",
   "hide_getting_started_progress": false
