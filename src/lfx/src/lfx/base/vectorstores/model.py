@@ -102,17 +102,6 @@ class LCVectorStoreComponent(Component):
             display_name="Table",
             name="dataframe",
             method="as_dataframe",
-            info=(
-                "Performs semantic similarity search in the vector store to find relevant documents/files "
-                "and returns results as a pandas DataFrame. "
-                "Input: A natural language search query (str). "
-                "Returns: A DataFrame with columns from the matched documents' metadata and content. "
-                "The 'text' column always contains document content. Other columns depend on indexed metadata. "
-                "IMPORTANT: Check available columns with df.columns before accessing specific fields. "
-                "Common metadata columns include: 'file_path', 'source', 'page', etc. "
-                "Use standard pandas operations (.shape, .columns, .head(), etc.) on the result."
-            ),
-            tool_mode=True,
         ),
     ]
 
