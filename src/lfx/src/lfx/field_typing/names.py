@@ -1,26 +1,21 @@
-"""Pure-string registry of public field-typing names.
+"""Static metadata for field-typing resolution.
 
-This module is the **cold-path** half of the split:
+Holds the tables ``lfx.field_typing.constants`` reads to lazy-resolve
+langchain classes and TypeVars: module paths, TypeVar specs, and the
+ordered keys of ``LANGCHAIN_BASE_TYPES``. Imports nothing from langchain,
+pandas, or any other heavy dependency, so a future cold-path consumer
+that only needs names (not class objects) can read from here without
+triggering ``constants`` lazy-resolution.
 
-- It only carries names (strings) and resolution metadata (module paths).
-- It imports nothing from langchain, pandas, or any other heavy dependency.
-- Importing it does not transitively pull in ``lfx.field_typing.constants``.
-
-Consumers that only need to *check whether a name appears in source code*
-(e.g. ``lfx.custom.validate.find_names_in_code``) should import from here so
-that the warm-path module ``lfx.field_typing.constants`` is not loaded —
-which in turn avoids triggering its lazy-resolution machinery.
-
-Consumers that need the actual class object (annotations, isinstance checks,
-exec'd component code) should keep importing from ``lfx.field_typing``.
+Consumers that need the actual class object (annotations, isinstance
+checks, exec'd component code) should keep importing from
+``lfx.field_typing``.
 """
 
 from __future__ import annotations
 
 # Resolution table: public symbol name -> (submodule_path, attribute_name).
-# Used by ``lfx.field_typing.constants._resolve_langchain_symbol`` for the
-# real import. Lives here so the table is reachable without paying the cost
-# of importing the warm-path module.
+# Read by ``lfx.field_typing.constants._resolve_langchain_symbol``.
 LANGCHAIN_SYMBOLS: dict[str, tuple[str, str]] = {
     "AgentExecutor": ("langchain_classic.agents", "AgentExecutor"),
     "BaseMemory": ("langchain_classic.base_memory", "BaseMemory"),
@@ -84,24 +79,4 @@ LANGCHAIN_BASE_TYPE_KEYS: tuple[str, ...] = (
     "BaseChatModel",
     "Memory",
     "BaseDocumentCompressor",
-)
-
-
-# Public string-keyed view of ``CUSTOM_COMPONENT_SUPPORTED_TYPES``. This is
-# the set ``lfx.custom.validate.find_names_in_code`` consults to decide which
-# names appear in user code; only the names matter, never the class objects.
-SUPPORTED_TYPE_NAMES: frozenset[str] = frozenset(
-    {
-        *LANGCHAIN_BASE_TYPE_KEYS,
-        "NestedDict",
-        "Data",
-        "JSON",
-        "Text",
-        "Object",
-        "Callable",
-        "LanguageModel",
-        "Retriever",
-        "DataFrame",
-        "Table",
-    }
 )

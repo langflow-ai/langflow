@@ -4,7 +4,6 @@ import importlib
 import sys
 import warnings
 from types import FunctionType
-from typing import Optional, Union
 
 from pydantic import ValidationError
 
@@ -265,17 +264,17 @@ def create_class(code, class_name):
         "from langflow.custom import CustomComponent",
     )
 
-    from lfx.field_typing.constants import DEFAULT_IMPORT_STRING
-
-    code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
-
-        class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
-
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        # ``prepare_global_scope`` already exec'd the class definition into
+        # ``exec_globals``. Mirror imported modules into our own globals so
+        # subsequent executions share them (preserved from the prior
+        # ``build_class_constructor`` side-effect).
+        for name, value in exec_globals.items():
+            if isinstance(value, type(importlib)):
+                globals()[name] = value
+        return exec_globals[class_name]
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -392,12 +391,20 @@ def prepare_global_scope(module):
         ModuleNotFoundError: If a module is not found in the code
     """
     exec_globals = globals().copy()
+    future_imports = []
     imports = []
     import_froms = []
     definitions = []
 
     for node in module.body:
-        if isinstance(node, ast.Import):
+        # ``from __future__ import …`` directives must remain in the AST passed
+        # to compile() — they are compile-time pragmas (e.g. PEP 563 ``annotations``),
+        # not runtime imports. Without this, components relying on lazy annotation
+        # evaluation (``-> list[Tool]`` with ``Tool`` only under TYPE_CHECKING)
+        # would NameError at class-body time.
+        if isinstance(node, ast.ImportFrom) and node.module == "__future__":
+            future_imports.append(node)
+        elif isinstance(node, ast.Import):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
@@ -467,8 +474,8 @@ def prepare_global_scope(module):
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg)
 
-    if definitions:
-        combined_module = ast.Module(body=definitions, type_ignores=[])
+    if definitions or future_imports:
+        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         exec(compiled_code, exec_globals)
 
@@ -527,37 +534,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
         return exec_globals[class_name]
 
     return build_custom_class()
-
-
-# TODO: Remove this function
-def get_default_imports(code_string):
-    """Returns a dictionary of default imports for the dynamic class constructor."""
-    default_imports = {
-        "Optional": Optional,
-        "List": list,
-        "Dict": dict,
-        "Union": Union,
-    }
-    from lfx.field_typing.names import SUPPORTED_TYPE_NAMES
-
-    necessary_imports = find_names_in_code(code_string, SUPPORTED_TYPE_NAMES)
-    langflow_module = importlib.import_module("lfx.field_typing")
-    default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
-
-    return default_imports
-
-
-def find_names_in_code(code, names):
-    """Finds if any of the specified names are present in the given code string.
-
-    Args:
-        code: The source code as a string.
-        names: A list of names to check for in the code.
-
-    Returns:
-        A set of names that are found in the code.
-    """
-    return {name for name in names if name in code}
 
 
 def extract_function_name(code):

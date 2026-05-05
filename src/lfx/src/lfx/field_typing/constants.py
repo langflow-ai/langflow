@@ -1,19 +1,16 @@
 """Lazy-resolved class objects for langchain field types.
 
-This module is the **warm-path** half of the split with ``names.py``:
+Pairs with ``names.py``: that module owns the static metadata
+(resolution paths, TypeVar specs); this module owns the actual
+class objects, resolved on demand via PEP 562 ``__getattr__``.
+Importing this module does not pull langchain at import time;
+resolution happens only when a consumer accesses a class.
 
-- ``names.py`` carries pure-string registries (no langchain imports).
-- ``constants.py`` carries the actual class objects, resolved on demand
-  via PEP 562 ``__getattr__``. Importing this module does not pull
-  langchain at import time; resolution happens only when a consumer
-  actually accesses a class.
-
-The ``LANGCHAIN_BASE_TYPES`` and ``CUSTOM_COMPONENT_SUPPORTED_TYPES``
-dicts are built fresh on each access (not cached on the module). This
-is intentional: cold-path consumers like ``lfx.custom.validate`` should
-read ``names.SUPPORTED_TYPE_NAMES`` instead of materializing the full
-class-valued dict, so the dict is never on the hot path. A consumer
-that *does* read it has already opted in to paying the import cost.
+``LANGCHAIN_BASE_TYPES`` and ``CUSTOM_COMPONENT_SUPPORTED_TYPES``
+are built fresh on each access (not cached on the module). Reading
+either dict materializes every langchain class — and, for the
+latter, ``lfx.schema.dataframe`` (pandas). Callers that only need
+to check whether a name exists should not read these dicts.
 
 Stub fallbacks (``_FooStub``) keep type annotations resolvable when
 langchain itself is unimportable — installation gap or transitive
@@ -24,7 +21,6 @@ under public names so a transient failure does not pin a process.
 from __future__ import annotations
 
 import importlib
-import importlib.util
 import os
 from collections.abc import Callable
 from typing import Any, TypeAlias, TypeVar
@@ -204,65 +200,6 @@ def _build_CUSTOM_COMPONENT_SUPPORTED_TYPES() -> dict[str, Any]:  # noqa: N802 -
         "DataFrame": DataFrame,
         "Table": Table,
     }
-
-
-# -- String literals (unchanged; text must match historical output) ----------
-
-LANGCHAIN_IMPORT_STRING = """from langchain_classic.agents import AgentExecutor
-from langchain_classic.base_memory import BaseMemory
-from langchain_classic.chains.base import Chain
-from langchain_classic.memory.chat_memory import BaseChatMemory
-from langchain_core.chat_history import BaseChatMessageHistory
-from langchain_core.document_loaders import BaseLoader
-from langchain_core.documents import Document
-from langchain_core.embeddings import Embeddings
-from langchain_core.language_models import BaseLanguageModel, BaseLLM
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.output_parsers import BaseLLMOutputParser, BaseOutputParser
-from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate, PromptTemplate
-from langchain_core.retrievers import BaseRetriever
-from langchain_core.documents.compressor import BaseDocumentCompressor
-from langchain_core.tools import BaseTool, Tool
-from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
-from langchain_text_splitters import TextSplitter
-"""
-
-
-DEFAULT_IMPORT_STRING = """
-
-from lfx.io import (
-    BoolInput,
-    CodeInput,
-    DataInput,
-    DictInput,
-    DropdownInput,
-    FileInput,
-    FloatInput,
-    HandleInput,
-    IntInput,
-    JSONInput,
-    LinkInput,
-    MessageInput,
-    MessageTextInput,
-    MultilineInput,
-    MultilineSecretInput,
-    MultiselectInput,
-    NestedDictInput,
-    Output,
-    PromptInput,
-    SecretStrInput,
-    SliderInput,
-    StrInput,
-    TableInput,
-)
-from lfx.schema.data import JSON, Data
-from lfx.schema.dataframe import DataFrame, Table
-"""
-
-if importlib.util.find_spec("langchain") is not None:
-    # ``find_spec`` is a metadata query and does NOT import langchain; it only
-    # checks whether the distribution is discoverable. Safe to call eagerly.
-    DEFAULT_IMPORT_STRING = LANGCHAIN_IMPORT_STRING + DEFAULT_IMPORT_STRING
 
 
 # -- PEP 562 module-level __getattr__ ----------------------------------------

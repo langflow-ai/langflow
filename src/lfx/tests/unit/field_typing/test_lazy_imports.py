@@ -304,8 +304,6 @@ class TestFieldTypingResolvesRealLangchain:
 
     def test_custom_component_supported_types_includes_dataframe_and_table(self):
         # The dict is built fresh on access and includes the real DataFrame/Table.
-        # Cold-path callers (lfx.custom.validate) read names.SUPPORTED_TYPE_NAMES
-        # instead, so this resolved dict is no longer on the import-cost hot path.
         from lfx.field_typing import constants
         from lfx.schema.dataframe import DataFrame, Table
 

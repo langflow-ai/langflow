@@ -6,7 +6,7 @@ import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
 import nanoid
@@ -47,10 +47,9 @@ if TYPE_CHECKING:
 
     import pandas as pd
 
-    from lfx.field_typing import Tool
-
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
+    from lfx.field_typing import Tool
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
     from lfx.inputs.inputs import InputTypes
@@ -1024,8 +1023,10 @@ class Component(CustomComponent):
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
         try:
-            return_type = get_type_hints(method).get("return")
-        except TypeError:
+            from lfx.utils.type_hints import get_runtime_type_hints
+
+            return_type = get_runtime_type_hints(method).get("return")
+        except (TypeError, NameError):
             return []
         if return_type is None:
             return []
