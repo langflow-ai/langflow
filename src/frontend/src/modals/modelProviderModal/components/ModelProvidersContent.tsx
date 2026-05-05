@@ -9,11 +9,13 @@ import ProviderConfigurationForm from "./ProviderConfigurationForm";
 interface ModelProvidersContentProps {
   modelType: "llm" | "embeddings" | "all";
   onFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
+  onHasChangesRef?: React.MutableRefObject<(() => boolean) | null>;
 }
 
 const ModelProvidersContent = ({
   modelType,
   onFlushRef,
+  onHasChangesRef,
 }: ModelProvidersContentProps) => {
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
@@ -41,22 +43,31 @@ const ModelProvidersContent = ({
     syncedSelectedProvider,
     handleModelToggle,
     flushPendingChanges,
+    hasUserMadeChanges,
     requiresConfiguration,
   } = useProviderConfiguration({
     selectedProvider,
   });
 
-  // Expose flushPendingChanges to the parent (ModelProviderModal) via ref
+  // Expose flushPendingChanges and hasUserMadeChanges to the parent
+  // (ModelProviderModal) via refs so it can decide whether to refresh model
+  // inputs on close.
   useEffect(() => {
     if (onFlushRef) {
       onFlushRef.current = flushPendingChanges;
+    }
+    if (onHasChangesRef) {
+      onHasChangesRef.current = hasUserMadeChanges;
     }
     return () => {
       if (onFlushRef) {
         onFlushRef.current = null;
       }
+      if (onHasChangesRef) {
+        onHasChangesRef.current = null;
+      }
     };
-  }, [onFlushRef, flushPendingChanges]);
+  }, [onFlushRef, onHasChangesRef, flushPendingChanges, hasUserMadeChanges]);
 
   const handleProviderSelect = (provider: Provider) => {
     setSelectedProvider((prev) =>
