@@ -20,9 +20,9 @@ import pytest
 # lfx `integration` dep group, so unit-test envs (`uv sync --dev`) don't have it.
 pytest.importorskip("langchain_community")
 
-from langchain_classic.agents import AgentExecutor  # noqa: E402
-from langchain_core.language_models.fake_chat_models import FakeListChatModel  # noqa: E402
-from lfx.components.langchain_utilities.openapi import OpenAPIAgentComponent  # noqa: E402
+from langchain_classic.agents import AgentExecutor
+from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from lfx.components.langchain_utilities.openapi import OpenAPIAgentComponent
 
 
 def test_should_load_yaml_spec_via_yaml_branch_when_path_has_yaml_suffix(tmp_path):
