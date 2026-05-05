@@ -32,53 +32,6 @@ HUGGINGFACE_MODELS_DETAILED = [
         tool_calling=False,
         default=True,
     ),
-    # IBM Granite — Apache-2.0, tool-calling capable.
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/granite-3.1-2b-instruct-GGUF",
-        display_name="granite3.1:2b",
-        icon="HuggingFace",
-        tool_calling=True,
-    ),
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/granite-3.1-8b-instruct-GGUF",
-        display_name="granite3.1:8b",
-        icon="HuggingFace",
-        tool_calling=True,
-    ),
-    # Qwen 2.5 — Apache-2.0, strong tool-calling for size, multilingual.
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/Qwen2.5-1.5B-Instruct-GGUF",
-        display_name="qwen2.5:1.5b",
-        icon="HuggingFace",
-        tool_calling=True,
-    ),
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/Qwen2.5-3B-Instruct-GGUF",
-        display_name="qwen2.5:3b",
-        icon="HuggingFace",
-        tool_calling=True,
-    ),
-    # Hermes 3 — fine-tuned Llama 3.2 3B with strong tool calling. Llama
-    # license (community), not gated download.
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/Hermes-3-Llama-3.2-3B-GGUF",
-        display_name="hermes3",
-        icon="HuggingFace",
-        tool_calling=True,
-    ),
-    # Phi 3.5 mini — MIT, ~2.4GB, decent generalist.
-    create_model_metadata(
-        provider="HuggingFace",
-        name="bartowski/Phi-3.5-mini-instruct-GGUF",
-        display_name="phi3.5",
-        icon="HuggingFace",
-        tool_calling=False,
-    ),
 ]
 
 HUGGINGFACE_MODEL_NAMES = [metadata["name"] for metadata in HUGGINGFACE_MODELS_DETAILED]
