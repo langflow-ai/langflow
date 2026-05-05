@@ -13,11 +13,17 @@ const mockSetSelectedLlm = jest.fn();
 let mockIsEditMode = false;
 let mockDeploymentType = "agent";
 let mockDeploymentName = "";
+let mockIsDeploymentNameValid = false;
+let mockHasDeploymentNameFormatError = false;
 let mockDeploymentDescription = "";
 let mockSelectedLlm = "";
 let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
 let mockLlmModels: Array<{ model_name: string }> = [];
 let mockLlmsLoading = false;
+let mockHasAgentNameErrors = false;
+const mockSetHasAgentNameErrors = jest.fn();
+const mockSetIsAgentNameValidationPending = jest.fn();
+const mockUseCheckAgentNames = jest.fn();
 
 jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: () => ({
@@ -26,11 +32,16 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
     setDeploymentType: mockSetDeploymentType,
     deploymentName: mockDeploymentName,
     setDeploymentName: mockSetDeploymentName,
+    isDeploymentNameValid: mockIsDeploymentNameValid,
+    hasDeploymentNameFormatError: mockHasDeploymentNameFormatError,
     deploymentDescription: mockDeploymentDescription,
     setDeploymentDescription: mockSetDeploymentDescription,
     selectedLlm: mockSelectedLlm,
     setSelectedLlm: mockSetSelectedLlm,
     selectedInstance: mockSelectedInstance,
+    hasAgentNameErrors: mockHasAgentNameErrors,
+    setHasAgentNameErrors: mockSetHasAgentNameErrors,
+    setIsAgentNameValidationPending: mockSetIsAgentNameValidationPending,
   }),
 }));
 
@@ -45,6 +56,10 @@ jest.mock(
     }),
   }),
 );
+
+jest.mock("@/controllers/API/queries/deployments", () => ({
+  useCheckAgentNames: (...args: unknown[]) => mockUseCheckAgentNames(...args),
+}));
 
 jest.mock(
   "@/components/common/genericIconComponent",
@@ -61,11 +76,18 @@ beforeEach(() => {
   mockIsEditMode = false;
   mockDeploymentType = "agent";
   mockDeploymentName = "";
+  mockIsDeploymentNameValid = false;
+  mockHasDeploymentNameFormatError = false;
   mockDeploymentDescription = "";
   mockSelectedLlm = "";
   mockSelectedInstance = { id: "inst-1" };
   mockLlmModels = [];
   mockLlmsLoading = false;
+  mockHasAgentNameErrors = false;
+  mockUseCheckAgentNames.mockReturnValue({
+    data: { existing_names: [] },
+    isFetching: false,
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -142,6 +164,106 @@ describe("Name input", () => {
     expect(
       screen.queryByText("Name cannot be changed after creation."),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows available message when name passes validation", async () => {
+    jest.useFakeTimers();
+    try {
+      mockDeploymentName = "Fresh Agent";
+
+      render(<StepType />);
+
+      await jest.advanceTimersByTimeAsync(500);
+
+      expect(screen.getByText("Agent name is available.")).toBeInTheDocument();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("queries raw and normalized agent names", () => {
+    mockDeploymentName = "Sales Bot";
+
+    render(<StepType />);
+
+    expect(mockUseCheckAgentNames).toHaveBeenCalledWith(
+      {
+        providerId: "inst-1",
+        names: ["Sales Bot", "Sales_Bot"],
+      },
+      expect.objectContaining({
+        enabled: true,
+        placeholderData: expect.anything(),
+      }),
+    );
+  });
+
+  it("flags normalized collisions returned by the backend", async () => {
+    jest.useFakeTimers();
+    try {
+      mockDeploymentName = "Sales Bot";
+      mockUseCheckAgentNames.mockReturnValue({
+        data: { existing_names: ["sales_bot"] },
+        isFetching: false,
+      });
+
+      render(<StepType />);
+
+      await jest.advanceTimersByTimeAsync(500);
+
+      expect(mockSetHasAgentNameErrors).toHaveBeenLastCalledWith(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("does not show available message when duplicate error is active", () => {
+    mockDeploymentName = "Sales Bot";
+    mockHasAgentNameErrors = true;
+
+    render(<StepType />);
+
+    expect(
+      screen.queryByText("Agent name is available."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows validation error when name does not start with a letter", () => {
+    mockDeploymentName = "1 Agent";
+    mockHasDeploymentNameFormatError = true;
+    render(<StepType />);
+    expect(
+      screen.getByText("Agent name must start with a letter."),
+    ).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  it("does not show available state when format error is active", () => {
+    mockDeploymentName = "1";
+    mockHasDeploymentNameFormatError = true;
+
+    render(<StepType />);
+
+    expect(
+      screen.getByText("Agent name must start with a letter."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Agent name is available."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show validation error for empty name", () => {
+    render(<StepType />);
+    expect(
+      screen.queryByText("Agent name must start with a letter."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
   });
 });
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
+import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-post-detect-env-vars";
@@ -25,7 +26,6 @@ export default function StepAttachFlows() {
     setConnections,
     selectedVersionByFlow,
     handleSelectVersion: onSelectVersion,
-    toolNameByFlow,
     setToolNameByFlow,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
@@ -78,16 +78,17 @@ export default function StepAttachFlows() {
       return;
     seededExistingConnections.current = true;
 
-    const existingConnections: ConnectionItem[] = configsData.configs.map(
-      (cfg) => ({
+    const existingConnections: ConnectionItem[] = configsData.configs
+      .filter((cfg) => cfg.environment !== "live")
+      .map((cfg) => ({
         id: cfg.app_id,
         connectionId: cfg.connection_id,
         name: cfg.app_id,
+        environment: cfg.environment,
         variableCount: 0,
         isNew: false,
         environmentVariables: {},
-      }),
-    );
+      }));
 
     setConnections((prev) => {
       // Avoid duplicates if user already created connections with the same id
@@ -156,13 +157,13 @@ export default function StepAttachFlows() {
   });
 
   const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
+  const { mutateAsync: createSnapshot, isPending: isCreatingDraftVersion } =
+    usePostCreateSnapshot();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const preSelected = initialFlowId
       ? selectedVersionByFlow.get(initialFlowId)
@@ -196,18 +197,16 @@ export default function StepAttachFlows() {
 
   const selectedFlow = flows.find((f) => f.id === effectiveFlowId);
 
-  const handleAttachFlow = useCallback(
-    async (versionId: string) => {
-      if (!effectiveFlowId) return;
-      const version = versions.find((v) => v.id === versionId);
+  const openConnectionPanelForVersion = useCallback(
+    async (flowId: string, versionId: string, versionTag: string) => {
       // Don't commit to context yet — wait for connection step to complete.
       setPendingAttachment({
-        flowId: effectiveFlowId,
+        flowId,
         versionId,
-        versionTag: version?.version_tag ?? "",
+        versionTag,
       });
       setRightPanel("connections");
-      initConnectionsForFlow(effectiveFlowId);
+      initConnectionsForFlow(flowId);
 
       // Auto-detect global variable references via the backend detection endpoint
       try {
@@ -224,14 +223,50 @@ export default function StepAttachFlows() {
       }
     },
     [
-      effectiveFlowId,
-      versions,
       detectEnvVars,
-      setErrorData,
       initConnectionsForFlow,
+      setErrorData,
       updateDetectedEnvVars,
     ],
   );
+
+  const handleAttachFlow = useCallback(
+    async (versionId: string) => {
+      if (!effectiveFlowId) return;
+      const version = versions.find((v) => v.id === versionId);
+      await openConnectionPanelForVersion(
+        effectiveFlowId,
+        versionId,
+        version?.version_tag ?? "",
+      );
+    },
+    [effectiveFlowId, versions, openConnectionPanelForVersion],
+  );
+
+  const handleCreateVersionFromDraft = useCallback(async () => {
+    if (!effectiveFlowId) return;
+
+    try {
+      const snapshot = await createSnapshot({ flowId: effectiveFlowId });
+      await openConnectionPanelForVersion(
+        effectiveFlowId,
+        snapshot.id,
+        snapshot.version_tag,
+      );
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail;
+      setErrorData({
+        title: "Failed to create version from draft",
+        ...(detail ? { list: [detail] } : {}),
+      });
+    }
+  }, [
+    createSnapshot,
+    effectiveFlowId,
+    openConnectionPanelForVersion,
+    setErrorData,
+  ]);
 
   const handleDetachFlow = useCallback(
     (flowId: string) => {
@@ -258,7 +293,7 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Attach Flows</h2>
+      <h2 className="text-lg font-semibold">Flows</h2>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel
@@ -280,8 +315,10 @@ export default function StepAttachFlows() {
               selectedFlow={selectedFlow}
               versions={versions}
               isLoadingVersions={isLoadingVersions}
+              isCreatingDraftVersion={isCreatingDraftVersion}
               selectedVersionByFlow={selectedVersionByFlow}
               onAttach={handleAttachFlow}
+              onCreateFromDraft={handleCreateVersionFromDraft}
             />
           ) : (
             <ConnectionPanel

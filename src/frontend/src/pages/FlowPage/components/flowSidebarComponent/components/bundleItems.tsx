@@ -49,7 +49,7 @@ export const BundleItem = memo(
                   name={item.icon}
                   className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
                 />
-                <span className="flex-1 group-aria-expanded/collapsible:font-semibold">
+                <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
                   {item.display_name}
                 </span>
                 <ForwardedIconComponent

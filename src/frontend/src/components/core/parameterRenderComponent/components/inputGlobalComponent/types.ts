@@ -1,7 +1,4 @@
-export interface GlobalVariable {
-  name: string;
-  // Add other properties as needed
-}
+export type { GlobalVariable } from "@/types/global_variables";
 
 export interface UnavailableFields {
   [key: string]: string;

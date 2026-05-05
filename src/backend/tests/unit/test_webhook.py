@@ -165,6 +165,33 @@ async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
+def test_webhook_auth_enable_defaults_to_true():
+    """Regression guard: WEBHOOK_AUTH_ENABLE must default to True (secure by default).
+
+    Defaulting to False previously allowed anyone who knew a flow UUID to execute
+    that flow unauthenticated as the flow owner. We read the class-level default
+    directly so a stray LANGFLOW_WEBHOOK_AUTH_ENABLE env var can't mask a regression.
+    """
+    from lfx.services.settings.auth import AuthSettings
+
+    assert AuthSettings.model_fields["WEBHOOK_AUTH_ENABLE"].default is True
+
+
+async def test_webhook_rejects_unauthenticated_request_by_default(client, added_webhook_test):
+    """Under the default config, an unauthenticated POST to /webhook must return 403."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    # Confirm the runtime default matches the secure-by-default value before exercising it.
+    assert settings_service.auth_settings.WEBHOOK_AUTH_ENABLE is True
+
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    response = await client.post(endpoint, json={"test": "unauthenticated_trigger"})
+
+    assert response.status_code == 403
+    assert "API key required" in response.json()["detail"]
+
+
 async def test_webhook_with_random_payload_requires_auth(client, added_webhook_test, created_api_key):
     """Test that webhook with random payload still requires authentication."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service

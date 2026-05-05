@@ -8,6 +8,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -338,8 +339,13 @@ def run(
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
     # Step 2: Starting Core Services
+    app = None
+    app_factory = None
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        if platform.system() == "Windows":
+            app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        else:
+            app_factory = partial(setup_app, static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
@@ -375,6 +381,10 @@ def run(
         with progress.step(6):
             import uvicorn
 
+            if app is None:
+                msg = "Windows startup requires a pre-built FastAPI application."
+                raise RuntimeError(msg)
+
             # Print summary and banner before starting the server, since uvicorn is a blocking call.
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
             # non-picklable code to the subprocess.
@@ -406,6 +416,10 @@ def run(
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
 
+            if app_factory is None:
+                msg = "Gunicorn startup requires an application factory."
+                raise RuntimeError(msg)
+
             options = {
                 "bind": f"{host}:{port}",
                 "workers": get_number_of_workers(workers),
@@ -415,7 +429,7 @@ def run(
                 "log_level": log_level.lower() if log_level is not None else "info",
                 "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
             }
-            server = LangflowApplication(app, options)
+            server = LangflowApplication(app_factory, options)
 
             # Start the webapp process
             process_manager.webapp_process = Process(target=server.run)

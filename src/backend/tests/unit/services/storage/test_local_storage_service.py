@@ -321,6 +321,62 @@ class TestLocalStorageServiceTeardown:
 
 
 @pytest.mark.asyncio
+class TestLocalStorageServicePathTraversal:
+    """Regression tests for PVR0754098 — path traversal on read/delete/size endpoints."""
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..\\..\\etc\\passwd",
+            "..",
+            "sub/dir.txt",
+        ],
+    )
+    async def test_get_file_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file("flow_a", malicious_filename)
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..",
+        ],
+    )
+    async def test_delete_file_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.delete_file("flow_a", malicious_filename)
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..",
+        ],
+    )
+    async def test_get_file_size_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file_size("flow_a", malicious_filename)
+
+    async def test_get_file_stream_rejects_traversal(self, local_storage_service):
+        with pytest.raises(ValueError, match="Invalid file"):
+            # AsyncIterator functions don't raise until first iteration.
+            async for _ in local_storage_service.get_file_stream("flow_a", "../escape.txt"):
+                pass
+
+    async def test_cross_flow_read_is_blocked(self, local_storage_service):
+        """Writing a file to flow_b then attempting to read it from flow_a must fail."""
+        await local_storage_service.save_file("flow_b", "secret.txt", b"hidden")
+
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file("flow_a", "../flow_b/secret.txt")
+
+
+@pytest.mark.asyncio
 class TestLocalStorageServiceEdgeCases:
     """Test edge cases and error conditions."""
 

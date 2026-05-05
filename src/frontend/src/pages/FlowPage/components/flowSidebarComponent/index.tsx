@@ -1,6 +1,5 @@
 import Fuse from "fuse.js";
 import { cloneDeep, debounce } from "lodash";
-import { useTranslation } from "react-i18next";
 import {
   createContext,
   memo,
@@ -12,8 +11,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -62,6 +63,12 @@ import { traditionalSearchMetadata } from "./helpers/traditional-search-metadata
 const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
 const MCP_COMPONENT_CATEGORY = "models_and_agents";
+
+type SidebarSearchItem = APIClassType & {
+  category: string;
+  key: string;
+  mcpServerName?: string;
+};
 
 // Search context for the sidebar
 export type SearchContextType = {
@@ -254,7 +261,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [search, debouncedSetSearch]);
 
   // State
-  const [fuse, setFuse] = useState<Fuse<any> | null>(null);
+  const [fuse, setFuse] = useState<Fuse<SidebarSearchItem> | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [showConfig, setShowConfig] = useState(false);
   const [showBeta, setShowBeta] = useState(showBetaStorage);
@@ -270,16 +277,23 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setShowLegacy(value);
     setLocalStorage("showLegacy", value.toString());
   }, []);
-  const [mcpSearchData, setMcpSearchData] = useState<any[]>([]);
+  const [mcpSearchData, setMcpSearchData] = useState<SidebarSearchItem[]>([]);
 
   // Create base data that includes MCP category when available
   const baseData = useMemo(() => {
-    if (
-      mcpSuccess &&
-      mcpServers &&
-      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
-    ) {
-      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
+    const mcpComponent = data[MCP_COMPONENT_CATEGORY]?.["MCPTools"];
+    const dataWithoutMcpTools = mcpComponent
+      ? {
+          ...data,
+          [MCP_COMPONENT_CATEGORY]: Object.fromEntries(
+            Object.entries(data[MCP_COMPONENT_CATEGORY]).filter(
+              ([, component]) => component !== mcpComponent,
+            ),
+          ),
+        }
+      : data;
+
+    if (mcpSuccess && mcpServers && mcpComponent) {
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
@@ -295,17 +309,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         },
       }));
 
-      const mcpCategoryData: Record<string, any> = {};
+      const mcpCategoryData: Record<string, SidebarSearchItem> = {};
       newMcpSearchData.forEach((mcp) => {
         mcpCategoryData[mcp.display_name] = mcp;
       });
 
       return {
-        ...data,
+        ...dataWithoutMcpTools,
         MCP: mcpCategoryData,
       };
     }
-    return data;
+    return dataWithoutMcpTools;
   }, [data, mcpSuccess, mcpServers]);
 
   const [dataFilter, setFilterData] = useState(baseData);
@@ -459,12 +473,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       includeScore: true,
     };
 
-    const fuseData = Object.entries(baseData).flatMap(([category, items]) =>
-      Object.entries(items).map(([key, value]) => ({
-        ...value,
-        category,
-        key,
-      })),
+    const fuseData: SidebarSearchItem[] = Object.entries(baseData).flatMap(
+      ([category, items]) =>
+        Object.entries(items).map(([key, value]) => ({
+          ...value,
+          category,
+          key,
+        })),
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
@@ -543,10 +558,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const onDragStart = useCallback(
     (
-      event: React.DragEvent<any>,
+      event: React.DragEvent<HTMLElement>,
       data: { type: string; node?: APIClassType },
     ) => {
-      var crt = event.currentTarget.cloneNode(true);
+      const crt = event.currentTarget.cloneNode(true) as HTMLElement;
       crt.style.position = "absolute";
       crt.style.width = "215px";
       crt.style.top = "-500px";
@@ -820,7 +835,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                                 className="h-4 w-4"
                               />
                             </span>
-                            {t("sidebar.discoverMore")}
+                            <ShadTooltip
+                              content={t("sidebar.discoverMore")}
+                              styleClasses="z-50"
+                            >
+                              <span className="min-w-0 truncate">
+                                {t("sidebar.discoverMore")}
+                              </span>
+                            </ShadTooltip>
                           </Button>
                         )}
                       </>

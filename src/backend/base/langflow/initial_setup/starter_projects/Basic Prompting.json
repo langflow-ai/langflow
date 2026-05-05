@@ -524,7 +524,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.basic_prompting.bd8ff52b"
           }
         },
         "dragging": false,
@@ -560,7 +561,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.basic_prompting.cd87cff6"
           },
           "type": "note"
         },
@@ -626,7 +628,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
