@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
@@ -10,6 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
+import ModelProviderModal from "@/modals/modelProviderModal";
 import type { AssistantModel } from "../assistant-panel.types";
 import { useEnabledModels } from "../hooks";
 
@@ -22,8 +25,21 @@ export function ModelSelector({
   selectedModel,
   onModelChange,
 }: ModelSelectorProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
   const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
+  const { refresh: refreshAllModelInputs } = useRefreshModelInputs();
+
+  const handleRefreshList = async () => {
+    setIsOpen(false);
+    await refreshAllModelInputs({ silent: true });
+  };
+
+  const handleOpenManageProviders = () => {
+    setIsOpen(false);
+    setIsManageProvidersOpen(true);
+  };
 
   // Flatten all models for easy selection
   const allModels = useMemo(() => {
@@ -107,6 +123,7 @@ export function ModelSelector({
   }
 
   return (
+    <>
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
@@ -180,7 +197,52 @@ export function ModelSelector({
             </div>
           </div>
         ))}
+        <DropdownMenuSeparator className="my-2" />
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            handleRefreshList();
+          }}
+          data-testid="assistant-refresh-model-list"
+          className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-muted-foreground hover:text-foreground"
+        >
+          <div className="flex w-full items-center gap-2">
+            <span className="ml-2 text-[13px]">
+              {t("modelInput.refreshList")}
+            </span>
+            <ForwardedIconComponent
+              name="RotateCw"
+              className="ml-auto h-4 w-4 shrink-0"
+            />
+          </div>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={(e) => {
+            e.preventDefault();
+            handleOpenManageProviders();
+          }}
+          data-testid="assistant-manage-model-providers"
+          className="flex w-full cursor-pointer items-center rounded-md px-3 py-2 text-muted-foreground hover:text-foreground"
+        >
+          <div className="flex w-full items-center gap-2">
+            <span className="ml-2 text-[13px]">
+              {t("modelInput.manageProviders")}
+            </span>
+            <ForwardedIconComponent
+              name="Settings"
+              className="ml-auto h-4 w-4 shrink-0"
+            />
+          </div>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    {isManageProvidersOpen && (
+      <ModelProviderModal
+        open={isManageProvidersOpen}
+        onClose={() => setIsManageProvidersOpen(false)}
+        modelType="llm"
+      />
+    )}
+    </>
   );
 }
