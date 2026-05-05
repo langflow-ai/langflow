@@ -1104,16 +1104,12 @@ class TestDenyListSensitivePaths:
         result = component._read_file("id_ed25519")
         assert "error" in result
 
-    def test_should_reject_read_when_extension_is_pem(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_reject_read_when_extension_is_pem(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         (sandbox / "cert.pem").write_text("-----BEGIN", encoding="utf-8")
         result = component._read_file("cert.pem")
         assert "error" in result
 
-    def test_should_reject_read_when_extension_is_key(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_reject_read_when_extension_is_key(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         (sandbox / "private.key").write_text("-----BEGIN", encoding="utf-8")
         result = component._read_file("private.key")
         assert "error" in result
@@ -1152,9 +1148,7 @@ class TestDenyListSensitivePaths:
         result = component._read_file(".git/config")
         assert "error" in result
 
-    def test_should_reject_writing_to_denied_basename(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_reject_writing_to_denied_basename(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         result = component._write_file(".env", "SECRET=x\n")
         assert "error" in result
         # Side effect must NOT have happened.
@@ -1168,9 +1162,7 @@ class TestDenyListSensitivePaths:
         assert "error" in result
         assert not (sandbox / ".ssh" / "authorized_keys").exists()
 
-    def test_should_reject_editing_denied_basename(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_reject_editing_denied_basename(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # Even if the file pre-exists, edits are rejected on denied paths.
         (sandbox / ".env").write_text("OLD=1\n", encoding="utf-8")
         result = component._edit_file(".env", old_string="OLD=1", new_string="NEW=2")
@@ -1178,9 +1170,7 @@ class TestDenyListSensitivePaths:
         # Disk content must remain unchanged.
         assert (sandbox / ".env").read_text(encoding="utf-8") == "OLD=1\n"
 
-    def test_should_allow_normal_path_with_dot_in_name(
-        self, component: FileSystemToolComponent, sandbox: Path
-    ) -> None:
+    def test_should_allow_normal_path_with_dot_in_name(self, component: FileSystemToolComponent, sandbox: Path) -> None:
         # A file named config.json must NOT be rejected — only specific
         # credential patterns are denied. Sanity-check that the deny-list
         # is not over-broad.
@@ -1264,16 +1254,12 @@ class TestHardlinkRejection:
         assert "error" in result
         assert outside.read_text(encoding="utf-8") == "OLD\n"
 
-    def test_should_allow_regular_file_with_single_link(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_allow_regular_file_with_single_link(self, component: FileSystemToolComponent) -> None:
         # Sanity: hello.txt has st_nlink == 1, must still work.
         result = component._read_file("hello.txt")
         assert result.get("status") == "ok", f"Got: {result}"
 
-    def test_should_allow_writing_a_brand_new_file(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_should_allow_writing_a_brand_new_file(self, component: FileSystemToolComponent) -> None:
         # New-file writes must NOT trigger the hardlink check (nothing to stat).
         result = component._write_file("brand_new.txt", "data")
         assert result.get("status") == "created", f"Got: {result}"
@@ -1392,9 +1378,7 @@ class TestOpenNoFollowTOCTOU:
         # The outside file MUST be unchanged — neither read-modified nor written-through.
         assert outside.read_text(encoding="utf-8") == "OUTSIDE_BEFORE\n"
 
-    def test_read_should_still_succeed_for_normal_regular_file(
-        self, component: FileSystemToolComponent
-    ) -> None:
+    def test_read_should_still_succeed_for_normal_regular_file(self, component: FileSystemToolComponent) -> None:
         # Sanity: O_NOFOLLOW is a no-op for normal regular files.
         result = component._read_file("hello.txt")
         assert result.get("status") == "ok", f"Got: {result}"
