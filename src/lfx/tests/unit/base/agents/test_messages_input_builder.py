@@ -176,6 +176,34 @@ def test_should_preserve_multimodal_content_when_message_to_lc_returns_list() ->
     assert any(part.get("type") == "text" for part in messages[0].content)
 
 
+def test_should_preserve_files_when_input_text_is_blank_but_files_present() -> None:
+    """Image-only Message (blank text + files) must not be replaced by the Continue fallback.
+
+    Regression: under the legacy AgentExecutor path, run_agent extracted image parts and
+    pushed them into chat_history when the input text was empty. Under create_agent,
+    Message.to_lc_message() returns a multimodal HumanMessage whose text part is ""
+    but whose remaining parts carry the image dicts. The helper must keep that message
+    rather than short-circuiting on blank text and dropping the files entirely.
+    """
+    msg = Message(text="", sender=MESSAGE_SENDER_USER, files=["/tmp/x.png"])
+    multimodal_payload: list = [
+        {"type": "text", "text": ""},
+        {"type": "image_url", "image_url": {"url": "https://example.invalid/x.png"}},
+    ]
+
+    with patch.object(Message, "to_lc_message", return_value=HumanMessage(content=multimodal_payload)):
+        messages = build_initial_messages(input_value=msg, chat_history=None)
+
+    assert len(messages) == 1, f"expected the multimodal message to be preserved, got: {messages}"
+    assert isinstance(messages[0], HumanMessage)
+    assert isinstance(messages[0].content, list), (
+        "expected list content carrying the image, got a string fallback (image was dropped)"
+    )
+    assert any(part.get("type") == "image_url" for part in messages[0].content), (
+        "image_url part missing from the preserved message"
+    )
+
+
 def test_should_return_only_basemessage_instances() -> None:
     msg = Message(text="hi", sender=MESSAGE_SENDER_USER)
     history = [Data(text="prev", sender=MESSAGE_SENDER_USER)]
