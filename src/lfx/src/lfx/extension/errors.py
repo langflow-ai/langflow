@@ -31,12 +31,13 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 # Error code registry
 # ---------------------------------------------------------------------------
 
-# Phase-1 (LE-1014) error codes.  Each code shipped here MUST have:
+# Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
 #   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
 #   3. a documented reference URL anchor.
 #
-# Loader / reload / migration / events codes are added in their own tickets.
+# Loader / reload / migration / events codes are added when those subsystems
+# land.
 ERROR_CODES: frozenset[str] = frozenset(
     {
         # Schema / manifest discovery

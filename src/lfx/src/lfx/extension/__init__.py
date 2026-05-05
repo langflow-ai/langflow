@@ -1,4 +1,4 @@
-"""Langflow Extension System (foundation, LE-1014).
+"""Langflow Extension System (foundation).
 
 Public surface for this milestone:
     - ``ExtensionManifest``, ``BundleRef``, ``LfxCompat`` -- Pydantic models for

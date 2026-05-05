@@ -1,4 +1,4 @@
-"""Pydantic models for the v0 Extension manifest schema (LE-1014).
+"""Pydantic models for the v0 Extension manifest schema.
 
 A Langflow Extension is the distribution unit that gets pip-installed.  In v0
 it ships exactly one Bundle (a named group of components) plus a manifest at
@@ -24,10 +24,10 @@ dropping them.
 
 Multi-bundle is similarly reserved: ``bundles`` is a list, but v0 rejects
 length > 1 with ``multi-bundle-deferred-in-this-milestone``.  This is enforced
-in two places (both checked in different tickets):
+in two places:
 
-    - here, by :class:`ExtensionManifest` (validator-side, LE-1014).
-    - in the loader (LE-1015) at install/discovery time.
+    - here, by :class:`ExtensionManifest` (validator-side).
+    - in the loader at install/discovery time.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ _SEMVER_RE: re.Pattern[str] = re.compile(
 
 # Deferred manifest fields.  Validators reject any non-null value with
 # ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
-# the loader (LE-1015) shares the same source of truth.
+# the loader shares the same source of truth.
 DEFERRED_FIELDS: tuple[str, ...] = (
     "services",
     "routes",
@@ -330,8 +330,8 @@ class ExtensionManifest(BaseModel):
     @model_validator(mode="after")
     def _validate_bundle_count(self) -> ExtensionManifest:
         # Multi-bundle is reserved.  Validator-enforced here so that the schema
-        # itself communicates the constraint; the loader (LE-1015) re-checks at
-        # install time with the same code.
+        # itself communicates the constraint; the loader re-checks at install
+        # time with the same code.
         if len(self.bundles) > 1:
             msg = "Manifest declares more than one bundle; multi-bundle extensions are deferred in this milestone."
             raise ValueError(msg)

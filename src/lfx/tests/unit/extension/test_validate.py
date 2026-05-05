@@ -1,6 +1,6 @@
-"""Tests for ``lfx.extension.validate.validate_extension`` (LE-1014).
+"""Tests for ``lfx.extension.validate.validate_extension``.
 
-Coverage targets from the ticket:
+Coverage targets:
     - schema validation (delegated to test_manifest, smoke-checked here).
     - path-safety (no ``..``, absolute, or symlink-escape).
     - AST inspection: syntax, Component subclass present, build() declared,

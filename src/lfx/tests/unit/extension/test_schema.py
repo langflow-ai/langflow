@@ -1,4 +1,4 @@
-"""JSON Schema export tests (LE-1014).
+"""JSON Schema export tests.
 
 Acceptance criterion: published JSON Schema validates the v0 example and
 rejects at least 10 malformed manifests with distinct error paths.
@@ -53,7 +53,6 @@ def test_schema_validates_v0_example() -> None:
 
 # ---------------------------------------------------------------------------
 # At least 10 malformed manifests with DISTINCT error paths.
-# Acceptance criterion from LE-1014.
 # ---------------------------------------------------------------------------
 
 

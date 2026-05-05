@@ -1,9 +1,8 @@
 """Extension authoring commands: ``lfx extension validate`` and ``lfx extension schema``.
 
-Sub-app rather than a flat command so that future tickets (LE-1016: ``init``,
-``dev``; LE-1018: ``reload``; etc.) can attach without a top-level naming
-collision with the existing ``lfx validate`` (which validates flow JSON, not
-extensions).
+Sub-app rather than a flat command so future authoring verbs (``init``,
+``dev``, ``reload``, ...) can attach without a top-level naming collision with
+the existing ``lfx validate`` (which validates flow JSON, not extensions).
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ import typer
 
 extension_app = typer.Typer(
     name="extension",
-    help="Author and inspect Langflow Extensions (LE-1014 foundation).",
+    help="Author and inspect Langflow Extensions.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -56,7 +55,7 @@ def validate_command(
         ),
     ),
 ) -> None:
-    """Run the offline LE-1014 validator and exit non-zero on any error.
+    """Run the offline extension validator and exit non-zero on any error.
 
     By default this performs:
       1. Manifest discovery and Pydantic schema validation.

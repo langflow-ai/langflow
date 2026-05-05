@@ -1,4 +1,4 @@
-"""Schema round-trip + edge-case tests for the v0 ExtensionManifest (LE-1014)."""
+"""Schema round-trip + edge-case tests for the v0 ExtensionManifest."""
 
 from __future__ import annotations
 

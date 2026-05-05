@@ -40,7 +40,7 @@ def build_schema() -> dict[str, Any]:
     schema["$id"] = EXTENSION_SCHEMA_URL
     schema["title"] = "Langflow Extension Manifest (v1)"
     schema["description"] = (
-        "Schema for the v0 Langflow Extension manifest (LE-1014). "
+        "Schema for the v0 Langflow Extension manifest. "
         "See https://docs.langflow.org/extensions/manifest for the author's guide."
     )
     return schema
