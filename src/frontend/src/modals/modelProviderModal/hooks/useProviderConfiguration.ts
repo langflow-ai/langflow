@@ -459,9 +459,7 @@ export const useProviderConfiguration = ({
       const models = syncedSelectedProvider.models ?? [];
       const updates = models
         .filter((model) =>
-          action === "activate"
-            ? model.metadata?.default === true
-            : true,
+          action === "activate" ? model.metadata?.default === true : true,
         )
         .map((model) => ({
           provider: providerName,

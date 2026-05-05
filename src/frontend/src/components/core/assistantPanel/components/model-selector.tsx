@@ -35,8 +35,7 @@ export function ModelSelector({
         id: `${provider.provider}-${model.model_name}`,
         name: model.model_name,
         provider: provider.provider,
-        displayName:
-          readModelDisplayName(model.metadata) ?? model.model_name,
+        displayName: readModelDisplayName(model.metadata) ?? model.model_name,
         icon: provider.icon,
       })),
     );
