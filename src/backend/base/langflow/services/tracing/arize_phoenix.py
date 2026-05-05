@@ -217,39 +217,11 @@ class ArizePhoenixTracer(BaseTracer):
             return False
 
         # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
-        self._instrument_http_clients()
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().enable(self.tracer_provider)
 
         return True
-
-    def _instrument_http_clients(self) -> None:
-        """Instrument requests and urllib3 to propagate trace context on outgoing HTTP calls."""
-        try:
-            from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-            RequestsInstrumentor().instrument(tracer_provider=self.tracer_provider)
-        except ImportError:
-            logger.debug("[Arize/Phoenix] opentelemetry-instrumentation-requests not available, skipping.")
-
-        try:
-            from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
-
-            URLLib3Instrumentor().instrument(tracer_provider=self.tracer_provider)
-        except ImportError:
-            logger.debug("[Arize/Phoenix] opentelemetry-instrumentation-urllib3 not available, skipping.")
-
-    def _uninstrument_http_clients(self) -> None:
-        """Uninstrument HTTP clients."""
-        import contextlib
-
-        with contextlib.suppress(ImportError, Exception):
-            from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-            RequestsInstrumentor().uninstrument()
-
-        with contextlib.suppress(ImportError, Exception):
-            from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
-
-            URLLib3Instrumentor().uninstrument()
 
     @override
     def add_trace(
@@ -364,7 +336,9 @@ class ArizePhoenixTracer(BaseTracer):
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
 
-        self._uninstrument_http_clients()
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""

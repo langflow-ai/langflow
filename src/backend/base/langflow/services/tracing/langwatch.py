@@ -92,41 +92,13 @@ class LangWatchTracer(BaseTracer):
             self._client = langwatch
 
             # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
-            self._instrument_http_clients()
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            get_http_instrumentation_manager().enable(self.tracer_provider)
         except ImportError as e:
             logger.exception(f"{e}")
             return False
         return True
-
-    def _instrument_http_clients(self) -> None:
-        """Instrument requests and urllib3 to propagate trace context on outgoing HTTP calls."""
-        try:
-            from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-            RequestsInstrumentor().instrument(tracer_provider=self.tracer_provider)
-        except ImportError:
-            logger.debug("[LangWatch] opentelemetry-instrumentation-requests not available, skipping.")
-
-        try:
-            from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
-
-            URLLib3Instrumentor().instrument(tracer_provider=self.tracer_provider)
-        except ImportError:
-            logger.debug("[LangWatch] opentelemetry-instrumentation-urllib3 not available, skipping.")
-
-    def _uninstrument_http_clients(self) -> None:
-        """Uninstrument HTTP clients."""
-        import contextlib
-
-        with contextlib.suppress(ImportError, Exception):
-            from opentelemetry.instrumentation.requests import RequestsInstrumentor
-
-            RequestsInstrumentor().uninstrument()
-
-        with contextlib.suppress(ImportError, Exception):
-            from opentelemetry.instrumentation.urllib3 import URLLib3Instrumentor
-
-            URLLib3Instrumentor().uninstrument()
 
     @override
     def add_trace(
@@ -203,7 +175,9 @@ class LangWatchTracer(BaseTracer):
                 # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
 
-        self._uninstrument_http_clients()
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values

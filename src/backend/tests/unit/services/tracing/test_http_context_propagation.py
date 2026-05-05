@@ -11,8 +11,131 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 
+class TestHTTPClientInstrumentationManager:
+    """Test the shared HTTP client instrumentation manager."""
+
+    @pytest.fixture(autouse=True)
+    def reset_manager(self):
+        """Reset the singleton manager between tests."""
+        from langflow.services.tracing.http_instrumentation import HTTPClientInstrumentationManager
+
+        HTTPClientInstrumentationManager._instance = None
+        yield
+        HTTPClientInstrumentationManager._instance = None
+
+    def test_reference_counting_instrument_once(self):
+        """Verify instrumentation only happens on first enable."""
+        with (
+            patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests,
+            patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3,
+        ):
+            mock_requests.return_value.instrument = MagicMock()
+            mock_urllib3.return_value.instrument = MagicMock()
+
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            manager = get_http_instrumentation_manager()
+
+            manager.enable()
+            manager.enable()
+            manager.enable()
+
+            mock_requests.return_value.instrument.assert_called_once()
+            mock_urllib3.return_value.instrument.assert_called_once()
+
+    def test_reference_counting_uninstrument_at_zero(self):
+        """Verify uninstrumentation only happens when ref count reaches zero."""
+        with (
+            patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests,
+            patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3,
+        ):
+            mock_requests.return_value.instrument = MagicMock()
+            mock_requests.return_value.uninstrument = MagicMock()
+            mock_urllib3.return_value.instrument = MagicMock()
+            mock_urllib3.return_value.uninstrument = MagicMock()
+
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            manager = get_http_instrumentation_manager()
+
+            manager.enable()
+            manager.enable()
+            manager.enable()
+
+            manager.disable()
+            mock_requests.return_value.uninstrument.assert_not_called()
+            mock_urllib3.return_value.uninstrument.assert_not_called()
+
+            manager.disable()
+            mock_requests.return_value.uninstrument.assert_not_called()
+            mock_urllib3.return_value.uninstrument.assert_not_called()
+
+            manager.disable()
+            mock_requests.return_value.uninstrument.assert_called_once()
+            mock_urllib3.return_value.uninstrument.assert_called_once()
+
+    def test_concurrent_tracers_dont_interfere(self):
+        """Verify that multiple tracers can coexist without interfering."""
+        with (
+            patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests,
+            patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3,
+        ):
+            mock_requests.return_value.instrument = MagicMock()
+            mock_requests.return_value.uninstrument = MagicMock()
+            mock_urllib3.return_value.instrument = MagicMock()
+            mock_urllib3.return_value.uninstrument = MagicMock()
+
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            manager = get_http_instrumentation_manager()
+
+            manager.enable()
+            manager.enable()
+
+            manager.disable()
+
+            mock_requests.return_value.uninstrument.assert_not_called()
+            mock_urllib3.return_value.uninstrument.assert_not_called()
+
+            manager.disable()
+
+            mock_requests.return_value.uninstrument.assert_called_once()
+
+    def test_error_logging_on_uninstrument_failure(self):
+        """Verify unexpected errors during uninstrument are logged, not silently suppressed."""
+        with (
+            patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests,
+            patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3,
+            patch("langflow.services.tracing.http_instrumentation.logger") as mock_logger,
+        ):
+            mock_requests.return_value.instrument = MagicMock()
+            mock_requests.return_value.uninstrument = MagicMock(side_effect=RuntimeError("test error"))
+            mock_urllib3.return_value.instrument = MagicMock()
+            mock_urllib3.return_value.uninstrument = MagicMock()
+
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            manager = get_http_instrumentation_manager()
+
+            manager.enable()
+            manager.disable()
+
+            mock_logger.warning.assert_called()
+            call_args = str(mock_logger.warning.call_args)
+            assert "Unexpected error uninstrumenting" in call_args
+
+
 class TestArizePhoenixHttpInstrumentation:
     """Test HTTP client instrumentation in ArizePhoenixTracer."""
+
+    @pytest.fixture(autouse=True)
+    def reset_manager(self):
+        """Reset the singleton manager between tests."""
+        from langflow.services.tracing.http_instrumentation import HTTPClientInstrumentationManager
+
+        HTTPClientInstrumentationManager._instance = None
+        yield
+        HTTPClientInstrumentationManager._instance = None
 
     @pytest.fixture
     def mock_phoenix_imports(self):
@@ -35,7 +158,7 @@ class TestArizePhoenixHttpInstrumentation:
 
     def test_instrument_http_clients_called_on_setup(self, mock_phoenix_imports):
         """Verify that HTTP client instrumentors are called during tracer setup."""
-        _ = mock_phoenix_imports  # Fixture provides mocked environment
+        _ = mock_phoenix_imports
         with (
             patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests_inst,
             patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3_inst,
@@ -58,7 +181,7 @@ class TestArizePhoenixHttpInstrumentation:
 
     def test_uninstrument_http_clients_called_on_end(self, mock_phoenix_imports):
         """Verify that HTTP client instrumentors are uninstrumented when tracer ends."""
-        _ = mock_phoenix_imports  # Fixture provides mocked environment
+        _ = mock_phoenix_imports
         with (
             patch("opentelemetry.instrumentation.requests.RequestsInstrumentor") as mock_requests_inst,
             patch("opentelemetry.instrumentation.urllib3.URLLib3Instrumentor") as mock_urllib3_inst,
@@ -86,6 +209,15 @@ class TestArizePhoenixHttpInstrumentation:
 class TestLangWatchHttpInstrumentation:
     """Test HTTP client instrumentation in LangWatchTracer."""
 
+    @pytest.fixture(autouse=True)
+    def reset_manager(self):
+        """Reset the singleton manager between tests."""
+        from langflow.services.tracing.http_instrumentation import HTTPClientInstrumentationManager
+
+        HTTPClientInstrumentationManager._instance = None
+        yield
+        HTTPClientInstrumentationManager._instance = None
+
     @pytest.fixture
     def mock_langwatch_imports(self):
         """Mock langwatch imports to avoid requiring the actual package."""
@@ -109,7 +241,7 @@ class TestLangWatchHttpInstrumentation:
 
     def test_instrument_http_clients_called_on_setup(self, mock_langwatch_imports):
         """Verify that HTTP client instrumentors are called during tracer setup."""
-        _ = mock_langwatch_imports  # Fixture provides mocked environment
+        _ = mock_langwatch_imports
         from langflow.services.tracing.langwatch import LangWatchTracer
 
         LangWatchTracer.tracer_provider = None
@@ -134,7 +266,7 @@ class TestLangWatchHttpInstrumentation:
 
     def test_uninstrument_http_clients_called_on_end(self, mock_langwatch_imports):
         """Verify that HTTP client instrumentors are uninstrumented when tracer ends."""
-        _ = mock_langwatch_imports  # Fixture provides mocked environment
+        _ = mock_langwatch_imports
         from langflow.services.tracing.langwatch import LangWatchTracer
 
         LangWatchTracer.tracer_provider = None
