@@ -180,12 +180,12 @@ class Settings(BaseSettings):
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
 
     # cache configuration
-    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    cache_type: Literal["async", "redis", "memory"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
     cache_dir: str | None = None
-    """The directory to store disk cache. Defaults to config_dir if not set."""
+    """Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 

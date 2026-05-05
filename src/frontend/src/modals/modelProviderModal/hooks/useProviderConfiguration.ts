@@ -6,6 +6,7 @@ import {
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
@@ -51,6 +52,7 @@ interface UseProviderConfigurationReturn {
   validateCredentials: () => Promise<boolean>;
   handleModelToggle: (modelName: string, enabled: boolean) => void;
   flushPendingChanges: () => Promise<void>;
+  hasUserMadeChanges: () => boolean;
 
   // Helpers
   isVariableConfigured: (key: string) => boolean;
@@ -86,6 +88,17 @@ export const useProviderConfiguration = ({
     useState(false);
   const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
+  );
+
+  // Tracks whether the user has made any persisted changes during this dialog
+  // session (save / activate / disconnect / model toggle). Read synchronously
+  // by the modal's onClose handler to skip refreshAllModelInputs and the
+  // accompanying loading affordance when the user opened the dialog and closed
+  // it without touching anything.
+  const hasUserMadeChangesRef = useRef(false);
+  const hasUserMadeChanges = useCallback(
+    () => hasUserMadeChangesRef.current,
+    [],
   );
 
   const { t } = useTranslation();
@@ -344,7 +357,7 @@ export const useProviderConfiguration = ({
         setValidationError(result.error || "Validation failed");
         return false;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ensure minimum 500ms duration even on error
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < 500) {
@@ -352,7 +365,7 @@ export const useProviderConfiguration = ({
       }
 
       setValidationState("invalid");
-      setValidationError(error?.message || "Validation failed");
+      setValidationError(getAxiosErrorMessage(error, "Validation failed"));
       return false;
     }
   }, [selectedProvider, getVariablesForValidation, validateProvider]);
@@ -418,18 +431,19 @@ export const useProviderConfiguration = ({
       );
 
       // All succeeded — defer toast and value clear until after models refetch
+      hasUserMadeChangesRef.current = true;
       pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", {
         provider: selectedProvider.provider,
       });
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setValidationFailed(true);
       setErrorData({
         title: t("modelProviders.errorSavingConfiguration"),
         list: [
-          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     } finally {
@@ -491,17 +505,18 @@ export const useProviderConfiguration = ({
         });
       }
 
+      hasUserMadeChangesRef.current = true;
       setSuccessData({
         title: t("modelProviders.providerActivated", {
           provider: syncedSelectedProvider.provider,
         }),
       });
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: t("modelProviders.errorActivatingProvider"),
         list: [
-          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     }
@@ -532,6 +547,7 @@ export const useProviderConfiguration = ({
     try {
       await deleteGlobalVariable({ id: existingVariable.id });
 
+      hasUserMadeChangesRef.current = true;
       setSuccessData({
         title: t("modelProviders.providerDisconnected", {
           provider: syncedSelectedProvider.provider,
@@ -539,11 +555,11 @@ export const useProviderConfiguration = ({
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: t("modelProviders.errorDisconnectingProvider"),
         list: [
-          error?.response?.data?.detail || t("modelProviders.errorUnexpected"),
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     }
@@ -585,14 +601,14 @@ export const useProviderConfiguration = ({
     updateEnabledModels(
       { updates },
       {
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           if (previousData) {
             queryClient.setQueryData(["useGetEnabledModels"], previousData);
           }
-          const errorMessage =
-            error?.response?.data?.detail ||
-            error?.message ||
-            t("modelProviders.errorFailedToUpdateModelStatus");
+          const errorMessage = getAxiosErrorMessage(
+            error,
+            t("modelProviders.errorFailedToUpdateModelStatus"),
+          );
           setErrorData({
             title: t("modelProviders.errorUpdatingModelStatus"),
             list: [errorMessage],
@@ -637,15 +653,15 @@ export const useProviderConfiguration = ({
       await updateEnabledModelsAsync({ updates });
       // Mutation succeeded — query invalidation is handled by
       // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Revert optimistic update on failure
       if (previousData) {
         queryClient.setQueryData(["useGetEnabledModels"], previousData);
       }
-      const errorMessage =
-        error?.response?.data?.detail ||
-        error?.message ||
-        t("modelProviders.errorFailedToUpdateModelStatus");
+      const errorMessage = getAxiosErrorMessage(
+        error,
+        t("modelProviders.errorFailedToUpdateModelStatus"),
+      );
       setErrorData({
         title: t("modelProviders.errorUpdatingModelStatus"),
         list: [errorMessage],
@@ -664,6 +680,8 @@ export const useProviderConfiguration = ({
       if (!syncedSelectedProvider?.provider) return;
 
       const providerName = syncedSelectedProvider.provider;
+
+      hasUserMadeChangesRef.current = true;
 
       if (Object.keys(pendingModelToggles.current).length === 0) {
         fallbackModelData.current =
@@ -714,6 +732,7 @@ export const useProviderConfiguration = ({
     validateCredentials,
     handleModelToggle,
     flushPendingChanges,
+    hasUserMadeChanges,
 
     // Helpers
     isVariableConfigured,

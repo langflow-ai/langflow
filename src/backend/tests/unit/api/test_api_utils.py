@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
+import pytest
 from langflow.api.utils import get_suggestion_message, remove_api_keys
+from langflow.api.utils.core import build_content_disposition
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
@@ -190,3 +192,58 @@ def test_remove_api_keys():
     assert len(result["data"]["nodes"]) == 6
     assert result["data"]["nodes"][0]["id"] == "bare-node"
     assert result["data"]["nodes"][1]["data"] is None
+
+
+# ---------------------------------------------------------------------------
+# build_content_disposition - unit tests (no HTTP round-trip needed)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_ascii", "expected_encoded"),
+    [
+        ("simple.txt", "simple.txt", "simple.txt"),
+        ('a"b.txt', 'a\\"b.txt', "a%22b.txt"),
+        ("a\\b.txt", "a\\\\b.txt", "a%5Cb.txt"),
+        ("../etc/passwd", "../etc/passwd", "..%2Fetc%2Fpasswd"),
+    ],
+)
+def test_build_content_disposition_happy_path(filename, expected_ascii, expected_encoded):
+    header = build_content_disposition(filename)
+    assert header.startswith("attachment; filename=")
+    assert f'filename="{expected_ascii}"' in header
+    assert f"filename*=UTF-8''{expected_encoded}" in header
+
+
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "evil\r\nX-Injected: pwned",
+        "evil\x00.txt",
+        "tab\there.txt",
+        "bell\x07.txt",
+    ],
+)
+def test_build_content_disposition_strips_control_chars(filename):
+    header = build_content_disposition(filename)
+    for char in ("\r", "\n", "\x00", "\t", "\x07"):
+        assert char not in header
+
+
+def test_build_content_disposition_crlf_not_in_output():
+    header = build_content_disposition("evil\r\nX: y")
+    assert "\r" not in header
+    assert "\n" not in header
+
+
+def test_build_content_disposition_empty_filename():
+    header = build_content_disposition("")
+    assert header.startswith("attachment;")
+    assert 'filename=""' in header
+
+
+def test_build_content_disposition_very_long_filename():
+    long_name = "a" * 5000 + ".txt"
+    header = build_content_disposition(long_name)
+    assert "attachment;" in header
+    assert "filename*=UTF-8''" in header
