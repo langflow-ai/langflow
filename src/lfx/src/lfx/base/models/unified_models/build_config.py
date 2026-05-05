@@ -11,7 +11,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
-from .provider_queries import _get_all_provider_specific_field_names
+from .provider_queries import _get_all_provider_specific_field_names, is_credentialless_provider
 
 # TTL for the per-user model-options cache inside update_model_options_in_build_config.
 # Short enough to pick up global-variable changes quickly.
@@ -376,9 +376,19 @@ def update_model_options_in_build_config(
                         default_model = opt
                         break
 
-            # If user's default not found, fallback to first option
+            # If user's default not found, fallback to the first option that
+            # comes from a provider the user actually configured. Credentialless
+            # providers (HuggingFace local inference, etc.) are always-enabled,
+            # so a naive ``options[0]`` would let them silently outrank a
+            # configured provider's first model and overwrite the saved
+            # selection on import / re-render. Falls back to the very first
+            # option only when *every* available provider is credentialless.
             if not default_model and options:
-                default_model = options[0]
+                credentialed = next(
+                    (opt for opt in options if not is_credentialless_provider(opt.get("provider"))),
+                    None,
+                )
+                default_model = credentialed or options[0]
 
             # Set the value
             if default_model:

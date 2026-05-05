@@ -10,6 +10,8 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { readModelDisplayName } from "@/utils/modelDisplay";
+import { isCredentiallessProvider } from "@/utils/providerCategories";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -18,7 +20,6 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
-import { readModelDisplayName } from "@/utils/modelDisplay";
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
@@ -289,6 +290,35 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
+  // Names of providers whose backend metadata declares no required
+  // variables — they're always-enabled (credentialless), and we don't
+  // want them to silently outrank a credentialed provider's first model
+  // when picking a default.
+  const credentiallessProviderNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const provider of providersData ?? []) {
+      if (isCredentiallessProvider(provider)) {
+        names.add(provider.provider);
+      }
+    }
+    return names;
+  }, [providersData]);
+
+  // Pick the first option from a credentialed provider, falling back to
+  // the very first option only when *every* available provider is
+  // credentialless. Mirrors the backend's ``options[0]`` fallback in
+  // ``update_model_options_in_build_config``.
+  const pickDefaultOption = useCallback(
+    (opts: ModelOption[]): ModelOption | null => {
+      if (opts.length === 0) return null;
+      const credentialed = opts.find(
+        (option) => !credentiallessProviderNames.has(option.provider || ""),
+      );
+      return credentialed ?? opts[0];
+    },
+    [credentiallessProviderNames],
+  );
+
   // Derive the currently selected model from the value prop
   const selectedModel = useMemo(() => {
     // If we're in connection mode, show the connection option as selected
@@ -307,8 +337,9 @@ export default function ModelInputComponent({
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
       if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
-        // If we haven't processed empty state yet, we render the first one
-        return flatOptions[0];
+        // Prefer a credentialed provider so credentialless ones (HuggingFace
+        // local inference, etc.) don't outrank what the user configured.
+        return pickDefaultOption(flatOptions);
       }
       return null;
     }
@@ -340,8 +371,14 @@ export default function ModelInputComponent({
       } as SelectedModel;
     }
 
-    return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions]);
+    return pickDefaultOption(flatOptions);
+  }, [
+    value,
+    flatOptions,
+    isConnectionMode,
+    externalOptions,
+    pickDefaultOption,
+  ]);
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
@@ -355,7 +392,14 @@ export default function ModelInputComponent({
     // when there's no saved value at all.
     if (!isEmpty) return;
 
-    const firstOption = flatOptions[0];
+    // Prefer a credentialed provider's first model. Credentialless
+    // providers (HuggingFace local inference, etc.) are always-enabled
+    // regardless of what the user configured — without this guard
+    // they'd silently win the initial value-write and overwrite what
+    // the backend would have sent back from
+    // ``__default_language_model__``.
+    const firstOption = pickDefaultOption(flatOptions);
+    if (!firstOption) return;
     // Construct the new value object
     const newValue = [
       {
@@ -368,7 +412,13 @@ export default function ModelInputComponent({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
+  }, [
+    flatOptions,
+    value,
+    handleOnNewValue,
+    isConnectionMode,
+    pickDefaultOption,
+  ]);
 
   /**
    * Handles model selection from the dropdown.

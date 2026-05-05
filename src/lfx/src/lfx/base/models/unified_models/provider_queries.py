@@ -81,6 +81,27 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
     return [v["variable_key"] for v in variables if v.get("required")]
 
 
+def is_credentialless_provider(provider: str | None) -> bool:
+    """Return True when the provider declares no required variables.
+
+    Mirrors the frontend's ``isCredentiallessProvider`` helper. A
+    credentialless provider (e.g. local HuggingFace inference) is always
+    listed as enabled even when the user hasn't configured anything, so
+    callers that pick a "default" model out of the merged options list
+    must avoid letting credentialless entries silently outrank the
+    providers the user actually configured.
+
+    Treats unknown / empty-variables providers as credentialed so we err
+    on the side of the legacy behavior.
+    """
+    if not provider:
+        return False
+    variables = get_provider_all_variables(provider)
+    if not variables:
+        return False
+    return all(not v.get("required", False) for v in variables)
+
+
 @lru_cache(maxsize=1)
 def _get_all_provider_specific_field_names() -> set[str]:
     """Return set of all field names used as mapping_field by any provider."""
