@@ -2,18 +2,31 @@ from __future__ import annotations
 
 import json
 import re
+import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
+from langchain.agents import create_agent
+from langchain.agents.middleware import ModelCallLimitMiddleware, ToolRetryMiddleware
 from pydantic import ValidationError
 
+from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
+    adapt_graph_events_to_executor_shape,
+)
+from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
+    build_initial_messages,
+)
 from lfx.components.models_and_agents.memory import MemoryComponent
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
+    from lfx.schema.log import SendMessageFunctionType
+
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.base.agents.events import ExceptionWithMessageError
+from lfx.base.agents.callback import AgentAsyncHandler
+from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -29,10 +42,12 @@ from lfx.helpers.base_model import build_model_from_schema
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
+from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 def set_advanced_true(component_input):
@@ -344,6 +359,86 @@ class AgentComponent(ToolCallingAgentComponent):
         for placeholder, value in replacements.items():
             prompt = prompt.replace(placeholder, value)
         return prompt
+
+    def create_agent_runnable(self):
+        """Build the LangGraph `CompiledStateGraph` via `langchain.agents.create_agent`.
+
+        Replaces the legacy `AgentExecutor` runnable inherited from
+        `ToolCallingAgentComponent`. Other agent components (tool_calling, csv, json,
+        openapi, sql*, vector_store_router) keep the legacy path — only AgentComponent
+        runs on the new graph API.
+
+        `max_iterations` and `handle_parsing_errors` (legacy AgentExecutor knobs) are
+        translated to LangGraph middleware. Without that translation those user inputs
+        would silently become no-ops on the new API.
+        """
+        middleware = self._build_middleware()
+        return create_agent(
+            model=self._get_llm(),
+            tools=self.tools or [],
+            system_prompt=self.system_prompt or "",
+            middleware=middleware or None,
+        )
+
+    def _build_middleware(self) -> list:
+        middleware: list = []
+        max_iterations = getattr(self, "max_iterations", None)
+        if max_iterations:
+            middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+        if getattr(self, "handle_parsing_errors", False):
+            middleware.append(ToolRetryMiddleware(max_retries=2))
+        return middleware
+
+    async def run_agent(self, agent) -> Message:
+        """Run the LangGraph `CompiledStateGraph` and return the final agent Message.
+
+        Overrides the legacy `LCAgentComponent.run_agent` (which builds an
+        `{"input": str, "chat_history": [...]}` dict for `AgentExecutor`). The graph
+        wants `{"messages": [BaseMessage, ...]}`. The event stream is wrapped with
+        `adapt_graph_events_to_executor_shape` so the legacy `process_agent_events`
+        (in `lfx.base.agents.events`) can be reused unchanged.
+        """
+        messages = build_initial_messages(
+            input_value=self.input_value,
+            chat_history=getattr(self, "chat_history", None),
+        )
+        input_dict = {"messages": messages}
+
+        agent_message = self._build_initial_agent_message()
+
+        stream = adapt_graph_events_to_executor_shape(
+            agent.astream_events(
+                input_dict,
+                config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
+                version="v2",
+            )
+        )
+        result = await process_agent_events(
+            stream,
+            agent_message,
+            cast("SendMessageFunctionType", self.send_message),
+        )
+
+        self.status = result
+        return result
+
+    def _build_initial_agent_message(self) -> Message:
+        """Construct the placeholder agent Message that `process_agent_events` mutates."""
+        if hasattr(self, "graph"):
+            session_id = self.graph.session_id
+        elif hasattr(self, "_session_id"):
+            session_id = self._session_id
+        else:
+            session_id = None
+
+        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
+        return Message(
+            sender=MESSAGE_SENDER_AI,
+            sender_name=sender_name,
+            properties={"icon": "Bot", "state": "partial"},
+            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            session_id=session_id or uuid.uuid4(),
+        )
 
     async def message_response(self) -> Message:
         try:
