@@ -119,9 +119,7 @@ async def test_should_pass_nested_chain_events_through_unchanged() -> None:
         "data": {"output": {"messages": [AIMessage(content="inner")]}},
     }
 
-    result = await _collect(
-        adapt_graph_events_to_executor_shape(_stream([outer_start, inner_start, inner_end]))
-    )
+    result = await _collect(adapt_graph_events_to_executor_shape(_stream([outer_start, inner_start, inner_end])))
 
     assert len(result) == 3
     # Outer was reshaped (input is now executor shape, not the raw graph input).
