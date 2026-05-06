@@ -257,7 +257,7 @@ class TestFieldTypingPreforkRecovery:
 
         assert "Tool" not in constants.__dict__
         assert "Memory" not in constants.__dict__
-        assert constants._STUB_WARNED == set()
+        assert set() == constants._STUB_WARNED
 
 
 class TestFieldTypingResolvesRealLangchain:
