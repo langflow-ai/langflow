@@ -639,3 +639,133 @@ async def test_should_apply_max_iterations_via_model_call_limit_middleware() -> 
     limiters = [m for m in middleware if isinstance(m, ModelCallLimitMiddleware)]
     assert limiters, "ModelCallLimitMiddleware must be present when max_iterations is set"
     assert limiters[0].run_limit == 7
+
+
+# ===== Eager bind_tools validation ============================================
+
+
+@pytest.mark.asyncio
+async def test_should_raise_at_build_time_when_llm_does_not_support_tool_calling() -> None:
+    """Tool-incapable models must fail at flow-build time, not at runtime.
+
+    `langchain.agents.create_agent` is lazy about validating `bind_tools` support.
+    Without an explicit eager check, an LLM that doesn't support tool calling
+    builds the graph fine and only fails on the first user message — much worse
+    UX than a clear error in the canvas. The legacy `create_tool_calling_agent`
+    raised `NotImplementedError` at build time; we preserve that contract.
+    """
+    bad_llm = MagicMock(name="bad_llm")
+    bad_llm.bind_tools.side_effect = NotImplementedError("provider doesn't support bind_tools")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=bad_llm),
+        pytest.raises(NotImplementedError, match="does not support tool calling"),
+    ):
+        component.create_agent_runnable()
+
+
+@pytest.mark.asyncio
+async def test_should_pass_through_other_bind_tools_exceptions_unchanged() -> None:
+    """Only the documented "no tool calling" exceptions are mapped to the user-facing message.
+
+    `ValueError` from a misconfigured tool, for example, should propagate untouched
+    so it surfaces its real cause in the logs.
+    """
+    bad_llm = MagicMock(name="bad_llm")
+    bad_llm.bind_tools.side_effect = ValueError("tool x is missing arg schema")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=bad_llm),
+        pytest.raises(ValueError, match="missing arg schema"),
+    ):
+        component.create_agent_runnable()
+
+
+@pytest.mark.asyncio
+async def test_should_skip_eager_bind_tools_validation_when_no_tools_attached() -> None:
+    """An Agent without tools doesn't need a tool-calling capable model.
+
+    Forcing `bind_tools(...)` on a no-tools flow would shut out plain chat models
+    (which legitimately don't implement bind_tools), so the eager validation is
+    gated behind a non-empty tools list.
+    """
+    chat_only_llm = MagicMock(name="chat_only")
+    chat_only_llm.bind_tools.side_effect = NotImplementedError("no bind_tools support")
+
+    component = _build_component()
+    component.set_attributes({"tools": []})
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=chat_only_llm),
+        patch("lfx.components.models_and_agents.agent.create_agent", return_value=MagicMock()),
+    ):
+        # Must not raise — validation skipped because tools is empty.
+        component.create_agent_runnable()
+
+    chat_only_llm.bind_tools.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_should_map_attribute_error_from_bind_tools_to_user_message() -> None:
+    """Some providers don't expose `bind_tools` at all (raises AttributeError)."""
+    bad_llm = MagicMock(name="bad_llm")
+    bad_llm.bind_tools.side_effect = AttributeError("'X' object has no attribute 'bind_tools'")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=bad_llm),
+        pytest.raises(NotImplementedError, match="does not support tool calling"),
+    ):
+        component.create_agent_runnable()
+
+
+@pytest.mark.asyncio
+async def test_should_map_type_error_from_bind_tools_to_user_message() -> None:
+    """Some providers raise TypeError on signature mismatches; same UX failure."""
+    bad_llm = MagicMock(name="bad_llm")
+    bad_llm.bind_tools.side_effect = TypeError("bind_tools() got unexpected kwarg")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=bad_llm),
+        pytest.raises(NotImplementedError, match="does not support tool calling"),
+    ):
+        component.create_agent_runnable()
+
+
+# ===== Input info-text overrides ==============================================
+
+
+@pytest.mark.asyncio
+async def test_should_not_mutate_shared_base_inputs_when_overriding_info_text() -> None:
+    """`_agent_base_inputs()` substitutes new instances; it must not edit the shared list.
+
+    `LCToolsAgentComponent.get_base_inputs()` returns the same list object every call
+    (via the `_base_inputs` class attribute). Mutating those instances would leak the
+    AgentComponent-specific info text into every other LCAgentComponent subclass.
+    """
+    from lfx.base.agents.agent import LCToolsAgentComponent
+    from lfx.components.models_and_agents.agent import _agent_base_inputs
+
+    pristine_before = {inp.name: inp.info for inp in LCToolsAgentComponent.get_base_inputs()}
+
+    customized = _agent_base_inputs()
+    customized_info = {inp.name: inp.info for inp in customized}
+    # The override actually changed the info text on the customized copy.
+    assert customized_info["handle_parsing_errors"] != pristine_before["handle_parsing_errors"]
+    assert customized_info["max_iterations"] != pristine_before["max_iterations"]
+
+    pristine_after = {inp.name: inp.info for inp in LCToolsAgentComponent.get_base_inputs()}
+    assert pristine_after == pristine_before, (
+        "AgentComponent's input overrides leaked into the shared LCToolsAgentComponent base list"
+    )
