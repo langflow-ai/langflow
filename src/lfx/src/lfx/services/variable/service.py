@@ -73,14 +73,23 @@ class VariableService(Service):
                 return f"Bearer {value}"
         return None
 
-    def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
+    async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
 
         First checks in-memory cache, then environment variables, then WXO bearer aliases.
 
+        Async to match the call signature in custom_component.get_variable
+        (`await variable_service.get_variable(...)`), which is the path used
+        by component variable resolution. The lookup itself is sync — no I/O —
+        but the coroutine wrapper is required so callers can `await` it
+        regardless of which variable service implementation is registered
+        (lfx env-fallback vs langflow DB-backed).
+
         Args:
             name: Variable name
-            **kwargs: Additional arguments (ignored in minimal implementation)
+            **kwargs: Additional arguments (ignored; user_id/field/session
+                from langflow's call signature are absorbed and not used,
+                since this implementation has no per-user scope).
 
         Returns:
             Variable value or None if not found
@@ -89,28 +98,31 @@ class VariableService(Service):
         if name in self._variables:
             return self._variables[name]
 
+        # Langflow passes name via kwarg; prefer explicit argument when provided.
+        effective_name = str(kwargs.get("name") or name)
+
         # Contract-first: prefer request-scoped variables injected by runtime.
         request_variables = self._get_request_variables()
-        if name in request_variables:
-            logger.debug(f"Variable '{name}' loaded from LANGFLOW_REQUEST_VARIABLES")
-            return request_variables[name]
+        if effective_name in request_variables:
+            logger.debug(f"Variable '{effective_name}' loaded from LANGFLOW_REQUEST_VARIABLES")
+            return request_variables[effective_name]
 
         # Fall back to environment variable
-        value = os.getenv(name)
+        value = os.getenv(effective_name)
         if value:
-            logger.debug(f"Variable '{name}' loaded from environment")
+            logger.debug(f"Variable '{effective_name}' loaded from environment")
             return value
 
         # For WXO OAuth vars, synthesize a <prefix>_bearer_token alias from request variables first.
-        bearer_value = self._get_wxo_bearer_alias_from_request_variables(name)
+        bearer_value = self._get_wxo_bearer_alias_from_request_variables(effective_name)
         if bearer_value:
-            logger.debug(f"Variable '{name}' synthesized from WXO access token request variable")
+            logger.debug(f"Variable '{effective_name}' synthesized from WXO access token request variable")
             return bearer_value
 
         # For WXO OAuth vars, synthesize a <prefix>_bearer_token alias on demand.
-        bearer_value = self._get_wxo_bearer_alias(name)
+        bearer_value = self._get_wxo_bearer_alias(effective_name)
         if bearer_value:
-            logger.debug(f"Variable '{name}' synthesized from WXO access token environment variable")
+            logger.debug(f"Variable '{effective_name}' synthesized from WXO access token environment variable")
             return bearer_value
         return None
 

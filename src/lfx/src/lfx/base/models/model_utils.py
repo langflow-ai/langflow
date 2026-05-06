@@ -19,6 +19,7 @@ from lfx.base.models.watsonx_constants import (
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import unwrap_secret_value
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -31,6 +32,7 @@ WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_ME
 
 def _to_str(value: Any) -> str | None:
     """Safely coerce Message/Data or other values to string for URL/string params."""
+    value = unwrap_secret_value(value)
     if value is None:
         return None
     if isinstance(value, str):
@@ -283,7 +285,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 session=session,
             )
 
-    return run_until_complete(_get_variable())
+    return _to_str(run_until_complete(_get_variable()))
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

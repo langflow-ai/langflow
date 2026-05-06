@@ -9,6 +9,7 @@ from lfx.base.models.unified_models import (
     get_unified_models_detailed,
 )
 from lfx.log.logger import logger
+from lfx.utils.secrets import secret_value_to_str
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.services.deps import get_variable_service
@@ -68,6 +69,7 @@ async def check_api_key(
     except ValueError:
         logger.debug(f"{key_name} not found in global variables, checking environment")
 
+    api_key = secret_value_to_str(api_key)
     if not api_key:
         api_key = os.getenv(key_name)
 

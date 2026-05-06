@@ -161,10 +161,13 @@ describe("SidebarSegmentedNav", () => {
 
     NAV_ITEMS.forEach((item) => {
       const tooltips = screen.getAllByTestId("tooltip");
+      // Mirror the t(key) mock: return translation if it exists, otherwise fall back to the key itself
+      const expectedContent =
+        (enTranslations[item.tooltip as keyof typeof enTranslations] as
+          | string
+          | undefined) ?? item.tooltip;
       const itemTooltip = tooltips.find(
-        (tooltip) =>
-          tooltip.getAttribute("data-content") ===
-          enTranslations[item.tooltip as keyof typeof enTranslations],
+        (tooltip) => tooltip.getAttribute("data-content") === expectedContent,
       );
       expect(itemTooltip).toBeInTheDocument();
       expect(itemTooltip).toHaveAttribute("data-side", "right");
@@ -296,9 +299,11 @@ describe("SidebarSegmentedNav", () => {
       const button = screen.getByTestId(`sidebar-nav-${item.id}`);
       // Check for screen reader only text
       const srOnlySpan = button.querySelector(".sr-only");
-      expect(srOnlySpan).toHaveTextContent(
-        enTranslations[item.label as keyof typeof enTranslations],
-      );
+      const expectedLabel =
+        (enTranslations[item.label as keyof typeof enTranslations] as
+          | string
+          | undefined) ?? item.label;
+      expect(srOnlySpan).toHaveTextContent(expectedLabel);
     });
   });
 
@@ -384,12 +389,18 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(6);
+    expect(NAV_ITEMS).toHaveLength(7);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
       label: "sidebar.nav.search",
       tooltip: "sidebar.nav.search",
+    });
+    expect(NAV_ITEMS[2]).toEqual({
+      id: "mcp",
+      icon: "Mcp",
+      label: "sidebar.nav.mcp",
+      tooltip: "sidebar.nav.mcp",
     });
     expect(NAV_ITEMS[3]).toEqual({
       id: "bundles",
@@ -408,6 +419,12 @@ describe("SidebarSegmentedNav", () => {
       icon: "Activity",
       label: "sidebar.nav.traces",
       tooltip: "sidebar.nav.traces",
+    });
+    expect(NAV_ITEMS[6]).toEqual({
+      id: "memories",
+      icon: "Brain",
+      label: "Memories",
+      tooltip: "Memories",
     });
   });
 

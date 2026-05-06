@@ -206,31 +206,31 @@ class TestVariableService:
         assert variables.ready is True
         assert variables.name == "variable_service"
 
-    def test_set_and_get_variable(self, variables):
+    async def test_set_and_get_variable(self, variables):
         """Test setting and getting a variable."""
         variables.set_variable("test_key", "test_value")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value == "test_value"
 
-    def test_get_from_environment(self, variables):
+    async def test_get_from_environment(self, variables):
         """Test getting variable from environment."""
         os.environ["TEST_ENV_VAR"] = "env_value"
         try:
-            value = variables.get_variable("TEST_ENV_VAR")
+            value = await variables.get_variable("TEST_ENV_VAR")
             assert value == "env_value"
         finally:
             del os.environ["TEST_ENV_VAR"]
 
-    def test_get_nonexistent_variable(self, variables):
+    async def test_get_nonexistent_variable(self, variables):
         """Test getting a variable that doesn't exist."""
-        value = variables.get_variable("nonexistent_key")
+        value = await variables.get_variable("nonexistent_key")
         assert value is None
 
-    def test_delete_variable(self, variables):
+    async def test_delete_variable(self, variables):
         """Test deleting a variable."""
         variables.set_variable("test_key", "test_value")
         variables.delete_variable("test_key")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value is None
 
     def test_list_variables(self, variables):
@@ -242,78 +242,109 @@ class TestVariableService:
         assert "key1" in vars_list
         assert "key2" in vars_list
 
-    def test_in_memory_overrides_env(self, variables):
+    async def test_in_memory_overrides_env(self, variables):
         """Test that in-memory variables override environment."""
         os.environ["TEST_VAR"] = "env_value"
         try:
             variables.set_variable("TEST_VAR", "memory_value")
-            value = variables.get_variable("TEST_VAR")
+            value = await variables.get_variable("TEST_VAR")
             assert value == "memory_value"
         finally:
             del os.environ["TEST_VAR"]
 
-    def test_get_wxo_bearer_alias_from_environment(self, variables):
+    async def test_get_wxo_bearer_alias_from_environment(self, variables):
         """Test that bearer aliases are synthesized from WXO access tokens."""
         os.environ["wxo_demo_access_token"] = "token-123"
         try:
-            value = variables.get_variable("wxo_demo_bearer_token")
+            value = await variables.get_variable("wxo_demo_bearer_token")
             assert value == "Bearer token-123"
         finally:
             del os.environ["wxo_demo_access_token"]
 
-    def test_get_variable_from_langflow_request_variables(self, variables):
+    async def test_get_variable_from_langflow_request_variables(self, variables):
         """Test request-scoped variables are read from LANGFLOW_REQUEST_VARIABLES."""
         os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"runtime_token":"abc123","normal_key":"value1"}'
         try:
-            assert variables.get_variable("runtime_token") == "abc123"
-            assert variables.get_variable("normal_key") == "value1"
+            assert await variables.get_variable("runtime_token") == "abc123"
+            assert await variables.get_variable("normal_key") == "value1"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
 
-    def test_langflow_request_variables_invalid_json_falls_back(self, variables):
+    async def test_langflow_request_variables_invalid_json_falls_back(self, variables):
         """Test invalid request variable JSON does not break env fallback."""
         os.environ["LANGFLOW_REQUEST_VARIABLES"] = "{not-json"
         os.environ["FALLBACK_ENV_KEY"] = "fallback-value"
         try:
-            assert variables.get_variable("FALLBACK_ENV_KEY") == "fallback-value"
+            assert await variables.get_variable("FALLBACK_ENV_KEY") == "fallback-value"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
             del os.environ["FALLBACK_ENV_KEY"]
 
-    def test_wxo_bearer_alias_from_langflow_request_variables(self, variables):
+    async def test_wxo_bearer_alias_from_langflow_request_variables(self, variables):
         """Test bearer alias synthesis from request-scoped WXO access token variable."""
         os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"wxo_github_access_token":"request-token"}'
         try:
-            assert variables.get_variable("wxo_github_bearer_token") == "Bearer request-token"
+            assert await variables.get_variable("wxo_github_bearer_token") == "Bearer request-token"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
 
-    def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
+    async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
         """Test that non-WXO access token names do not expose bearer aliases."""
         os.environ["demo_access_token"] = "token-456"
         try:
-            value = variables.get_variable("demo_bearer_token")
+            value = await variables.get_variable("demo_bearer_token")
             assert value is None
         finally:
             del os.environ["demo_access_token"]
 
-    def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
+    async def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
         """Test that synthesized aliases are not persisted in in-memory variable list."""
         os.environ["wxo_demo_access_token"] = "token-789"
         try:
-            assert variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
+            assert await variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
             assert "wxo_demo_bearer_token" not in variables.list_variables()
         finally:
             del os.environ["wxo_demo_access_token"]
 
     @pytest.mark.asyncio
+    async def test_get_variable_is_coroutine(self, variables):
+        """get_variable must be async to match the langflow call site.
+
+        Callers use ``await variable_service.get_variable(...)`` (see
+        ``Component.get_variable`` in custom_component.py); awaiting a non-coroutine
+        TypeErrors. lfx's implementation does no I/O — the async wrapper exists
+        purely to match the interface langflow's DatabaseVariableService uses.
+        """
+        import inspect
+
+        assert inspect.iscoroutinefunction(variables.get_variable)
+        coro = variables.get_variable("anything")
+        assert inspect.iscoroutine(coro)
+        await coro  # avoid 'coroutine never awaited' warning
+
+    async def test_get_variable_absorbs_extra_kwargs(self, variables):
+        """Extra kwargs from the langflow call site must not crash the lfx implementation.
+
+        Langflow calls ``await variable_service.get_variable(user_id=..., name=...,
+        field=..., session=...)``. lfx's implementation must accept and ignore the
+        extras so flows behave identically as long as the variable can be resolved
+        by name.
+        """
+        os.environ["LFX_KWARG_TEST"] = "value-from-env"
+        try:
+            value = await variables.get_variable(
+                user_id="random-uuid", name="LFX_KWARG_TEST", field="value", session=None
+            )
+            assert value == "value-from-env"
+        finally:
+            del os.environ["LFX_KWARG_TEST"]
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")
         await variables.teardown()
         # Variables should be cleared (verify via public API)
         assert variables.list_variables() == []
-        assert variables.get_variable("test_key") is None
+        assert await variables.get_variable("test_key") is None
 
 
 class TestMinimalServicesIntegration:
