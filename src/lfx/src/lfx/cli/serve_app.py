@@ -226,6 +226,7 @@ class RunRequest(BaseModel):
     """Request model for executing a LFX flow."""
 
     input_value: str = Field(..., description="Input value passed to the flow")
+    session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
 
 
 class StreamRequest(BaseModel):
@@ -329,7 +330,9 @@ async def run_flow_generator_for_serve(
         # For the serve app, we'll use execute_graph_with_capture with streaming
         # Note: This is a simplified version. In a full implementation, you might want
         # to integrate with the full LFX streaming pipeline from endpoints.py
-        results, logs = await execute_graph_with_capture(graph, input_request.input_value)
+        results, logs = await execute_graph_with_capture(
+            graph, input_request.input_value, session_id=input_request.session_id
+        )
         result_data = extract_result_data(results, logs)
 
         # Send the final result
@@ -422,7 +425,9 @@ def create_multi_serve_app(
             try:
                 validate_flow_for_current_settings(graph)
                 graph_copy = deepcopy(graph)
-                results, logs = await execute_graph_with_capture(graph_copy, request.input_value)
+                results, logs = await execute_graph_with_capture(
+                    graph_copy, request.input_value, session_id=request.session_id
+                )
                 result_data = extract_result_data(results, logs)
 
                 # Debug logging

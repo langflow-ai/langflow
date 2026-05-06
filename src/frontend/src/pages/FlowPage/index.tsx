@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useBlocker, useParams } from "react-router-dom";
 import { AssistantPanel } from "@/components/core/assistantPanel";
@@ -32,6 +33,7 @@ import {
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 
 function FlowPageMainContent({
   flowId,
@@ -42,6 +44,7 @@ function FlowPageMainContent({
 }): JSX.Element {
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
 
   if (showTraces) {
     return (
@@ -58,6 +61,10 @@ function FlowPageMainContent({
     );
   }
 
+  if (showMemories) {
+    return <MemoriesMainContent />;
+  }
+
   return <Page setIsLoading={setIsLoading} />;
 }
 
@@ -72,6 +79,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
   const changesNotSaved =
@@ -107,7 +115,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (proceed) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
     }, 1200);
@@ -115,7 +123,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       if (!autoSaving || saving === false) {
         blocker.proceed && blocker.proceed();
         setSuccessData({
-          title: "Flow saved successfully!",
+          title: t("flow.savedSuccessfully"),
         });
       }
       proceed = true;

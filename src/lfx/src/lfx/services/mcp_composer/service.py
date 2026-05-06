@@ -5,6 +5,7 @@ import json
 import os
 import platform
 import re
+import secrets
 import select
 import socket
 import subprocess
@@ -22,6 +23,7 @@ from lfx.services.deps import get_settings_service
 GENERIC_STARTUP_ERROR_MSG = (
     "MCP Composer startup failed. Check OAuth configuration and check logs for more information."
 )
+COMPOSER_BACKEND_AUTH_HEADER = "x-langflow-mcp-composer-token"
 
 
 class MCPComposerError(Exception):
@@ -85,6 +87,7 @@ class MCPComposerService(Service):
         self._port_to_project: dict[int, str] = {}  # Track which project is using which port
         self._pid_to_project: dict[int, str] = {}  # Track which PID belongs to which project
         self._last_errors: dict[str, str] = {}  # Track last error message per project for UI display
+        self._backend_auth_tokens: dict[str, str] = {}  # project_id -> internal Composer-to-Langflow token
 
     def get_last_error(self, project_id: str) -> str | None:
         """Get the last error message for a project, if any."""
@@ -97,6 +100,19 @@ class MCPComposerService(Service):
     def clear_last_error(self, project_id: str) -> None:
         """Clear the last error message for a project."""
         self._last_errors.pop(project_id, None)
+
+    def get_or_create_backend_auth_token(self, project_id: str) -> str:
+        """Return the internal token used by MCP Composer to call Langflow's MCP endpoint."""
+        if project_id not in self._backend_auth_tokens:
+            self._backend_auth_tokens[project_id] = secrets.token_urlsafe(32)
+        return self._backend_auth_tokens[project_id]
+
+    def validate_backend_auth_token(self, project_id: str, token: str | None) -> bool:
+        """Validate an internal Composer-to-Langflow token for a project."""
+        expected_token = self._backend_auth_tokens.get(project_id)
+        if not expected_token or not token:
+            return False
+        return secrets.compare_digest(expected_token, token)
 
     def _is_port_available(self, port: int, host: str = "localhost") -> bool:
         """Check if a port is available by trying to bind to it.
@@ -531,6 +547,7 @@ class MCPComposerService(Service):
 
             # Remove from tracking
             self.project_composers.pop(project_id, None)
+            self._backend_auth_tokens.pop(project_id, None)
             await logger.adebug(f"Removed tracking for project {project_id}")
 
     async def _wait_for_process_exit(self, process):
@@ -563,6 +580,8 @@ class MCPComposerService(Service):
         try:
             # On Windows with temp files, read from files instead of pipes
             if stdout_file and stderr_file:
+                stdout_path = Path(stdout_file.name)
+                stderr_path = Path(stderr_file.name)
                 # Close file handles to flush and allow reading
                 try:
                     stdout_file.close()
@@ -576,7 +595,7 @@ class MCPComposerService(Service):
                     def read_file(filepath):
                         return Path(filepath).read_bytes()
 
-                    stdout_bytes = await asyncio.to_thread(read_file, stdout_file.name)
+                    stdout_bytes = await asyncio.to_thread(read_file, stdout_path)
                     stdout_content = stdout_bytes.decode("utf-8", errors="replace") if stdout_bytes else ""
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error reading stdout file: {e}")
@@ -586,15 +605,15 @@ class MCPComposerService(Service):
                     def read_file(filepath):
                         return Path(filepath).read_bytes()
 
-                    stderr_bytes = await asyncio.to_thread(read_file, stderr_file.name)
+                    stderr_bytes = await asyncio.to_thread(read_file, stderr_path)
                     stderr_content = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else ""
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error reading stderr file: {e}")
 
                 # Clean up temp files
                 try:
-                    Path(stdout_file.name).unlink()
-                    Path(stderr_file.name).unlink()
+                    stdout_path.unlink()
+                    stderr_path.unlink()
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error removing temp files: {e}")
             else:
@@ -821,6 +840,67 @@ class MCPComposerService(Service):
         if error_parts:
             config_error_msg = f"Invalid OAuth configuration: {'; '.join(error_parts)}"
             raise MCPComposerConfigError(config_error_msg)
+
+    def _build_backend_auth_member_config(
+        self,
+        project_id: str,
+        streamable_http_url: str,
+        *,
+        legacy_sse_url: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Build mcp-composer member-server config with internal Langflow auth headers."""
+        backend_token = self.get_or_create_backend_auth_token(project_id)
+        headers = {COMPOSER_BACKEND_AUTH_HEADER: backend_token}
+        streamable_id = f"{project_id}-streamable"
+        config: list[dict[str, Any]] = [
+            {
+                "id": streamable_id,
+                "_id": streamable_id,
+                "type": "http",
+                "endpoint": streamable_http_url,
+                "headers": headers,
+            }
+        ]
+
+        if legacy_sse_url:
+            sse_id = f"{project_id}-sse"
+            config.append(
+                {
+                    "id": sse_id,
+                    "_id": sse_id,
+                    "type": "sse",
+                    "endpoint": legacy_sse_url,
+                    "headers": headers,
+                }
+            )
+
+        return config
+
+    def _write_backend_auth_member_config(
+        self,
+        project_id: str,
+        streamable_http_url: str,
+        *,
+        legacy_sse_url: str | None = None,
+    ) -> Path:
+        """Write a temporary mcp-composer config containing backend auth headers."""
+        config = self._build_backend_auth_member_config(
+            project_id,
+            streamable_http_url,
+            legacy_sse_url=legacy_sse_url,
+        )
+        fd, config_path = tempfile.mkstemp(
+            prefix=f"mcp_composer_{project_id}_config_",
+            suffix=".json",
+        )
+        path = Path(config_path)
+        try:
+            with os.fdopen(fd, mode="w", encoding="utf-8") as config_file:
+                json.dump(config, config_file)
+        except Exception:
+            path.unlink(missing_ok=True)
+            raise
+        return path
 
     @staticmethod
     def _normalize_config_value(value: Any) -> Any:
@@ -1280,6 +1360,8 @@ class MCPComposerService(Service):
         settings = get_settings_service().settings
         # Some composer tooling still uses the --sse-url flag for backwards compatibility even in HTTP mode.
         effective_legacy_sse_url = legacy_sse_url or f"{streamable_http_url.rstrip('/')}/sse"
+        auth_type = auth_config.get("auth_type") if auth_config else None
+        backend_auth_config_path: Path | None = None
 
         cmd = [
             "uvx",
@@ -1290,53 +1372,64 @@ class MCPComposerService(Service):
             host,
             "--mode",
             "http",
-            "--endpoint",
-            streamable_http_url,
-            "--sse-url",
-            effective_legacy_sse_url,
-            "--disable-composer-tools",
         ]
+
+        if auth_type == "oauth":
+            backend_auth_config_path = self._write_backend_auth_member_config(
+                project_id,
+                streamable_http_url,
+                legacy_sse_url=effective_legacy_sse_url,
+            )
+            cmd.extend(["--config_path", str(backend_auth_config_path)])
+        else:
+            cmd.extend(
+                [
+                    "--endpoint",
+                    streamable_http_url,
+                    "--sse-url",
+                    effective_legacy_sse_url,
+                ]
+            )
+
+        cmd.append("--disable-composer-tools")
 
         # Set environment variables
         env = os.environ.copy()
 
         oauth_server_url = auth_config.get("oauth_server_url") if auth_config else None
-        if auth_config:
-            auth_type = auth_config.get("auth_type")
+        if auth_config and auth_type == "oauth":
+            cmd.extend(["--auth_type", "oauth"])
 
-            if auth_type == "oauth":
-                cmd.extend(["--auth_type", "oauth"])
+            # Add OAuth environment variables as command line arguments
+            cmd.extend(["--env", "ENABLE_OAUTH", "True"])
 
-                # Add OAuth environment variables as command line arguments
-                cmd.extend(["--env", "ENABLE_OAUTH", "True"])
+            # Map auth config to environment variables for OAuth
+            # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
+            # (for server binding) and as environment variables (for OAuth flow)
+            # Note: mcp-composer expects the env var name OAUTH_CALLBACK_PATH, but the value
+            # is still the full callback URL used as the OAuth redirect_uri. Support legacy
+            # oauth_callback_path input for backwards compatibility.
+            oauth_env_mapping = {
+                "oauth_host": "OAUTH_HOST",
+                "oauth_port": "OAUTH_PORT",
+                "oauth_server_url": "OAUTH_SERVER_URL",
+                "oauth_callback_path": "OAUTH_CALLBACK_PATH",
+                "oauth_client_id": "OAUTH_CLIENT_ID",
+                "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
+                "oauth_auth_url": "OAUTH_AUTH_URL",
+                "oauth_token_url": "OAUTH_TOKEN_URL",
+                "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
+                "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
+            }
 
-                # Map auth config to environment variables for OAuth
-                # Note: oauth_host and oauth_port are passed both via --host/--port CLI args
-                # (for server binding) and as environment variables (for OAuth flow)
-                # Note: mcp-composer expects the env var name OAUTH_CALLBACK_PATH, but the value
-                # is still the full callback URL used as the OAuth redirect_uri. Support legacy
-                # oauth_callback_path input for backwards compatibility.
-                oauth_env_mapping = {
-                    "oauth_host": "OAUTH_HOST",
-                    "oauth_port": "OAUTH_PORT",
-                    "oauth_server_url": "OAUTH_SERVER_URL",
-                    "oauth_callback_path": "OAUTH_CALLBACK_PATH",
-                    "oauth_client_id": "OAUTH_CLIENT_ID",
-                    "oauth_client_secret": "OAUTH_CLIENT_SECRET",  # pragma: allowlist secret
-                    "oauth_auth_url": "OAUTH_AUTH_URL",
-                    "oauth_token_url": "OAUTH_TOKEN_URL",
-                    "oauth_mcp_scope": "OAUTH_MCP_SCOPE",
-                    "oauth_provider_scope": "OAUTH_PROVIDER_SCOPE",
-                }
+            normalized_auth_config = self._normalize_oauth_callback_aliases(auth_config)
 
-                normalized_auth_config = self._normalize_oauth_callback_aliases(auth_config)
-
-                # Add environment variables as command line arguments
-                # Only set non-empty values to avoid Pydantic validation errors
-                for config_key, env_key in oauth_env_mapping.items():
-                    value = normalized_auth_config.get(config_key)
-                    if value is not None and str(value).strip():
-                        cmd.extend(["--env", env_key, str(value)])
+            # Add environment variables as command line arguments
+            # Only set non-empty values to avoid Pydantic validation errors
+            for config_key, env_key in oauth_env_mapping.items():
+                value = normalized_auth_config.get(config_key)
+                if value is not None and str(value).strip():
+                    cmd.extend(["--env", env_key, str(value)])
 
         # Log the command being executed (with secrets obfuscated)
         safe_cmd = self._obfuscate_command_secrets(cmd)
@@ -1348,6 +1441,8 @@ class MCPComposerService(Service):
         stderr_handle: int | typing.IO[bytes] = subprocess.PIPE
         stdout_file = None
         stderr_file = None
+        stdout_path: Path | None = None
+        stderr_path: Path | None = None
 
         if platform.system() == "Windows":
             # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
@@ -1361,30 +1456,89 @@ class MCPComposerService(Service):
             )
             stdout_handle = stdout_file
             stderr_handle = stderr_file
-            stdout_name = stdout_file.name
-            stderr_name = stderr_file.name
-            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_name}, stderr={stderr_name}")
-
-        process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
-
-        # Monitor the process startup with multiple checks
-        process_running = False
-        port_bound = False
-
-        await logger.adebug(
-            f"MCP Composer process started with PID {process.pid}, monitoring startup for project {project_id}..."
-        )
+            stdout_path = Path(stdout_file.name)
+            stderr_path = Path(stderr_file.name)
+            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}")
 
         try:
-            for check in range(max_startup_checks):
-                await asyncio.sleep(startup_delay)
+            process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
 
-                # Check if process is still running
+            # Monitor the process startup with multiple checks
+            process_running = False
+            port_bound = False
+
+            await logger.adebug(
+                f"MCP Composer process started with PID {process.pid}, monitoring startup for project {project_id}..."
+            )
+
+            try:
+                for check in range(max_startup_checks):
+                    await asyncio.sleep(startup_delay)
+
+                    # Check if process is still running
+                    poll_result = process.poll()
+
+                    startup_error_msg = None
+                    if poll_result is not None:
+                        # Process terminated, get the error output
+                        (
+                            stdout_content,
+                            stderr_content,
+                            startup_error_msg,
+                        ) = await self._read_process_output_and_extract_error(
+                            process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
+                        )
+                        await self._log_startup_error_details(
+                            project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
+                        )
+                        raise MCPComposerStartupError(startup_error_msg, project_id)
+
+                    # Process is still running, check if port is bound
+                    port_bound = not self._is_port_available(port)
+
+                    if port_bound:
+                        await logger.adebug(
+                            f"MCP Composer for project {project_id} bound to port {port} "
+                            f"(check {check + 1}/{max_startup_checks})"
+                        )
+                        process_running = True
+                        break
+                    await logger.adebug(
+                        f"MCP Composer for project {project_id} not yet bound to port {port} "
+                        f"(check {check + 1}/{max_startup_checks})"
+                    )
+
+                    # Try to read any available stderr/stdout without blocking to see what's happening
+                    await self._read_stream_non_blocking(process.stderr, "stderr")
+                    await self._read_stream_non_blocking(process.stdout, "stdout")
+
+            except asyncio.CancelledError:
+                # Operation was cancelled, kill the process and cleanup
+                await logger.adebug(
+                    f"MCP Composer process startup cancelled for project {project_id}, "
+                    f"terminating process {process.pid}"
+                )
+                try:
+                    process.terminate()
+                    # Wait for graceful termination with timeout
+                    try:
+                        await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
+                    except asyncio.TimeoutError:
+                        # Force kill if graceful termination times out
+                        await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
+                        await asyncio.to_thread(process.kill)
+                        await asyncio.to_thread(process.wait)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error terminating process during cancellation: {e}")
+                raise  # Re-raise to propagate cancellation
+
+            # After all checks
+            if not process_running or not port_bound:
+                # Get comprehensive error information
                 poll_result = process.poll()
 
-                startup_error_msg = None
                 if poll_result is not None:
-                    # Process terminated, get the error output
+                    # Process died
                     (
                         stdout_content,
                         stderr_content,
@@ -1396,91 +1550,46 @@ class MCPComposerService(Service):
                         project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
                     )
                     raise MCPComposerStartupError(startup_error_msg, project_id)
-
-                # Process is still running, check if port is bound
-                port_bound = not self._is_port_available(port)
-
-                if port_bound:
-                    await logger.adebug(
-                        f"MCP Composer for project {project_id} bound to port {port} "
-                        f"(check {check + 1}/{max_startup_checks})"
-                    )
-                    process_running = True
-                    break
-                await logger.adebug(
-                    f"MCP Composer for project {project_id} not yet bound to port {port} "
-                    f"(check {check + 1}/{max_startup_checks})"
+                # Process running but port not bound
+                await logger.aerror(
+                    f"  - Checked {max_startup_checks} times over {max_startup_checks * startup_delay} seconds"
                 )
 
-                # Try to read any available stderr/stdout without blocking to see what's happening
-                await self._read_stream_non_blocking(process.stderr, "stderr")
-                await self._read_stream_non_blocking(process.stdout, "stdout")
-
-        except asyncio.CancelledError:
-            # Operation was cancelled, kill the process and cleanup
-            await logger.adebug(
-                f"MCP Composer process startup cancelled for project {project_id}, terminating process {process.pid}"
-            )
-            try:
+                # Get any available output before terminating
                 process.terminate()
-                # Wait for graceful termination with timeout
-                try:
-                    await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
-                except asyncio.TimeoutError:
-                    # Force kill if graceful termination times out
-                    await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
-                    await asyncio.to_thread(process.kill)
-                    await asyncio.to_thread(process.wait)
-            except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Error terminating process during cancellation: {e}")
-            raise  # Re-raise to propagate cancellation
-
-        # After all checks
-        if not process_running or not port_bound:
-            # Get comprehensive error information
-            poll_result = process.poll()
-
-            if poll_result is not None:
-                # Process died
                 stdout_content, stderr_content, startup_error_msg = await self._read_process_output_and_extract_error(
                     process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
                 )
                 await self._log_startup_error_details(
-                    project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, poll_result
+                    project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, pid=process.pid
                 )
                 raise MCPComposerStartupError(startup_error_msg, project_id)
-            # Process running but port not bound
-            await logger.aerror(
-                f"  - Checked {max_startup_checks} times over {max_startup_checks * startup_delay} seconds"
-            )
 
-            # Get any available output before terminating
-            process.terminate()
-            stdout_content, stderr_content, startup_error_msg = await self._read_process_output_and_extract_error(
-                process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
-            )
-            await self._log_startup_error_details(
-                project_id, cmd, host, port, stdout_content, stderr_content, startup_error_msg, pid=process.pid
-            )
-            raise MCPComposerStartupError(startup_error_msg, project_id)
+            # Close the pipes/files if everything is successful
+            if stdout_file and stderr_file:
+                # Clean up temp files on success
+                try:
+                    stdout_file.close()
+                    stderr_file.close()
+                    if stdout_path:
+                        stdout_path.unlink(missing_ok=True)
+                    if stderr_path:
+                        stderr_path.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error cleaning up temp files on success: {e}")
+            else:
+                if process.stdout:
+                    process.stdout.close()
+                if process.stderr:
+                    process.stderr.close()
 
-        # Close the pipes/files if everything is successful
-        if stdout_file and stderr_file:
-            # Clean up temp files on success
-            try:
-                stdout_file.close()
-                stderr_file.close()
-                Path(stdout_file.name).unlink()
-                Path(stderr_file.name).unlink()
-            except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Error cleaning up temp files on success: {e}")
-        else:
-            if process.stdout:
-                process.stdout.close()
-            if process.stderr:
-                process.stderr.close()
-
-        return process
+            return process
+        finally:
+            if backend_auth_config_path:
+                try:
+                    backend_auth_config_path.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error cleaning up MCP Composer config file: {e}")
 
     @require_composer_enabled
     def get_project_composer_port(self, project_id: str) -> int | None:

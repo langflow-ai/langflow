@@ -29,6 +29,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.load import load_flow_from_json
+from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
 
 if TYPE_CHECKING:
@@ -299,12 +300,16 @@ def prepare_graph(graph, verbose_print):
         raise typer.Exit(1) from e
 
 
-async def execute_graph_with_capture(graph, input_value: str | None):
+async def execute_graph_with_capture(graph, input_value: str | None, session_id: str | None = None):
     """Execute a graph and capture output.
 
     Args:
         graph: Graph object to execute
         input_value: Input value to pass to the graph
+        session_id: Optional session ID. ``None`` auto-generates one so that
+            message-store paths (which validate session_id) succeed; an empty or
+            whitespace-only string is rejected with ``ValueError`` to surface
+            shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
 
     Returns:
         Tuple of (results, captured_logs)
@@ -312,6 +317,11 @@ async def execute_graph_with_capture(graph, input_value: str | None):
     Raises:
         Exception: Re-raises any exception that occurs during graph execution
     """
+    # Apply session_id, user_id, and Memory-vertex propagation defaults via the
+    # shared helper (same logic as run_flow). user_id is not exposed in this
+    # entry point, so any pre-existing graph.user_id is preserved.
+    apply_run_defaults(graph, session_id=session_id, user_id=None, overwrite_user_id=False)
+
     # Create input request
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
@@ -323,10 +333,12 @@ async def execute_graph_with_capture(graph, input_value: str | None):
     original_stdout = sys.stdout
     original_stderr = sys.stderr
 
+    fallback_to_env_vars = resolve_fallback_to_env_vars()
+
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
-        results = [result async for result in graph.async_start(inputs)]
+        results = [result async for result in graph.async_start(inputs, fallback_to_env_vars=fallback_to_env_vars)]
     except Exception as exc:
         # Capture any error output that was written to stderr
         error_output = captured_stderr.getvalue()

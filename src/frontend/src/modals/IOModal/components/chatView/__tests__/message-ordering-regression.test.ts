@@ -472,11 +472,13 @@ describe("Message Ordering Regression Tests - GitHub Issue #9186", () => {
       // Verify performance scales reasonably (not exponentially)
       // Each 10x increase in size should not cause more than 30x increase in time
       // (allowing for O(n log n) which is ~13x for 10x size increase, plus generous CI noise margin)
-      // Only check ratios if base timing is above noise floor (0.1ms)
-      if (timings[0] > 0.1) {
+      // Only check ratios when the base timing is well above the noise floor —
+      // sub-millisecond measurements on shared CI runners are dominated by
+      // scheduler/GC jitter, which makes the ratio meaningless even at 30x.
+      if (timings[0] > 2) {
         expect(timings[1]).toBeLessThan(timings[0] * 30); // 1000 items vs 100 items
       }
-      if (timings[1] > 0.1) {
+      if (timings[1] > 2) {
         expect(timings[2]).toBeLessThan(timings[1] * 30); // 10000 items vs 1000 items
       }
 

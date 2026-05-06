@@ -8,7 +8,7 @@
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim AS builder
 
 WORKDIR /app
 
@@ -37,13 +37,14 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Install langflow-base with all extras except dev (which includes Playwright)
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
 ################################
-FROM python:3.12.13-slim-trixie AS runtime
+FROM python:3.12-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \
