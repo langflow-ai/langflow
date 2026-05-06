@@ -33,6 +33,7 @@ import {
 } from "./components/flowSidebarComponent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 
 function FlowPageMainContent({
   flowId,
@@ -43,6 +44,7 @@ function FlowPageMainContent({
 }): JSX.Element {
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
 
   if (showTraces) {
     return (
@@ -57,6 +59,10 @@ function FlowPageMainContent({
         />
       </div>
     );
+  }
+
+  if (showMemories) {
+    return <MemoriesMainContent />;
   }
 
   return <Page setIsLoading={setIsLoading} />;
