@@ -17,7 +17,7 @@ EXA_INTEGRATION_NAME = "langflow-integration"
 
 class ExaSearchToolkit(Component):
     display_name = "Exa Search"
-    description = "Exa search, find-similar, and contents tools for agents and MCP clients."
+    description = "Exa search and contents tools for agents and MCP clients."
     documentation = "https://docs.exa.ai/reference/getting-started"
     beta = True
     name = "ExaSearch"
@@ -25,10 +25,20 @@ class ExaSearchToolkit(Component):
 
     inputs = [
         SecretStrInput(
-            name="metaphor_api_key",
+            name="exa_api_key",
             display_name="Exa API Key",
             info="Get one at https://dashboard.exa.ai/api-keys",
             password=True,
+        ),
+        # Kept for backward compatibility with flows saved before the field
+        # was renamed. Hidden from the UI; users should fill in `exa_api_key`.
+        SecretStrInput(
+            name="metaphor_api_key",
+            display_name="Metaphor API Key (legacy)",
+            info="Deprecated. Use Exa API Key instead.",
+            password=True,
+            advanced=True,
+            show=False,
         ),
         DropdownInput(
             name="search_type",
@@ -39,13 +49,8 @@ class ExaSearchToolkit(Component):
         ),
         IntInput(
             name="search_num_results",
-            display_name="Search Number of Results",
-            value=5,
-        ),
-        IntInput(
-            name="similar_num_results",
-            display_name="Similar Number of Results",
-            value=5,
+            display_name="Number of results",
+            value=10,
         ),
         BoolInput(
             name="include_highlights",
@@ -53,6 +58,13 @@ class ExaSearchToolkit(Component):
             value=True,
             advanced=True,
             info="Token-efficient extracts of the most relevant text per result. Recommended default.",
+        ),
+        IntInput(
+            name="highlights_max_characters",
+            display_name="Highlights max characters",
+            value=0,
+            advanced=True,
+            info="Optional cap on the length of each highlight, in characters. 0 leaves it at Exa's default.",
         ),
         BoolInput(
             name="include_text",
@@ -82,7 +94,10 @@ class ExaSearchToolkit(Component):
             display_name="Max age (hours)",
             value=0,
             advanced=True,
-            info="Refetch any cached page older than this many hours. 0 uses Exa's default cache freshness.",
+            info=(
+                "Max age of cached content (in hours) before refetching. "
+                "0 = always refetch. -1 = never refetch (use cache only)."
+            ),
         ),
         MessageTextInput(
             name="include_domains",
@@ -112,31 +127,35 @@ class ExaSearchToolkit(Component):
             advanced=True,
             info="ISO date (YYYY-MM-DD). Only return results published on or before this date.",
         ),
-        BoolInput(
-            name="use_autoprompt",
-            display_name="Use Autoprompt",
-            value=False,
-            advanced=True,
-            show=False,
-        ),
     ]
 
     outputs = [
         Output(name="tools", display_name="Tools", method="build_toolkit"),
     ]
 
+    def _resolved_api_key(self) -> str:
+        return self.exa_api_key or self.metaphor_api_key
+
     def _build_client(self) -> Exa:
-        client = Exa(api_key=self.metaphor_api_key)
+        client = Exa(api_key=self._resolved_api_key())
         client.headers["x-exa-integration"] = EXA_INTEGRATION_NAME
         return client
 
+    def _highlights_value(self):
+        if not self.include_highlights:
+            return None
+        if self.highlights_max_characters and self.highlights_max_characters > 0:
+            return {"max_characters": self.highlights_max_characters}
+        return True
+
     def _contents(self) -> dict | None:
         contents: dict = {}
-        if self.include_highlights:
-            contents["highlights"] = True
+        highlights = self._highlights_value()
+        if highlights is not None:
+            contents["highlights"] = highlights
         if self.include_text:
             contents["text"] = True
-        if self.max_age_hours and self.max_age_hours > 0:
+        if self.max_age_hours and self.max_age_hours != 0:
             contents["max_age_hours"] = self.max_age_hours
         return contents or None
 
@@ -179,17 +198,13 @@ class ExaSearchToolkit(Component):
         def get_contents(ids: list[str]):
             """Fetch contents (highlights and/or text) for result IDs returned by `search`."""
             kwargs: dict = {}
-            if self.include_highlights:
-                kwargs["highlights"] = True
+            highlights = self._highlights_value()
+            if highlights is not None:
+                kwargs["highlights"] = highlights
             if self.include_text:
                 kwargs["text"] = True
-            if self.max_age_hours and self.max_age_hours > 0:
+            if self.max_age_hours and self.max_age_hours != 0:
                 kwargs["max_age_hours"] = self.max_age_hours
             return client.get_contents(ids, **kwargs)
 
-        @tool
-        def find_similar(url: str):
-            """Get search results similar to a given URL."""
-            return client.find_similar(url, num_results=self.similar_num_results)
-
-        return [search, get_contents, find_similar]
+        return [search, get_contents]
