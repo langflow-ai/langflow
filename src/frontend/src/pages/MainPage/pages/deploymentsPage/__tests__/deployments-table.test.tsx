@@ -273,7 +273,7 @@ describe("Column headers", () => {
       "Name",
       "Type",
       "Attached",
-      "Provider",
+      "Environment",
       "Last Modified",
       "Test",
     ]) {

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json as _json
+import re
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -460,3 +462,20 @@ def raise_error_if_astra_cloud_env():
         raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+
+
+_FORBIDDEN_HEADER_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def build_content_disposition(filename: str) -> str:
+    """Build a RFC 5987-compliant Content-Disposition header value.
+
+    Strips ASCII control chars (CR/LF/NUL/etc.) to prevent header injection,
+    then produces a dual-param header: an ASCII fallback (with backslash and
+    double-quote escaped per RFC 6266 §4.1) and a percent-encoded UTF-8 param
+    so both legacy and modern clients receive an unambiguous filename.
+    """
+    safe_filename = _FORBIDDEN_HEADER_CHARS.sub("_", filename)
+    ascii_fallback = safe_filename.encode("ascii", "replace").decode("ascii").replace("\\", "\\\\").replace('"', '\\"')
+    encoded = quote(safe_filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"

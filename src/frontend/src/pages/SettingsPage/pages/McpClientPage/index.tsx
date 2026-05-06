@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -31,7 +32,10 @@ function buildMcpJson(serverUrl: string): string {
   );
 }
 
-function getAgentInstructions(agent: AgentTab): {
+function getAgentInstructions(
+  agent: AgentTab,
+  t: (key: string) => string,
+): {
   configPath: string;
   steps: string[];
 } {
@@ -40,17 +44,17 @@ function getAgentInstructions(agent: AgentTab): {
       return {
         configPath: "~/.bob/settings/mcp_settings.json",
         steps: [
-          "Open Bob and go to Settings > MCP",
-          'Click "Edit Global MCP" (or "Edit Project MCP" for per-project setup)',
-          "Paste the JSON config below and save",
+          t("settings.mcpClient.bob.step1"),
+          t("settings.mcpClient.bob.step2"),
+          t("settings.mcpClient.bob.step3"),
         ],
       };
     case "claude-code":
       return {
         configPath: "",
         steps: [
-          "Run the command below in your terminal:",
-          "Or add the JSON config to ~/.claude.json manually",
+          t("settings.mcpClient.claudeCode.step1"),
+          t("settings.mcpClient.claudeCode.step2"),
         ],
       };
   }
@@ -63,6 +67,7 @@ function getClaudeCodeCommand(serverUrl: string): string {
 }
 
 export default function McpClientPage() {
+  const { t } = useTranslation();
   const [selectedAgent, setSelectedAgent] = useState<AgentTab>("bob");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -70,7 +75,7 @@ export default function McpClientPage() {
   const serverUrl = `${protocol}//${host}`;
 
   const mcpJson = useMemo(() => buildMcpJson(serverUrl), [serverUrl]);
-  const instructions = getAgentInstructions(selectedAgent);
+  const instructions = getAgentInstructions(selectedAgent, t);
   const claudeCommand = useMemo(
     () => getClaudeCodeCommand(serverUrl),
     [serverUrl],
@@ -89,15 +94,14 @@ export default function McpClientPage() {
       <div className="flex w-full items-start justify-between gap-6">
         <div className="flex flex-col">
           <h2 className="flex items-center text-lg font-semibold tracking-tight">
-            Langflow MCP Client
+            {t("settings.mcpClient.title")}
             <ForwardedIconComponent
               name="Mcp"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Connect coding agents to build and run flows on this Langflow
-            instance.
+            {t("settings.mcpClient.description")}
           </p>
         </div>
       </div>
@@ -160,7 +164,7 @@ export default function McpClientPage() {
 
           {instructions.configPath && (
             <p className="text-sm text-muted-foreground">
-              Config file:{" "}
+              {t("settings.mcpClient.configFileLabel")}{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 text-[13px]">
                 {instructions.configPath}
               </code>
@@ -193,14 +197,14 @@ export default function McpClientPage() {
               className="mt-0.5 h-4 w-4 shrink-0"
             />
             <span>
-              If you don't provide an API key, the agent will need to log in
-              using the <code className="font-semibold">login</code> tool with
-              your username and password. You can generate an API key in{" "}
+              {t("settings.mcpClient.apiKeyInfo")}{" "}
+              <code className="font-semibold">login</code>{" "}
+              {t("settings.mcpClient.apiKeyInfoMiddle")}{" "}
               <Link
                 to="/settings/api-keys"
                 className="underline hover:text-foreground"
               >
-                API Keys settings
+                {t("settings.mcpClient.apiKeysSettings")}
               </Link>
               .
             </span>

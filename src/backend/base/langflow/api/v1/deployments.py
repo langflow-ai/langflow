@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import time
+from collections.abc import AsyncIterator
+from dataclasses import dataclass
 from typing import Annotated
 from uuid import UUID
 
@@ -12,7 +15,6 @@ from lfx.services.adapters.deployment.exceptions import (
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
-    DeploymentListParams,
     DeploymentListTypesResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -108,6 +110,57 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
+from langflow.services.deps import get_telemetry_service
+from langflow.services.telemetry.schema import DeploymentPayload
+
+
+@dataclass
+class DeploymentTelemetryCtx:
+    """Mutable context that routes write into; passed via Depends."""
+
+    provider: str = "unknown"
+    wxo_tenant_id: str | None = None
+
+
+def _make_telemetry_dep(action: str, log_method_name: str):
+    async def _dep() -> AsyncIterator[DeploymentTelemetryCtx]:
+        ctx = DeploymentTelemetryCtx()
+        started_at = time.perf_counter()
+        success: bool = True
+        error_message: str = ""
+        try:
+            yield ctx
+        except Exception as exc:
+            success = False
+            error_message = str(exc)
+            raise
+        finally:
+            try:
+                ts = get_telemetry_service()
+                payload = DeploymentPayload(
+                    deployment_action=action,
+                    deployment_provider=ctx.provider,
+                    deployment_seconds=time.perf_counter() - started_at,
+                    deployment_success=success,
+                    deployment_error_message=error_message,
+                    wxo_tenant_id=ctx.wxo_tenant_id,
+                )
+                await getattr(ts, log_method_name)(payload)
+            except Exception:  # noqa: BLE001
+                logger.debug("deployment telemetry emit failed", exc_info=True)
+
+    return _dep
+
+
+deployment_create_telemetry = _make_telemetry_dep("deployment.create", "log_package_deployment")
+deployment_update_telemetry = _make_telemetry_dep("deployment.update", "log_package_deployment")
+deployment_delete_telemetry = _make_telemetry_dep("deployment.delete", "log_package_deployment")
+deployment_run_telemetry = _make_telemetry_dep("deployment.run", "log_package_deployment_run")
+provider_create_telemetry = _make_telemetry_dep("provider.create", "log_package_deployment_provider")
+provider_update_telemetry = _make_telemetry_dep("provider.update", "log_package_deployment_provider")
+provider_delete_telemetry = _make_telemetry_dep("provider.delete", "log_package_deployment_provider")
+snapshot_update_telemetry = _make_telemetry_dep("snapshot.update", "log_package_deployment")
+
 
 router = APIRouter(prefix="/deployments", tags=["Deployments"], include_in_schema=False)
 
@@ -134,13 +187,15 @@ DeploymentIdQuery = Annotated[
 SnapshotNameQueryItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
-def _dedupe_snapshot_names(values: list[str] | None) -> list[str] | None:
+def _dedupe_names(values: list[str] | None) -> list[str] | None:
     if values is None:
         return None
     return list(dict.fromkeys(values))
 
 
-SnapshotNamesQuery = Annotated[list[SnapshotNameQueryItem] | None, AfterValidator(_dedupe_snapshot_names)]
+SnapshotNamesQuery = Annotated[list[SnapshotNameQueryItem] | None, AfterValidator(_dedupe_names)]
+DeploymentNameQueryItem = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+DeploymentNamesQuery = Annotated[list[DeploymentNameQueryItem] | None, AfterValidator(_dedupe_names)]
 IncludeProviderDeleteQuery = Annotated[
     bool,
     Query(
@@ -194,7 +249,7 @@ async def _count_provider_deployments_after_reconciliation(
         deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
         deployment_mapper = get_deployment_mapper(provider_account.provider_key)
         with deployment_provider_scope(provider_account.id):
-            _, deployment_count = await list_deployments_synced(
+            _, deployment_count, _ = await list_deployments_synced(
                 deployment_adapter=deployment_adapter,
                 deployment_mapper=deployment_mapper,
                 user_id=user_id,
@@ -266,7 +321,9 @@ async def create_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountCreateRequest,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_create_telemetry)],
 ):
+    telemetry.provider = payload.provider_key
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
 
@@ -288,6 +345,7 @@ async def create_provider_account(
         )
     except ValueError as exc:
         _raise_http_for_provider_account_value_error(exc)
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     return deployment_mapper.resolve_provider_account_response(provider_account)
 
 
@@ -337,12 +395,15 @@ async def delete_provider_account(
     provider_id: DeploymentProviderAccountIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_delete_telemetry)],
 ):
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id,
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_count = await _count_provider_deployments_after_reconciliation(
         session=session,
         provider_account=provider_account,
@@ -370,12 +431,15 @@ async def update_provider_account(
     session: DbSession,
     payload: DeploymentProviderAccountUpdateRequest,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_update_telemetry)],
 ):
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id,
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
 
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     verify_input = None
@@ -420,6 +484,7 @@ async def create_deployment(
     session: DbSession,
     payload: DeploymentCreateRequest,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_create_telemetry)],
 ):
     provider_id = payload.provider_id
     provider_account = await get_owned_provider_account_or_404(
@@ -427,6 +492,8 @@ async def create_deployment(
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     # fail fast if the deployment name already exists
     # we could have races but that is more
     # acceptable than provider-side rollback failure
@@ -622,6 +689,17 @@ async def list_deployments(
         ),
     ] = None,
     project_id: ProjectIdQuery = None,
+    names: Annotated[
+        DeploymentNamesQuery,
+        Query(
+            description=(
+                "Optional deployment names (pass as repeated query params, "
+                "e.g. ?names=A&names=B). Filters deployments by name match. "
+                "When load_from_provider is false (default), filters Langflow-tracked deployments in the DB. "
+                "Otherwise, filters provider deployments directly, including deployments not tracked by Langflow."
+            )
+        ),
+    ] = None,
 ):
     if flow_ids and flow_version_ids:
         raise HTTPException(
@@ -658,8 +736,12 @@ async def list_deployments(
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
         provider_list_params = deployment_mapper.resolve_load_from_provider_deployment_list_params()
-        adapter_params = DeploymentListParams(provider_params=provider_list_params) if provider_list_params else None
         with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
+            adapter_params = await deployment_mapper.resolve_deployment_list_adapter_params(
+                deployment_type=deployment_type,
+                names=names,
+                provider_params=provider_list_params,
+            )
             provider_view = await deployment_adapter.list(
                 user_id=current_user.id,
                 db=session,
@@ -668,7 +750,7 @@ async def list_deployments(
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
-        rows_with_counts, total = await list_deployments_synced(
+        rows_with_counts, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
@@ -679,6 +761,7 @@ async def list_deployments(
             deployment_type=deployment_type,
             flow_version_ids=effective_flow_version_ids,
             project_id=project_id,
+            names=names,
         )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
@@ -687,6 +770,7 @@ async def list_deployments(
         # (empty lists are rejected by validation)
         has_flow_filter=bool(flow_version_ids or flow_ids),
         provider_key=provider_account.provider_key,
+        provider_data_by_resource_key=provider_data_by_resource_key,
     )
     return DeploymentListResponse(
         deployments=deployments,
@@ -749,12 +833,21 @@ async def create_deployment_run(
     session: DbSession,
     payload: RunCreateRequest,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_run_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = _provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     adapter_execution_payload = await deployment_mapper.resolve_execution_create(
         deployment_resource_key=deployment_row.resource_key,
         db=session,
@@ -783,7 +876,13 @@ async def get_deployment_run(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -865,7 +964,6 @@ async def list_deployment_configs(
     adapter_params = await deployment_mapper.resolve_config_list_adapter_params(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         config_result = await deployment_adapter.list_configs(
@@ -922,7 +1020,6 @@ async def list_deployment_snapshots(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         snapshot_names=names,
         provider_params=None,
-        db=session,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         snapshot_result = await deployment_adapter.list_snapshots(
@@ -950,6 +1047,7 @@ async def update_snapshot(
     body: SnapshotUpdateRequest,
     session: DbSession,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(snapshot_update_telemetry)],
 ):
     """Replace an existing provider snapshot's content with a new flow version.
 
@@ -1005,6 +1103,8 @@ async def update_snapshot(
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = provider_account.provider_key
+    telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
 
@@ -1116,7 +1216,13 @@ async def get_deployment(
     session: DbSession,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1232,12 +1338,21 @@ async def update_deployment(
     session: DbSession,
     payload: DeploymentUpdateRequest,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_update_telemetry)],
 ):
-    deployment_row, deployment_adapter, deployment_mapper, provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_key,
+        provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     deployment_row_id = deployment_row.id
     deployment_resource_key = deployment_row.resource_key
     deployment_provider_account_id = deployment_row.deployment_provider_account_id
@@ -1334,14 +1449,17 @@ async def delete_deployment(
     deployment_id: DeploymentIdPath,
     session: DbSession,
     current_user: CurrentActiveUser,
+    telemetry: Annotated[DeploymentTelemetryCtx, Depends(deployment_delete_telemetry)],
     *,
     include_provider: IncludeProviderDeleteQuery = True,
 ):
-    deployment_row, deployment_adapter, _provider_key = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, _provider_key, provider_tenant_id = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
     )
+    telemetry.provider = _provider_key
+    telemetry.wxo_tenant_id = provider_tenant_id
     if include_provider:
         try:
             with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
@@ -1377,7 +1495,7 @@ async def get_deployment_status(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
 ):
-    deployment_row, deployment_adapter, provider_key = await resolve_adapter_from_deployment(
+    deployment_row, deployment_adapter, provider_key, _provider_tenant_id = await resolve_adapter_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
@@ -1422,7 +1540,13 @@ async def list_deployment_flow_versions(
         ),
     ] = None,
 ):
-    deployment_row, deployment_adapter, deployment_mapper, _provider_key = await resolve_adapter_mapper_from_deployment(
+    (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        _provider_key,
+        _provider_tenant_id,
+    ) = await resolve_adapter_mapper_from_deployment(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,

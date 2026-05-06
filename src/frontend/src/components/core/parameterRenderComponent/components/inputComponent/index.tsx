@@ -15,7 +15,9 @@ interface FormInputBranchProps {
   refInput: React.RefObject<HTMLInputElement | null>;
   value: string;
   onChange?: (value: string, skipSnapshot?: boolean) => void;
-  onChangeFolderName?: (e: any) => void;
+  onChangeFolderName?: (e: {
+    target: { value: string; selectionStart: number | null };
+  }) => void;
   onInputLostFocus: (event: React.FocusEvent<HTMLInputElement>) => void;
   autoFocus: boolean;
   password?: boolean;
@@ -136,6 +138,7 @@ export default function InputComponent({
   selectedOptions = [],
   setSelectedOptions,
   options = [],
+  disabledOptions,
   optionsPlaceholder = "Search options...",
   optionsButton,
   optionButton,
@@ -150,7 +153,9 @@ export default function InputComponent({
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
   inspectionPanel = false,
-}: InputComponentType): JSX.Element {
+}: InputComponentType & {
+  disabledOptions?: Record<string, string>;
+}): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
@@ -241,6 +246,7 @@ export default function InputComponent({
               placeholder={placeholder}
               blurOnEnter={blurOnEnter}
               options={options}
+              disabledOptions={disabledOptions}
               optionsPlaceholder={optionsPlaceholder}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}

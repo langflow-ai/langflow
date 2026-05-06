@@ -27,6 +27,7 @@ from lfx.base.mcp.util import (
     update_tools,
     validate_headers,
 )
+from lfx.schema.data import Data
 
 
 class TestMCPSessionManager:
@@ -2719,6 +2720,18 @@ class TestNormalizeArgumentsForMcp:
         result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
         assert result == {"params": {"x": 1}}
         assert isinstance(result["params"], dict)
+
+    def test_langflow_data_to_dict_when_dict_expected(self):
+        """Test Langflow Data/JSON connected to a dict MCP parameter unwraps to its payload."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        value = Data(data={"item1": "value_a"})
+
+        result = util._normalize_arguments_for_mcp({"params": value}, Schema, "test_tool")
+        assert result == {"params": {"item1": "value_a"}}
 
     def test_str_to_bool_when_bool_expected(self):
         """Test str 'true' when bool expected -> True."""

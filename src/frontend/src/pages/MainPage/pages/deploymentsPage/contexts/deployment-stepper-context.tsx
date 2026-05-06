@@ -108,6 +108,12 @@ interface DeploymentStepperContextType {
   hasToolNameErrors: boolean;
   setHasToolNameErrors: Dispatch<SetStateAction<boolean>>;
 
+  // Agent name validation
+  hasAgentNameErrors: boolean;
+  setHasAgentNameErrors: Dispatch<SetStateAction<boolean>>;
+  isAgentNameValidationPending: boolean;
+  setIsAgentNameValidationPending: Dispatch<SetStateAction<boolean>>;
+
   // Deploy / Update
   needsProviderAccountCreation: boolean;
   buildProviderAccountPayload: () => ProviderAccountCreateRequest | null;
@@ -175,6 +181,9 @@ export function DeploymentStepperProvider({
     trimmedDeploymentName !== "" && !/^\p{L}/u.test(trimmedDeploymentName);
   const isDeploymentNameValid =
     trimmedDeploymentName !== "" && !hasDeploymentNameFormatError;
+  const [hasAgentNameErrors, setHasAgentNameErrors] = useState(false);
+  const [isAgentNameValidationPending, setIsAgentNameValidationPending] =
+    useState(false);
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
@@ -260,7 +269,12 @@ export function DeploymentStepperProvider({
       );
     }
     if (logical === 2) {
-      return isDeploymentNameValid && selectedLlm.trim() !== "";
+      return (
+        isDeploymentNameValid &&
+        selectedLlm.trim() !== "" &&
+        !hasAgentNameErrors &&
+        !isAgentNameValidationPending
+      );
     }
     if (logical === 3) {
       // In edit mode, user can proceed without new attachments (may just change desc/LLM).
@@ -282,6 +296,8 @@ export function DeploymentStepperProvider({
     selectedVersionByFlow,
     isEditMode,
     hasToolNameErrors,
+    hasAgentNameErrors,
+    isAgentNameValidationPending,
   ]);
 
   const handleNext = useCallback(() => {
@@ -579,6 +595,10 @@ export function DeploymentStepperProvider({
       handleUndoRemoveFlow,
       hasToolNameErrors,
       setHasToolNameErrors,
+      hasAgentNameErrors,
+      setHasAgentNameErrors,
+      isAgentNameValidationPending,
+      setIsAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
@@ -614,6 +634,8 @@ export function DeploymentStepperProvider({
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
       hasToolNameErrors,
+      hasAgentNameErrors,
+      isAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,

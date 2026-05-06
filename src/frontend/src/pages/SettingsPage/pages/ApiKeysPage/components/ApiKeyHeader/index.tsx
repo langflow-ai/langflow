@@ -15,7 +15,7 @@ const ApiKeyHeaderComponent = ({
   userId,
 }: ApiKeyHeaderComponentProps) => {
   const { t } = useTranslation();
-  const modalProps = getModalPropsApiKey();
+  const modalProps = getModalPropsApiKey(t);
   return (
     <>
       <div className="flex w-full items-start justify-between gap-6">
