@@ -1548,12 +1548,14 @@ class MCPSessionManager:
 
 
 class MCPStdioClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        # Set timeout: use provided value, or fall back to global setting
+        self._tool_execution_timeout = tool_execution_timeout or _get_mcp_setting("mcp_tool_execution_timeout", 180)
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
@@ -1647,12 +1649,13 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1672,9 +1675,9 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
-        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
-        # floor so default deployments aren't shorter than the previous hardcoded 30s.
-        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1686,7 +1689,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1780,12 +1783,14 @@ class MCPStdioClient:
 
 
 class MCPStreamableHttpClient:
-    def __init__(self, component_cache=None):
+    def __init__(self, component_cache=None, tool_execution_timeout: float | None = None):
         self.session: ClientSession | None = None
         self._connection_params = None
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
+        # Set timeout: use provided value, or fall back to global setting
+        self._tool_execution_timeout = tool_execution_timeout or _get_mcp_setting("mcp_tool_execution_timeout", 180)
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""
@@ -1930,12 +1935,13 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
-    async def run_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+    async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
         """Run a tool with the given arguments using context-specific session.
 
         Args:
             tool_name: Name of the tool to run
             arguments: Dictionary of arguments to pass to the tool
+            timeout: Optional timeout in seconds. If not provided, uses the client's configured timeout.
 
         Returns:
             The result of the tool execution
@@ -1955,9 +1961,9 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
-        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
-        # floor so default deployments aren't shorter than the previous hardcoded 30s.
-        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
+        # Use provided timeout or fall back to client's configured timeout
+        effective_timeout = timeout if timeout is not None else self._tool_execution_timeout
+
         max_retries = 2
         last_error_type = None
 
@@ -1969,7 +1975,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -2065,6 +2071,7 @@ async def update_tools(
     mcp_streamable_http_client: MCPStreamableHttpClient | None = None,
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
+    tool_execution_timeout: float | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2075,17 +2082,29 @@ async def update_tools(
         mcp_streamable_http_client: Optional streamable HTTP client instance
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
+        tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
     """
     if server_config is None:
         server_config = {}
     if not server_name:
         return "", [], {}
+
     if mcp_stdio_client is None:
-        mcp_stdio_client = MCPStdioClient()
+        mcp_stdio_client = MCPStdioClient(tool_execution_timeout=tool_execution_timeout)
+    else:
+        # Update timeout on existing client (read at execution time)
+        mcp_stdio_client._tool_execution_timeout = tool_execution_timeout
 
     # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
-        mcp_streamable_http_client = mcp_sse_client if mcp_sse_client is not None else MCPStreamableHttpClient()
+        mcp_streamable_http_client = (
+            mcp_sse_client
+            if mcp_sse_client is not None
+            else MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
+        )
+    else:
+        # Update timeout on existing client (read at execution time)
+        mcp_streamable_http_client._tool_execution_timeout = tool_execution_timeout
 
     # Fetch server config from backend
     # Determine mode from config, defaulting to Streamable_HTTP if URL present
