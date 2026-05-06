@@ -168,6 +168,7 @@ class LangflowApplication(BaseApplication):
                 preload_master()
         return self.application
 
+
 def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
     """Reset fork-unsafe resources in each worker after gunicorn forks.
 
