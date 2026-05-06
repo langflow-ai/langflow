@@ -1,14 +1,16 @@
+from __future__ import annotations
+
 import re
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
-from fastapi.encoders import jsonable_encoder
-from langchain_core.documents import Document
 
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+
+if TYPE_CHECKING:
+    from langchain_core.documents import Document
 
 
 def docs_to_data(documents: list[Document]) -> list[Data]:
@@ -32,6 +34,8 @@ def clean_string(s):
 
 def _serialize_data(data: Data) -> str:
     """Serialize Data object to JSON string."""
+    from fastapi.encoders import jsonable_encoder
+
     # Convert data.data to JSON-serializable format
     serializable_data = jsonable_encoder(data.data)
     # Serialize with orjson, enabling pretty printing with indentation
@@ -42,6 +46,8 @@ def _serialize_data(data: Data) -> str:
 
 def safe_convert(data: Any, *, clean_data: bool = False) -> str:
     """Safely convert input data to string."""
+    from lfx.schema.dataframe import DataFrame
+
     try:
         if isinstance(data, str):
             return clean_string(data)

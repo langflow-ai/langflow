@@ -5,8 +5,6 @@ from __future__ import annotations
 import ast
 from typing import TYPE_CHECKING, Any
 
-import pandas as pd
-
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.services.deps import get_storage_service
@@ -320,6 +318,8 @@ class ParameterHandler:
         self, field_name: str, field: dict, val: Any, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Handle other direct type fields."""
+        import pandas as pd
+
         if val is None:
             return params
 

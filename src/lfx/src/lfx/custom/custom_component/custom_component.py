@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 from cachetools import TTLCache
-from langchain_core.documents import Document
 from pydantic import BaseModel
 
 from lfx.custom import validate
@@ -296,6 +295,8 @@ class CustomComponent(BaseComponent):
             ValueError: If the input data is not of a valid type or if the specified keys are not found in the data.
 
         """
+        from langchain_core.documents import Document
+
         if not keys:
             keys = []
         data_objects = []

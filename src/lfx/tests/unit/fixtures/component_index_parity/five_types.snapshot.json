@@ -1,0 +1,9 @@
+{
+  "final_text": "Benchmark-fixed response.",
+  "vertex_order": [
+    "ChatInput-6v83x",
+    "PromptComponent-lSNPR",
+    "OpenAIModelComponent-hQE-m",
+    "ChatOutput-rjwKJ"
+  ]
+}

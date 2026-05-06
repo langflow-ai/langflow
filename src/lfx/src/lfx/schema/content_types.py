@@ -1,6 +1,5 @@
 from typing import Any, Literal
 
-from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing_extensions import TypedDict
 
@@ -28,6 +27,8 @@ class BaseContent(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, nxt) -> dict[str, Any]:
+        from fastapi.encoders import jsonable_encoder
+
         try:
             dump = nxt(self)
             return jsonable_encoder(dump, custom_encoder=CUSTOM_ENCODERS)

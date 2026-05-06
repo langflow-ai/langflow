@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import math
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
-import numpy as np
-import pandas as pd
-from langchain_core.documents import Document
 from pydantic import BaseModel
 from pydantic.v1 import BaseModel as BaseModelV1
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from langchain_core.documents import Document
 
 from lfx.log.logger import logger
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
@@ -158,11 +161,15 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
 
 def _is_numpy_type(obj: Any) -> bool:
     """Check if an object is a numpy type by checking its type's module name."""
+    import numpy as np
+
     return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
 
 
 def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
     """Serialize numpy types."""
+    import numpy as np
+
     try:
         # For single-element arrays
         if obj.size == 1 and hasattr(obj, "item"):
@@ -188,6 +195,10 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
 
 def _serialize_dispatcher(obj: Any, max_length: int | None, max_items: int | None) -> Any | _UnserializableSentinel:
     """Dispatch object to appropriate serializer."""
+    import numpy as np
+    import pandas as pd
+    from langchain_core.documents import Document
+
     # Handle primitive types first
     if obj is None:
         return obj

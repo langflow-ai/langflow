@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Literal
 
-from pandas import Series
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
@@ -73,6 +74,8 @@ def get_type(payload):
 
 def get_message(payload):
     # Importing here to avoid circular imports
+    from pandas import Series
+
     from lfx.schema.data import Data
 
     message = None

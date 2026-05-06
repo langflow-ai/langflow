@@ -3,8 +3,6 @@ from collections import defaultdict, deque
 from collections.abc import Callable
 from typing import Any
 
-import networkx as nx
-
 from lfx.log.logger import logger
 
 PRIORITY_LIST_OF_INPUTS = ["webhook", "chat"]
@@ -447,6 +445,8 @@ def should_continue(yielded_counts: dict[str, int], max_iterations: int | None) 
 
 
 def find_cycle_vertices(edges):
+    import networkx as nx
+
     graph = nx.DiGraph(edges)
 
     # Initialize a set to collect vertices part of any cycle

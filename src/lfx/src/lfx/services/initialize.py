@@ -20,3 +20,9 @@ def initialize_services():
 
 # Initialize services when the module is imported
 initialize_services()
+
+# Records `after-initialize-services` exactly once, the first time this module
+# is imported. No-op unless LFX_BENCHMARK_CHECKPOINTS is set. See `lfx/_bench.py`.
+from lfx._bench import checkpoint as _checkpoint  # noqa: E402
+
+_checkpoint("after-initialize-services")

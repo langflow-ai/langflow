@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import warnings
 from collections.abc import AsyncIterator, Iterator
 from typing import Any, TypeAlias, get_args
 
-from pandas import DataFrame
 from pydantic import Field, SecretStr, field_validator, model_validator
 
-from lfx.inputs.validators import CoalesceBool
+from lfx.inputs.validators import CoalesceBool  # noqa: TC001
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
@@ -62,6 +63,8 @@ class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMi
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, info):
+        from pandas import DataFrame
+
         _reject_secret_in_non_password_field(v, info)
         # Convert single dict or Data instance into a list.
         if isinstance(v, dict | Data):

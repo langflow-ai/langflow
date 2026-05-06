@@ -91,6 +91,12 @@ async def aload_flow_from_json(
         )
         raise CustomComponentValidationError(msg) from exc
 
+    # Records completion of the component-index warmup. No-op unless
+    # LFX_BENCHMARK_CHECKPOINTS is set. See `lfx/_bench.py`.
+    from lfx._bench import checkpoint as _checkpoint
+
+    _checkpoint("after-component-index")
+
     from lfx.graph.graph.base import Graph
 
     return Graph.from_payload(graph_data)

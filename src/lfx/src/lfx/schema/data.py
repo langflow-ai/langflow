@@ -13,8 +13,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
-from langchain_core.documents import Document
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from pydantic import BaseModel, ConfigDict, model_serializer, model_validator
 
 from lfx.log.logger import logger
@@ -23,6 +21,9 @@ from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 
 if TYPE_CHECKING:
+    from langchain_core.documents import Document
+    from langchain_core.messages import BaseMessage
+
     from lfx.schema.dataframe import Table
     from lfx.schema.message import Message
 
@@ -173,6 +174,8 @@ class JSON(CrossModuleModel):
         Returns:
             Document: The converted Document.
         """
+        from langchain_core.documents import Document
+
         data_copy = self.data.copy()
         text = data_copy.pop(self.text_key, self.default_value)
         if isinstance(text, str):
@@ -192,6 +195,8 @@ class JSON(CrossModuleModel):
         # If the key is not present, it will default to AI
         # But first we check if all required keys are present in the data dictionary
         # they are: "text", "sender"
+        from langchain_core.messages import AIMessage, HumanMessage
+
         if not all(key in self.data for key in ["text", "sender"]):
             msg = f"Missing required keys ('text', 'sender') in JSON: {self.data}"
             raise ValueError(msg)

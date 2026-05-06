@@ -1,12 +1,16 @@
+from __future__ import annotations
+
 import enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
-from langchain_core.messages import BaseMessage
 from pydantic import BaseModel, field_validator, model_validator
 from typing_extensions import TypedDict
 
 from .constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI
+
+if TYPE_CHECKING:
+    from langchain_core.messages import BaseMessage
 
 # File types moved from lfx.base.data.utils
 TEXT_FILE_TYPES = [

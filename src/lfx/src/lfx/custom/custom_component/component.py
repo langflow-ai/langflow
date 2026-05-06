@@ -6,13 +6,11 @@ import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
 import nanoid
-import pandas as pd
 import yaml
-from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, ValidationError
 
 from lfx.base.tools.constants import (
@@ -23,7 +21,6 @@ from lfx.base.tools.constants import (
 )
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
-from lfx.field_typing import Tool  # noqa: TC001
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
@@ -49,8 +46,11 @@ from .custom_component import CustomComponent
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import pandas as pd
+
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
+    from lfx.field_typing import Tool
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
     from lfx.inputs.inputs import InputTypes
@@ -901,6 +901,8 @@ class Component(CustomComponent):
     def _process_connection_or_parameters(self, key, value) -> None:
         # if value is a list of components, we need to process each component
         # Note this update make sure it is not a list str | int | float | bool | type(None)
+        from langchain_core.tools import StructuredTool
+
         if isinstance(value, list) and not any(
             isinstance(val, str | int | float | bool | type(None) | Message | Data | StructuredTool | dict)
             for val in value
@@ -1052,8 +1054,20 @@ class Component(CustomComponent):
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
         try:
-            return_type = get_type_hints(method).get("return")
+            from lfx.utils.type_hints import get_runtime_type_hints
+
+            return_type = get_runtime_type_hints(method).get("return")
         except TypeError:
+            return []
+        except NameError as exc:
+            # ``get_runtime_type_hints`` injects ``lfx.field_typing`` names so the
+            # legitimate TYPE_CHECKING-only case resolves. A surviving NameError
+            # almost always means a typo'd return annotation in user code, and
+            # the empty list silently disables tool-mode return-type metadata —
+            # log so this is debuggable instead of invisible.
+            from lfx.log.logger import logger
+
+            logger.debug(f"Could not resolve return annotation on {self.__class__.__name__}.{method_name}: {exc}")
             return []
         if return_type is None:
             return []
@@ -1396,6 +1410,8 @@ class Component(CustomComponent):
 
     def extract_data(self, result):
         """Extract the data from the result. this is where the self.status is set."""
+        import pandas as pd
+
         if isinstance(result, Message):
             self.status = result.get_text()
             return (
@@ -1532,6 +1548,8 @@ class Component(CustomComponent):
         Returns:
             list[Tool]: Filtered list of tools.
         """
+        import pandas as pd
+
         # Convert metadata to a list of dicts if it's a DataFrame
         metadata_dict = None  # Initialize as None to avoid lint issues with empty dict
         if isinstance(metadata, pd.DataFrame):
