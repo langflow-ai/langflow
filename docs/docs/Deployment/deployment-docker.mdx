@@ -276,3 +276,7 @@ If you need to upgrade to a custom image based on a Langflow release, such as to
 Set the custom image in your compose file or `docker run`, and then pull and restart.
 
 For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) (“Docker image no longer includes uv or uvx”).
+
+## Cold-start optimization
+
+For guidance on reducing cold-start time in containerized deployments (scale-from-zero, serverless, pre-baked images), see [Cold-start optimization](/deployment-cold-start).
