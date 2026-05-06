@@ -382,3 +382,177 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
             )
             return
         raise
+
+
+def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str, list[str]]:
+    """Validate URL for SSRF and return validated IP addresses for DNS pinning.
+
+    This function is the core of DNS pinning-based SSRF protection. It performs
+    comprehensive validation and returns the validated IP addresses that should
+    be used for the actual HTTP request, preventing DNS rebinding attacks.
+
+    DNS Rebinding Attack Prevention:
+        Without DNS pinning, an attacker can exploit the time gap between validation
+        and the actual HTTP request:
+        1. Validation: DNS returns public IP (8.8.8.8) → passes security check
+        2. [Attacker changes DNS with TTL=0]
+        3. HTTP request: DNS returns internal IP (127.0.0.1) → bypasses protection
+
+        With DNS pinning (this function):
+        1. Validation: DNS returns public IP (8.8.8.8) → passes security check
+        2. Function returns: (url, ['8.8.8.8']) → IP is pinned
+        3. HTTP request: Uses pinned IP directly → no new DNS lookup → secure
+
+    Args:
+        url: URL to validate (e.g., "http://example.com/api")
+        warn_only: If True, only log warnings instead of raising errors.
+                  Default is False to enforce blocking.
+
+    Returns:
+        Tuple of (original_url, list_of_validated_ips):
+        - original_url: The input URL unchanged
+        - list_of_validated_ips: List of validated IP addresses to use for DNS pinning
+          Returns empty list if:
+          - SSRF protection is disabled
+          - Host is in the allowlist (e.g., localhost for Ollama)
+          - URL scheme is not http/https
+
+    Raises:
+        SSRFProtectionError: If URL is blocked by SSRF protection (only if warn_only=False)
+        ValueError: If URL format is invalid
+
+    Example:
+        >>> # Public domain - returns validated IPs for pinning
+        >>> url, ips = validate_and_resolve_url("http://example.com")
+        >>> print(ips)  # ['93.184.216.34']
+
+        >>> # Localhost (if in allowlist) - returns empty list (no pinning needed)
+        >>> url, ips = validate_and_resolve_url("http://localhost:8080")
+        >>> print(ips)  # []
+
+        >>> # Private IP - raises SSRFProtectionError
+        >>> url, ips = validate_and_resolve_url("http://192.168.1.1")
+        # Raises: SSRFProtectionError("Access to IP address 192.168.1.1 is blocked...")
+    """
+    # ============================================================================
+    # Step 1: Check if SSRF protection is enabled
+    # ============================================================================
+    if not is_ssrf_protection_enabled():
+        # Protection is disabled - return empty list (no DNS pinning)
+        return url, []
+
+    # ============================================================================
+    # Step 2: Parse and validate URL format
+    # ============================================================================
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid URL format: {e}"
+        raise ValueError(msg) from e
+
+    try:
+        # ============================================================================
+        # Step 3: Validate URL scheme (only http/https allowed)
+        # ============================================================================
+        _validate_url_scheme(parsed.scheme)
+        if parsed.scheme not in ("http", "https"):
+            # Non-HTTP schemes (ftp, file, etc.) are not subject to SSRF protection
+            return url, []
+
+        # ============================================================================
+        # Step 4: Extract and validate hostname
+        # ============================================================================
+        hostname = _validate_hostname_exists(parsed.hostname)
+
+        # ============================================================================
+        # Step 5: Check allowlist (early return for trusted hosts)
+        # ============================================================================
+        # Allowlisted hosts bypass all SSRF checks and DNS pinning
+        # This is used for legitimate internal services like Ollama (localhost)
+        if is_host_allowed(hostname):
+            logger.debug(f"Hostname {hostname} is in allowlist, bypassing SSRF checks and DNS pinning")
+            return url, []
+
+        # ============================================================================
+        # Step 6: Handle direct IP addresses
+        # ============================================================================
+        # Check if the hostname is already an IP address (no DNS resolution needed)
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+
+            # Check if this specific IP is in the allowlist
+            if is_host_allowed(hostname, str(ip_obj)):
+                logger.debug(f"IP {hostname} is in allowlist")
+                return url, []
+
+            # Check if IP is in blocked ranges (private IPs, localhost, etc.)
+            if is_ip_blocked(ip_obj):
+                msg = (
+                    f"Access to IP address {hostname} is blocked by SSRF protection. "
+                    "Requests to private/internal IP ranges are not allowed for security reasons. "
+                    "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+                )
+                if warn_only:
+                    logger.warning(f"SSRF Warning: {msg}")
+                    return url, []
+                raise SSRFProtectionError(msg)
+            # Direct IP is public and allowed - return it for DNS pinning
+            # (Even though it's already an IP, we return it for consistency)
+            logger.debug(f"Direct IP {hostname} validated, will use for DNS pinning")
+            return url, [hostname]  # noqa: TRY300
+
+        except ValueError:
+            # Not an IP address, it's a hostname - continue to DNS resolution
+            pass
+
+        # ============================================================================
+        # Step 7: Resolve hostname to IP addresses
+        # ============================================================================
+        # This is the critical step for DNS pinning - we resolve DNS here during
+        # validation, and the returned IPs will be used for the actual HTTP request
+        resolved_ips = resolve_hostname(hostname)
+        blocked_ips = []
+
+        # ============================================================================
+        # Step 8: Validate all resolved IPs
+        # ============================================================================
+        for ip in resolved_ips:
+            # Check if this resolved IP is in the allowlist
+            if is_host_allowed(hostname, ip):
+                logger.debug(f"Resolved IP {ip} for {hostname} is in allowlist")
+                return url, []
+
+            # Check if IP is in blocked ranges
+            if is_ip_blocked(ip):
+                blocked_ips.append(ip)
+
+        # ============================================================================
+        # Step 9: Block if any resolved IPs are private/internal
+        # ============================================================================
+        if blocked_ips:
+            msg = (
+                f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
+                "Requests to private/internal IP ranges are not allowed for security reasons. "
+                "This protection prevents access to internal services, cloud metadata endpoints "
+                "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
+                "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+            )
+            if warn_only:
+                logger.warning(f"SSRF Warning: {msg}")
+                return url, []
+            raise SSRFProtectionError(msg)
+        # ============================================================================
+        # Step 10: Return validated IPs for DNS pinning
+        # ============================================================================
+        # All IPs are public and safe - return them for DNS pinning
+        # The HTTP client will use these IPs directly, preventing DNS rebinding
+        logger.debug(f"Hostname {hostname} validated, resolved to {resolved_ips}, will use for DNS pinning")
+        return url, resolved_ips  # noqa: TRY300
+
+    except SSRFProtectionError:
+        # Re-raise SSRF errors as-is
+        raise
+    except Exception as e:
+        # Wrap unexpected errors in SSRFProtectionError
+        msg = f"Error validating URL: {e}"
+        raise SSRFProtectionError(msg) from e
