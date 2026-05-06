@@ -450,7 +450,7 @@ function buildBackendConfigPayload(
     password_variable: OPENSEARCH_VARIABLES.PASSWORD,
     index_name: literalFields[OPENSEARCH_VARIABLES.INDEX_NAME] || "",
     vector_field:
-      literalFields[OPENSEARCH_VARIABLES.VECTOR_FIELD] || "vector_field",
+      literalFields[OPENSEARCH_VARIABLES.VECTOR_FIELD] || "chunk_embedding",
     text_field: literalFields[OPENSEARCH_VARIABLES.TEXT_FIELD] || "text",
     use_ssl: booleanFields[OPENSEARCH_VARIABLES.USE_SSL] ?? true,
     verify_certs: booleanFields[OPENSEARCH_VARIABLES.VERIFY_CERTS] ?? true,

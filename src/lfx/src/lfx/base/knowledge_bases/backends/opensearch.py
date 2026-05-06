@@ -20,7 +20,9 @@ secrets — and round-trips cleanly through the UI.
   the raw credential.
 * ``index_name`` — OpenSearch index this KB writes / reads. Required.
 * ``vector_field`` — document field for the embedding vector.
-  Defaults to ``vector_field``.
+  Defaults to ``chunk_embedding`` to match the canvas OpenSearch
+  component's default, so KB ingestion and the canvas component
+  can target the same index without manual overrides.
 * ``text_field`` — document field for the chunk text. Defaults to
   ``text``.
 * ``engine`` — k-NN engine (``jvector``, ``nmslib``, ``faiss``,
@@ -59,7 +61,7 @@ if TYPE_CHECKING:
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
 DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
-DEFAULT_VECTOR_FIELD = "vector_field"
+DEFAULT_VECTOR_FIELD = "chunk_embedding"
 DEFAULT_TEXT_FIELD = "text"
 # ``faiss`` is part of the core OpenSearch k-NN plugin on every
 # released version (1.x → 3.x) and works without extra cluster setup.
