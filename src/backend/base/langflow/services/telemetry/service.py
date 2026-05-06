@@ -224,6 +224,8 @@ class TelemetryService(Service):
         if self.running or self.do_not_track:
             return
         try:
+            if self.client is None:  # reset by _langflow_post_fork after gunicorn fork
+                self.client = httpx.AsyncClient(timeout=10.0)
             self.running = True
             self._start_time = datetime.now(timezone.utc)
             self.worker_task = asyncio.create_task(self.telemetry_worker())
@@ -270,7 +272,8 @@ class TelemetryService(Service):
                     self.log_package_email_task,
                     "Cancel telemetry log package email task",
                 )
-            await self.client.aclose()
+            if self.client is not None:
+                await self.client.aclose()
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")
 
