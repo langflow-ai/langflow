@@ -5,7 +5,15 @@ from unittest.mock import patch
 
 import pytest
 import typer
-from langflow.__main__ import _create_superuser, app, get_number_of_workers
+from langflow.__main__ import (
+    DIRECT_UVICORN_PLATFORMS,
+    _create_superuser,
+    app,
+    build_direct_uvicorn_kwargs,
+    clamp_uvicorn_workers,
+    get_number_of_workers,
+    use_direct_uvicorn,
+)
 from lfx.services import deps
 
 
@@ -160,3 +168,130 @@ def test_get_number_of_workers():
         # Test explicit value is respected
         workers = get_number_of_workers(2)
         assert workers == 2
+
+
+# ---------------------------------------------------------------------------
+# Platform routing for `langflow run` startup.
+#
+# These tests pin the policy that on Windows and macOS we bypass Gunicorn and
+# run uvicorn directly against a pre-built app object, while on Linux we use
+# Gunicorn (which forks workers). Also pins the worker-clamp behaviour, which
+# exists because uvicorn refuses to spawn multiple workers from an app object
+# (it requires an import string).
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("system", "expected"),
+    [
+        ("Darwin", True),
+        ("Windows", True),
+        ("Linux", False),
+        ("FreeBSD", False),
+    ],
+)
+def test_use_direct_uvicorn_routes_by_platform(system, expected):
+    assert use_direct_uvicorn(system=system) is expected
+
+
+def test_direct_uvicorn_platforms_constant_is_stable():
+    # Guards against accidental drift; the launch site relies on this exact set.
+    assert DIRECT_UVICORN_PLATFORMS == ("Windows", "Darwin")
+
+
+@pytest.mark.parametrize("system", ["Darwin", "Windows"])
+def test_clamp_uvicorn_workers_caps_to_one_on_direct_uvicorn(system):
+    """Workers > 1 must be clamped to 1 with a warning on direct-uvicorn platforms."""
+    # langflow uses loguru, not stdlib logging — patch the logger method
+    # directly rather than relying on caplog.
+    with patch("langflow.__main__.logger") as mock_logger:
+        assert clamp_uvicorn_workers(4, system=system) == 1
+    mock_logger.warning.assert_called_once()
+    # The warning should mention what we clamped and why, so users can
+    # diagnose `langflow run --workers N` regressing to a single worker.
+    fmt, *args = mock_logger.warning.call_args.args
+    assert "workers > 1" in fmt, f"warning did not explain the clamp: {fmt!r}"
+    assert system in args, f"warning did not mention platform={system}: args={args!r}"
+    assert 4 in args, f"warning did not include the requested worker count: args={args!r}"
+
+
+def test_clamp_uvicorn_workers_passes_through_on_linux():
+    # Linux uses Gunicorn — no clamping should happen here.
+    assert clamp_uvicorn_workers(4, system="Linux") == 4
+
+
+@pytest.mark.parametrize("system", ["Darwin", "Windows", "Linux"])
+def test_clamp_uvicorn_workers_one_is_noop(system):
+    assert clamp_uvicorn_workers(1, system=system) == 1
+
+
+# ---------------------------------------------------------------------------
+# Direct-uvicorn kwargs shape.
+#
+# These pin the option set passed to ``uvicorn.run(app, **kwargs)`` on the
+# Windows/macOS path. They exist because the previous inline call silently
+# dropped TLS cert/key options, regressing HTTPS startup. Treat any field
+# omission as a behaviour change and update the test deliberately.
+# ---------------------------------------------------------------------------
+
+
+def _kwargs(**overrides):
+    """Build ``build_direct_uvicorn_kwargs`` arguments with sensible defaults."""
+    base = {
+        "host": "0.0.0.0",  # noqa: S104
+        "port": 7860,
+        "log_level": "info",
+        "workers": 1,
+        "loop": "asyncio",
+        "ssl_cert_file_path": None,
+        "ssl_key_file_path": None,
+        "system": "Darwin",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_build_direct_uvicorn_kwargs_forwards_tls_paths():
+    """TLS cert/key must reach uvicorn under uvicorn's ``ssl_certfile``/``ssl_keyfile`` names."""
+    result = build_direct_uvicorn_kwargs(
+        **_kwargs(ssl_cert_file_path="/etc/cert.pem", ssl_key_file_path="/etc/key.pem")
+    )
+    assert result["ssl_certfile"] == "/etc/cert.pem"
+    assert result["ssl_keyfile"] == "/etc/key.pem"
+
+
+def test_build_direct_uvicorn_kwargs_forwards_none_when_no_tls():
+    # Plain HTTP startup: cert/key remain None so uvicorn doesn't try to load anything.
+    result = build_direct_uvicorn_kwargs(**_kwargs())
+    assert result["ssl_certfile"] is None
+    assert result["ssl_keyfile"] is None
+
+
+def test_build_direct_uvicorn_kwargs_clamps_workers_on_direct_platforms():
+    result = build_direct_uvicorn_kwargs(**_kwargs(workers=4, system="Darwin"))
+    assert result["workers"] == 1
+
+
+def test_build_direct_uvicorn_kwargs_does_not_clamp_on_linux():
+    # Defensive: the helper is only called from the direct-uvicorn branch, but
+    # if it ever gets reused on Linux the clamp must remain a no-op there.
+    result = build_direct_uvicorn_kwargs(**_kwargs(workers=4, system="Linux"))
+    assert result["workers"] == 4
+
+
+def test_build_direct_uvicorn_kwargs_pins_full_shape():
+    """Drift guard: the exact key set passed to uvicorn.run must stay stable."""
+    result = build_direct_uvicorn_kwargs(**_kwargs())
+    # If uvicorn options change deliberately, update this set explicitly so
+    # reviewers see the diff.
+    assert set(result.keys()) == {
+        "host",
+        "port",
+        "log_level",
+        "reload",
+        "workers",
+        "loop",
+        "ssl_certfile",
+        "ssl_keyfile",
+    }
+    assert result["reload"] is False
