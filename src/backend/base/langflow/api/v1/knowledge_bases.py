@@ -1716,12 +1716,16 @@ def _run_row_to_info(row) -> IngestionRunInfo:
     key on their ``job_metadata`` blob.
     """
     user_metadata = getattr(row, "user_metadata", None) or {}
+    source_config = getattr(row, "source_config", None) or {}
+    raw_source_name = source_config.get("source_name")
+    source_name = raw_source_name.strip() if isinstance(raw_source_name, str) and raw_source_name.strip() else None
     return IngestionRunInfo(
         id=str(row.id),
         kb_name=row.kb_name,
         kb_id=str(row.kb_id) if row.kb_id else None,
         job_id=str(row.job_id) if row.job_id else None,
         source_type=row.source_type,
+        source_name=source_name,
         status=row.status,
         error_message=row.error_message,
         total_items=row.total_items,

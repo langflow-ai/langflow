@@ -28,10 +28,12 @@ import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
+import { IngestionHistoryPanel } from "./IngestionHistoryPanel";
 import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
+  kbName?: string;
   sourceName: string;
   onSourceNameChange: (value: string) => void;
   selectedEmbeddingModel: ModelOption[];
@@ -63,6 +65,7 @@ interface StepConfigurationProps {
 
 export function StepConfiguration({
   isAddSourcesMode,
+  kbName,
   sourceName,
   onSourceNameChange,
   selectedEmbeddingModel,
@@ -95,6 +98,11 @@ export function StepConfiguration({
   return (
     <div className="relative">
       <div className="flex flex-col">
+        {isAddSourcesMode && kbName && (
+          <div className="pb-4">
+            <IngestionHistoryPanel kbName={kbName} />
+          </div>
+        )}
         {/* Name */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="source-name" className="text-sm font-medium">
