@@ -35,10 +35,12 @@ class TestShellExecutionUsesDesktopCommander:
         MCPServerConfig.model_validate(payload)
 
     def test_shell_execution_spec_declares_60s_startup_timeout(self):
-        """Slice E5: first-run of `npx -y @wonderwhy-er/desktop-commander@latest` can
-        take 30–90s while npm downloads the package + deps. The global default is
-        20s; the spec opts into a 60s startup timeout so the first user click
-        doesn't time out.
+        """Slice E5: spec opts into a 60s startup timeout for first-run.
+
+        First-run of `npx -y @wonderwhy-er/desktop-commander@latest` can take
+        30-90s while npm downloads the package + deps. The global default is
+        20s; the per-spec override avoids first-click timeouts without raising
+        the global default for every other server.
         """
         spec = DEFAULT_MCP_SERVERS["shell-execution"]
 
