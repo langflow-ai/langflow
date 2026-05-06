@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json as _json
+import re
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
@@ -398,19 +400,44 @@ def custom_params(
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
 
 
-def extract_global_variables_from_headers(headers) -> dict[str, str]:
-    """Extract global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*.
+# Well-known authentication headers that can be propagated to nested MCP calls
+# when ``include_auth_headers=True`` is passed. These are stored under their
+# lowercase header names so that nested server configs can reference them
+# directly, e.g. ``{"x-api-key": "x-api-key"}`` in the MCP server headers config.
+_AUTH_HEADERS_TO_PROPAGATE = frozenset({"x-api-key", "authorization"})
+
+
+def extract_global_variables_from_headers(headers, *, include_auth_headers: bool = False) -> dict[str, str]:
+    """Extract global variables from HTTP headers.
+
+    By default, only headers with the ``X-LANGFLOW-GLOBAL-VAR-*`` prefix are
+    extracted. When ``include_auth_headers=True``, the well-known authentication
+    headers ``x-api-key`` and ``authorization`` are additionally captured under
+    their lowercase names so that nested MCP server configs can reference them
+    directly (e.g. ``{"x-api-key": "x-api-key"}``).
+
+    SECURITY NOTE: Only pass ``include_auth_headers=True`` from MCP call sites
+    (see ``api/v1/mcp_projects.py``). On non-MCP routes such as ``/run`` and
+    ``/workflow``, ``x-api-key`` is Langflow's own authentication key — exposing
+    it in ``request_variables`` would make it readable by any component that
+    reads the graph context.
 
     Args:
-        headers: HTTP headers object (e.g., from FastAPI Request.headers)
+        headers: HTTP headers object (e.g., from FastAPI Request.headers).
+        include_auth_headers: When True, also extract well-known authentication
+            headers (``x-api-key``, ``authorization``) under their lowercase
+            names. Should only be set by MCP request handlers that need to
+            propagate these values to nested MCP calls.
 
     Returns:
-        Dictionary mapping variable names (uppercase) to their values
+        Dictionary mapping variable names to their values.
 
     Example:
-        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "Content-Type": "application/json"}
-        result = extract_global_variables_from_headers(headers)
-        # Returns: {"API_KEY": "secret"}
+        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "x-api-key": "mykey"}
+        extract_global_variables_from_headers(headers)
+        # Returns: {"API-KEY": "secret"}
+        extract_global_variables_from_headers(headers, include_auth_headers=True)
+        # Returns: {"API-KEY": "secret", "x-api-key": "mykey"}
     """
     variables: dict[str, str] = {}
 
@@ -420,6 +447,8 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
             if header_lower.startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
                 var_name = header_lower[len(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX) :].upper()
                 variables[var_name] = header_value
+            elif include_auth_headers and header_lower in _AUTH_HEADERS_TO_PROPAGATE:
+                variables[header_lower] = header_value
     except Exception as exc:  # noqa: BLE001
         # Log the error but don't raise - we want to continue execution
         logger.exception("Failed to extract global variables from headers: %s", exc)
@@ -433,3 +462,20 @@ def raise_error_if_astra_cloud_env():
         raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+
+
+_FORBIDDEN_HEADER_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def build_content_disposition(filename: str) -> str:
+    """Build a RFC 5987-compliant Content-Disposition header value.
+
+    Strips ASCII control chars (CR/LF/NUL/etc.) to prevent header injection,
+    then produces a dual-param header: an ASCII fallback (with backslash and
+    double-quote escaped per RFC 6266 §4.1) and a percent-encoded UTF-8 param
+    so both legacy and modern clients receive an unambiguous filename.
+    """
+    safe_filename = _FORBIDDEN_HEADER_CHARS.sub("_", filename)
+    ascii_fallback = safe_filename.encode("ascii", "replace").decode("ascii").replace("\\", "\\\\").replace('"', '\\"')
+    encoded = quote(safe_filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"

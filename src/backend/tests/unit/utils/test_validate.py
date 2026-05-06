@@ -18,8 +18,6 @@ from lfx.custom.validate import (
     extract_class_code,
     extract_class_name,
     extract_function_name,
-    find_names_in_code,
-    get_default_imports,
     prepare_global_scope,
     validate_code,
 )
@@ -387,16 +385,24 @@ class MyComponent(CustomComponent):
     def build(self):
         return "test"
 """
-        # Should not raise an error due to import replacement
-        with patch("lfx.custom.validate.prepare_global_scope") as mock_prepare:
-            mock_prepare.return_value = {"CustomComponent": type("CustomComponent", (), {})}
-            with patch("lfx.custom.validate.extract_class_code") as mock_extract:
-                mock_extract.return_value = Mock()
-                with patch("lfx.custom.validate.compile_class_code") as mock_compile:
-                    mock_compile.return_value = compile("pass", "<string>", "exec")
-                    with patch("lfx.custom.validate.build_class_constructor") as mock_build:
-                        mock_build.return_value = lambda: None
-                        create_class(code, "MyComponent")
+        # Capture what code prepare_global_scope receives so we can assert the rewrite happened.
+        # Return a dict with both CustomComponent (the rewritten symbol) and MyComponent
+        # (so create_class's exec_globals[class_name] lookup succeeds).
+        seen_modules = []
+
+        def fake_prepare(module):
+            seen_modules.append(ast.unparse(module))
+            return {
+                "CustomComponent": type("CustomComponent", (), {}),
+                "MyComponent": type("MyComponent", (), {}),
+            }
+
+        with patch("lfx.custom.validate.prepare_global_scope", side_effect=fake_prepare):
+            create_class(code, "MyComponent")
+
+        assert seen_modules, "prepare_global_scope was not called"
+        assert "from langflow.custom import CustomComponent" in seen_modules[0]
+        assert "from langflow import CustomComponent" not in seen_modules[0]
 
     def test_handles_syntax_error(self):
         """Test that syntax errors are handled properly."""
@@ -407,6 +413,44 @@ class BrokenClass
 """
         with pytest.raises(ValueError, match="Syntax error in code"):
             create_class(code, "BrokenClass")
+
+    def test_name_error_hints_at_legacy_lfx_import(self):
+        """Surface a hint for names previously auto-injected by DEFAULT_IMPORT_STRING.
+
+        Components that lean on the removed preamble get an actionable hint
+        pointing at the missing lfx import.
+        """
+        code = """
+class Broken:
+    inputs = [StrInput(name="x")]
+"""
+        with pytest.raises(ValueError, match=r"Add `from lfx\.io import StrInput`"):
+            create_class(code, "Broken")
+
+    def test_name_error_without_legacy_match_omits_hint(self):
+        """Unknown names get the plain message — no misleading hint."""
+        code = """
+class Broken:
+    x = some_random_undefined_name
+"""
+        with pytest.raises(ValueError, match="some_random_undefined_name") as exc_info:
+            create_class(code, "Broken")
+        assert "Add `from " not in str(exc_info.value)
+
+    def test_name_error_hints_at_langchain_import(self):
+        """Names dropped from the langchain half of DEFAULT_IMPORT_STRING also surface a hint.
+
+        ``Tool``, ``BaseLanguageModel`` etc. were injected via the langchain
+        preamble. We now resolve them lazily from ``lfx.field_typing.names``
+        so users with components that leaned on the auto-import get an
+        actionable message instead of a bare NameError.
+        """
+        code = """
+class Broken:
+    tool: Tool = None
+"""
+        with pytest.raises(ValueError, match=r"Add `from langchain_core\.tools import Tool`"):
+            create_class(code, "Broken")
 
     def test_handles_validation_error(self):
         """Test that validation errors are handled properly."""
@@ -475,20 +519,6 @@ class RegularClass:
         code = "class BrokenClass"
         with pytest.raises(ValueError, match="Invalid Python code"):
             extract_class_name(code)
-
-    def test_find_names_in_code(self):
-        """Test finding specific names in code."""
-        code = "from typing import Optional, List\ndata: Optional[List[str]] = None"
-        names = ["Optional", "List", "Dict", "Union"]
-        found = find_names_in_code(code, names)
-        assert found == {"Optional", "List"}
-
-    def test_find_names_in_code_none_found(self):
-        """Test when no names are found in code."""
-        code = "x = 42"
-        names = ["Optional", "List"]
-        found = find_names_in_code(code, names)
-        assert found == set()
 
 
 class TestPrepareGlobalScope:
@@ -572,6 +602,86 @@ class TestClass:
         assert callable(scope["helper"])
         assert scope["TestClass"].value == 42
 
+    def test_preserves_future_annotations_for_pep563_typing(self):
+        """Preserve PEP 563 lazy-annotation semantics in the compiled module.
+
+        Components use ``from __future__ import annotations`` plus type-only
+        imports under ``TYPE_CHECKING:``. Without preserving __future__, the
+        class body would NameError on TYPE_CHECKING-only symbols (e.g.
+        AgentComponent with ``-> list[Tool]``).
+        """
+        code = """
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain_core.tools import Tool
+
+
+class Sample:
+    async def get_tools(self) -> list[Tool]:
+        return []
+"""
+        module = ast.parse(code)
+        scope = prepare_global_scope(module)
+        assert "Sample" in scope
+        # Annotation must be the lazy string form, not the resolved object — which
+        # would have NameError'd at class-body time without PEP 563.
+        assert scope["Sample"]().get_tools.__annotations__["return"] == "list[Tool]"
+
+
+class TestToolModeIntrospection:
+    """End-to-end regression for the full tool-mode introspection path.
+
+    Compile happens fine (PEP 563 keeps annotations as strings), but enabling
+    tool mode on a component triggers ``_get_method_return_type("to_toolkit")``
+    which calls ``get_type_hints`` and tries to *resolve* those strings back to
+    class objects. The resolution needs ``Tool`` in scope. Components import
+    ``Tool`` only under ``if TYPE_CHECKING:`` (per cold-start hygiene), so plain
+    ``get_type_hints`` raises ``NameError``. ``get_runtime_type_hints`` injects
+    the public ``lfx.field_typing`` names so the resolution succeeds.
+
+    This test compiles a real ``Component`` subclass via ``eval_custom_component_code``
+    — the same path the langflow API uses — and asserts ``_get_method_return_type``
+    on a tool-mode-style method returns a non-empty list instead of NameError'ing.
+    """
+
+    def test_get_method_return_type_resolves_typecheck_only_tool_annotation(self):
+        from lfx.custom.eval import eval_custom_component_code
+
+        code = """
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from langchain_core.tools import Tool
+
+from lfx.custom.custom_component.component import Component
+from lfx.io import StrInput, Output
+
+
+class ToolModeSample(Component):
+    inputs = [StrInput(name="x")]
+    outputs = [Output(name="out", method="build")]
+
+    async def my_tool_method(self) -> list[Tool]:
+        return []
+
+    def build(self):
+        return self.x
+"""
+        cls = eval_custom_component_code(code)
+        instance = cls()
+
+        # The bug surface: this call uses get_runtime_type_hints to resolve the
+        # `-> list[Tool]` annotation. Plain get_type_hints would NameError because
+        # ``Tool`` isn't in the exec_globals (only imported under TYPE_CHECKING).
+        return_type = instance._get_method_return_type("my_tool_method")
+
+        assert return_type, f"Expected non-empty return type, got {return_type!r}"
+        assert "Tool" in return_type[0], f"Expected 'Tool' in {return_type!r}"
+
 
 class TestClassCodeOperations:
     """Test cases for class code operation functions."""
@@ -616,36 +726,3 @@ class SimpleClass:
 
         constructor = build_class_constructor(compiled, {}, "SimpleClass")
         assert constructor is not None
-
-
-class TestGetDefaultImports:
-    """Test cases for get_default_imports function."""
-
-    @patch("lfx.field_typing.constants.CUSTOM_COMPONENT_SUPPORTED_TYPES", {"TestType": Mock()})
-    def test_returns_default_imports(self):
-        """Test that default imports are returned."""
-        code = "TestType and Optional"
-
-        with patch("importlib.import_module") as mock_import:
-            mock_module = Mock()
-            mock_module.TestType = Mock()
-            mock_import.return_value = mock_module
-
-            imports = get_default_imports(code)
-            assert "Optional" in imports
-            assert "List" in imports
-            assert "Dict" in imports
-            assert "Union" in imports
-
-    def test_includes_langflow_imports(self):
-        """Test that langflow imports are included when found in code."""
-        # Use an actual type from CUSTOM_COMPONENT_SUPPORTED_TYPES
-        code = "Chain is used here"
-
-        with patch("lfx.custom.validate.importlib") as mock_importlib:
-            mock_module = Mock()
-            mock_module.Chain = Mock()
-            mock_importlib.import_module.return_value = mock_module
-
-            imports = get_default_imports(code)
-            assert "Chain" in imports

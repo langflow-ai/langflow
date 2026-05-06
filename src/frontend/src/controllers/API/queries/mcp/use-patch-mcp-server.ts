@@ -24,19 +24,19 @@ export const usePatchMCPServer: useMutationFunctionType<
     try {
       const payload: Omit<MCPServerType, "name"> = {};
 
-      if (body.url) {
+      if (body.url !== undefined) {
         payload.url = body.url;
       }
-      if (body.command) {
+      if (body.command !== undefined) {
         payload.command = body.command;
       }
-      if (body.args && body.args.length > 0) {
+      if (body.args !== undefined) {
         payload.args = body.args;
       }
-      if (body.env && Object.keys(body.env).length > 0) {
+      if (body.env !== undefined) {
         payload.env = body.env;
       }
-      if (body.headers && Object.keys(body.headers).length > 0) {
+      if (body.headers !== undefined) {
         payload.headers = body.headers;
       }
 
@@ -50,7 +50,7 @@ export const usePatchMCPServer: useMutationFunctionType<
         (oldData: getMCPServersResponse = []) => {
           return oldData.map((server) => {
             return server.name === body.name
-              ? { ...server, toolsCount: null }
+              ? { ...server, toolsCount: null, mode: null, error: undefined }
               : server;
           });
         },
@@ -71,7 +71,7 @@ export const usePatchMCPServer: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     PatchMCPServerResponse,
-    any,
+    unknown,
     MCPServerType
   > = mutate(["usePatchMCPServer"], patchMCPServer, {
     ...options,
@@ -82,7 +82,7 @@ export const usePatchMCPServer: useMutationFunctionType<
         queryKey: ["useGetMCPServers"],
       });
       queryClient.invalidateQueries({
-        queryKey: ["useGetMCPServer", data.name],
+        queryKey: ["useGetMCPServer", variables.name],
       });
       options?.onSuccess?.(data, variables, context);
     },

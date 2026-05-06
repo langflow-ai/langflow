@@ -1,9 +1,12 @@
 import ast
+import sys
 from textwrap import dedent
 
 import pytest
 from lfx.custom.validate import (
     _get_module_fallbacks,
+    _LazyExecGlobals,
+    _LazyImportProxy,
     _resolve_attribute,
     create_class,
     create_function,
@@ -37,6 +40,34 @@ class TestLoggingComponent(Component):
     """)
     result = create_class(code, "TestLoggingComponent")
     assert result.__name__ == "TestLoggingComponent"
+
+
+def test_create_class_future_annotations_with_type_checking():
+    """Regression test for issue #12776.
+
+     `from __future__ import annotations` must act as a compiler directive so that TYPE_CHECKING-only
+    imports don't raise NameError at classdefinition time.
+    """
+    code = dedent("""
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from langflow.custom import Component
+
+if TYPE_CHECKING:
+    from typing import List
+
+class TypeCheckingComponent(Component):
+    display_name = "Test"
+
+    def build(self, value: List[str]) -> str:
+        return str(value)
+    """)
+    result = create_class(code, "TypeCheckingComponent")
+    assert result.__name__ == "TypeCheckingComponent"
+    # With PEP 563 active, annotations should be stored as strings rather than evaluated
+    hints = result.build.__annotations__
+    assert hints.get("value") == "List[str]"
+    assert hints.get("return") == "str"
 
 
 def test_execute_function_supports_aliased_dotted_imports():
@@ -95,6 +126,38 @@ def to_url(path):
 
     assert "urllib" in scope
     assert scope["urllib"].request.pathname2url("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_prepare_global_scope_supports_aliased_from_imports():
+    """Regression test: `from X import Y as Z` must bind Z in scope, not Y."""
+    module = ast.parse(
+        dedent("""
+from urllib.request import pathname2url as to_url_path
+
+def to_url(path):
+    return to_url_path(path)
+""")
+    )
+    scope = prepare_global_scope(module)
+
+    assert "to_url_path" in scope
+    assert "pathname2url" not in scope
+    assert scope["to_url_path"]("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_create_class_supports_aliased_from_imports():
+    """End-to-end: a component using `from X import Y as Z` should load and Z is usable."""
+    code = dedent("""
+from urllib.request import pathname2url as to_url_path
+from lfx.custom import Component
+
+class AliasedImportComponent(Component):
+    def to_url(self, path):
+        return to_url_path(path)
+""")
+    cls = create_class(code, "AliasedImportComponent")
+    assert cls.__name__ == "AliasedImportComponent"
+    assert cls().to_url("folder name/file.txt") == "folder%20name/file.txt"
 
 
 # ---------------------------------------------------------------------------
@@ -441,3 +504,110 @@ class Comp(Component):
         """)
         result = create_class(code, "Comp")
         assert result.__name__ == "Comp"
+
+
+# ---------------------------------------------------------------------------
+# prepare_global_scope: lazy / eager binding decisions per-alias
+# ---------------------------------------------------------------------------
+class TestLazyExecGlobalsBinding:
+    """Verify which alias shapes produce `_LazyImportProxy` vs eagerly-resolved bindings."""
+
+    def test_returns_lazy_exec_globals(self):
+        scope = prepare_global_scope(ast.parse("class Foo: pass\n"))
+        assert isinstance(scope, _LazyExecGlobals)
+
+    def test_non_langchain_module_resolves_eagerly(self):
+        # `import json` is outside _LAZY_MODULE_PREFIXES, so the binding must be the real
+        # module and not a proxy. Guards against future widening of the prefix list breaking
+        # Pydantic-validated string-constant imports.
+        scope = prepare_global_scope(ast.parse("import json\n"))
+        assert "json" in scope
+        assert not isinstance(scope["json"], _LazyImportProxy)
+        assert scope["json"] is sys.modules["json"]
+
+    def test_non_langchain_from_import_resolves_eagerly(self):
+        scope = prepare_global_scope(ast.parse("from os.path import join\n"))
+        assert not isinstance(scope.get("join"), _LazyImportProxy)
+        assert callable(scope["join"])
+
+    def test_langchain_from_import_returns_proxy(self):
+        scope = prepare_global_scope(ast.parse("from langchain_classic.agents import AgentExecutor\n"))
+        assert isinstance(scope["AgentExecutor"], _LazyImportProxy)
+
+    def test_langchain_import_returns_proxy(self):
+        scope = prepare_global_scope(ast.parse("import langchain_core\n"))
+        assert isinstance(scope["langchain_core"], _LazyImportProxy)
+
+    def test_from_import_asname_lazy(self):
+        # `from langchain_classic.agents import AgentExecutor as AE` should bind only `AE`.
+        scope = prepare_global_scope(ast.parse("from langchain_classic.agents import AgentExecutor as AE\n"))
+        assert "AE" in scope
+        assert "AgentExecutor" not in scope
+        assert isinstance(scope["AE"], _LazyImportProxy)
+
+    def test_module_import_asname_lazy(self):
+        # `import langchain_core as lc` should bind only `lc`.
+        scope = prepare_global_scope(ast.parse("import langchain_core as lc\n"))
+        assert "lc" in scope
+        assert "langchain_core" not in scope
+        assert isinstance(scope["lc"], _LazyImportProxy)
+
+    def test_from_import_asname_eager(self):
+        # `from os import path as P` is eager because `os` is not in the lazy prefix list.
+        scope = prepare_global_scope(ast.parse("from os import path as P\n"))
+        assert "P" in scope
+        assert not isinstance(scope["P"], _LazyImportProxy)
+
+    def test_mixed_lazy_and_eager_on_single_import_node(self):
+        # `import json, langchain_core` is one ast.Import node with two aliases. Each alias
+        # must be classified independently: json eager, langchain_core lazy.
+        scope = prepare_global_scope(ast.parse("import json, langchain_core\n"))
+        assert not isinstance(scope["json"], _LazyImportProxy)
+        assert isinstance(scope["langchain_core"], _LazyImportProxy)
+
+    def test_star_import_resolves_eagerly(self):
+        # `from X import *` always resolves now, regardless of prefix. Use os.path so the
+        # test does not depend on langchain being installed cleanly.
+        scope = prepare_global_scope(ast.parse("from os.path import *\n"))
+        assert callable(scope.get("join"))
+        assert not isinstance(scope["join"], _LazyImportProxy)
+
+
+class TestLazyImportProxyResolution:
+    """Resolution semantics of `_LazyImportProxy` itself."""
+
+    def test_repr_does_not_resolve(self):
+        proxy = _LazyImportProxy(
+            "definitely_not_a_real_module_xyz",
+            "Whatever",
+            is_module_binding=False,
+            top_level=False,
+        )
+        text = repr(proxy)
+        assert "definitely_not_a_real_module_xyz.Whatever" in text
+        assert "definitely_not_a_real_module_xyz" not in sys.modules
+
+    def test_resolve_surfaces_module_not_found(self):
+        # Deferred module that truly does not exist must raise ModuleNotFoundError on first
+        # use rather than silently producing None or a stale sentinel.
+        proxy = _LazyImportProxy(
+            "definitely_not_a_real_module_xyz",
+            "Whatever",
+            is_module_binding=False,
+            top_level=False,
+        )
+        with pytest.raises(ModuleNotFoundError):
+            proxy._resolve()
+
+    def test_resolution_is_cached(self):
+        # Once resolved, _resolve() must return the same object on every call so callers see
+        # consistent identity and avoid repeated import cost on hot paths.
+        proxy = _LazyImportProxy(
+            "json",
+            "loads",
+            is_module_binding=False,
+            top_level=False,
+        )
+        first = proxy._resolve()
+        second = proxy._resolve()
+        assert first is second

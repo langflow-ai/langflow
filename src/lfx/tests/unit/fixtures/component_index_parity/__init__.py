@@ -1,1 +1,1 @@
-# Synthetic fixtures for Phase 2 component-index parity tests.
+# Synthetic fixtures for component-index parity tests.
