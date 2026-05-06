@@ -263,7 +263,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -541,11 +541,11 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.7"
+                    "version": "1.5.9"
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "48.0.0"
                   },
                   {
                     "name": "langchain_chroma",
@@ -565,15 +565,15 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.1.13"
-                  },
-                  {
-                    "name": "langchain_huggingface",
                     "version": "1.2.1"
                   },
                   {
+                    "name": "langchain_huggingface",
+                    "version": "1.2.2"
+                  },
+                  {
                     "name": "langchain_cohere",
-                    "version": "0.5.0"
+                    "version": "0.5.1"
                   },
                   {
                     "name": "langchain_google_genai",
@@ -585,7 +585,7 @@
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "1.0.6"
+                    "version": "1.0.7"
                   }
                 ],
                 "total_dependencies": 12

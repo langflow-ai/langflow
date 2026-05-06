@@ -210,7 +210,8 @@ class TestFieldTypingNativeDependencyFailure:
             def __getattr__(self, name: str):
                 if name.startswith("__"):
                     raise AttributeError(name)
-                raise OSError("transient native dependency failure")
+                msg = "transient native dependency failure"
+                raise OSError(msg)
 
         monkeypatch.setitem(
             sys.modules,
@@ -251,20 +252,13 @@ class TestFieldTypingPreforkRecovery:
 
         constants.__dict__["Tool"] = constants._STUBS["Tool"]
         constants.__dict__["Memory"] = type("T", (), {"__bound__": constants._STUBS["BaseChatMessageHistory"]})()
-        constants.__dict__["LANGCHAIN_BASE_TYPES"] = {"Tool": constants._STUBS["Tool"]}
-        constants.__dict__["CUSTOM_COMPONENT_SUPPORTED_TYPES"] = {
-            "Tool": constants._STUBS["Tool"],
-            "Memory": constants.__dict__["Memory"],
-        }
         constants._STUB_WARNED.add("Tool")
 
         constants._clear_degraded_caches_after_fork()
 
         assert "Tool" not in constants.__dict__
         assert "Memory" not in constants.__dict__
-        assert "LANGCHAIN_BASE_TYPES" not in constants.__dict__
-        assert "CUSTOM_COMPONENT_SUPPORTED_TYPES" not in constants.__dict__
-        assert constants._STUB_WARNED == set()
+        assert set() == constants._STUB_WARNED
 
 
 class TestFieldTypingResolvesRealLangchain:
@@ -309,10 +303,8 @@ class TestFieldTypingResolvesRealLangchain:
         assert constants.LANGCHAIN_BASE_TYPES["Tool"] is langchain_core.tools.Tool
         assert constants.LANGCHAIN_BASE_TYPES["BaseTool"] is langchain_core.tools.BaseTool
 
-    def test_custom_component_supported_types_resolves_dataframe_lazily(self):
-        # DataFrame/Table are deferred placeholders to keep cold-start clean
-        # for `lfx.custom.validate` (which imports this dict for `.keys()`).
-        # Reading the attribute populates the dict.
+    def test_custom_component_supported_types_includes_dataframe_and_table(self):
+        # The dict is built fresh on access and includes the real DataFrame/Table.
         from lfx.field_typing import constants
         from lfx.schema.dataframe import DataFrame, Table
 
