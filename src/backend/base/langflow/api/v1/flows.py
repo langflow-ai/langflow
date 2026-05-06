@@ -445,10 +445,23 @@ async def upload_file(
         )
     try:
         if "flows" in data:
+            if not isinstance(data["flows"], list):
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid JSON: 'flows' must be a list of flow objects",
+                )
+            non_dict = [i for i, f in enumerate(data["flows"]) if not isinstance(f, dict)]
+            if non_dict:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
+                )
             data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
             flow_list = FlowListCreate(**data)
         else:
             flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    except HTTPException:
+        raise
     except ValidationError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
 

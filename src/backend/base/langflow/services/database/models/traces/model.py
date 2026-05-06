@@ -173,8 +173,8 @@ class TraceRead(BaseModel):
     total_tokens: int
     flow_id: UUID
     session_id: str
-    input: dict[str, Any] | None = None
-    output: dict[str, Any] | None = None
+    input: dict[str, Any] | str | None = None
+    output: dict[str, Any] | str | None = None
     spans: list[SpanReadResponse] = PydanticField(default_factory=list)
 
 
