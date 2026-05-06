@@ -274,7 +274,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": null
+                    "version": "2.195.0"
                   },
                   {
                     "name": "lfx",
