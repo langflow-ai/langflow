@@ -24,8 +24,7 @@ def _ai_message_with_tool_calls(*tool_call_names: str) -> AIMessage:
     return AIMessage(
         content="",
         tool_calls=[
-            {"id": f"call_{i}", "name": name, "args": {}, "type": "tool_call"}
-            for i, name in enumerate(tool_call_names)
+            {"id": f"call_{i}", "name": name, "args": {}, "type": "tool_call"} for i, name in enumerate(tool_call_names)
         ],
     )
 
