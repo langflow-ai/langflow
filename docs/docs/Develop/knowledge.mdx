@@ -49,31 +49,6 @@ import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
 
 <PartialKbSummary />
 
-### Knowledge base storage locations
-
-When using the default Chroma backend, knowledge bases are stored local to your Langflow instance.
-The default storage location depends on your operating system and installation method:
-
-- **Langflow Desktop**:
-    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
-    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
-- **Langflow OSS**:
-    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases` (Python version can vary. Knowledge bases aren't shared between virtual environments.)
-    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
-
-If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
-
-To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLEDGE_BASES_DIR` environment variable:
-
-```bash
-export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
-```
-
-:::note
-Storage location settings apply to the Chroma backend only.
-When using an external DB Provider such as OpenSearch, embeddings are stored in the remote cluster, not on the local filesystem.
-:::
-
 ### Create a knowledge base
 
 In this example, you'll create a knowledge base of chunked customer orders.
@@ -135,14 +110,33 @@ If any flows use the deleted knowledge base, you must update them to use a diffe
 
 For more information on using knowledge bases in a flow, see the [**Knowledge Base** component](/knowledge-base) documentation.
 
-### Configure different vector database providers
+### Configure vector database providers
 
-By default, knowledge bases use [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) as a local vector store, with no additional setup required.
-
-To configure a different database provider, go to **Settings → DB Providers**.
-A DB Provider is the vector store backend where knowledge base embeddings are stored and searched.
+**DB Providers** are the vector store backend where knowledge base embeddings are stored and searched.
+To configure DB Providers, go to **Settings → DB Providers**.
 The selected provider applies to all new knowledge bases you create.
 Existing knowledge bases keep their original backend.
+
+#### Chroma (default)
+
+By default, knowledge bases use [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) as a local vector store, with no additional setup required.
+Knowledge bases are stored local to your Langflow instance.
+The default storage location depends on your operating system and installation method:
+
+- **Langflow Desktop**:
+    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
+    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
+- **Langflow OSS**:
+    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases` (Python version can vary. Knowledge bases aren't shared between virtual environments.)
+    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
+
+If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
+
+To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLEDGE_BASES_DIR` environment variable:
+
+```bash
+export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
+```
 
 #### OpenSearch
 
