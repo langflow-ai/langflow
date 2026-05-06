@@ -59,11 +59,18 @@ def set_advanced_true(component_input):
 
 
 def _agent_base_inputs():
-    """Return base inputs with AgentComponent-specific info text overrides.
+    """Return base inputs tailored to AgentComponent's create_agent path.
 
-    `get_base_inputs()` returns a shared list — replace, don't mutate — and we
-    override only the fields whose semantics shifted under create_agent.
+    `get_base_inputs()` returns a shared list — replace, don't mutate. We drop
+    inputs that are no-ops here and override info text on the inputs whose
+    semantics shifted under create_agent.
+
+    `verbose` is dropped because the create_agent event stream already surfaces
+    every agent step via the "Agent Steps" content blocks; the legacy boolean
+    has nothing to toggle. Saved flows that still carry a `verbose` value just
+    ignore it on load (the schema no longer declares it).
     """
+    drop = {"verbose"}
     overrides = {
         "handle_parsing_errors": BoolInput(
             name="handle_parsing_errors",
@@ -75,17 +82,6 @@ def _agent_base_inputs():
                 "feeds tool-call validation errors back to the LLM automatically; "
                 "this flag layers `ToolRetryMiddleware` on top so transient tool "
                 "runtime failures are retried (max 2 retries)."
-            ),
-        ),
-        "verbose": BoolInput(
-            name="verbose",
-            display_name="Verbose",
-            value=False,
-            advanced=True,
-            info=(
-                "[Deprecated] No longer used on the create_agent path. Live agent "
-                "reasoning is surfaced via the Agent Steps content blocks in the "
-                "chat panel."
             ),
         ),
         "max_iterations": IntInput(
@@ -100,7 +96,7 @@ def _agent_base_inputs():
             ),
         ),
     }
-    return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs()]
+    return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs() if inp.name not in drop]
 
 
 def _extract_text_content(value) -> str:

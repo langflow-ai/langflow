@@ -769,3 +769,30 @@ async def test_should_not_mutate_shared_base_inputs_when_overriding_info_text() 
     assert pristine_after == pristine_before, (
         "AgentComponent's input overrides leaked into the shared LCToolsAgentComponent base list"
     )
+
+
+@pytest.mark.asyncio
+async def test_should_drop_verbose_input_from_agent_component() -> None:
+    """`verbose` is a no-op on the create_agent path and must be removed from the schema.
+
+    The legacy AgentExecutor honored `verbose=True` by dumping reasoning steps to
+    stdout. Under create_agent, every step is already surfaced via the "Agent Steps"
+    content blocks in the chat panel — `verbose` has nothing to toggle. Keeping a
+    deprecated boolean in the input schema would just confuse users, so we drop it
+    entirely. Saved flows that carry a `verbose` value ignore it on load.
+    """
+    from lfx.base.agents.agent import LCToolsAgentComponent
+    from lfx.components.models_and_agents.agent import AgentComponent, _agent_base_inputs
+
+    # Sanity check: the parent class still declares verbose (we're scoping the
+    # removal to AgentComponent, not yanking it from every LCAgentComponent subclass).
+    parent_input_names = {inp.name for inp in LCToolsAgentComponent.get_base_inputs()}
+    assert "verbose" in parent_input_names, "test premise broken — base class no longer declares verbose"
+
+    # `_agent_base_inputs()` filters it out.
+    customized_names = {inp.name for inp in _agent_base_inputs()}
+    assert "verbose" not in customized_names
+
+    # The full AgentComponent inputs list also lacks verbose.
+    component_input_names = {inp.name for inp in AgentComponent.inputs}
+    assert "verbose" not in component_input_names
