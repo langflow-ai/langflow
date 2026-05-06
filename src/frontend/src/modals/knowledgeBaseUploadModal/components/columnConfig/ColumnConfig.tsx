@@ -1,5 +1,6 @@
 import type { AgGridReact } from "ag-grid-react";
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import TableModal from "@/modals/tableModal";
@@ -49,6 +50,7 @@ export function ColumnConfig({
   columnConfig,
   onColumnConfigChange,
 }: ColumnConfigProps) {
+  const { t } = useTranslation();
   const AgColumns = FormatColumns(COLUMN_CONFIG_COLUMNS);
   const agGrid = useRef<AgGridReact>(null);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
@@ -177,7 +179,7 @@ export function ColumnConfig({
       <Button variant="outline" className="w-full justify-center">
         <span className="flex items-center gap-2">
           <ForwardedIconComponent name="Columns" className="h-4 w-4" />
-          Open Table
+          {t("editNode.openTable")}
         </span>
       </Button>
     </TableModal>
