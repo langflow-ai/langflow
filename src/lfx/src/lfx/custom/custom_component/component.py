@@ -1026,7 +1026,17 @@ class Component(CustomComponent):
             from lfx.utils.type_hints import get_runtime_type_hints
 
             return_type = get_runtime_type_hints(method).get("return")
-        except (TypeError, NameError):
+        except TypeError:
+            return []
+        except NameError as exc:
+            # ``get_runtime_type_hints`` injects ``lfx.field_typing`` names so the
+            # legitimate TYPE_CHECKING-only case resolves. A surviving NameError
+            # almost always means a typo'd return annotation in user code, and
+            # the empty list silently disables tool-mode return-type metadata —
+            # log so this is debuggable instead of invisible.
+            from lfx.log.logger import logger
+
+            logger.debug(f"Could not resolve return annotation on {self.__class__.__name__}.{method_name}: {exc}")
             return []
         if return_type is None:
             return []

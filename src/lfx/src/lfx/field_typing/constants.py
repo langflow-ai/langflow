@@ -10,7 +10,8 @@ resolution happens only when a consumer accesses a class.
 are built fresh on each access (not cached on the module). Reading
 either dict materializes every langchain class — and, for the
 latter, ``lfx.schema.dataframe`` (pandas). Callers that only need
-to check whether a name exists should not read these dicts.
+to enumerate the names should iterate ``names.LANGCHAIN_BASE_TYPE_KEYS``
+or ``names.LANGCHAIN_SYMBOLS`` directly to stay off the import path.
 
 Stub fallbacks (``_FooStub``) keep type annotations resolvable when
 langchain itself is unimportable — installation gap or transitive
@@ -26,14 +27,13 @@ from collections.abc import Callable
 from typing import Any, TypeAlias, TypeVar
 
 from lfx.field_typing.names import LANGCHAIN_BASE_TYPE_KEYS, LANGCHAIN_SYMBOLS, TYPEVAR_SPECS
+from lfx.schema.data import JSON, Data
 
 # ``Text`` is re-exported as a public name because downstream modules (notably
 # ``lfx.template.field.base``) import it as ``from lfx.field_typing import Text``.
 # In Python 3.x ``typing.Text`` is ``str``; the alias keeps existing callers
 # working without changes.
 Text = str
-
-from lfx.schema.data import JSON, Data  # noqa: E402
 
 # -- Local non-langchain types (always eager) --------------------------------
 
@@ -103,6 +103,10 @@ def _clear_degraded_caches_after_fork() -> None:
             globals().pop(name, None)
 
 
+# ``os.register_at_fork`` has no unregister API. Reloads of this module via
+# ``monkeypatch.delitem(sys.modules, ...)`` (see test_lazy_imports.py) will
+# accumulate handlers across the test run. Idempotent — they only ever clear
+# stub-backed caches — so this is overhead, not a correctness issue.
 if hasattr(os, "register_at_fork"):
     os.register_at_fork(after_in_child=_clear_degraded_caches_after_fork)
 
@@ -113,12 +117,16 @@ def _resolve_langchain_symbol(name: str) -> Any:
     try:
         module = importlib.import_module(module_path)
         return getattr(module, attr)
-    except (ImportError, OSError) as exc:
-        # Import failed (langchain not installed, or a transitive native dep
-        # like torch's c10.dll failed with ``OSError: [WinError 126]`` on
-        # Windows without the MSVC redistributable). Fall back to the stub
-        # so simple type annotations still resolve, but warn once per
-        # symbol so a broken install is not invisible to support engineers.
+    except (ImportError, OSError, AttributeError) as exc:
+        # Import failed (langchain not installed; a transitive native dep
+        # like torch's c10.dll failing with ``OSError: [WinError 126]`` on
+        # Windows without the MSVC redistributable; or an upstream rename
+        # that drops ``attr`` from a still-importable module — the legacy
+        # ``from langchain_classic.agents import AgentExecutor`` form
+        # converted this last case to ImportError, but ``getattr`` raises
+        # AttributeError directly). Fall back to the stub so simple type
+        # annotations still resolve, but warn once per symbol so a broken
+        # install is not invisible to support engineers.
         if name not in _STUB_WARNED:
             _STUB_WARNED.add(name)
             from lfx.log.logger import logger
@@ -170,10 +178,10 @@ def _get_typevar(name: str) -> TypeVar:
 def _build_LANGCHAIN_BASE_TYPES() -> dict[str, Any]:  # noqa: N802 - public dict name
     """Materialize ``LANGCHAIN_BASE_TYPES`` fresh.
 
-    Not cached on this module: the dict is now off the cold path
-    (``lfx.custom.validate`` reads ``names.SUPPORTED_TYPE_NAMES`` instead).
-    Building fresh keeps stub-detection trivial and removes the recursive
-    cache-walk that the previous design needed.
+    Not cached on this module: building on demand keeps stub-detection trivial
+    and removes the recursive cache-walk the previous design needed for
+    aggregate dicts. Per-symbol caches in ``globals()`` still memoize the
+    real classes, so subsequent rebuilds are cheap.
     """
     return {key: _get_typevar(key) if key in TYPEVAR_SPECS else _get_langchain(key) for key in LANGCHAIN_BASE_TYPE_KEYS}
 
@@ -182,8 +190,9 @@ def _build_CUSTOM_COMPONENT_SUPPORTED_TYPES() -> dict[str, Any]:  # noqa: N802 -
     """Materialize ``CUSTOM_COMPONENT_SUPPORTED_TYPES`` fresh.
 
     Reading this dict eagerly resolves langchain *and* ``lfx.schema.dataframe``
-    (which pulls pandas). Cold-path callers should read
-    ``names.SUPPORTED_TYPE_NAMES`` instead.
+    (which pulls pandas). Callers that only need to check whether a name
+    exists should iterate ``names.LANGCHAIN_BASE_TYPE_KEYS`` and the local
+    additions below directly instead of materializing the class-valued dict.
     """
     from lfx.schema.dataframe import DataFrame, Table
 
@@ -216,12 +225,14 @@ def __getattr__(name: str) -> Any:
     if name == "CUSTOM_COMPONENT_SUPPORTED_TYPES":
         return _build_CUSTOM_COMPONENT_SUPPORTED_TYPES()
     if name in {"DataFrame", "Table"}:
-        from lfx.schema.dataframe import DataFrame as _DataFrame
-        from lfx.schema.dataframe import Table as _Table
+        # Cache both at once: ``lfx.schema.dataframe`` is loaded as a unit, so
+        # paying the cost for one means we can hand out the other for free
+        # without re-firing ``__getattr__``.
+        from lfx.schema.dataframe import DataFrame, Table
 
-        resolved = {"DataFrame": _DataFrame, "Table": _Table}[name]
-        globals()[name] = resolved
-        return resolved
+        globals()["DataFrame"] = DataFrame
+        globals()["Table"] = Table
+        return globals()[name]
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

@@ -31,6 +31,15 @@ def get_runtime_type_hints(obj: Any) -> dict[str, Any]:
     localns = None
     bound_instance = getattr(obj, "__self__", None)
     if bound_instance is not None:
+        # Bound-method case: inject the class's own attributes as locals so a
+        # method annotated with a type alias declared on the class itself
+        # (e.g. ``MyAlias: TypeAlias = ...`` at class scope, then
+        # ``def f(self) -> MyAlias:``) resolves. ``typing.get_type_hints``
+        # walks the MRO for class-level annotations but not for *bound method*
+        # annotations, so without this the alias name would NameError.
+        # Caveat: a class attribute named the same as a module-level symbol
+        # would shadow it here; in practice annotations are simple types or
+        # aliases, but worth noting if a future bug points back at this line.
         localns = vars(bound_instance.__class__)
 
     try:

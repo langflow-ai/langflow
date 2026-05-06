@@ -309,6 +309,10 @@ def create_class(code, class_name):
         # ``exec_globals``. Mirror imported modules into our own globals so
         # subsequent executions share them (preserved from the prior
         # ``build_class_constructor`` side-effect).
+        # TODO: scope this to a contained mapping. Right now every dynamically
+        # created component permanently injects its imported modules into
+        # ``lfx.custom.validate``'s module globals; over a long-running server
+        # with many user components this can grow unbounded and shadow names.
         for name, value in exec_globals.items():
             if isinstance(value, type(importlib)):
                 globals()[name] = value
@@ -532,6 +536,10 @@ def prepare_global_scope(module):
     return exec_globals
 
 
+# Kept for external callers (re-exported via ``from lfx.custom.validate import *``
+# in langflow.utils.validate / langflow.custom.validate). ``create_class`` no
+# longer goes through these — ``prepare_global_scope`` already exec's the
+# class into ``exec_globals``, so the chain below is redundant work.
 def extract_class_code(module, class_name):
     """Extracts the AST node for the specified class from the module.
 
