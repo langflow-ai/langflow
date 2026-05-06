@@ -252,6 +252,60 @@ class TestVariableService:
         finally:
             del os.environ["TEST_VAR"]
 
+    def test_get_wxo_bearer_alias_from_environment(self, variables):
+        """Test that bearer aliases are synthesized from WXO access tokens."""
+        os.environ["wxo_demo_access_token"] = "token-123"
+        try:
+            value = variables.get_variable("wxo_demo_bearer_token")
+            assert value == "Bearer token-123"
+        finally:
+            del os.environ["wxo_demo_access_token"]
+
+    def test_get_variable_from_langflow_request_variables(self, variables):
+        """Test request-scoped variables are read from LANGFLOW_REQUEST_VARIABLES."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"runtime_token":"abc123","normal_key":"value1"}'
+        try:
+            assert variables.get_variable("runtime_token") == "abc123"
+            assert variables.get_variable("normal_key") == "value1"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    def test_langflow_request_variables_invalid_json_falls_back(self, variables):
+        """Test invalid request variable JSON does not break env fallback."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = "{not-json"
+        os.environ["FALLBACK_ENV_KEY"] = "fallback-value"
+        try:
+            assert variables.get_variable("FALLBACK_ENV_KEY") == "fallback-value"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+            del os.environ["FALLBACK_ENV_KEY"]
+
+    def test_wxo_bearer_alias_from_langflow_request_variables(self, variables):
+        """Test bearer alias synthesis from request-scoped WXO access token variable."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"wxo_github_access_token":"request-token"}'
+        try:
+            assert variables.get_variable("wxo_github_bearer_token") == "Bearer request-token"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
+        """Test that non-WXO access token names do not expose bearer aliases."""
+        os.environ["demo_access_token"] = "token-456"
+        try:
+            value = variables.get_variable("demo_bearer_token")
+            assert value is None
+        finally:
+            del os.environ["demo_access_token"]
+
+    def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
+        """Test that synthesized aliases are not persisted in in-memory variable list."""
+        os.environ["wxo_demo_access_token"] = "token-789"
+        try:
+            assert variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
+            assert "wxo_demo_bearer_token" not in variables.list_variables()
+        finally:
+            del os.environ["wxo_demo_access_token"]
+
     @pytest.mark.asyncio
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
