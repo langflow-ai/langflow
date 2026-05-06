@@ -1,5 +1,6 @@
 """Pydantic schemas for v2 API endpoints."""
 
+import shlex
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
@@ -28,12 +29,12 @@ ALLOWED_MCP_COMMANDS = frozenset(
 DANGEROUS_SHELL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "(", ")", "\n", "\r"})
 
 # SECURITY: Keywords that enable code execution or package installation
+# Note: -y/--yes is intentionally NOT here. It is governed by validate_yes_flag_pattern
+# below, which permits it only inside the package-allowlisted `npx -y <pkg>` pattern.
 DANGEROUS_KEYWORDS = frozenset(
     {
         "-c",
         "-e",
-        "-y",
-        "--yes",
         "pip",
         "install",
         "npm",
@@ -41,6 +42,21 @@ DANGEROUS_KEYWORDS = frozenset(
         "pnpm",
         "eval",
         "exec",
+    }
+)
+
+# SECURITY: -y / --yes flags. These are blocked by default and only allowed
+# in the strict pattern `npx -y <pkg>` where <pkg> is explicitly listed in
+# ALLOWED_NPX_YES_PACKAGES. See validate_yes_flag_pattern.
+YES_FLAGS = frozenset({"-y", "--yes"})
+
+# SECURITY: Per-package allowlist for the `npx -y <pkg>` pattern.
+# Adding a package here is a code-review touchpoint: each entry must be justified
+# (the package is a default MCP server we ship; npm publish is the trust boundary).
+ALLOWED_NPX_YES_PACKAGES = frozenset(
+    {
+        "@wonderwhy-er/desktop-commander",
+        "@wonderwhy-er/desktop-commander@latest",
     }
 )
 
@@ -207,6 +223,80 @@ class MCPServerConfig(BaseModel):
 
         return self
 
+    @model_validator(mode="after")
+    def validate_yes_flag_pattern(self) -> "MCPServerConfig":
+        """Restrict ``-y`` / ``--yes`` to the package-allowlisted ``npx -y <pkg>`` pattern.
+
+        Why: most npm-distributed MCP servers (notably ``@wonderwhy-er/desktop-commander``)
+        require ``npx -y <pkg>`` to skip the interactive install prompt — without ``-y``
+        the stdio MCP server hangs at startup. Generically allowing ``-y`` after ``npx``
+        is rejected by policy: each package gets vetted explicitly via
+        ``ALLOWED_NPX_YES_PACKAGES``. Direct and shell-wrapper invocations are both
+        validated; the historical loophole of putting ``-y`` inside a quoted shell
+        argument (e.g. ``sh -c "npx -y any-pkg"``) is closed here too via shlex
+        tokenization of the wrapped command.
+        """
+        if not self.args:
+            return self
+
+        base_command = _extract_base_command(self.command) if self.command else None
+
+        # Direct case: command is npx, args contains a yes-flag.
+        if base_command == "npx" and any(a.lower() in YES_FLAGS for a in self.args):
+            tokens = ["npx", *self.args]
+            if not _is_allowed_npx_yes_invocation(tokens):
+                msg = (
+                    "Argument '-y'/'--yes' is only allowed with command 'npx' followed "
+                    "by an approved package. "
+                    f"Got: npx {' '.join(self.args)}. "
+                    f"Approved packages: {sorted(ALLOWED_NPX_YES_PACKAGES)}"
+                )
+                logger.warning("MCP -y rejected (direct): npx args={}", self.args)
+                raise ValueError(msg)
+            return self
+
+        # Shell-wrapper case: tokenize the wrapped command and re-apply the pattern check.
+        if base_command in SHELL_WRAPPERS:
+            wrapped = _find_wrapped_command(self.args)
+            if wrapped is not None:
+                try:
+                    wrapped_tokens = shlex.split(wrapped)
+                except ValueError as e:
+                    # Unbalanced quotes etc. — refuse rather than guess.
+                    msg = f"Could not parse shell-wrapper command: {wrapped!r} ({e})"
+                    raise ValueError(msg) from e
+                if any(t.lower() in YES_FLAGS for t in wrapped_tokens) and not _is_allowed_npx_yes_invocation(
+                    wrapped_tokens
+                ):
+                    msg = (
+                        "Argument '-y'/'--yes' inside a shell wrapper is only allowed "
+                        "in the pattern `npx -y <approved-package>`. "
+                        f"Got wrapped command: {wrapped!r}. "
+                        f"Approved packages: {sorted(ALLOWED_NPX_YES_PACKAGES)}"
+                    )
+                    logger.warning("MCP -y rejected (wrapper): {}", wrapped)
+                    raise ValueError(msg)
+
+        # Anywhere else: -y/--yes must NOT appear as a top-level arg.
+        # This catches the stray-flag case in shell-wrapper args (e.g. `sh -c "npx X" -y`)
+        # where the flag sits OUTSIDE the wrapped command. The wrapped string is the only
+        # legitimate place for -y, and only when it matches the npx-yes pattern above.
+        if any(a.lower() in YES_FLAGS for a in self.args):
+            msg = (
+                "Argument '-y'/'--yes' is only allowed in the strict pattern "
+                "`npx -y <approved-package>`, either as direct args of `npx` "
+                "or inside a single shell-wrapper -c/'/c' argument. "
+                f"Got: command='{self.command}' args={self.args}"
+            )
+            logger.warning(
+                "MCP -y rejected (top-level): command={}, args={}",
+                self.command,
+                self.args,
+            )
+            raise ValueError(msg)
+
+        return self
+
     @field_validator("args")
     @classmethod
     def validate_args(cls, v: list[str] | None) -> list[str] | None:
@@ -303,6 +393,32 @@ class MCPServerConfig(BaseModel):
                 raise ValueError(msg)
 
         return self
+
+
+def _find_wrapped_command(args: list[str]) -> str | None:
+    """Return the single string immediately following the first SHELL_EXEC_FLAG, or None."""
+    for i, arg in enumerate(args):
+        if arg in SHELL_EXEC_FLAGS and i + 1 < len(args):
+            return args[i + 1]
+    return None
+
+
+def _is_allowed_npx_yes_invocation(tokens: list[str]) -> bool:
+    """Strictly match the pattern: ['npx', '-y'|'--yes', <pkg-on-allowlist>].
+
+    Used by both the direct-args and shell-wrapper paths in validate_yes_flag_pattern.
+    Strict on length (exactly 3) so trailing junk like ['npx','-y','pkg',';rm'] never
+    sneaks through. Case sensitive on the package name (npm package names are case
+    sensitive on the registry).
+    """
+    expected_token_count = 3
+    if len(tokens) != expected_token_count:
+        return False
+    if tokens[0] != "npx":
+        return False
+    if tokens[1].lower() not in YES_FLAGS:
+        return False
+    return tokens[2] in ALLOWED_NPX_YES_PACKAGES
 
 
 def _extract_base_command(command: str) -> str:

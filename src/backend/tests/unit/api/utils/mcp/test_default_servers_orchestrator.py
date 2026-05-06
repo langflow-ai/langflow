@@ -72,7 +72,6 @@ def patched_orchestrator_deps(monkeypatch):
     monkeypatch.setattr(orchestrator_module, "get_service", lambda _t: storage_sentinel)
     monkeypatch.setattr(orchestrator_module, "update_server", update_server_mock)
     monkeypatch.setattr(orchestrator_module, "get_server_list", get_server_list_mock)
-    monkeypatch.setattr("platform.system", lambda: "Linux")
 
     return SimpleNamespace(
         settings=settings_ns,
@@ -103,25 +102,25 @@ class TestRespectsFlag:
         patched_orchestrator_deps.get_server_list.assert_not_called()
 
 
-class TestInstallsUnixShellServer:
-    async def test_should_install_unix_shell_server_for_each_user_when_running_on_linux(
+class TestInstallsShellExecution:
+    async def test_should_install_shell_execution_for_each_user(
         self, fake_session_with_users, patched_orchestrator_deps, fake_user
     ):
-        # Arrange — flag on (default), Linux (default), user has no existing MCP servers
+        """Cross-platform: same payload regardless of host OS (DesktopCommander via npx)."""
         update_server = patched_orchestrator_deps.update_server
 
-        # Act
         await auto_configure_default_mcp_servers(fake_session_with_users)
 
-        # Assert — one call per (user, default-server) pair
         assert update_server.await_count == 1
         call_kwargs = update_server.await_args.kwargs
         assert call_kwargs["server_name"] == "shell-execution"
         assert call_kwargs["current_user"] is fake_user
         cfg = call_kwargs["server_config"]
-        assert cfg["command"] == "uvx"
-        assert cfg["args"] == ["mcp-shell-server"]
-        assert "ALLOW_COMMANDS" in cfg["env"]
+        assert cfg["command"] == "npx"
+        assert cfg["args"] == ["-y", "@wonderwhy-er/desktop-commander@latest"]
+        assert cfg["env"] == {}
+        assert cfg["metadata"]["auto_configured"] is True
+        assert cfg["metadata"]["langflow_internal"] is True
 
 
 class TestIdempotency:
@@ -132,9 +131,8 @@ class TestIdempotency:
         patched_orchestrator_deps.get_server_list.return_value = {
             "mcpServers": {
                 "shell-execution": {
-                    "command": "uvx",
-                    "args": ["mcp-shell-server"],
-                    "env": {"ALLOW_COMMANDS": "ls,echo"},  # user-customized whitelist
+                    "command": "npx",
+                    "args": ["-y", "@some/user-replacement"],
                 }
             }
         }
@@ -142,22 +140,6 @@ class TestIdempotency:
         await auto_configure_default_mcp_servers(fake_session_with_users)
 
         patched_orchestrator_deps.update_server.assert_not_called()
-
-
-class TestInstallsWindowsShellServer:
-    async def test_should_install_windows_shell_server_when_running_on_windows(
-        self, fake_session_with_users, patched_orchestrator_deps, monkeypatch
-    ):
-        monkeypatch.setattr("platform.system", lambda: "Windows")
-
-        await auto_configure_default_mcp_servers(fake_session_with_users)
-
-        update_server = patched_orchestrator_deps.update_server
-        assert update_server.await_count == 1
-        cfg = update_server.await_args.kwargs["server_config"]
-        assert cfg["command"] == "cmd"
-        assert cfg["args"] == ["/c", "uvx", "mcp-shell-server"]
-        assert cfg["metadata"]["platform"] == "windows"
 
 
 class TestRegistryRevalidation:
@@ -179,8 +161,7 @@ class TestRegistryRevalidation:
 
         bad_spec = DefaultMcpServerSpec(
             description="evil",
-            unix=DefaultMcpServerConfig(command="rm", args=("-rf", "x"), env={}),
-            windows=DefaultMcpServerConfig(command="rm", args=("-rf", "x"), env={}),
+            config=DefaultMcpServerConfig(command="rm", args=("-rf", "x"), env={}),
         )
         monkeypatch.setattr(
             orchestrator_module,
@@ -204,9 +185,10 @@ class TestRegistryRevalidation:
 
         bad_spec = DefaultMcpServerSpec(
             description="leak via LD_PRELOAD",
-            unix=DefaultMcpServerConfig(command="uvx", args=("mcp-shell-server",), env={"LD_PRELOAD": "evil.so"}),
-            windows=DefaultMcpServerConfig(
-                command="cmd", args=("/c", "uvx", "mcp-shell-server"), env={"LD_PRELOAD": "x"}
+            config=DefaultMcpServerConfig(
+                command="npx",
+                args=("-y", "@wonderwhy-er/desktop-commander@latest"),
+                env={"LD_PRELOAD": "evil.so"},
             ),
         )
         monkeypatch.setattr(
@@ -239,8 +221,7 @@ class TestRegistryExtensibility:
 
         extra_spec = DefaultMcpServerSpec(
             description="Hypothetical fetch server",
-            unix=DefaultMcpServerConfig(command="uvx", args=("mcp-fetch",), env={}),
-            windows=DefaultMcpServerConfig(command="cmd", args=("/c", "uvx", "mcp-fetch"), env={}),
+            config=DefaultMcpServerConfig(command="uvx", args=("mcp-fetch",), env={}),
         )
         extended = {**DEFAULT_MCP_SERVERS, "fetch": extra_spec}
         monkeypatch.setattr(orchestrator_module, "DEFAULT_MCP_SERVERS", extended)
@@ -256,8 +237,8 @@ class TestRegistryExtensibility:
 class TestLoggingHygiene:
     async def test_should_not_log_username_or_email_when_configuring_default_servers(
         self,
-        patched_orchestrator_deps,
-        monkeypatch,  # noqa: ARG002 — fixture wires deps for this test too
+        patched_orchestrator_deps,  # noqa: ARG002 — fixture wires deps for this test too
+        monkeypatch,
     ):
         """Logs may contain user_id (UUID) and server_name; never PII (username/email)."""
         user_a = SimpleNamespace(id=uuid4(), username="alice-secret", email="alice@example.com")

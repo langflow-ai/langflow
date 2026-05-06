@@ -1611,11 +1611,31 @@ class MCPStdioClient:
         self._connected = True
         return response.tools
 
-    async def connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
-        """Connect to MCP server using stdio transport (SDK style)."""
-        return await asyncio.wait_for(
-            self._connect_to_server(command_str, env), timeout=get_settings_service().settings.mcp_server_timeout
-        )
+    async def connect_to_server(
+        self,
+        command_str: str,
+        env: dict[str, str] | None = None,
+        *,
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> list[StructuredTool]:
+        """Connect to MCP server using stdio transport (SDK style).
+
+        Args:
+            command_str: shell-quoted command line for the server process.
+            env: environment overrides forwarded to the subprocess.
+            timeout: optional per-server startup timeout in seconds. When ``None``
+                (the default) we fall back to ``settings.mcp_server_timeout``.
+                Used by default-server entries that legitimately need more than
+                the global default for first-run cases (e.g. ``npx -y`` packages
+                that download on first launch).
+
+        Why ``# noqa: ASYNC109``: ASYNC109 recommends ``anyio.fail_after`` over
+        a ``timeout`` parameter, but the rest of this module already uses
+        ``asyncio.wait_for(..., timeout=...)``; staying consistent matters more
+        than complying with that lint here.
+        """
+        resolved_timeout = float(timeout) if timeout is not None else get_settings_service().settings.mcp_server_timeout
+        return await asyncio.wait_for(self._connect_to_server(command_str, env), timeout=resolved_timeout)
 
     def set_session_context(self, context_id: str):
         """Set the session context (e.g., flow_id + user_id + session_id)."""
@@ -2153,7 +2173,11 @@ async def update_tools(
                 else:
                     args.extend(extra_args)
         full_command = shlex.join([*shlex.split(command), *args])
-        tools = await mcp_stdio_client.connect_to_server(full_command, env)
+        # Per-server startup-timeout opt-in via metadata.startup_timeout_seconds.
+        # When absent, connect_to_server falls back to the global setting.
+        metadata = server_config.get("metadata") or {}
+        startup_timeout = metadata.get("startup_timeout_seconds")
+        tools = await mcp_stdio_client.connect_to_server(full_command, env, timeout=startup_timeout)
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback

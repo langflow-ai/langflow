@@ -396,20 +396,25 @@ class TestMCPCommandInjectionSecurity:
     # ==================== Npx/Uvx Auto-Install Prevention ====================
 
     def test_npx_auto_install_flag_rejected(self):
-        """Test that npx -y (auto-install) flag is rejected."""
+        """Test that npx -y is rejected for packages outside the explicit allowlist.
+
+        Note: -y is now governed by ALLOWED_NPX_YES_PACKAGES (see schemas.py).
+        The behavior — reject malicious package — is preserved; the error message
+        wording changed to be more specific about the allowlist.
+        """
         with pytest.raises(ValidationError) as exc_info:
             MCPServerConfig(command="npx", args=["-y", "@malicious/package"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        error_msg = str(exc_info.value).lower()
+        assert "only allowed" in error_msg or "not allowed" in error_msg
 
     def test_npx_yes_flag_rejected(self):
-        """Test that npx --yes (auto-install) flag is rejected."""
+        """Test that npx --yes is rejected for packages outside the explicit allowlist."""
         with pytest.raises(ValidationError) as exc_info:
             MCPServerConfig(command="npx", args=["--yes", "@malicious/package"])
 
-        error_msg = str(exc_info.value)
-        assert "not allowed" in error_msg.lower()
+        error_msg = str(exc_info.value).lower()
+        assert "only allowed" in error_msg or "not allowed" in error_msg
 
     # ==================== Subshell Metacharacter Tests ====================
 
