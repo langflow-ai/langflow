@@ -23,7 +23,10 @@ const KnowledgeBaseDrawer = ({
     return null;
   }
 
-  const backendLabel = getKnowledgeBaseBackendLabel(knowledgeBase.backend_type);
+  const backendLabel = getKnowledgeBaseBackendLabel(
+    knowledgeBase.backend_type,
+    knowledgeBase.backend_config as Record<string, unknown> | undefined,
+  );
   const backendTarget = getKnowledgeBaseBackendTarget(knowledgeBase);
 
   return (

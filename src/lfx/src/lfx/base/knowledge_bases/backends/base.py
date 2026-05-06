@@ -187,7 +187,12 @@ class BaseVectorStoreBackend(ABC):
                             session=session,
                         )
                     if value:
-                        return str(value)
+                        # CREDENTIAL_TYPE variables are returned as SecretStr;
+                        # str() on SecretStr yields "**********", not the secret.
+                        try:
+                            return value.get_secret_value()  # type: ignore[union-attr]
+                        except AttributeError:
+                            return str(value)
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
 
@@ -215,7 +220,7 @@ class BaseVectorStoreBackend(ABC):
         instance attributes; ``_build_vector_store`` then reads those attrs
         synchronously.
 
-        Default: no-op. ``ChromaBackend`` has no credentials.
+        Default: no-op.
         """
         return
 

@@ -56,8 +56,10 @@ interface StepConfigurationProps {
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
   backendType: AvailableDBProviderId;
-  onBackendTypeChange: (value: AvailableDBProviderId) => void;
-  onBackendConfigChange: (value: Record<string, DBProviderConfigValue>) => void;
+  onBackendChange: (
+    type: AvailableDBProviderId,
+    config: Record<string, DBProviderConfigValue>,
+  ) => void;
   globalVariables: GlobalVariable[];
   metadataPairs: MetadataPair[];
   onMetadataPairsChange: (pairs: MetadataPair[]) => void;
@@ -88,8 +90,7 @@ export function StepConfiguration({
   columnConfig,
   onColumnConfigChange,
   backendType,
-  onBackendTypeChange,
-  onBackendConfigChange,
+  onBackendChange,
   globalVariables,
   metadataPairs,
   onMetadataPairsChange,
@@ -191,8 +192,7 @@ export function StepConfiguration({
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}
               onValueChange={(nextBackendType, nextBackendConfig) => {
-                onBackendTypeChange(nextBackendType);
-                onBackendConfigChange(nextBackendConfig);
+                onBackendChange(nextBackendType, nextBackendConfig);
                 onFieldChange?.();
               }}
             />

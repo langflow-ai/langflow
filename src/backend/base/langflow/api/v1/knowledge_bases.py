@@ -383,7 +383,7 @@ async def _delete_remote_backend_collection(
         kb_path=kb_path,
         current_user=current_user,
     )
-    if backend_type_value == BackendType.CHROMA.value:
+    if backend_type_value == BackendType.CHROMA.value and backend_config.get("mode") != "cloud":
         return None
 
     backend = create_backend(
@@ -1277,7 +1277,9 @@ async def get_knowledge_base_chunks(
         # Local-Chroma short-circuit: if the KB lives on disk and has no
         # files yet, return empty without booting a Chroma client (which
         # would otherwise hit 'readonly database' on the empty dir).
-        if backend_type_value == BackendType.CHROMA.value:
+        # Cloud KBs store nothing locally, so this check must be skipped for them.
+        chroma_mode = str((backend_config or {}).get("mode", "local")).lower()
+        if backend_type_value == BackendType.CHROMA.value and chroma_mode != "cloud":
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
             if not has_data:
                 return PaginatedChunkResponse(
@@ -1361,7 +1363,7 @@ async def get_knowledge_base_chunks(
         matched: list[tuple[str, str, dict[str, Any]]] = []
         matched_count = 0
         try:
-            async for batch in backend.iter_documents(batch_size=1000):
+            async for batch in backend.iter_documents():
                 for entry in batch:
                     if not matches_filters(entry.metadata, entry.content):
                         continue

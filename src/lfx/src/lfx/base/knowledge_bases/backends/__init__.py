@@ -18,6 +18,14 @@ DB-stored ``backend_type`` strings on existing rows) keeps round-tripping,
 but they are not instantiable through ``create_backend`` and the picker UI
 hides them. Reinstate by re-introducing the full implementation and
 re-adding ``register_backend(...)`` for that backend below.
+
+Chroma ships as two concrete classes:
+* ``ChromaLocalBackend`` — local ``PersistentClient``; registered under
+  ``BackendType.CHROMA``.
+* ``ChromaCloudBackend`` — ``CloudClient``; resolved at factory time by
+  ``create_backend`` inspecting ``backend_config["mode"]``.
+
+``ChromaBackend`` is kept as a backward-compat alias for ``ChromaLocalBackend``.
 """
 
 from lfx.base.knowledge_bases.backends.astra import AstraBackend
@@ -27,7 +35,11 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
-from lfx.base.knowledge_bases.backends.chroma import ChromaBackend
+from lfx.base.knowledge_bases.backends.chroma import (
+    ChromaBackend,
+    ChromaCloudBackend,
+    ChromaLocalBackend,
+)
 from lfx.base.knowledge_bases.backends.mongodb import MongoDBBackend
 from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
 from lfx.base.knowledge_bases.backends.postgres import PostgresBackend
@@ -41,7 +53,10 @@ from lfx.base.knowledge_bases.backends.registry import (
 # Register the supported built-in backends on import. AstraBackend /
 # MongoDBBackend / PostgresBackend are intentionally NOT registered while
 # they're stubbed out — see each module's docstring.
-register_backend(BackendType.CHROMA, ChromaBackend)
+#
+# ChromaCloudBackend shares BackendType.CHROMA; create_backend() dispatches
+# to the correct class based on backend_config["mode"] at call time.
+register_backend(BackendType.CHROMA, ChromaLocalBackend)
 register_backend(BackendType.OPENSEARCH, OpenSearchBackend)
 
 __all__ = [
@@ -49,6 +64,8 @@ __all__ = [
     "BackendType",
     "BaseVectorStoreBackend",
     "ChromaBackend",
+    "ChromaCloudBackend",
+    "ChromaLocalBackend",
     "IngestedDocument",
     "MongoDBBackend",
     "OpenSearchBackend",

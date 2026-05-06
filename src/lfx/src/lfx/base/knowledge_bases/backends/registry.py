@@ -80,8 +80,25 @@ def create_backend(
     through Langflow's ``variable_service`` (same pattern as the connector
     ingestion sources). Legacy call sites that pass ``None`` still work —
     the backends fall back to ``os.environ`` in that case.
+
+    For ``BackendType.CHROMA`` the factory dispatches to ``ChromaLocalBackend``
+    or ``ChromaCloudBackend`` based on ``backend_config["mode"]`` so callers
+    never need to know which class to use.
     """
-    backend_class = get_backend_class(backend_type)
+    cfg = backend_config or {}
+    resolved = _resolve_backend_type(backend_type)
+
+    if resolved == BackendType.CHROMA:
+        from lfx.base.knowledge_bases.backends.chroma import (
+            ChromaCloudBackend,
+            ChromaLocalBackend,
+        )
+
+        mode = str(cfg.get("mode", "local")).lower()
+        backend_class: type[BaseVectorStoreBackend] = ChromaCloudBackend if mode == "cloud" else ChromaLocalBackend
+    else:
+        backend_class = get_backend_class(resolved)
+
     return backend_class(
         kb_name=kb_name,
         kb_path=kb_path,
