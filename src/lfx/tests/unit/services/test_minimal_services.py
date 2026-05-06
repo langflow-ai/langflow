@@ -338,6 +338,7 @@ class TestVariableService:
             assert value == "value-from-env"
         finally:
             del os.environ["LFX_KWARG_TEST"]
+
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")

@@ -29,9 +29,7 @@ class VariableService(Service):
     def _is_wxo_access_token_key(name: str) -> bool:
         """Return True when a variable name matches WXO access-token conventions."""
         normalized = name.lower()
-        return normalized.endswith("_access_token") and (
-            normalized.startswith("wxo_") or "_wxo_" in normalized
-        )
+        return normalized.endswith("_access_token") and (normalized.startswith("wxo_") or "_wxo_" in normalized)
 
     def _get_wxo_bearer_alias(self, name: str) -> str | None:
         """Resolve a <prefix>_bearer_token alias from matching WXO <prefix>_access_token env var."""
@@ -73,7 +71,7 @@ class VariableService(Service):
                 return f"Bearer {value}"
         return None
 
-    async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
+    async def get_variable(self, name: str, **kwargs) -> str | None:
         """Get a variable value.
 
         First checks in-memory cache, then environment variables, then WXO bearer aliases.
