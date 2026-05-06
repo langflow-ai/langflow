@@ -1,3 +1,5 @@
+import uuid
+
 from langchain_community.vectorstores import Qdrant
 from langchain_core.embeddings import Embeddings
 
@@ -11,6 +13,18 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+
+
+def _generate_stable_id(content: str, metadata: dict) -> str:
+    """Generate a deterministic UUID5 from document content and sorted metadata.
+
+    Sorting metadata makes the ID independent of dict insertion order, so
+    re-ingesting the same document produces the same point ID and Qdrant
+    upserts in place rather than creating duplicates.
+    """
+    metadata_str = "|".join(f"{k}={v}" for k, v in sorted(metadata.items()))
+    payload = f"{content}|{metadata_str}"
+    return str(uuid.uuid5(uuid.NAMESPACE_OID, payload))
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -85,7 +99,10 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
+            ids = [_generate_stable_id(doc.page_content, doc.metadata) for doc in documents]
+            qdrant = Qdrant.from_documents(
+                documents, embedding=self.embedding, ids=ids, **qdrant_kwargs, **server_kwargs
+            )
         else:
             from qdrant_client import QdrantClient
 
