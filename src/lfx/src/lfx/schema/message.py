@@ -27,6 +27,7 @@ from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
+from lfx.utils.secrets import is_secret_value
 
 if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
@@ -65,7 +66,7 @@ class Message(Data):
     session_id: str | UUID | None = Field(default="")
     context_id: str | UUID | None = Field(default="")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     flow_id: str | UUID | None = None
     error: bool = Field(default=False)
@@ -82,6 +83,13 @@ class Message(Data):
     def validate_flow_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
+        return value
+
+    @field_validator("text", mode="before")
+    @classmethod
+    def validate_text(cls, value):
+        if is_secret_value(value):
+            return str(value)
         return value
 
     @field_validator("content_blocks", mode="before")
@@ -114,12 +122,7 @@ class Message(Data):
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
-        try:
-            # Try parsing with timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        except ValueError:
-            # Try parsing without timezone
-            return datetime.strptime(value.strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        return timestamp_to_str(value)
 
     @field_validator("files", mode="before")
     @classmethod

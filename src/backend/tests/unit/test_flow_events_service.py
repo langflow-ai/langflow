@@ -1,6 +1,13 @@
+import multiprocessing
 import time
 
 from langflow.services.flow_events.service import FlowEventsService
+
+
+def _worker_append(cache_dir, flow_id, event_type, summary):
+    """Top-level helper used by multiprocessing tests; must be picklable."""
+    svc = FlowEventsService(cache_dir=cache_dir)
+    svc.append(flow_id, event_type, summary)
 
 
 def test_append_and_get_events(tmp_path):
@@ -60,8 +67,7 @@ def test_ttl_cleanup(tmp_path):
 
     time.sleep(0.15)
 
-    # Force re-append to reset TTL for the key, then read
-    # Actually just read -- the key should have expired via diskcache expire
+    # The row should be filtered out by the expires_at >= now() predicate in get_since.
     events, _ = svc.get_since("flow-1", 0.0)
     assert len(events) == 0
 
@@ -202,3 +208,27 @@ def test_cross_worker_ttl_expiry(tmp_path):
     worker_b = FlowEventsService(cache_dir=shared_dir)
     events, _ = worker_b.get_since("flow-1", 0.0)
     assert len(events) == 0
+
+
+def test_multi_process_visibility(tmp_path):
+    """A separate OS process can write events that this process reads.
+
+    Proves the WAL-mode sqlite backend gives the same cross-worker contract that
+    the prior diskcache-based implementation did under multi-uvicorn/gunicorn.
+    """
+    shared_dir = tmp_path / "shared_cache"
+
+    # Use spawn so the child does not inherit the parent's sqlite handle.
+    ctx = multiprocessing.get_context("spawn")
+    proc = ctx.Process(
+        target=_worker_append,
+        args=(str(shared_dir), "flow-mp", "component_added", "from-other-process"),
+    )
+    proc.start()
+    proc.join(timeout=10)
+    assert proc.exitcode == 0, "Child process failed to append event"
+
+    reader = FlowEventsService(cache_dir=shared_dir)
+    events, _ = reader.get_since("flow-mp", 0.0)
+    assert len(events) == 1
+    assert events[0].summary == "from-other-process"

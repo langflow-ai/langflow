@@ -1,4 +1,4 @@
-"""Shared parity-test scaffolding for Phase 2 IDX fixes (plan 02-01+).
+"""Shared parity-test scaffolding for component-index and import-deferral parity tests.
 
 Deliberately a plain module (not a pytest collector): tests import from here,
 and the snapshot-generation step imports from here too. Underscore prefix keeps
@@ -17,16 +17,15 @@ _MOCK_LLM_PATH = Path(__file__).resolve().parents[3] / "backend" / "tests" / "be
 
 
 def _install_mock_llm() -> bool:
-    """Install Phase 1 BaseChatOpenAI mock. Idempotent.
+    """Install BaseChatOpenAI mock from `src/backend/tests/benchmarks/mock_llm.py`. Idempotent.
 
     Returns True if the mock was installed, False if:
       * mock_llm.py source cannot be located (shallow clone / non-monorepo lfx checkout), or
       * langchain_openai is not installed in the current environment (lfx-only test venv).
 
     The False return is intentional: smallest.json parity does not require an LLM mock,
-    and later plans reusing this helper can still proceed on a clean lfx-only venv if a
-    fixture happens to exercise an LLM path they run in the monorepo venv where
-    langchain_openai IS available.
+    and callers that run in the monorepo venv where langchain_openai IS available can
+    still proceed even when the mock cannot be installed.
     """
     if not _MOCK_LLM_PATH.exists():
         return False
@@ -47,7 +46,7 @@ def _install_mock_llm() -> bool:
 async def _capture_parity_snapshot(fixture_path: Path, input_value: str = "hello") -> dict[str, Any]:
     """Drive a flow to completion in-process; return a (vertex_order, final_text) snapshot.
 
-    Used by every Phase 2 plan's parity test. Deep end-to-end per D-01, not shallow.
+    Used by parity tests that need a deep end-to-end run, not just a smoke check.
 
     The Graph.async_start async-generator yields VertexBuildResult named tuples; each
     tuple has a ``result_dict`` (a ``ResultData`` pydantic model) whose ``.results`` dict

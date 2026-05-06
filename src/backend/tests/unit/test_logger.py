@@ -33,6 +33,7 @@ from lfx.log.logger import (
     setup_gunicorn_logger,
     setup_uvicorn_logger,
 )
+from loguru import logger as loguru_logger
 
 
 class TestConfigure:
@@ -103,6 +104,29 @@ class TestConfigure:
             for handler in logging.root.handlers[:]:
                 if isinstance(handler, logging.handlers.RotatingFileHandler):
                     logging.root.removeHandler(handler)
+
+    def test_configure_routes_loguru_messages_to_log_file(self):
+        """Test configure() routes Loguru messages through Langflow logging."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+
+            for handler in logging.root.handlers[:]:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    logging.root.removeHandler(handler)
+
+            try:
+                configure(log_level="INFO", log_file=log_file_path, cache=False)
+                loguru_logger.info("Custom component log message")
+
+                for handler in logging.root.handlers:
+                    if hasattr(handler, "flush"):
+                        handler.flush()
+
+                assert "Custom component log message" in log_file_path.read_text()
+            finally:
+                for handler in logging.root.handlers[:]:
+                    if isinstance(handler, logging.handlers.RotatingFileHandler):
+                        logging.root.removeHandler(handler)
 
     def test_configure_with_invalid_log_file_path(self):
         """Test configure() with invalid log file path falls back to cache dir."""

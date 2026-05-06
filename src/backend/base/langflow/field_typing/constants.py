@@ -5,7 +5,6 @@ from typing import Text
 
 from lfx.field_typing.constants import (
     CUSTOM_COMPONENT_SUPPORTED_TYPES,
-    DEFAULT_IMPORT_STRING,
     LANGCHAIN_BASE_TYPES,
     # Import all the langchain types that may be needed
     AgentExecutor,
@@ -57,7 +56,6 @@ CUSTOM_COMPONENT_SUPPORTED_TYPES = {
 
 __all__ = [
     "CUSTOM_COMPONENT_SUPPORTED_TYPES",
-    "DEFAULT_IMPORT_STRING",
     "LANGCHAIN_BASE_TYPES",
     # Langchain types
     "AgentExecutor",

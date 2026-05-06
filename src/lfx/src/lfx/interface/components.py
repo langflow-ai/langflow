@@ -27,8 +27,9 @@ MIN_MODULE_PARTS = 2
 MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
 
-# cap concurrent module scans so the thread pool is not exhausted
-# (prevents silent component drops under high concurrency; see bounded-concurrency rationale).
+# Cap concurrent module scans so asyncio's default thread pool isn't exhausted.
+# Without this bound, high-concurrency loads can silently drop components when
+# threads are starved.
 _MODULE_SCAN_CONCURRENCY = 16
 
 
@@ -46,19 +47,18 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
-        # lazily created on first access inside a running event loop.
-        # Constructing asyncio.Lock() at import time raises RuntimeError on Python 3.13/3.14
-        # because the singleton ComponentCache() below runs at module import. See
-        # .planning/phases/02-component-index-and-correctness-fixes/02-RESEARCH.md Pitfall 1.
+        # Lazily created on first access from inside a running event loop.
+        # Constructing asyncio.Lock() at import time raises RuntimeError on
+        # Python 3.13+ because the singleton below runs at module import.
         self._lock: asyncio.Lock | None = None
 
     @property
     def lock(self) -> asyncio.Lock:
         """Return the asyncio.Lock, creating it lazily on first access.
 
-        Must be called from inside a running event loop (asyncio.Lock() constructor
-        requires a running loop on Python 3.13+). The singleton is instantiated at
-        module import, which is why this property exists.
+        Must be called from inside a running event loop: asyncio.Lock() requires
+        a running loop on Python 3.13+, and the singleton is instantiated at
+        module import time.
         """
         if self._lock is None:
             self._lock = asyncio.Lock()
@@ -125,9 +125,9 @@ async def _read_component_index(custom_path: str | None = None) -> dict | None:
                 import httpx
 
                 try:
-                    # Out of scope for URL fetch path (see CONCERNS.md §1.7; tracked for a later phase).
-                    # The sync call is only reached when the user explicitly points components_index_path
-                    # at an http(s) URL; the 5.7MB built-in read path (the common case) is now async.
+                    # Sync HTTP call: only reached when the user explicitly points
+                    # components_index_path at an http(s) URL. The common (built-in
+                    # and file-path) read paths are async.
                     response = httpx.get(custom_path, timeout=10.0)  # noqa: ASYNC210
                     response.raise_for_status()
                     blob = orjson.loads(response.content)
@@ -144,7 +144,6 @@ async def _read_component_index(custom_path: str | None = None) -> dict | None:
                     logger.warning(f"Custom component index not found at {custom_path}")
                     return None
                 try:
-                    # do not block the event loop during disk read (custom user cache path).
                     blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
                 except orjson.JSONDecodeError as e:
                     logger.warning(f"Component index at {custom_path} is corrupted or invalid JSON: {e}")
@@ -158,7 +157,7 @@ async def _read_component_index(custom_path: str | None = None) -> dict | None:
                 return None
 
             try:
-                # do not block the event loop during disk read (built-in 5.7MB file).
+                # Read the built-in index off-thread to avoid blocking the event loop.
                 blob = orjson.loads(await asyncio.to_thread(index_path.read_bytes))
             except orjson.JSONDecodeError as e:
                 logger.warning(f"Built-in component index is corrupted or invalid JSON: {e}")
@@ -196,7 +195,7 @@ async def _read_component_index(custom_path: str | None = None) -> dict | None:
             )
             return None
     except Exception as e:  # noqa: BLE001
-        logger.warning(f"Unexpected error reading component index: {type(e).__name__}: {e}")
+        logger.warning(f"Unexpected error reading component index: {type(e).__name__}: {e}", exc_info=True)
         return None
     return blob
 
@@ -213,10 +212,10 @@ def _get_cache_path() -> Path:
 def _save_generated_index(modules_dict: dict) -> None:
     """Save a dynamically generated component index to cache for future use.
 
-    stamps the cache with the lfx package version (not langflow),
-    so lfx-only deployments do not invalidate the cache on every restart.
-    writes atomically via tmp file in same directory + os.replace so
-    concurrent workers never see a torn file.
+    The cache is stamped with the lfx package version (not langflow) so lfx-only
+    deployments don't invalidate the cache on every restart. The write is atomic:
+    a temp file in the same directory is renamed via os.replace so concurrent
+    workers never see a torn file.
 
     Args:
         modules_dict: Dictionary of components by category
@@ -231,9 +230,10 @@ def _save_generated_index(modules_dict: dict) -> None:
         num_modules = len(modules_dict)
         num_components = sum(len(components) for components in modules_dict.values())
 
-        # stamp with lfx version, not langflow. Mirror the read-time
-        # PackageNotFoundError fallback at lines ~178-186 so workspace/editable
-        # installs (no dist-info) do not crash the save path.
+        # Stamp with the lfx version (not langflow) so lfx-only deployments
+        # don't invalidate the cache on every restart. Mirrors the read-time
+        # PackageNotFoundError fallback above so editable/workspace installs
+        # without dist-info don't crash the save path.
         from importlib.metadata import PackageNotFoundError, version
 
         try:
@@ -259,20 +259,24 @@ def _save_generated_index(modules_dict: dict) -> None:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
-        # atomic write via temp file in the SAME directory as the target,
-        # then atomic rename via Path.replace (a thin wrapper around os.replace,
-        # atomic on POSIX and on Windows since Python 3.3). Temp file must live
-        # on the same filesystem as the target to avoid cross-device-link errors
-        # in containers where $TMPDIR is tmpfs and the cache dir is a persistent
-        # volume. Matches the pattern used in src/lfx/src/lfx/_bench.py.
+        # Atomic write: temp file in the SAME directory as the target, then
+        # rename via Path.replace (atomic on POSIX and Windows since Python 3.3).
+        # The temp file must share a filesystem with the target to avoid
+        # cross-device-link errors in containers where $TMPDIR is tmpfs and the
+        # cache dir is a persistent volume.
         json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
         tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
         tmp_path.write_bytes(json_bytes)
         tmp_path.replace(cache_path)
 
         logger.debug(f"Saved generated component index to cache: {cache_path}")
+    except OSError as e:
+        # Disk full, permission denied, read-only mount, cross-device link, etc.
+        # Surface at warning so operators see it: a silent failure here defeats
+        # the cache and forces a full rebuild on every cold start.
+        logger.warning(f"Failed to save generated index to cache: {type(e).__name__}: {e}")
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Failed to save generated index to cache: {e}")
+        logger.error(f"Unexpected error saving generated index to cache: {type(e).__name__}: {e}", exc_info=True)
 
 
 async def _send_telemetry(
@@ -427,9 +431,9 @@ async def _load_components_dynamically(
     if not module_names:
         return modules_dict
 
-    # bound concurrent scans with a semaphore so the thread pool is not exhausted
-    # under high module-count workloads. Pattern: wrap each asyncio.to_thread in an
-    # async helper that acquires the semaphore. See 02-RESEARCH.md Pattern 2 / Pitfall 2.
+    # Bound concurrent scans with a semaphore so the default thread pool isn't
+    # exhausted under high module-count workloads. Each asyncio.to_thread call
+    # is wrapped in a helper that acquires the semaphore before running.
     semaphore = asyncio.Semaphore(_MODULE_SCAN_CONCURRENCY)
 
     async def _bounded(modname: str):
@@ -445,10 +449,15 @@ async def _load_components_dynamically(
         await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
         return modules_dict
 
-    # Merge results from all modules
+    # Merge results from all modules; track failures so we can emit one
+    # aggregate signal — without this the user sees N individual warnings
+    # interleaved with normal startup logs and no overall pass/fail.
+    failure_types: dict[str, int] = {}
     for result in module_results:
         if isinstance(result, Exception):
-            await logger.awarning(f"Module processing failed: {result}")
+            type_name = type(result).__name__
+            failure_types[type_name] = failure_types.get(type_name, 0) + 1
+            await logger.awarning(f"Module processing failed ({type_name}): {result}")
             continue
 
         if result and isinstance(result, tuple) and len(result) == EXPECTED_RESULT_LENGTH:
@@ -457,6 +466,13 @@ async def _load_components_dynamically(
                 if top_level not in modules_dict:
                     modules_dict[top_level] = {}
                 modules_dict[top_level].update(components)
+
+    if failure_types:
+        total_failed = sum(failure_types.values())
+        await logger.aerror(
+            f"Component module load: {total_failed} of {len(module_results)} modules failed. "
+            f"Failure types: {failure_types}"
+        )
 
     return modules_dict
 
@@ -496,6 +512,15 @@ async def _load_selective_dev_mode(
         if top_level not in modules_dict:
             modules_dict[top_level] = {}
         modules_dict[top_level].update(components)
+
+    if not modules_dict:
+        # No index/cache + no targeted module loaded successfully. Without this
+        # warning the caller sees a successful empty result, which is the worst
+        # debug-time UX -- the component palette is empty with no signal why.
+        await logger.awarning(
+            f"LFX_DEV selective mode produced 0 components for targets {target_modules}. "
+            "Check that the targeted module names exist under lfx.components and imported cleanly."
+        )
 
     await logger.adebug(f"Reloaded {len(target_modules)} module(s), kept others from index")
     return modules_dict, "dynamic"
@@ -698,25 +723,9 @@ async def get_and_cache_all_types_dict(
         telemetry_service: Optional telemetry service for tracking component loading metrics
     """
     if component_cache.all_types_dict is None:
-        # read-time stale-index warning. Fires ONLY when the user's
-        # disk cache exists AND its version differs from the installed lfx
-        # version. Clean installs that hit only the built-in shipped index
-        # never fire this warning (the shipped _assets/component_index.json
-        # lives at a different path and is never compared here). Corrupt /
-        # unreadable cache is handled downstream by _read_component_index
-        # (and swallowed here so the user does not see redundant noise).
-        #
-        # Placed OUTSIDE the lock-critical section per 02-RESEARCH.md "
-        # stale warning" recommendation: the peek is idempotent and read-only,
-        # so holding the lock while doing a ~5MB disk read unnecessarily
-        # widens the lock-hold window and reliably exposes a latent race in
-        # the ComponentCache lazy-lock reset pattern exercised by the
-        # multi-event-loop threading test (TestIDX01LazyLock::
-        # test_cache_built_once_threading). Running the peek before
-        # lock acquisition keeps that test at its  sub-second
-        # runtime. In the rare case where two callers cold-start simultaneously
-        # and both observe a stale cache, they will each emit the warning once
-        # -- acceptable cosmetic redundancy, not a correctness issue.
+        # The peek runs OUTSIDE the lock so a multi-MB disk read doesn't widen
+        # the lock-hold window. It is idempotent: when two callers cold-start at
+        # once they may each emit the same warning, which is cosmetic.
         from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
         from importlib.metadata import version as _version
 
@@ -725,50 +734,68 @@ async def get_and_cache_all_types_dict(
         except _PackageNotFoundError:
             installed_version = None
 
-        # blob promoted here if ALL conditions pass; used to
-        # short-circuit the rebuild inside the lock (see below).
+        # Promoted to the SHA-validated cache blob when version matches and
+        # integrity passes; used to short-circuit the rebuild inside the lock.
         _pending_cache_hit: dict | None = None
 
         if installed_version is not None:
             try:
                 cache_path = _get_cache_path()
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(f"Could not resolve component cache path: {exc}")
                 cache_path = None
             if cache_path is not None and cache_path.exists():
+                cached_blob: Any = None
                 try:
                     cached_blob = orjson.loads(await asyncio.to_thread(cache_path.read_bytes))
-                    cached_version = cached_blob.get("version") if isinstance(cached_blob, dict) else None
+                except (OSError, orjson.JSONDecodeError) as exc:
+                    logger.warning(
+                        f"Component cache peek failed at {cache_path} "
+                        f"({type(exc).__name__}); falling through to rebuild: {exc}"
+                    )
+
+                if isinstance(cached_blob, dict):
+                    cached_version = cached_blob.get("version")
                     if isinstance(cached_version, str) and cached_version and cached_version != installed_version:
                         logger.warning(
-                            "stale component index: cached=%s, installed=%s, path=%s. "
-                            "Delete the file or restart to regenerate.",
-                            cached_version,
-                            installed_version,
-                            cache_path,
+                            f"Stale component cache: cached={cached_version}, "
+                            f"installed={installed_version}, path={cache_path}. "
+                            "Removing so it is regenerated on the next build."
                         )
+                        try:
+                            cache_path.unlink(missing_ok=True)
+                        except OSError as exc:
+                            logger.warning(f"Could not remove stale component cache at {cache_path}: {exc}")
                     elif (
-                        isinstance(cached_blob, dict)
-                        and isinstance(cached_version, str)
-                        and cached_version
+                        isinstance(cached_version, str)
                         and cached_version == installed_version
                         and isinstance(cached_blob.get("entries"), list)
                         and cached_blob["entries"]
                     ):
-                        # All conditions satisfied: promote the blob for
-                        # the short-circuit inside the lock.
-                        _pending_cache_hit = cached_blob
-                except Exception:  # noqa: BLE001, S110
-                    # Corrupt or unreadable cache: downstream _read_component_index
-                    # will log at warning level when it retries the read with SHA check.
-                    pass
+                        # Version + entries OK: verify SHA256 inline (mirrors
+                        # _read_component_index's integrity check) before promoting.
+                        unsigned = {k: v for k, v in cached_blob.items() if k != "sha256"}
+                        sha = cached_blob.get("sha256")
+                        calc = hashlib.sha256(orjson.dumps(unsigned, option=orjson.OPT_SORT_KEYS)).hexdigest()
+                        if not isinstance(sha, str) or not sha:
+                            logger.warning(f"Component cache at {cache_path} missing SHA256 hash; will rebuild.")
+                        elif sha != calc:
+                            logger.warning(
+                                f"Component cache at {cache_path} failed SHA256 integrity check; will rebuild."
+                            )
+                        else:
+                            _pending_cache_hit = cached_blob
 
         async with component_cache.lock:
-            # Double-check: another task may have populated while we awaited the lock.
+            # Double-check: another task may have populated the cache while we
+            # awaited the lock.
             if component_cache.all_types_dict is None:
                 if _pending_cache_hit is not None:
-                    # cache-hit short-circuit. Reconstruct flat dict from entries
-                    # (same pattern as _load_from_index_or_cache at components.py:348-354).
-                    #: no telemetry -- no build work happened.
+                    # Cache-hit short-circuit: reconstruct the flat dict from
+                    # entries (same pattern as _load_from_index_or_cache).
+                    # No telemetry is emitted because no build work happened;
+                    # the rebuild branch below owns telemetry via
+                    # import_langflow_components.
                     merged: dict[str, Any] = {}
                     for top_level, components in _pending_cache_hit["entries"]:
                         if top_level not in merged:
@@ -778,13 +805,12 @@ async def get_and_cache_all_types_dict(
                     component_cache.all_types_dict = merged
                     component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
                     await logger.adebug(
-                        f"loaded {component_count} components from user cache (version={installed_version})"
+                        f"Loaded {component_count} components from user cache (version={installed_version})"
                     )
-                    # P-2: populate type_to_current_hash so ensure_component_hash_lookups_loaded
-                    # does not trigger a second rebuild.
+                    # Populate hash lookups now so ensure_component_hash_lookups_loaded
+                    # doesn't trigger a second rebuild on the next call.
                     _build_code_hash_lookups(component_cache)
                 else:
-                    # Existing rebuild path (unchanged).
                     await logger.adebug("Building components cache")
                     langflow_components = await import_langflow_components(settings_service, telemetry_service)
                     custom_components_dict = await _determine_loading_strategy(settings_service)
