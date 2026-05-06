@@ -257,7 +257,7 @@ class TestLoggingHygiene:
     async def test_should_not_log_username_or_email_when_configuring_default_servers(
         self,
         patched_orchestrator_deps,
-        monkeypatch,  # noqa: ARG002 — fixture wires deps for this test too
+        monkeypatch,
     ):
         """Logs may contain user_id (UUID) and server_name; never PII (username/email)."""
         user_a = SimpleNamespace(id=uuid4(), username="alice-secret", email="alice@example.com")
