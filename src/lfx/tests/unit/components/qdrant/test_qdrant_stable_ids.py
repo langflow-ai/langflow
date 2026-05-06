@@ -10,7 +10,6 @@ import pytest
 pytest.importorskip("langchain_community")
 
 from langchain_core.documents import Document
-
 from lfx.components.qdrant.qdrant import _generate_stable_id
 
 
