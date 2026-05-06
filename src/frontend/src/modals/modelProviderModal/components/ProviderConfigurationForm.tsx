@@ -5,7 +5,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ProviderVariable } from "@/constants/providerConstants";
+import {
+  LANGFLOW_LOCAL_PROVIDER_NAME,
+  type ProviderVariable,
+} from "@/constants/providerConstants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
 import DisconnectWarning from "./DisconnectWarning";
@@ -128,11 +131,16 @@ const ProviderConfigurationForm = ({
 
   if (!selectedProvider) return null;
 
+  const isLangflowLocal =
+    selectedProvider.provider === LANGFLOW_LOCAL_PROVIDER_NAME;
+
   return (
     <div className="flex flex-col gap-1 px-4 pt-4">
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
-          {isSingleVariableProvider ? (
+          {isLangflowLocal ? (
+            selectedProvider.provider
+          ) : isSingleVariableProvider ? (
             <>
               {providerVariables[0].variable_name}
               {providerVariables[0].required && (
@@ -145,7 +153,9 @@ const ProviderConfigurationForm = ({
         </span>
       </div>
       <span className="text-[13px] text-muted-foreground pt-1 pb-2">
-        {requiresConfiguration ? (
+        {isLangflowLocal ? (
+          <>{t("modelProviders.langflowLocalAlwaysActive")}</>
+        ) : requiresConfiguration ? (
           <>
             {t("modelProviders.configurePrefix")}{" "}
             <span
@@ -170,7 +180,7 @@ const ProviderConfigurationForm = ({
           </>
         )}
       </span>
-      {requiresConfiguration ? (
+      {isLangflowLocal ? null : requiresConfiguration ? (
         <div className="flex flex-col gap-3">
           {providerVariables.map((variable) => {
             const isConfigured = isVariableConfigured(variable.variable_key);

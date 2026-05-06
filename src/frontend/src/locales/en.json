@@ -784,6 +784,7 @@
   "modelProviders.credentialsLink": "{{provider}} credentials",
   "modelProviders.toEnableModels": "to enable these models",
   "modelProviders.activateToEnable": "Activate {{provider}} to enable these models",
+  "modelProviders.langflowLocalAlwaysActive": "Always active and ready to use — runs locally with no API key required.",
   "modelProviders.unknownProvider": "Unknown Provider",
   "modelProviders.configuration": "Configuration",
   "modelProviders.disconnectButton": "Disconnect",

@@ -48,6 +48,15 @@ export const PROVIDER_VARIABLE_MAPPING: Record<string, string> = {
  */
 export const NO_API_KEY_PROVIDERS: string[] = [];
 
+/**
+ * The bundled local LLM provider. Mirrors LANGFLOW_LOCAL_PROVIDER_NAME in
+ * lfx.base.models.langflow_local_constants — keep these in sync.
+ *
+ * This provider is always active and has no per-model toggle: the UI hides
+ * activate/deactivate controls and the per-model switch for it.
+ */
+export const LANGFLOW_LOCAL_PROVIDER_NAME = "Langflow Model";
+
 export const VARIABLE_CATEGORY = {
   GLOBAL: "Global",
   CREDENTIAL: "Credential",

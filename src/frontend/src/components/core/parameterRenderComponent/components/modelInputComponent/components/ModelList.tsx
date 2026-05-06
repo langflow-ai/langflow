@@ -39,7 +39,15 @@ const ModelList = ({
       {Object.entries(groupedOptions).map(([provider, models]) => (
         <CommandGroup className="p-0" key={provider}>
           <div className="text-xs font-semibold my-2 ml-4 text-muted-foreground flex items-center justify-between pr-4">
-            <div className="flex items-center">{provider}</div>
+            <div className="flex items-center gap-2">
+              {models[0]?.icon && (
+                <ForwardedIconComponent
+                  name={models[0].icon}
+                  className="h-4 w-4 shrink-0"
+                />
+              )}
+              {provider}
+            </div>
           </div>
           {models.map((data) => (
             <CommandItem

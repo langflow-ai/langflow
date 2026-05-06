@@ -4,6 +4,7 @@ import json
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from lfx.base.models.langflow_local_constants import LANGFLOW_LOCAL_PROVIDER_NAME
 from lfx.base.models.model_utils import replace_with_live_models
 from lfx.base.models.unified_models import (
     get_model_provider_metadata,
@@ -199,6 +200,13 @@ async def list_models(
     for provider_dict in filtered_models:
         prov_name = provider_dict.get("provider")
         provider_dict["is_configured"] = provider_configured_status.get(prov_name, False)
+
+        # Langflow Model is the bundled local provider — always active, no
+        # user setup required. Force is_enabled regardless of per-user toggles.
+        if prov_name == LANGFLOW_LOCAL_PROVIDER_NAME:
+            provider_dict["is_configured"] = True
+            provider_dict["is_enabled"] = True
+            continue
 
         # Provider is "enabled" (active) if it has at least one enabled model
         prov_models_status = enabled_models_map.get(prov_name, {})
@@ -566,6 +574,14 @@ async def get_enabled_models(
             is_deprecated = metadata.get("deprecated", False)
             is_not_supported = metadata.get("not_supported", False)
             is_default = metadata.get("default", False)
+
+            # Langflow Model is the bundled local provider — its curated
+            # models are always enabled and cannot be toggled off by the user.
+            if provider == LANGFLOW_LOCAL_PROVIDER_NAME:
+                enabled_models[provider][model_name] = (
+                    not is_deprecated and not is_not_supported
+                )
+                continue
 
             # Model is enabled if:
             # 1. Provider is enabled

@@ -57,6 +57,7 @@ import { IcosaIcon } from "@/icons/Icosa";
 import { IFixIcon } from "@/icons/IFixIt";
 import { JSIcon } from "@/icons/JSicon";
 import { LangChainIcon } from "@/icons/LangChain";
+import { LangflowIcon } from "@/icons/Langflow";
 import { LangwatchIcon } from "@/icons/Langwatch";
 import { LiteLLMIcon } from "@/icons/LiteLLM";
 import { LMStudioIcon } from "@/icons/LMStudio";
@@ -181,6 +182,7 @@ export const eagerIconsMapping = {
   javascript: JSIcon,
   JigsawStack: JigsawStackIcon,
   LangChain: LangChainIcon,
+  Langflow: LangflowIcon,
   Langwatch: LangwatchIcon,
   LiteLLM: LiteLLMIcon,
   LMStudio: LMStudioIcon,

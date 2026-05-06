@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
+import { LANGFLOW_LOCAL_PROVIDER_NAME } from "@/constants/providerConstants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
@@ -20,6 +21,7 @@ interface ModelRowProps {
   onToggle: (modelName: string, enabled: boolean) => void;
   testIdPrefix: string;
   isEnabledModel?: boolean;
+  hideToggle?: boolean;
 }
 
 /** Single row displaying a model with its toggle switch */
@@ -29,6 +31,7 @@ const ModelRow = ({
   enabled,
   testIdPrefix,
   isEnabledModel,
+  hideToggle,
 }: ModelRowProps) => (
   <div className="flex flex-row items-center justify-between h-[24px]">
     <div className="flex flex-row items-center gap-2">
@@ -42,7 +45,7 @@ const ModelRow = ({
         {model.model_name}
       </span>
     </div>
-    {isEnabledModel && (
+    {!hideToggle && isEnabledModel && (
       <Switch
         checked={enabled}
         onCheckedChange={(checked) => onToggle(model.model_name, checked)}
@@ -80,6 +83,8 @@ const ModelSelection = ({
     (model) => model.metadata?.model_type === "embeddings",
   );
 
+  const isLangflowLocal = providerName === LANGFLOW_LOCAL_PROVIDER_NAME;
+
   const renderModelSection = (
     title: string,
     models: Model[],
@@ -100,6 +105,7 @@ const ModelSelection = ({
               onToggle={onModelToggle}
               testIdPrefix={testIdPrefix}
               isEnabledModel={isEnabledModel}
+              hideToggle={isLangflowLocal}
             />
           ))}
         </div>
