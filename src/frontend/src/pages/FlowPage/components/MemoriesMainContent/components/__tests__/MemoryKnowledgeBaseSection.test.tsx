@@ -1,4 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { MemoryDocumentItem } from "@/controllers/API/queries/memories/types";
+import type { MemoryKnowledgeBaseSectionProps } from "../../types";
 import { MemoryKnowledgeBaseSection } from "../MemoryKnowledgeBaseSection";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -13,34 +15,33 @@ jest.mock("@/components/ui/loading", () => ({
 
 describe("MemoryKnowledgeBaseSection", () => {
   const makeBaseProps = () => {
-    const documents = [
+    const documents: MemoryDocumentItem[] = [
       {
         message_id: "msg-1",
         session_id: "session-1",
         sender: "user",
+        job_id: "job-1",
+        ingestion_timestamp: "2025-01-01T10:00:01.000Z",
         content: "hello",
         timestamp: "2025-01-01T10:00:00.000Z",
       },
     ];
 
-    return {
+    const base: MemoryKnowledgeBaseSectionProps = {
       docsData: {
         total: 1,
         sessions: ["session-1"],
         documents,
       },
       docsLoading: false,
-      searchQuery: "",
-      setSearchQuery: jest.fn(),
-      activeSearch: "",
-      setActiveSearch: jest.fn(),
-      selectedSession: null,
-      setSelectedSession: jest.fn(),
-      handleSearch: jest.fn(),
+      fetchNextMessagesPage: jest.fn(),
+      hasNextMessagesPage: false,
+      isFetchingNextMessagesPage: false,
       groupedBySession: new Map([["session-1", documents]]),
       handleOpenDocumentPanel: jest.fn(),
-      totalChunks: 1,
-    } as any;
+    };
+
+    return base;
   };
 
   it("shows loading state", () => {
@@ -49,27 +50,27 @@ describe("MemoryKnowledgeBaseSection", () => {
     expect(screen.getByText("loading...")).toBeInTheDocument();
   });
 
+  it("shows empty state message when there are no documents", () => {
+    const props = {
+      ...makeBaseProps(),
+      docsData: {
+        total: 0,
+        sessions: [],
+        documents: [],
+      },
+      groupedBySession: new Map(),
+    };
+
+    render(<MemoryKnowledgeBaseSection {...props} />);
+
+    expect(screen.getByText("No chunks yet.")).toBeInTheDocument();
+  });
+
   it("opens document panel when row is clicked", () => {
     const props = makeBaseProps();
     render(<MemoryKnowledgeBaseSection {...props} />);
 
     fireEvent.click(screen.getByText("hello"));
     expect(props.handleOpenDocumentPanel).toHaveBeenCalled();
-  });
-
-  it("clears active search", () => {
-    const props = makeBaseProps();
-    render(
-      <MemoryKnowledgeBaseSection
-        {...props}
-        activeSearch="abc"
-        searchQuery="abc"
-      />,
-    );
-
-    const clearButton = screen.getByRole("button", { name: /clear/i });
-    fireEvent.click(clearButton);
-    expect(props.setSearchQuery).toHaveBeenCalledWith("");
-    expect(props.setActiveSearch).toHaveBeenCalledWith("");
   });
 });

@@ -38,13 +38,9 @@ import MemoriesMainContent from "./components/MemoriesMainContent";
 function FlowPageMainContent({
   flowId,
   setIsLoading,
-  selectedMemoryId,
-  onSelectMemory,
 }: {
   flowId?: string;
   setIsLoading: (isLoading: boolean) => void;
-  selectedMemoryId: string | null;
-  onSelectMemory: (id: string | null) => void;
 }): JSX.Element {
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
@@ -66,12 +62,7 @@ function FlowPageMainContent({
   }
 
   if (showMemories) {
-    return (
-      <MemoriesMainContent
-        selectedMemoryId={selectedMemoryId}
-        onSelectMemory={onSelectMemory}
-      />
-    );
+    return <MemoriesMainContent />;
   }
 
   return <Page setIsLoading={setIsLoading} />;
@@ -90,7 +81,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -186,7 +176,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   useEffect(() => {
     setOnFlowPage(true);
-    setSelectedMemoryId(null);
 
     return () => {
       setOnFlowPage(false);
@@ -335,8 +324,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       <FlowPageMainContent
                         flowId={id}
                         setIsLoading={setIsLoading}
-                        selectedMemoryId={selectedMemoryId}
-                        onSelectMemory={setSelectedMemoryId}
                       />
                     </div>
                   </main>

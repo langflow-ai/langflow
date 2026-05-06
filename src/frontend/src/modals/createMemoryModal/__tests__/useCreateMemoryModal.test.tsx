@@ -97,9 +97,10 @@ describe("useCreateMemoryModal", () => {
         name: "My Memory",
         flow_id: "flow-1",
         embedding_model: "text-embedding-3-small",
-        preprocessing_model: "gpt-4o-mini",
-        preprocessing_prompt: "summarize",
-        batch_size: 5,
+        preproc_model: "gpt-4o-mini",
+        preproc_instructions: "summarize",
+        preprocessing: true,
+        threshold: 5,
       }),
     );
   });

@@ -1,38 +1,45 @@
+import { useCallback, useEffect, useState } from "react";
 import Loading from "@/components/ui/loading";
 import CreateMemoryModal from "@/modals/createMemoryModal";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { useMemoriesData } from "./hooks/useMemoriesData";
-import { NoMemorySelected } from "./components/NoMemorySelected";
 import { MemoriesSidebar } from "./components/MemoriesSidebar";
 import { MemoryDetails } from "./components/MemoryDetails";
 import { MemoryDocumentPanel } from "./components/MemoryDocumentPanel";
-import { MemoriesMainContentProps } from "./types";
+import { NoMemorySelected } from "./components/NoMemorySelected";
+import { useMemoriesData } from "./hooks/useMemoriesData";
 
-export default function MemoriesMainContent({
-  selectedMemoryId,
-  onSelectMemory,
-}: MemoriesMainContentProps) {
+export default function MemoriesMainContent() {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowName = useFlowsManagerStore(
     (state) => state.currentFlow?.name,
   );
+
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
+  const onSelectMemory = useCallback((id: string | null) => {
+    setSelectedMemoryId(id);
+  }, []);
+
+  useEffect(() => {
+    setSelectedMemoryId(null);
+  }, [currentFlowId]);
 
   const {
     memories,
     filteredMemories,
     memoriesSearch,
     setMemoriesSearch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     memory,
     isLoading,
     docsData,
     docsLoading,
-    searchQuery,
-    setSearchQuery,
-    activeSearch,
-    setActiveSearch,
+    fetchNextMessagesPage,
+    hasNextMessagesPage,
+    isFetchingNextMessagesPage,
     selectedSession,
     setSelectedSession,
-    handleSearch,
     groupedBySession,
     documentPanelOpen,
     setDocumentPanelOpen,
@@ -40,8 +47,11 @@ export default function MemoriesMainContent({
     setSelectedDocument,
     handleOpenDocumentPanel,
     deleteMutation,
-    updateMemoryMutation,
     handleToggleActive,
+    onRefresh,
+    fetchNextSessionsPage,
+    hasNextSessionsPage,
+    isFetchingNextSessionsPage,
     createModalOpen,
     setCreateModalOpen,
   } = useMemoriesData({
@@ -57,6 +67,9 @@ export default function MemoriesMainContent({
         filteredMemories={filteredMemories}
         memoriesSearch={memoriesSearch}
         setMemoriesSearch={setMemoriesSearch}
+        fetchNextPage={fetchNextPage}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
         selectedMemoryId={selectedMemoryId}
         currentFlowId={currentFlowId ?? undefined}
         onSelectMemory={onSelectMemory}
@@ -77,18 +90,19 @@ export default function MemoriesMainContent({
             memory={memory}
             docsData={docsData}
             docsLoading={docsLoading}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            activeSearch={activeSearch}
-            setActiveSearch={setActiveSearch}
+            fetchNextMessagesPage={fetchNextMessagesPage}
+            hasNextMessagesPage={hasNextMessagesPage}
+            isFetchingNextMessagesPage={isFetchingNextMessagesPage}
             selectedSession={selectedSession}
             setSelectedSession={setSelectedSession}
-            handleSearch={handleSearch}
             groupedBySession={groupedBySession}
             handleOpenDocumentPanel={handleOpenDocumentPanel}
             deleteMutation={deleteMutation}
-            updateMemoryMutation={updateMemoryMutation}
             handleToggleActive={handleToggleActive}
+            onRefresh={onRefresh}
+            fetchNextSessionsPage={fetchNextSessionsPage}
+            hasNextSessionsPage={hasNextSessionsPage}
+            isFetchingNextSessionsPage={isFetchingNextSessionsPage}
           />
         )}
       </div>
@@ -108,7 +122,7 @@ export default function MemoriesMainContent({
         flowId={currentFlowId ?? ""}
         flowName={currentFlowName ?? ""}
         onSuccess={(memoryId) => {
-          onSelectMemory?.(memoryId);
+          onSelectMemory(memoryId);
         }}
       />
     </div>

@@ -1,8 +1,9 @@
+import type { UIEvent } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
-import { statusBgColors, statusColors } from "../helpers";
+import { SIDEBAR_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoriesSidebarProps } from "../types";
 
 export function MemoriesSidebar({
@@ -10,11 +11,23 @@ export function MemoriesSidebar({
   filteredMemories,
   memoriesSearch,
   setMemoriesSearch,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
   selectedMemoryId,
   currentFlowId,
   onSelectMemory,
   onCreateMemory,
 }: MemoriesSidebarProps) {
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
+    const el = e.currentTarget;
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (remaining < SIDEBAR_SCROLL_THRESHOLD_PX) {
+      fetchNextPage();
+    }
+  };
+
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-background">
       <div className="border-b border-border px-4 py-3">
@@ -32,7 +45,7 @@ export function MemoriesSidebar({
             onClick={onCreateMemory}
             disabled={!currentFlowId}
           >
-            <IconComponent name="Plus" className="mr-1.5 h-3.5 w-3.5" />
+            <IconComponent name="Plus" className="h-3.5 w-3.5" />
             Create
           </Button>
         </div>
@@ -52,7 +65,7 @@ export function MemoriesSidebar({
         />
       </div>
 
-      <div className="flex-1 overflow-auto px-2 pb-4">
+      <div className="flex-1 overflow-auto px-2 pb-4" onScroll={handleScroll}>
         {!filteredMemories.length ? (
           <div className="px-3 py-6 text-center">
             <IconComponent
@@ -62,18 +75,6 @@ export function MemoriesSidebar({
             <p className="text-xs text-muted-foreground">
               {memoriesSearch.trim() ? "No memories found" : "No memories yet"}
             </p>
-            {!memoriesSearch.trim() && (
-              <Button
-                className="mt-3"
-                size="sm"
-                variant="outline"
-                onClick={onCreateMemory}
-                disabled={!currentFlowId}
-              >
-                <IconComponent name="Plus" className="mr-1.5 h-3.5 w-3.5" />
-                Create Memory
-              </Button>
-            )}
           </div>
         ) : (
           <div className="flex flex-col gap-1">
@@ -93,13 +94,25 @@ export function MemoriesSidebar({
                 >
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
-                      {memoryItem.is_active && (
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full bg-accent-emerald-foreground"
-                          aria-label="enabled"
-                          title="enabled"
-                        />
-                      )}
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          memoryItem.is_active
+                            ? "bg-accent-emerald-foreground"
+                            : "bg-muted-foreground",
+                        )}
+                        role="img"
+                        aria-label={
+                          memoryItem.is_active
+                            ? "Auto-capture enabled"
+                            : "Auto-capture disabled"
+                        }
+                        title={
+                          memoryItem.is_active
+                            ? "Auto-capture enabled"
+                            : "Auto-capture disabled"
+                        }
+                      />
                       <div className="truncate text-sm font-medium">
                         {memoryItem.name}
                       </div>
@@ -110,16 +123,6 @@ export function MemoriesSidebar({
                       </div>
                     )}
                   </div>
-                  <span
-                    className={cn(
-                      "ml-2 shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      statusBgColors[memoryItem.status] || "bg-muted",
-                      statusColors[memoryItem.status] ||
-                        "text-muted-foreground",
-                    )}
-                  >
-                    {memoryItem.status}
-                  </span>
                 </button>
               );
             })}

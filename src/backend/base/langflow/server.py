@@ -152,4 +152,17 @@ class LangflowApplication(BaseApplication):
     def load(self):
         if self.application is None:
             self.application = self._app_factory()
+            # When preload_app is enabled, gunicorn calls load() once in the master
+            # before forking workers. Take this opportunity to run all fork-safe
+            # one-time initialization so workers inherit the big in-memory state
+            # (component types dict, bundle Python modules, starter projects, etc.)
+            # via copy-on-write. Preload may open the DB engine transiently for
+            # migrations/seeding and dispose it before fork; long-lived pools and
+            # other fork-unsafe resources (telemetry threads, MCP asyncio tasks,
+            # prometheus server, ...) are not left running in the master. Each
+            # worker still sets them up in its own FastAPI lifespan.
+            if self.cfg.preload_app:
+                from langflow.preload import preload_master
+
+                preload_master()
         return self.application

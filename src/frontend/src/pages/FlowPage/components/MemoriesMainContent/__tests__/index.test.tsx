@@ -31,13 +31,25 @@ jest.mock("../components/NoMemorySelected", () => ({
 }));
 
 jest.mock("../components/MemoriesSidebar", () => ({
-  MemoriesSidebar: ({ onCreateMemory }: any) => (
-    <button onClick={onCreateMemory}>open-create</button>
+  MemoriesSidebar: ({
+    onCreateMemory,
+    onSelectMemory,
+    selectedMemoryId,
+  }: any) => (
+    <div>
+      <button onClick={onCreateMemory}>open-create</button>
+      <button onClick={() => onSelectMemory?.("m1")}>select-memory</button>
+      <div>selected:{selectedMemoryId ?? ""}</div>
+    </div>
   ),
 }));
 
+const capturedMemoryDetailsProps: Record<string, unknown> = {};
 jest.mock("../components/MemoryDetails", () => ({
-  MemoryDetails: () => <div>MemoryDetails</div>,
+  MemoryDetails: (props: any) => {
+    Object.assign(capturedMemoryDetailsProps, props);
+    return <div>MemoryDetails</div>;
+  },
 }));
 
 jest.mock("../components/MemoryDocumentPanel", () => ({
@@ -56,6 +68,9 @@ jest.mock("@/modals/createMemoryModal", () => ({
 describe("MemoriesMainContent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.keys(capturedMemoryDetailsProps).forEach(
+      (k) => delete capturedMemoryDetailsProps[k],
+    );
     mockedHookValue = {
       memories: [],
       filteredMemories: [],
@@ -65,13 +80,8 @@ describe("MemoriesMainContent", () => {
       isLoading: false,
       docsData: { total: 0, sessions: [], documents: [] },
       docsLoading: false,
-      searchQuery: "",
-      setSearchQuery: jest.fn(),
-      activeSearch: "",
-      setActiveSearch: jest.fn(),
       selectedSession: null,
       setSelectedSession: jest.fn(),
-      handleSearch: jest.fn(),
       groupedBySession: new Map(),
       documentPanelOpen: true,
       setDocumentPanelOpen: mockSetDocumentPanelOpen,
@@ -81,69 +91,78 @@ describe("MemoriesMainContent", () => {
       deleteMutation: { mutate: jest.fn(), isPending: false },
       updateMemoryMutation: { isPending: false },
       handleToggleActive: jest.fn(),
+      onRefresh: jest.fn(),
+      fetchNextSessionsPage: jest.fn(),
+      hasNextSessionsPage: false,
+      isFetchingNextSessionsPage: false,
       createModalOpen: false,
       setCreateModalOpen: mockSetCreateModalOpen,
+      fetchNextMessagesPage: jest.fn(),
+      hasNextMessagesPage: false,
+      isFetchingNextMessagesPage: false,
     };
   });
 
   it("renders empty state when no memory is selected", () => {
-    render(
-      <MemoriesMainContent
-        selectedMemoryId={null}
-        onSelectMemory={jest.fn()}
-      />,
-    );
+    render(<MemoriesMainContent />);
     expect(screen.getByText("NoMemorySelected")).toBeInTheDocument();
   });
 
   it("renders loading state for selected memory", () => {
     mockedHookValue.isLoading = true;
 
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
     expect(screen.getByText("Loading...")).toBeInTheDocument();
   });
 
   it("renders memory details when selected memory exists", () => {
     mockedHookValue.memory = { id: "m1" };
 
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
     expect(screen.getByText("MemoryDetails")).toBeInTheDocument();
   });
 
   it("opens create modal via sidebar action", () => {
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("open-create"));
     expect(mockSetCreateModalOpen).toHaveBeenCalledWith(true);
   });
 
   it("clears selected document when panel closes", () => {
-    render(
-      <MemoriesMainContent selectedMemoryId="m1" onSelectMemory={jest.fn()} />,
-    );
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("close-panel"));
     expect(mockSetDocumentPanelOpen).toHaveBeenCalledWith(false);
     expect(mockSetSelectedDocument).toHaveBeenCalledWith(null);
   });
 
-  it("forwards create success to onSelectMemory", () => {
-    const onSelectMemory = jest.fn();
-
-    render(
-      <MemoriesMainContent
-        selectedMemoryId="m1"
-        onSelectMemory={onSelectMemory}
-      />,
-    );
+  it("selects created memory after create success", () => {
+    render(<MemoriesMainContent />);
 
     fireEvent.click(screen.getByText("create-success"));
-    expect(onSelectMemory).toHaveBeenCalledWith("m-created");
+    expect(screen.getByText("selected:m-created")).toBeInTheDocument();
+  });
+
+  it("passes onRefresh, fetchNextSessionsPage and session pagination flags to MemoryDetails", () => {
+    const onRefresh = jest.fn();
+    const fetchNextSessionsPage = jest.fn();
+    mockedHookValue.memory = { id: "m1" };
+    mockedHookValue.onRefresh = onRefresh;
+    mockedHookValue.fetchNextSessionsPage = fetchNextSessionsPage;
+    mockedHookValue.hasNextSessionsPage = true;
+    mockedHookValue.isFetchingNextSessionsPage = true;
+
+    render(<MemoriesMainContent />);
+    fireEvent.click(screen.getByText("select-memory"));
+
+    expect(capturedMemoryDetailsProps.onRefresh).toBe(onRefresh);
+    expect(capturedMemoryDetailsProps.fetchNextSessionsPage).toBe(
+      fetchNextSessionsPage,
+    );
+    expect(capturedMemoryDetailsProps.hasNextSessionsPage).toBe(true);
+    expect(capturedMemoryDetailsProps.isFetchingNextSessionsPage).toBe(true);
   });
 });

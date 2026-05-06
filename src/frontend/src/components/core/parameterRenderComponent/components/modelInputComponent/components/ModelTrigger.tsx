@@ -73,7 +73,7 @@ const ModelTrigger = ({
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
-          disabled={disabled || (options.length === 0 && !showEmptyState)}
+          disabled={disabled}
           variant="primary"
           size="xs"
           role="combobox"
