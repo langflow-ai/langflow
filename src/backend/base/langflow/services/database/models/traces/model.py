@@ -46,7 +46,7 @@ class _LegacyCaseEnum(sa_types.TypeDecorator):
         self._by_name: dict[str, Enum] = {m.name: m for m in enum_cls}
         super().__init__(enum_cls, name=name, values_callable=_enum_values)
 
-    def process_result_value(self, value: str | None, dialect) -> Enum | None:
+    def process_result_value(self, value: str | None, _dialect) -> Enum | None:
         if value is None:
             return None
         if isinstance(value, self._enum_cls):
