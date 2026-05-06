@@ -9,6 +9,7 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .calculator import CalculatorToolComponent
+    from .filesystem import FileSystemToolComponent
     from .python_code_structured_tool import PythonCodeStructuredTool
     from .python_repl import PythonREPLToolComponent
     from .search_api import SearchAPIComponent
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "CalculatorToolComponent": "calculator",
+    "FileSystemToolComponent": "filesystem",
     "PythonCodeStructuredTool": "python_code_structured_tool",
     "PythonREPLToolComponent": "python_repl",
     "SearchAPIComponent": "search_api",
@@ -34,6 +36,7 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorToolComponent",
+    "FileSystemToolComponent",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
