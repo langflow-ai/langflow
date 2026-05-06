@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from langchain_community.vectorstores import Qdrant
@@ -16,14 +17,27 @@ from lfx.schema.data import Data
 
 
 def _generate_stable_id(content: str, metadata: dict) -> str:
-    """Generate a deterministic UUID5 from document content and sorted metadata.
+    """Generate a deterministic UUID5 from document content and metadata.
 
-    Sorting metadata makes the ID independent of dict insertion order, so
-    re-ingesting the same document produces the same point ID and Qdrant
-    upserts in place rather than creating duplicates.
+    Uses canonical JSON serialization (sorted keys, compact separators) so the
+    ID is independent of dict insertion order, handles nested structures, and
+    is unambiguous for content/metadata containing characters like ``|`` or
+    ``=`` that would collide under naive string concatenation. Re-ingesting the
+    same document produces the same point ID and Qdrant upserts in place rather
+    than creating duplicates.
+
+    Metadata values are expected to be JSON-serializable (the standard
+    ``Document.metadata`` shape from langchain: str / int / float / bool /
+    None / list / dict). Non-serializable values fall back to ``str()``;
+    callers who put custom objects in metadata should ensure those objects
+    have a stable ``__str__`` for IDs to remain deterministic across runs.
     """
-    metadata_str = "|".join(f"{k}={v}" for k, v in sorted(metadata.items()))
-    payload = f"{content}|{metadata_str}"
+    payload = json.dumps(
+        {"content": content, "metadata": metadata},
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
     return str(uuid.uuid5(uuid.NAMESPACE_OID, payload))
 
 
