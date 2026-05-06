@@ -31,12 +31,13 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 # Error code registry
 # ---------------------------------------------------------------------------
 
-# Phase-1 (LE-1014) error codes.  Each code shipped here MUST have:
+# Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
 #   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
 #   3. a documented reference URL anchor.
 #
-# Loader / reload / migration / events codes are added in their own tickets.
+# Loader / reload / migration / events codes are added when those subsystems
+# land.
 ERROR_CODES: frozenset[str] = frozenset(
     {
         # Schema / manifest discovery
@@ -56,7 +57,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
-        # Loader-specific codes (LE-1015)
+        # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
         "duplicate-inline-bundle",
@@ -67,9 +68,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "local-extension-missing",
     }
 )
-# NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
-# discovery) once there is a startup flow + events surface that can actually
-# emit it.  We hold the line that every registered code must have a producer.
+# NOTE: ``duplicate-distribution`` will be added with the installed-package
+# discovery flow once there is a startup path + events surface that can
+# actually emit it.  We hold the line that every registered code must have a
+# producer.
 
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-"""Pydantic models for the v0 Extension manifest schema (LE-1014).
+"""Pydantic models for the v0 Extension manifest schema.
 
 A Langflow Extension is the distribution unit that gets pip-installed.  In v0
 it ships exactly one Bundle (a named group of components) plus a manifest at
@@ -24,10 +24,10 @@ dropping them.
 
 Multi-bundle is similarly reserved: ``bundles`` is a list, but v0 rejects
 length > 1 with ``multi-bundle-deferred-in-this-milestone``.  This is enforced
-in two places (both checked in different tickets):
+in two places:
 
-    - here, by :class:`ExtensionManifest` (validator-side, LE-1014).
-    - in the loader (LE-1015) at install/discovery time.
+    - here, by :class:`ExtensionManifest` (validator-side).
+    - in the loader at install/discovery time.
 """
 
 from __future__ import annotations
@@ -61,6 +61,18 @@ SCHEMA_VERSION: int = 1
 """The integer version of the manifest schema.  Bumped only when a v0 manifest
 becomes invalid against the new shape."""
 
+BUNDLE_API_VERSION: int = 1
+"""The integer version of the BUNDLE_API.md contract that this lfx package
+implements.  Manifests declare the contract versions they support via
+``lfx.compat`` (a list of stringified integers); a manifest that does not
+include ``str(BUNDLE_API_VERSION)`` is rejected at install time with
+``version-constraint-unsatisfied``.
+
+This is a different concept from :data:`SCHEMA_VERSION` (which versions the
+manifest's own shape) and from the ``"v0"`` initial-state marker in
+BUNDLE_API.md's changelog (which is documentation prose); the integer
+contract version is ``1`` from day one."""
+
 EXTENSION_SCHEMA_URL: str = f"https://schemas.langflow.org/extension/v{SCHEMA_VERSION}.json"
 """Canonical hosting URL for the published JSON Schema.  Authors point their
 ``$schema`` field here for editor autocompletion."""
@@ -70,7 +82,7 @@ _EXTENSION_ID_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 """Extension IDs are lowercase, hyphenated, must start with a letter, 2-64 chars.
 Mirrors the npm-package / PyPI normalization rules."""
 
-_BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
+BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 """Bundle names use snake_case so they can be addressed in the registry as
 ``ext:<bundle>:<Class>@<slot>`` without quoting."""
 
@@ -83,7 +95,7 @@ _SEMVER_RE: re.Pattern[str] = re.compile(
 
 # Deferred manifest fields.  Validators reject any non-null value with
 # ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
-# the loader (LE-1015) shares the same source of truth.
+# the loader shares the same source of truth.
 DEFERRED_FIELDS: tuple[str, ...] = (
     "services",
     "routes",
@@ -94,43 +106,43 @@ DEFERRED_FIELDS: tuple[str, ...] = (
 
 
 # ---------------------------------------------------------------------------
-# LangflowCompat
+# LfxCompat
 # ---------------------------------------------------------------------------
 
+_COMPAT_VERSION_RE: re.Pattern[str] = re.compile(r"^[1-9]\d*$")
+"""Manifest ``lfx.compat`` entries are stringified positive integers (no leading
+zeros) that name a frozen BUNDLE_API.md revision.  v0 only knows ``"1"``."""
 
-class LangflowCompat(BaseModel):
+
+class LfxCompat(BaseModel):
     """Declares which BUNDLE_API.md contract version(s) this Extension supports.
 
-    Each integer in ``bundle_api`` corresponds to a frozen revision of
-    BUNDLE_API.md.  Mismatch with the running Langflow surfaces as
-    ``version-constraint-unsatisfied`` at install time.
+    Each entry in ``compat`` is the string form of a frozen BUNDLE_API.md
+    revision (e.g. ``"1"``).  At install time the loader compares
+    ``str(BUNDLE_API_VERSION)`` against this list; a mismatch surfaces as
+    ``version-constraint-unsatisfied``.
 
-    v0 ships only ``bundle_api=1``; the model is a list to allow future
-    forward-compatible declarations like ``[1, 2]``.
+    v0 ships only ``compat=["1"]``; the field is a list so future bundles can
+    declare forward-compatible support like ``["1", "2"]``.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    bundle_api: list[int] = Field(
+    compat: list[StrictStr] = Field(
         ...,
-        description="Supported BUNDLE_API.md major versions.  Must be non-empty.",
+        description="Supported BUNDLE_API.md contract versions, as strings.  Must be non-empty.",
         min_length=1,
     )
 
-    @field_validator("bundle_api")
+    @field_validator("compat")
     @classmethod
-    def _bundle_api_positive(cls, value: list[int]) -> list[int]:
+    def _compat_well_formed(cls, value: list[str]) -> list[str]:
         for v in value:
-            # ``bool`` is a subclass of ``int``; reject it explicitly so a
-            # trailing ``[true]`` does not silently parse as ``[1]``.
-            if not isinstance(v, int) or isinstance(v, bool):
-                msg = "bundle_api entries must be integers"
-                raise TypeError(msg)
-            if v < 1:
-                msg = "bundle_api entries must be >= 1"
+            if not _COMPAT_VERSION_RE.fullmatch(v):
+                msg = f"compat entries must be positive-integer strings (got {v!r})"
                 raise ValueError(msg)
         if len(set(value)) != len(value):
-            msg = "bundle_api entries must be unique"
+            msg = "compat entries must be unique"
             raise ValueError(msg)
         return value
 
@@ -179,7 +191,7 @@ class BundleRef(BaseModel):
 
     name: StrictStr = Field(
         ...,
-        pattern=_BUNDLE_NAME_RE.pattern,
+        pattern=BUNDLE_NAME_RE.pattern,
         description=(
             "Bundle name; addressable as ext:<name>:<Class>@<slot>. "
             "Lowercase snake_case, starting with a letter, 2-64 chars."
@@ -239,11 +251,6 @@ class ExtensionManifest(BaseModel):
         description="Optional JSON-Schema URL pointer for editor tooling.",
     )
 
-    schema_version: Literal[1] = Field(
-        default=1,
-        description="Manifest schema major version. v0 fixes this at 1.",
-    )
-
     id: StrictStr = Field(
         ...,
         pattern=_EXTENSION_ID_RE.pattern,
@@ -266,7 +273,7 @@ class ExtensionManifest(BaseModel):
         description="Optional human-readable summary of what the extension provides.",
     )
 
-    lfx: LangflowCompat = Field(
+    lfx: LfxCompat = Field(
         ...,
         description="Compatibility declaration vs. the BUNDLE_API.md contract.",
     )
@@ -274,7 +281,12 @@ class ExtensionManifest(BaseModel):
     bundles: list[BundleRef] = Field(
         ...,
         min_length=1,
-        description="Bundles shipped by this extension. v0 accepts exactly one.",
+        max_length=1,
+        description=(
+            "Bundles shipped by this extension. v0 accepts exactly one; the "
+            "constraint is encoded as ``minItems``/``maxItems`` in the published "
+            "JSON Schema so third-party manifest tools agree with the runtime."
+        ),
     )
 
     capabilities: Capabilities = Field(
@@ -316,15 +328,12 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
 
     @model_validator(mode="after")
-    def _validate_bundle_count(self) -> ExtensionManifest:
-        # Multi-bundle is reserved.  Validator-enforced here so that the schema
-        # itself communicates the constraint; the loader (LE-1015) re-checks at
-        # install time with the same code.
-        if len(self.bundles) > 1:
-            msg = "Manifest declares more than one bundle; multi-bundle extensions are deferred in this milestone."
-            raise ValueError(msg)
-        # Bundle names must be unique even though only one is allowed today --
-        # the loader uses this list directly when multi-bundle ships.
+    def _validate_bundle_uniqueness(self) -> ExtensionManifest:
+        # The list-length constraint (exactly one bundle in v0) is encoded on
+        # the field above so it lands in the JSON Schema.  This validator covers
+        # what Field constraints can't express: bundle names must be unique
+        # within an extension.  The check is cheap and forward-compatible -- the
+        # loader uses this list directly when multi-bundle ships.
         names = [bundle.name for bundle in self.bundles]
         if len(set(names)) != len(names):
             msg = "Bundle names must be unique within an extension"

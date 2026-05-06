@@ -1,4 +1,4 @@
-"""Tests for ``discover_inline_bundles`` (LANGFLOW_COMPONENTS_PATH; LE-1015).
+"""Tests for ``discover_inline_bundles`` (LANGFLOW_COMPONENTS_PATH).
 
 Covers the @extra-slot AC items:
     - each immediate subfolder of every path is one Bundle

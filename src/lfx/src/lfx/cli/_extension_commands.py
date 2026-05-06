@@ -1,17 +1,16 @@
 """Extension authoring commands.
 
-Sub-app rather than a flat command so that future tickets (LE-1018: ``reload``;
-LE-1022: ``list`` / installed-pkg discovery; etc.) can attach without a
-top-level naming collision with the existing ``lfx validate`` (which validates
-flow JSON, not extensions).
+Sub-app rather than a flat command so future authoring verbs (``init``,
+``dev``, ``reload``, ...) can attach without a top-level naming collision with
+the existing ``lfx validate`` (which validates flow JSON, not extensions).
 
 Commands shipped here:
 
-    - ``validate``  -- LE-1014; static manifest + AST checker.
-    - ``schema``    -- LE-1014; emit the manifest JSON Schema.
-    - ``init``      -- LE-1016; scaffold a basic single-Bundle extension.
-    - ``dev``       -- LE-1016; register a local extension and launch
-                       Langflow with it loaded.
+    - ``validate``  -- static manifest + AST checker.
+    - ``schema``    -- emit the manifest JSON Schema.
+    - ``init``      -- scaffold a basic single-Bundle extension.
+    - ``dev``       -- register a local extension and launch Langflow with
+                       it loaded.
 
 Each command is implemented as a thin shell over the helpers in
 ``lfx.extension.*`` so the same code paths are reachable from tests
@@ -32,7 +31,7 @@ import typer
 
 extension_app = typer.Typer(
     name="extension",
-    help="Author and inspect Langflow Extensions (LE-1014/1015/1016).",
+    help="Author and inspect Langflow Extensions.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -72,7 +71,7 @@ def validate_command(
         ),
     ),
 ) -> None:
-    """Run the offline LE-1014 validator and exit non-zero on any error.
+    """Run the offline extension validator and exit non-zero on any error.
 
     By default this performs:
       1. Manifest discovery and Pydantic schema validation.

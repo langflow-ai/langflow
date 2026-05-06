@@ -27,7 +27,7 @@ _BASE_MANIFEST: dict = {
     "id": "lfx-pilot",
     "version": "1.2.3",
     "name": "Pilot Bundle",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "pilot", "path": "components"}],
 }
 
@@ -133,7 +133,7 @@ def make_installed_extension(parent: Path, distribution_name: str) -> FakeDist:
         "id": distribution_name,
         "version": "1.0.0",
         "name": distribution_name,
-        "lfx": {"bundle_api": [1]},
+        "lfx": {"compat": ["1"]},
         "bundles": [{"name": distribution_name.replace("-", "_"), "path": "components"}],
     }
     manifest_file = pkg_dir / "extension.json"

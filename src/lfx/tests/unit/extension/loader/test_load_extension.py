@@ -1,4 +1,4 @@
-"""Tests for ``load_extension`` -- happy path and failure modes (LE-1015).
+"""Tests for ``load_extension`` -- happy path and failure modes.
 
 Covers the AC items for the @official slot:
     - single-Bundle happy path + identity tuple population
@@ -121,7 +121,7 @@ def test_runtime_multi_bundle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     from lfx.extension.manifest import (
         BundleRef,
         ExtensionManifest,
-        LangflowCompat,
+        LfxCompat,
         ManifestSource,
     )
 
@@ -136,7 +136,7 @@ def test_runtime_multi_bundle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPa
         id="lfx-pilot",
         version="1.2.3",
         name="Pilot",
-        lfx=LangflowCompat(bundle_api=[1]),
+        lfx=LfxCompat(compat=["1"]),
         bundles=[BundleRef(name="alpha", path="alpha"), BundleRef(name="bravo", path="bravo")],
     )
     source = ManifestSource.model_construct(manifest=forged, path=tmp_path / "extension.json", kind="extension.json")

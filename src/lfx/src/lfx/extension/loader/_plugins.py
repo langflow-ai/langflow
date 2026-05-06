@@ -1,4 +1,4 @@
-"""Manifest-first precedence over ``langflow.plugins`` entry-points (LE-1015).
+"""Manifest-first precedence over ``langflow.plugins`` entry-points.
 
 This is the bridge between the new manifest-based loader and the legacy
 ``langflow.plugins`` entry-point system that third parties already use to
@@ -9,9 +9,9 @@ to avoid double registration.  Non-component entry-points (services,
 routes) on the same distribution are unaffected -- the caller's loop is
 responsible for that distinction.
 
-LE-1022 will use the same primitives at server startup to drive the
-read-only @official slot (installed-package + seed-dir discovery).  The
-helpers live in their own module so that downstream module gets a stable
+The installed-package / seed-dir discovery flow consumes the same
+primitives at server startup to drive the read-only @official slot.  The
+helpers live in their own module so that downstream consumer gets a stable
 import surface to reach for.
 """
 
@@ -114,9 +114,9 @@ def installed_extension_roots(
 
     # Two distributions with the same canonical name (rare but possible in
     # broken venvs) are resolved by keeping the lexicographically-first
-    # manifest path for determinism.  LE-1022 will surface the conflict as
-    # a typed warning when it owns the startup-time discovery flow; in this
-    # primitive we only return the resolved mapping, never an error.
+    # manifest path for determinism.  The startup-time discovery flow will
+    # surface the conflict as a typed warning when it lands; this primitive
+    # only returns the resolved mapping, never an error.
     found: dict[str, tuple[Path, str]] = {}
     for dist in distributions:
         manifest_path = _distribution_manifest_path(dist)

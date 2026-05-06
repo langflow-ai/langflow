@@ -1,4 +1,4 @@
-"""Offline, non-executing validator for a Langflow Extension (LE-1014).
+"""Offline, non-executing validator for a Langflow Extension.
 
 ``validate_extension`` is the function backing the ``lfx extension validate``
 CLI.  It performs four passes:
@@ -364,8 +364,8 @@ def _is_component_class(node: ast.ClassDef) -> bool:
     A class is treated as a Component if any base name is ``Component`` or
     ends with ``Component`` (so ``LCComponent``, ``BaseComponent``, ... all
     match).  Static analysis cannot resolve the actual MRO, so we err on the
-    side of accepting plausible candidates and let the loader (LE-1015) do
-    the real isinstance check at registration time.
+    side of accepting plausible candidates and let the loader do the real
+    isinstance check at registration time.
     """
     for base in node.bases:
         if isinstance(base, ast.Name) and (base.id == "Component" or base.id.endswith("Component")):

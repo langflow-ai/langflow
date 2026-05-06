@@ -1,4 +1,4 @@
-"""Component-subclass detection for the extension loader (LE-1015).
+"""Component-subclass detection for the extension loader.
 
 After ``_discovery`` imports a bundle module, this module is responsible
 for picking the Component subclasses out of the resulting namespace.  The
