@@ -29,16 +29,6 @@ body {
   }
 }
 
-/* Prevent native text-selection highlight on the canvas during shift+drag.
-   WKWebView (Tauri/Safari) does not suppress selection on pointer-drag the way
-   Chromium does, so the viewport div gets highlighted without this rule. */
-.react-flow__container,
-.react-flow__viewport,
-.react-flow__pane {
-  -webkit-user-select: none;
-  user-select: none;
-}
-
 .react-flow__node {
   height: auto;
   border-radius: auto;
