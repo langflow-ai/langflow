@@ -90,16 +90,24 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
         placeholder: "https://search.example.com:9200",
       },
       {
+        // Required because the runtime OpenSearch components (KB +
+        // canvas vector-store) default to basic auth and surface a
+        // confusing "Auth Mode is 'basic' but username/password are
+        // missing" error when the global variables aren't populated.
+        // Operators with auth-less clusters or external auth (sigv4 /
+        // upstream proxy) can set these env vars to a placeholder
+        // value; OpenSearch ignores the credentials when auth is not
+        // enforced.
         label: "Username",
         variableKey: OPENSEARCH_VARIABLES.USERNAME,
-        required: false,
+        required: true,
         isSecret: false,
         placeholder: "admin",
       },
       {
         label: "Password",
         variableKey: OPENSEARCH_VARIABLES.PASSWORD,
-        required: false,
+        required: true,
         isSecret: true,
         placeholder: "Enter OpenSearch password",
       },
