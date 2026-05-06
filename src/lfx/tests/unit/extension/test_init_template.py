@@ -232,7 +232,7 @@ def test_init_template_regexes_match_manifest_schema() -> None:
     from lfx.extension import manifest as manifest_mod
     from lfx.extension.init_template import _BUNDLE_NAME_RE, _EXTENSION_ID_RE
 
-    assert _BUNDLE_NAME_RE.pattern == manifest_mod._BUNDLE_NAME_RE.pattern
+    assert _BUNDLE_NAME_RE.pattern == manifest_mod.BUNDLE_NAME_RE.pattern
     assert _EXTENSION_ID_RE.pattern == manifest_mod._EXTENSION_ID_RE.pattern
 
 
