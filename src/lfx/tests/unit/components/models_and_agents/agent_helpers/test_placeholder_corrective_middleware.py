@@ -1,5 +1,4 @@
-"""Tests for WatsonXPlaceholderMiddleware — corrective re-invoke when WatsonX
-emits literal placeholder strings (e.g. `<result-from-search>`) in tool args.
+"""Tests for WatsonXPlaceholderMiddleware — corrective re-invoke on placeholder tool args.
 
 The legacy `create_granite_agent` had `_handle_placeholder_in_response` doing
 this. This middleware ports that protection so AgentComponent stays robust on
@@ -134,8 +133,11 @@ def test_should_handle_extended_model_response_shape() -> None:
 
 
 def test_should_use_request_override_when_available() -> None:
-    """ModelRequest documents `override()` as the immutable update path; direct
-    attribute assignment is deprecated. Verify we go through override."""
+    """Verify we go through `ModelRequest.override()`.
+
+    `ModelRequest` documents `override()` as the immutable update path; direct
+    attribute assignment is deprecated.
+    """
     middleware = WatsonXPlaceholderMiddleware()
     bad_response = ModelResponse(result=[_ai_message(tool_calls=[_placeholder_tool_call()])])
     good_response = ModelResponse(result=[_ai_message(content="final")])

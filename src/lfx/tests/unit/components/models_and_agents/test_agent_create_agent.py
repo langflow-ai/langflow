@@ -287,11 +287,12 @@ async def test_should_not_attach_watsonx_placeholder_middleware_for_non_watsonx_
 
 @pytest.mark.asyncio
 async def test_should_order_single_tool_call_middleware_outside_watsonx_placeholder_middleware() -> None:
-    """SingleToolCallMiddleware must wrap WatsonXPlaceholderMiddleware so the
-    clamp is applied to the final response — including any corrective re-invoke.
+    """SingleToolCallMiddleware must wrap WatsonXPlaceholderMiddleware.
 
-    Per langchain's middleware composition, the first item in the list is the
-    outermost layer."""
+    The clamp is applied to the final response — including any corrective
+    re-invoke. Per langchain's middleware composition, the first item in the
+    list is the outermost layer.
+    """
     from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
         WatsonXPlaceholderMiddleware,
     )

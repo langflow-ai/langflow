@@ -77,9 +77,11 @@ def test_should_pass_through_unchanged_when_result_has_no_messages() -> None:
 
 
 def test_should_not_mutate_original_ai_message_in_place() -> None:
-    """Direct attribute assignment on a pydantic v2 BaseModel mutates references
-    held by callbacks/streaming. Verify we return a clamped copy and leave the
-    original message untouched."""
+    """Verify we return a clamped copy and leave the original message untouched.
+
+    Direct attribute assignment on a pydantic v2 BaseModel mutates references
+    held by callbacks/streaming.
+    """
     middleware = SingleToolCallMiddleware()
     multi_call = _ai_message_with_tool_calls("calculator", "fetch")
     original_tool_calls = list(multi_call.tool_calls)
@@ -94,8 +96,10 @@ def test_should_not_mutate_original_ai_message_in_place() -> None:
 
 
 def test_should_clamp_when_handler_returns_plain_ai_message() -> None:
-    """`wrap_model_call` may return a bare AIMessage (per the base class
-    signature). The clamp must apply to that shape too."""
+    """`wrap_model_call` may return a bare AIMessage; clamp must apply to that shape too.
+
+    Per the AgentMiddleware base class signature.
+    """
     middleware = SingleToolCallMiddleware()
     multi_call = _ai_message_with_tool_calls("calculator", "fetch")
     handler = MagicMock(return_value=multi_call)
@@ -124,8 +128,10 @@ def test_should_clamp_when_handler_returns_extended_model_response() -> None:
 
 
 def test_should_pass_through_when_last_message_is_not_ai_message() -> None:
-    """Defensive: structured-output paths can append a ToolMessage after the
-    AIMessage. Don't crash, don't clamp."""
+    """Defensive: don't crash, don't clamp when last message is not an AIMessage.
+
+    Structured-output paths can append a ToolMessage after the AIMessage.
+    """
     middleware = SingleToolCallMiddleware()
     final = AIMessage(content="done")
     tool = ToolMessage(content="result", tool_call_id="x")

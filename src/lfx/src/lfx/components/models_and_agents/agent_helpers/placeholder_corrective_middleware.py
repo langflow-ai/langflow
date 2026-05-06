@@ -1,5 +1,4 @@
-"""Re-invoke the model with a corrective prompt when WatsonX emits placeholder
-syntax in tool arguments.
+"""Corrective re-invoke for WatsonX placeholder tool args.
 
 WatsonX-hosted models occasionally emit literal placeholder strings (e.g.
 `<result-from-search>`, `<previous-output>`, `<extracted-value>`) in tool
