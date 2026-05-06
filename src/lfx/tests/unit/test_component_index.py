@@ -1082,17 +1082,17 @@ class TestIDX07StaleIndexWarning:
         settings = _fake_settings_service()
         await ci.get_and_cache_all_types_dict(settings)
 
-        # Find the stale-index warning among any other warnings (e.g. downstream).
+        # Find the stale-cache warning among any other warnings (e.g. downstream).
         stale_calls = [
-            call for call in warning_mock.call_args_list if call.args and "stale component index" in str(call.args[0])
+            call
+            for call in warning_mock.call_args_list
+            if call.args and "stale component cache" in str(call.args[0]).lower()
         ]
         assert len(stale_calls) == 1, (
-            f"expected exactly 1 stale-index warning, got {len(stale_calls)}. "
+            f"expected exactly 1 stale-cache warning, got {len(stale_calls)}. "
             f"All warning calls: {warning_mock.call_args_list!r}"
         )
-        fmt, *args = stale_calls[0].args
-        # Format-substitute to verify the three fields made it into the message.
-        rendered = fmt % tuple(args)
+        rendered = str(stale_calls[0].args[0])
         assert "old-1.0" in rendered, f"warning missing cached version: {rendered!r}"
         assert "new-2.0" in rendered, f"warning missing installed version: {rendered!r}"
         assert str(cache_file) in rendered, f"warning missing cache file path: {rendered!r}"
