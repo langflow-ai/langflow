@@ -58,6 +58,47 @@ def set_advanced_true(component_input):
     return component_input
 
 
+def _agent_base_inputs():
+    """Return base inputs tailored to AgentComponent's create_agent path.
+
+    `get_base_inputs()` returns a shared list — replace, don't mutate. We drop
+    inputs that are no-ops here and override info text on the inputs whose
+    semantics shifted under create_agent.
+
+    `verbose` is dropped because the create_agent event stream already surfaces
+    every agent step via the "Agent Steps" content blocks; the legacy boolean
+    has nothing to toggle. Saved flows that still carry a `verbose` value just
+    ignore it on load (the schema no longer declares it).
+    """
+    drop = {"verbose"}
+    overrides = {
+        "handle_parsing_errors": BoolInput(
+            name="handle_parsing_errors",
+            display_name="Handle Parse Errors",
+            value=True,
+            advanced=True,
+            info=(
+                "Adds tool-execution retry as a safety net. `create_agent` already "
+                "feeds tool-call validation errors back to the LLM automatically; "
+                "this flag layers `ToolRetryMiddleware` on top so transient tool "
+                "runtime failures are retried (max 2 retries)."
+            ),
+        ),
+        "max_iterations": IntInput(
+            name="max_iterations",
+            display_name="Max Iterations",
+            value=15,
+            advanced=True,
+            info=(
+                "Maximum number of model calls the agent can make before stopping "
+                "(maps to `ModelCallLimitMiddleware.run_limit` on the create_agent "
+                "path)."
+            ),
+        ),
+    }
+    return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs() if inp.name not in drop]
+
+
 def _extract_text_content(value) -> str:
     """Pull a string payload from a Message-like, AIMessage-like, or string value."""
     if isinstance(value, str):
@@ -232,7 +273,7 @@ class AgentComponent(ToolCallingAgentComponent):
                 },
             ],
         ),
-        *LCToolsAgentComponent.get_base_inputs(),
+        *_agent_base_inputs(),
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
@@ -427,10 +468,31 @@ class AgentComponent(ToolCallingAgentComponent):
           catches Pydantic ValidationErrors from bad args and feeds the error back
           to the LLM as a retry signal, so the agent recovers gracefully.
         """
+        llm = self._get_llm()
+        tools = self.tools or []
+
+        # Eager bind_tools validation. `create_agent(...)` is lazy — without this,
+        # an LLM that doesn't support tool calling fails on the first user message
+        # instead of when the user wires up the component, which is a much worse UX.
+        # Gated on a non-empty tools list so a no-tool Agent on a plain chat model
+        # (which legitimately has no `bind_tools`) isn't shut out at flow-build time.
+        # Providers signal "no tool calling" inconsistently — `NotImplementedError`
+        # (langchain default), `AttributeError` (no `bind_tools` attr), or `TypeError`
+        # (signature mismatch). Treat all three as the same UX failure.
+        if tools:
+            try:
+                llm.bind_tools(tools)
+            except (NotImplementedError, AttributeError, TypeError) as exc:
+                msg = (
+                    f"{self.display_name} does not support tool calling. "
+                    "Please connect a tool-calling capable language model."
+                )
+                raise NotImplementedError(msg) from exc
+
         middleware = self._build_middleware()
         return create_agent(
-            model=self._get_llm(),
-            tools=self.tools or [],
+            model=llm,
+            tools=tools,
             system_prompt=self.system_prompt or "",
             middleware=middleware or None,
         )

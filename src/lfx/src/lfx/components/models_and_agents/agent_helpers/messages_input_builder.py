@@ -9,6 +9,7 @@ from collections.abc import Iterable
 
 from langchain_core.messages import BaseMessage, HumanMessage
 
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
@@ -27,7 +28,9 @@ def build_initial_messages(
         for item in _normalize_history(chat_history):
             if _has_blank_text(item):
                 continue
-            messages.append(item.to_lc_message())
+            converted = _safe_to_lc_message(item)
+            if converted is not None:
+                messages.append(converted)
 
     if not _append_input(messages, input_value):
         # No fresh user input this turn. Always inject a deterministic continuation
@@ -70,3 +73,20 @@ def _append_input(messages: list[BaseMessage], input_value: Message | str | None
         messages.append(HumanMessage(content=input_value))
         return True
     return False
+
+
+def _safe_to_lc_message(item: Data | Message) -> BaseMessage | None:
+    """Convert a chat_history item to a BaseMessage, or skip+log when malformed.
+
+    `Data.to_lc_message()` raises `ValueError` if the underlying dict is missing the
+    required `text` / `sender` keys. Without this guard a single malformed item would
+    crash the whole turn — the legacy AgentExecutor path silently dropped the entire
+    chat_history under similar circumstances, so we preserve that "noisy log, keep
+    going" contract instead of regressing to a hard failure. Catch is narrowed to
+    `ValueError` so genuine bugs in `to_lc_message` implementations still surface.
+    """
+    try:
+        return item.to_lc_message()
+    except ValueError as exc:
+        logger.warning(f"Skipping malformed chat_history item ({type(item).__name__}): {exc}")
+        return None

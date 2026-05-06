@@ -180,3 +180,29 @@ def test_should_inject_continue_message_when_input_is_blank_and_history_ends_wit
     # And the history is preserved before the safeguard.
     assert len(messages) == 5
     assert _content_text(messages[0]) == "Calculate 17 * 23"
+
+
+def test_should_skip_malformed_chat_history_items_without_crashing_the_turn() -> None:
+    """Malformed `Data` entries in chat_history are skipped, not fatal.
+
+    `Data.to_lc_message()` raises `ValueError` if the underlying dict is missing
+    the required `text` / `sender` keys. The legacy `AgentExecutor` path silently
+    dropped the entire chat_history when any item failed validation; we preserve
+    a similar "log and keep going" contract instead of letting one bad item
+    crash the whole turn. Well-formed neighbors must still come through.
+    """
+    history = [
+        Data(text="hello", sender=MESSAGE_SENDER_USER),  # well-formed
+        Data(data={"text": "no sender"}),  # malformed: missing sender
+        Data(data={"sender": MESSAGE_SENDER_AI}),  # malformed: missing text
+        Data(text="goodbye", sender=MESSAGE_SENDER_AI),  # well-formed
+    ]
+
+    messages = build_initial_messages(input_value="ping", chat_history=history)
+
+    # Only the two well-formed Data items + the user input message survive.
+    assert len(messages) == 3
+    assert _content_text(messages[0]) == "hello"
+    assert _content_text(messages[1]) == "goodbye"
+    assert isinstance(messages[2], HumanMessage)
+    assert _content_text(messages[2]) == "ping"
