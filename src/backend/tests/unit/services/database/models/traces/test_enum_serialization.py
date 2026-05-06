@@ -225,10 +225,16 @@ class TestTraceSummaryReadIoFields:
         assert TraceSummaryRead(**{**_TRACE_DEFAULTS, "output": None}).output is None
 
     def test_accepts_unserializable_sentinel_as_input(self):
-        assert TraceSummaryRead(**{**_TRACE_DEFAULTS, "input": "[Unserializable Object]"}).input == "[Unserializable Object]"
+        assert (
+            TraceSummaryRead(**{**_TRACE_DEFAULTS, "input": "[Unserializable Object]"}).input
+            == "[Unserializable Object]"
+        )
 
     def test_accepts_unserializable_sentinel_as_output(self):
-        assert TraceSummaryRead(**{**_TRACE_DEFAULTS, "output": "[Unserializable Object]"}).output == "[Unserializable Object]"
+        assert (
+            TraceSummaryRead(**{**_TRACE_DEFAULTS, "output": "[Unserializable Object]"}).output
+            == "[Unserializable Object]"
+        )
 
     def test_defaults_input_and_output_to_none(self):
         s = TraceSummaryRead(**_TRACE_DEFAULTS)
@@ -262,10 +268,15 @@ class TestTraceReadIoFields:
         assert TraceRead(**{**_TRACE_READ_DEFAULTS, "output": None}).output is None
 
     def test_accepts_unserializable_sentinel_as_input(self):
-        assert TraceRead(**{**_TRACE_READ_DEFAULTS, "input": "[Unserializable Object]"}).input == "[Unserializable Object]"
+        assert (
+            TraceRead(**{**_TRACE_READ_DEFAULTS, "input": "[Unserializable Object]"}).input == "[Unserializable Object]"
+        )
 
     def test_accepts_unserializable_sentinel_as_output(self):
-        assert TraceRead(**{**_TRACE_READ_DEFAULTS, "output": "[Unserializable Object]"}).output == "[Unserializable Object]"
+        assert (
+            TraceRead(**{**_TRACE_READ_DEFAULTS, "output": "[Unserializable Object]"}).output
+            == "[Unserializable Object]"
+        )
 
     def test_defaults_input_and_output_to_none(self):
         t = TraceRead(**_TRACE_READ_DEFAULTS)
