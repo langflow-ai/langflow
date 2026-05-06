@@ -50,3 +50,22 @@ def has_langflow_memory():
     _LangflowModule.set_available(is_langflow_available)
 
     return is_langflow_available
+
+
+def has_langflow_db_backend() -> bool:
+    """Return True iff langflow-backed memory calls have a real DB to hit.
+
+    Requires both langflow to be importable AND the registered database
+    service to be a non-noop implementation. Evaluated on every call because
+    the database service is typically registered *after* this module is first
+    imported (e.g., from Component class definitions loaded before graph setup).
+    """
+    if not has_langflow_memory():
+        return False
+    from lfx.services.database.service import NoopDatabaseService
+    from lfx.services.deps import get_db_service
+
+    try:
+        return not isinstance(get_db_service(), NoopDatabaseService)
+    except Exception:  # noqa: BLE001
+        return False

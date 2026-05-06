@@ -1,9 +1,16 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StepperModal, StepperModalFooter } from "../stepperModal/StepperModal";
 import { FilesPanel } from "./components/FilesPanel";
 import { StepConfiguration } from "./components/StepConfiguration";
 import { StepReview } from "./components/StepReview";
-import { STEP_DESCRIPTIONS, STEP_TITLES } from "./constants";
+import {
+  getStepDescriptions,
+  getStepTitles,
+  MODAL_HEIGHT_DEFAULT,
+  MODAL_HEIGHT_WITH_ADVANCED,
+  VALIDATION_ERROR_LINE_HEIGHT,
+} from "./constants";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 import type { KnowledgeBaseUploadModalProps } from "./types";
 
@@ -20,6 +27,7 @@ export default function KnowledgeBaseUploadModal({
   hideAdvanced,
   existingKnowledgeBaseNames,
 }: KnowledgeBaseUploadModalProps) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledSetOpen ?? setInternalOpen;
@@ -84,6 +92,15 @@ export default function KnowledgeBaseUploadModal({
     }
   };
 
+  const errorCount = Object.keys(form.validationErrors).length;
+  const modalBase =
+    !hideAdvanced && form.showAdvanced
+      ? MODAL_HEIGHT_WITH_ADVANCED
+      : MODAL_HEIGHT_DEFAULT;
+  const modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
+
+  const showHelpButton = !hideAdvanced && form.currentStep === 1;
+
   return (
     <StepperModal
       open={open}
@@ -96,19 +113,19 @@ export default function KnowledgeBaseUploadModal({
       currentStep={form.currentStep}
       totalSteps={2}
       title={
-        form.isAddSourcesMode ? "Add Sources" : STEP_TITLES[form.currentStep]
+        form.isAddSourcesMode
+          ? t("knowledge.addSourcesTitle")
+          : getStepTitles()[form.currentStep]
       }
       description={
         form.isAddSourcesMode && form.currentStep === 1
-          ? "Upload files and configure chunking settings"
-          : STEP_DESCRIPTIONS[form.currentStep]
+          ? t("knowledge.addSourcesDescription")
+          : getStepDescriptions()[form.currentStep]
       }
       icon="Database"
-      height={(() => {
-        const errorCount = Object.keys(form.validationErrors).length;
-        const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
-        return `${base + errorCount * 16}`;
-      })()}
+      height={
+        !hideAdvanced && form.showAdvanced ? "min-h-[690px]" : "min-h-[347px]"
+      }
       width="w-[700px]"
       showProgress={false}
       sidePanel={
@@ -129,19 +146,19 @@ export default function KnowledgeBaseUploadModal({
           }
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"
-          submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
+          submitLabel={
+            form.isAddSourcesMode
+              ? t("knowledge.submitAddSources")
+              : t("knowledge.submitCreate")
+          }
           helpLabel={
-            !hideAdvanced && form.currentStep === 1
+            showHelpButton
               ? form.showAdvanced
-                ? "Hide Configuration"
-                : "Configure Sources"
+                ? t("knowledge.helpHideConfiguration")
+                : t("knowledge.helpConfigureSources")
               : undefined
           }
-          onHelp={
-            !hideAdvanced && form.currentStep === 1
-              ? form.toggleAdvanced
-              : undefined
-          }
+          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >

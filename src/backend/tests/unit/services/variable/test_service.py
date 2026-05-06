@@ -8,6 +8,7 @@ from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -44,7 +45,8 @@ async def test_initialize_user_variables__create_and_update(service, session: As
     variables = await service.list_variables(user_id, session=session)
     for name in variables:
         value = await service.get_variable(user_id, name, field, session=session)
-        assert value == env_vars[name]
+        assert isinstance(value, SecretStr)
+        assert value.get_secret_value() == env_vars[name]
 
     assert all(i in variables for i in good_vars)
     assert all(i not in variables for i in bad_vars)
@@ -72,7 +74,9 @@ async def test_get_variable(service, session: AsyncSession):
 
     result = await service.get_variable(user_id, name, field, session=session)
 
-    assert result == value
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == value
+    assert str(result) == "**********"
 
 
 async def test_get_variable__valueerror(service, session: AsyncSession):
@@ -130,8 +134,10 @@ async def test_update_variable(service, session: AsyncSession):
     result = await service.update_variable(user_id, name, new_value, session=session)
     new_recovered = await service.get_variable(user_id, name, field, session=session)
 
-    assert old_value == old_recovered
-    assert new_value == new_recovered
+    assert isinstance(old_recovered, SecretStr)
+    assert isinstance(new_recovered, SecretStr)
+    assert old_value == old_recovered.get_secret_value()
+    assert new_value == new_recovered.get_secret_value()
     assert result.user_id == user_id
     assert result.name == name
     assert result.value != old_value
@@ -223,7 +229,8 @@ async def test_delete_variable(service, session: AsyncSession):
     with pytest.raises(ValueError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
 
-    assert recovered == value
+    assert isinstance(recovered, SecretStr)
+    assert recovered.get_secret_value() == value
 
 
 async def test_delete_variable__valueerror(service, session: AsyncSession):
@@ -246,7 +253,8 @@ async def test_delete_variable_by_id(service, session: AsyncSession):
     with pytest.raises(ValueError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
 
-    assert recovered == value
+    assert isinstance(recovered, SecretStr)
+    assert recovered.get_secret_value() == value
 
 
 async def test_delete_variable_by_id__valueerror(service, session: AsyncSession):

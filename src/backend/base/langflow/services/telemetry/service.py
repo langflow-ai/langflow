@@ -18,6 +18,7 @@ from langflow.services.telemetry.schema import (
     ComponentIndexPayload,
     ComponentInputsPayload,
     ComponentPayload,
+    DeploymentPayload,
     EmailPayload,
     ExceptionPayload,
     PlaygroundPayload,
@@ -109,6 +110,15 @@ class TelemetryService(Service):
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
+
+    async def log_package_deployment(self, payload: DeploymentPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "deployment"))
+
+    async def log_package_deployment_provider(self, payload: DeploymentPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "deployment_provider"))
+
+    async def log_package_deployment_run(self, payload: DeploymentPayload) -> None:
+        await self._queue_event((self.send_telemetry_data, payload, "deployment_run"))
 
     async def log_package_shutdown(self) -> None:
         payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)

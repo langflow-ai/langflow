@@ -12,18 +12,15 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import remove_api_keys
-from langflow.api.v1.mappers.deployments.helpers import sync_flow_version_attachments
-from langflow.services.database.models.deployment_provider_account.crud import (
-    count_provider_accounts,
-)
+from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
+from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
     delete_flow_version_entry,
     get_flow_version_entry_or_raise,
-    get_flow_version_list,
     get_flow_version_list_simple,
-    is_flow_version_deployed,
+    get_flow_versions_with_provider_status,
 )
 from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
@@ -62,14 +59,14 @@ def strip_version_data(data: dict | None) -> dict | None:
         return None
 
 
-def _version_to_read(entry: FlowVersion, *, is_deployed: bool = False) -> FlowVersionRead:
+def _version_to_read(entry: FlowVersion, *, is_deployed: bool | None = None) -> FlowVersionRead:
     result = FlowVersionRead.model_validate(entry, from_attributes=True)
     result.is_deployed = is_deployed
     return result
 
 
 def _version_to_read_full(
-    entry: FlowVersion, *, strip_keys: bool = False, is_deployed: bool = False
+    entry: FlowVersion, *, strip_keys: bool = False, is_deployed: bool | None = None
 ) -> FlowVersionReadWithData:
     result = FlowVersionReadWithData.model_validate(entry, from_attributes=True)
     result.is_deployed = is_deployed
@@ -99,42 +96,45 @@ def _translate_version_error(exc: FlowVersionError) -> HTTPException:
     return HTTPException(status_code=500, detail=str(exc))
 
 
-def _ensure_deployments_enabled_for_filters(deployment_ids: list[UUID] | None) -> None:
-    if deployment_ids and not FEATURE_FLAGS.wxo_deployments:
-        msg = "Cannot filter by deployment_ids: the wxo_deployments feature flag is disabled"
+def _ensure_deployments_enabled_for_provider_id(deployment_provider_id: UUID | None) -> None:
+    if deployment_provider_id and not FEATURE_FLAGS.wxo_deployments:
+        msg = "Cannot use deployment_provider_id: the wxo_deployments feature flag is disabled"
         raise HTTPException(status_code=400, detail=msg)
 
 
-@router.get("/")
+# NOTE: `response_model_exclude_none=True` is intentionally narrow here: we use
+# it to omit `is_deployed` unless deployment status is explicitly requested.
+# If future nullable fields must be returned as explicit null, prefer splitting
+# response schemas/routes and disabling this global exclude-none behavior.
+@router.get("/", response_model_exclude_none=True)
 async def list_flow_versions(
     flow_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
-    deployment_ids: Annotated[
-        list[UUID] | None,
-        Query(
-            description=(
-                "Optional deployment ids to filter by (pass as repeated query params, "
-                "e.g. ?deployment_ids=id1&deployment_ids=id2). When provided, only "
-                "versions attached to at least one of these deployments are returned."
-            ),
-        ),
+    deployment_provider_id: Annotated[
+        UUID | None,
+        Query(description=("Optional provider account ID for provider account-scoped deployment status.")),
     ] = None,
 ) -> FlowVersionListResponse:
     await _get_user_flow(session, flow_id, current_user.id)
-    _ensure_deployments_enabled_for_filters(deployment_ids)
+    _ensure_deployments_enabled_for_provider_id(deployment_provider_id)
 
-    has_providers = (
-        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
-    )
-
-    if has_providers:
-        # Best-effort snapshot-level sync: prune attachment rows whose
-        # provider_snapshot_id is no longer recognised by the provider.
+    if deployment_provider_id is not None:
+        await get_owned_provider_account_or_404(
+            provider_id=deployment_provider_id,
+            user_id=current_user.id,
+            db=session,
+        )
+        # Best-effort provider-scoped sync before read to keep status fresh.
         try:
-            await sync_flow_version_attachments(db=session, flow_id=flow_id, user_id=current_user.id)
+            await sync_flow_version_attachments(
+                db=session,
+                flow_id=flow_id,
+                user_id=current_user.id,
+                deployment_provider_account_id=deployment_provider_id,
+            )
         except Exception:  # noqa: BLE001
             logger.warning(
                 "Snapshot-level sync failed for flow %s; returning unverified deployment status",
@@ -142,26 +142,29 @@ async def list_flow_versions(
                 exc_info=True,
             )
 
-        rows = await get_flow_version_list(
+    if deployment_provider_id is not None:
+        rows = await get_flow_versions_with_provider_status(
             session,
             flow_id,
             current_user.id,
-            limit,
-            offset,
-            deployment_ids=deployment_ids,
+            provider_account_id=deployment_provider_id,
+            limit=limit,
+            offset=offset,
         )
+        entries = [_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows]
     else:
-        rows = await get_flow_version_list_simple(
+        rows_simple = await get_flow_version_list_simple(
             session,
             flow_id,
             current_user.id,
             limit,
             offset,
         )
+        entries = [_version_to_read(entry, is_deployed=None) for entry, _is_deployed in rows_simple]
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
     return FlowVersionListResponse(
-        entries=[_version_to_read(entry, is_deployed=is_deployed) for entry, is_deployed in rows],
+        entries=entries,
         max_entries=max_entries,
     )
 
@@ -180,31 +183,17 @@ async def get_single_flow_version(
 ) -> FlowVersionReadWithData:
     await _get_user_flow(session, flow_id, current_user.id)
 
-    has_providers = (
-        FEATURE_FLAGS.wxo_deployments and await count_provider_accounts(session, user_id=current_user.id) > 0
-    )
-
-    if has_providers:
-        # Best-effort snapshot-level sync (same as list endpoint).
-        try:
-            await sync_flow_version_attachments(db=session, flow_id=flow_id, user_id=current_user.id)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Snapshot-level sync failed for flow %s; returning unverified deployment status",
-                flow_id,
-                exc_info=True,
-            )
-
     try:
         entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
-    deployed = await is_flow_version_deployed(session, version_id) if has_providers else False
-    return _version_to_read_full(entry, strip_keys=True, is_deployed=deployed)
+    return _version_to_read_full(entry, strip_keys=True)
 
 
-@router.post("/", status_code=201)
+# shares FlowVersionRead model with list endpoint (inside FlowVersionListResponse),
+# but omits is_deployed field because its not relevant to this endpoint
+@router.post("/", status_code=201, response_model_exclude={"is_deployed"})
 async def create_snapshot(
     flow_id: UUID,
     current_user: CurrentActiveUser,

@@ -271,6 +271,11 @@ module.exports = {
             },
             {
               type: "doc",
+              id: "Deployment/deployment-wxo",
+              label: "IBM watsonx Orchestrate"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
