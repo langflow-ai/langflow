@@ -153,8 +153,12 @@ class Settings(BaseSettings):
     the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
-    database."""
+    """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
+
+    mcp_tool_execution_timeout: int = 180
+    """Maximum seconds to wait for MCP tool execution before timing out.
+    Default is 180 seconds (3 minutes) to support long-running operations.
+    Individual components can override this with their own timeout setting."""
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning

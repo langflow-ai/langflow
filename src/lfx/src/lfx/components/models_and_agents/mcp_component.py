@@ -20,7 +20,7 @@ from lfx.base.mcp.util import (
 from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -100,9 +100,12 @@ class MCPToolsComponent(ComponentWithCache):
         self._ensure_cache_structure()
 
         # Initialize clients with access to the component cache
-        self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
+        # Timeout will be read at execution time (like use_cache and headers)
+        self.stdio_client: MCPStdioClient = MCPStdioClient(
+            component_cache=self._shared_component_cache, tool_execution_timeout=None
+        )
         self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
-            component_cache=self._shared_component_cache
+            component_cache=self._shared_component_cache, tool_execution_timeout=None
         )
         # One MCP stdio/streamable client pair per component; concurrent update_tool_list calls
         # otherwise race (session DELETE vs POST) and the MCP SDK surfaces HTTP 404 as "Session terminated".
@@ -184,6 +187,7 @@ class MCPToolsComponent(ComponentWithCache):
         "use_cache",
         "verify_ssl",
         "headers",
+        "tool_execution_timeout",
     ]
 
     display_name = "MCP Tools"
@@ -229,6 +233,17 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             advanced=True,
             is_list=True,
+        ),
+        FloatInput(
+            name="tool_execution_timeout",
+            display_name="Tool Execution Timeout (seconds)",
+            info=(
+                "Maximum time to wait for tool execution before timing out. "
+                "Supports decimal values for sub-second timeouts (e.g., 0.01 for 10ms). "
+                "Set to 0 to use the global default timeout (180 seconds)."
+            ),
+            value=0.0,
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -460,12 +475,18 @@ class MCPToolsComponent(ComponentWithCache):
                     else "list-or-empty",
                 )
 
+                # Get timeout from component input or use None (will default to global setting)
+                # Convert to float and treat 0 as None (use global default)
+                timeout_value = getattr(self, "tool_execution_timeout", 0.0)
+                timeout = float(timeout_value) if timeout_value else None
+
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
                     server_config=server_config,
                     mcp_stdio_client=self.stdio_client,
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
+                    tool_execution_timeout=timeout,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
