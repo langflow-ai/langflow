@@ -2518,7 +2518,7 @@
               }
             ],
             "pinned": false,
-            "score": 0.000018578044550916993,
+            "score": 1.8578044550916993e-05,
             "template": {
               "_type": "Component",
               "api_key": {
@@ -3248,7 +3248,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -3625,7 +3625,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",

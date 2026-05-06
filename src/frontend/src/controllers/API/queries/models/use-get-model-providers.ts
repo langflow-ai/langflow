@@ -86,6 +86,7 @@ const getProviderIcon = (providerName: string): string => {
     Ollama: "Ollama",
     "IBM WatsonX": "IBM",
     "IBM watsonx.ai": "IBM",
+    "Langflow Model": "Langflow",
   };
 
   return iconMap[providerName] || "Bot";

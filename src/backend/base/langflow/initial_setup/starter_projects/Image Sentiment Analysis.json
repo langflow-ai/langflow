@@ -1123,7 +1123,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.13.3"
+                    "version": "2.12.5"
                   },
                   {
                     "name": "trustcall",
@@ -1652,7 +1652,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",

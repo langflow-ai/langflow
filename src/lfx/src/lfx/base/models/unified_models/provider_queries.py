@@ -9,6 +9,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.langflow_local_constants import LANGFLOW_LOCAL_MODELS_DETAILED
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 from lfx.base.models.ollama_constants import (
     OLLAMA_EMBEDDING_MODELS_DETAILED,
@@ -33,7 +34,11 @@ model_provider_metadata = get_model_provider_metadata()
 @lru_cache(maxsize=1)
 def get_models_detailed() -> list[list[dict]]:
     """Return grouped static model metadata from provider constants."""
+    # Why Langflow Model first: order in this list drives the dropdown order in the
+    # frontend. Putting the bundled local provider first makes it the natural default
+    # for new users who have no API keys configured.
     return [
+        LANGFLOW_LOCAL_MODELS_DETAILED,
         ANTHROPIC_MODELS_DETAILED,
         OPENAI_MODELS_DETAILED,
         OPENAI_EMBEDDING_MODELS_DETAILED,

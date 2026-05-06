@@ -1511,7 +1511,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -1913,7 +1913,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",
@@ -2315,7 +2315,7 @@
                 "trace_as_input": true,
                 "track_in_telemetry": false,
                 "type": "model",
-                "value": ""
+                "value": "qwen2.5:1.5b"
               },
               "ollama_base_url": {
                 "_input_type": "MessageInput",

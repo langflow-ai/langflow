@@ -558,7 +558,7 @@
                   },
                   {
                     "name": "langchain_openai",
-                    "version": "1.2.1"
+                    "version": "1.2.0"
                   },
                   {
                     "name": "langchain_huggingface",
@@ -578,7 +578,7 @@
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "1.0.7"
+                    "version": "1.0.6"
                   }
                 ],
                 "total_dependencies": 10

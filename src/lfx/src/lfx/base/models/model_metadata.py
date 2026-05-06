@@ -47,7 +47,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "Langflow Model"]
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
@@ -287,6 +287,19 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "mapping": {
             "model_class": "ChatWatsonx",
             "model_param": "model_id",
+        },
+    },
+    "Langflow Model": {
+        "icon": "Langflow",
+        "max_tokens_field_name": "max_tokens",
+        # Why empty variables: this provider is "no API key required" by design — it
+        # ships with the bundled local backend (Ollama). Surfacing credential fields
+        # would break the zero-config promise.
+        "variables": [],
+        "api_docs_url": "https://docs.langflow.org/components-models",
+        "mapping": {
+            "model_class": "ChatLangflowLocal",
+            "model_param": "model",
         },
     },
 }

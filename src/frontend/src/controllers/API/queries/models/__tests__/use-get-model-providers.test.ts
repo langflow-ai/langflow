@@ -223,4 +223,60 @@ describe("useGetModelProviders", () => {
       expect(result.current).toBeDefined();
     });
   });
+
+  // Why explicit icon assertions here (vs. the existing "is defined" checks above):
+  // the existing tests do not actually verify the iconMap, so a missing or wrong entry
+  // would slip through. These assertions guard the contract between provider name
+  // (the backend's MODEL_PROVIDER_METADATA key) and the frontend icon registry.
+  describe("Langflow Model provider icon mapping", () => {
+    it("should map 'Langflow Model' provider to the Langflow icon", async () => {
+      const mockResponse: ModelProviderInfo[] = [
+        {
+          provider: "Langflow Model",
+          models: [
+            {
+              model_name: "qwen2.5:1.5b",
+              metadata: { model_type: "llm", tool_calling: true },
+            },
+          ],
+          is_enabled: true,
+        },
+      ];
+      mockApiGet.mockResolvedValue({ data: mockResponse });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+
+      expect(result.current.data?.[0].icon).toBe("Langflow");
+    });
+
+    it("should still fall back to 'Bot' for genuinely unknown providers", async () => {
+      // Regression guard: a typo on the new entry must not silently fall back to "Bot".
+      // This test pins the fallback behaviour for actually-unknown providers so that
+      // adding "Langflow Model" did not accidentally widen or narrow the fallback path.
+      const mockResponse: ModelProviderInfo[] = [
+        {
+          provider: "DefinitelyNotARealProvider",
+          models: [],
+          is_enabled: true,
+        },
+      ];
+      mockApiGet.mockResolvedValue({ data: mockResponse });
+
+      const { result } = renderHook(() => useGetModelProviders({}), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+
+      expect(result.current.data?.[0].icon).toBe("Bot");
+    });
+  });
 });
