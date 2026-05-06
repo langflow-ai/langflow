@@ -34,18 +34,14 @@ class TestChatLangflowLocalDefaults:
 
         assert chat.base_url == "http://localhost:11434"
 
-    def test_should_accept_curated_non_default_model(self):
-        # Pick any curated model that is NOT the default — to prove non-default
-        # entries also work, and the test does not silently degrade to the default
-        # (which would happen if curation was bypassed).
+    def test_curated_set_should_contain_at_least_the_default_model(self):
+        # Why we keep this test even with a single curated model: it pins the
+        # invariant that the curated set is non-empty AND the default is in it.
+        # If a future change drops the default by mistake, this fails loudly.
         from lfx.base.models.langflow_local_constants import CURATED_MODEL_NAMES, LANGFLOW_LOCAL_DEFAULT_MODEL
-        from lfx.base.models.langflow_local_model import ChatLangflowLocal
 
-        non_default = next(name for name in CURATED_MODEL_NAMES if name != LANGFLOW_LOCAL_DEFAULT_MODEL)
-
-        chat = ChatLangflowLocal(model=non_default)
-
-        assert chat.model == non_default
+        assert LANGFLOW_LOCAL_DEFAULT_MODEL in CURATED_MODEL_NAMES
+        assert len(CURATED_MODEL_NAMES) >= 1
 
 
 # ---------------------------------------------------------------------------

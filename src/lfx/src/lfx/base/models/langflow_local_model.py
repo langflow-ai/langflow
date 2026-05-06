@@ -1,11 +1,12 @@
 """ChatLangflowLocal — validated wrapper around langchain-ollama's ChatOllama.
 
 This wrapper backs the "Langflow Model" provider exposed in the unified model
-catalog. Its only responsibility is to enforce two security guards before delegating
-to ChatOllama:
+catalog. Responsibilities, in order:
 
-  1. base_url whitelist (SSRF guard) — see ALLOWED_BASE_URLS.
-  2. model name whitelist (anti-injection / unbounded download) — see CURATED_MODEL_NAMES.
+  1. SSRF guard — see ALLOWED_BASE_URLS.
+  2. Anti-injection guard — see CURATED_MODEL_NAMES.
+  3. Auto-pull on demand — if the curated model is not pulled yet on the bundled
+     Ollama backend, fetch it synchronously before delegating to ChatOllama.
 
 Everything else — streaming, tool calling, message formatting — is inherited unchanged
 from ChatOllama.
@@ -13,8 +14,10 @@ from ChatOllama.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
+import httpx
 from langchain_ollama import ChatOllama
 
 from .langflow_local_constants import (
@@ -24,6 +27,9 @@ from .langflow_local_constants import (
 )
 
 DEFAULT_BASE_URL = "http://localhost:11434"
+
+_TAGS_TIMEOUT_S = 5.0
+_PULL_TIMEOUT_S = 1800.0  # 30 min hard cap
 
 
 class UnsafeBaseUrlError(ValueError):
@@ -67,6 +73,74 @@ def _validate_model_name(model: str) -> None:
         raise UncuratedModelError(msg)
 
 
+def _is_model_pulled_sync(model: str, base_url: str) -> bool:
+    """Synchronous variant of services.local_model.model_puller.is_model_pulled.
+
+    Why duplicate (vs. importing the async version): __init__ runs in sync code paths
+    (component.build_model is synchronous). Using asyncio.run() here would either
+    crash inside an existing event loop or deadlock when called from one.
+    """
+    try:
+        with httpx.Client(timeout=_TAGS_TIMEOUT_S) as client:
+            response = client.get(f"{base_url}/api/tags")
+    except httpx.HTTPError:
+        return False
+    if response.status_code != 200:  # noqa: PLR2004
+        return False
+    try:
+        payload = response.json()
+    except ValueError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    models = payload.get("models", [])
+    return isinstance(models, list) and any(
+        isinstance(m, dict) and m.get("name") == model for m in models
+    )
+
+
+def _pull_model_sync(model: str, base_url: str) -> None:
+    """Synchronous Ollama pull. Streams NDJSON; raises on error or stream-without-success."""
+    saw_success = False
+    with httpx.Client(timeout=_PULL_TIMEOUT_S) as client, client.stream(
+        "POST", f"{base_url}/api/pull", json={"name": model}
+    ) as response:
+        response.raise_for_status()
+        for raw in response.iter_lines():
+            if not raw:
+                continue
+            try:
+                chunk = json.loads(raw)
+            except ValueError:
+                continue
+            if not isinstance(chunk, dict):
+                continue
+            if "error" in chunk:
+                msg = f"Ollama pull error: {chunk['error']}"
+                raise RuntimeError(msg)
+            if chunk.get("status") == "success":
+                saw_success = True
+    if not saw_success:
+        msg = "Ollama pull stream ended without a success terminator"
+        raise RuntimeError(msg)
+
+
+def _ensure_model_available(model: str, base_url: str) -> None:
+    """No-op if model is already pulled; otherwise pulls it synchronously.
+
+    Failures are swallowed silently — the subsequent ChatOllama call will surface
+    the original 404 error to the user, which is the existing UX. We just give it
+    a chance to succeed instead of guaranteeing it.
+    """
+    try:
+        if _is_model_pulled_sync(model, base_url):
+            return
+        _pull_model_sync(model, base_url)
+    except (httpx.HTTPError, RuntimeError):
+        # If pull fails, fall through — let the actual invoke surface its own error.
+        return
+
+
 class ChatLangflowLocal(ChatOllama):
     """ChatOllama subclass restricted to the curated Langflow Model catalog."""
 
@@ -74,6 +148,8 @@ class ChatLangflowLocal(ChatOllama):
         self,
         model: str | None = None,
         base_url: str | None = None,
+        *,
+        auto_pull: bool = True,
         **kwargs: Any,
     ) -> None:
         _ensure_langchain_ollama_available()
@@ -83,5 +159,8 @@ class ChatLangflowLocal(ChatOllama):
 
         _validate_base_url(chosen_url)
         _validate_model_name(chosen_model)
+
+        if auto_pull:
+            _ensure_model_available(chosen_model, chosen_url)
 
         super().__init__(model=chosen_model, base_url=chosen_url, **kwargs)

@@ -140,7 +140,7 @@ const ProviderConfigurationForm = ({
               )}
             </>
           ) : (
-            `${selectedProvider.provider || t("modelProviders.unknownProvider")} ${requiresConfiguration && ` ${t("modelProviders.configuration")}`}`
+            `${selectedProvider.provider || t("modelProviders.unknownProvider")}${requiresConfiguration ? ` ${t("modelProviders.configuration")}` : ""}`
           )}
         </span>
       </div>

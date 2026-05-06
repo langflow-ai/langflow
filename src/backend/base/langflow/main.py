@@ -360,6 +360,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             await start_streamable_http_manager()
             await start_project_task_group()
 
+            # Why a background task: ensure_local_model_ready may install Ollama
+            # and pull a ~1GB model. We never want to block server startup on it,
+            # but we DO want to start it the moment the server is up so the user
+            # has the bundled model ready when they open the UI for the first time.
+            from langflow.services.local_model.startup_hook import schedule_local_model_bootstrap
+
+            # Why store on app.state: keeps a strong reference so the asyncio
+            # event loop does not garbage-collect the task mid-flight (RUF006).
+            _app.state.local_model_bootstrap_task = asyncio.create_task(schedule_local_model_bootstrap())
+
             yield
         except asyncio.CancelledError:
             await logger.adebug("Lifespan received cancellation signal")

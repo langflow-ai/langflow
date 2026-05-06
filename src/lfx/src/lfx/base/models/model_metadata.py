@@ -47,7 +47,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "Langflow Model"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
@@ -292,10 +292,29 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "Langflow Model": {
         "icon": "Langflow",
         "max_tokens_field_name": "max_tokens",
-        # Why empty variables: this provider is "no API key required" by design — it
-        # ships with the bundled local backend (Ollama). Surfacing credential fields
-        # would break the zero-config promise.
-        "variables": [],
+        # Why this single non-secret variable: the frontend's activate flow needs at
+        # least one variable to attach an "is_enabled" record to (mirrors how Ollama
+        # uses OLLAMA_BASE_URL). The Langflow Model provider does NOT require any
+        # third-party credential — this URL just points at the bundled Ollama
+        # backend, defaults to localhost, and is hidden in the advanced section.
+        "variables": [
+            {
+                "variable_name": "Langflow Model Base URL",
+                "variable_key": "LANGFLOW_LOCAL_BASE_URL",
+                "description": "Base URL of the bundled local Ollama backend",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "base_url",
+                "component_metadata": {
+                    "mapping_field": "base_url",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Defaults to http://localhost:11434",
+                },
+            }
+        ],
         "api_docs_url": "https://docs.langflow.org/components-models",
         "mapping": {
             "model_class": "ChatLangflowLocal",

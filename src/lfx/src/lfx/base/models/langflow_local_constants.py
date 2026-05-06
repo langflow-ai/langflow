@@ -17,24 +17,15 @@ LANGFLOW_LOCAL_PROVIDER_NAME: str = "Langflow Model"
 LANGFLOW_LOCAL_DEFAULT_MODEL: str = "qwen2.5:1.5b"
 
 LANGFLOW_LOCAL_MODELS_DETAILED: list[dict] = [
+    # Why a single curated model: keeps the on-disk footprint small (~1GB) and
+    # avoids confusing new users with options that all need to be pulled separately.
+    # Advanced users can still use Ollama directly for any other model.
     create_model_metadata(
         provider=LANGFLOW_LOCAL_PROVIDER_NAME,
         name="qwen2.5:1.5b",
         icon="Langflow",
         tool_calling=True,
         default=True,
-    ),
-    create_model_metadata(
-        provider=LANGFLOW_LOCAL_PROVIDER_NAME,
-        name="llama3.2:1b",
-        icon="Langflow",
-        tool_calling=True,
-    ),
-    create_model_metadata(
-        provider=LANGFLOW_LOCAL_PROVIDER_NAME,
-        name="llama3.2:3b",
-        icon="Langflow",
-        tool_calling=True,
     ),
 ]
 

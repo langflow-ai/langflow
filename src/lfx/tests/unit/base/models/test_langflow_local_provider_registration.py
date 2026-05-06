@@ -66,15 +66,18 @@ class TestModelProviderMetadataIncludesLangflowLocal:
 
         assert LANGFLOW_LOCAL_PROVIDER_NAME in MODEL_PROVIDER_METADATA
 
-    def test_metadata_entry_should_have_no_credentials(self):
+    def test_metadata_entry_should_not_require_secret_credentials(self):
         # Why: the WHOLE POINT of the Langflow Model provider is "no API key required".
-        # If variables is non-empty, the credentials UI will appear and break the
-        # zero-config promise.
+        # We allow ONE non-secret marker variable (LANGFLOW_LOCAL_BASE_URL) so the
+        # frontend's activate flow has something to attach the is_enabled flag to —
+        # mirrors how Ollama uses OLLAMA_BASE_URL — but no secret/required credential.
         from lfx.base.models.langflow_local_constants import LANGFLOW_LOCAL_PROVIDER_NAME
         from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 
         entry = MODEL_PROVIDER_METADATA[LANGFLOW_LOCAL_PROVIDER_NAME]
-        assert entry.get("variables") == []
+        for variable in entry.get("variables", []):
+            assert variable.get("is_secret") is False, "Langflow Model must not require any secret"
+            assert variable.get("required") is False, "Langflow Model variables must be optional"
 
     def test_metadata_entry_should_map_to_chat_langflow_local_class(self):
         from lfx.base.models.langflow_local_constants import LANGFLOW_LOCAL_PROVIDER_NAME
@@ -92,15 +95,17 @@ class TestModelProviderMetadataIncludesLangflowLocal:
         assert entry["icon"] == "Langflow"
 
 
-class TestLiveModelProvidersIncludesLangflowLocal:
-    def test_langflow_local_should_be_in_live_providers(self):
+class TestLiveModelProvidersExcludesLangflowLocal:
+    def test_langflow_local_must_not_be_in_live_providers(self):
         # Why: LIVE_MODEL_PROVIDERS marks providers that resolve their model list at
-        # runtime (Ollama queries `/api/tags`). Langflow Model rides on Ollama under
-        # the hood and benefits from the same dynamic discovery semantics.
+        # runtime via /api/tags. Adding "Langflow Model" there caused the unified
+        # endpoint to REPLACE the curated 3-model list with an empty live result
+        # (because no fetch_live_* function exists for Langflow Model). Our model
+        # list is intentionally CURATED, not dynamic — so it must stay static.
         from lfx.base.models.langflow_local_constants import LANGFLOW_LOCAL_PROVIDER_NAME
         from lfx.base.models.model_metadata import LIVE_MODEL_PROVIDERS
 
-        assert LANGFLOW_LOCAL_PROVIDER_NAME in LIVE_MODEL_PROVIDERS
+        assert LANGFLOW_LOCAL_PROVIDER_NAME not in LIVE_MODEL_PROVIDERS
 
 
 # ---------------------------------------------------------------------------
