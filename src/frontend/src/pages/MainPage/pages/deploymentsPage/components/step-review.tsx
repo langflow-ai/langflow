@@ -1,5 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +64,7 @@ function EditableToolName({
           type="button"
           onClick={confirm}
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Confirm"
+          title={t("deployments.confirm")}
         >
           <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
         </button>
@@ -83,7 +84,7 @@ function EditableToolName({
           setEditing(true);
         }}
         className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-        title="Edit tool name"
+        title={t("deployments.editToolName")}
         data-testid="edit-tool-name"
       >
         <ForwardedIconComponent name="Pencil" className="h-3.5 w-3.5" />
@@ -110,6 +111,7 @@ export default function StepReview() {
     setHasToolNameErrors,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId;
@@ -201,9 +203,9 @@ export default function StepReview() {
       // Check batch duplicates (two flows with same tool name in this deployment)
       const firstFlowId = batchNames.get(normalized);
       if (firstFlowId) {
-        errors.set(item.flowId, "Duplicate tool name within this deployment");
+        errors.set(item.flowId, t("deployments.duplicateToolName"));
         if (!errors.has(firstFlowId)) {
-          errors.set(firstFlowId, "Duplicate tool name within this deployment");
+          errors.set(firstFlowId, t("deployments.duplicateToolName"));
         }
       } else {
         batchNames.set(normalized, item.flowId);
@@ -223,7 +225,7 @@ export default function StepReview() {
         if (!skipProviderCheck) {
           errors.set(
             item.flowId,
-            "Edit tool name (already exists in provider)",
+            t("deployments.editToolNameExists"),
           );
         }
       }
@@ -249,9 +251,9 @@ export default function StepReview() {
   return (
     <div className="flex flex-col gap-4 py-3">
       <div>
-        <h2 className="text-lg font-semibold">Review & Confirm</h2>
+        <h2 className="text-lg font-semibold">{t("deployments.reviewAndConfirm")}</h2>
         <p className="text-sm text-muted-foreground">
-          Review your deployment details before creating.
+          {t("deployments.reviewDetails")}
         </p>
       </div>
 
@@ -260,11 +262,11 @@ export default function StepReview() {
           {/* Deployment column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              Deployment
+              {t("deployments.deploymentLabel")}
             </span>
             <div className="flex flex-col gap-2">
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">Type</span>
+                <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelType")}</span>
                 <div className="flex items-center gap-1.5">
                   <ForwardedIconComponent
                     name={deploymentType === "agent" ? "Bot" : "Server"}
@@ -276,7 +278,7 @@ export default function StepReview() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">Name</span>
+                <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelName")}</span>
                 <span className="text-sm text-foreground">
                   {deploymentName || "—"}
                 </span>
@@ -284,7 +286,7 @@ export default function StepReview() {
               {selectedLlm && (
                 <div className="flex items-center gap-2">
                   <span className="w-10 text-xs text-muted-foreground">
-                    Model
+                    {t("deployments.labelModel")}
                   </span>
                   <span className="text-sm text-foreground">{selectedLlm}</span>
                 </div>
@@ -295,7 +297,7 @@ export default function StepReview() {
           {/* Attached Flows column */}
           <div className="flex flex-col gap-3">
             <span className="text-sm font-medium text-foreground">
-              Attached Flows
+              {t("deployments.attachedFlowsLabel")}
             </span>
             <div className="flex flex-col gap-1.5">
               {reviewFlows.length === 0 ? (
@@ -483,7 +485,7 @@ export default function StepReview() {
                       className="h-3.5 w-3.5 shrink-0 text-destructive/60"
                     />
                     <span className="text-sm text-foreground">
-                      {flow?.name ?? "Unknown flow"}
+                      {flow?.name ?? t("deployments.unknownFlow")}
                     </span>
                     <Badge
                       variant="secondaryStatic"

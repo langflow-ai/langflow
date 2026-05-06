@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +48,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   onCreateConnection: () => void;
   isDuplicateName?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
@@ -69,8 +71,8 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 )}
               >
                 {tab === "available"
-                  ? "Available Connections"
-                  : "Create Connection"}
+                  ? t("deployments.availableConnections")
+                  : t("deployments.createConnection")}
               </button>
             ))}
           </div>
@@ -94,10 +96,10 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  Connection Name<span className="text-destructive">*</span>
+                  {t("deployments.connectionNameLabel")}<span className="text-destructive">*</span>
                 </span>
                 <Input
-                  placeholder="e.g., SALES_BOT_PROD"
+                  placeholder={t("deployments.placeholderConnectionName")}
                   className="bg-muted"
                   value={newConnectionName}
                   onChange={(e) =>
@@ -106,27 +108,25 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 />
                 {isDuplicateName && (
                   <span className="pt-1 text-xs text-destructive">
-                    A connection with this name already exists.
+                    {t("deployments.connectionNameExists")}
                   </span>
                 )}
               </div>
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  Environment Variables
+                  {t("deployments.environmentVariables")}
                   <span className="text-destructive">*</span>
                 </span>
                 {detectedVarCount > 0 && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    {detectedVarCount} variable
-                    {detectedVarCount > 1 ? "s" : ""} auto-detected from the
-                    selected flow version.
+                    {t("deployments.variablesAutoDetected", { count: detectedVarCount })}
                   </p>
                 )}
                 <div className="space-y-2">
                   {envVars.map((envVar) => (
                     <div key={envVar.id} className="grid grid-cols-2 gap-2">
                       <Input
-                        placeholder="Key"
+                        placeholder={t("deployments.placeholderKey")}
                         className="bg-muted"
                         value={envVar.key}
                         onChange={(e) =>
@@ -137,10 +137,10 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                         nodeStyle
                         password
                         id={`env-val-${envVar.id}`}
-                        placeholder="Value"
+                        placeholder={t("deployments.placeholderValue")}
                         value={envVar.value}
                         options={globalVariableOptions}
-                        optionsPlaceholder="Global Variables"
+                        optionsPlaceholder={t("deployments.globalVariables")}
                         optionsIcon="Globe"
                         selectedOption={envVar.globalVar ? envVar.value : ""}
                         setSelectedOption={(sel) =>

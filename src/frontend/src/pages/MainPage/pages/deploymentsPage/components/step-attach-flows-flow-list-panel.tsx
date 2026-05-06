@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
@@ -26,6 +27,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   onRemoveFlow?: (flowId: string) => void;
   onUndoRemoveFlow?: (flowId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
@@ -112,7 +114,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                   type="button"
                   data-testid={`detach-flow-${flow.id}`}
                   className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  title="Detach flow"
+                  title={t("deployments.detachFlow")}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemoveFlow(flow.id);
@@ -126,7 +128,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                   type="button"
                   data-testid={`undo-remove-flow-${flow.id}`}
                   className="flex-shrink-0 rounded p-1 text-muted-foreground hover:bg-accent-blue-muted hover:text-accent-blue-muted-foreground"
-                  title="Undo detach"
+                  title={t("deployments.undoDetach")}
                   onClick={() => onUndoRemoveFlow(flow.id)}
                 >
                   <ForwardedIconComponent

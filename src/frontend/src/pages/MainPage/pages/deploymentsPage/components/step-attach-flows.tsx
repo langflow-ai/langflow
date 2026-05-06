@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
@@ -34,6 +35,7 @@ export default function StepAttachFlows() {
     handleUndoRemoveFlow,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId;
@@ -180,8 +182,8 @@ export default function StepAttachFlows() {
         updateDetectedEnvVars(result.variables ?? []);
       } catch {
         setErrorData({
-          title: "Could not auto-detect environment variables",
-          list: ["Add them manually in the connection form."],
+          title: t("deployments.cannotAutoDetectEnvVars"),
+          list: [t("deployments.addManuallyInConnection")],
         });
       }
     };
@@ -219,8 +221,8 @@ export default function StepAttachFlows() {
       } catch {
         updateDetectedEnvVars([]);
         setErrorData({
-          title: "Could not auto-detect environment variables",
-          list: ["Add them manually in the connection form."],
+          title: t("deployments.cannotAutoDetectEnvVars"),
+          list: [t("deployments.addManuallyInConnection")],
         });
       }
     },
