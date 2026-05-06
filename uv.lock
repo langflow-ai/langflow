@@ -6492,6 +6492,7 @@ all = [
     { name = "dspy-ai" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
+    { name = "exa-py" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -6543,7 +6544,6 @@ all = [
     { name = "mcp" },
     { name = "mem0ai" },
     { name = "metal-sdk" },
-    { name = "metaphor-python" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "needle-python" },
@@ -6658,6 +6658,7 @@ complete = [
     { name = "dspy-ai" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
+    { name = "exa-py" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -6709,7 +6710,6 @@ complete = [
     { name = "mcp" },
     { name = "mem0ai" },
     { name = "metal-sdk" },
-    { name = "metaphor-python" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "needle-python" },
@@ -6887,8 +6887,11 @@ mem0 = [
 metal = [
     { name = "metal-sdk" },
 ]
+exa = [
+    { name = "exa-py" },
+]
 metaphor = [
-    { name = "metaphor-python" },
+    { name = "exa-py" },
 ]
 milvus = [
     { name = "langchain-milvus" },
@@ -7103,6 +7106,8 @@ requires-dist = [
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
     { name = "email-validator", specifier = ">=2.0.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
+    { name = "exa-py", marker = "extra == 'exa'", specifier = ">=1.14,<3" },
+    { name = "exa-py", marker = "extra == 'metaphor'", specifier = ">=1.14,<3" },
     { name = "faiss-cpu", marker = "extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = ">=2.0.0" },
     { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
@@ -7281,7 +7286,6 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.17.0,<2.0.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.34" },
     { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
-    { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.29.0" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = "~=0.3.9" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
@@ -8400,15 +8404,21 @@ wheels = [
 ]
 
 [[package]]
-name = "metaphor-python"
-version = "0.1.23"
+name = "exa-py"
+version = "2.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "requests" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/f4/458fbd9c8624aab58deca73468df107201cadc5ca8ea449511d318140de3/metaphor-python-0.1.23.tar.gz", hash = "sha256:ce3a8f9d81b2ee7201dac225095cdf2da34b003fe889c5b4629a8b480e8de7ba", size = 5563, upload-time = "2023-11-30T16:49:45.831Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/e4/11bbbc076ae420b9e0053795d48a03cb42cc6da63edc65bf50d23e4778e/exa_py-2.12.1.tar.gz", hash = "sha256:9ff1924fbfbcae822b20c0ddef0650fabc04ac75906b9153623eadc18135b7ce", size = 55792, upload-time = "2026-04-22T20:00:38.528484Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/ef/44b06a7269a596fb23ce0a318c1b2e6e67012624c9122d5a73883c23f9f9/metaphor_python-0.1.23-py3-none-any.whl", hash = "sha256:993b594373efdd5223631f8997dfd68801241db112a214d7c56aeac03fc74b4f", size = 6138, upload-time = "2023-11-30T16:49:43.946Z" },
+    { url = "https://files.pythonhosted.org/packages/49/19/0a504b6ce7c468595cd0551f65e5c464832a1d3af8dc8acd681e21696a5f/exa_py-2.12.1-py3-none-any.whl", hash = "sha256:9e735802161482a7d5b231376257883cb4e34dbd6f75ded04ab1a5a171b69d9f", size = 74512, upload-time = "2026-04-22T20:00:34.326822Z" },
 ]
 
 [[package]]

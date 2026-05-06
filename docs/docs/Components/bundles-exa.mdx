@@ -11,7 +11,15 @@ This page describes the components that are available in the **Exa** bundle.
 
 ## Exa Search
 
-This component provides an [Exa Search](https://exa.ai/) toolkit for search and content retrieval by a Langflow [**Agent** component](/agents) or [MCP client](/mcp-client).
+This component provides an [Exa](https://exa.ai/) toolkit for search, find-similar, and content retrieval, for use by a Langflow [**Agent** component](/agents) or an [MCP client](/mcp-client).
+
+It exposes three tools:
+
+- `search` — search the web with Exa and return results, including highlights by default.
+- `find_similar` — find pages similar to a given URL.
+- `get_contents` — fetch highlights and/or full text for one or more result IDs returned by `search`.
+
+Get an API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys). For details on the underlying API and best practices, see the [Exa Search API guide](https://docs.exa.ai/reference/search-api-guide).
 
 The output is exclusively [`Tools`](/data-types#tool).
 
@@ -19,7 +27,15 @@ The output is exclusively [`Tools`](/data-types#tool).
 
 | Name | Type | Description |
 |------|------|-------------|
-| Exa Search API Key (`metaphor_api_key`) | SecretString | Input parameter. An API key for Exa Search. |
-| Use Autoprompt (`use_autoprompt`) | Boolean | Input parameter. Whether to use the autoprompt feature. Default: `true`. |
-| Search Number of Results (`search_num_results`) | Integer | Input parameter. The number of results to return for search. Default: 5. |
-| Similar Number of Results (`similar_num_results`) | Integer | Input parameter. The number of similar results to return. Default: 5. |
+| Exa API Key (`metaphor_api_key`) | SecretString | Input parameter. Your Exa API key. |
+| Search type (`search_type`) | Dropdown | Input parameter. One of `auto`, `fast`, `instant`, or `deep`. `auto` is the default and recommended for most use cases. |
+| Search Number of Results (`search_num_results`) | Integer | Input parameter. Maximum number of results to return for `search`. Default: `5`. |
+| Similar Number of Results (`similar_num_results`) | Integer | Input parameter. Maximum number of results to return for `find_similar`. Default: `5`. |
+| Include highlights (`include_highlights`) | Boolean | Input parameter. Return token-efficient highlights with each result. Default: `true`. |
+| Include full text (`include_text`) | Boolean | Input parameter. Return full page text. Default: `false`. Prefer highlights for token efficiency. |
+| Category (`category`) | Dropdown | Input parameter. Optional. Restrict results to one of `company`, `people`, `research paper`, `news`, `personal site`, or `financial report`. |
+| Max age (hours) (`max_age_hours`) | Integer | Input parameter. Optional. Refetch any cached page older than this many hours. `0` uses Exa's default cache freshness. |
+| Include domains (`include_domains`) | String | Input parameter. Optional. Comma-separated allowlist of domains. |
+| Exclude domains (`exclude_domains`) | String | Input parameter. Optional. Comma-separated denylist of domains. |
+| Start published date (`start_published_date`) | String | Input parameter. Optional. ISO date (`YYYY-MM-DD`). Only return results published on or after this date. |
+| End published date (`end_published_date`) | String | Input parameter. Optional. ISO date (`YYYY-MM-DD`). Only return results published on or before this date. |
