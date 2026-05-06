@@ -13,7 +13,9 @@ function makeRef(el: HTMLElement | null) {
 }
 
 function fireMouseDown(target: HTMLElement, shiftKey: boolean) {
-  target.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, shiftKey }));
+  target.dispatchEvent(
+    new MouseEvent("mousedown", { bubbles: true, shiftKey }),
+  );
 }
 
 function fireMouseUp() {
