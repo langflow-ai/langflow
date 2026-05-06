@@ -5,12 +5,23 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
+from lfx.components.tools._filesystem_audit import AuditRecord, make_audit_sink
+from lfx.components.tools._filesystem_isolation import (
+    IsolationConfig,
+    IsolationMode,
+    load_isolation_config,
+)
+from lfx.components.tools._filesystem_namespace import (
+    compute_user_namespace,
+    load_or_create_pepper,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, StrInput
 from lfx.io import Output
@@ -18,7 +29,25 @@ from lfx.schema.data import Data
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 if TYPE_CHECKING:
+    from lfx.components.tools._filesystem_audit import AuditSink
     from lfx.field_typing import Tool
+
+
+# Reserved on-disk segment for future HMAC sidecar trees (L3 in the plan).
+# We block it now so first-mover writes don't poison a namespace we will rely
+# on later — agents must never see or touch this directory.
+RESERVED_SEGMENT = ".lfsig"
+
+
+def _default_config_dir() -> Path:
+    """Pick a sensible config dir when no env var is set.
+
+    Operators set ``LANGFLOW_FS_TOOL_BASE_DIR`` / ``LANGFLOW_FS_TOOL_PEPPER_PATH``
+    explicitly in any real deployment; this fallback exists so the OSS desktop
+    install just works without any setup.
+    """
+    return Path.home() / ".langflow" / "fs_tool"
+
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 BINARY_SNIFF_BYTES = 8 * 1024
@@ -260,18 +289,38 @@ class FileSystemToolComponent(Component):
 
     async def _get_tools(self) -> list[Tool]:
         """Tool Mode entrypoint. Called by Component.to_toolkit()."""
+        # Capture the bound user_id ONCE per build. Each StructuredTool closure
+        # below re-checks the live ``self._user_id`` against this value at call
+        # time, so a tool issued for user A cannot be invoked after the
+        # component has been reused for user B (defense for L2 in the plan).
+        bound_user_id = self._resolve_user_id()
         tools: list[Tool] = [
-            self._make_read_tool(),
-            self._make_glob_tool(),
-            self._make_grep_tool(),
+            self._make_read_tool(bound_user_id=bound_user_id),
+            self._make_glob_tool(bound_user_id=bound_user_id),
+            self._make_grep_tool(bound_user_id=bound_user_id),
         ]
         if not self.read_only:
-            tools.append(self._make_write_tool())
-            tools.append(self._make_edit_tool())
+            tools.append(self._make_write_tool(bound_user_id=bound_user_id))
+            tools.append(self._make_edit_tool(bound_user_id=bound_user_id))
         return tools
 
-    def _make_read_tool(self) -> StructuredTool:
+    def _user_binding_error(self, bound_user_id: str | None) -> dict | None:
+        """Return a structured error dict if the live user_id has shifted.
+
+        Why ``None`` on match: lets call sites use ``if err: return err`` —
+        the most common (success) path stays one branch deep.
+        """
+        current = self._resolve_user_id()
+        if current == bound_user_id:
+            return None
+        return {
+            "error": ("tool/user-id mismatch: this tool was bound to a different user session and cannot be reused"),
+        }
+
+    def _make_read_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, offset: int | None = None, limit: int | None = None) -> str:
+            if (err := self._user_binding_error(bound_user_id)) is not None:
+                return json.dumps(err)
             return json.dumps(self._read_file(path, offset=offset, limit=limit))
 
         return StructuredTool.from_function(
@@ -286,8 +335,10 @@ class FileSystemToolComponent(Component):
             tags=["read_file"],
         )
 
-    def _make_write_tool(self) -> StructuredTool:
+    def _make_write_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, content: str) -> str:
+            if (err := self._user_binding_error(bound_user_id)) is not None:
+                return json.dumps(err)
             return json.dumps(self._write_file(path, content))
 
         return StructuredTool.from_function(
@@ -298,8 +349,10 @@ class FileSystemToolComponent(Component):
             tags=["write_file"],
         )
 
-    def _make_edit_tool(self) -> StructuredTool:
+    def _make_edit_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, old_string: str, new_string: str, *, replace_all: bool = False) -> str:
+            if (err := self._user_binding_error(bound_user_id)) is not None:
+                return json.dumps(err)
             return json.dumps(
                 self._edit_file(path, old_string=old_string, new_string=new_string, replace_all=replace_all)
             )
@@ -315,8 +368,10 @@ class FileSystemToolComponent(Component):
             tags=["edit_file"],
         )
 
-    def _make_glob_tool(self) -> StructuredTool:
+    def _make_glob_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(pattern: str, path: str | None = None) -> str:
+            if (err := self._user_binding_error(bound_user_id)) is not None:
+                return json.dumps(err)
             return json.dumps(self._glob_search(pattern, path=path))
 
         return StructuredTool.from_function(
@@ -330,7 +385,7 @@ class FileSystemToolComponent(Component):
             tags=["glob_search"],
         )
 
-    def _make_grep_tool(self) -> StructuredTool:
+    def _make_grep_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(
             pattern: str,
             path: str | None = None,
@@ -340,6 +395,8 @@ class FileSystemToolComponent(Component):
             output_mode: str = "files_with_matches",
             is_regex: bool = False,
         ) -> str:
+            if (err := self._user_binding_error(bound_user_id)) is not None:
+                return json.dumps(err)
             return json.dumps(
                 self._grep_search(
                     pattern,
@@ -365,32 +422,100 @@ class FileSystemToolComponent(Component):
             tags=["grep_search"],
         )
 
-    def _validate_root(self) -> Path:
-        """Resolve and authorize `self.root_path`.
+    def _resolve_user_id(self) -> str | None:
+        """Best-effort lookup of the calling user's id.
 
-        Two server-controlled gates run before the path is usable:
+        The Component base class populates ``_user_id`` during instantiation,
+        and the property cascades to ``self.graph.user_id``. In tests there is
+        no graph; in scheduled/anonymous runs there is no user_id at all. We
+        treat all of those as "anonymous" — the isolation mode decides what to
+        do with that information.
 
-        1. Cloud gate. In a hosted/multi-user deployment a flow author must not
-           be able to point root_path at `/` or any other server-sensitive
-           location. When `ASTRA_CLOUD_DISABLE_COMPONENT=true` we refuse the
-           component outright (defense in depth — the registration filter in
-           `validate_cloud.py` is the primary control, this catches the case
-           where it has been bypassed).
-        2. Allowlist gate. When `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` is set, the
-           resolved root_path MUST be the same as, or nested under, one of the
-           allowlisted directories. Operators who care about scoping enable
-           this; OSS/desktop users leave it unset and get the prior behavior.
+        Why we filter ``"none"`` / ``"null"``: Langflow's ``PlaceholderGraph``
+        stringifies a missing user as ``"None"`` rather than the Python
+        ``None`` value, so a naive truthiness check would mistake "no user" for
+        a real user named "None" and create a spurious shared namespace.
         """
-        if is_astra_cloud_environment():
-            msg = "FileSystemTool is disabled in cloud/hosted deployments"
+        candidates: list[object | None] = [getattr(self, "_user_id", None)]
+        graph = getattr(self, "graph", None)
+        if graph is not None:
+            candidates.append(getattr(graph, "user_id", None))
+
+        for value in candidates:
+            if value is None:
+                continue
+            cleaned = str(value).strip()
+            if not cleaned or cleaned.lower() in {"none", "null"}:
+                continue
+            return cleaned
+        return None
+
+    def _isolation_config(self) -> IsolationConfig:
+        """Read the isolation policy from the environment on every call.
+
+        Re-read intentionally: tests and live operators tweak env vars between
+        runs; caching would create stale-config bugs that are painful to
+        diagnose. The cost is a handful of dict lookups per tool call.
+        """
+        return load_isolation_config(env=os.environ, default_config_dir=_default_config_dir())
+
+    def _validate_root(self) -> Path:
+        """Resolve and authorize the effective sandbox root.
+
+        The resolution applies, in order:
+
+        1. **Cloud gate.** Astra cloud refuses the component unless isolation
+           mode is explicitly ``on`` — single-tenant flows on a multi-tenant
+           host must not be allowed to touch the host filesystem.
+        2. **User isolation gate** (``LANGFLOW_FS_TOOL_USER_ISOLATION``):
+           - ``off``: legacy behavior. ``root_path`` is taken at face value.
+           - ``auto`` + authenticated user: scope under
+             ``<base>/users/<hash(user_id)>/<root_path>``.
+           - ``auto`` + anonymous: legacy fallback. Existing OSS / desktop
+             flows that never had a user keep working unchanged.
+           - ``on``: anonymous calls are refused outright.
+        3. **Legacy allowlist gate** (``LANGFLOW_FS_TOOL_ALLOWED_ROOTS``):
+           applies in legacy mode only. The per-user namespace makes the
+           global allowlist redundant for cross-user isolation.
+        """
+        config = self._isolation_config()
+        if is_astra_cloud_environment() and config.mode is not IsolationMode.ON:
+            msg = "FileSystemTool requires user isolation (mode=on) in cloud/hosted deployments"
             raise PermissionError(msg)
-        # Reject empty/None/whitespace root_path before any path resolution.
-        # `Path("").resolve()` silently returns the process CWD (e.g. `/app/`
-        # in a container), which would let a flow author or agent escape the
-        # sandbox by leaving root_path blank — the UI's required=True is
-        # bypassed in Tool Mode because each StructuredTool has its own
-        # per-operation args schema, and `root_path` is component-level config.
-        # See BUG-03 / UI-022.
+
+        user_id = self._resolve_user_id()
+
+        if config.mode is IsolationMode.OFF:
+            return self._legacy_validate_root()
+
+        if not user_id:
+            if config.mode is IsolationMode.ON:
+                msg = "FileSystemTool requires an authenticated user (LANGFLOW_FS_TOOL_USER_ISOLATION=on)"
+                raise PermissionError(msg)
+            return self._legacy_validate_root()
+
+        return self._isolated_user_root(config=config, user_id=user_id)
+
+    def _isolated_user_root(self, *, config: IsolationConfig, user_id: str) -> Path:
+        """Materialize ``<base>/users/<hash(user_id)>/<sub_path>`` and verify the boundary."""
+        pepper = load_or_create_pepper(config.pepper_path)
+        namespace = compute_user_namespace(user_id, pepper=pepper)
+        user_root = (config.base_dir / namespace).resolve()
+        user_root.mkdir(parents=True, exist_ok=True)
+
+        sub_raw = (self.root_path or "").strip()
+        # Strip leading separators so absolute-looking sub_paths are pinned
+        # under the user root rather than escaping to the host filesystem.
+        sub = sub_raw.lstrip("/\\")
+        candidate = (user_root / sub).resolve() if sub else user_root
+        if not candidate.is_relative_to(user_root):
+            msg = f"sub_path {self.root_path!r} escapes user namespace"
+            raise PermissionError(msg)
+        candidate.mkdir(parents=True, exist_ok=True)
+        return candidate
+
+    def _legacy_validate_root(self) -> Path:
+        """Pre-isolation root resolution. Kept verbatim for backwards compat."""
         if self.root_path is None or not str(self.root_path).strip():
             msg = "root_path is required and must be a non-empty path"
             raise PermissionError(msg)
@@ -412,6 +537,13 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         if portability_error := _check_windows_portability(path):
             raise PermissionError(portability_error)
+        # Block the reserved signing tree (L3 hook). We forbid traversal even
+        # by users with valid credentials — agents and humans both — because
+        # the integrity guarantee depends on this directory being unreachable
+        # from the public tool surface.
+        if any(part == RESERVED_SEGMENT for part in PureWindowsPath(path).parts):
+            msg = f"Path component {RESERVED_SEGMENT!r} is reserved"
+            raise PermissionError(msg)
         root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
@@ -419,7 +551,58 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         return candidate
 
+    def _audit_sink(self) -> AuditSink:
+        """Build (or rebuild) the audit sink from the current isolation config.
+
+        Re-read on every call to stay consistent with ``_isolation_config`` and
+        avoid stale handles when operators rotate the audit log path.
+        """
+        config = self._isolation_config()
+        return make_audit_sink(audit_log_path=config.audit_log_path)
+
+    def _audit(
+        self,
+        *,
+        action: str,
+        path: str | None,
+        result: dict,
+    ) -> None:
+        """Emit one NDJSON line for the just-completed tool call."""
+        ok = "error" not in result
+        err = None if ok else str(result.get("error"))
+        record = AuditRecord(
+            ts=time.time(),
+            user_id=self._resolve_user_id(),
+            flow_id=self._resolve_flow_id(),
+            action=action,
+            path=path,
+            ok=ok,
+            err=err,
+        )
+        self._audit_sink().write(record)
+
+    def _resolve_flow_id(self) -> str | None:
+        """Return the flow id the component runs in, or None outside a graph."""
+        for attr in ("_flow_id", "flow_id"):
+            value = getattr(self, attr, None)
+            if value:
+                return str(value)
+        try:
+            graph = getattr(self, "graph", None)
+            if graph is not None:
+                value = getattr(graph, "flow_id", None)
+                if value:
+                    return str(value)
+        except AttributeError:
+            pass
+        return None
+
     def _read_file(self, path: str, offset: int | None = None, limit: int | None = None) -> dict:
+        result = self._read_file_impl(path, offset=offset, limit=limit)
+        self._audit(action="read_file", path=path, result=result)
+        return result
+
+    def _read_file_impl(self, path: str, offset: int | None = None, limit: int | None = None) -> dict:
         try:
             resolved = self._validate_path(path)
         except PermissionError as exc:
@@ -469,6 +652,11 @@ class FileSystemToolComponent(Component):
         }
 
     def _write_file(self, path: str, content: str) -> dict:
+        result = self._write_file_impl(path, content)
+        self._audit(action="write_file", path=path, result=result)
+        return result
+
+    def _write_file_impl(self, path: str, content: str) -> dict:
         try:
             resolved = self._validate_path(path)
         except PermissionError as exc:
@@ -499,6 +687,18 @@ class FileSystemToolComponent(Component):
         }
 
     def _edit_file(
+        self,
+        path: str,
+        old_string: str,
+        new_string: str,
+        *,
+        replace_all: bool = False,
+    ) -> dict:
+        result = self._edit_file_impl(path, old_string=old_string, new_string=new_string, replace_all=replace_all)
+        self._audit(action="edit_file", path=path, result=result)
+        return result
+
+    def _edit_file_impl(
         self,
         path: str,
         old_string: str,
@@ -585,6 +785,11 @@ class FileSystemToolComponent(Component):
         }
 
     def _glob_search(self, pattern: str, path: str | None = None) -> dict:
+        result = self._glob_search_impl(pattern, path=path)
+        self._audit(action="glob_search", path=path, result=result)
+        return result
+
+    def _glob_search_impl(self, pattern: str, path: str | None = None) -> dict:
         try:
             root_resolved = self._validate_root()
             base = self._validate_path(path) if path else root_resolved
@@ -632,6 +837,27 @@ class FileSystemToolComponent(Component):
         }
 
     def _grep_search(
+        self,
+        pattern: str,
+        path: str | None = None,
+        glob: str | None = None,
+        *,
+        case_insensitive: bool = False,
+        output_mode: str = "files_with_matches",
+        is_regex: bool = False,
+    ) -> dict:
+        result = self._grep_search_impl(
+            pattern,
+            path=path,
+            glob=glob,
+            case_insensitive=case_insensitive,
+            output_mode=output_mode,
+            is_regex=is_regex,
+        )
+        self._audit(action="grep_search", path=path, result=result)
+        return result
+
+    def _grep_search_impl(
         self,
         pattern: str,
         path: str | None = None,
