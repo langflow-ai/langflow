@@ -17,6 +17,44 @@ with contextlib.suppress(ImportError):
     _LANGFLOW_IS_INSTALLED = True
 
 
+# Migration aid: maps lfx names that *used* to be auto-injected into custom-
+# component scope (via the now-removed DEFAULT_IMPORT_STRING preamble) to the
+# module the user should import them from. Consulted only by the NameError
+# handler in ``create_class`` to produce an actionable hint. Pure static data
+# — never exec'd, no langchain/lfx imports triggered, zero cold-start cost.
+_LEGACY_LFX_IMPORT_HINTS: dict[str, str] = {
+    # lfx.io inputs/outputs
+    "BoolInput": "lfx.io",
+    "CodeInput": "lfx.io",
+    "DataInput": "lfx.io",
+    "DictInput": "lfx.io",
+    "DropdownInput": "lfx.io",
+    "FileInput": "lfx.io",
+    "FloatInput": "lfx.io",
+    "HandleInput": "lfx.io",
+    "IntInput": "lfx.io",
+    "JSONInput": "lfx.io",
+    "LinkInput": "lfx.io",
+    "MessageInput": "lfx.io",
+    "MessageTextInput": "lfx.io",
+    "MultilineInput": "lfx.io",
+    "MultilineSecretInput": "lfx.io",
+    "MultiselectInput": "lfx.io",
+    "NestedDictInput": "lfx.io",
+    "Output": "lfx.io",
+    "PromptInput": "lfx.io",
+    "SecretStrInput": "lfx.io",
+    "SliderInput": "lfx.io",
+    "StrInput": "lfx.io",
+    "TableInput": "lfx.io",
+    # lfx.schema
+    "Data": "lfx.schema.data",
+    "JSON": "lfx.schema.data",
+    "DataFrame": "lfx.schema.dataframe",
+    "Table": "lfx.schema.dataframe",
+}
+
+
 def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
 
@@ -280,7 +318,12 @@ def create_class(code, class_name):
         msg = f"Syntax error in code: {e!s}"
         raise ValueError(msg) from e
     except NameError as e:
-        msg = f"Name error (possibly undefined variable): {e!s}"
+        missing = getattr(e, "name", None)
+        hint = ""
+        if missing and missing in _LEGACY_LFX_IMPORT_HINTS:
+            module = _LEGACY_LFX_IMPORT_HINTS[missing]
+            hint = f" Add `from {module} import {missing}` to your component code."
+        msg = f"Name error (possibly undefined variable): {e!s}.{hint}"
         raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]

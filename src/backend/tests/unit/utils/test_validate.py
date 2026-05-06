@@ -414,6 +414,29 @@ class BrokenClass
         with pytest.raises(ValueError, match="Syntax error in code"):
             create_class(code, "BrokenClass")
 
+    def test_name_error_hints_at_legacy_lfx_import(self):
+        """Surface a hint for names previously auto-injected by DEFAULT_IMPORT_STRING.
+
+        Components that lean on the removed preamble get an actionable hint
+        pointing at the missing lfx import.
+        """
+        code = """
+class Broken:
+    inputs = [StrInput(name="x")]
+"""
+        with pytest.raises(ValueError, match=r"Add `from lfx\.io import StrInput`"):
+            create_class(code, "Broken")
+
+    def test_name_error_without_legacy_match_omits_hint(self):
+        """Unknown names get the plain message — no misleading hint."""
+        code = """
+class Broken:
+    x = some_random_undefined_name
+"""
+        with pytest.raises(ValueError, match="some_random_undefined_name") as exc_info:
+            create_class(code, "Broken")
+        assert "Add `from " not in str(exc_info.value)
+
     def test_handles_validation_error(self):
         """Test that validation errors are handled properly."""
         code = """
@@ -564,13 +587,13 @@ class TestClass:
         assert callable(scope["helper"])
         assert scope["TestClass"].value == 42
 
-
     def test_preserves_future_annotations_for_pep563_typing(self):
-        """Regression: components using `from __future__ import annotations` plus
-        type-only imports under `TYPE_CHECKING:` must have their annotations stay
-        lazy strings. Without preserving __future__ in the compiled module, the
-        class body would NameError on TYPE_CHECKING-only symbols (e.g. AgentComponent
-        with `-> list[Tool]` where `Tool` is only imported under `if TYPE_CHECKING:`).
+        """Preserve PEP 563 lazy-annotation semantics in the compiled module.
+
+        Components use ``from __future__ import annotations`` plus type-only
+        imports under ``TYPE_CHECKING:``. Without preserving __future__, the
+        class body would NameError on TYPE_CHECKING-only symbols (e.g.
+        AgentComponent with ``-> list[Tool]``).
         """
         code = """
 from __future__ import annotations
