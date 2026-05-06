@@ -15,15 +15,12 @@ export interface UseMemoriesDataProps {
   onSelectMemory?: (id: string | null) => void;
 }
 
-export interface MemoriesMainContentProps {
-  selectedMemoryId?: string | null;
-  onSelectMemory?: (id: string | null) => void;
-}
-
 export type MemoryActionMutation = {
   mutate: (args: { memoryId: string }) => void;
   isPending: boolean;
 };
+
+export type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
 
 export type MemoryDetailsProps = {
   memory: MemoryInfo;
@@ -33,18 +30,19 @@ export type MemoryDetailsProps = {
     documents?: MemoryDocumentItem[];
   };
   docsLoading: boolean;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  activeSearch: string;
-  setActiveSearch: (value: string) => void;
+  fetchNextMessagesPage: () => void;
+  hasNextMessagesPage?: boolean;
+  isFetchingNextMessagesPage?: boolean;
   selectedSession: string | null;
   setSelectedSession: (value: string | null) => void;
-  handleSearch: () => void;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
-  updateMemoryMutation: { isPending: boolean };
-  handleToggleActive: () => void;
+  handleToggleActive: (nextIsActive: NextIsActive) => void;
+  onRefresh: () => void;
+  fetchNextSessionsPage: () => void;
+  hasNextSessionsPage?: boolean;
+  isFetchingNextSessionsPage?: boolean;
 };
 
 export type MemoriesSidebarProps = {
@@ -52,6 +50,9 @@ export type MemoriesSidebarProps = {
   filteredMemories: MemoryInfo[];
   memoriesSearch: string;
   setMemoriesSearch: (value: string) => void;
+  fetchNextPage?: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
   selectedMemoryId?: string | null;
   currentFlowId?: string;
   onSelectMemory?: (id: string | null) => void;
@@ -71,27 +72,22 @@ export type MemoryKnowledgeBaseSectionProps = {
     documents?: MemoryDocumentItem[];
   };
   docsLoading: boolean;
-  searchQuery: string;
-  setSearchQuery: (value: string) => void;
-  activeSearch: string;
-  setActiveSearch: (value: string) => void;
-  selectedSession: string | null;
-  setSelectedSession: (value: string | null) => void;
-  handleSearch: () => void;
+  fetchNextMessagesPage: () => void;
+  hasNextMessagesPage?: boolean;
+  isFetchingNextMessagesPage?: boolean;
   groupedBySession: Map<string, MemoryDocumentItem[]>;
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
-  totalChunks: number;
-};
-
-export type MemoryStatusBannersProps = {
-  memory: MemoryInfo;
-  isProcessing: boolean;
 };
 
 export type MemoryDetailsHeaderProps = {
   memory: MemoryInfo;
-  isProcessing: boolean;
+  sessions?: string[];
+  selectedSession: string | null;
+  setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
-  updateMemoryMutation: { isPending: boolean };
-  handleToggleActive: () => void;
+  handleToggleActive: (nextIsActive: NextIsActive) => void;
+  onRefresh: () => void;
+  fetchNextSessionsPage: () => void;
+  hasNextSessionsPage?: boolean;
+  isFetchingNextSessionsPage?: boolean;
 };

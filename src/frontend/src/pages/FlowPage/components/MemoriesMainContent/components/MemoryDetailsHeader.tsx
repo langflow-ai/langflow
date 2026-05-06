@@ -1,17 +1,41 @@
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import { cn } from "@/utils/utils";
-import { statusBgColors, statusColors } from "../helpers";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
   memory,
+  sessions,
+  selectedSession,
+  setSelectedSession,
   deleteMutation,
-  updateMemoryMutation,
   handleToggleActive,
+  onRefresh,
+  fetchNextSessionsPage,
+  hasNextSessionsPage,
+  isFetchingNextSessionsPage,
 }: MemoryDetailsHeaderProps) {
+  const effectiveSession = (selectedSession ?? sessions?.[0] ?? "") as
+    | string
+    | null;
+
+  const handleSessionsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (
+      el.scrollHeight - el.scrollTop <= el.clientHeight * 2 &&
+      hasNextSessionsPage &&
+      !isFetchingNextSessionsPage
+    ) {
+      fetchNextSessionsPage();
+    }
+  };
+
   return (
     <div className="flex items-center justify-between border-b border-border bg-background px-6 py-3">
       <div className="flex items-center gap-3">
@@ -24,36 +48,96 @@ export function MemoryDetailsHeader({
             </p>
           )}
         </div>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-xs font-medium",
-            statusBgColors[memory.status] || "bg-muted",
-            statusColors[memory.status] || "text-muted-foreground",
-          )}
-        >
-          {memory.status}
-        </span>
-        <div className="ml-2 flex items-center gap-2">
-          <Switch
-            checked={memory.is_active}
-            onCheckedChange={handleToggleActive}
-            disabled={updateMemoryMutation.isPending}
-            aria-label={`memory capture enabled for ${memory.name}`}
-          />
-          <span
-            className={cn(
-              "text-xs font-medium",
-              memory.is_active ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            {memory.is_active ? "Enabled" : "Disabled"}
-          </span>
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onRefresh}
+          aria-label="Reload sessions and messages"
+        >
+          <IconComponent name="RefreshCw" className="h-4 w-4" />
+        </Button>
+
+        {sessions && sessions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Session filter"
+                disabled={sessions.length <= 1 && !hasNextSessionsPage}
+                className="w-[240px] justify-between px-3"
+              >
+                <span className="truncate">
+                  {effectiveSession && effectiveSession.length > 20
+                    ? `${effectiveSession.slice(0, 20)}...`
+                    : (effectiveSession ?? "")}
+                </span>
+                <IconComponent
+                  name="ChevronDown"
+                  className="ml-2 h-4 w-4 shrink-0 text-muted-foreground"
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[240px] p-0">
+              <div
+                className="max-h-[240px] overflow-y-auto py-1"
+                onScroll={handleSessionsScroll}
+              >
+                {sessions.map((sid) => {
+                  const isSelected = sid === effectiveSession;
+                  return (
+                    <DropdownMenuItem
+                      key={sid}
+                      className="flex items-center justify-between"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setSelectedSession(sid);
+                      }}
+                    >
+                      <span className="truncate">{sid}</span>
+                      <IconComponent
+                        name="Check"
+                        className={
+                          isSelected
+                            ? "h-4 w-4 text-primary"
+                            : "h-4 w-4 opacity-0"
+                        }
+                      />
+                    </DropdownMenuItem>
+                  );
+                })}
+                {isFetchingNextSessionsPage && (
+                  <div className="py-1 text-center">
+                    <span className="text-xs text-muted-foreground">
+                      Loading…
+                    </span>
+                  </div>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        <Button
+          variant={memory.is_active ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
+          aria-pressed={memory.is_active}
+          aria-label="Toggle auto-capture"
+          className="gap-2"
+        >
+          <IconComponent
+            name={memory.is_active ? "ToggleRight" : "ToggleLeft"}
+            className="h-4 w-4"
+          />
+          Auto-capture
+        </Button>
+
         <DeleteConfirmationModal
-          description={`memory \"${memory.name}\"`}
+          description={`memory "${memory.name}"`}
           onConfirm={(e) => {
             e.stopPropagation();
             deleteMutation.mutate({ memoryId: memory.id });
@@ -65,7 +149,7 @@ export function MemoryDetailsHeader({
             size="sm"
             disabled={deleteMutation.isPending}
           >
-            <IconComponent name="Trash2" className="mr-1.5 h-3.5 w-3.5" />
+            <IconComponent name="Trash2" className="h-4 w-4" />
             Delete
           </Button>
         </DeleteConfirmationModal>
