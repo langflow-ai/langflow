@@ -102,11 +102,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   useEffect(() => {
-    // Wait until both the global flows store and the folder query have
-    // resolved at least once before deciding whether the folder is empty.
-    // This avoids a one-frame flash of <EmptyFolder> on initial mount and
-    // right after login, when the store is briefly stale.
-    if (flows === undefined || folderData === undefined) return;
+    // Wait until both the global flows store has populated and the folder
+    // query has settled (success or error) before deciding whether the
+    // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
+    // initial mount and right after login, when the store is briefly
+    // stale. Gating on isLoading instead of folderData lets us still
+    // resolve when the query errors out (e.g. when there is no valid
+    // folder id to query, after deleting all folders).
+    if (flows === undefined || isLoading) return;
     setIsEmptyFolder(
       isFolderEmpty({
         flows,
@@ -115,7 +118,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         enableMcp: ENABLE_MCP,
       }),
     );
-  }, [flows, folderId, myCollectionId, folderData]);
+  }, [flows, folderId, myCollectionId, folderData, isLoading]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
