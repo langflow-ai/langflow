@@ -31,8 +31,14 @@ describe("codeBlockUtils", () => {
         expect(result).toBe(true);
       });
 
-      it("should_return_true_when_props_has_data_language_empty_string", () => {
-        const result = isCodeBlock(undefined, { "data-language": "" }, "code");
+      it("should_return_true_when_data_language_is_empty_AND_content_is_multiline", () => {
+        // Fenced block (```...```) without a language hint, with multi-line
+        // content. Unambiguously a code block — render with the panel.
+        const result = isCodeBlock(
+          undefined,
+          { "data-language": "" },
+          "line one\nline two",
+        );
         expect(result).toBe(true);
       });
 
@@ -83,6 +89,29 @@ describe("codeBlockUtils", () => {
 
       it("should_return_false_when_content_is_empty", () => {
         const result = isCodeBlock(undefined, {}, "");
+        expect(result).toBe(false);
+      });
+
+      it("should_return_false_for_single_line_fenced_block_without_language", () => {
+        // Repro for the agent chat regression: the LLM was emitting
+        // ```\nhttps://www.google.com\n``` for short inline values, which
+        // turned every short value into its own code-panel and broke the
+        // surrounding bullet flow. Single-line content with empty
+        // data-language must render as inline.
+        const result = isCodeBlock(
+          undefined,
+          { "data-language": "" },
+          "https://www.google.com",
+        );
+        expect(result).toBe(false);
+      });
+
+      it("should_return_false_for_short_numeric_expression_in_fenced_block", () => {
+        const result = isCodeBlock(
+          undefined,
+          { "data-language": "" },
+          "923 * 31233",
+        );
         expect(result).toBe(false);
       });
     });
@@ -141,8 +170,11 @@ describe("codeBlockUtils", () => {
         expect(result).toBe(true);
       });
 
-      it("should_handle_code_block_without_language_via_data_language", () => {
-        // Code blocks without language (```) get data-language attribute
+      it("should_handle_multiline_code_block_without_language_via_data_language", () => {
+        // Multi-line code blocks without language (```) get data-language=""
+        // and render as a panel because the content is unambiguously a code
+        // block. Single-line variants are now treated as inline (see
+        // should_return_false_for_single_line_fenced_block_without_language).
         const content = "some code\nwith newlines";
         const result = isCodeBlock(undefined, { "data-language": "" }, content);
         expect(result).toBe(true);

@@ -224,6 +224,106 @@ async def test_should_not_attach_single_tool_call_middleware_for_non_watsonx_pro
 
 
 @pytest.mark.asyncio
+async def test_should_attach_watsonx_placeholder_middleware_when_llm_is_watsonx() -> None:
+    """Attach WatsonXPlaceholderMiddleware when the LLM is WatsonX.
+
+    WatsonX models occasionally emit literal placeholder strings (e.g.
+    `<result-from-search>`) in tool call args instead of real values. The
+    middleware re-invokes the model once with a corrective SystemMessage so
+    the agent loop recovers instead of running the tool with garbage.
+    """
+    from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
+        WatsonXPlaceholderMiddleware,
+    )
+
+    fake_watsonx = MagicMock(name="ChatWatsonx_fake")
+    type(fake_watsonx).__name__ = "ChatWatsonx"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_watsonx),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert any(isinstance(m, WatsonXPlaceholderMiddleware) for m in middleware), (
+        "WatsonX must get WatsonXPlaceholderMiddleware to recover from placeholder tool args"
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_not_attach_watsonx_placeholder_middleware_for_non_watsonx_providers() -> None:
+    """Don't pay the placeholder-detection cost on providers that don't have this quirk."""
+    from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
+        WatsonXPlaceholderMiddleware,
+    )
+
+    fake_openai = MagicMock(name="ChatOpenAI_fake")
+    type(fake_openai).__name__ = "ChatOpenAI"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_openai),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert not any(isinstance(m, WatsonXPlaceholderMiddleware) for m in middleware)
+
+
+@pytest.mark.asyncio
+async def test_should_order_single_tool_call_middleware_outside_watsonx_placeholder_middleware() -> None:
+    """SingleToolCallMiddleware must wrap WatsonXPlaceholderMiddleware so the
+    clamp is applied to the final response — including any corrective re-invoke.
+
+    Per langchain's middleware composition, the first item in the list is the
+    outermost layer."""
+    from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
+        WatsonXPlaceholderMiddleware,
+    )
+    from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
+        SingleToolCallMiddleware,
+    )
+
+    fake_watsonx = MagicMock(name="ChatWatsonx_fake")
+    type(fake_watsonx).__name__ = "ChatWatsonx"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_watsonx),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    single_idx = next(i for i, m in enumerate(middleware) if isinstance(m, SingleToolCallMiddleware))
+    placeholder_idx = next(i for i, m in enumerate(middleware) if isinstance(m, WatsonXPlaceholderMiddleware))
+    assert single_idx < placeholder_idx, (
+        "SingleToolCallMiddleware must come before WatsonXPlaceholderMiddleware (outermost wraps innermost)"
+    )
+
+
+@pytest.mark.asyncio
 async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
     """Pydantic ValidationError from bad tool args must NOT crash the agent build.
 
@@ -796,3 +896,48 @@ async def test_should_drop_verbose_input_from_agent_component() -> None:
     # The full AgentComponent inputs list also lacks verbose.
     component_input_names = {inp.name for inp in AgentComponent.inputs}
     assert "verbose" not in component_input_names
+
+
+@pytest.mark.asyncio
+async def test_should_not_require_verbose_in_update_build_config() -> None:
+    """`update_build_config` must not require `verbose` after the input was dropped.
+
+    Regression: when the user changes the model in the canvas, the FE re-sends
+    the build_config. After dropping `verbose` from the input set, that
+    build_config no longer carries the key, and the legacy required-keys check
+    raised ``Missing required keys in build_config: ['verbose']`` on every
+    model change. The validator must accept a build_config without `verbose`.
+    """
+    component = _build_component()
+
+    # Build a build_config that has every key the validator requires *except* verbose.
+    from lfx.schema.dotdict import dotdict
+
+    build_config = dotdict(
+        {
+            "code": {"value": ""},
+            "_type": {"value": "AgentComponent"},
+            "model": {"value": "fake-model"},
+            "tools": {"value": []},
+            "input_value": {"value": ""},
+            "add_current_date_tool": {"value": False},
+            "add_calculator_tool": {"value": False},
+            "system_prompt": {"value": ""},
+            "agent_description": {"value": ""},
+            "max_iterations": {"value": 15},
+            "handle_parsing_errors": {"value": True},
+        }
+    )
+
+    # Patch the helpers that touch the network / option cache so we isolate
+    # the validator branch.
+    with (
+        patch(
+            "lfx.components.models_and_agents.agent.handle_model_input_update",
+            side_effect=lambda **kwargs: kwargs["build_config"],
+        ),
+        patch.object(type(component), "update_input_types", side_effect=lambda bc: bc),
+    ):
+        # Should NOT raise. If it does, the canvas surfaces "Error while updating
+        # the Component — Missing required keys in build_config: ['verbose']".
+        await component.update_build_config(build_config, [], field_name="model")

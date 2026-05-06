@@ -14,6 +14,9 @@ from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
     build_initial_messages,
 )
+from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
+    WatsonXPlaceholderMiddleware,
+)
 from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
     SingleToolCallMiddleware,
 )
@@ -504,10 +507,20 @@ class AgentComponent(ToolCallingAgentComponent):
             middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
         if getattr(self, "handle_parsing_errors", False):
             middleware.append(ToolRetryMiddleware(max_retries=2))
-        # WatsonX models reject assistant turns with multiple tool_calls.
-        # Clamp them to one per turn — the agent will run more turns instead.
+        # WatsonX models have two known platform quirks; both still reproduce on
+        # the current API per field reports, so we keep the protections from the
+        # legacy `create_granite_agent` path.
+        # 1. Multi-tool-call assistant turns are rejected ("This model only
+        #    supports single tool-calls at once!"). Clamp to one per turn.
+        # 2. Tool args occasionally come back as literal placeholder strings
+        #    (e.g. `<result-from-search>`). Re-invoke once with a corrective
+        #    SystemMessage.
+        # Order: SingleToolCallMiddleware first (outermost) so the clamp is
+        # applied to the final response, including any corrective re-invoke
+        # produced by WatsonXPlaceholderMiddleware.
         if is_watsonx_model(self._get_llm()):
             middleware.append(SingleToolCallMiddleware())
+            middleware.append(WatsonXPlaceholderMiddleware())
         return middleware
 
     async def run_agent(self, agent) -> Message:
@@ -730,7 +743,11 @@ class AgentComponent(ToolCallingAgentComponent):
         if field_name == "model":
             build_config = self.update_input_types(build_config)
 
-            # Validate required keys
+            # Validate required keys. `verbose` was dropped from the input set
+            # (see `_agent_base_inputs` — the create_agent event stream already
+            # surfaces every step), so it is intentionally NOT required here.
+            # Saved flows that still carry a `verbose` value just ignore it on
+            # load.
             default_keys = [
                 "code",
                 "_type",
@@ -743,7 +760,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",
-                "verbose",
             ]
             missing_keys = [key for key in default_keys if key not in build_config]
             if missing_keys:
