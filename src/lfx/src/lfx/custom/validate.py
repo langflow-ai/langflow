@@ -546,9 +546,14 @@ class _LazyImportProxy:
             # exception itself is correct, but the traceback points at the user's usage
             # site (e.g. `agent.from_agent_and_tools(...)`) rather than at the originating
             # `from X import Y` line. Log the target name so debugging has a starting point;
-            # let the exception propagate unchanged.
+            # let the exception propagate unchanged. Logging itself must never replace the
+            # real exception, so any failure inside the logger is swallowed.
             target = f"{module_name}.{attr_name}" if attr_name else module_name
-            logger.exception("Deferred import of '%s' failed at first use", target)
+            log_exception = getattr(logger, "exception", None)
+            if callable(log_exception):
+                # Diagnostic logging only — must never replace the real import failure.
+                with contextlib.suppress(Exception):
+                    log_exception("Deferred import of '%s' failed at first use", target)
             raise
 
         object.__setattr__(self, "_resolved", resolved)

@@ -70,6 +70,7 @@ class LangflowApplication(BaseApplication):
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
         self.options["pre_fork"] = self.pre_fork
+        self.options["post_fork"] = _langflow_post_fork
         self._app_factory = app_factory
         self.application = None
         super().__init__()
@@ -166,3 +167,26 @@ class LangflowApplication(BaseApplication):
 
                 preload_master()
         return self.application
+
+
+def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
+    """Reset fork-unsafe resources in each worker after gunicorn forks.
+
+    Gunicorn calls this hook synchronously in the worker process immediately
+    after fork, before any request is served. No event loop exists yet here —
+    this function MUST remain fully synchronous.
+
+    Currently resets ``TelemetryService.client`` (an ``httpx.AsyncClient``
+    constructed during master preload) so ``TelemetryService.start()`` can
+    reconstruct it inside the worker's event loop. ``httpx.AsyncClient`` has
+    no synchronous ``.close()``, so replacing the reference is the correct
+    pattern.
+    """
+    try:
+        from langflow.services.deps import get_telemetry_service
+
+        get_telemetry_service().client = None
+    except Exception:  # noqa: BLE001, S110
+        # Service not yet initialized (e.g. preload_app=False path). The
+        # hook must not crash gunicorn.
+        pass

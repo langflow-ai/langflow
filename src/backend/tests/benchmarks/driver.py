@@ -878,9 +878,15 @@ def compare_against_thresholds(
     Behavior:
       - measurement_mode mismatch -> stderr WARNING only (not a failure; see D-11a note).
       - any scenario delta_pct > allowed_regression_pct/100 -> exit code EXIT_VERIFY_REGRESSION.
-      - baseline mean_ms <= 0 -> treat any finite current mean as FAIL (Path-B sentinel trip).
+      - baseline runs == 0 AND mean_ms <= 0 -> UNANCHORED (scenario exists in
+        thresholds.json as a placeholder but has never been snapshotted); the
+        row is recorded with status SKIP and does not trip the gate. A new
+        scenario can land in thresholds.json alongside its code change without
+        failing its first real measurement.
+      - baseline mean_ms <= 0 (with runs > 0) -> FAIL on any finite current
+        mean (Path-B sentinel trip: intentionally-zeroed baseline).
       - on any FAIL, write reports/regression_comment.md.
-      - on all PASS, no regression_comment.md file is written.
+      - on all PASS/SKIP, no regression_comment.md file is written.
     """
     if not thresholds_path.exists():
         sys.stderr.write(
@@ -905,9 +911,17 @@ def compare_against_thresholds(
         if not current:
             continue
         baseline_ms = float(t_entry.get("mean_ms", 0.0))
+        baseline_runs = int(t_entry.get("runs", 0) or 0)
         current_ms = float(current.get("mean_ms", 0.0))
-        if baseline_ms <= 0.0:
-            # Sentinel baseline: any finite current trips the gate.
+        if baseline_ms <= 0.0 and baseline_runs <= 0:
+            # Unanchored baseline: scenario is a placeholder that has never been
+            # snapshotted. Record the current number for visibility but do not
+            # trip the gate — the next snapshot run will anchor it.
+            status = "SKIP"
+            delta_pct = 0.0
+        elif baseline_ms <= 0.0:
+            # Sentinel baseline with prior runs: any finite current trips the
+            # gate (intentionally-zeroed baseline, Path-B sentinel trip).
             status = "FAIL"
             delta_pct = float("inf") if current_ms > 0 else 0.0
         else:
