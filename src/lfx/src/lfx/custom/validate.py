@@ -38,12 +38,12 @@ _LEGACY_LFX_IMPORT_HINTS: dict[str, str] = {
     "MessageInput": "lfx.io",
     "MessageTextInput": "lfx.io",
     "MultilineInput": "lfx.io",
-    "MultilineSecretInput": "lfx.io",
+    "MultilineSecretInput": "lfx.io",  # pragma: allowlist secret
     "MultiselectInput": "lfx.io",
     "NestedDictInput": "lfx.io",
     "Output": "lfx.io",
     "PromptInput": "lfx.io",
-    "SecretStrInput": "lfx.io",
+    "SecretStrInput": "lfx.io",  # pragma: allowlist secret
     "SliderInput": "lfx.io",
     "StrInput": "lfx.io",
     "TableInput": "lfx.io",
@@ -319,10 +319,17 @@ def create_class(code, class_name):
         raise ValueError(msg) from e
     except NameError as e:
         missing = getattr(e, "name", None)
-        hint = ""
-        if missing and missing in _LEGACY_LFX_IMPORT_HINTS:
-            module = _LEGACY_LFX_IMPORT_HINTS[missing]
-            hint = f" Add `from {module} import {missing}` to your component code."
+        module = _LEGACY_LFX_IMPORT_HINTS.get(missing) if missing else None
+        if module is None and missing:
+            # Lazy fallback to langchain symbols so we don't pull names.py at
+            # module import. The error path is cold by definition; cost here
+            # is irrelevant.
+            from lfx.field_typing.names import LANGCHAIN_SYMBOLS
+
+            symbol = LANGCHAIN_SYMBOLS.get(missing)
+            if symbol is not None:
+                module = symbol[0]
+        hint = f" Add `from {module} import {missing}` to your component code." if module else ""
         msg = f"Name error (possibly undefined variable): {e!s}.{hint}"
         raise ValueError(msg) from e
     except ValidationError as e:

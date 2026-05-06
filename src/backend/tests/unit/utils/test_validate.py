@@ -437,6 +437,21 @@ class Broken:
             create_class(code, "Broken")
         assert "Add `from " not in str(exc_info.value)
 
+    def test_name_error_hints_at_langchain_import(self):
+        """Names dropped from the langchain half of DEFAULT_IMPORT_STRING also surface a hint.
+
+        ``Tool``, ``BaseLanguageModel`` etc. were injected via the langchain
+        preamble. We now resolve them lazily from ``lfx.field_typing.names``
+        so users with components that leaned on the auto-import get an
+        actionable message instead of a bare NameError.
+        """
+        code = """
+class Broken:
+    tool: Tool = None
+"""
+        with pytest.raises(ValueError, match=r"Add `from langchain_core\.tools import Tool`"):
+            create_class(code, "Broken")
+
     def test_handles_validation_error(self):
         """Test that validation errors are handled properly."""
         code = """
