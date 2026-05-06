@@ -1647,7 +1647,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.195.0"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 4
@@ -2711,7 +2711,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.8"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 7
@@ -3057,7 +3057,7 @@
                 "dependencies": [
                   {
                     "name": "chromadb",
-                    "version": "1.5.8"
+                    "version": null
                   },
                   {
                     "name": "langchain_chroma",
@@ -3077,7 +3077,7 @@
                   },
                   {
                     "name": "langchain_huggingface",
-                    "version": "1.2.2"
+                    "version": null
                   },
                   {
                     "name": "langchain_cohere",
@@ -3085,15 +3085,15 @@
                   },
                   {
                     "name": "langchain_google_genai",
-                    "version": "4.1.3"
+                    "version": null
                   },
                   {
                     "name": "langchain_ollama",
-                    "version": "0.3.10"
+                    "version": null
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": "1.0.7"
+                    "version": null
                   }
                 ],
                 "total_dependencies": 10
