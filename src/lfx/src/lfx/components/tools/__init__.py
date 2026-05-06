@@ -3,12 +3,11 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any
 
-from langchain_core._api.deprecation import LangChainDeprecationWarning
-
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from .calculator import CalculatorToolComponent
+    from .filesystem import FileSystemToolComponent
     from .python_code_structured_tool import PythonCodeStructuredTool
     from .python_repl import PythonREPLToolComponent
     from .search_api import SearchAPIComponent
@@ -21,6 +20,7 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "CalculatorToolComponent": "calculator",
+    "FileSystemToolComponent": "filesystem",
     "PythonCodeStructuredTool": "python_code_structured_tool",
     "PythonREPLToolComponent": "python_repl",
     "SearchAPIComponent": "search_api",
@@ -34,6 +34,7 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorToolComponent",
+    "FileSystemToolComponent",
     "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
@@ -52,6 +53,8 @@ def __getattr__(attr_name: str) -> Any:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
     try:
+        from langchain_core._api.deprecation import LangChainDeprecationWarning
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", LangChainDeprecationWarning)
             result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)

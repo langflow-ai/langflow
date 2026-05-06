@@ -1,14 +1,8 @@
-"""Unit tests for the MEAS-03 checkpoint landmarks (D-03a).
+"""Tests for `lfx._bench` checkpoint landmarks.
 
-These tests exercise `lfx._bench` and the two new landmark call sites added
-in plan 01-05:
-  - `lfx/services/initialize.py` emits `after-initialize-services` at module import.
-  - `lfx/load/load.py` emits `after-component-index` after `ensure_component_hash_lookups_loaded()`.
-
-They do NOT require docker, hyperfine, or any benchmark scaffolding. They verify
-the landmark checkpoints fire at the right places and are cost-free when disabled.
-
-No mocking: env-var-driven real code paths only (per user global rule).
+Verifies the landmarks emitted from `lfx.services.initialize` and `lfx.load.load`
+fire at the right places and are cost-free when disabled. No docker, hyperfine,
+or benchmark scaffolding required.
 """
 
 from __future__ import annotations
@@ -24,10 +18,16 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+_RELOADED_MODULES = ("lfx._bench", "lfx.services.initialize")
+
+
 def _reset_bench_modules(monkeypatch, *, enabled: bool, dump_path: Path | None = None) -> None:
     """Reset env vars and force reload of `lfx._bench` so the module-level _ENABLED flag reflects the new env.
 
     The module caches _ENABLED at import time, so a plain monkeypatch without reload would not flip it.
+
+    Restores any popped modules at teardown via ``monkeypatch.setitem`` so adjacent
+    tests do not see the reloaded copies.
     """
     if enabled:
         monkeypatch.setenv("LFX_BENCHMARK_CHECKPOINTS", "1")
@@ -37,10 +37,11 @@ def _reset_bench_modules(monkeypatch, *, enabled: bool, dump_path: Path | None =
         monkeypatch.delenv("LFX_BENCHMARK_CHECKPOINTS", raising=False)
         monkeypatch.delenv("LFX_BENCHMARK_CHECKPOINTS_FILE", raising=False)
 
-    # Purge cached modules so reload sees the new env.
-    for mod in ("lfx._bench", "lfx.services.initialize"):
+    # Snapshot the original module objects (if loaded) so monkeypatch restores
+    # them on teardown. ``delitem`` rolls back, restoring the originals.
+    for mod in _RELOADED_MODULES:
         if mod in sys.modules:
-            del sys.modules[mod]
+            monkeypatch.delitem(sys.modules, mod)
 
 
 @pytest.fixture
@@ -52,7 +53,7 @@ def bench_enabled(tmp_path, monkeypatch):
 
 
 def test_initialize_services_emits_after_initialize_services(bench_enabled):  # noqa: ARG001
-    """D-03a: importing lfx.services.initialize records `after-initialize-services`.
+    """Importing lfx.services.initialize records `after-initialize-services`.
 
     The checkpoint is appended by the module-level `_checkpoint(...)` call at the end of
     `lfx/services/initialize.py`, which runs exactly once per process the first time the
@@ -74,7 +75,7 @@ def test_initialize_services_emits_after_initialize_services(bench_enabled):  # 
 
 @pytest.mark.asyncio
 async def test_load_emits_after_component_index(bench_enabled):  # noqa: ARG001
-    """D-03a: completing `ensure_component_hash_lookups_loaded()` records `after-component-index`.
+    """Completing `ensure_component_hash_lookups_loaded()` records `after-component-index`.
 
     Exercised through the `lfx.load.load` path: the `_checkpoint("after-component-index")` call
     lives inside the `try` block immediately after the await.

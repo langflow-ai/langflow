@@ -203,6 +203,116 @@ class TestFieldTypingNativeDependencyFailure:
         assert "AgentExecutor" in constants.LANGCHAIN_BASE_TYPES
         assert constants.LANGCHAIN_BASE_TYPES["AgentExecutor"] is constants.AgentExecutor
 
+    def test_stub_resolution_is_not_cached_under_public_name(self, monkeypatch):
+        """Transient failures should not pin the public symbol to the stub forever."""
+
+        class _RaisingLangchainAgents(types.ModuleType):
+            def __getattr__(self, name: str):
+                if name.startswith("__"):
+                    raise AttributeError(name)
+                msg = "transient native dependency failure"
+                raise OSError(msg)
+
+        monkeypatch.setitem(
+            sys.modules,
+            "langchain_classic.agents",
+            _RaisingLangchainAgents("langchain_classic.agents"),
+        )
+        monkeypatch.delitem(sys.modules, "lfx.field_typing.constants", raising=False)
+        monkeypatch.delitem(sys.modules, "lfx.field_typing", raising=False)
+
+        from lfx.field_typing import constants
+
+        assert constants.AgentExecutor is not None
+        assert "AgentExecutor" not in constants.__dict__
+
+        monkeypatch.delitem(sys.modules, "langchain_classic.agents", raising=False)
+        monkeypatch.delitem(sys.modules, "langchain_classic", raising=False)
+
+        # After the transient failure is removed, the next access should retry.
+        pytest.importorskip("langchain_classic.agents")
+        import langchain_classic.agents
+
+        assert constants.AgentExecutor is langchain_classic.agents.AgentExecutor
+
+
+class TestFieldTypingPreforkRecovery:
+    """Prefork servers should not inherit degraded stub caches forever."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_constants(self):
+        for mod in ("lfx.field_typing.constants", "lfx.field_typing"):
+            sys.modules.pop(mod, None)
+        yield
+        for mod in ("lfx.field_typing.constants", "lfx.field_typing"):
+            sys.modules.pop(mod, None)
+
+    def test_clear_degraded_caches_after_fork_removes_stub_backed_entries(self):
+        from lfx.field_typing import constants
+
+        constants.__dict__["Tool"] = constants._STUBS["Tool"]
+        constants.__dict__["Memory"] = type("T", (), {"__bound__": constants._STUBS["BaseChatMessageHistory"]})()
+        constants._STUB_WARNED.add("Tool")
+
+        constants._clear_degraded_caches_after_fork()
+
+        assert "Tool" not in constants.__dict__
+        assert "Memory" not in constants.__dict__
+        assert set() == constants._STUB_WARNED
+
+
+class TestFieldTypingResolvesRealLangchain:
+    """Regression guard for the lazy-resolution mechanism.
+
+    When langchain is importable, the public symbols must resolve to the real
+    classes, NOT the private stubs. The earlier implementation defined stub
+    classes at module top level under their public names, which placed them in
+    ``globals()`` and short-circuited the PEP 562 ``__getattr__`` lazy
+    resolution. Every consumer silently received empty stub classes.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_constants(self):
+        """Force a fresh import so the test sees uncached resolution."""
+        for mod in ("lfx.field_typing.constants", "lfx.field_typing"):
+            sys.modules.pop(mod, None)
+        yield
+        for mod in ("lfx.field_typing.constants", "lfx.field_typing"):
+            sys.modules.pop(mod, None)
+
+    def test_tool_resolves_to_real_langchain_tool(self):
+        pytest.importorskip("langchain_core.tools")
+        import langchain_core.tools
+        from lfx.field_typing import constants
+
+        assert constants.Tool is langchain_core.tools.Tool
+        assert constants.BaseTool is langchain_core.tools.BaseTool
+
+    def test_base_language_model_resolves_to_real_class(self):
+        pytest.importorskip("langchain_core.language_models")
+        import langchain_core.language_models
+        from lfx.field_typing import constants
+
+        assert constants.BaseLanguageModel is langchain_core.language_models.BaseLanguageModel
+
+    def test_langchain_base_types_dict_holds_real_classes(self):
+        pytest.importorskip("langchain_core.tools")
+        import langchain_core.tools
+        from lfx.field_typing import constants
+
+        assert constants.LANGCHAIN_BASE_TYPES["Tool"] is langchain_core.tools.Tool
+        assert constants.LANGCHAIN_BASE_TYPES["BaseTool"] is langchain_core.tools.BaseTool
+
+    def test_custom_component_supported_types_includes_dataframe_and_table(self):
+        # The dict is built fresh on access and includes the real DataFrame/Table.
+        from lfx.field_typing import constants
+        from lfx.schema.dataframe import DataFrame, Table
+
+        assert constants.DataFrame is DataFrame
+        assert constants.Table is Table
+        assert constants.CUSTOM_COMPONENT_SUPPORTED_TYPES["DataFrame"] is DataFrame
+        assert constants.CUSTOM_COMPONENT_SUPPORTED_TYPES["Table"] is Table
+
 
 class TestFieldTypingModuleStructure:
     """Test the structure of the field_typing module."""

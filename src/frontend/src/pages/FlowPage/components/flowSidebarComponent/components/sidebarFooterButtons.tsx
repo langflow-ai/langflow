@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
@@ -47,9 +48,11 @@ const SidebarMenuButtons = ({
             name="Plus"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="group-data-[state=open]/collapsible:font-semibold">
-            {t("sidebar.mcp.add")}
-          </span>
+          <ShadTooltip content={t("sidebar.mcp.add")} styleClasses="z-50">
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              {t("sidebar.mcp.add")}
+            </span>
+          </ShadTooltip>
         </Button>
       </SidebarMenuButton>
       <SidebarMenuButton asChild>
@@ -66,9 +69,11 @@ const SidebarMenuButtons = ({
             name="ArrowUpRight"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="group-data-[state=open]/collapsible:font-semibold">
-            {t("sidebar.mcp.manage")}
-          </span>
+          <ShadTooltip content={t("sidebar.mcp.manage")} styleClasses="z-50">
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              {t("sidebar.mcp.manage")}
+            </span>
+          </ShadTooltip>
         </Button>
       </SidebarMenuButton>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
@@ -90,9 +95,14 @@ const SidebarMenuButtons = ({
           name="Plus"
           className="h-4 w-4 text-muted-foreground"
         />
-        <span className="group-data-[state=open]/collapsible:font-semibold">
-          {t("sidebar.newCustomComponent")}
-        </span>
+        <ShadTooltip
+          content={t("sidebar.newCustomComponent")}
+          styleClasses="z-50"
+        >
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            {t("sidebar.newCustomComponent")}
+          </span>
+        </ShadTooltip>
       </Button>
     </SidebarMenuButton>
   );

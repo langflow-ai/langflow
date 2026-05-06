@@ -4,11 +4,9 @@ import importlib
 import sys
 import warnings
 from types import FunctionType
-from typing import Optional, Union
 
 from pydantic import ValidationError
 
-from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
 _LANGFLOW_IS_INSTALLED = False
@@ -17,6 +15,44 @@ with contextlib.suppress(ImportError):
     import langflow  # noqa: F401
 
     _LANGFLOW_IS_INSTALLED = True
+
+
+# Migration aid: maps lfx names that *used* to be auto-injected into custom-
+# component scope (via the now-removed DEFAULT_IMPORT_STRING preamble) to the
+# module the user should import them from. Consulted only by the NameError
+# handler in ``create_class`` to produce an actionable hint. Pure static data
+# — never exec'd, no langchain/lfx imports triggered, zero cold-start cost.
+_LEGACY_LFX_IMPORT_HINTS: dict[str, str] = {
+    # lfx.io inputs/outputs
+    "BoolInput": "lfx.io",
+    "CodeInput": "lfx.io",
+    "DataInput": "lfx.io",
+    "DictInput": "lfx.io",
+    "DropdownInput": "lfx.io",
+    "FileInput": "lfx.io",
+    "FloatInput": "lfx.io",
+    "HandleInput": "lfx.io",
+    "IntInput": "lfx.io",
+    "JSONInput": "lfx.io",
+    "LinkInput": "lfx.io",
+    "MessageInput": "lfx.io",
+    "MessageTextInput": "lfx.io",
+    "MultilineInput": "lfx.io",
+    "MultilineSecretInput": "lfx.io",  # pragma: allowlist secret
+    "MultiselectInput": "lfx.io",
+    "NestedDictInput": "lfx.io",
+    "Output": "lfx.io",
+    "PromptInput": "lfx.io",
+    "SecretStrInput": "lfx.io",  # pragma: allowlist secret
+    "SliderInput": "lfx.io",
+    "StrInput": "lfx.io",
+    "TableInput": "lfx.io",
+    # lfx.schema
+    "Data": "lfx.schema.data",
+    "JSON": "lfx.schema.data",
+    "DataFrame": "lfx.schema.dataframe",
+    "Table": "lfx.schema.dataframe",
+}
 
 
 def add_type_ignores() -> None:
@@ -266,21 +302,39 @@ def create_class(code, class_name):
         "from langflow.custom import CustomComponent",
     )
 
-    code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
-
-        class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code)
-
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        # ``prepare_global_scope`` already exec'd the class definition into
+        # ``exec_globals``. Mirror imported modules into our own globals so
+        # subsequent executions share them (preserved from the prior
+        # ``build_class_constructor`` side-effect).
+        # TODO: scope this to a contained mapping. Right now every dynamically
+        # created component permanently injects its imported modules into
+        # ``lfx.custom.validate``'s module globals; over a long-running server
+        # with many user components this can grow unbounded and shadow names.
+        for name, value in exec_globals.items():
+            if isinstance(value, type(importlib)):
+                globals()[name] = value
+        return exec_globals[class_name]
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
         raise ValueError(msg) from e
     except NameError as e:
-        msg = f"Name error (possibly undefined variable): {e!s}"
+        missing = getattr(e, "name", None)
+        module = _LEGACY_LFX_IMPORT_HINTS.get(missing) if missing else None
+        if module is None and missing:
+            # Lazy fallback to langchain symbols so we don't pull names.py at
+            # module import. The error path is cold by definition; cost here
+            # is irrelevant.
+            from lfx.field_typing.names import LANGCHAIN_SYMBOLS
+
+            symbol = LANGCHAIN_SYMBOLS.get(missing)
+            if symbol is not None:
+                module = symbol[0]
+        hint = f" Add `from {module} import {missing}` to your component code." if module else ""
+        msg = f"Name error (possibly undefined variable): {e!s}.{hint}"
         raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
@@ -312,8 +366,7 @@ def _import_module_with_warnings(module_name):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", LangChainDeprecationWarning)
             return importlib.import_module(module_name)
-    else:
-        return importlib.import_module(module_name)
+    return importlib.import_module(module_name)
 
 
 def _resolve_attribute(imported_module, module_name, attr_name):
@@ -672,8 +725,17 @@ def prepare_global_scope(module):
     # Seed the exec namespace with this module's globals so helpers referenced from
     # `DEFAULT_IMPORT_STRING` (e.g. typing aliases) are visible to the compiled class body.
     exec_globals = _LazyExecGlobals(globals())
+    future_imports = []
 
     for node in module.body:
+        # ``from __future__ import …`` directives must remain in the AST passed to
+        # compile() — they are compile-time pragmas (e.g. PEP 563 ``annotations``),
+        # not runtime imports. Components relying on lazy annotation evaluation
+        # (``-> list[Tool]`` with ``Tool`` only under TYPE_CHECKING) would NameError
+        # at class-body time without this.
+        if isinstance(node, ast.ImportFrom) and node.module == "__future__":
+            future_imports.append(node)
+            continue
         if isinstance(node, ast.Import):
             # Each alias on a single `import` node decides independently whether to defer.
             lazy_aliases = [a for a in node.names if _should_defer_module(a.name)]
@@ -724,14 +786,18 @@ def prepare_global_scope(module):
     definitions = [
         node for node in module.body if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign)
     ]
-    if definitions:
-        combined_module = ast.Module(body=definitions, type_ignores=[])
+    if definitions or future_imports:
+        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
         exec(compiled_code, exec_globals)
 
     return exec_globals
 
 
+# Kept for external callers (re-exported via ``from lfx.custom.validate import *``
+# in langflow.utils.validate / langflow.custom.validate). ``create_class`` no
+# longer goes through these — ``prepare_global_scope`` already exec's the
+# class into ``exec_globals``, so the chain below is redundant work.
 def extract_class_code(module, class_name):
     """Extracts the AST node for the specified class from the module.
 
@@ -784,36 +850,6 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
         return exec_globals[class_name]
 
     return build_custom_class()
-
-
-# TODO: Remove this function
-def get_default_imports(code_string):
-    """Returns a dictionary of default imports for the dynamic class constructor."""
-    default_imports = {
-        "Optional": Optional,
-        "List": list,
-        "Dict": dict,
-        "Union": Union,
-    }
-    langflow_imports = list(CUSTOM_COMPONENT_SUPPORTED_TYPES.keys())
-    necessary_imports = find_names_in_code(code_string, langflow_imports)
-    langflow_module = importlib.import_module("lfx.field_typing")
-    default_imports.update({name: getattr(langflow_module, name) for name in necessary_imports})
-
-    return default_imports
-
-
-def find_names_in_code(code, names):
-    """Finds if any of the specified names are present in the given code string.
-
-    Args:
-        code: The source code as a string.
-        names: A list of names to check for in the code.
-
-    Returns:
-        A set of names that are found in the code.
-    """
-    return {name for name in names if name in code}
 
 
 def extract_function_name(code):

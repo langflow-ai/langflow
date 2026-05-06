@@ -6,9 +6,9 @@ function in this module is effectively a no-op (one dict lookup + early return).
 
 When set, records `time.perf_counter()` timestamps at named checkpoints and
 dumps them as JSON to `LFX_BENCHMARK_CHECKPOINTS_FILE` (default
-`/tmp/lfx_checkpoints.json`). The harness driver (see
-`src/backend/tests/benchmarks/driver.py`, plan 05) reads that file and renders
-the per-phase breakdown.
+`/tmp/lfx_checkpoints.json`). The harness driver at
+`src/backend/tests/benchmarks/driver.py` reads that file and renders the
+per-phase breakdown.
 
 The `process-start` checkpoint is recorded at MODULE IMPORT time. This is as
 close to "Python interpreter has just started running user code" as we can
@@ -25,7 +25,7 @@ from pathlib import Path
 
 __all__ = ["checkpoint", "dump"]
 
-_ENABLED: bool = bool(os.environ.get("LFX_BENCHMARK_CHECKPOINTS"))
+_ENABLED: bool = os.environ.get("LFX_BENCHMARK_CHECKPOINTS", "").strip().lower() in {"1", "true", "yes", "on"}
 _DEFAULT_FILE: str = "/tmp/lfx_checkpoints.json"  # noqa: S108
 _CHECKPOINTS: list[tuple[str, float]] = []
 
@@ -36,9 +36,8 @@ if _ENABLED:
     # to the degree Python lets us observe it).
     _CHECKPOINTS.append(("process-start", time.perf_counter()))
 
-    # Optional bootstrap hook (plan 01-05 Task 5a). The benchmark harness uses
-    # JSON fixtures for MEAS-03 six-checkpoint coverage; JSON fixtures do NOT
-    # execute any fixture-level Python (e.g., mock-LLM installation). To let
+    # Optional bootstrap hook. The benchmark harness uses JSON fixtures, which do
+    # NOT execute any fixture-level Python (e.g., mock-LLM installation). To let
     # callers hook module-level initialization (mocks, tracing shims, etc.) on
     # top of `lfx run <fixture>.json`, we honor two env vars:
     #   - LFX_BENCHMARK_BOOTSTRAP_MODULE: dotted import path (e.g. "pkg.mod").

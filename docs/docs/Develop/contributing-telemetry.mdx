@@ -91,3 +91,25 @@ This telemetry event is sent when an unhandled exception is captured by Langflow
 - **Message**: The exception message that was raised.
 - **Context**: Additional contextual information related to where the exception occurred, such as route, component, or operation details, when available.
 - **StackTraceHash**: A hash of the stack trace used to group similar exceptions for easier analysis.
+
+### Deployment provider
+
+This telemetry event is sent for various lifecycle operations on deployment provider accounts, such as create, delete, and update.
+
+- **DeploymentAction**: The specific action performed, such as `provider.create` or `provider.delete`.
+- **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
+- **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
+- **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
+- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
+- **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.
+
+### Deployment
+
+This telemetry event is sent for various lifecycle operations on deployment resources, such as create, delete, and update.
+
+- **DeploymentAction**: The specific action performed, such as `deployment.create`.
+- **DeploymentProvider**: The deployment provider used, such as `watsonx-orchestrate`.
+- **DeploymentSeconds**: Duration in seconds for the operation, providing performance insights.
+- **DeploymentSuccess**: Boolean value indicating whether the operation was successful.
+- **DeploymentErrorMessage**: Error message details if the operation was unsuccessful.
+- **WxoTenantId**: A unique identifier for the tenant, populated only for `watsonx-orchestrate` deployments, used to understand multi-tenant usage patterns without collecting personal information.

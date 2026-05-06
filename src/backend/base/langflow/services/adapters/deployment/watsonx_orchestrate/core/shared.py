@@ -22,7 +22,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     create_and_upload_wxo_flow_tools_with_bindings,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxResultToolRefBinding
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_error_detail
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
+    dedupe_list,
+    extract_error_detail,
+    validate_wxo_name,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterator
@@ -72,6 +76,12 @@ class RawConnectionCreatePlan:
     provider_app_id: str
     payload: WatsonxConnectionRawPayload
 
+    def __post_init__(self) -> None:
+        # operations[*].app_ids use operation_app_id as the caller-visible key.
+        # provider_app_id is used for provider calls and must follow wxO rules.
+        # Normalizing here keeps create/validate/rollback on one canonical id.
+        self.provider_app_id = validate_wxo_name(self.provider_app_id)
+
 
 @dataclass(slots=True)
 class RawToolCreatePlan:
@@ -116,6 +126,7 @@ async def create_connection_with_conflict_mapping(
     user_id: IdLike,
     db: AsyncSession,
     error_prefix: str,
+    created_app_ids_journal: list[str] | None = None,
 ) -> str:
     from lfx.services.adapters.deployment.schema import DeploymentConfig
 
@@ -133,6 +144,7 @@ async def create_connection_with_conflict_mapping(
             config=config_payload,
             user_id=user_id,
             db=db,
+            created_app_ids_journal=created_app_ids_journal,
         )
     except (ClientAPIException, HTTPException) as exc:
         if isinstance(exc, ClientAPIException):
@@ -163,7 +175,7 @@ async def resolve_connections_for_operations(
     raw_connections_to_create: list[RawConnectionCreatePlan],
     error_prefix: str,
     validate_connection_fn: Callable[..., Awaitable[object]] = validate_connection,
-    create_connection_fn: Callable[..., Awaitable[str]] = create_connection_with_conflict_mapping,
+    created_app_ids_journal: list[str] | None = None,
 ) -> ConnectionResolutionResult:
     logger.debug(
         "resolve_connections_for_operations: existing_app_ids=%s, raw_to_create=%d",
@@ -187,15 +199,17 @@ async def resolve_connections_for_operations(
             created_app_ids=[],
         )
 
+    journal = created_app_ids_journal if created_app_ids_journal is not None else []
     created_connections_results = await asyncio.gather(
         *(
-            create_connection_fn(
+            create_connection_with_conflict_mapping(
                 clients=clients,
                 app_id=create_plan.provider_app_id,
                 payload=create_plan.payload,
                 user_id=user_id,
                 db=db,
                 error_prefix=error_prefix,
+                created_app_ids_journal=journal,
             )
             for create_plan in raw_connections_to_create
         ),
@@ -203,7 +217,7 @@ async def resolve_connections_for_operations(
     )
 
     create_connection_errors: list[Exception] = []
-    created_app_ids_journal: list[str] = []
+    created_app_ids: list[str] = []
     for result in created_connections_results:
         if isinstance(result, BaseException):
             if isinstance(result, Exception):
@@ -213,26 +227,34 @@ async def resolve_connections_for_operations(
                     RuntimeError(f"Connection create failed with non-standard exception: {type(result).__name__}")
                 )
             continue
-        created_app_ids_journal.append(result)
-    created_app_ids = list(dict.fromkeys(created_app_ids_journal))
+        created_app_ids.append(result)
     if create_connection_errors:
+        rollback_app_ids = dedupe_list([*journal, *created_app_ids])
         logger.debug(
             "resolve_connections_for_operations: %d errors, created_app_ids=%s",
             len(create_connection_errors),
-            created_app_ids,
+            rollback_app_ids,
         )
-        raise ConnectionCreateBatchError(created_app_ids=created_app_ids, errors=create_connection_errors)
+        raise ConnectionCreateBatchError(created_app_ids=rollback_app_ids, errors=create_connection_errors)
 
-    validated_created_connections: list[object] = await asyncio.gather(
-        *(
-            retry_create(
-                validate_connection_fn,
-                clients.connections,
-                app_id=create_plan.provider_app_id,
+    try:
+        validated_created_connections: list[object] = await asyncio.gather(
+            *(
+                retry_create(
+                    validate_connection_fn,
+                    clients.connections,
+                    app_id=create_plan.provider_app_id,
+                )
+                for create_plan in raw_connections_to_create
             )
-            for create_plan in raw_connections_to_create
         )
-    )
+    except Exception as exc:
+        rollback_app_ids = dedupe_list([*journal, *created_app_ids])
+        logger.debug(
+            "resolve_connections_for_operations: validation error, created_app_ids=%s",
+            rollback_app_ids,
+        )
+        raise ConnectionCreateBatchError(created_app_ids=rollback_app_ids, errors=[exc]) from exc
     for create_plan, connection in zip(raw_connections_to_create, validated_created_connections, strict=True):
         operation_to_provider_app_id[create_plan.operation_app_id] = create_plan.provider_app_id
         resolved_connections[create_plan.provider_app_id] = connection.connection_id  # type: ignore[attr-defined]

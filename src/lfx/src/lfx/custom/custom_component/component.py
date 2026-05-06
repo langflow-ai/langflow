@@ -6,7 +6,7 @@ import inspect
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
 import nanoid
@@ -21,7 +21,6 @@ from lfx.base.tools.constants import (
 )
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
-from lfx.field_typing import Tool  # noqa: TC001
 
 # Lazy import to avoid circular dependency
 # from lfx.graph.state.model import create_state_model
@@ -39,6 +38,7 @@ from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
 from .custom_component import CustomComponent
@@ -50,6 +50,7 @@ if TYPE_CHECKING:
 
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
+    from lfx.field_typing import Tool
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
     from lfx.inputs.inputs import InputTypes
@@ -71,6 +72,32 @@ def get_component_toolkit():
 
 BACKWARDS_COMPATIBLE_ATTRIBUTES = ["user_id", "vertex", "tracing_service"]
 CONFIG_ATTRIBUTES = ["_display_name", "_description", "_icon", "_name", "_metadata"]
+
+
+def _wrap_if_secret(input_obj: Any, value: Any) -> Any:
+    """Return the runtime value for an input, preserving string compatibility.
+
+    Credential variables arrive as SecretStr and non-password inputs reject them
+    during validation. Password inputs keep their runtime string contract, so
+    existing component code can pass self.api_key to provider clients without
+    unwrapping every call site.
+    """
+    if input_obj is not None and getattr(input_obj, "password", False):
+        return unwrap_secret_value(value)
+    return value
+
+
+def _mask_secret_value(value: Any) -> Any:
+    if is_secret_value(value):
+        return str(value)
+    return value
+
+
+def _get_secret_text(input_obj: Any, value: Any) -> str | None:
+    if input_obj is None or not getattr(input_obj, "password", False):
+        return None
+    value = unwrap_secret_value(value)
+    return value if isinstance(value, str) and value else None
 
 
 class PlaceholderGraph(NamedTuple):
@@ -133,6 +160,7 @@ class Component(CustomComponent):
         self._outputs_map: dict[str, Output] = {}
         self._results: dict[str, Any] = {}
         self._attributes: dict[str, Any] = {}
+        self._secret_values: set[str] = set()
         self._edges: list[EdgeData] = []
         self._components: list[Component] = []
         self._event_manager: EventManager | None = None
@@ -928,7 +956,10 @@ class Component(CustomComponent):
             raise TypeError(msg)
         self.set_input_value(key, value)
         self._parameters[key] = value
-        self._attributes[key] = value
+        input_obj = self._inputs.get(key)
+        if secret_text := _get_secret_text(input_obj, value):
+            self._secret_values.add(secret_text)
+        self._attributes[key] = _wrap_if_secret(input_obj, value)
 
     def __call__(self, **kwargs):
         self.set(**kwargs)
@@ -1023,8 +1054,20 @@ class Component(CustomComponent):
     def _get_method_return_type(self, method_name: str) -> list[str]:
         method = getattr(self, method_name)
         try:
-            return_type = get_type_hints(method).get("return")
+            from lfx.utils.type_hints import get_runtime_type_hints
+
+            return_type = get_runtime_type_hints(method).get("return")
         except TypeError:
+            return []
+        except NameError as exc:
+            # ``get_runtime_type_hints`` injects ``lfx.field_typing`` names so the
+            # legitimate TYPE_CHECKING-only case resolves. A surviving NameError
+            # almost always means a typo'd return annotation in user code, and
+            # the empty list silently disables tool-mode return-type metadata —
+            # log so this is debuggable instead of invisible.
+            from lfx.log.logger import logger
+
+            logger.debug(f"Could not resolve return annotation on {self.__class__.__name__}.{method_name}: {exc}")
             return []
         if return_type is None:
             return []
@@ -1120,10 +1163,15 @@ class Component(CustomComponent):
                     f"that is a reserved word and cannot be used."
                 )
                 raise ValueError(msg)
-            attributes[key] = value
+            input_obj = self._inputs.get(key)
+            if secret_text := _get_secret_text(input_obj, value):
+                self._secret_values.add(secret_text)
+            attributes[key] = _wrap_if_secret(input_obj, value)
         for key, input_obj in self._inputs.items():
             if key not in attributes and key not in self._attributes:
-                attributes[key] = input_obj.value or None
+                if secret_text := _get_secret_text(input_obj, input_obj.value):
+                    self._secret_values.add(secret_text)
+                attributes[key] = _wrap_if_secret(input_obj, input_obj.value or None)
 
         self._attributes.update(attributes)
 
@@ -1287,6 +1335,7 @@ class Component(CustomComponent):
         ):
             result.set_flow_id(self._vertex.graph.flow_id)
         result = output.apply_options(result)
+        result = self._sanitize_secret_values(result)
         output.value = result
 
         return result
@@ -1317,13 +1366,44 @@ class Component(CustomComponent):
         custom_repr = self.custom_repr()
         if custom_repr is None and isinstance(result, dict | Data | str):
             custom_repr = result
+        custom_repr = self._sanitize_secret_values(custom_repr)
         if not isinstance(custom_repr, str):
             custom_repr = str(custom_repr)
 
         raw = self._process_raw_result(result)
+        raw = self._sanitize_secret_values(raw)
         artifact_type = get_artifact_type(self.status or raw, result)
         raw, artifact_type = post_process_raw(raw, artifact_type)
         return {"repr": custom_repr, "raw": raw, "type": artifact_type}
+
+    def _sanitize_secret_string(self, value: str) -> str:
+        for secret in sorted(self._secret_values, key=len, reverse=True):
+            value = value.replace(secret, "**********")
+        return value
+
+    def _sanitize_secret_values(self, value):
+        if not self._secret_values:
+            return _mask_secret_value(value)
+        value = _mask_secret_value(value)
+        if isinstance(value, str):
+            return self._sanitize_secret_string(value)
+        if isinstance(value, Message):
+            if isinstance(value.text, str):
+                value.text = self._sanitize_secret_string(value.text)
+            value.data = self._sanitize_secret_values(value.data)
+            return value
+        if isinstance(value, Data):
+            value.data = self._sanitize_secret_values(value.data)
+            if isinstance(value.default_value, str):
+                value.default_value = self._sanitize_secret_string(value.default_value)
+            return value
+        if isinstance(value, dict):
+            return {key: self._sanitize_secret_values(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [self._sanitize_secret_values(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(self._sanitize_secret_values(item) for item in value)
+        return value
 
     def _process_raw_result(self, result):
         return self.extract_data(result)
@@ -1359,6 +1439,8 @@ class Component(CustomComponent):
         self._current_output = ""
 
     def _finalize_results(self, results, artifacts):
+        self.status = self._sanitize_secret_values(self.status)
+        self.repr_value = self._sanitize_secret_values(self.repr_value)
         self._artifacts = artifacts
         self._results = results
         if self.tracing_service:
@@ -1577,6 +1659,7 @@ class Component(CustomComponent):
         """
         if name is None:
             name = f"Log {len(self._logs) + 1}"
+        message = self._sanitize_secret_values(message)
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
