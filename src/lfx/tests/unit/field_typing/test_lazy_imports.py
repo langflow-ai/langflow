@@ -210,7 +210,8 @@ class TestFieldTypingNativeDependencyFailure:
             def __getattr__(self, name: str):
                 if name.startswith("__"):
                     raise AttributeError(name)
-                raise OSError("transient native dependency failure")
+                msg = "transient native dependency failure"
+                raise OSError(msg)
 
         monkeypatch.setitem(
             sys.modules,
