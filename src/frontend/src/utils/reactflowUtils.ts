@@ -2382,7 +2382,7 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "New Flow",
+    name: flow?.name ? flow.name : i18n.t("flow.defaultName"),
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,
