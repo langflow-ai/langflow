@@ -224,20 +224,28 @@ async def _run_master_preload() -> None:
     # would leave an open connection pool in the master process, and that pool
     # would be inherited (fork-unsafe) by every worker.
     try:
-        await logger.adebug("[preload] copying profile pictures")
-        await _best_effort(
-            PreloadStep.PROFILE_PICTURES,
-            "copy_profile_pictures failed",
-            copy_profile_pictures(),
+        # Wave 1: profile-picture copy and bundle download/extract are independent
+        # (different filesystem subtrees, no shared state). Run them concurrently
+        # so the master pays max(profile, bundles) instead of profile + bundles.
+        async def _do_bundles() -> None:
+            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+            _STATE.temp_dirs = list(temp_dirs)
+            _STATE.bundles_components_paths = list(bundles_components_paths)
+            settings_service.settings.components_path.extend(bundles_components_paths)
+            mark_step_complete(PreloadStep.BUNDLES)
+
+        await logger.ainfo("[preload] copying profile pictures + loading bundles (parallel)")
+        await asyncio.gather(
+            _best_effort(
+                PreloadStep.PROFILE_PICTURES,
+                "copy_profile_pictures failed",
+                copy_profile_pictures(),
+            ),
+            _do_bundles(),
         )
 
-        await logger.ainfo("[preload] loading bundles")
-        temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-        _STATE.temp_dirs = list(temp_dirs)
-        _STATE.bundles_components_paths = list(bundles_components_paths)
-        settings_service.settings.components_path.extend(bundles_components_paths)
-        mark_step_complete(PreloadStep.BUNDLES)
-
+        # Types cache scans settings.components_path, which the bundle step just
+        # extended. Must run sequentially after Wave 1.
         await logger.ainfo("[preload] building component types cache")
         await get_and_cache_all_types_dict(settings_service, get_telemetry_service())
         mark_step_complete(PreloadStep.TYPES_CACHED)
@@ -257,28 +265,30 @@ async def _run_master_preload() -> None:
                 initialize_agentic_global_variables,
             )
 
-            await logger.adebug("[preload] initializing agentic global variables")
-
+            # Globals and MCP config are explicitly independent (per the prerequisite
+            # DAG: MCP config can succeed even when globals failed). Each gets its
+            # own session_scope and its own _best_effort wrapper, so a failure in
+            # one does not abort the other inside the gather.
             async def _run_agentic_globals() -> None:
                 async with session_scope() as session:
                     await initialize_agentic_global_variables(session)
-
-            await _best_effort(
-                PreloadStep.AGENTIC_GLOBALS,
-                "initialize agentic global variables failed",
-                _run_agentic_globals(),
-            )
-
-            await logger.adebug("[preload] auto-configuring agentic MCP server")
 
             async def _run_agentic_mcp() -> None:
                 async with session_scope() as session:
                     await auto_configure_agentic_mcp_server(session)
 
-            await _best_effort(
-                PreloadStep.AGENTIC_MCP,
-                "auto-configure agentic MCP server failed",
-                _run_agentic_mcp(),
+            await logger.adebug("[preload] initializing agentic globals + MCP server (parallel)")
+            await asyncio.gather(
+                _best_effort(
+                    PreloadStep.AGENTIC_GLOBALS,
+                    "initialize agentic global variables failed",
+                    _run_agentic_globals(),
+                ),
+                _best_effort(
+                    PreloadStep.AGENTIC_MCP,
+                    "auto-configure agentic MCP server failed",
+                    _run_agentic_mcp(),
+                ),
             )
 
         await logger.adebug("[preload] loading flows from directory")

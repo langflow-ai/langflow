@@ -1,3 +1,24 @@
+# macOS Objective-C fork-safety guard.
+#
+# Gunicorn forks workers; on Darwin, Objective-C runtime fork-safety checks
+# can SIGSEGV workers unless OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES is set
+# in the OS environment *before* Python starts (setting it in Python is too
+# late — see langflow_launcher.py for the same pattern).
+#
+# The `langflow` console script routes through langflow_launcher.py which
+# handles this. This guard catches the bypass paths (`python -m langflow`,
+# `uv run python -m langflow`, etc.) so they're not silent footguns. Only
+# fires for direct CLI invocation; ordinary `import langflow.__main__` is
+# unaffected.
+if __name__ == "__main__":
+    import os as _os
+    import platform as _platform
+    import sys as _sys
+
+    if _platform.system() == "Darwin" and not _os.environ.get("OBJC_DISABLE_INITIALIZE_FORK_SAFETY"):
+        _os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+        _os.execv(_sys.executable, [_sys.executable, "-m", "langflow.__main__", *_sys.argv[1:]])  # noqa: S606
+
 import asyncio
 import inspect
 import os
@@ -8,6 +29,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -132,6 +154,68 @@ def get_number_of_workers(workers=None):
     return workers
 
 
+# Platforms where `langflow run` bypasses Gunicorn and runs uvicorn directly
+# against a pre-built FastAPI app object. On Linux we use Gunicorn (multi-worker
+# via fork()); on Windows and macOS forking is unsafe (Windows lacks fork; macOS
+# fork-with-threads + libdispatch / asyncio kqueue state crashes workers).
+DIRECT_UVICORN_PLATFORMS: tuple[str, ...] = ("Windows", "Darwin")
+
+
+def use_direct_uvicorn(system: str | None = None) -> bool:
+    """Return True iff this platform launches with uvicorn directly (no Gunicorn)."""
+    return (system or platform.system()) in DIRECT_UVICORN_PLATFORMS
+
+
+def clamp_uvicorn_workers(requested: int, *, system: str | None = None) -> int:
+    """Clamp ``workers`` to 1 when running uvicorn against a pre-built app object.
+
+    uvicorn refuses to spawn multiple workers from an app *object* (it needs an
+    import string), so on the direct-uvicorn platforms we cap workers at 1 and
+    warn — preferable to uvicorn's own ``sys.exit(1)`` with a generic message.
+    On Linux this is a no-op since Gunicorn handles multi-worker.
+    """
+    if requested > 1 and use_direct_uvicorn(system):
+        logger.warning(
+            "Direct-uvicorn startup on %s does not support workers > 1 "
+            "(uvicorn requires an import string for multi-worker mode). "
+            "Falling back to a single worker; requested=%d.",
+            system or platform.system(),
+            requested,
+        )
+        return 1
+    return requested
+
+
+def build_direct_uvicorn_kwargs(
+    *,
+    host: str,
+    port: int,
+    log_level: str | None,
+    workers: int,
+    loop: str,
+    ssl_cert_file_path: str | None,
+    ssl_key_file_path: str | None,
+    system: str | None = None,
+) -> dict:
+    """Build the kwargs dict for ``uvicorn.run(app, **kwargs)`` on Win/macOS.
+
+    Pins the option set (workers clamp, TLS certs, loop type) in one place so
+    the launch site stays a single call and so tests can assert that things
+    like TLS cert/key pass through. Mirrors the option set used on the
+    Gunicorn (Linux) path so platform parity does not drift again.
+    """
+    return {
+        "host": host,
+        "port": port,
+        "log_level": log_level,
+        "reload": False,
+        "workers": clamp_uvicorn_workers(workers, system=system),
+        "loop": loop,
+        "ssl_certfile": ssl_cert_file_path,
+        "ssl_keyfile": ssl_key_file_path,
+    }
+
+
 def display_results(results) -> None:
     """Display the results of the migration."""
     for table_results in results:
@@ -158,8 +242,6 @@ def set_var_for_macos_issue() -> None:
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
-        os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
 
 
 def wait_for_server_ready(host, port, protocol) -> None:
@@ -338,8 +420,14 @@ def run(
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
     # Step 2: Starting Core Services
+    app = None
+    app_factory = None
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        # See DIRECT_UVICORN_PLATFORMS for the rationale (no fork on Win/macOS).
+        if use_direct_uvicorn():
+            app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        else:
+            app_factory = partial(setup_app, static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
@@ -371,9 +459,26 @@ def run(
             pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
-    if platform.system() == "Windows":
+    if use_direct_uvicorn():
+        # LANGFLOW_GUNICORN_PRELOAD is a Gunicorn-only knob: it triggers fork-safe
+        # master-process preload so workers inherit state via copy-on-write. On
+        # the direct-uvicorn path there is no master/worker split and no fork,
+        # so the env var is silently inert. Warn loudly so users diagnosing
+        # "preload isn't doing anything on my Mac" don't have to read source.
+        if os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true":
+            logger.warning(
+                "LANGFLOW_GUNICORN_PRELOAD=true is ignored on %s: this platform "
+                "uses single-process uvicorn (no fork), so master preload / "
+                "copy-on-write inheritance does not apply.",
+                platform.system(),
+            )
+
         with progress.step(6):
             import uvicorn
+
+            if app is None:
+                msg = "Direct-uvicorn startup (Windows/macOS) requires a pre-built FastAPI application."
+                raise RuntimeError(msg)
 
             # Print summary and banner before starting the server, since uvicorn is a blocking call.
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
@@ -394,17 +499,24 @@ def run(
 
         uvicorn.run(
             app,
-            host=host,
-            port=port,
-            log_level=log_level,
-            reload=False,
-            workers=get_number_of_workers(workers),
-            loop=loop_type,
+            **build_direct_uvicorn_kwargs(
+                host=host,
+                port=port,
+                log_level=log_level,
+                workers=get_number_of_workers(workers),
+                loop=loop_type,
+                ssl_cert_file_path=ssl_cert_file_path,
+                ssl_key_file_path=ssl_key_file_path,
+            ),
         )
     else:
         with progress.step(6):
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
+
+            if app_factory is None:
+                msg = "Gunicorn startup requires an application factory."
+                raise RuntimeError(msg)
 
             options = {
                 "bind": f"{host}:{port}",
@@ -413,9 +525,9 @@ def run(
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
                 "log_level": log_level.lower() if log_level is not None else "info",
-                "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "true").lower() == "true",
+                "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
             }
-            server = LangflowApplication(app, options)
+            server = LangflowApplication(app_factory, options)
 
             # Start the webapp process
             process_manager.webapp_process = Process(target=server.run)
