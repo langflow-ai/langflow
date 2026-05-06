@@ -1,8 +1,13 @@
 """Unit tests for the Exa Search component."""
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# `exa-py` is an optional dependency, so mock the module before importing
+# the component. This keeps the tests runnable in the slim lfx test env.
+sys.modules.setdefault("exa_py", MagicMock())
 
 
 @pytest.fixture
@@ -46,6 +51,14 @@ def test_resolved_api_key_falls_back_to_metaphor(component):
     component.exa_api_key = ""
     component.metaphor_api_key = "legacy"
     assert component._resolved_api_key() == "legacy"
+
+
+def test_resolved_api_key_raises_when_both_empty(component):
+    """No key set on either field -> clear ValueError instead of silent empty string."""
+    component.exa_api_key = ""
+    component.metaphor_api_key = ""
+    with pytest.raises(ValueError, match="Exa API key is required"):
+        component._resolved_api_key()
 
 
 def test_build_client_sets_integration_header(component):

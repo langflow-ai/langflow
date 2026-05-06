@@ -134,7 +134,11 @@ class ExaSearchToolkit(Component):
     ]
 
     def _resolved_api_key(self) -> str:
-        return self.exa_api_key or self.metaphor_api_key
+        key = self.exa_api_key or self.metaphor_api_key
+        if not key:
+            msg = "Exa API key is required. Set the Exa API Key input."
+            raise ValueError(msg)
+        return key
 
     def _build_client(self) -> Exa:
         client = Exa(api_key=self._resolved_api_key())
