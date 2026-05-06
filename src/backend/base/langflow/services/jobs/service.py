@@ -220,6 +220,45 @@ class JobService(Service):
         async with session_scope() as session:
             return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
 
+    async def cancel_in_flight_jobs_by_asset(
+        self,
+        asset_id: UUID | str,
+        asset_type: str,
+        *,
+        user_id: UUID | None = None,
+    ) -> list[UUID]:
+        """Mark every queued / in-progress job for ``asset_id`` CANCELLED.
+
+        Used by the asset-delete flows (KB, Memory Base, …) so an
+        in-flight ingestion stops writing to (and thereby recreating)
+        the asset's storage. The ingestion's own ``is_job_cancelled``
+        poll picks up the new status and bails out via the cancelled
+        handler.
+
+        Returns the ids of the jobs transitioned. Empty list when
+        nothing is in flight.
+        """
+        normalized_id = UUID(asset_id) if isinstance(asset_id, str) else asset_id
+        async with session_scope() as session:
+            stmt = select(Job).where(
+                Job.asset_id == normalized_id,
+                Job.asset_type == asset_type,
+                col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS]),
+            )
+            if user_id is not None:
+                stmt = stmt.where((Job.user_id == user_id) | (col(Job.user_id).is_(None)))
+            result = await session.exec(stmt)
+            jobs = list(result.all())
+            if not jobs:
+                return []
+            now = datetime.now(timezone.utc)
+            for job in jobs:
+                job.status = JobStatus.CANCELLED
+                job.finished_timestamp = now
+                session.add(job)
+            await session.flush()
+            return [job.job_id for job in jobs]
+
     async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
 

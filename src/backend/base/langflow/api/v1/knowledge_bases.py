@@ -348,6 +348,68 @@ async def _cleanup_orphan_db_row(
     return True, warning
 
 
+async def _cancel_inflight_ingestion_for_kb(
+    *,
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    job_service: JobService,
+) -> None:
+    """Cancel queued / in-progress ingestion jobs for the named KB.
+
+    Looks up the KB's ``asset_id`` (preferring the indexed
+    ``KnowledgeBaseRecord.id`` and falling back to disk metadata for
+    legacy KBs), then transitions every job with
+    ``asset_type='knowledge_base'`` and ``status in (QUEUED,
+    IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
+    :func:`KBIngestionHelper.is_job_cancelled` between batches and
+    bails out via :class:`IngestionCancelledError`, which prevents
+    chroma writes from auto-recreating the deleted KB directory.
+
+    Best-effort: surfacing a cancellation failure here would mask the
+    user's actual delete intent. Failures are logged and the delete
+    proceeds — the worst case is the same as before this helper
+    existed.
+    """
+    try:
+        record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("KB lookup failed during cancel-on-delete for %s: %s", kb_name, exc)
+        record = None
+
+    asset_id: uuid.UUID | None = record.id if record is not None else None
+    if asset_id is None:
+        # Legacy disk-only KB: try to recover the id from the sidecar.
+        try:
+            kb_path = _resolve_kb_path(kb_name, current_user)
+        except HTTPException:
+            return
+        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True) or {}
+        raw_id = metadata.get("id")
+        if not raw_id:
+            return
+        try:
+            asset_id = uuid.UUID(str(raw_id))
+        except (TypeError, ValueError):
+            return
+
+    try:
+        cancelled = await job_service.cancel_in_flight_jobs_by_asset(
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+            user_id=current_user.id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
+        return
+
+    if cancelled:
+        await logger.ainfo(
+            "Cancelled %d in-flight ingestion job(s) before deleting KB '%s'",
+            len(cancelled),
+            kb_name,
+        )
+
+
 async def _delete_remote_backend_collection(
     *,
     kb_name: str,
@@ -1618,7 +1680,11 @@ def _run_row_to_info(row) -> IngestionRunInfo:
 
 
 @router.delete("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
-async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> dict[str, str]:
+async def delete_knowledge_base(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+    job_service: Annotated[JobService, Depends(get_job_service)],
+) -> dict[str, str]:
     """Delete a specific knowledge base."""
     try:
         try:
@@ -1641,6 +1707,18 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
             if orphan_warning:
                 response["warning"] = orphan_warning
             return response
+
+        # Cancel any in-flight ingestion before tearing down the KB.
+        # Without this, the background job keeps writing chunks via the
+        # backend's persistent client, which auto-recreates the kb
+        # directory after rmtree. The list endpoint's disk-fallback
+        # path then re-discovers the recreated dir and the KB
+        # reappears in the UI seconds after delete.
+        await _cancel_inflight_ingestion_for_kb(
+            kb_name=kb_name,
+            current_user=current_user,
+            job_service=job_service,
+        )
 
         remote_warning = await _delete_remote_backend_collection(
             kb_name=kb_name,
@@ -1677,7 +1755,11 @@ async def delete_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -
 
 @router.delete("", status_code=HTTPStatus.OK)
 @router.delete("/", status_code=HTTPStatus.OK)
-async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: CurrentActiveUser) -> dict[str, object]:
+async def delete_knowledge_bases_bulk(
+    request: BulkDeleteRequest,
+    current_user: CurrentActiveUser,
+    job_service: Annotated[JobService, Depends(get_job_service)],
+) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     try:
         deleted_count = 0
@@ -1719,6 +1801,14 @@ async def delete_knowledge_bases_bulk(request: BulkDeleteRequest, current_user: 
                 continue
 
             try:
+                # Cancel any in-flight ingestion before tearing down
+                # this KB. See the matching call in the single-delete
+                # endpoint for the failure mode this prevents.
+                await _cancel_inflight_ingestion_for_kb(
+                    kb_name=kb_name,
+                    current_user=current_user,
+                    job_service=job_service,
+                )
                 remote_warning = await _delete_remote_backend_collection(
                     kb_name=kb_name,
                     kb_path=kb_path,
