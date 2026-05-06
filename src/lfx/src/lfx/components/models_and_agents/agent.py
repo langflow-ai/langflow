@@ -14,6 +14,9 @@ from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
     build_initial_messages,
 )
+from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
+    SingleToolCallMiddleware,
+)
 from lfx.components.models_and_agents.memory import MemoryComponent
 
 if TYPE_CHECKING:
@@ -34,6 +37,7 @@ from lfx.base.models.unified_models import (
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 from lfx.components.agentics.helpers.model_config import validate_model_selection
 from lfx.components.helpers import CalculatorComponent, CurrentDateComponent
+from lfx.components.langchain_utilities.ibm_granite_handler import is_watsonx_model
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.field_typing.range_spec import RangeSpec
@@ -412,6 +416,16 @@ class AgentComponent(ToolCallingAgentComponent):
         `max_iterations` and `handle_parsing_errors` (legacy AgentExecutor knobs) are
         translated to LangGraph middleware. Without that translation those user inputs
         would silently become no-ops on the new API.
+
+        Provider notes:
+        - WatsonX/Granite work natively with create_agent — `ChatWatsonx.bind_tools`
+          handles tool_choice correctly. The legacy `create_granite_agent` path was
+          dropped because it hardcoded `tool_choice='required'`, which the WatsonX
+          API now rejects.
+        - Ollama and other small/local models often emit malformed tool args. The
+          ToolRetryMiddleware (default `retry_on=(Exception,)`, `on_failure='continue'`)
+          catches Pydantic ValidationErrors from bad args and feeds the error back
+          to the LLM as a retry signal, so the agent recovers gracefully.
         """
         middleware = self._build_middleware()
         return create_agent(
@@ -428,6 +442,10 @@ class AgentComponent(ToolCallingAgentComponent):
             middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
         if getattr(self, "handle_parsing_errors", False):
             middleware.append(ToolRetryMiddleware(max_retries=2))
+        # WatsonX models reject assistant turns with multiple tool_calls.
+        # Clamp them to one per turn — the agent will run more turns instead.
+        if is_watsonx_model(self._get_llm()):
+            middleware.append(SingleToolCallMiddleware())
         return middleware
 
     async def run_agent(self, agent) -> Message:

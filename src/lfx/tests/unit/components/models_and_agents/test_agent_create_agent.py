@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langgraph.graph.state import CompiledStateGraph
 
 
 async def _empty_event_stream() -> AsyncIterator[dict[str, Any]]:
@@ -20,6 +21,13 @@ async def _empty_event_stream() -> AsyncIterator[dict[str, Any]]:
 async def _from_events(events: list[dict[str, Any]]) -> AsyncIterator[dict[str, Any]]:
     for event in events:
         yield event
+
+
+def _fake_graph(astream_events_impl):
+    """Build a MagicMock that passes `isinstance(_, CompiledStateGraph)` and exposes astream_events."""
+    graph = MagicMock(spec=CompiledStateGraph)
+    graph.astream_events = astream_events_impl
+    return graph
 
 
 def _build_component():
@@ -120,6 +128,136 @@ async def test_should_omit_tool_retry_middleware_when_handle_parsing_errors_is_f
 
 
 @pytest.mark.asyncio
+async def test_should_use_create_agent_for_all_providers_including_watsonx() -> None:
+    """All LLM providers go through `langchain.agents.create_agent` natively.
+
+    Earlier versions had a WatsonX-specific fallback to the legacy `create_granite_agent`,
+    but that hardcoded `tool_choice='required'` which the WatsonX API now rejects.
+    Removed because `ChatWatsonx.bind_tools` works correctly with create_agent.
+    """
+    fake_watsonx = MagicMock(name="ChatWatsonx_fake")
+    type(fake_watsonx).__name__ = "ChatWatsonx"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_watsonx),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    assert captured.get("model") is fake_watsonx, "WatsonX must reach create_agent natively"
+
+
+@pytest.mark.asyncio
+async def test_should_attach_single_tool_call_middleware_when_llm_is_watsonx() -> None:
+    """Attach SingleToolCallMiddleware when the LLM is WatsonX.
+
+    WatsonX rejects multi-tool-call assistant turns with:
+    "This model only supports single tool-calls at once!"
+
+    To keep WatsonX flows working with the new create_agent path, attach the
+    `SingleToolCallMiddleware` (clamps multi-call responses to one). Other
+    providers (OpenAI, Anthropic, etc.) emit multi-tool-calls happily, so the
+    middleware is gated on WatsonX detection only.
+    """
+    from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
+        SingleToolCallMiddleware,
+    )
+
+    fake_watsonx = MagicMock(name="ChatWatsonx_fake")
+    type(fake_watsonx).__name__ = "ChatWatsonx"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_watsonx),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert any(isinstance(m, SingleToolCallMiddleware) for m in middleware), (
+        "WatsonX must get SingleToolCallMiddleware to clamp multi-tool-call responses"
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_not_attach_single_tool_call_middleware_for_non_watsonx_providers() -> None:
+    """Do not attach SingleToolCallMiddleware for non-WatsonX providers.
+
+    OpenAI/Anthropic models handle multi-tool-calls fine. Attaching the clamp
+    would needlessly serialize their parallel tool calls and slow them down.
+    """
+    from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
+        SingleToolCallMiddleware,
+    )
+
+    fake_openai = MagicMock(name="ChatOpenAI_fake")
+    type(fake_openai).__name__ = "ChatOpenAI"
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    with (
+        patch.object(type(component), "_get_llm", return_value=fake_openai),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert not any(isinstance(m, SingleToolCallMiddleware) for m in middleware)
+
+
+@pytest.mark.asyncio
+async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
+    """Pydantic ValidationError from bad tool args must NOT crash the agent build.
+
+    Small/local models (Ollama, llama, etc.) often emit malformed tool calls — e.g.
+    a string `"http://x"` for a parameter typed `list[str]`. The agent must recover
+    via `ToolRetryMiddleware` (default `retry_on=(Exception,)`, `on_failure='continue'`)
+    so the LLM sees the error and can correct on retry, rather than crashing the
+    whole component build.
+    """
+    from langchain.agents.middleware import ToolRetryMiddleware
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()  # handle_parsing_errors=True
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    retry = next((m for m in middleware if isinstance(m, ToolRetryMiddleware)), None)
+    assert retry is not None, "ToolRetryMiddleware must be wired when handle_parsing_errors=True"
+    # Defaults: retry_on=(Exception,), on_failure='continue'.
+    # Both are required for recovery from Pydantic ValidationError on tool args.
+    assert Exception in retry.retry_on, "Must retry on Exception (covers ValidationError)"
+    assert retry.on_failure == "continue", "Must convert exhausted retries into a retry-message, not crash"
+
+
+@pytest.mark.asyncio
 async def test_should_attach_token_usage_handler_and_set_usage_on_result_properties() -> None:
     """Parity with `LCAgentComponent.run_agent`: TokenUsageCallbackHandler must be wired.
 
@@ -140,7 +278,7 @@ async def test_should_attach_token_usage_handler_and_set_usage_on_result_propert
         captured_callbacks.extend(config.get("callbacks") or [])
         return _empty_event_stream()
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = _capture_astream
 
     component = _build_component()
@@ -177,7 +315,7 @@ async def test_should_update_stored_message_and_send_event_when_token_usage_and_
     handler_instance = MagicMock()
     handler_instance.get_usage.return_value = fake_usage
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     initial_result = MagicMock()
@@ -224,7 +362,7 @@ async def test_should_skip_db_round_trip_when_result_has_no_id() -> None:
     handler_instance = MagicMock()
     handler_instance.get_usage.return_value = fake_usage
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     unstored_result = MagicMock()
@@ -277,7 +415,7 @@ async def test_should_pass_event_manager_on_token_callback_to_process_agent_even
         captured["on_token"] = on_token_callback
         return MagicMock(get_id=lambda: None, properties=MagicMock())
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     on_token_fn = MagicMock(name="event_manager_on_token")
@@ -306,7 +444,7 @@ async def test_should_pass_none_on_token_callback_when_event_manager_is_absent()
         captured["on_token"] = on_token_callback
         return MagicMock(get_id=lambda: None, properties=MagicMock())
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     component = _build_component()
@@ -333,7 +471,7 @@ async def test_should_delete_stored_message_and_emit_remove_event_on_exception_w
     """
     from lfx.base.agents.events import ExceptionWithMessageError as _ExcWithMsg
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     # Use a MagicMock for agent_message — Pydantic's Message restricts instance-level
@@ -369,7 +507,7 @@ async def test_should_skip_delete_message_on_exception_when_message_was_not_stor
     """Regression guard: don't call delete_message on a Message with no ID."""
     from lfx.base.agents.events import ExceptionWithMessageError as _ExcWithMsg
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
 
     unstored = MagicMock()
@@ -452,7 +590,7 @@ async def test_should_invoke_graph_astream_events_with_messages_input_when_run_a
         captured_input["payload"] = input_dict
         return _empty_event_stream()
 
-    fake_graph = MagicMock()
+    fake_graph = MagicMock(spec=CompiledStateGraph)
     fake_graph.astream_events = _capture_astream
 
     component = _build_component()
