@@ -1310,6 +1310,134 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert sorted(chunk["id"] for chunk in data["chunks"]) == ["2", "3"]
 
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    async def test_get_metadata_keys_returns_distinct_user_keys(
+        self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """``/metadata/keys`` returns distinct user keys + sample values, hides reserved."""
+        import json as _json
+
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / "activeuser" / "KB1"
+        kb_dir.mkdir(parents=True, exist_ok=True)
+        (kb_dir / "chroma.sqlite3").write_text("dummy")
+
+        documents = [
+            IngestedDocument(
+                content="doc",
+                metadata={
+                    "_id": "1",
+                    "source_metadata": _json.dumps(
+                        {
+                            # Reserved keys must be excluded from the response.
+                            "file_name": "report.pdf",
+                            "source": "file_upload",
+                            "chunk_index": 0,
+                            # User keys.
+                            "year": "2020",
+                            "dept": "engineering",
+                            "tags": ["urgent", "review"],
+                        }
+                    ),
+                },
+            ),
+            IngestedDocument(
+                content="doc 2",
+                metadata={
+                    "_id": "2",
+                    "source_metadata": _json.dumps({"file_name": "doc2.pdf", "year": "2021", "tags": "audit"}),
+                },
+            ),
+            IngestedDocument(
+                content="legacy",
+                metadata={"_id": "3"},  # pre-metadata era — should be ignored
+            ),
+        ]
+
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield documents
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/metadata/keys",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        data = response.json()
+        # Reserved keys hidden; user keys surface with insertion-ordered values.
+        assert set(data["keys"].keys()) == {"year", "dept", "tags"}
+        assert data["keys"]["year"] == ["2020", "2021"]
+        assert data["keys"]["dept"] == ["engineering"]
+        # Array-valued metadata expands one distinct value per array entry,
+        # union-ed with the second doc's "audit" string.
+        assert sorted(data["keys"]["tags"]) == ["audit", "review", "urgent"]
+        assert data["truncated"] is False
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    @patch("langflow.api.v1.knowledge_bases.create_backend")
+    async def test_get_metadata_keys_caps_distinct_values_per_key(
+        self, mock_create_backend, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Distinct values per key are capped — response sets ``truncated=true``."""
+        import json as _json
+
+        from langflow.api.v1.knowledge_bases import KB_METADATA_KEYS_VALUES_CAP
+        from lfx.base.knowledge_bases.backends.base import IngestedDocument
+
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / "activeuser" / "KB1"
+        kb_dir.mkdir(parents=True, exist_ok=True)
+        (kb_dir / "chroma.sqlite3").write_text("dummy")
+
+        documents = [
+            IngestedDocument(
+                content=f"doc {idx}",
+                metadata={"_id": str(idx), "source_metadata": _json.dumps({"variant": str(idx)})},
+            )
+            for idx in range(KB_METADATA_KEYS_VALUES_CAP + 5)
+        ]
+
+        async def _iter_documents(*, batch_size: int = 1000, include_embeddings: bool = False):  # noqa: ARG001
+            yield documents
+
+        backend = MagicMock()
+        backend.iter_documents = _iter_documents
+        backend.teardown = AsyncMock()
+        mock_create_backend.return_value = backend
+
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/metadata/keys",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        data = response.json()
+        assert len(data["keys"]["variant"]) == KB_METADATA_KEYS_VALUES_CAP
+        assert data["truncated"] is True
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_get_metadata_keys_empty_kb_returns_empty_response(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Empty Chroma KB short-circuits before booting the backend client."""
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / "activeuser" / "KB1"
+        kb_dir.mkdir(parents=True, exist_ok=True)
+        # No chroma.sqlite3 / chroma / index files → short-circuit path.
+
+        response = await client.get(
+            "api/v1/knowledge_bases/KB1/metadata/keys",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200, response.json()
+        assert response.json() == {"keys": {}, "truncated": False}
+
 
 class TestPerformIngestionTask:
     """Tests for the internal KBIngestionHelper.perform_ingestion background task."""

@@ -162,6 +162,20 @@ class PaginatedChunkResponse(BaseModel):
     total_pages: int
 
 
+class KbMetadataKeysResponse(BaseModel):
+    """Distinct user-supplied metadata keys (and a sample of values) for a KB.
+
+    Powers the chunks-browser filter popover so users can pick from keys
+    that actually exist in the KB instead of typing blind. Reserved
+    ingestion-internal keys (``file_name``, ``source``, ``chunk_index``,
+    etc.) are excluded — those have dedicated filters in the chunks
+    endpoint and would clutter the user-tag dropdown.
+    """
+
+    keys: dict[str, list[str]]
+    truncated: bool = False
+
+
 class IngestionRunItemInfo(BaseModel):
     """Per-item outcome inside a run (``ingestion_run.items`` row shape)."""
 

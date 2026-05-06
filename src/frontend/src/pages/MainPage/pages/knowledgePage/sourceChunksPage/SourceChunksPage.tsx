@@ -191,6 +191,7 @@ export const SourceChunksPage = () => {
                 </SelectContent>
               </Select>
               <ChunksMetadataFilter
+                kbName={sourceId || ""}
                 onAdd={(key, value) =>
                   setMetadataFilter((prev) => {
                     const existing = prev[key] ?? [];
