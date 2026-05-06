@@ -240,7 +240,7 @@ export async function buildFlowVertices({
 
   queryParams.append(
     "event_delivery",
-    eventDelivery ?? EventDeliveryType.POLLING,
+    eventDelivery ?? EventDeliveryType.STREAMING,
   );
 
   if (queryParams.toString()) {
