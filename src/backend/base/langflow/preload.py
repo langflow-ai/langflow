@@ -62,6 +62,7 @@ class PreloadStep(Enum):
     STARTER_PROJECTS = "starter_projects"
     AGENTIC_GLOBALS = "agentic_globals"
     AGENTIC_MCP = "agentic_mcp"
+    DEFAULT_MCP_SERVERS = "default_mcp_servers"
     FLOWS = "flows"
 
 
@@ -72,6 +73,7 @@ _STEP_ATTR: Final[dict[PreloadStep, str]] = {
     PreloadStep.STARTER_PROJECTS: "starter_projects_created",
     PreloadStep.AGENTIC_GLOBALS: "agentic_globals_initialized",
     PreloadStep.AGENTIC_MCP: "agentic_mcp_configured",
+    PreloadStep.DEFAULT_MCP_SERVERS: "default_mcp_servers_configured",
     PreloadStep.FLOWS: "flows_loaded",
 }
 
@@ -84,6 +86,7 @@ _STEP_PREREQUISITES: Final[dict[PreloadStep, tuple[PreloadStep, ...]]] = {
     PreloadStep.AGENTIC_GLOBALS: (PreloadStep.TYPES_CACHED,),
     # MCP config may succeed even when globals failed (separate try/except in preload).
     PreloadStep.AGENTIC_MCP: (PreloadStep.TYPES_CACHED,),
+    PreloadStep.DEFAULT_MCP_SERVERS: (PreloadStep.TYPES_CACHED,),
     PreloadStep.FLOWS: (PreloadStep.TYPES_CACHED,),
 }
 
@@ -116,6 +119,7 @@ class _PreloadState:
     starter_projects_created: bool = False
     agentic_globals_initialized: bool = False
     agentic_mcp_configured: bool = False
+    default_mcp_servers_configured: bool = False
     flows_loaded: bool = False
 
     def reset(self) -> None:
@@ -144,6 +148,7 @@ class _PreloadState:
         self.starter_projects_created = False
         self.agentic_globals_initialized = False
         self.agentic_mcp_configured = False
+        self.default_mcp_servers_configured = False
         self.flows_loaded = False
 
 
@@ -279,6 +284,21 @@ async def _run_master_preload() -> None:
                 PreloadStep.AGENTIC_MCP,
                 "auto-configure agentic MCP server failed",
                 _run_agentic_mcp(),
+            )
+
+        if settings_service.settings.enable_default_mcp_servers:
+            from langflow.api.utils.mcp.default_servers import auto_configure_default_mcp_servers
+
+            await logger.adebug("[preload] auto-configuring default MCP servers")
+
+            async def _run_default_mcp_servers() -> None:
+                async with session_scope() as session:
+                    await auto_configure_default_mcp_servers(session)
+
+            await _best_effort(
+                PreloadStep.DEFAULT_MCP_SERVERS,
+                "auto-configure default MCP servers failed",
+                _run_default_mcp_servers(),
             )
 
         await logger.adebug("[preload] loading flows from directory")

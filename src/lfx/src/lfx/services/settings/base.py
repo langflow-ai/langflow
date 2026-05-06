@@ -356,6 +356,11 @@ class Settings(BaseSettings):
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
 
+    # Default MCP servers (shell-execution, ...) auto-installed for every user on startup.
+    enable_default_mcp_servers: bool = True
+    """If True, Langflow auto-configures a curated set of default MCP servers
+    (shell-execution, ...) for every user on startup. Set to False to opt-out."""
+
     # Agentic Experience
     agentic_experience: bool = False
     """If set to True, Langflow will start the agentic MCP server that provides tools for

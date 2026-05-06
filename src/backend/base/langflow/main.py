@@ -353,6 +353,27 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.awarning(f"Failed to configure agentic MCP server: {e}")
 
+            # Gate: Auto-configure default MCP servers (shell-execution, ...) for every user
+            if get_settings_service().settings.enable_default_mcp_servers:
+                if is_step_complete(PreloadStep.DEFAULT_MCP_SERVERS):
+                    await logger.adebug(
+                        "Skipping default MCP servers config: master already completed it during preload"
+                    )
+                else:
+                    from langflow.api.utils.mcp.default_servers import (
+                        auto_configure_default_mcp_servers,
+                    )
+
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Configuring default MCP servers...")
+                    try:
+                        async with session_scope() as session:
+                            await auto_configure_default_mcp_servers(session)
+                        elapsed = asyncio.get_event_loop().time() - current_time
+                        await logger.adebug(f"Default MCP servers configured in {elapsed:.2f}s")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to configure default MCP servers: {e}")
+
             # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
             if is_step_complete(PreloadStep.FLOWS):
