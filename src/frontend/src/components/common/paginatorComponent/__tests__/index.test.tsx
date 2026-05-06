@@ -42,17 +42,17 @@ function renderPaginator(
 // ---------------------------------------------------------------------------
 
 describe("empty state", () => {
-  it("shows 0-0 of 0 items when totalRowsCount is 0", () => {
+  it("shows '0 items' when totalRowsCount is 0", () => {
     renderPaginator({ totalRowsCount: 0, pageIndex: 1, pageSize: 20 });
-    expect(screen.getByText(/^0-0$/)).toBeInTheDocument();
-    expect(screen.getByText(/of 0 items/)).toBeInTheDocument();
+    expect(screen.getByText(/^0 items$/)).toBeInTheDocument();
+    expect(screen.queryByText(/of 0 items/)).not.toBeInTheDocument();
   });
 
   it("does not show a negative start when pageIndex is 0 and totalRowsCount is 0", () => {
     // pageIndex=0 would previously produce (0-1)*20+1 = -19
     renderPaginator({ totalRowsCount: 0, pageIndex: 0, pageSize: 20 });
     expect(screen.queryByText(/-19/)).not.toBeInTheDocument();
-    expect(screen.getByText(/^0-0$/)).toBeInTheDocument();
+    expect(screen.getByText(/^0 items$/)).toBeInTheDocument();
   });
 });
 
