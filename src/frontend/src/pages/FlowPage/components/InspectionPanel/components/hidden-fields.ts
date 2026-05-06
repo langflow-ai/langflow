@@ -14,7 +14,7 @@ export const HIDDEN_FIELDS: Record<string, string[]> = {
     "autoset_encoding",
   ],
   UnifiedWebSearch: ["ceid"],
-  Agent: ["format_instructions", "output_schema", "verbose"],
+  Agent: ["verbose"],
   EmbeddingModel: ["show_progress_bar", "chunk_size"],
   Memory: ["sender_type"],
   StructuredOutput: ["system_prompt", "schema_name"],
