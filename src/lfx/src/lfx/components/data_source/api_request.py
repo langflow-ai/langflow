@@ -490,12 +490,11 @@ class APIRequestComponent(Component):
 
         try:
             # Validate URL and get validated IPs for DNS pinning
-            # warn_only=False enforces blocking (changed from previous warn_only=True)
-            _validated_url, validated_ips = validate_and_resolve_url(url, warn_only=False)
+            _validated_url, validated_ips = validate_and_resolve_url(url)
 
             # Log DNS pinning information for security auditing
             if validated_ips:
-                self.log(f"SSRF Protection: Using DNS pinning with validated IP {validated_ips[0]}")
+                self.log(f"SSRF Protection: Using DNS pinning with {len(validated_ips)} validated IP(s)")
 
         except SSRFProtectionError as e:
             # SSRF protection blocked the request (private IP, internal network, etc.)
@@ -514,11 +513,12 @@ class APIRequestComponent(Component):
         url = self.add_query_params(url, query_params)
 
         # ============================================================================
-        # Create HTTP Client with DNS Pinning (if needed)
+        # Create HTTP Client with DNS Pinning (if SSRF protection enabled)
         # ============================================================================
+        from lfx.utils.ssrf_protection import is_ssrf_protection_enabled
 
-        if validated_ips:
-            # DNS pinning is needed - create SSRF-protected client
+        if is_ssrf_protection_enabled() and validated_ips:
+            # SSRF protection is enabled and DNS pinning is needed
             # Extract hostname from the final URL (after query params added)
             hostname = urlparse(url).hostname
 
@@ -558,7 +558,7 @@ class APIRequestComponent(Component):
                     )
         else:
             # No DNS pinning needed - use normal client
-            # This happens when:
+            # This happens when SSRF protection is disabled or host is allowlisted
             # - SSRF protection is disabled
             # - Host is in the allowlist (e.g., localhost for Ollama)
             # - Direct IP address was used (no DNS to pin)

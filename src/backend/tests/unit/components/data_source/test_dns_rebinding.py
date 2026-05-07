@@ -12,7 +12,6 @@ from unittest.mock import patch
 import httpcore
 import httpx
 import pytest
-from httpcore._backends.auto import AutoBackend
 from lfx.components.data_source.api_request import APIRequestComponent
 from lfx.schema import Data
 
@@ -83,7 +82,7 @@ class TestDNSRebindingProtection:
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
         ):
             # Execute the request
             result = await component.make_api_request()
@@ -142,7 +141,7 @@ class TestDNSRebindingProtection:
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
         ):
             result = await component.make_api_request()
 
@@ -257,7 +256,7 @@ class TestDNSRebindingProtection:
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
         ):
             result = await component.make_api_request()
 
@@ -317,8 +316,6 @@ class TestDNSRebindingProtection:
     @pytest.mark.asyncio
     async def test_dns_pinning_with_multiple_ips_fallback(self, component):
         """Test that DNS pinning tries multiple IPs when first one fails (dual-stack/load balancing)."""
-        from httpcore._backends.auto import AutoBackend
-
         component.url_input = "http://dual-stack.example.com/api"
 
         # Track which IPs were attempted
@@ -362,7 +359,7 @@ class TestDNSRebindingProtection:
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
         ):
             # Execute the request
             result = await component.make_api_request()

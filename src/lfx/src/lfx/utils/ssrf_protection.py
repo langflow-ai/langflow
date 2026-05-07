@@ -265,7 +265,6 @@ def _validate_direct_ip_address(hostname: str) -> bool:
     if is_ip_blocked(ip_obj):
         msg = (
             f"Access to IP address {hostname} is blocked by SSRF protection. "
-            "Requests to private/internal IP ranges are not allowed for security reasons. "
             "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
         )
         raise SSRFProtectionError(msg)
@@ -307,9 +306,6 @@ def _validate_hostname_resolution(hostname: str) -> None:
     if blocked_ips:
         msg = (
             f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
-            "Requests to private/internal IP ranges are not allowed for security reasons. "
-            "This protection prevents access to internal services, cloud metadata endpoints "
-            "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
             "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
         )
         raise SSRFProtectionError(msg)
@@ -377,7 +373,7 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise
 
 
-def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str, list[str]]:
+def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
     """Validate URL for SSRF and return validated IP addresses for DNS pinning.
 
     This function is the core of DNS pinning-based SSRF protection. It performs
@@ -398,8 +394,6 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
 
     Args:
         url: URL to validate (e.g., "http://example.com/api")
-        warn_only: If True, only log warnings instead of raising errors.
-                  Default is False to enforce blocking.
 
     Returns:
         Tuple of (original_url, list_of_validated_ips):
@@ -411,7 +405,7 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
           - URL scheme is not http/https
 
     Raises:
-        SSRFProtectionError: If URL is blocked by SSRF protection (only if warn_only=False)
+        SSRFProtectionError: If URL is blocked by SSRF protection
         ValueError: If URL format is invalid
 
     Example:
@@ -482,12 +476,8 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
             if is_ip_blocked(ip_obj):
                 msg = (
                     f"Access to IP address {hostname} is blocked by SSRF protection. "
-                    "Requests to private/internal IP ranges are not allowed for security reasons. "
                     "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
                 )
-                if warn_only:
-                    logger.warning(f"SSRF Warning: {msg}")
-                    return url, []
                 raise SSRFProtectionError(msg)
             # Direct IP is public and allowed - return it for DNS pinning
             # (Even though it's already an IP, we return it for consistency)
@@ -536,14 +526,8 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
         if blocked_ips:
             msg = (
                 f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
-                "Requests to private/internal IP ranges are not allowed for security reasons. "
-                "This protection prevents access to internal services, cloud metadata endpoints "
-                "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
                 "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
             )
-            if warn_only:
-                logger.warning(f"SSRF Warning: {msg}")
-                return url, []
             raise SSRFProtectionError(msg)
 
         # ============================================================================

@@ -8,10 +8,13 @@ and connect to the pinned IP address while preserving the original hostname for
 TLS SNI (Server Name Indication) and certificate verification.
 """
 
+import ssl
 from collections.abc import Iterable
 
 import httpcore
 import httpx
+from httpx import URL, Proxy
+from httpx._config import create_ssl_context
 
 from lfx.logging import logger
 
@@ -35,14 +38,13 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
 
         Args:
             pinned_ips: Dictionary mapping hostnames to list of validated IP addresses
-            backend: Underlying network backend (defaults to AutoBackend)
+            backend: Underlying network backend (defaults to AnyIOBackend for asyncio)
         """
         self.pinned_ips = pinned_ips
-        # Use the actual auto backend implementation, not the base class
+        # Use httpcore's default async backend (AnyIOBackend) if none provided
+        # This is the public API recommended in httpcore documentation
         if backend is None:
-            from httpcore._backends.auto import AutoBackend
-
-            backend = AutoBackend()
+            backend = httpcore.AnyIOBackend()
         self._backend = backend
         logger.debug(f"Created DNS pinning network backend with pinned IPs: {pinned_ips}")
 
@@ -72,6 +74,13 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
         # Check if this hostname has pinned IPs
         if host in self.pinned_ips:
             pinned_ips = self.pinned_ips[host]
+
+            # Security: If host is in pinned_ips but list is empty, fail rather than bypass
+            if not pinned_ips:
+                msg = f"DNS pinning: Host {host} is marked for pinning but has no pinned IPs"
+                logger.error(msg)
+                raise RuntimeError(msg)
+
             logger.debug(f"DNS pinning: Connecting to pinned IPs {pinned_ips} for hostname {host}")
 
             # Try each pinned IP in order (supports dual-stack and load balancing)
@@ -93,8 +102,11 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
                     continue
 
             # All pinned IPs failed, raise the last error
-            if last_error:
-                raise last_error
+            # This should never be None since we checked for empty list above
+            if last_error is None:
+                msg = f"DNS pinning: All pinned IPs failed for {host} but no error was captured"
+                raise RuntimeError(msg)
+            raise last_error
 
         # No pinned IP, use normal connection
         return await self._backend.connect_tcp(
@@ -142,25 +154,69 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
         ...     response = await client.get("https://example.com/path")
     """
 
-    def __init__(self, pinned_ips: dict[str, list[str]], **kwargs):
+    def __init__(
+        self,
+        pinned_ips: dict[str, list[str]],
+        verify: bool | str | ssl.SSLContext = True,  # noqa: FBT001, FBT002
+        cert: tuple[str, str] | tuple[str, str, str] | str | None = None,
+        trust_env: bool = True,  # noqa: FBT001, FBT002
+        http1: bool = True,  # noqa: FBT001, FBT002
+        http2: bool = False,  # noqa: FBT001, FBT002
+        limits: httpx.Limits = httpx.Limits(),  # noqa: B008
+        proxy: httpx._types.ProxyTypes | None = None,
+        uds: str | None = None,
+        local_address: str | None = None,
+        retries: int = 0,
+        socket_options: Iterable[httpcore.SOCKET_OPTION] | None = None,
+    ):
         """Initialize transport with pinned DNS mappings.
 
         Args:
             pinned_ips: Dictionary mapping hostnames to list of validated IP addresses.
                        Example: {"example.com": ["93.184.216.34", "2606:2800:220:1:248:1893:25c8:1946"]}
-            **kwargs: Additional arguments passed to AsyncHTTPTransport
+            verify: SSL verification settings
+            cert: Client certificate
+            trust_env: Whether to trust environment variables for proxy config
+            http1: Enable HTTP/1.1
+            http2: Enable HTTP/2
+            limits: Connection pool limits
+            proxy: Proxy configuration
+            uds: Unix domain socket path
+            local_address: Local address to bind to
+            retries: Number of retries
+            socket_options: Socket options
         """
         # Create custom network backend with DNS pinning
         network_backend = DNSPinningNetworkBackend(pinned_ips=pinned_ips)
 
-        # Create connection pool with custom network backend
-        # AsyncHTTPTransport doesn't expose network_backend parameter directly,
-        # so we need to create the pool ourselves
-        pool = httpcore.AsyncConnectionPool(network_backend=network_backend)
+        # Create SSL context (same as parent class)
+        ssl_context = create_ssl_context(verify=verify, cert=cert, trust_env=trust_env)
 
-        # Initialize parent transport with custom pool
-        super().__init__(**kwargs)
-        self._pool = pool
+        # Handle proxy (same as parent class)
+        if proxy is not None:
+            proxy = Proxy(url=proxy) if isinstance(proxy, (str, URL)) else proxy
+
+        # Create pool with our custom network backend
+        # We replicate the parent's logic but add network_backend parameter
+        if proxy is None:
+            self._pool = httpcore.AsyncConnectionPool(
+                ssl_context=ssl_context,
+                max_connections=limits.max_connections,
+                max_keepalive_connections=limits.max_keepalive_connections,
+                keepalive_expiry=limits.keepalive_expiry,
+                http1=http1,
+                http2=http2,
+                uds=uds,
+                local_address=local_address,
+                retries=retries,
+                socket_options=socket_options,
+                network_backend=network_backend,  # Our custom backend!
+            )
+        else:
+            # For proxy scenarios, we'd need to handle HTTPProxy/SOCKSProxy
+            # For now, raise an error as DNS pinning with proxies needs special handling
+            msg = "DNS pinning with proxies is not currently supported"
+            raise NotImplementedError(msg)
 
         self.pinned_ips = pinned_ips
         logger.debug(f"Created SSRF protected transport with pinned IPs: {pinned_ips}")
