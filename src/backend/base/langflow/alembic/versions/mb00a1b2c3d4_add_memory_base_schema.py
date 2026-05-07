@@ -203,7 +203,14 @@ def downgrade() -> None:
         op.drop_index("ix_mir_memory_base_session", table_name="message_ingestion_record")
         op.drop_index("ix_mir_job_id", table_name="message_ingestion_record")
         op.drop_index("ix_mir_message_id", table_name="message_ingestion_record")
-        op.drop_table("message_ingestion_record")
+        if conn.dialect.name == "postgresql":
+            # Explicitly drop the constraint to unblock message table drop in prior migrations
+            op.execute(
+                'ALTER TABLE "message_ingestion_record" DROP CONSTRAINT IF EXISTS "fk_message_ingestion_record_message_id_message"'
+            )
+            op.execute('DROP TABLE "message_ingestion_record" CASCADE')
+        else:
+            op.drop_table("message_ingestion_record")
 
     if migration.table_exists("memory_base_session", conn):
         op.drop_index("ix_memory_base_session_lookup", table_name="memory_base_session")
