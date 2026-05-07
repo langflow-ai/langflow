@@ -206,12 +206,14 @@ class TestVariableService:
         assert variables.ready is True
         assert variables.name == "variable_service"
 
+    @pytest.mark.asyncio
     async def test_set_and_get_variable(self, variables):
         """Test setting and getting a variable."""
         variables.set_variable("test_key", "test_value")
         value = await variables.get_variable("test_key")
         assert value == "test_value"
 
+    @pytest.mark.asyncio
     async def test_get_from_environment(self, variables):
         """Test getting variable from environment."""
         os.environ["TEST_ENV_VAR"] = "env_value"
@@ -221,11 +223,13 @@ class TestVariableService:
         finally:
             del os.environ["TEST_ENV_VAR"]
 
+    @pytest.mark.asyncio
     async def test_get_nonexistent_variable(self, variables):
         """Test getting a variable that doesn't exist."""
         value = await variables.get_variable("nonexistent_key")
         assert value is None
 
+    @pytest.mark.asyncio
     async def test_delete_variable(self, variables):
         """Test deleting a variable."""
         variables.set_variable("test_key", "test_value")
@@ -242,6 +246,7 @@ class TestVariableService:
         assert "key1" in vars_list
         assert "key2" in vars_list
 
+    @pytest.mark.asyncio
     async def test_in_memory_overrides_env(self, variables):
         """Test that in-memory variables override environment."""
         os.environ["TEST_VAR"] = "env_value"
@@ -252,29 +257,19 @@ class TestVariableService:
         finally:
             del os.environ["TEST_VAR"]
 
+    @pytest.mark.asyncio
     async def test_get_variable_is_coroutine(self, variables):
-        """get_variable must be async to match the langflow call site.
-
-        Callers use ``await variable_service.get_variable(...)`` (see
-        ``Component.get_variable`` in custom_component.py); awaiting a non-coroutine
-        TypeErrors. lfx's implementation does no I/O — the async wrapper exists
-        purely to match the interface langflow's DatabaseVariableService uses.
-        """
+        """get_variable is async to match custom component call sites."""
         import inspect
 
         assert inspect.iscoroutinefunction(variables.get_variable)
         coro = variables.get_variable("anything")
         assert inspect.iscoroutine(coro)
-        await coro  # avoid 'coroutine never awaited' warning
+        await coro
 
+    @pytest.mark.asyncio
     async def test_get_variable_absorbs_extra_kwargs(self, variables):
-        """Extra kwargs from the langflow call site must not crash the lfx implementation.
-
-        Langflow calls ``await variable_service.get_variable(user_id=..., name=...,
-        field=..., session=...)``. lfx's implementation must accept and ignore the
-        extras so flows behave identically as long as the variable can be resolved
-        by name.
-        """
+        """Extra kwargs are accepted for compatibility with langflow call signature."""
         os.environ["LFX_KWARG_TEST"] = "value-from-env"
         try:
             value = await variables.get_variable(
@@ -284,6 +279,95 @@ class TestVariableService:
         finally:
             del os.environ["LFX_KWARG_TEST"]
 
+    @pytest.mark.asyncio
+    async def test_get_wxo_bearer_alias_from_environment(self, variables):
+        """Test that bearer aliases are synthesized from WXO access tokens."""
+        os.environ["wxo_demo_access_token"] = "token-123"
+        try:
+            value = await variables.get_variable("wxo_demo_bearer_token")
+            assert value == "Bearer token-123"
+        finally:
+            del os.environ["wxo_demo_access_token"]
+
+    @pytest.mark.asyncio
+    async def test_get_variable_from_langflow_request_variables(self, variables):
+        """Test request-scoped variables are read from LANGFLOW_REQUEST_VARIABLES."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"runtime_token":"abc123","normal_key":"value1"}'
+        try:
+            assert await variables.get_variable("runtime_token") == "abc123"
+            assert await variables.get_variable("normal_key") == "value1"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_langflow_request_variables_invalid_json_falls_back(self, variables):
+        """Test invalid request variable JSON does not break env fallback."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = "{not-json"
+        os.environ["FALLBACK_ENV_KEY"] = "fallback-value"
+        try:
+            assert await variables.get_variable("FALLBACK_ENV_KEY") == "fallback-value"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+            del os.environ["FALLBACK_ENV_KEY"]
+
+    @pytest.mark.asyncio
+    async def test_wxo_bearer_alias_from_langflow_request_variables(self, variables):
+        """Test bearer alias synthesis from request-scoped WXO access token variable."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"wxo_github_access_token":"request-token"}'
+        try:
+            assert await variables.get_variable("wxo_github_bearer_token") == "Bearer request-token"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
+        """Test that generic access token names also expose bearer aliases."""
+        os.environ["demo_access_token"] = "token-456"
+        try:
+            value = await variables.get_variable("demo_bearer_token")
+            assert value == "Bearer token-456"
+        finally:
+            del os.environ["demo_access_token"]
+
+    @pytest.mark.asyncio
+    async def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
+        """Test that synthesized aliases are not persisted in in-memory variable list."""
+        os.environ["wxo_demo_access_token"] = "token-789"
+        try:
+            assert await variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
+            assert "wxo_demo_bearer_token" not in variables.list_variables()
+        finally:
+            del os.environ["wxo_demo_access_token"]
+
+    @pytest.mark.asyncio
+    async def test_token_access_token_alias_resolution_from_request_variables(self, variables):
+        """Test token/access_token canonical alias resolution from request-scoped variables."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"access_token":"request-access"}'
+        try:
+            assert await variables.get_variable("token") == "request-access"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_prefixed_token_alias_resolution_from_request_variables(self, variables):
+        """Test prefixed app token/access_token aliases are interchangeable."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"my_app_token":"prefixed-token"}'
+        try:
+            assert await variables.get_variable("my_app_access_token") == "prefixed-token"
+        finally:
+            del os.environ["LANGFLOW_REQUEST_VARIABLES"]
+
+    @pytest.mark.asyncio
+    async def test_global_var_alias_resolution(self, variables):
+        """Test x-langflow-global-var-* alias lookup."""
+        os.environ["x-langflow-global-var-access-token"] = "global-token"
+        try:
+            assert await variables.get_variable("access_token") == "global-token"
+            assert await variables.get_variable("token") == "global-token"
+        finally:
+            del os.environ["x-langflow-global-var-access-token"]
+
+    @pytest.mark.asyncio
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")
