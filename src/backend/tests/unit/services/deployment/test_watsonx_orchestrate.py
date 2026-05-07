@@ -2299,7 +2299,14 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
         listed_agents=[
             {"id": "dep-1", "name": "deployment-1", "tools": [], "environments": [{"name": "draft"}]},
             {"id": "dep-2", "name": "deployment-2", "tools": [], "environments": [{"name": "prod"}]},
-            {"id": "dep-3", "name": "deployment-3", "tools": [], "environments": [{"name": "draft"}]},
+            {
+                "id": "dep-3",
+                "name": "deployment-3",
+                "display_name": "Deployment Three",
+                "description": "Provider description",
+                "tools": [],
+                "environments": [{"name": "draft"}],
+            },
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -2326,6 +2333,13 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
     )
 
     assert sorted(item.id for item in result.deployments) == ["dep-3"]
+    assert result.deployments[0].provider_data == {
+        "name": "deployment-3",
+        "display_name": "Deployment Three",
+        "description": "Provider description",
+        "tool_ids": [],
+        "environments": ["draft"],
+    }
 
 
 @pytest.mark.anyio
@@ -5000,7 +5014,13 @@ async def test_get_deployment_returns_agent(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
-            {"id": "dep-1", "name": "my_agent", "description": "desc"},
+            {
+                "id": "dep-1",
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "environments": [],
+            },
         ),
     )
 
@@ -5022,6 +5042,7 @@ async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data
             {
                 "id": "dep-1",
                 "name": "my_agent",
+                "display_name": "My Agent",
                 "description": "desc",
                 "tools": ["tool-1", "tool-2"],
                 "environments": [{"name": "draft"}],
@@ -5038,8 +5059,11 @@ async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
+        "name": "my_agent",
+        "display_name": "My Agent",
+        "description": "desc",
         "tool_ids": ["tool-1", "tool-2"],
-        "environment": "draft",
+        "environments": ["draft"],
         "llm": "meta-llm",
     }
 
@@ -5049,7 +5073,13 @@ async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
-            {"id": "dep-1", "name": "my_agent", "description": "desc"},
+            {
+                "id": "dep-1",
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "environments": [],
+            },
         ),
     )
 
@@ -5061,8 +5091,12 @@ async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
+        "name": "my_agent",
+        "display_name": "My Agent",
+        "description": "desc",
         "tool_ids": [],
-        "environment": "unknown",
+        "llm": None,
+        "environments": [],
     }
 
 

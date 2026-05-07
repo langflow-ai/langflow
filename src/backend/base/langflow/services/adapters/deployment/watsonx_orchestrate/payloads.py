@@ -595,6 +595,19 @@ class WatsonxConfigItemProviderData(BaseModel):
     environment: NormalizedStr
 
 
+class WatsonxDeploymentItemProviderData(BaseModel):
+    """Provider data contract for deployment list items."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    display_name: str
+    description: str
+    tool_ids: list[NormalizedId]
+    llm: NormalizedId | None = None
+    environments: list[NormalizedStr]
+
+
 class WatsonxConfigListResultData(BaseModel):
     """Provider-result metadata contract for config listing.
 
@@ -668,6 +681,7 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     flow_artifact=PayloadSlot(WatsonxFlowArtifactProviderData),
     snapshot_item_data=PayloadSlot(WatsonxSnapshotConnectionsProviderData),
     config_item_data=PayloadSlot(WatsonxConfigItemProviderData),
+    deployment_item_data=PayloadSlot(WatsonxDeploymentItemProviderData),
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),

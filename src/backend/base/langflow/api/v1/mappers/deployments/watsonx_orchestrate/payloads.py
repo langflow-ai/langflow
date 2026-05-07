@@ -474,10 +474,11 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
 
     id: str = Field(min_length=1, description="Provider-owned deployment identifier.")
     name: str
+    display_name: str | None = None
     type: DeploymentType
-    description: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    description: str
+    created_at: datetime
+    updated_at: datetime
     tool_ids: list[str] = Field(default_factory=list)
     environments: list[str] = Field(default_factory=list)
 
@@ -494,8 +495,21 @@ class WatsonxApiDeploymentListItemProviderData(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    agent_name: NormalizedStr
+    name: str
+    display_name: str
+    description: str
     environments: list[NormalizedStr]
+
+
+class WatsonxApiDeploymentGetProviderData(BaseModel):
+    """Provider_data surfaced on wxO deployment detail responses."""
+
+    model_config = {"extra": "forbid"}
+
+    llm: NormalizedStr | None
+    name: str
+    display_name: str
+    description: str
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

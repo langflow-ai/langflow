@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
@@ -123,9 +123,9 @@ from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
 
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any
 
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -185,6 +185,29 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
             detail = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=detail) from None
+
+    def _validate_deployment_item_provider_data(
+        self,
+        agent: dict[str, Any],
+        *,
+        for_detail: bool = False,
+    ) -> dict[str, object]:
+        """Validate deployment item provider_data via the configured slot.
+
+        ``llm`` is detail-only metadata in Langflow's API shape. The adapter list path
+        omits it so list responses do not carry fields the list API intentionally hides.
+        """
+        raw: dict[str, object] = {
+            "name": agent["name"],
+            "display_name": agent["display_name"],
+            "description": agent["description"],
+            "tool_ids": extract_agent_tool_ids(agent),
+            "environments": get_agent_environments(agent),
+        }
+        if for_detail:
+            raw["llm"] = agent.get("llm")
+
+        return self.payload_schemas.deployment_item_data.parse(raw).model_dump(mode="json", exclude_unset=True)
 
     async def create(
         self,
@@ -386,10 +409,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 get_deployment_metadata(
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
-                    provider_data={
-                        "tool_ids": extract_agent_tool_ids(agent),
-                        "environments": get_agent_environments(agent),
-                    },
+                    provider_data=self._validate_deployment_item_provider_data(agent, for_detail=False),
                 )
                 for agent in raw_agents
             ]
@@ -427,15 +447,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
-        environments = get_agent_environments(agent) if isinstance(agent, dict) and "environments" in agent else []
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
-            provider_data={
-                "tool_ids": extract_agent_tool_ids(agent),
-                "environment": environments[0] if environments else "unknown",
-                **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
-            },
+            provider_data=self._validate_deployment_item_provider_data(agent, for_detail=True),
         )
 
     async def update(
