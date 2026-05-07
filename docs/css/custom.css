@@ -93,10 +93,58 @@ html[data-theme="light"] .navbar__logo {
     height: 100vh !important;
     max-height: 100vh !important;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  [class*="sidebarViewport"]:hover {
+    scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+  }
+
+  [class*="sidebarViewport"]::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  [class*="sidebarViewport"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  [class*="sidebarViewport"]::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+  }
+
+  [class*="sidebarViewport"]:hover::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.35);
   }
 
   [class*="tableOfContents"] {
     max-height: calc(100vh - var(--ifm-navbar-height) - 2rem) !important;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  [class*="tableOfContents"]:hover {
+    scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+  }
+
+  [class*="tableOfContents"]::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  [class*="tableOfContents"]::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  [class*="tableOfContents"]::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  [class*="tableOfContents"]:hover::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.35);
   }
 
 }
