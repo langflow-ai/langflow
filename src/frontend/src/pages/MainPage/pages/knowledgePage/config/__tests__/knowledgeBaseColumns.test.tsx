@@ -160,7 +160,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onDelete });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("Delete"));
       expect(onDelete).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
@@ -173,7 +173,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onAddSources });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("Update Knowledge"));
       expect(onAddSources).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
@@ -186,7 +186,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onViewChunks });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("View Chunks"));
       expect(onViewChunks).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
@@ -198,7 +198,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       expect(screen.getByText("Stop Ingestion")).toBeInTheDocument();
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
     });
@@ -209,7 +209,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onStopIngestion });
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("Stop Ingestion"));
       expect(onStopIngestion).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
@@ -221,11 +221,43 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       const updateItem = screen
         .getByText("Update Knowledge")
         .closest('[role="menuitem"]');
       expect(updateItem).toHaveAttribute("data-disabled");
+    });
+  });
+
+  describe("Row settings icon shortcut", () => {
+    const getActionsRenderer = (callbacks = {}) => {
+      const cols = createKnowledgeBaseColumns(callbacks);
+      return cols.find((c) => c.headerName === "")!
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
+    };
+
+    it("renders the settings icon button on each row", () => {
+      const CellRenderer = getActionsRenderer({});
+      render(<CellRenderer data={makeKb({ status: "ready" })} />);
+      expect(screen.getByTestId("kb-row-update-button")).toBeInTheDocument();
+    });
+
+    it("calls onAddSources directly when settings icon is clicked", async () => {
+      const onAddSources = jest.fn();
+      const user = userEvent.setup();
+      const CellRenderer = getActionsRenderer({ onAddSources });
+      render(<CellRenderer data={makeKb({ status: "ready" })} />);
+
+      await user.click(screen.getByTestId("kb-row-update-button"));
+      expect(onAddSources).toHaveBeenCalledWith(
+        expect.objectContaining({ dir_name: "my_kb" }),
+      );
+    });
+
+    it("disables the settings icon button while KB is ingesting", () => {
+      const CellRenderer = getActionsRenderer({});
+      render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
+      expect(screen.getByTestId("kb-row-update-button")).toBeDisabled();
     });
   });
 });

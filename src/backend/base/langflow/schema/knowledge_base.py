@@ -199,6 +199,9 @@ class IngestionRunInfo(BaseModel):
     kb_id: str | None = None
     job_id: str | None = None
     source_type: str
+    # User-supplied name typed at upload (or connector source_name).
+    # ``None`` for legacy runs that pre-date source_name capture.
+    source_name: str | None = None
     status: str
     error_message: str | None = None
     total_items: int = 0

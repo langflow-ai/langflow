@@ -47,6 +47,7 @@ export default function KnowledgeBaseUploadModal({
         return (
           <StepConfiguration
             isAddSourcesMode={form.isAddSourcesMode}
+            kbName={existingKnowledgeBase?.name}
             sourceName={form.sourceName}
             onSourceNameChange={form.setSourceName}
             selectedEmbeddingModel={form.selectedEmbeddingModel}

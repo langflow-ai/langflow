@@ -10,6 +10,7 @@ export interface IngestionRunInfo {
   kb_id: string | null;
   job_id: string | null;
   source_type: string;
+  source_name: string | null;
   status: string;
   error_message: string | null;
   total_items: number;
