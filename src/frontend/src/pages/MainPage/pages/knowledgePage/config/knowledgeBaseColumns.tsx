@@ -133,7 +133,12 @@ export const createKnowledgeBaseColumns = (
       editable: false,
       cellClass: baseCellClass,
       cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
-        <span>{getKnowledgeBaseBackendLabel(params.data.backend_type)}</span>
+        <span>
+          {getKnowledgeBaseBackendLabel(
+            params.data.backend_type,
+            params.data.backend_config as Record<string, unknown> | undefined,
+          )}
+        </span>
       ),
     },
     {

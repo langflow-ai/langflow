@@ -20,6 +20,7 @@ import {
   getDBProviderOption,
   getDefaultDBProviderConfig,
   isDBProviderConfigured,
+  resolveUIBackendType,
 } from "@/constants/dbProviderConstants";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import type { GlobalVariable } from "@/types/global_variables";
@@ -288,7 +289,12 @@ function normalizeDBProviderValue(
   globalVariables: GlobalVariable[],
 ): DBProviderSelection {
   if (typeof value === "string") {
-    const backendType = value === "opensearch" ? "opensearch" : "chroma";
+    const backendType: AvailableDBProviderId =
+      value === "opensearch"
+        ? "opensearch"
+        : value === "chroma_cloud"
+          ? "chroma_cloud"
+          : "chroma";
     return {
       backend_type: backendType,
       backend_config: getDBProviderConfig(backendType, globalVariables),
@@ -296,8 +302,10 @@ function normalizeDBProviderValue(
   }
 
   if (value?.backend_type) {
-    const backendType =
-      value.backend_type === "opensearch" ? "opensearch" : "chroma";
+    const backendType = resolveUIBackendType(
+      value.backend_type,
+      value.backend_config as Record<string, unknown> | undefined,
+    );
     return {
       backend_type: backendType,
       backend_config:

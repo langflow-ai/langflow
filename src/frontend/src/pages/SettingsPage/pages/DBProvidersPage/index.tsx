@@ -7,15 +7,18 @@ import { Switch } from "@/components/ui/switch";
 import {
   ACTIVE_DB_PROVIDER_VARIABLE,
   type AvailableDBProviderId,
+  CHROMA_CLOUD_VARIABLES,
   DB_PROVIDER_OPTIONS,
   type DBProviderBooleanField,
   type DBProviderConfigField,
+  type DBProviderId,
   type DBProviderOption,
   type DBProviderTextField,
   getActiveDBProvider,
   getGlobalVariableValue,
   OPENSEARCH_VARIABLES,
   parseBooleanGlobalVariable,
+  toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { VARIABLE_CATEGORY } from "@/constants/providerConstants";
 import { useTestDBProviderConnection } from "@/controllers/API/queries/knowledge-bases/use-test-kb-connection";
@@ -44,7 +47,7 @@ const getErrorDetail = (error: unknown) =>
 
 export default function DBProvidersPage() {
   const { data: globalVariables = [] } = useGetGlobalVariables();
-  const [selectedProviderId, setSelectedProviderId] = useState(
+  const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
     getActiveDBProvider(globalVariables),
   );
   const [hasManuallySelectedProvider, setHasManuallySelectedProvider] =
@@ -152,14 +155,41 @@ export default function DBProvidersPage() {
   const hasConfiguredValue = (variableKey: string) =>
     globalVariables.some((variable) => variable.name === variableKey);
 
+  // True when every required field already has a saved variable so the
+  // provider can be activated / tested without the user re-entering anything.
+  // Secret fields are checked by existence (API responses mask the value);
+  // non-secret fields are checked by stored value.
+  const isHydrated = selectedProvider.configFields
+    .filter(
+      (field): field is DBProviderTextField =>
+        field.kind !== "boolean" && field.required,
+    )
+    .every((field) =>
+      field.isSecret
+        ? hasConfiguredValue(field.variableKey)
+        : Boolean(
+            getGlobalVariableValue(globalVariables, field.variableKey)?.trim(),
+          ),
+    );
+
   // Boolean fields always have a defined value (toggle is never blank),
   // so they don't gate the save button — only required text fields do.
+  // Secret fields satisfy the check when the user has typed a new value OR
+  // the variable already exists (API response masks saved secrets).
   const canSave = selectedProvider.configFields
     .filter(
       (field): field is DBProviderTextField =>
         field.kind !== "boolean" && field.required,
     )
-    .every((field) => getFieldValue(field).trim());
+    .every((field) => {
+      if (field.isSecret) {
+        return (
+          Boolean(variableValues[field.variableKey]?.trim()) ||
+          hasConfiguredValue(field.variableKey)
+        );
+      }
+      return Boolean(getFieldValue(field).trim());
+    });
 
   // Returns ``true`` if the save fully succeeded so callers (the Test
   // Connection button) can chain a follow-up step. Errors are surfaced
@@ -302,7 +332,9 @@ export default function DBProvidersPage() {
         booleanFields,
       );
       const response = await testProviderConnection({
-        backend_type: selectedProvider.id,
+        backend_type: toAPIBackendType(
+          selectedProvider.id as AvailableDBProviderId,
+        ),
         backend_config: backendConfig,
       });
       if (response.ok) {
@@ -402,6 +434,7 @@ export default function DBProvidersPage() {
               editingSecret={editingSecret}
               isPending={isPending}
               canSave={canSave}
+              isHydrated={isHydrated}
               getFieldValue={getFieldValue}
               onVariableChange={(key, value) =>
                 setVariableValues((prev) => ({ ...prev, [key]: value }))
@@ -441,6 +474,15 @@ function buildBackendConfigPayload(
   literalFields: Record<string, string>,
   booleanFields: Record<string, boolean>,
 ): Record<string, unknown> {
+  if (providerId === "chroma_cloud") {
+    return {
+      mode: "cloud",
+      tenant_variable: CHROMA_CLOUD_VARIABLES.TENANT,
+      database_variable: CHROMA_CLOUD_VARIABLES.DATABASE,
+      api_key_variable: CHROMA_CLOUD_VARIABLES.API_KEY,
+      cloud_region: literalFields[CHROMA_CLOUD_VARIABLES.REGION] || "us-east-1",
+    };
+  }
   if (providerId !== "opensearch") {
     return {};
   }
@@ -534,6 +576,7 @@ function ProviderConfigurationPanel({
   editingSecret,
   isPending,
   canSave,
+  isHydrated,
   getFieldValue,
   onVariableChange,
   onSecretEditingChange,
@@ -542,12 +585,13 @@ function ProviderConfigurationPanel({
   isTesting,
 }: {
   provider: DBProviderOption;
-  activeProviderId: "chroma" | "opensearch";
+  activeProviderId: AvailableDBProviderId;
   globalVariables: GlobalVariable[];
   variableValues: Record<string, string>;
   editingSecret: Record<string, boolean>;
   isPending: boolean;
   canSave: boolean;
+  isHydrated: boolean;
   getFieldValue: (field: DBProviderConfigField) => string;
   onVariableChange: (key: string, value: string) => void;
   onSecretEditingChange: (key: string, editing: boolean) => void;
@@ -557,6 +601,17 @@ function ProviderConfigurationPanel({
 }) {
   const isComingSoon = provider.status === "coming_soon";
   const isActive = activeProviderId === provider.id;
+  // True when the user has interacted with any field this session.
+  const hasUnsavedChanges = Object.keys(variableValues).length > 0;
+  // Label for the primary action button:
+  // · Active provider → "Save" (persist any edits)
+  // · Hydrated + no edits → "Use <Provider>" (just switch active provider)
+  // · Otherwise → "Save and use <Provider>" (persist + activate)
+  const saveButtonLabel = isActive
+    ? "Save"
+    : isHydrated && !hasUnsavedChanges
+      ? `Use ${provider.label}`
+      : `Save and use ${provider.label}`;
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4">
@@ -640,18 +695,20 @@ function ProviderConfigurationPanel({
                   globalVariables,
                   field.variableKey,
                 )}
+                isSecretConfigured={
+                  field.isSecret &&
+                  globalVariables.some((v) => v.name === field.variableKey)
+                }
                 disabled={isPending}
                 onChange={(value) => onVariableChange(field.variableKey, value)}
                 onFocus={() => {
-                  const existing = getGlobalVariableValue(
-                    globalVariables,
-                    field.variableKey,
-                  );
-                  if (
+                  // Use variable existence (not its returned value) as the
+                  // gate — credential-type variables may have their value
+                  // masked in the API response.
+                  const isConfigured =
                     field.isSecret &&
-                    existing &&
-                    !(field.variableKey in variableValues)
-                  ) {
+                    globalVariables.some((v) => v.name === field.variableKey);
+                  if (isConfigured && !(field.variableKey in variableValues)) {
                     onSecretEditingChange(field.variableKey, true);
                     onVariableChange(field.variableKey, "");
                   }
@@ -683,7 +740,7 @@ function ProviderConfigurationPanel({
               loading={isPending}
               disabled={!canSave || isPending || isTesting}
             >
-              {isActive ? "Save" : `Save and use ${provider.label}`}
+              {saveButtonLabel}
             </Button>
           </div>
         </div>
@@ -698,6 +755,7 @@ function TextFieldRow({
   hasNewValue,
   isEditingSecret,
   existingValue,
+  isSecretConfigured,
   disabled,
   onChange,
   onFocus,
@@ -708,15 +766,23 @@ function TextFieldRow({
   hasNewValue: boolean;
   isEditingSecret: boolean;
   existingValue: string | undefined;
+  isSecretConfigured?: boolean;
   disabled: boolean;
   onChange: (value: string) => void;
   onFocus: () => void;
   onBlur: () => void;
 }) {
-  const inputValue =
-    field.isSecret && existingValue && !hasNewValue && !isEditingSecret
-      ? MASKED_VALUE
-      : value;
+  // Show redacted dots when a secret is configured (variable exists) and
+  // the user is neither actively editing nor has typed a new value this
+  // session. Use ``isSecretConfigured`` (variable existence) rather than
+  // ``existingValue`` (returned API value) because credential-type
+  // variables are not exposed in the global-variables API response.
+  const shouldMask =
+    field.isSecret &&
+    (isSecretConfigured ?? !!existingValue) &&
+    !hasNewValue &&
+    !isEditingSecret;
+  const inputValue = shouldMask ? MASKED_VALUE : value;
 
   return (
     <label className="flex flex-col gap-1">
@@ -727,11 +793,7 @@ function TextFieldRow({
       <Input
         placeholder={field.placeholder}
         value={inputValue}
-        type={
-          field.isSecret && (isEditingSecret || hasNewValue)
-            ? "password"
-            : "text"
-        }
+        type={field.isSecret ? "password" : "text"}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
         onFocus={onFocus}
