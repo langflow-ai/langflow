@@ -210,7 +210,8 @@ This example uses an OpenSearch container running locally, but you can also use 
 8. Enter a name for this knowledge base. The name can be anything, and doesn't need to match the OpenSearch index name.
 The name becomes the internal label used to scope searches to this knowledge base within the shared OpenSearch index.
 
-9. Select an embedding model, and confirm **DB Provider** is set to **OpenSearch**.
+9. Select an embedding model.
+When you create a knowledge base in Langflow, you can choose one of your configured embedding model providers. Once you create a knowledge base, you cannot change its provider unless you recreate the knowledge base. For more information, see [Embedding Model](/components-embedding-models).
 
 10. Optional: Add **Custom Metadata Fields** to tag every chunk with additional context. For example, if you're ingesting files from multiple teams, add a field `team` with a value of `support`. When the **Knowledge Base** component searches, you can then filter results to only return chunks where `team` equals `support` to keep results scoped to the support team's content.
 
