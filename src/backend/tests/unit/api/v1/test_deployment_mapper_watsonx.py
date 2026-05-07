@@ -40,6 +40,7 @@ try:
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
         WatsonxApiDeploymentCreatePayload,
+        WatsonxApiDeploymentListItemProviderData,
         WatsonxApiDeploymentUpdatePayload,
         WatsonxApiDeploymentUpdateResultData,
     )
@@ -401,15 +402,16 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
     assert "Invalid deployment list item provider_data payload:" in str(exc_info.value.detail)
 
 
-def test_watsonx_mapper_extracts_list_item_provider_data_environments_only() -> None:
+def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = SimpleNamespace(
         deployments=[
             SimpleNamespace(
                 id="agent-1",
+                name="Agent 1",
                 provider_data={
                     "tool_ids": ["tool-1"],
-                    "environments": ["draft", "live"],
+                    "environments": [" draft ", "live"],
                 },
             )
         ]
@@ -417,20 +419,17 @@ def test_watsonx_mapper_extracts_list_item_provider_data_environments_only() -> 
 
     provider_data_by_resource_key = mapper.extract_list_item_provider_data(provider_view)
 
-    assert provider_data_by_resource_key == {"agent-1": {"environments": ["draft", "live"]}}
+    assert provider_data_by_resource_key == {"agent-1": {"agent_name": "Agent 1", "environments": ["draft", "live"]}}
+
+
+def test_watsonx_api_list_item_provider_data_rejects_blank_environment() -> None:
+    with pytest.raises(ValidationError):
+        WatsonxApiDeploymentListItemProviderData(agent_name="Agent 1", environments=["draft", "  "])
 
 
 @pytest.mark.parametrize(
     ("item", "expected_message"),
     [
-        (
-            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-1"], "environments": ["draft"]}),
-            "deployment id is required from wxO adapter.",
-        ),
-        (
-            SimpleNamespace(id="", provider_data={"tool_ids": ["tool-1"], "environments": ["draft"]}),
-            "deployment id is required from wxO adapter.",
-        ),
         (
             SimpleNamespace(id="agent-1", provider_data="bad-payload-type"),
             "provider_data is required from wxO adapter for list().",
@@ -469,13 +468,13 @@ def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
         rows_with_counts=[(row, 2, [(fv_id, "tool-1")])],
         has_flow_filter=True,
         provider_key=WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-        provider_data_by_resource_key={"agent-1": {"environments": ["draft"]}},
+        provider_data_by_resource_key={"agent-1": {"agent_name": "Agent 1", "environments": ["draft"]}},
     )
 
     assert len(items) == 1
     assert items[0].resource_key == "agent-1"
     assert items[0].flow_version_ids == [fv_id]
-    assert items[0].provider_data == {"environments": ["draft"]}
+    assert items[0].provider_data == {"agent_name": "Agent 1", "environments": ["draft"]}
 
 
 def test_watsonx_mapper_shape_synced_list_items_requires_provider_data_map() -> None:
