@@ -44,17 +44,19 @@ test(
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/login") && response.status() === 200,
+        { timeout: 60000 },
+      ),
+      page.getByRole("button", { name: "Sign In" }).click(),
+    ]);
 
-    // Create User A — wait for the homepage Loading state to clear before
-    // checking mainpage_title (mainpage_title only renders after data load,
-    // which can outlast a 30s wait on slower runners like Windows CI).
-    await page.waitForSelector('text="Loading"', {
-      state: "hidden",
-      timeout: 60000,
-    });
+    // mainpage_title only renders after the homepage data finishes loading,
+    // and on slower runners (Windows CI) this can outlast a 60s wait.
     await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
+      timeout: 90000,
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Admin Page", { exact: true }).click();
@@ -88,10 +90,17 @@ test(
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/login") && response.status() === 200,
+        { timeout: 60000 },
+      ),
+      page.getByRole("button", { name: "Sign In" }).click(),
+    ]);
 
     // Create a flow for User A
-    await page.waitForSelector('[id="new-project-btn"]', { timeout: 30000 });
+    await page.waitForSelector('[id="new-project-btn"]', { timeout: 60000 });
     // Check that User A starts with an empty flows list
     expect(
       (
@@ -129,7 +138,7 @@ test(
       await basicPromptingHeading.click();
       try {
         await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-          timeout: attempt === maxClickAttempts ? 100000 : 45000,
+          timeout: attempt === maxClickAttempts ? 240000 : 60000,
         });
         canvasMounted = true;
         break;
@@ -172,7 +181,14 @@ test(
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/login") && response.status() === 200,
+        { timeout: 60000 },
+      ),
+      page.getByRole("button", { name: "Sign In" }).click(),
+    ]);
 
     // Verify admin can't see User A's flow
     await expect(page.getByText(userAFlowName, { exact: true })).toBeVisible({
