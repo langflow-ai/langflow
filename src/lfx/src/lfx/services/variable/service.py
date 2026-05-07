@@ -26,21 +26,38 @@ class VariableService(Service):
         logger.debug("Variable service initialized (env vars only)")
 
     @staticmethod
-    def _is_wxo_access_token_key(name: str) -> bool:
-        """Return True when a variable name matches WXO access-token conventions."""
+    def _normalize_global_var_key(name: str) -> str:
+        return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
+
+    @staticmethod
+    def _token_alias_candidates(name: str) -> list[str]:
         normalized = name.lower()
-        return normalized.endswith("_access_token") and (normalized.startswith("wxo_") or "_wxo_" in normalized)
+        if normalized == "token":
+            return ["token", "access_token"]
+        if normalized == "access_token":
+            return ["access_token", "token"]
+        if normalized.endswith("_token"):
+            return [name, f"{name[:-len('_token')]}_access_token"]
+        if normalized.endswith("_access_token"):
+            return [name, f"{name[:-len('_access_token')]}_token"]
+        return [name]
+
+    @staticmethod
+    def _format_bearer_value(value: str) -> str:
+        if value.lower().startswith("bearer "):
+            return value
+        return f"Bearer {value}"
 
     def _get_wxo_bearer_alias(self, name: str) -> str | None:
-        """Resolve a <prefix>_bearer_token alias from matching WXO <prefix>_access_token env var."""
+        """Resolve a <prefix>_bearer_token alias from matching <prefix> token env vars."""
         normalized = name.lower()
         if not normalized.endswith("_bearer_token"):
             return None
         base_name = normalized[: -len("_bearer_token")]
-        access_token_name = f"{base_name}_access_token"
+        candidate_names = (f"{base_name}_access_token", f"{base_name}_token")
         for key, value in os.environ.items():
-            if key.lower() == access_token_name and self._is_wxo_access_token_key(key):
-                return f"Bearer {value}"
+            if key.lower() in candidate_names:
+                return self._format_bearer_value(value)
         return None
 
     @staticmethod
@@ -60,15 +77,15 @@ class VariableService(Service):
         return {str(key): str(value) for key, value in parsed.items()}
 
     def _get_wxo_bearer_alias_from_request_variables(self, name: str) -> str | None:
-        """Resolve WXO <prefix>_bearer_token alias from request-scoped access token values."""
+        """Resolve <prefix>_bearer_token alias from request-scoped token values."""
         normalized = name.lower()
         if not normalized.endswith("_bearer_token"):
             return None
         base_name = normalized[: -len("_bearer_token")]
-        access_token_name = f"{base_name}_access_token"
+        candidate_names = (f"{base_name}_access_token", f"{base_name}_token")
         for key, value in self._get_request_variables().items():
-            if key.lower() == access_token_name and self._is_wxo_access_token_key(key):
-                return f"Bearer {value}"
+            if key.lower() in candidate_names:
+                return self._format_bearer_value(value)
         return None
 
     async def get_variable(self, name: str, **kwargs) -> str | None:
@@ -101,15 +118,25 @@ class VariableService(Service):
 
         # Contract-first: prefer request-scoped variables injected by runtime.
         request_variables = self._get_request_variables()
-        if effective_name in request_variables:
-            logger.debug(f"Variable '{effective_name}' loaded from LANGFLOW_REQUEST_VARIABLES")
-            return request_variables[effective_name]
+        for candidate in self._token_alias_candidates(effective_name):
+            if candidate in request_variables:
+                logger.debug(f"Variable '{effective_name}' loaded from LANGFLOW_REQUEST_VARIABLES as '{candidate}'")
+                return request_variables[candidate]
 
         # Fall back to environment variable
-        value = os.getenv(effective_name)
-        if value:
-            logger.debug(f"Variable '{effective_name}' loaded from environment")
-            return value
+        for candidate in self._token_alias_candidates(effective_name):
+            value = os.getenv(candidate)
+            if value:
+                logger.debug(f"Variable '{effective_name}' loaded from environment as '{candidate}'")
+                return value
+
+        # Fall back to x-langflow-global-var-* aliases.
+        for candidate in self._token_alias_candidates(effective_name):
+            global_alias = self._normalize_global_var_key(candidate)
+            value = os.getenv(global_alias)
+            if value:
+                logger.debug(f"Variable '{effective_name}' loaded from global alias '{global_alias}'")
+                return value
 
         # For WXO OAuth vars, synthesize a <prefix>_bearer_token alias from request variables first.
         bearer_value = self._get_wxo_bearer_alias_from_request_variables(effective_name)
