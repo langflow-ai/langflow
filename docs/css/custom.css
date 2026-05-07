@@ -1130,6 +1130,10 @@ html[data-theme="light"] .sidebar-group-label {
   font-weight: 500;
 }
 
+html[data-theme="light"] .menu__link--active:not(.menu__link--sublist) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
 /* Sidebar category label styling */
 .theme-doc-sidebar-item-category > .menu__list-item-collapsible > .menu__link {
   font-weight: 500;
@@ -1322,7 +1326,7 @@ html[data-theme="light"] .sidebar-group-label {
   width: 100%;
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: var(--ifm-global-radius);
-  background: var(--ifm-background-surface-color);
+  background: #f7f7f9;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1388,7 +1392,7 @@ html[data-theme="light"] .sidebar-group-label {
 }
 
 [data-theme="dark"] .lf-card {
-  background: var(--ifm-card-background-color, #232328);
+  background: #1a1a1f;
   border-color: var(--ifm-card-border-color, #303038);
 }
 
