@@ -637,6 +637,65 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
     )
 
 
+def _filter_public_flow_files(
+    files: list[str] | None,
+    *,
+    source_flow_id: uuid.UUID,
+) -> list[str] | None:
+    """Drop file paths that aren't safe to forward from the public-flow boundary.
+
+    GHSA-rcjh-r59h-gq37: callers of `/build_public_tmp/{flow_id}/flow` may be
+    unauthenticated, so any path they send is untrusted. Legitimate uploads go
+    through `/api/v1/files/upload/{flow_id}` and yield paths shaped exactly as
+    `<source_flow_id>/<filename>` (a single forward slash, no traversal, no
+    drive letter, no leading separator). Anything outside that shape — absolute
+    paths, traversal sequences, or references to other flows' storage
+    namespaces — is dropped so it can't reach `Message.to_lc_message` and turn
+    into an arbitrary local/S3 file read.
+
+    The corresponding authenticated route (`/build/{flow_id}/flow`) is
+    intentionally untouched: file ownership there is enforced by the upload
+    endpoint and its own auth dependencies.
+    """
+    if not files:
+        return files
+
+    # Length needed to recognize a Windows drive-qualified path like "C:" or "C:/foo".
+    drive_letter_prefix_len = 2
+
+    expected_prefix = f"{source_flow_id}/"
+    safe: list[str] = []
+    dropped: list[str] = []
+    for raw in files:
+        if not isinstance(raw, str) or not raw:
+            dropped.append(repr(raw))
+            continue
+        # Reject POSIX/Windows absolute paths and Windows drive-qualified paths.
+        if raw.startswith(("/", "\\")) or (len(raw) >= drive_letter_prefix_len and raw[1] == ":"):
+            dropped.append(raw)
+            continue
+        # Normalize separators so a single check covers both POSIX and Windows callers.
+        normalized = raw.replace("\\", "/")
+        # Reject any segment-level traversal (`..`, `foo/..`, `..\\bar`, etc.).
+        if any(segment == ".." for segment in normalized.split("/")):
+            dropped.append(raw)
+            continue
+        # Must live in the source flow's storage namespace and have a filename after it.
+        if not normalized.startswith(expected_prefix) or normalized == expected_prefix:
+            dropped.append(raw)
+            continue
+        safe.append(raw)
+
+    if dropped:
+        logger.warning(
+            "build_public_tmp: dropped untrusted file paths outside source flow namespace",
+            source_flow_id=str(source_flow_id),
+            dropped_count=len(dropped),
+        )
+
+    return safe or None
+
+
 @router.post("/build_public_tmp/{flow_id}/flow")
 async def build_public_tmp(
     *,
@@ -720,6 +779,15 @@ async def build_public_tmp(
             if flow and flow.data:
                 validate_flow_for_current_settings(flow.data)
 
+        # GHSA-rcjh-r59h-gq37: callers of the public route can be unauthenticated, so
+        # `files` paths are untrusted input. Restrict them to the source flow's storage
+        # namespace ("<source_flow_id>/<filename>") before forwarding so absolute paths,
+        # traversal sequences, and references to other flows can't be turned into
+        # arbitrary file reads inside Message.to_lc_message. Legitimate uploads from the
+        # shared playground go through /api/v1/files/upload/{flow_id}, which already
+        # produces paths in this exact shape.
+        safe_files = _filter_public_flow_files(files, source_flow_id=flow_id)
+
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
         job_id = await start_flow_build(
@@ -728,7 +796,7 @@ async def build_public_tmp(
             background_tasks=background_tasks,
             inputs=inputs,
             data=None,  # Always None - public flows load from database only
-            files=files,
+            files=safe_files,
             stop_component_id=stop_component_id,
             start_component_id=start_component_id,
             log_builds=log_builds or False,

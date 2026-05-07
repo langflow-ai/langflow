@@ -734,6 +734,120 @@ async def test_build_public_tmp_without_data_parameter(client, json_memory_chatb
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_rejects_unsafe_file_paths(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    r"""GHSA-rcjh-r59h-gq37: untrusted file paths must not reach the build pipeline.
+
+    Callers of `/build_public_tmp/{flow_id}/flow` may be unauthenticated, so
+    `files` is untrusted input. Forwarding raw paths lets ChatInput's message
+    pipeline (Message.to_lc_message -> get_file_content_dicts ->
+    create_image_content_dict / parse_text_file_to_data) read arbitrary local
+    or S3 files. We strip:
+      * absolute POSIX paths (`/etc/passwd`)
+      * absolute Windows paths (`C:\Windows\win.ini`, `\\server\share`)
+      * traversal sequences (`../etc/shadow`, `..\..\win.ini`)
+      * references that don't live under the source flow's storage namespace
+        (`<other-flow-id>/file.txt`, `anything/at/all`)
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured_kwargs: dict = {}
+
+    async def fake_start_flow_build(**kwargs):
+        captured_kwargs.update(kwargs)
+        return "fake-public-tmp-job-id"
+
+    monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
+
+    client.cookies.set("client_id", "ghsa-rcjh-r59h-gq37-probe")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "files": [
+                "/etc/passwd",
+                "C:\\Windows\\win.ini",
+                "\\\\server\\share\\secret.txt",
+                "../etc/shadow",
+                "..\\..\\win.ini",
+                f"{flow_id}/../../../etc/passwd",
+                "00000000-0000-0000-0000-000000000000/file.txt",
+                "anything/at/all",
+                "",
+            ],
+            "inputs": {"session": "ghsa-test"},
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+    assert response.json() == {"job_id": "fake-public-tmp-job-id"}
+    assert "files" in captured_kwargs, "start_flow_build was not invoked"
+    assert captured_kwargs["files"] is None, (
+        "untrusted paths must be rejected at the public boundary to prevent "
+        f"arbitrary file read; got {captured_kwargs['files']!r}"
+    )
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_preserves_files_in_source_flow_namespace(
+    client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
+):
+    """Legitimate uploads from the shared playground must keep working.
+
+    The chat-input upload flow on the public playground POSTs to
+    `/api/v1/files/upload/{flow_id}` and yields paths shaped as
+    `<source_flow_id>/<timestamp_filename>`. Those legitimate paths must pass
+    through unchanged after the GHSA-rcjh-r59h-gq37 sanitization, so users can
+    still attach files to ChatInput on the public playground. Only paths that
+    fail the safety checks alongside them are stripped.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == codes.OK
+
+    captured_kwargs: dict = {}
+
+    async def fake_start_flow_build(**kwargs):
+        captured_kwargs.update(kwargs)
+        return "fake-public-tmp-job-id"
+
+    monkeypatch.setattr("langflow.api.v1.chat.start_flow_build", fake_start_flow_build)
+
+    legit_path = f"{flow_id}/2026-05-07_15-30-00_message.txt"
+    legit_image = f"{flow_id}/2026-05-07_15-30-00_screenshot.png"
+
+    client.cookies.set("client_id", "ghsa-rcjh-r59h-gq37-legit")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            # Mix of legit + malicious — only legit must survive.
+            "files": [legit_path, "/etc/passwd", legit_image, "../etc/shadow"],
+            "inputs": {"session": "ghsa-test-legit"},
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+    assert response.json() == {"job_id": "fake-public-tmp-job-id"}
+    assert captured_kwargs.get("files") == [legit_path, legit_image], (
+        f"legit namespaced paths must reach the build pipeline; got {captured_kwargs.get('files')!r}"
+    )
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
     client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
 ):
