@@ -906,18 +906,6 @@ def test_watsonx_mapper_extract_snapshot_bindings_allows_empty_tool_ids():
     assert bindings == []
 
 
-def test_watsonx_mapper_extract_snapshot_bindings_requires_deployment_id():
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    provider_view = _mock_provider_view(
-        [
-            SimpleNamespace(id=None, provider_data={"tool_ids": ["tool-ignored"]}),
-        ]
-    )
-
-    with pytest.raises(ValueError, match=r"^deployment id is required from wxO adapter\.$"):
-        mapper.extract_snapshot_bindings(provider_view)
-
-
 def test_watsonx_mapper_extract_snapshot_bindings_for_get():
     mapper = WatsonxOrchestrateDeploymentMapper()
     get_result = DeploymentGetResult(
@@ -2002,7 +1990,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
             ),
         )
         mock_count_attachments.return_value = {row.id: 2}
@@ -2024,7 +2012,7 @@ class TestListDeploymentsSyncedBindingPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 2
-        assert provider_data_by_resource_key == {"rk-1": {"environments": []}}
+        assert provider_data_by_resource_key == {"rk-1": {"agent_name": "Agent 1", "environments": []}}
         db.begin_nested.assert_called_once()
         mock_delete_unbound.assert_awaited_once()
         mock_count_attachments.assert_awaited_once()
@@ -2048,7 +2036,9 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_list.side_effect = [[(row, 0, [])], []]
         mock_fetch_rk.return_value = (
             {"rk-1"},
-            _mock_provider_view([SimpleNamespace(id="rk-1", provider_data={"tool_ids": [], "environments": []})]),
+            _mock_provider_view(
+                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": [], "environments": []})]
+            ),
         )
         mock_count_attachments.return_value = {row.id: 0}
         db = MagicMock()
@@ -2094,7 +2084,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
             ),
         )
         mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
@@ -2138,7 +2128,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
             ),
         )
         mock_count_attachments.return_value = {row.id: 3}

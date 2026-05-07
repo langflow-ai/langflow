@@ -378,7 +378,7 @@ class ItemResult(ProviderDataModel[T_DeploymentItemData]):
     """Model representing a result for a deployment list item."""
 
     id: IdLike = Field(description="The id of the deployment")
-    name: str = Field(description="The name of the deployment")
+    name: NormalizedStr = Field(description="The name of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")

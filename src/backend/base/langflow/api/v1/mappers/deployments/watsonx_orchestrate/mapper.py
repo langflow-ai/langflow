@@ -832,9 +832,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def extract_snapshot_bindings(self, provider_view) -> list[ProviderSnapshotBinding]:
         bindings: list[ProviderSnapshotBinding] = []
         for item in provider_view.deployments:
-            if not item.id:
-                msg = "deployment id is required from wxO adapter."
-                raise ValueError(msg)
             resource_key = str(item.id)
 
             if not isinstance(item.provider_data, dict):
@@ -856,11 +853,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> dict[str, dict[str, Any]]:
         provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
         for item in provider_view.deployments:
-            if not item.id:
-                msg = "deployment id is required from wxO adapter."
-                raise ValueError(msg)
-            resource_key = str(item.id)
-
             if not isinstance(item.provider_data, dict):
                 msg = "provider_data is required from wxO adapter for list()."
                 raise ValueError(msg)  # noqa: TRY004
@@ -871,7 +863,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 msg = "environments is required from wxO adapter."
                 raise ValueError(msg)
 
+            resource_key = str(item.id)
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
+                agent_name=item.name,
                 environments=environments,
             ).model_dump(mode="json")
 

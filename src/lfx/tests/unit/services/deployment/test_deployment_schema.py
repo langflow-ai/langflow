@@ -25,6 +25,7 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    ItemResult,
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
     SnapshotItem,
@@ -147,6 +148,21 @@ def test_deployment_list_params_validates_deployment_names() -> None:
 
     with pytest.raises(ValidationError):
         DeploymentListParams(deployment_names=["A", "  "])
+
+
+def test_item_result_normalizes_name() -> None:
+    item = ItemResult(id="dep_1", name=" Deployment 1 ", type=DeploymentType.AGENT)
+    assert item.name == "Deployment 1"
+
+
+def test_item_result_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="dep_1", name="   ", type=DeploymentType.AGENT)
+
+
+def test_item_result_rejects_blank_id() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="   ", name="Deployment 1", type=DeploymentType.AGENT)
 
 
 def test_snapshot_binding_update_add_ids_dedupes() -> None:
