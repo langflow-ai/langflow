@@ -107,7 +107,9 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
           - langflow-data:/app/langflow
 
       postgres:
-        image: postgres:16
+        # Pinned to bookworm (glibc 2.36) to prevent collation version mismatch
+        # warnings on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-bookworm
         environment:
           POSTGRES_USER: langflow
           POSTGRES_PASSWORD: langflow

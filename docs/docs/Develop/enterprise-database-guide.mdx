@@ -67,7 +67,9 @@ For more information, see [Configure an external PostgreSQL database](/configura
         environment:
           - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
       postgres:
-        image: postgres:16
+        # Pinned to bookworm (glibc 2.36) to prevent collation version mismatch
+        # warnings on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-bookworm
         ports:
           - "5432:5432"
         environment:

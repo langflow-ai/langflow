@@ -232,7 +232,9 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         volumes:
           - ./langflow-data:/app/langflow
       postgres:
-        image: postgres:16
+        # Pinned to bookworm (glibc 2.36) to prevent collation version mismatch
+        # warnings on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-bookworm
         volumes:
           - langflow-postgres:/var/lib/postgresql/data
 
