@@ -521,9 +521,7 @@ async def get_flow_desc_from_db(flow_id: str, user_id: UUID | None = None) -> Fl
     async with session_scope() as session:
         stmt = select(Flow).where(Flow.id == UUID(flow_id))
         if user_id is not None:
-            stmt = stmt.where(
-                (Flow.user_id == user_id) | (Flow.access_type == AccessTypeEnum.PUBLIC)
-            )
+            stmt = stmt.where((Flow.user_id == user_id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
         result = await session.exec(stmt)
         flow = result.scalar_one_or_none()
         if not flow:
