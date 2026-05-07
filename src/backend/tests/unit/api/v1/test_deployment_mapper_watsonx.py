@@ -323,6 +323,9 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
         created_at=now,
         updated_at=now,
         provider_data={
+            "name": "Agent 1",
+            "display_name": "Agent 1",
+            "description": "desc",
             "tool_ids": ["tool-1", "  ", "tool-2"],
             "environments": ["draft", "live"],
         },
@@ -334,6 +337,7 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
     assert shaped["name"] == "Agent 1"
     assert shaped["type"] == DeploymentType.AGENT.value
     assert shaped["description"] == "desc"
+    assert shaped["display_name"] == "Agent 1"
     assert shaped["created_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["updated_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["tool_ids"] == ["tool-1", "tool-2"]
@@ -354,7 +358,13 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
                 description="desc",
                 created_at=now,
                 updated_at=now,
-                provider_data={"tool_ids": ["tool-1"], "environments": ["live"]},
+                provider_data={
+                    "name": "Agent 1",
+                    "display_name": "Agent 1",
+                    "description": "desc",
+                    "tool_ids": ["tool-1"],
+                    "environments": ["live"],
+                },
             )
         ]
     )
@@ -371,8 +381,10 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
             "id": "agent-1",
             "name": "Agent 1",
             "type": DeploymentType.AGENT.value,
+            "description": "desc",
             "created_at": now.isoformat().replace("+00:00", "Z"),
             "updated_at": now.isoformat().replace("+00:00", "Z"),
+            "display_name": "Agent 1",
             "tool_ids": ["tool-1"],
             "environments": ["live"],
         }
@@ -390,7 +402,7 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
                 type=DeploymentType.AGENT,
                 created_at=now,
                 updated_at=now,
-                provider_data={"unexpected": "value"},
+                provider_data={"description": "desc", "unexpected": "value"},
             )
         ]
     )
@@ -410,6 +422,9 @@ def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
                 id="agent-1",
                 name="Agent 1",
                 provider_data={
+                    "name": "agent_api_name",
+                    "display_name": "  Agent One  ",
+                    "description": "  Provider description  ",
                     "tool_ids": ["tool-1"],
                     "environments": [" draft ", "live"],
                 },
@@ -419,12 +434,68 @@ def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
 
     provider_data_by_resource_key = mapper.extract_list_item_provider_data(provider_view)
 
-    assert provider_data_by_resource_key == {"agent-1": {"agent_name": "Agent 1", "environments": ["draft", "live"]}}
+    assert provider_data_by_resource_key == {
+        "agent-1": {
+            "name": "agent_api_name",
+            "display_name": "  Agent One  ",
+            "description": "  Provider description  ",
+            "environments": ["draft", "live"],
+        }
+    }
 
 
 def test_watsonx_api_list_item_provider_data_rejects_blank_environment() -> None:
     with pytest.raises(ValidationError):
-        WatsonxApiDeploymentListItemProviderData(agent_name="Agent 1", environments=["draft", "  "])
+        WatsonxApiDeploymentListItemProviderData(
+            name="Agent 1",
+            display_name="Agent One",
+            description="Provider description",
+            environments=["draft", "  "],
+        )
+
+
+def test_watsonx_mapper_shapes_get_provider_agent_metadata() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    provider_data = mapper.shape_deployment_get_data(
+        {
+            "llm": TEST_WXO_LLM,
+            "name": "agent_api_name",
+            "display_name": "  Agent Display Name  ",
+            "description": "  Provider description  ",
+            "tool_ids": ["tool-1"],
+            "environments": ["draft"],
+        }
+    )
+
+    assert provider_data == {
+        "llm": TEST_WXO_LLM,
+        "name": "agent_api_name",
+        "display_name": "  Agent Display Name  ",
+        "description": "  Provider description  ",
+    }
+
+
+def test_watsonx_mapper_shapes_get_provider_agent_metadata_keeps_null_llm() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+
+    provider_data = mapper.shape_deployment_get_data(
+        {
+            "llm": None,
+            "name": "agent_api_name",
+            "display_name": "Agent Display Name",
+            "description": "Provider description",
+            "tool_ids": ["tool-1"],
+            "environments": ["draft"],
+        }
+    )
+
+    assert provider_data == {
+        "llm": None,
+        "name": "agent_api_name",
+        "display_name": "Agent Display Name",
+        "description": "Provider description",
+    }
 
 
 @pytest.mark.parametrize(
@@ -432,22 +503,37 @@ def test_watsonx_api_list_item_provider_data_rejects_blank_environment() -> None
     [
         (
             SimpleNamespace(id="agent-1", provider_data="bad-payload-type"),
-            "provider_data is required from wxO adapter for list().",
+            "Invalid payload.",
         ),
         (
-            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1"]}),
-            "environments is required from wxO adapter.",
+            SimpleNamespace(id="agent-1", provider_data={"name": "agent-1", "tool_ids": ["tool-1"]}),
+            "Missing required field 'display_name'.",
+        ),
+        (
+            SimpleNamespace(
+                id="agent-1",
+                provider_data={
+                    "name": "agent-1",
+                    "display_name": None,
+                    "description": "Provider description",
+                    "tool_ids": ["tool-1"],
+                    "environments": ["draft"],
+                },
+            ),
+            "Invalid value for field 'display_name'.",
         ),
     ],
 )
-def test_watsonx_mapper_extract_list_item_provider_data_contract_breaks_raise_value_error(
+def test_watsonx_mapper_extract_list_item_provider_data_contract_breaks_raise_http_error(
     item: SimpleNamespace,
     expected_message: str,
 ) -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
 
-    with pytest.raises(ValueError, match=expected_message):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.extract_list_item_provider_data(SimpleNamespace(deployments=[item]))
+    assert exc_info.value.status_code == 500
+    assert expected_message in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
@@ -468,13 +554,25 @@ def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
         rows_with_counts=[(row, 2, [(fv_id, "tool-1")])],
         has_flow_filter=True,
         provider_key=WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-        provider_data_by_resource_key={"agent-1": {"agent_name": "Agent 1", "environments": ["draft"]}},
+        provider_data_by_resource_key={
+            "agent-1": {
+                "name": "Agent 1",
+                "display_name": "Agent One",
+                "description": "Provider description",
+                "environments": ["draft"],
+            }
+        },
     )
 
     assert len(items) == 1
     assert items[0].resource_key == "agent-1"
     assert items[0].flow_version_ids == [fv_id]
-    assert items[0].provider_data == {"agent_name": "Agent 1", "environments": ["draft"]}
+    assert items[0].provider_data == {
+        "name": "Agent 1",
+        "display_name": "Agent One",
+        "description": "Provider description",
+        "environments": ["draft"],
+    }
 
 
 def test_watsonx_mapper_shape_synced_list_items_requires_provider_data_map() -> None:

@@ -56,6 +56,23 @@ def _mock_provider_view(items: list) -> SimpleNamespace:
     return SimpleNamespace(deployments=items)
 
 
+def _wxo_deployment_provider_data(
+    *,
+    tool_ids: list[str],
+    environments: list[str] | None = None,
+    name: str = "agent_api_name",
+    display_name: str = "Agent Display",
+    description: str = "Agent description",
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "display_name": display_name,
+        "description": description,
+        "tool_ids": tool_ids,
+        "environments": environments or [],
+    }
+
+
 def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
@@ -857,8 +874,8 @@ def test_watsonx_mapper_extract_snapshot_bindings_from_provider_view():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
-            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1", "tool-2"]}),
-            SimpleNamespace(id="agent-2", provider_data={"tool_ids": ["tool-3"]}),
+            SimpleNamespace(id="agent-1", provider_data=_wxo_deployment_provider_data(tool_ids=["tool-1", "tool-2"])),
+            SimpleNamespace(id="agent-2", provider_data=_wxo_deployment_provider_data(tool_ids=["tool-3"])),
         ]
     )
 
@@ -870,7 +887,7 @@ def test_watsonx_mapper_extract_snapshot_bindings_from_provider_view():
     ]
 
 
-def test_watsonx_mapper_extract_snapshot_bindings_requires_tool_ids():
+def test_watsonx_mapper_extract_snapshot_bindings_requires_contract_fields():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
@@ -878,8 +895,10 @@ def test_watsonx_mapper_extract_snapshot_bindings_requires_tool_ids():
         ]
     )
 
-    with pytest.raises(ValueError, match=r"^tool_ids is required from wxO adapter\.$"):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.extract_snapshot_bindings(provider_view)
+    assert exc_info.value.status_code == 500
+    assert "Missing required field 'name'" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_extract_snapshot_bindings_requires_provider_data_object():
@@ -890,15 +909,17 @@ def test_watsonx_mapper_extract_snapshot_bindings_requires_provider_data_object(
         ]
     )
 
-    with pytest.raises(ValueError, match=r"^provider_data is required from wxO adapter for list\(\)\.$"):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.extract_snapshot_bindings(provider_view)
+    assert exc_info.value.status_code == 500
+    assert "Unexpected result while reading deployment list item metadata" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_extract_snapshot_bindings_allows_empty_tool_ids():
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_view = _mock_provider_view(
         [
-            SimpleNamespace(id="agent-1", provider_data={"tool_ids": []}),
+            SimpleNamespace(id="agent-1", provider_data=_wxo_deployment_provider_data(tool_ids=[])),
         ]
     )
 
@@ -980,21 +1001,29 @@ def test_watsonx_mapper_shape_deployment_get_data_hides_internal_sync_fields():
     shaped = mapper.shape_deployment_get_data(
         {
             "llm": "my-llm",
+            "name": "agent-name",
+            "display_name": "Agent Name",
+            "description": "Provider description",
             "tool_ids": ["tool-1", "tool-2"],
+            "environments": ["draft"],
         }
     )
 
-    assert shaped == {"llm": "my-llm"}
+    assert shaped == {
+        "llm": "my-llm",
+        "name": "agent-name",
+        "display_name": "Agent Name",
+        "description": "Provider description",
+    }
 
 
 def test_watsonx_mapper_shape_deployment_get_data_requires_provider_data():
     mapper = WatsonxOrchestrateDeploymentMapper()
 
-    with pytest.raises(
-        HTTPException,
-        match=r"^500: An internal error occured\. provider_data is required from wxO adapter for get\(\)\.$",
-    ):
+    with pytest.raises(HTTPException) as exc_info:
         mapper.shape_deployment_get_data(None)
+    assert exc_info.value.status_code == 500
+    assert "Empty result while reading deployment metadata" in str(exc_info.value.detail)
 
 
 def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
@@ -1990,7 +2019,19 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [
+                    SimpleNamespace(
+                        id="rk-1",
+                        name="Agent 1",
+                        provider_data={
+                            "name": "agent_api_name",
+                            "display_name": "Agent One",
+                            "description": "Provider description",
+                            "tool_ids": ["snap-1"],
+                            "environments": [],
+                        },
+                    )
+                ]
             ),
         )
         mock_count_attachments.return_value = {row.id: 2}
@@ -2012,7 +2053,14 @@ class TestListDeploymentsSyncedBindingPhase:
 
         assert len(accepted) == 1
         assert accepted[0][1] == 2
-        assert provider_data_by_resource_key == {"rk-1": {"agent_name": "Agent 1", "environments": []}}
+        assert provider_data_by_resource_key == {
+            "rk-1": {
+                "name": "agent_api_name",
+                "display_name": "Agent One",
+                "description": "Provider description",
+                "environments": [],
+            }
+        }
         db.begin_nested.assert_called_once()
         mock_delete_unbound.assert_awaited_once()
         mock_count_attachments.assert_awaited_once()
@@ -2037,7 +2085,7 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": [], "environments": []})]
+                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data=_wxo_deployment_provider_data(tool_ids=[]))]
             ),
         )
         mock_count_attachments.return_value = {row.id: 0}
@@ -2084,7 +2132,13 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [
+                    SimpleNamespace(
+                        id="rk-1",
+                        name="Agent 1",
+                        provider_data=_wxo_deployment_provider_data(tool_ids=["snap-1"]),
+                    )
+                ]
             ),
         )
         mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
@@ -2128,7 +2182,13 @@ class TestListDeploymentsSyncedBindingPhase:
         mock_fetch_rk.return_value = (
             {"rk-1"},
             _mock_provider_view(
-                [SimpleNamespace(id="rk-1", name="Agent 1", provider_data={"tool_ids": ["snap-1"], "environments": []})]
+                [
+                    SimpleNamespace(
+                        id="rk-1",
+                        name="Agent 1",
+                        provider_data=_wxo_deployment_provider_data(tool_ids=["snap-1"]),
+                    )
+                ]
             ),
         )
         mock_count_attachments.return_value = {row.id: 3}

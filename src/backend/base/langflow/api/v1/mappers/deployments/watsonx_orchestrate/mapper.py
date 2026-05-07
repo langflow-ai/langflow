@@ -73,6 +73,7 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentCreatePayload,
     WatsonxApiDeploymentCreateResultData,
     WatsonxApiDeploymentFlowVersionItemData,
+    WatsonxApiDeploymentGetProviderData,
     WatsonxApiDeploymentListItemProviderData,
     WatsonxApiDeploymentListProviderData,
     WatsonxApiDeploymentLlmListResultData,
@@ -834,16 +835,15 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         for item in provider_view.deployments:
             resource_key = str(item.id)
 
-            if not isinstance(item.provider_data, dict):
-                msg = "provider_data is required from wxO adapter for list()."
-                raise ValueError(msg)  # noqa: TRY004
-            tool_ids = item.provider_data.get("tool_ids", None)
-            if tool_ids is None:
-                msg = "tool_ids is required from wxO adapter."
-                raise ValueError(msg)
+            item_provider_data = self._parse_required_payload_slot(
+                slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+                slot_name="deployment_item_data",
+                raw=item.provider_data,
+                operation="reading deployment list item metadata",
+            )
             bindings.extend(
                 ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id))
-                for snapshot_id in tool_ids
+                for snapshot_id in item_provider_data.tool_ids
             )
         return bindings
 
@@ -853,20 +853,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     ) -> dict[str, dict[str, Any]]:
         provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
         for item in provider_view.deployments:
-            if not isinstance(item.provider_data, dict):
-                msg = "provider_data is required from wxO adapter for list()."
-                raise ValueError(msg)  # noqa: TRY004
-
-            environments = item.provider_data.get("environments")
-
-            if environments is None:
-                msg = "environments is required from wxO adapter."
-                raise ValueError(msg)
+            item_provider_data = self._parse_required_payload_slot(
+                slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+                slot_name="deployment_item_data",
+                raw=item.provider_data,
+                operation="reading deployment list item metadata",
+            )
 
             resource_key = str(item.id)
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
-                agent_name=item.name,
-                environments=environments,
+                name=item_provider_data.name,
+                display_name=item_provider_data.display_name,
+                description=item_provider_data.description,
+                environments=item_provider_data.environments,
             ).model_dump(mode="json")
 
         return provider_data_by_resource_key
@@ -1493,7 +1492,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 }
             ).model_dump(
                 mode="json",
-                exclude_none=True,
             )
         except ValidationError as exc:
             first_error = exc.errors()[0] if exc.errors() else {}
@@ -1504,23 +1502,18 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             ) from exc
 
     def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
-        if provider_data is None:
-            msg = "An internal error occured. provider_data is required from wxO adapter for get()."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-
-        if "llm" not in provider_data:
-            msg = "An internal error occured. provider_data must contain 'llm' from wxO adapter for get()."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-
-        llm = provider_data["llm"]
-
-        if not isinstance(llm, str) or not llm.strip():
-            msg = (
-                "An internal error occured. provider_data['llm'] must be a non-empty string from wxO adapter for get()."
-            )
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-
-        return {"llm": llm}
+        parsed = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+            slot_name="deployment_item_data",
+            raw=provider_data,
+            operation="reading deployment metadata",
+        )
+        return WatsonxApiDeploymentGetProviderData(
+            llm=parsed.llm,
+            name=parsed.name,
+            display_name=parsed.display_name,
+            description=parsed.description,
+        ).model_dump(mode="json")
 
     def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:
         return self._parse_required_payload_slot(
