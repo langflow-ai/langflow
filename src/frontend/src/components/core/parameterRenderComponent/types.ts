@@ -59,6 +59,9 @@ export type ToolsComponentType = {
   button_description?: string;
   isAction?: boolean;
   template?: APITemplateType;
+  hideButton?: boolean;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
 };
 
 export type FloatComponentType = {
