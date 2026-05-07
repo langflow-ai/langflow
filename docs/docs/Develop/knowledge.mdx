@@ -112,10 +112,10 @@ For more information on using knowledge bases in a flow, see the [**Knowledge Ba
 
 ### Configure vector database providers
 
-**DB Providers** are the vector store backend where knowledge base embeddings are stored and searched.
-To configure DB Providers, go to **Settings → DB Providers**.
+**DB Providers** are the vector databases where your knowledge bases store and search embeddings.
+To configure these providers, go to **Settings → DB Providers**.
 The selected provider applies to all new knowledge bases you create.
-Existing knowledge bases keep their original backend.
+Existing knowledge bases continue to use the provider that was active when they were created.
 
 #### Chroma (default)
 
@@ -140,10 +140,10 @@ export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 
 #### OpenSearch
 
-To use OpenSearch as a DB Provider, you need a running OpenSearch cluster accessible to your Langflow instance.
-This example uses an OpenSearch container running locally, but you could also use a remote OpenSearch instance.
+To use OpenSearch as a database provider, you need a running OpenSearch cluster that is accessible to your Langflow instance.
+This example uses an OpenSearch container running locally, but you can also use a remote OpenSearch instance.
 
-1. Start a local OpenSearch container with security disabled. This allows you to connect without a username, password, or TLS.
+1. For this example, start a local OpenSearch container with security disabled. This allows you to connect without a username, password, or TLS. This configuration is for example purposes only; it _isn't_ recommended in production environments.
 
     ```bash
     podman run -d \
@@ -161,7 +161,7 @@ This example uses an OpenSearch container running locally, but you could also us
 
     If the password fails validation, container startup exits immediately with `Password failed validation`.
 
-    Create a password that doesn't include `admin`, and contains uppercase and lowercase characters, a digit, and a special character.
+    The password must adhere to the https://docs.opensearch.org/latest/security/configuration/demo-configuration/#setting-up-a-custom-admin-password[OpenSearch password complexity requirements].
     :::
 
 2. Verify the cluster is reachable:
@@ -184,7 +184,7 @@ This example uses an OpenSearch container running locally, but you could also us
     }
     ```
 
-    If you get no response or a connection error, the container may still be starting. Wait a few seconds and try again.
+    If you get no response or a connection error, the container might still be starting. Wait a few seconds and try again.
 
 3. To connect the OpenSearch database to Langflow as a knowledge base, click **Settings**, and then click **DB Providers**.
 4. Select **OpenSearch**.
@@ -206,14 +206,21 @@ This example uses an OpenSearch container running locally, but you could also us
     The OpenSearch database is now connected to Langflow as a knowledge base, so you can create a knowledge base that stores its embeddings in OpenSearch.
 
 7. Click <Icon name="Library" aria-hidden="true"/> **Knowledge**, and then click <Icon name="Plus" aria-hidden="true"/> **Add Knowledge**.
+
 8. Enter a name for this knowledge base. The name can be anything, and doesn't need to match the OpenSearch index name.
 The name becomes the internal label used to scope searches to this knowledge base within the shared OpenSearch index.
+
 9. Select an embedding model, and confirm **DB Provider** is set to **OpenSearch**.
 
-    Optionally, add **Custom Metadata Fields** to tag every chunk with additional context. For example, if you're ingesting files from multiple teams, add a field `team` with a value of `support`. When the **Knowledge Base** component searches, you can then filter results to only return chunks where `team` equals `support` to keep results scoped to the support team's content.
-10. Click **Next Step**.
-11. Add your source files and configure chunking settings, then click **Next Step**.
-12. In the **Review & Build** pane, preview the first chunk of your data and confirm the chunk size is appropriate for your use case. A typical chunk size is 512–1000 characters. Smaller chunks give more granular retrieval but may lose context at boundaries. Click **Create**.
+10. Optional: Add **Custom Metadata Fields** to tag every chunk with additional context. For example, if you're ingesting files from multiple teams, add a field `team` with a value of `support`. When the **Knowledge Base** component searches, you can then filter results to only return chunks where `team` equals `support` to keep results scoped to the support team's content.
+
+11. Click **Next Step**.
+
+12. Add your source files and configure chunking settings, then click **Next Step**.
+
+13. In the **Review & Build** pane, preview the first chunk of your data and confirm the chunk size is appropriate for your use case. A typical chunk size is 512–1000 characters. Smaller chunks support more granular retrieval but they can lose context across chunks.
+
+14. Click **Create**.
 
 The knowledge base is now available to use in a flow with the **Knowledge Ingestion** and **Knowledge Base** components.
 
