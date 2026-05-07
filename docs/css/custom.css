@@ -97,11 +97,12 @@ html[data-theme="light"] .navbar__logo {
   [class*="tableOfContents"] {
     max-height: calc(100vh - var(--ifm-navbar-height) - 2rem) !important;
   }
+
 }
 
 /* Content area - breathing room */
 [class*="docMainContainer"] {
-  padding: 0 3rem;
+  padding: 0 0 0 3rem;
 }
 
 [class*="docItemWrapper"] {
