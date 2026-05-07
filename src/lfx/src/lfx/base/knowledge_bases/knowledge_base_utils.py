@@ -109,6 +109,14 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
 async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
     """Retrieve a list of available knowledge bases.
 
+    Skips dot-prefixed entries (legacy hidden bundles) and any directory
+    that carries the ``.kb_deleted`` sentinel.  The sentinel is written by
+    the API layer when a KB row was removed from the DB but the on-disk
+    directory could not be cleaned up (most commonly because Chroma's
+    SQLite file is still locked on Windows); without this filter the
+    deleted KB would reappear in the canvas component dropdown until the
+    next server restart.
+
     Returns:
         A list of knowledge base names.
     """
@@ -140,4 +148,14 @@ async def get_knowledge_bases(kb_root: Path, user_id: UUID | str) -> list[str]:
     if not kb_path.exists():
         return []
 
-    return [str(d.name) for d in kb_path.iterdir() if not d.name.startswith(".") and d.is_dir()]
+    # Inlined sentinel check: lfx must stay importable without the
+    # langflow API package, so we cannot reach for KBStorageHelper.
+    # The string literal is kept in lockstep with KB_DELETED_SENTINEL
+    # in src/backend/base/langflow/api/utils/kb_helpers.py via a unit
+    # test that asserts the two values are equal.
+    deleted_marker = ".kb_deleted"
+    return [
+        str(d.name)
+        for d in kb_path.iterdir()
+        if not d.name.startswith(".") and d.is_dir() and not (d / deleted_marker).is_file()
+    ]

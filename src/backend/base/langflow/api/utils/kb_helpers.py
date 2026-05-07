@@ -59,6 +59,13 @@ from langflow.utils.kb_constants import (
 # (folder, connectors, URL, template) through the ingestion-source registry.
 DEFAULT_INGESTION_SOURCE_TYPE = "file_upload"
 
+# Marker file dropped inside a KB directory whose row has been deleted from
+# the DB but whose on-disk contents could not be removed (most commonly
+# because Chroma still holds an exclusive SQLite lock on Windows).  Listing
+# code paths skip directories containing this file so the deleted KB does
+# not reappear in the UI before the next server restart cleans up the dir.
+KB_DELETED_SENTINEL = ".kb_deleted"
+
 
 class IngestionCancelledError(Exception):
     """Custom error for when an ingestion job is cancelled."""
@@ -132,10 +139,22 @@ class KBStorageHelper:
 
         Handles ChromaDB SQLite file locks that can prevent deletion, particularly
         on Windows where mandatory file locks block deletion of open files.
-        Uses retry with exponential backoff and rename-as-fallback strategy.
+        Uses retry with exponential backoff and a sentinel-file fallback when
+        physical removal is impossible.
+
+        The sentinel-file fallback (``.kb_deleted``) is preferred over the
+        previous rename-based fallback because Windows can refuse to rename a
+        directory whose contents are still locked open, in which case the
+        directory remained at its original name and the disk-scan listing
+        path re-discovered it as a valid KB.  Writing a marker file inside
+        the dir works in cases where rename does not, and the listing layer
+        treats it identically to a missing dir.
 
         Returns:
-            True if deletion succeeded (or path already gone), False otherwise.
+            True if the KB is no longer visible to listing code (either
+            because the dir was removed, or because a sentinel was written
+            after a failed rmtree).  False only when both physical removal
+            and the sentinel write fail.
         """
         if not kb_path.exists():
             return True
@@ -181,18 +200,50 @@ class KBStorageHelper:
                         e,
                     )
 
-        # Last resort: rename for deferred cleanup
-        if kb_path.exists():
+        # Fallback: drop a sentinel inside the dir so the listing code paths
+        # treat it as deleted even though the bytes are still on disk.  Done
+        # AFTER the final rmtree attempt so anything that did get cleaned out
+        # of the dir does not also remove the sentinel we just wrote.
+        if kb_path.exists() and kb_path.is_dir():
             try:
-                deferred = kb_path.with_name(f".deleted_{kb_name}_{int(time.time())}")
-                kb_path.rename(deferred)
+                (kb_path / KB_DELETED_SENTINEL).touch(exist_ok=True)
             except OSError as e:
-                logger.warning("Deferred rename failed for %s: %s", kb_name, e)
-            else:
-                logger.info("Renamed %s for deferred cleanup", kb_name)
-                return True
+                logger.warning("Could not write %s sentinel for %s: %s", KB_DELETED_SENTINEL, kb_name, e)
+                return False
+            logger.info("Wrote %s sentinel for %s; dir remains on disk pending restart", KB_DELETED_SENTINEL, kb_name)
+            return True
 
         return False
+
+    @staticmethod
+    def is_kb_dir_deleted(kb_path: Path) -> bool:
+        """Return True if the KB directory carries the deletion sentinel.
+
+        Used by listing endpoints and the disk-scan fallback in
+        :func:`get_knowledge_bases` so a KB whose row was deleted but whose
+        bytes could not be removed (locked-file case) does not reappear in
+        the UI.
+        """
+        try:
+            return kb_path.is_dir() and (kb_path / KB_DELETED_SENTINEL).is_file()
+        except OSError:
+            # Permission errors / disappearing dir under our feet -> treat as
+            # not-deleted; the caller will fall through to its own checks.
+            return False
+
+    @staticmethod
+    def clear_deletion_sentinel(kb_path: Path) -> None:
+        """Remove a leftover ``.kb_deleted`` marker before reusing the path.
+
+        Called from the create / first-ingest paths so a recreate-with-the-
+        same-name immediately after a failed delete does not silently vanish
+        from listings.  Safe to call when the marker is absent.
+        """
+        marker = kb_path / KB_DELETED_SENTINEL
+        try:
+            marker.unlink(missing_ok=True)
+        except OSError as e:
+            logger.debug("Could not clear %s sentinel under %s: %s", KB_DELETED_SENTINEL, kb_path, e)
 
 
 def _remove_sqlite_lock_files(kb_path: Path) -> None:

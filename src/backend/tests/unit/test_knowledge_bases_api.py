@@ -741,12 +741,14 @@ class TestKnowledgeBaseAPI:
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base(
         self,
         mock_root,
         mock_get_record,
+        mock_delete_record,
         mock_create_backend,
         mock_delete,
         client: AsyncClient,
@@ -772,15 +774,18 @@ class TestKnowledgeBaseAPI:
         backend.delete_collection.assert_awaited_once()
         backend.teardown.assert_awaited_once()
         mock_delete.assert_called_once()
+        mock_delete_record.assert_awaited_once()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base_survives_remote_backend_auth_failure(
         self,
         mock_root,
         mock_get_record,
+        mock_delete_record,  # noqa: ARG002 - patch fixture; presence is the assertion
         mock_create_backend,
         mock_delete,
         client: AsyncClient,

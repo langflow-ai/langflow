@@ -549,11 +549,31 @@ async def create_knowledge_base(
         # expand/contract rollout a KB row can exist even if its local
         # sidecar directory was cleaned up out of band.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-        if existing_record is not None or kb_path.exists():
+        if existing_record is not None:
+            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
+        if kb_path.exists():
+            # No DB row but a directory survives.  Two paths fork here:
+            # the dir is a leftover from a previous failed delete (carries
+            # the .kb_deleted sentinel) -- in which case the user clearly
+            # wants to reuse the name -- vs. a legitimate orphan from a
+            # legacy export.  Only the sentinel case is safe to repurpose.
+            if KBStorageHelper.is_kb_dir_deleted(kb_path):
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Knowledge base '{kb_name}' was recently deleted but its on-disk files "
+                        "are still being released by another process. Restart the server (or wait "
+                        "for the lock to clear) before recreating it with the same name."
+                    ),
+                )
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
-        # Create KB directory
+        # Create KB directory.  Clear any leftover sentinel just in case
+        # mkdir is racing with a sentinel write from a concurrent delete
+        # of the same name; ``clear_deletion_sentinel`` is a no-op when
+        # the marker is absent.
         kb_path.mkdir(parents=True, exist_ok=True)
+        KBStorageHelper.clear_deletion_sentinel(kb_path)
         kb_id = uuid.uuid4()
 
         # Initialize Chroma storage and collection immediately
@@ -1158,6 +1178,12 @@ async def list_knowledge_bases(
             for kb_dir in kb_path.iterdir():
                 if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                     continue
+                # Skip dirs whose row was deleted but whose bytes survived
+                # a locked-file rmtree.  Without this, a 0-row user (which
+                # is what triggers the disk-fallback path) would re-surface
+                # a "deleted" KB they previously cleaned up.
+                if KBStorageHelper.is_kb_dir_deleted(kb_dir):
+                    continue
                 try:
                     metadata = knowledge_base_service.load_metadata_from_disk(kb_dir)
                     kb_id_str = metadata.get("id")
@@ -1726,20 +1752,32 @@ async def delete_knowledge_base(
             current_user=current_user,
         )
 
-        if not KBStorageHelper.delete_storage(kb_path, kb_name):
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to delete knowledge base '{kb_name}'. The database may be in use.",
-            )
-
-        # Mirror the deletion in the DB so list/search endpoints stop
-        # returning a stale row. Failures don't fail the request — the
-        # filesystem is already gone; the orphan row will be reaped by
-        # the next backfill when the disk dir is absent.
+        # Delete the DB row first, then attempt to clear the on-disk dir.
+        # Rationale: when Chroma still holds a SQLite lock (most common on
+        # Windows) physical removal can fail, but the user's intent was to
+        # remove the KB.  By dropping the DB row first the row never lingers
+        # past a partial cleanup, and KBStorageHelper.delete_storage() drops
+        # a sentinel inside any dir it could not remove so the listing layer
+        # treats it as gone until the next restart fully reaps it.
         try:
             await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
+        except Exception as exc:
+            await logger.aerror("KB DB delete failed for %s: %s", kb_name, exc)
+            raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from exc
+
+        storage_warning: str | None = None
+        if not KBStorageHelper.delete_storage(kb_path, kb_name):
+            # Both physical removal AND the sentinel write failed.  This is
+            # rare (would require the dir itself being unwritable) but we
+            # still return 200 because the DB row is gone -- the user no
+            # longer sees the KB.  A warning surfaces so operators know the
+            # bytes are still on disk and want a follow-up cleanup.
+            storage_warning = (
+                f"Knowledge base '{kb_name}' was removed from the database but its on-disk "
+                "files could not be cleaned up. The KB will not reappear in the UI; the bytes "
+                "will be removed on the next server restart."
+            )
+            await logger.awarning(storage_warning)
 
     except HTTPException:
         raise
@@ -1748,8 +1786,13 @@ async def delete_knowledge_base(
         raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from e
     else:
         response: dict[str, str] = {"message": f"Knowledge base '{kb_name}' deleted successfully"}
-        if remote_warning:
-            response["warning"] = remote_warning
+        # Storage-cleanup failure first so it is the most visible to the
+        # operator (it has actionable filesystem implications).  Remote-
+        # backend warnings stack onto the same response field separated by
+        # a sentinel so a future client can split them.
+        warnings = [w for w in (storage_warning, remote_warning) if w]
+        if warnings:
+            response["warning"] = " | ".join(warnings)
         return response
 
 
@@ -1816,15 +1859,29 @@ async def delete_knowledge_bases_bulk(
                 )
                 if remote_warning:
                     remote_warnings.append(remote_warning)
-                if not KBStorageHelper.delete_storage(kb_path, kb_name):
+
+                # DB-first ordering, mirroring the single-delete endpoint:
+                # row goes first so a locked-storage cleanup leaves no
+                # stale row behind.  delete_storage() drops a sentinel
+                # inside any dir it could not remove so listing stays
+                # consistent.
+                try:
+                    await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
+                except Exception as exc:  # noqa: BLE001 - DB delete failures shouldn't block remaining KBs in the bulk op
+                    await logger.aexception("KB DB delete failed for %s: %s", kb_name, exc)
                     failed_kbs.append(kb_name)
                     continue
 
+                if not KBStorageHelper.delete_storage(kb_path, kb_name):
+                    # Both rmtree and the sentinel write failed -- count
+                    # this as deleted (the row is gone, the listing UI
+                    # will not show the KB) but warn so the operator can
+                    # follow up on the orphaned bytes.
+                    remote_warnings.append(
+                        f"Knowledge base '{kb_name}' was removed from the database but its on-disk "
+                        "files could not be cleaned up; bytes will be reaped on next server restart."
+                    )
                 deleted_count += 1
-                try:
-                    await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
-                except Exception as exc:  # noqa: BLE001
-                    await logger.awarning("KB DB delete lagged for %s: %s", kb_name, exc)
             except (HTTPException, OSError, PermissionError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)
                 # Continue with other deletions even if one fails
