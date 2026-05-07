@@ -1,5 +1,7 @@
 """Orchestrator that auto-installs the default MCP servers (registry-driven) for every user."""
 
+import platform
+
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
@@ -16,6 +18,35 @@ from langflow.api.v2.schemas import MCPServerConfig
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service
 from langflow.services.schema import ServiceType
+
+# Metadata fields the spec authors. We compare these (and only these) when
+# deciding whether a persisted auto-configured entry has drifted from the
+# canonical spec — extra metadata keys (added by future API extensions or
+# user tooling) must not trigger spurious reconciliations.
+_SPEC_OWNED_METADATA_KEYS: tuple[str, ...] = (
+    "description",
+    "auto_configured",
+    "langflow_internal",
+    "startup_timeout_seconds",
+)
+
+
+def _is_persisted_payload_in_sync(persisted: dict, canonical: dict) -> bool:
+    """Return True iff the persisted MCP entry already matches the canonical spec.
+
+    Compares only the fields the spec controls (command, args, env, and the
+    spec-owned metadata keys). Extra fields on either side are ignored so we
+    don't thrash on derived / user-added properties.
+    """
+    if persisted.get("command") != canonical["command"]:
+        return False
+    if list(persisted.get("args") or []) != list(canonical["args"]):
+        return False
+    if dict(persisted.get("env") or {}) != dict(canonical["env"]):
+        return False
+    persisted_meta = persisted.get("metadata") or {}
+    canonical_meta = canonical["metadata"]
+    return all(persisted_meta.get(key) == canonical_meta.get(key) for key in _SPEC_OWNED_METADATA_KEYS)
 
 
 def _build_server_payload(spec: DefaultMcpServerSpec) -> dict:
@@ -70,15 +101,41 @@ async def auto_configure_default_mcp_servers(session: AsyncSession) -> None:
         payload = _build_server_payload(spec)
         for user in users:
             try:
-                existing = await get_server_list(user, session, storage_service, settings_service)
-                if server_name in existing.get("mcpServers", {}):
-                    await logger.adebug(
-                        "default_mcp_server_skipped",
+                existing_servers = (await get_server_list(user, session, storage_service, settings_service)).get(
+                    "mcpServers", {}
+                )
+                persisted = existing_servers.get(server_name)
+                if persisted is not None:
+                    persisted_meta = persisted.get("metadata") or {}
+                    if not persisted_meta.get("auto_configured"):
+                        # User-owned entry (no `auto_configured` flag): never overwrite.
+                        await logger.adebug(
+                            "default_mcp_server_skipped",
+                            user_id=str(user.id),
+                            server_name=server_name,
+                            reason="user_owned",
+                        )
+                        continue
+                    if _is_persisted_payload_in_sync(persisted, payload):
+                        await logger.adebug(
+                            "default_mcp_server_skipped",
+                            user_id=str(user.id),
+                            server_name=server_name,
+                            reason="already_in_sync",
+                        )
+                        continue
+                    # Spec drifted (e.g. user upgraded across a commit that changed the
+                    # canonical payload). Reconcile by overwriting with the new spec —
+                    # `auto_configured: True` was our marker that the entry is ours.
+                    # Platform context lets ops correlate reconciliations against the
+                    # reported OS when the prior version's payload is too short for
+                    # that OS (notably first-run npx timeouts on Windows).
+                    await logger.ainfo(
+                        "default_mcp_server_reconciled",
                         user_id=str(user.id),
                         server_name=server_name,
-                        reason="already_exists",
+                        platform=platform.system(),
                     )
-                    continue
                 await update_server(
                     server_name=server_name,
                     server_config=payload,

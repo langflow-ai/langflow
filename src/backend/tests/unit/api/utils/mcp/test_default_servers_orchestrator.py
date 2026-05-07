@@ -142,6 +142,99 @@ class TestIdempotency:
         patched_orchestrator_deps.update_server.assert_not_called()
 
 
+class TestReconcileAutoConfiguredEntries:
+    """Reconcile auto-configured entries when the canonical spec drifts.
+
+    When the canonical spec evolves (e.g. a new `metadata.startup_timeout_seconds`
+    field is added), users who installed Langflow on an earlier build keep a
+    stale persisted payload — the orchestrator's old skip-if-exists behavior
+    would lock them out of fixes forever (notably: the 60s opt-in needed to
+    survive the first `npx -y @wonderwhy-er/desktop-commander@latest` download
+    on Windows + slow networks).
+
+    Reconciliation is gated on `metadata.auto_configured == True`: only entries
+    that we wrote can be overwritten. Anything missing the flag (e.g. the user
+    swapped in their own server) is preserved unconditionally.
+    """
+
+    async def test_should_reconcile_auto_configured_entry_when_persisted_payload_diverges_from_spec(
+        self, fake_session_with_users, patched_orchestrator_deps
+    ):
+        """Stale entry from a pre-`startup_timeout_seconds` build must be updated."""
+        patched_orchestrator_deps.get_server_list.return_value = {
+            "mcpServers": {
+                "shell-execution": {
+                    "command": "npx",
+                    "args": ["-y", "@wonderwhy-er/desktop-commander@latest"],
+                    "env": {},
+                    "metadata": {
+                        "description": (
+                            "Cross-platform shell execution + filesystem control (wonderwhy-er/desktop-commander)."
+                        ),
+                        "auto_configured": True,
+                        "langflow_internal": True,
+                        # NOTE: no startup_timeout_seconds — this is the stale field.
+                    },
+                }
+            }
+        }
+
+        await auto_configure_default_mcp_servers(fake_session_with_users)
+
+        patched_orchestrator_deps.update_server.assert_awaited_once()
+        cfg = patched_orchestrator_deps.update_server.await_args.kwargs["server_config"]
+        assert cfg["metadata"].get("startup_timeout_seconds") == 60
+
+    async def test_should_not_overwrite_entry_lacking_auto_configured_flag(
+        self, fake_session_with_users, patched_orchestrator_deps
+    ):
+        """User-owned entry (no `auto_configured` flag) must be preserved."""
+        patched_orchestrator_deps.get_server_list.return_value = {
+            "mcpServers": {
+                "shell-execution": {
+                    "command": "npx",
+                    "args": ["-y", "@user/custom-fork"],
+                    "env": {},
+                    "metadata": {"description": "user-owned override"},
+                }
+            }
+        }
+
+        await auto_configure_default_mcp_servers(fake_session_with_users)
+
+        patched_orchestrator_deps.update_server.assert_not_called()
+
+    async def test_should_skip_when_auto_configured_entry_payload_already_matches_spec(
+        self, fake_session_with_users, patched_orchestrator_deps
+    ):
+        """No-op when the persisted payload already matches the canonical spec.
+
+        Avoids needless disk writes and noisy logs on every Langflow startup.
+        """
+        from langflow.api.utils.mcp.default_servers_specs import DEFAULT_MCP_SERVERS
+
+        spec = DEFAULT_MCP_SERVERS["shell-execution"]
+        patched_orchestrator_deps.get_server_list.return_value = {
+            "mcpServers": {
+                "shell-execution": {
+                    "command": spec.config.command,
+                    "args": list(spec.config.args),
+                    "env": dict(spec.config.env),
+                    "metadata": {
+                        "description": spec.description,
+                        "auto_configured": True,
+                        "langflow_internal": True,
+                        "startup_timeout_seconds": spec.startup_timeout_seconds,
+                    },
+                }
+            }
+        }
+
+        await auto_configure_default_mcp_servers(fake_session_with_users)
+
+        patched_orchestrator_deps.update_server.assert_not_called()
+
+
 class TestRegistryRevalidation:
     """Defense-in-depth on the registry.
 
