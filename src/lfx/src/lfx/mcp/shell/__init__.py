@@ -11,6 +11,4 @@ isolation. Treat it accordingly when configuring permissions.
 
 Usage:
     python -m lfx.mcp.shell
-    # or via console script:
-    lfx-shell-mcp
 """

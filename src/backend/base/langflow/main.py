@@ -349,6 +349,23 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e2:  # noqa: BLE001
                         await logger.aexception(f"Failed to initialize MCP servers after retry: {e2}")
 
+                # Default MCP servers (currently the in-tree shell-execution server)
+                # are auto-installed AFTER project servers so that the per-project
+                # initialization path doesn't race with us against the same DB rows.
+                # Failures here are non-fatal: the langflow process keeps booting
+                # and the orchestrator's per-user try/except keeps one bad row from
+                # blocking the rest.
+                from langflow.api.utils.mcp.default_servers import (
+                    auto_configure_default_mcp_servers,
+                )
+                from langflow.services.deps import session_scope
+
+                try:
+                    async with session_scope() as default_servers_session:
+                        await auto_configure_default_mcp_servers(default_servers_session)
+                except Exception as default_err:  # noqa: BLE001
+                    await logger.aexception(f"auto_configure_default_mcp_servers failed at startup: {default_err}")
+
             # Start the delayed initialization as a background task
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())

@@ -46,11 +46,16 @@ def test_should_classify_read_only_commands(command: str, expected: CommandInten
         ("zip -r out.zip dir", CommandIntent.WRITE),
         ("git commit -m msg", CommandIntent.WRITE),
         ("git add .", CommandIntent.WRITE),
-        ("sed -i s/a/b/ f", CommandIntent.WRITE),
     ],
 )
 def test_should_classify_write_commands(command: str, expected: CommandIntent):
     assert classify_command(command) == expected
+
+
+# ``sed`` (and the wider scripting-engine family — awk/perl/tcl/lua/etc.)
+# was historically WRITE here. PR review #4 reclassified them as UNKNOWN
+# (fail-closed) because their script-body argv slot can hide arbitrary
+# shell-exec primitives. See test_classification_scripting_engines_fail_closed.
 
 
 @pytest.mark.parametrize(

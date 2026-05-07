@@ -10,68 +10,93 @@ from lfx.mcp.shell.shell_config import ShellMode, ShellServerConfig
 
 
 class TestShellServerConfigDefaults:
-    def test_should_use_cwd_as_default_working_directory(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+    def test_should_raise_when_working_directory_env_unset(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        """PR review #1: Path.cwd() fallback exposes user files when langflow is started from $HOME.
+
+        Refuse to boot without an explicit LANGFLOW_SHELL_WORKING_DIR — the security model
+        leans entirely on the working dir being a deliberate sandbox.
+        """
         monkeypatch.delenv("LANGFLOW_SHELL_WORKING_DIR", raising=False)
         monkeypatch.chdir(tmp_path)
-        config = ShellServerConfig.from_environment()
-        assert Path(config.working_directory) == tmp_path.resolve()
+        with pytest.raises(ValueError, match="LANGFLOW_SHELL_WORKING_DIR"):
+            ShellServerConfig.from_environment()
 
-    def test_should_default_to_read_write_mode(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_to_read_only_mode(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        """PR review #2: read_write default is too wide a door.
+
+        Allows git/pip/npm/curl as the langflow process user. Default to
+        read_only; read_write is an explicit opt-in.
+        """
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_MODE", raising=False)
         config = ShellServerConfig.from_environment()
-        assert config.mode == ShellMode.READ_WRITE
+        assert config.mode == ShellMode.READ_ONLY
 
-    def test_should_default_max_timeout_to_30_seconds(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_max_timeout_to_30_seconds(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         # 30s is web-proxy-friendly: stays under Heroku's 30s, ALB 60s,
         # Cloudflare 100s, nginx default 60s. Operators with longer-running
         # commands raise LANGFLOW_SHELL_MAX_TIMEOUT explicitly.
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_TIMEOUT", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.max_timeout == 30
 
-    def test_should_default_max_output_bytes_to_16kb(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_max_output_bytes_to_16kb(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_OUTPUT_BYTES", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.max_output_bytes == 16 * 1024
 
-    def test_should_default_max_command_length_to_4kb(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_max_command_length_to_4kb(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_COMMAND_LENGTH", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.max_command_length == 4 * 1024
 
-    def test_should_default_max_concurrent_to_4(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_max_concurrent_to_4(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_MAX_CONCURRENT", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.max_concurrent == 4
 
-    def test_should_default_queue_timeout_to_10_seconds(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_queue_timeout_to_10_seconds(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_QUEUE_TIMEOUT", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.queue_timeout == 10
 
-    def test_should_default_isolation_to_shared(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_default_isolation_to_shared(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         from lfx.mcp.shell.shell_config import IsolationMode
 
         # ``shared`` is the historical behaviour; ephemeral is opt-in so
         # operators upgrading do not see a sudden state-loss change.
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.delenv("LANGFLOW_SHELL_ISOLATION", raising=False)
         config = ShellServerConfig.from_environment()
         assert config.isolation is IsolationMode.SHARED
 
-    def test_should_read_ephemeral_isolation_from_env(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_read_ephemeral_isolation_from_env(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         from lfx.mcp.shell.shell_config import IsolationMode
 
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.setenv("LANGFLOW_SHELL_ISOLATION", "ephemeral")
         config = ShellServerConfig.from_environment()
         assert config.isolation is IsolationMode.EPHEMERAL
 
-    def test_should_reject_unknown_isolation_value(self, monkeypatch: pytest.MonkeyPatch):
+    def test_should_reject_unknown_isolation_value(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         monkeypatch.setenv("LANGFLOW_SHELL_ISOLATION", "container")
         with pytest.raises(ValueError, match="LANGFLOW_SHELL_ISOLATION"):
             ShellServerConfig.from_environment()
 
 
 class TestShellServerConfigEnvOverrides:
+    @pytest.fixture(autouse=True)
+    def _set_working_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        # WORKING_DIR is now mandatory (PR review #1); every test in this class
+        # asserts behaviour orthogonal to it.
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
+
     def test_should_read_working_directory_from_env(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
         monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         config = ShellServerConfig.from_environment()
@@ -99,6 +124,12 @@ class TestShellServerConfigEnvOverrides:
 
 
 class TestShellServerConfigValidation:
+    @pytest.fixture(autouse=True)
+    def _set_working_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        # Same rationale as TestShellServerConfigEnvOverrides: each test below
+        # exercises a *non*-WORKING_DIR validation path.
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
+
     def test_should_reject_unknown_mode(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setenv("LANGFLOW_SHELL_MODE", "anything_else")
         with pytest.raises(ValueError, match="LANGFLOW_SHELL_MODE"):
@@ -142,8 +173,8 @@ class TestShellServerConfigValidation:
 
 
 class TestShellServerConfigImmutability:
-    def test_should_be_frozen(self, monkeypatch: pytest.MonkeyPatch):
-        monkeypatch.delenv("LANGFLOW_SHELL_WORKING_DIR", raising=False)
+    def test_should_be_frozen(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+        monkeypatch.setenv("LANGFLOW_SHELL_WORKING_DIR", str(tmp_path))
         config = ShellServerConfig.from_environment()
         with pytest.raises(dataclasses.FrozenInstanceError):
             config.max_timeout = 99  # type: ignore[misc]

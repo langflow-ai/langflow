@@ -55,7 +55,12 @@ dependencies = [
 [project.scripts]
 lfx = "lfx.__main__:main"
 lfx-mcp = "lfx.mcp.__main__:main"
-lfx-shell-mcp = "lfx.mcp.shell.__main__:main"
+# Note: no `lfx-shell-mcp` console script. Langflow's MCPServerConfig allowlist
+# (ALLOWED_MCP_COMMANDS in api/v2/schemas.py) only permits `python` / `python3`
+# as the launcher binary, so the shell server registers as
+# `python -m lfx.mcp.shell`. Shipping a console script that the allowlist would
+# reject (and that this binary's only intended caller cannot use) would invite
+# confusion. PR review #7.
 
 [project.entry-points.pytest11]
 lfx = "lfx.testing"

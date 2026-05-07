@@ -10,6 +10,17 @@ Builders are provided so callers don't have to know about FastMCP
 internals: production code passes a :class:`mcp.server.fastmcp.Context`
 to :func:`from_fastmcp_context`; tests can construct
 :class:`AuditContext` directly.
+
+V1 KNOWN LIMITATION (PR review #6) — multi-tenant attribution gap:
+``client_id`` is the FastMCP *host*'s identifier. Over stdio that is
+the langflow process itself, not the langflow user who triggered the
+flow. As written, the audit log can attribute a command to a Langflow
+deployment but NOT to the human (or service-account) that initiated
+the call. A real identity passthrough — Langflow stamping the calling
+user into the MCP context, the server reading it from a per-call header
+or token — is V2 work. Single-tenant deployments still get useful
+forensic value; multi-tenant operators must layer their own attribution
+upstream until V2 lands.
 """
 
 from __future__ import annotations

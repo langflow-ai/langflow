@@ -39,7 +39,8 @@ _INTENT_BY_BINARY: dict[str, CommandIntent] = {
     "egrep": CommandIntent.READ_ONLY,
     "fgrep": CommandIntent.READ_ONLY,
     "rg": CommandIntent.READ_ONLY,
-    "find": CommandIntent.READ_ONLY,
+    # NOTE: ``find`` is intentionally absent from this map — it is
+    # contextual (see ``_classify_find``).
     "locate": CommandIntent.READ_ONLY,
     "pwd": CommandIntent.READ_ONLY,
     "echo": CommandIntent.READ_ONLY,
@@ -78,8 +79,13 @@ _INTENT_BY_BINARY: dict[str, CommandIntent] = {
     "gzip": CommandIntent.WRITE,
     "gunzip": CommandIntent.WRITE,
     "git": CommandIntent.WRITE,
-    "sed": CommandIntent.WRITE,
-    "awk": CommandIntent.WRITE,
+    # NOTE: scripting engines (awk, sed, perl, tcl, lua, osascript, xargs,
+    # ruby, node, deno, bun, php) are intentionally absent. Each has
+    # script-level shell-exec primitives ("awk 'BEGIN{system(...)}'",
+    # "sed 'e <cmd>'") whose payload lives in a single-quoted argv slot
+    # the path validator cannot see into. Leaving them unmapped means
+    # they fall through to UNKNOWN and the pipeline fail-closes — the
+    # operator must add an explicit allow-list to enable them.
     # Destructive
     "rm": CommandIntent.DESTRUCTIVE,
     "rmdir": CommandIntent.DESTRUCTIVE,
@@ -322,8 +328,53 @@ def _classify_set(command: str) -> CommandIntent:
     return CommandIntent.WRITE if "=" in first_token else CommandIntent.READ_ONLY
 
 
+# ``find`` primaries that turn the command into arbitrary exec or filesystem
+# mutation, escaping the READ_ONLY classification it would otherwise get.
+# Matched as case-insensitive whole tokens against the argv tail (we lowercase
+# the whole tail and walk it). False positives are acceptable: an operator that
+# wants to *search for the literal string ``-exec``* can quote it differently
+# or tighten the rule later — flagging is the conservative default.
+_FIND_DANGEROUS_PRIMARIES = frozenset(
+    {
+        "-exec",
+        "-execdir",
+        "-delete",
+        "-fprint",
+        "-fprintf",
+        "-fprint0",
+        "-ok",  # Same shape as -exec but interactive — still arbitrary exec.
+        "-okdir",
+    }
+)
+
+
+def _classify_find(command: str) -> CommandIntent:
+    """Classify ``find`` based on its argument primaries.
+
+    Plain queries (``find . -name foo``) are read-only inspection. Queries
+    that include ``-exec``/``-execdir``/``-ok``/``-okdir`` (arbitrary command
+    execution per match), ``-delete`` (filesystem removal), or ``-fprint*``
+    (writes to a path) escalate to DESTRUCTIVE so the destructive-pattern
+    validator gets a chance to reject them.
+
+    Why DESTRUCTIVE rather than UNKNOWN: UNKNOWN is fail-closed at the
+    pipeline level but reads as "we don't know what this is". Marking the
+    real risk profile (``find -delete`` *is* destructive) keeps audit logs
+    accurate and matches how operators reason about it.
+    """
+    parts = command.strip().split(maxsplit=1)
+    if len(parts) < _BINARY_AND_AT_LEAST_ONE_ARG:
+        return CommandIntent.READ_ONLY
+    tail_tokens = parts[1].split()
+    for token in tail_tokens:
+        if token.lower() in _FIND_DANGEROUS_PRIMARIES:
+            return CommandIntent.DESTRUCTIVE
+    return CommandIntent.READ_ONLY
+
+
 _CONTEXTUAL_CLASSIFIERS: dict[str, Callable[[str], CommandIntent]] = {
     "set": _classify_set,
+    "find": _classify_find,
 }
 
 

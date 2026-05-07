@@ -21,11 +21,25 @@ from pathlib import Path, PureWindowsPath
 
 from lfx.mcp.shell.shell_types import RejectionReason, ValidationResult
 
-_HOME_REFERENCES_POSIX = ("~", "$HOME")
+_HOME_REFERENCES_POSIX = ("~",)
 _PARENT_TRAVERSAL = re.compile(r"(?:^|[/\\])\.\.(?:[/\\]|$)")
+
+# Both ``$HOME`` and ``${HOME}`` shell-expand to the same path, so the
+# validator must catch both forms. Same logic for any env-var reference
+# (``$VAR`` and ``${VAR}``). The ``\{?`` and ``\}?`` make the braces
+# optional; when present, both must appear (not enforced by the regex
+# itself, but a stray ``${VAR`` token is unusual enough to ignore).
+# Match against the *bare* env-var name with no path separator
+# requirement — ``cat $HOME`` and ``echo ${HOME}`` are both leaks.
+_HOME_REFERENCES_POSIX_PATTERNS = (re.compile(r"\$\{?HOME\}?"),)
 
 # Windows-shaped home references — any token containing one of these
 # substrings is rejected. Case-insensitive.
+# Three forms covered per env var:
+#   * ``%VAR%``     — cmd.exe
+#   * ``$env:VAR``  — PowerShell
+#   * ``${VAR}``    — bash on Windows (Git Bash, WSL, MSYS2). Caught by
+#                     the bare ``\$\{?VAR\}?`` pattern below.
 _HOME_REFERENCES_WINDOWS_PATTERNS = (
     re.compile(r"%USERPROFILE%", re.IGNORECASE),
     re.compile(r"%APPDATA%", re.IGNORECASE),
@@ -36,7 +50,13 @@ _HOME_REFERENCES_WINDOWS_PATTERNS = (
     re.compile(r"\$env:APPDATA\b", re.IGNORECASE),
     re.compile(r"\$env:LOCALAPPDATA\b", re.IGNORECASE),
     re.compile(r"\$env:HOMEDRIVE\b", re.IGNORECASE),
-    re.compile(r"\$HOME\b"),
+    re.compile(r"\$env:HOMEPATH\b", re.IGNORECASE),
+    re.compile(r"\$\{?env:HOME\}?", re.IGNORECASE),
+    re.compile(r"\$\{?USERPROFILE\}?", re.IGNORECASE),
+    re.compile(r"\$\{?APPDATA\}?", re.IGNORECASE),
+    re.compile(r"\$\{?LOCALAPPDATA\}?", re.IGNORECASE),
+    re.compile(r"\$\{?HOMEDRIVE\}?", re.IGNORECASE),
+    re.compile(r"\$\{?HOMEPATH\}?", re.IGNORECASE),
 )
 
 # Drive-letter (``C:\``, ``C:/``) and UNC (``\\server\share``) prefixes.
@@ -114,6 +134,9 @@ def _check_home_reference(token: str) -> str | None:
     for ref in _HOME_REFERENCES_POSIX:
         if token == ref or token.startswith((ref + "/", ref + "\\")):
             return f"references home directory ({ref})"
+    for pattern in _HOME_REFERENCES_POSIX_PATTERNS:
+        if pattern.search(token):
+            return f"references home env var ({pattern.pattern})"
     for pattern in _HOME_REFERENCES_WINDOWS_PATTERNS:
         if pattern.search(token):
             return f"references Windows home env var ({pattern.pattern})"

@@ -350,6 +350,14 @@ class Settings(BaseSettings):
     # Add projects to MCP servers automatically on creation
     add_projects_to_mcp_servers: bool = True
     """If set to True, newly created projects will be added to the user's MCP servers config automatically."""
+
+    # Default MCP servers (e.g. the in-tree shell-execution server) auto-installed
+    # for every user on startup. Set to False to skip the registration entirely
+    # — operators who curate their own MCP catalog will want this off.
+    enable_default_mcp_servers: bool = True
+    """If set to True, Langflow auto-installs the curated default MCP servers
+    (currently the in-tree ``lfx.mcp.shell`` server) for every existing user
+    on startup. Idempotent and reconciles drift on auto-configured entries."""
     # MCP Composer
     mcp_composer_enabled: bool = True
     """If set to False, Langflow will not start the MCP Composer service."""

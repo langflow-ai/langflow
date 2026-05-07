@@ -90,19 +90,41 @@ class ShellServerConfig:
 
 
 def _read_working_dir() -> str:
+    """Resolve the sandbox working directory.
+
+    Why no fallback: the entire security model leans on this being a
+    deliberate sandbox. If we silently fell back to ``Path.cwd()``, an
+    operator who happened to start langflow from ``$HOME`` (or any dir
+    holding user files) would hand the agent read access to everything
+    under it. Explicit configuration is the only safe contract.
+    """
     raw = os.environ.get(ENV_WORKING_DIR)
-    candidate = Path(raw) if raw else Path.cwd()
-    resolved = candidate.resolve()
+    if not raw:
+        msg = (
+            f"{ENV_WORKING_DIR} must be set to an existing sandbox directory. "
+            "Refusing to default to the current working directory because that "
+            "would expose whatever files are under it to shell tool callers."
+        )
+        raise ValueError(msg)
+    resolved = Path(raw).resolve()
     if not resolved.exists() or not resolved.is_dir():
-        msg = f"{ENV_WORKING_DIR} must point to an existing directory: {candidate}"
+        msg = f"{ENV_WORKING_DIR} must point to an existing directory: {raw}"
         raise ValueError(msg)
     return str(resolved)
 
 
 def _read_mode() -> ShellMode:
+    """Resolve the read/write mode.
+
+    Why ``READ_ONLY`` is the default: a fresh install handed a ``read_write``
+    server can run ``git``, ``pip install``, ``npm``, ``curl``, ``rsync``,
+    etc. as the langflow process user. For any deployment with more than
+    one tenant that's a wide door to leave open. Operators that need
+    write access opt in explicitly.
+    """
     raw = os.environ.get(ENV_MODE)
     if raw is None:
-        return ShellMode.READ_WRITE
+        return ShellMode.READ_ONLY
     normalized = raw.strip().lower()
     try:
         return ShellMode(normalized)

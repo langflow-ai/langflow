@@ -2,8 +2,6 @@
 
 Usage:
     python -m lfx.mcp.shell
-    # or via console script:
-    lfx-shell-mcp
 
 Environment variables:
     LANGFLOW_SHELL_WORKING_DIR        Working directory for commands
