@@ -92,6 +92,47 @@ def test_should_reject_when_logical_and_chains_destructive(tmp_path: Path):
     assert result.reason == RejectionReason.DESTRUCTIVE_PATTERN
 
 
+def test_should_reject_rm_in_read_only_when_separated_by_newline(tmp_path: Path):
+    r"""Regression: newline-injection bypass — second reviewer scenario.
+
+    With the bug, ``"ls\nrm somefile"`` was treated as a single subcommand;
+    classification keyed on ``ls`` (READ_ONLY); the ``rm`` (DESTRUCTIVE
+    intent) never reached :func:`validate_mode` and read_only mode was
+    silently bypassed. ``rm somefile`` is not a catastrophic pattern, so
+    the whole-input destructive regex did not catch it either.
+    """
+    result = run_validation_pipeline(
+        "ls\nrm somefile",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_should_reject_write_in_read_only_when_separated_by_newline(tmp_path: Path):
+    r"""Regression: newline-injection bypass of read_only mode.
+
+    Reviewer-reported scenario: ``"ls\ntouch newfile"`` was passing
+    read_only validation because classification keyed on ``ls`` alone.
+    """
+    result = run_validation_pipeline(
+        "ls\ntouch newfile",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
+def test_should_reject_write_in_read_only_when_separated_by_crlf(tmp_path: Path):
+    """CRLF line endings (Windows-origin payloads) must not bypass read_only either."""
+    result = run_validation_pipeline(
+        "ls\r\ntouch newfile",
+        _config(tmp_path, mode=ShellMode.READ_ONLY),
+    )
+    assert result.is_ok is False
+    assert result.reason == RejectionReason.MODE_VIOLATION
+
+
 def test_should_pass_safe_chained_commands(tmp_path: Path):
     result = run_validation_pipeline("ls && echo done", _config(tmp_path))
     assert result.is_ok is True

@@ -16,7 +16,10 @@ construct.
 from __future__ import annotations
 
 _TWO_CHAR_OPS = ("&&", "||")
-_ONE_CHAR_OPS = (";", "|", "&")
+# Newline (\n) and carriage return (\r) are command terminators in POSIX sh,
+# PowerShell, and cmd.exe; omitting them lets ``"ls\nrm x"`` survive as a
+# single subcommand and bypass destructive/mode validation.
+_ONE_CHAR_OPS = (";", "|", "&", "\n", "\r")
 
 
 def split_subcommands(command: str) -> list[str]:
