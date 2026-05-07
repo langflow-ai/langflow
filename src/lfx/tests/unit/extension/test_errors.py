@@ -79,6 +79,11 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
     "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
     "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
+    "migration-table-missing": "error[migration-table-missing]: Migration table not found at loc.",
+    "migration-table-unreadable": "error[migration-table-unreadable]: Could not read migration table at loc: msg",
+    "migration-table-invalid": "error[migration-table-invalid]: Invalid migration table at loc: msg",
+    "component-not-found-with-hint": "error[component-not-found-with-hint]: Legacy component reference 'content' (in flow node loc) is not in the migration table.",  # noqa: E501
+    "component-name-ambiguous": "error[component-name-ambiguous]: Legacy component reference 'content' (in flow node loc) matches more than one migration entry.",  # noqa: E501
 }
 
 

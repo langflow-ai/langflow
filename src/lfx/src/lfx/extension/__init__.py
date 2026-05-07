@@ -45,6 +45,16 @@ from lfx.extension.manifest import (
     ManifestSource,
     load_manifest,
 )
+from lfx.extension.migration import (
+    MIGRATION_SCHEMA_VERSION,
+    MIGRATION_TABLE_PATH,
+    MigrationEntry,
+    MigrationReport,
+    MigrationTable,
+    NodeRewriteRecord,
+    load_migration_table,
+    migrate_flow_payload,
+)
 from lfx.extension.validate import (
     ValidateReport,
     validate_extension,
@@ -54,6 +64,8 @@ __all__ = [
     "BUNDLE_API_VERSION",
     "ERROR_CODES",
     "EXTENSION_SCHEMA_URL",
+    "MIGRATION_SCHEMA_VERSION",
+    "MIGRATION_TABLE_PATH",
     "SCHEMA_VERSION",
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
@@ -65,6 +77,10 @@ __all__ = [
     "LoadResult",
     "LoadedComponent",
     "ManifestSource",
+    "MigrationEntry",
+    "MigrationReport",
+    "MigrationTable",
+    "NodeRewriteRecord",
     "ValidateReport",
     "discover_inline_bundles",
     "filter_plugin_entry_points",
@@ -72,6 +88,8 @@ __all__ = [
     "installed_extension_roots",
     "load_extension",
     "load_manifest",
+    "load_migration_table",
     "manifest_owning_distributions",
+    "migrate_flow_payload",
     "validate_extension",
 ]

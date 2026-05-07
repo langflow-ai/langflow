@@ -62,6 +62,12 @@ ERROR_CODES: frozenset[str] = frozenset(
         "duplicate-component-name",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        # Migration-specific codes
+        "migration-table-missing",
+        "migration-table-unreadable",
+        "migration-table-invalid",
+        "component-not-found-with-hint",
+        "component-name-ambiguous",
     }
 )
 # NOTE: ``duplicate-distribution`` will be added with the installed-package
@@ -192,6 +198,15 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "migration-table-missing": ("Migration table not found at {location}."),
+    "migration-table-unreadable": ("Could not read migration table at {location}: {message}"),
+    "migration-table-invalid": ("Invalid migration table at {location}: {message}"),
+    "component-not-found-with-hint": (
+        "Legacy component reference {content!r} (in flow node {location}) is not in the migration table."
+    ),
+    "component-name-ambiguous": (
+        "Legacy component reference {content!r} (in flow node {location}) matches more than one migration entry."
     ),
 }
 
