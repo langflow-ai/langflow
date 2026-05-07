@@ -7,6 +7,7 @@
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-global-radius: 10px;
+  --ifm-code-border-radius: 4px;
   --ifm-navbar-item-padding-vertical: 0;
   --ifm-font-family-base: "Geist", Inter, -apple-system, BlinkMacSystemFont,
     Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
@@ -1326,7 +1327,7 @@ html[data-theme="light"] .menu__link--active:not(.menu__link--sublist) {
   width: 100%;
   border: 1px solid var(--ifm-color-emphasis-200);
   border-radius: var(--ifm-global-radius);
-  background: #f7f7f9;
+  background: var(--ifm-background-surface-color);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -1392,7 +1393,7 @@ html[data-theme="light"] .menu__link--active:not(.menu__link--sublist) {
 }
 
 [data-theme="dark"] .lf-card {
-  background: #1a1a1f;
+  background: var(--ifm-card-background-color, #232328);
   border-color: var(--ifm-card-border-color, #303038);
 }
 
