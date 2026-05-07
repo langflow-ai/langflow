@@ -30,11 +30,11 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
     4. This prevents DNS rebinding while maintaining full HTTPS compatibility
     """
 
-    def __init__(self, pinned_ips: dict[str, str], backend: httpcore.AsyncNetworkBackend | None = None):
+    def __init__(self, pinned_ips: dict[str, list[str]], backend: httpcore.AsyncNetworkBackend | None = None):
         """Initialize the DNS pinning backend.
 
         Args:
-            pinned_ips: Dictionary mapping hostnames to validated IP addresses
+            pinned_ips: Dictionary mapping hostnames to list of validated IP addresses
             backend: Underlying network backend (defaults to AutoBackend)
         """
         self.pinned_ips = pinned_ips
@@ -69,20 +69,32 @@ class DNSPinningNetworkBackend(httpcore.AsyncNetworkBackend):
         Returns:
             Network stream for the connection
         """
-        # Check if this hostname has a pinned IP
+        # Check if this hostname has pinned IPs
         if host in self.pinned_ips:
-            pinned_ip = self.pinned_ips[host]
-            logger.debug(f"DNS pinning: Connecting to pinned IP {pinned_ip} for hostname {host}")
+            pinned_ips = self.pinned_ips[host]
+            logger.debug(f"DNS pinning: Connecting to pinned IPs {pinned_ips} for hostname {host}")
 
-            # Connect to the pinned IP instead of the hostname
+            # Try each pinned IP in order (supports dual-stack and load balancing)
             # The TLS layer will still use the original hostname for SNI and cert verification
-            return await self._backend.connect_tcp(
-                host=pinned_ip,
-                port=port,
-                timeout=timeout,
-                local_address=local_address,
-                socket_options=socket_options,
-            )
+            last_error = None
+            for pinned_ip in pinned_ips:
+                try:
+                    logger.debug(f"DNS pinning: Attempting connection to {pinned_ip}")
+                    return await self._backend.connect_tcp(
+                        host=pinned_ip,
+                        port=port,
+                        timeout=timeout,
+                        local_address=local_address,
+                        socket_options=socket_options,
+                    )
+                except (OSError, TimeoutError) as e:
+                    last_error = e
+                    logger.debug(f"DNS pinning: Failed to connect to {pinned_ip}: {e}")
+                    continue
+
+            # All pinned IPs failed, raise the last error
+            if last_error:
+                raise last_error
 
         # No pinned IP, use normal connection
         return await self._backend.connect_tcp(
@@ -130,12 +142,12 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
         ...     response = await client.get("https://example.com/path")
     """
 
-    def __init__(self, pinned_ips: dict[str, str], **kwargs):
+    def __init__(self, pinned_ips: dict[str, list[str]], **kwargs):
         """Initialize transport with pinned DNS mappings.
 
         Args:
-            pinned_ips: Dictionary mapping hostnames to validated IP addresses.
-                       Example: {"example.com": "93.184.216.34"}
+            pinned_ips: Dictionary mapping hostnames to list of validated IP addresses.
+                       Example: {"example.com": ["93.184.216.34", "2606:2800:220:1:248:1893:25c8:1946"]}
             **kwargs: Additional arguments passed to AsyncHTTPTransport
         """
         # Create custom network backend with DNS pinning
@@ -154,16 +166,21 @@ class SSRFProtectedTransport(httpx.AsyncHTTPTransport):
         logger.debug(f"Created SSRF protected transport with pinned IPs: {pinned_ips}")
 
 
-def create_ssrf_protected_client(hostname: str, validated_ip: str, **client_kwargs) -> httpx.AsyncClient:
+def create_ssrf_protected_client(
+    hostname: str, validated_ips: list[str] | tuple[str, ...], **client_kwargs
+) -> httpx.AsyncClient:
     """Create an httpx client with DNS pinning for SSRF protection.
 
     Args:
         hostname: The hostname to pin
-        validated_ip: The validated IP address to use for this hostname
+        validated_ips: List of validated IP addresses to use for this hostname.
+                      IPs will be tried in order for dual-stack/load-balanced hosts.
         **client_kwargs: Additional arguments for AsyncClient (e.g., timeout, headers)
 
     Returns:
         Configured AsyncClient with DNS pinning
     """
-    transport = SSRFProtectedTransport(pinned_ips={hostname: validated_ip})
+    # Convert to list if tuple
+    ip_list = list(validated_ips) if isinstance(validated_ips, tuple) else validated_ips
+    transport = SSRFProtectedTransport(pinned_ips={hostname: ip_list})
     return httpx.AsyncClient(transport=transport, **client_kwargs)

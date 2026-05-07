@@ -524,11 +524,11 @@ class APIRequestComponent(Component):
 
             if hostname:
                 # Create client with DNS pinning to prevent rebinding attacks
-                # The custom transport will replace hostname with pinned IP
+                # The custom transport will try validated IPs in order (supports dual-stack/load balancing)
                 # while preserving the Host header for virtual hosting/SNI
                 async with create_ssrf_protected_client(
                     hostname=hostname,
-                    validated_ip=validated_ips[0],  # Use first validated IP
+                    validated_ips=validated_ips,  # Pass all validated IPs
                 ) as client:
                     result = await self.make_request(
                         client,

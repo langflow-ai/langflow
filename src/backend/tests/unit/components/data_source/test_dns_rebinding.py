@@ -314,5 +314,64 @@ class TestDNSRebindingProtection:
             assert "internal.example.com" in url_str, f"Allowlisted host should preserve hostname: {url_str}"
             assert "10.0.0.1" not in url_str, f"Allowlisted host should not use IP: {url_str}"
 
+    @pytest.mark.asyncio
+    async def test_dns_pinning_with_multiple_ips_fallback(self, component):
+        """Test that DNS pinning tries multiple IPs when first one fails (dual-stack/load balancing)."""
+        from httpcore._backends.auto import AutoBackend
 
-# Made with Bob
+        component.url_input = "http://dual-stack.example.com/api"
+
+        # Track which IPs were attempted
+        attempted_ips = []
+
+        def mock_getaddrinfo(host, port, family=0, type_=0, proto=0, flags=0):
+            """Mock DNS resolution to return multiple IPs (IPv4 and IPv6)."""
+            if host == "dual-stack.example.com":
+                # Return both IPv4 and IPv6 addresses (dual-stack)
+                return [
+                    (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0)),  # IPv4
+                    (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2606:2800:220:1:248:1893:25c8:1946", 0)),  # IPv6
+                ]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (host, 0))]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Mock connection that fails on first IP, succeeds on second."""
+            nonlocal attempted_ips
+            attempted_ips.append(host)
+
+            # First IP fails (simulating IPv4 unreachable)
+            if host == "93.184.216.34":
+                msg = "Connection refused"
+                raise OSError(msg)
+
+            # Second IP succeeds (IPv6 works)
+            if host == "2606:2800:220:1:248:1893:25c8:1946":
+                return httpcore.AsyncMockStream(
+                    [
+                        b"HTTP/1.1 200 OK\r\n",
+                        b"Content-Type: application/json\r\n",
+                        b"Content-Length: 15\r\n",
+                        b"\r\n",
+                        b'{"status":"ok"}',
+                    ]
+                )
+
+            msg = f"Unexpected host: {host}"
+            raise OSError(msg)
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            # Execute the request
+            result = await component.make_api_request()
+
+            # Verify both IPs were attempted in order
+            assert len(attempted_ips) == 2
+            assert attempted_ips[0] == "93.184.216.34"  # IPv4 tried first
+            assert attempted_ips[1] == "2606:2800:220:1:248:1893:25c8:1946"  # IPv6 tried second
+
+            # Verify the result (should succeed with second IP)
+            assert isinstance(result, Data)
+            assert result.data is not None
