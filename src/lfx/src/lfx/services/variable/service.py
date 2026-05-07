@@ -37,9 +37,9 @@ class VariableService(Service):
         if normalized == "access_token":
             return ["access_token", "token"]
         if normalized.endswith("_token"):
-            return [name, f"{name[:-len('_token')]}_access_token"]
+            return [name, f"{name[: -len('_token')]}_access_token"]
         if normalized.endswith("_access_token"):
-            return [name, f"{name[:-len('_access_token')]}_token"]
+            return [name, f"{name[: -len('_access_token')]}_token"]
         return [name]
 
     @staticmethod
