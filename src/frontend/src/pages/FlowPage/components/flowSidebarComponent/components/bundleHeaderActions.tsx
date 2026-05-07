@@ -1,0 +1,215 @@
+import { type MouseEvent, memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select-custom";
+import type {
+  ExtensionErrorPayload,
+  ReloadBundleResponse,
+} from "@/controllers/API/queries/extensions";
+import { useReloadBundle } from "@/controllers/API/queries/extensions";
+import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
+import useAlertStore from "@/stores/alertStore";
+
+const RELOAD_VALUE = "reload" as const;
+
+type AlertList = { title: string; list: string[] } | undefined;
+
+/**
+ * Render a list of typed errors / warnings into the alert-store list shape.
+ *
+ * The UI shows the first sentence (code + message) plus the hint indented;
+ * keeping the hint in the same alert means the user does not need to dig
+ * for the fix when a reload fails.  Returns ``undefined`` when the input
+ * list is empty so the alert store does not render an empty bullet list.
+ */
+function renderTypedErrorList(
+  payloads: readonly ExtensionErrorPayload[],
+): AlertList {
+  if (payloads.length === 0) {
+    return undefined;
+  }
+  const list = payloads.flatMap((p) => {
+    const lines: string[] = [`[${p.code}] ${p.message}`];
+    if (p.hint) {
+      lines.push(`  ${p.hint}`);
+    }
+    return lines;
+  });
+  return { title: "Reload diagnostics", list };
+}
+
+interface BundleHeaderActionsProps {
+  bundleName: string;
+  /**
+   * Distribution id this bundle was installed from.  When undefined the
+   * component renders nothing -- the Reload action requires both halves
+   * of the registry coordinate so a click cannot 404 on the user.
+   */
+  extensionId: string | undefined;
+  displayName: string;
+}
+
+/**
+ * Overflow trigger ("⋮") next to the Bundle header chevron, plus the
+ * matching context-menu wiring (the bundleItems wrapper handles the
+ * right-click capture and forwards "reload" through this component's
+ * Select).  Pure UI -- network / toast logic lives here so the parent
+ * does not have to import ``useReloadBundle``.
+ */
+const BundleHeaderActionsInner = ({
+  bundleName,
+  extensionId,
+  displayName,
+}: BundleHeaderActionsProps) => {
+  const { t } = useTranslation();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const { mutate: reloadBundle, isPending } = useReloadBundle({
+    onSuccess: (data: ReloadBundleResponse) => {
+      // Two success-path shapes per the reload endpoint contract:
+      //   1) ok=true: clean reload, components_added/removed describe the
+      //      delta.  Show a green toast.
+      //   2) ok=false: the pipeline ran but rejected the new source
+      //      (broken module, name mismatch, missing path).  Show a red
+      //      toast with the typed errors + hints inline.
+      if (data.ok) {
+        const added = data.components_added.length;
+        const removed = data.components_removed.length;
+        const summary =
+          added === 0 && removed === 0
+            ? t("sidebar.bundles.reload.success.noChanges", {
+                bundle: displayName,
+                defaultValue: "Reloaded {{bundle}} (no component changes)",
+              })
+            : t("sidebar.bundles.reload.success.withChanges", {
+                bundle: displayName,
+                added,
+                removed,
+                defaultValue:
+                  "Reloaded {{bundle}} (+{{added}} / -{{removed}} components)",
+              });
+        const list = renderTypedErrorList(data.warnings);
+        setSuccessData({
+          title: summary,
+          ...(list ? { list: list.list } : {}),
+        });
+        return;
+      }
+      const list = renderTypedErrorList(data.errors);
+      setErrorData({
+        title: t("sidebar.bundles.reload.failure.structural", {
+          bundle: displayName,
+          defaultValue: "Reload failed for {{bundle}}",
+        }),
+        ...(list ? { list: list.list } : {}),
+      });
+    },
+    onError: (error: Error) => {
+      const message = error?.message ?? "";
+      // The 409 case (reload-in-progress) is informational, not a hard
+      // failure: another tab / worker is already swapping the same bundle.
+      // Use the notice toast so the user gets feedback without alarming
+      // red styling.
+      if (message.startsWith("reload-in-progress:")) {
+        setNoticeData({
+          title: t("sidebar.bundles.reload.inProgress", {
+            bundle: displayName,
+            defaultValue: "Reload already in progress for {{bundle}}",
+          }),
+        });
+        return;
+      }
+      setErrorData({
+        title: t("sidebar.bundles.reload.failure.network", {
+          bundle: displayName,
+          defaultValue: "Could not reload {{bundle}}",
+        }),
+        list: [message || "Unknown error"],
+      });
+    },
+  });
+
+  const handleSelectChange = useCallback(
+    (value: string) => {
+      if (value !== RELOAD_VALUE) return;
+      if (!extensionId) return;
+      reloadBundle({ extensionId, bundleName });
+    },
+    [extensionId, bundleName, reloadBundle],
+  );
+
+  // Stop propagation so opening the menu / clicking Reload does not also
+  // collapse / expand the parent disclosure trigger.
+  const stopPropagation = useCallback(
+    (event: MouseEvent<HTMLButtonElement | HTMLDivElement>) => {
+      event.stopPropagation();
+    },
+    [],
+  );
+
+  const visible = useMemo(
+    () => ENABLE_EXTENSION_RELOAD && Boolean(extensionId),
+    [extensionId],
+  );
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <Select onValueChange={handleSelectChange}>
+      <SelectTrigger
+        tabIndex={-1}
+        onClick={stopPropagation}
+        className="h-6 w-6 border-0 p-0 shadow-none focus:ring-0 [&>svg]:hidden"
+        data-testid={`bundle-header-overflow-${bundleName}`}
+        aria-label={t("sidebar.bundles.reload.overflowAria", {
+          bundle: displayName,
+          defaultValue: "Open actions for {{bundle}}",
+        })}
+      >
+        <ForwardedIconComponent
+          name={isPending ? "Loader2" : "MoreHorizontal"}
+          className={
+            isPending
+              ? "h-4 w-4 animate-spin text-muted-foreground"
+              : "h-4 w-4 text-muted-foreground"
+          }
+        />
+      </SelectTrigger>
+      <SelectContent
+        position="popper"
+        side="bottom"
+        align="end"
+        onClick={stopPropagation}
+      >
+        <SelectItem
+          value={RELOAD_VALUE}
+          disabled={isPending}
+          data-testid={`bundle-header-reload-${bundleName}`}
+        >
+          <div className="flex items-center">
+            <ForwardedIconComponent
+              name="RefreshCw"
+              className="relative top-0.5 mr-2 h-4 w-4"
+            />
+            {t("sidebar.bundles.reload.action", {
+              defaultValue: "Reload",
+            })}
+          </div>
+        </SelectItem>
+      </SelectContent>
+    </Select>
+  );
+};
+
+export const BundleHeaderActions = memo(BundleHeaderActionsInner);
+BundleHeaderActions.displayName = "BundleHeaderActions";
+
+export default BundleHeaderActions;
