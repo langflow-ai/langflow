@@ -710,6 +710,13 @@ html[data-theme="light"] .sidebar-group-label {
   -webkit-mask-position: center;
   mask-position: center;
   opacity: 0.45;
+  transition: background-color 0.25s ease, opacity 0.25s ease;
+}
+
+/* Active section: icon turns primary pink */
+.sidebar-category-with-icon > .menu__list-item-collapsible > .menu__link--active::before {
+  background-color: var(--ifm-color-primary) !important;
+  opacity: 0.9;
 }
 
 /* Sidebar icon colors via CSS filters / mask approach */
