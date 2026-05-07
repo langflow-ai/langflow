@@ -95,6 +95,7 @@ html[data-theme="light"] .navbar__logo {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.25s ease;
   }
 
   [class*="sidebarViewport"]:hover {
@@ -112,7 +113,7 @@ html[data-theme="light"] .navbar__logo {
   [class*="sidebarViewport"]::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 4px;
-    transition: background 0.2s ease;
+    transition: background 0.25s ease;
   }
 
   [class*="sidebarViewport"]:hover::-webkit-scrollbar-thumb {
@@ -124,6 +125,7 @@ html[data-theme="light"] .navbar__logo {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.25s ease;
   }
 
   [class*="tableOfContents"]:hover {
@@ -141,6 +143,7 @@ html[data-theme="light"] .navbar__logo {
   [class*="tableOfContents"]::-webkit-scrollbar-thumb {
     background: transparent;
     border-radius: 4px;
+    transition: background 0.25s ease;
   }
 
   [class*="tableOfContents"]:hover::-webkit-scrollbar-thumb {
