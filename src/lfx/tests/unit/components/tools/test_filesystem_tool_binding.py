@@ -24,11 +24,10 @@ def _build_component(
     base_dir: Path,
     user_id: str,
 ) -> FileSystemToolComponent:
-    monkeypatch.setenv("LANGFLOW_FS_TOOL_USER_ISOLATION", "auto")
     monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(base_dir))
-    monkeypatch.setenv("LANGFLOW_FS_TOOL_PEPPER_PATH", str(base_dir / ".pepper"))
-    monkeypatch.delenv("LANGFLOW_FS_TOOL_AUDIT_LOG", raising=False)
     component = FileSystemToolComponent(root_path="", read_only=False)
+    # Tool binding only matters when isolation is active (AUTO_LOGIN=False).
+    component._resolve_auto_login = lambda: False  # type: ignore[method-assign]
     component._user_id = user_id
     return component
 

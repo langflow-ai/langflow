@@ -1,4 +1,12 @@
-"""Unit tests for the isolation config layer of the FileSystem tool."""
+"""Unit tests for the isolation config layer of the FileSystem tool.
+
+The config layer owns ONE responsibility: turn environment configuration into a
+frozen ``IsolationConfig`` so the component code can treat it as immutable data.
+
+Single env var: ``LANGFLOW_FS_TOOL_BASE_DIR``. Pepper file is auto-derived under
+``<base>/.fs_pepper``. Behavior (shared vs isolated) is decided by the
+component at call time based on ``AUTO_LOGIN``, NOT by the config.
+"""
 
 from __future__ import annotations
 
@@ -10,67 +18,26 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestResolveIsolationMode:
-    """Slice B1 — env var → IsolationMode enum (case-insensitive, defaults to AUTO)."""
-
-    def test_should_default_to_auto_when_value_is_none(self) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            resolve_isolation_mode,
-        )
-
-        assert resolve_isolation_mode(None) is IsolationMode.AUTO
-
-    def test_should_default_to_auto_when_value_is_empty_string(self) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            resolve_isolation_mode,
-        )
-
-        assert resolve_isolation_mode("") is IsolationMode.AUTO
-
-    @pytest.mark.parametrize("raw", ["off", "OFF", " off ", "Off"])
-    def test_should_accept_off_case_insensitively(self, raw: str) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            resolve_isolation_mode,
-        )
-
-        assert resolve_isolation_mode(raw) is IsolationMode.OFF
-
-    @pytest.mark.parametrize("raw", ["on", "ON", " on "])
-    def test_should_accept_on_case_insensitively(self, raw: str) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            resolve_isolation_mode,
-        )
-
-        assert resolve_isolation_mode(raw) is IsolationMode.ON
-
-    def test_should_reject_when_value_is_invalid(self) -> None:
-        from lfx.components.tools._filesystem_isolation import resolve_isolation_mode
-
-        with pytest.raises(ValueError, match="LANGFLOW_FS_TOOL_USER_ISOLATION"):
-            resolve_isolation_mode("strict")
-
-
 class TestLoadIsolationConfig:
-    """Slice B2 — read env vars into a frozen IsolationConfig."""
+    """``load_isolation_config`` reads env vars into a frozen ``IsolationConfig``."""
 
-    def test_should_default_paths_under_default_config_dir(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            load_isolation_config,
-        )
+    def test_should_default_base_dir_under_default_config_dir_when_env_var_unset(
+        self, tmp_path: Path
+    ) -> None:
+        from lfx.components.tools._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)
 
-        assert config.mode is IsolationMode.AUTO
         assert config.base_dir == (tmp_path / "fs_sandbox").resolve()
-        assert config.pepper_path == (tmp_path / ".fs_pepper").resolve()
-        assert config.audit_log_path is None
 
-    def test_should_override_base_dir_when_env_var_set(self, tmp_path: Path) -> None:
+    def test_should_derive_pepper_path_under_base_dir(self, tmp_path: Path) -> None:
+        from lfx.components.tools._filesystem_isolation import load_isolation_config
+
+        config = load_isolation_config(env={}, default_config_dir=tmp_path)
+
+        assert config.pepper_path == (tmp_path / "fs_sandbox" / ".fs_pepper").resolve()
+
+    def test_should_override_base_dir_when_env_var_is_set(self, tmp_path: Path) -> None:
         from lfx.components.tools._filesystem_isolation import load_isolation_config
 
         custom_base = tmp_path / "custom_root"
@@ -80,44 +47,35 @@ class TestLoadIsolationConfig:
 
         assert config.base_dir == custom_base.resolve()
 
-    def test_should_override_audit_log_path_when_env_var_set(self, tmp_path: Path) -> None:
+    def test_should_track_pepper_path_under_overridden_base_dir(self, tmp_path: Path) -> None:
         from lfx.components.tools._filesystem_isolation import load_isolation_config
 
-        audit_log = tmp_path / "audit.jsonl"
-        env = {"LANGFLOW_FS_TOOL_AUDIT_LOG": str(audit_log)}
+        custom_base = tmp_path / "custom_root"
+        env = {"LANGFLOW_FS_TOOL_BASE_DIR": str(custom_base)}
 
         config = load_isolation_config(env=env, default_config_dir=tmp_path)
 
-        assert config.audit_log_path == audit_log.resolve()
+        assert config.pepper_path == (custom_base / ".fs_pepper").resolve()
 
-    def test_should_treat_empty_audit_log_env_var_as_disabled(self, tmp_path: Path) -> None:
+    def test_should_treat_empty_base_dir_env_var_as_unset(self, tmp_path: Path) -> None:
+        # Empty env var must NOT make the component fail closed at config-read
+        # time — falling back to the default keeps OSS / desktop installs alive
+        # when an operator clears the var without thinking.
         from lfx.components.tools._filesystem_isolation import load_isolation_config
 
-        env = {"LANGFLOW_FS_TOOL_AUDIT_LOG": ""}
+        env = {"LANGFLOW_FS_TOOL_BASE_DIR": ""}
 
         config = load_isolation_config(env=env, default_config_dir=tmp_path)
 
-        assert config.audit_log_path is None
-
-    def test_should_apply_isolation_mode_from_env(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import (
-            IsolationMode,
-            load_isolation_config,
-        )
-
-        env = {"LANGFLOW_FS_TOOL_USER_ISOLATION": "on"}
-
-        config = load_isolation_config(env=env, default_config_dir=tmp_path)
-
-        assert config.mode is IsolationMode.ON
+        assert config.base_dir == (tmp_path / "fs_sandbox").resolve()
 
     def test_should_be_immutable(self, tmp_path: Path) -> None:
-        # Why this test: the config is read once and threaded through every
-        # tool call; mutation would invite TOCTOU bugs where one operation sees
-        # one mode and another sees a different one mid-flight.
+        # The config is read once per call and threaded through every helper;
+        # mutating it mid-flight would invite TOCTOU bugs where one operation
+        # sees one base_dir and another sees a different one.
         from lfx.components.tools._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)
 
         with pytest.raises((AttributeError, TypeError)):
-            config.mode = "off"  # type: ignore[misc]
+            config.base_dir = tmp_path / "other"  # type: ignore[misc]
