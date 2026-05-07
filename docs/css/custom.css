@@ -1144,7 +1144,7 @@ html[data-theme="light"] .sidebar-group-label {
    ======================================== */
 
 .table-of-contents {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   border-left: 1px solid var(--ifm-color-emphasis-200);
 }
 
