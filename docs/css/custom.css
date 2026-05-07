@@ -1348,11 +1348,14 @@ html[data-theme="light"] .sidebar-group-label {
   flex-shrink: 0;
 }
 
+
 .lf-card-title {
   font-size: 1.0625rem;
   font-weight: 600;
-  margin: 0;
+  margin: 0 !important;
   line-height: 1.4;
+  min-width: 0;
+  flex: 1;
 }
 
 .lf-card-body {
