@@ -48,7 +48,7 @@ Volumes:
 
 ### PostgreSQL Service
 
-The `postgres` service uses the `postgres:16` Docker image and exposes port 5432.
+The `postgres` service uses the `postgres:16-bookworm` Docker image and exposes port 5432. The image is pinned to the `bookworm` (Debian 12, glibc 2.36) base to keep the OS-level locale data stable across rebuilds and avoid collation version mismatch warnings on existing data volumes.
 
 Environment variables:
 
