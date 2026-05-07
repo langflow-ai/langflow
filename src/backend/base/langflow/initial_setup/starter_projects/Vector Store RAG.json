@@ -7,7 +7,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-zxsrb",
+            "id": "ChatInput-QY6i6",
             "name": "message",
             "output_types": [
               "Message"
@@ -15,7 +15,7 @@
           },
           "targetHandle": {
             "fieldName": "question",
-            "id": "Prompt-PG7Iw",
+            "id": "Prompt-POcpa",
             "inputTypes": [
               "Message",
               "Text"
@@ -23,12 +23,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-zxsrb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zxsrbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-PG7Iw{œfieldNameœ:œquestionœ,œidœ:œPrompt-PG7Iwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-QY6i6{œdataTypeœ:œChatInputœ,œidœ:œChatInput-QY6i6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Prompt-POcpa{œfieldNameœ:œquestionœ,œidœ:œPrompt-POcpaœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-zxsrb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zxsrbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-PG7Iw",
-        "targetHandle": "{œfieldNameœ: œquestionœ, œidœ: œPrompt-PG7Iwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-QY6i6",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-QY6i6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-POcpa",
+        "targetHandle": "{œfieldNameœ:œquestionœ,œidœ:œPrompt-POcpaœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -36,7 +36,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "parser",
-            "id": "parser-ETEeW",
+            "id": "parser-2ehJ6",
             "name": "parsed_text",
             "output_types": [
               "Message"
@@ -44,7 +44,7 @@
           },
           "targetHandle": {
             "fieldName": "context",
-            "id": "Prompt-PG7Iw",
+            "id": "Prompt-POcpa",
             "inputTypes": [
               "Message",
               "Text"
@@ -52,12 +52,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-parser-ETEeW{œdataTypeœ:œparserœ,œidœ:œparser-ETEeWœ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-PG7Iw{œfieldNameœ:œcontextœ,œidœ:œPrompt-PG7Iwœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-parser-2ehJ6{œdataTypeœ:œparserœ,œidœ:œparser-2ehJ6œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}-Prompt-POcpa{œfieldNameœ:œcontextœ,œidœ:œPrompt-POcpaœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "parser-ETEeW",
-        "sourceHandle": "{œdataTypeœ: œparserœ, œidœ: œparser-ETEeWœ, œnameœ: œparsed_textœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "Prompt-PG7Iw",
-        "targetHandle": "{œfieldNameœ: œcontextœ, œidœ: œPrompt-PG7Iwœ, œinputTypesœ: [œMessageœ, œTextœ], œtypeœ: œstrœ}"
+        "source": "parser-2ehJ6",
+        "sourceHandle": "{œdataTypeœ:œparserœ,œidœ:œparser-2ehJ6œ,œnameœ:œparsed_textœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "Prompt-POcpa",
+        "targetHandle": "{œfieldNameœ:œcontextœ,œidœ:œPrompt-POcpaœ,œinputTypesœ:[œMessageœ,œTextœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -65,7 +65,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "Prompt",
-            "id": "Prompt-PG7Iw",
+            "id": "Prompt-POcpa",
             "name": "prompt",
             "output_types": [
               "Message"
@@ -73,19 +73,19 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "LanguageModelComponent-rwe3L",
+            "id": "LanguageModelComponent-XSmrK",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-Prompt-PG7Iw{œdataTypeœ:œPromptœ,œidœ:œPrompt-PG7Iwœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-rwe3L{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-rwe3Lœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-Prompt-POcpa{œdataTypeœ:œPromptœ,œidœ:œPrompt-POcpaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-XSmrK{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XSmrKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "Prompt-PG7Iw",
-        "sourceHandle": "{œdataTypeœ: œPromptœ, œidœ: œPrompt-PG7Iwœ, œnameœ: œpromptœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-rwe3L",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-rwe3Lœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "Prompt-POcpa",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-POcpaœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LanguageModelComponent-XSmrK",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œLanguageModelComponent-XSmrKœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -93,7 +93,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "LanguageModelComponent",
-            "id": "LanguageModelComponent-rwe3L",
+            "id": "LanguageModelComponent-XSmrK",
             "name": "text_output",
             "output_types": [
               "Message"
@@ -101,7 +101,7 @@
           },
           "targetHandle": {
             "fieldName": "input_value",
-            "id": "ChatOutput-r71x3",
+            "id": "ChatOutput-7BwOj",
             "inputTypes": [
               "Data",
               "JSON",
@@ -112,12 +112,12 @@
             "type": "str"
           }
         },
-        "id": "reactflow__edge-LanguageModelComponent-rwe3L{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-rwe3Lœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-r71x3{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-r71x3œ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-LanguageModelComponent-XSmrK{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XSmrKœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-7BwOj{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7BwOjœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "LanguageModelComponent-rwe3L",
-        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-rwe3Lœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "ChatOutput-r71x3",
-        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-r71x3œ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œstrœ}"
+        "source": "LanguageModelComponent-XSmrK",
+        "sourceHandle": "{œdataTypeœ:œLanguageModelComponentœ,œidœ:œLanguageModelComponent-XSmrKœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-7BwOj",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-7BwOjœ,œinputTypesœ:[œDataœ,œJSONœ,œDataFrameœ,œTableœ,œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -125,7 +125,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "ChatInput",
-            "id": "ChatInput-zxsrb",
+            "id": "ChatInput-QY6i6",
             "name": "message",
             "output_types": [
               "Message"
@@ -133,19 +133,19 @@
           },
           "targetHandle": {
             "fieldName": "search_query",
-            "id": "KnowledgeBase-7KXpO",
+            "id": "KnowledgeBase-GjNLJ",
             "inputTypes": [
               "Message"
             ],
             "type": "str"
           }
         },
-        "id": "reactflow__edge-ChatInput-zxsrb{œdataTypeœ:œChatInputœ,œidœ:œChatInput-zxsrbœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-KnowledgeBase-7KXpO{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledgeBase-7KXpOœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "id": "reactflow__edge-ChatInput-QY6i6{œdataTypeœ:œChatInputœ,œidœ:œChatInput-QY6i6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-KnowledgeBase-GjNLJ{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledgeBase-GjNLJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
         "selected": false,
-        "source": "ChatInput-zxsrb",
-        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-zxsrbœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "KnowledgeBase-7KXpO",
-        "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKnowledgeBase-7KXpOœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
+        "source": "ChatInput-QY6i6",
+        "sourceHandle": "{œdataTypeœ:œChatInputœ,œidœ:œChatInput-QY6i6œ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "KnowledgeBase-GjNLJ",
+        "targetHandle": "{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledgeBase-GjNLJœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}"
       },
       {
         "animated": false,
@@ -153,7 +153,7 @@
         "data": {
           "sourceHandle": {
             "dataType": "KnowledgeBase",
-            "id": "KnowledgeBase-7KXpO",
+            "id": "KnowledgeBase-GjNLJ",
             "name": "retrieve_data",
             "output_types": [
               "Table"
@@ -161,7 +161,7 @@
           },
           "targetHandle": {
             "fieldName": "input_data",
-            "id": "parser-ETEeW",
+            "id": "parser-2ehJ6",
             "inputTypes": [
               "DataFrame",
               "Table",
@@ -171,12 +171,12 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-KnowledgeBase-7KXpO{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-7KXpOœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}-parser-ETEeW{œfieldNameœ:œinput_dataœ,œidœ:œparser-ETEeWœ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-KnowledgeBase-GjNLJ{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-GjNLJœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}-parser-2ehJ6{œfieldNameœ:œinput_dataœ,œidœ:œparser-2ehJ6œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "KnowledgeBase-7KXpO",
-        "sourceHandle": "{œdataTypeœ: œKnowledgeBaseœ, œidœ: œKnowledgeBase-7KXpOœ, œnameœ: œretrieve_dataœ, œoutput_typesœ: [œTableœ]}",
-        "target": "parser-ETEeW",
-        "targetHandle": "{œfieldNameœ: œinput_dataœ, œidœ: œparser-ETEeWœ, œinputTypesœ: [œDataFrameœ, œTableœ, œDataœ, œJSONœ], œtypeœ: œotherœ}"
+        "source": "KnowledgeBase-GjNLJ",
+        "sourceHandle": "{œdataTypeœ:œKnowledgeBaseœ,œidœ:œKnowledgeBase-GjNLJœ,œnameœ:œretrieve_dataœ,œoutput_typesœ:[œTableœ]}",
+        "target": "parser-2ehJ6",
+        "targetHandle": "{œfieldNameœ:œinput_dataœ,œidœ:œparser-2ehJ6œ,œinputTypesœ:[œDataFrameœ,œTableœ,œDataœ,œJSONœ],œtypeœ:œotherœ}"
       }
     ],
     "nodes": [
@@ -184,7 +184,7 @@
         "data": {
           "description": "Get chat inputs from the Playground.",
           "display_name": "Chat Input",
-          "id": "ChatInput-zxsrb",
+          "id": "ChatInput-QY6i6",
           "node": {
             "base_classes": [
               "Message"
@@ -423,7 +423,7 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "id": "ChatInput-zxsrb",
+        "id": "ChatInput-QY6i6",
         "measured": {
           "height": 207,
           "width": 320
@@ -443,7 +443,7 @@
         "data": {
           "description": "Create a prompt template with dynamic variables.",
           "display_name": "Prompt",
-          "id": "Prompt-PG7Iw",
+          "id": "Prompt-POcpa",
           "node": {
             "base_classes": [
               "Message"
@@ -638,7 +638,7 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "id": "Prompt-PG7Iw",
+        "id": "Prompt-POcpa",
         "measured": {
           "height": 429,
           "width": 320
@@ -656,9 +656,9 @@
       },
       {
         "data": {
-          "id": "note-mp5EG",
+          "id": "note-GJegX",
           "node": {
-            "description": "# 📖 README\n  Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector store with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector\n  store.\n  For example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\n  This template has two sub-flows. One flow loads data into your knowledge base, and the other is the user-driven chat flow that compares a new query against the existing\n  content in your knowledge base.\n\n  ## Quick start\n  1. Configure your **Model Provider** with your API credentials.\n  2. Select a database or create a new one using the **[Knowledge Ingestion](http://localhost:7860/assets/knowledge-bases)** feature. \n  3. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\n\n\n  ## Next steps\n  Experiment by changing the prompt and the loaded data to see how the LLM's responses change.",
+            "description": "# 📖 README\n  Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector store with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector\n  store.\n  For example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\n\n  ## Quick start\n  1. Configure your **Model Provider** with your API credentials.\n  2. Select a database or create a new one using the **[Knowledge Ingestion](http://localhost:7860/assets/knowledge-bases)** feature. \n  3. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\n\n\n  ## Next steps\n  Experiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "",
             "documentation": "",
             "template": {
@@ -669,7 +669,7 @@
         },
         "dragging": false,
         "height": 1107,
-        "id": "note-mp5EG",
+        "id": "note-GJegX",
         "measured": {
           "height": 1107,
           "width": 404
@@ -695,7 +695,7 @@
         "data": {
           "description": "Display a chat message in the Playground.",
           "display_name": "Chat Output",
-          "id": "ChatOutput-r71x3",
+          "id": "ChatOutput-7BwOj",
           "node": {
             "base_classes": [
               "Message"
@@ -955,7 +955,7 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "id": "ChatOutput-r71x3",
+        "id": "ChatOutput-7BwOj",
         "measured": {
           "height": 207,
           "width": 320
@@ -973,7 +973,7 @@
       },
       {
         "data": {
-          "id": "note-RjdkI",
+          "id": "note-H0ORp",
           "node": {
             "description": "### 💡 Configure your language model here👇",
             "display_name": "",
@@ -986,7 +986,7 @@
         },
         "dragging": false,
         "height": 324,
-        "id": "note-RjdkI",
+        "id": "note-H0ORp",
         "measured": {
           "height": 324,
           "width": 324
@@ -1005,7 +1005,7 @@
       },
       {
         "data": {
-          "id": "parser-ETEeW",
+          "id": "parser-2ehJ6",
           "node": {
             "base_classes": [
               "Message"
@@ -1182,7 +1182,7 @@
           "type": "parser"
         },
         "dragging": false,
-        "id": "parser-ETEeW",
+        "id": "parser-2ehJ6",
         "measured": {
           "height": 331,
           "width": 320
@@ -1196,7 +1196,7 @@
       },
       {
         "data": {
-          "id": "LanguageModelComponent-rwe3L",
+          "id": "LanguageModelComponent-XSmrK",
           "node": {
             "base_classes": [
               "LanguageModel",
@@ -1223,7 +1223,7 @@
             ],
             "frozen": false,
             "icon": "brain-circuit",
-            "last_updated": "2026-05-06T23:58:57.025Z",
+            "last_updated": "2026-05-07T00:31:35.156Z",
             "legacy": false,
             "lf_version": "1.9.0",
             "metadata": {
@@ -1289,10 +1289,10 @@
             "priority": 0,
             "template": {
               "_frontend_node_flow_id": {
-                "value": "45d7e57a-397e-4511-8551-58bd0884f828"
+                "value": "c60caae4-5515-44ff-a7ad-0a71f7d5175b"
               },
               "_frontend_node_folder_id": {
-                "value": "dcc5fb58-91a1-4f59-b409-f2ae85a6c66a"
+                "value": "3010eaeb-7d1e-40a2-9999-ae7357e1e6c6"
               },
               "_type": "Component",
               "api_key": {
@@ -1562,7 +1562,7 @@
           "type": "LanguageModelComponent"
         },
         "dragging": false,
-        "id": "LanguageModelComponent-rwe3L",
+        "id": "LanguageModelComponent-XSmrK",
         "measured": {
           "height": 371,
           "width": 320
@@ -1576,7 +1576,7 @@
       },
       {
         "data": {
-          "id": "KnowledgeBase-7KXpO",
+          "id": "KnowledgeBase-GjNLJ",
           "node": {
             "base_classes": [
               "Table"
@@ -1598,7 +1598,7 @@
             ],
             "frozen": false,
             "icon": "download",
-            "last_updated": "2026-05-06T23:58:57.026Z",
+            "last_updated": "2026-05-07T00:31:35.158Z",
             "legacy": false,
             "lf_version": "1.9.0",
             "metadata": {
@@ -1666,8 +1666,11 @@
                 "cache": true,
                 "display_name": "Results",
                 "group_outputs": false,
+                "loop_types": null,
                 "method": "retrieve_data",
                 "name": "retrieve_data",
+                "options": null,
+                "required_inputs": null,
                 "selected": "Table",
                 "tool_mode": true,
                 "types": [
@@ -1678,6 +1681,12 @@
             ],
             "pinned": false,
             "template": {
+              "_frontend_node_flow_id": {
+                "value": "c60caae4-5515-44ff-a7ad-0a71f7d5175b"
+              },
+              "_frontend_node_folder_id": {
+                "value": "3010eaeb-7d1e-40a2-9999-ae7357e1e6c6"
+              },
               "_type": "Component",
               "api_key": {
                 "_input_type": "SecretStrInput",
@@ -1756,6 +1765,7 @@
                 "type": "bool",
                 "value": true
               },
+              "is_refresh": false,
               "knowledge_base": {
                 "_input_type": "DropdownInput",
                 "advanced": false,
@@ -1834,7 +1844,7 @@
           "type": "KnowledgeBase"
         },
         "dragging": false,
-        "id": "KnowledgeBase-7KXpO",
+        "id": "KnowledgeBase-GjNLJ",
         "measured": {
           "height": 332,
           "width": 320
@@ -1848,14 +1858,14 @@
       }
     ],
     "viewport": {
-      "x": -111.60442059515037,
-      "y": -601.4974656583686,
-      "zoom": 0.9100121732183996
+      "x": -163.5468775046079,
+      "y": -253.5982473092156,
+      "zoom": 0.7680803396825182
     }
   },
   "description": "Load your data for chat context with Retrieval Augmented Generation.",
   "endpoint_name": null,
-  "id": "45d7e57a-397e-4511-8551-58bd0884f828",
+  "id": "c60caae4-5515-44ff-a7ad-0a71f7d5175b",
   "is_component": false,
   "last_tested_version": "1.9.2",
   "locked": false,
