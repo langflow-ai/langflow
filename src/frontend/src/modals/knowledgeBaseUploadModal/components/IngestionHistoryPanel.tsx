@@ -108,8 +108,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
               STATUS_STYLES[run.status] ?? STATUS_STYLES.pending;
             const typeLabel =
               SOURCE_TYPE_LABELS[run.source_type] ?? run.source_type;
-            const primaryLabel = run.source_name?.trim() || typeLabel;
-            const showTypeSubtitle = !!run.source_name?.trim();
+            const trimmedName = run.source_name?.trim();
+            const primaryLabel = trimmedName || typeLabel;
+            const showTypeSubtitle = !!trimmedName;
             return (
               <div
                 key={run.id}
@@ -119,7 +120,10 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 truncate">
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${statusClass}`}
+                      className={cn(
+                        "rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                        statusClass,
+                      )}
                     >
                       {run.status}
                     </span>
