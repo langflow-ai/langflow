@@ -13,15 +13,9 @@ IMPORTANT: HTTP Redirects
     See: https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 
 Configuration:
-    LANGFLOW_SSRF_PROTECTION_ENABLED: Enable/disable SSRF protection (default: false)
-        TODO: Change default to true in next major version (2.0)
+    LANGFLOW_SSRF_PROTECTION_ENABLED: Enable/disable SSRF protection (default: true)
     LANGFLOW_SSRF_ALLOWED_HOSTS: Comma-separated list of allowed hosts/CIDR ranges
         Examples: "192.168.1.0/24,internal-api.company.local,10.0.0.5"
-
-TODO: In next major version (2.0):
-    - Change LANGFLOW_SSRF_PROTECTION_ENABLED default to "true"
-    - Remove warning-only mode and enforce blocking
-    - Update documentation to reflect breaking change
 """
 
 import functools
@@ -321,7 +315,7 @@ def _validate_hostname_resolution(hostname: str) -> None:
         raise SSRFProtectionError(msg)
 
 
-def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
+def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
     """Validate a URL to prevent SSRF attacks.
 
     This function performs the following checks:
@@ -333,8 +327,7 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
 
     Args:
         url: URL to validate
-        warn_only: If True, only log warnings instead of raising errors (default: True)
-            TODO: Change default to False in next major version (2.0)
+        warn_only: If True, only log warnings instead of raising errors (default: False)
 
     Raises:
         SSRFProtectionError: If the URL is blocked due to SSRF protection (only if warn_only=False)
@@ -516,19 +509,30 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
         # ============================================================================
         # Step 8: Validate all resolved IPs
         # ============================================================================
+        # Security: We must check ALL resolved IPs before making any decisions.
+        # A hostname might resolve to multiple IPs (e.g., [8.8.8.8, 192.168.1.1]).
+        # If we return early on the first allowlisted IP, we skip validation of
+        # remaining IPs, which could include blocked/internal addresses.
+        #
+        # Strategy:
+        # 1. Collect all allowlisted IPs and all blocked IPs
+        # 2. If ANY IP is blocked → block the entire hostname (security first)
+        # 3. If some IPs are allowlisted but others are not → use only allowlisted IPs for pinning
+        # 4. If all IPs are public (none blocked, none allowlisted) → use all for pinning
+        allowed_ips = []
         for ip in resolved_ips:
             # Check if this resolved IP is in the allowlist
             if is_host_allowed(hostname, ip):
-                logger.debug(f"Resolved IP {ip} for {hostname} is in allowlist")
-                return url, []
-
+                allowed_ips.append(ip)
             # Check if IP is in blocked ranges
-            if is_ip_blocked(ip):
+            elif is_ip_blocked(ip):
                 blocked_ips.append(ip)
 
         # ============================================================================
         # Step 9: Block if any resolved IPs are private/internal
         # ============================================================================
+        # Security: If ANY resolved IP is blocked, we block the entire hostname.
+        # This prevents attacks where a hostname resolves to both safe and unsafe IPs.
         if blocked_ips:
             msg = (
                 f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
@@ -541,6 +545,17 @@ def validate_and_resolve_url(url: str, *, warn_only: bool = False) -> tuple[str,
                 logger.warning(f"SSRF Warning: {msg}")
                 return url, []
             raise SSRFProtectionError(msg)
+
+        # ============================================================================
+        # Step 9b: Handle partially allowlisted IPs
+        # ============================================================================
+        # If some (but not all) IPs are allowlisted, use only the allowlisted ones for pinning
+        if allowed_ips:
+            logger.debug(
+                f"Hostname {hostname} has {len(allowed_ips)} allowlisted IP(s) out of {len(resolved_ips)} total. "
+                f"Using allowlisted IPs for DNS pinning: {allowed_ips}"
+            )
+            return url, allowed_ips
         # ============================================================================
         # Step 10: Return validated IPs for DNS pinning
         # ============================================================================

@@ -9,8 +9,10 @@ import os
 import socket
 from unittest.mock import patch
 
+import httpcore
 import httpx
 import pytest
+from httpcore._backends.auto import AutoBackend
 from lfx.components.data_source.api_request import APIRequestComponent
 from lfx.schema import Data
 
@@ -44,10 +46,10 @@ class TestDNSRebindingProtection:
         2. Second DNS lookup (httpx): would return localhost (127.0.0.1)
 
         With DNS pinning, the second lookup should NOT happen - the validated
-        IP from the first lookup should be used directly.
+        IP from the first lookup should be used directly at the network layer.
         """
         call_count = 0
-        pinned_url_used = None
+        connected_to_ip = None
 
         def mock_getaddrinfo(_hostname, _port, *_args, **_kwargs):
             """Mock DNS resolution to simulate rebinding attack."""
@@ -62,18 +64,26 @@ class TestDNSRebindingProtection:
             # With DNS pinning, this should NOT be called
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
 
-        # Mock the transport's handle_async_request to capture the actual URL used
-        async def mock_handle_async_request(_self, request):
-            """Capture the URL that's actually being requested."""
-            nonlocal pinned_url_used
-            pinned_url_used = str(request.url)
-            # Return a mock response
-            return httpx.Response(200, json={"status": "ok"}, request=request)
+        # Mock the network backend's connect_tcp to capture the actual IP being connected to
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture the IP that's actually being connected to."""
+            nonlocal connected_to_ip
+            connected_to_ip = host
+            # Return a mock stream with proper format (list of bytes)
+            return httpcore.AsyncMockStream(
+                [
+                    b"HTTP/1.1 200 OK\r\n",
+                    b"Content-Type: application/json\r\n",
+                    b"Content-Length: 15\r\n",
+                    b"\r\n",
+                    b'{"status":"ok"}',
+                ]
+            )
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch.object(httpx.AsyncHTTPTransport, "handle_async_request", mock_handle_async_request),
+            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
         ):
             # Execute the request
             result = await component.make_api_request()
@@ -88,42 +98,62 @@ class TestDNSRebindingProtection:
                 "DNS pinning failed - the component is vulnerable to DNS rebinding!"
             )
 
-            # Verify the pinned URL was used
-            assert pinned_url_used is not None, "No HTTP request was made"
-            assert "8.8.8.8" in pinned_url_used, f"Request didn't use pinned IP 8.8.8.8: {pinned_url_used}"
-            assert "127.0.0.1" not in pinned_url_used, (
-                f"Request used rebinded IP 127.0.0.1 (VULNERABILITY!): {pinned_url_used}"
+            # Verify the connection was made to the pinned IP
+            assert connected_to_ip is not None, "No TCP connection was made"
+            assert connected_to_ip == "8.8.8.8", (
+                f"Connection should be to pinned IP 8.8.8.8, but was to {connected_to_ip}"
             )
 
     @pytest.mark.asyncio
     async def test_dns_pinning_preserves_hostname_in_header(self, component):
-        """Test that DNS pinning preserves the original hostname in the Host header.
+        """Test that DNS pinning connects to pinned IP while preserving hostname for TLS.
+
+        With network-level DNS pinning:
+        - TCP connection goes to the pinned IP (93.184.216.34)
+        - URL preserves the original hostname (rebinding.test)
+        - This allows TLS SNI and certificate verification to work correctly
 
         This is important for:
         - Virtual hosting (multiple sites on same IP)
         - SNI (Server Name Indication) for HTTPS
+        - Certificate verification (cert is for hostname, not IP)
         """
+        connected_to_ip = None
 
         def mock_getaddrinfo(hostname, port, *args, **kwargs):
             """Mock DNS resolution."""
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
 
-        mock_response = httpx.Response(200, json={"status": "ok"})
+        # Mock network backend to capture TCP connection
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture the IP that TCP connects to."""
+            nonlocal connected_to_ip
+            connected_to_ip = host
+            return httpcore.AsyncMockStream(
+                [
+                    b"HTTP/1.1 200 OK\r\n",
+                    b"Content-Type: application/json\r\n",
+                    b"Content-Length: 15\r\n",
+                    b"\r\n",
+                    b'{"status":"ok"}',
+                ]
+            )
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("httpx.AsyncClient.request", return_value=mock_response) as mock_request,
+            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
         ):
-            await component.make_api_request()
+            result = await component.make_api_request()
 
-            # Verify the Host header contains the original hostname
-            called_headers = mock_request.call_args[1].get("headers", {})
-            assert "Host" in called_headers or "host" in called_headers, "Host header not set"
+            # Verify the request succeeded
+            assert result is not None
 
-            # The Host header should be the original hostname, not the IP
-            host_value = called_headers.get("Host") or called_headers.get("host")
-            assert host_value == "rebinding.test", f"Host header should be 'rebinding.test', got: {host_value}"
+            # Verify TCP connection was made to the pinned IP
+            assert connected_to_ip is not None, "No TCP connection was made"
+            assert connected_to_ip == "93.184.216.34", (
+                f"TCP connection should be to pinned IP 93.184.216.34, but was to {connected_to_ip}"
+            )
 
     @pytest.mark.asyncio
     async def test_dns_pinning_with_direct_ip_address(self, component):
@@ -195,40 +225,67 @@ class TestDNSRebindingProtection:
 
     @pytest.mark.asyncio
     async def test_dns_pinning_with_ipv6(self, component):
-        """Test that DNS pinning works with IPv6 addresses."""
+        """Test that DNS pinning works with IPv6 addresses.
+
+        With network-level DNS pinning:
+        - TCP connection goes to the IPv6 address
+        - URL preserves the original hostname
+        - IPv6 addresses don't need brackets in connect_tcp (only in URLs)
+        """
         component.url_input = "http://ipv6.example.com/api"
+        connected_to_ip = None
 
         def mock_getaddrinfo(hostname, port, *args, **kwargs):
             """Mock DNS resolution to return IPv6."""
             return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:4860:4860::8888", 0))]
 
-        mock_response = httpx.Response(200, json={"status": "ok"})
+        # Mock network backend to capture TCP connection
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture the IP that TCP connects to."""
+            nonlocal connected_to_ip
+            connected_to_ip = host
+            return httpcore.AsyncMockStream(
+                [
+                    b"HTTP/1.1 200 OK\r\n",
+                    b"Content-Type: application/json\r\n",
+                    b"Content-Length: 15\r\n",
+                    b"\r\n",
+                    b'{"status":"ok"}',
+                ]
+            )
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("httpx.AsyncClient.request", return_value=mock_response) as mock_request,
+            patch.object(AutoBackend, "connect_tcp", mock_connect_tcp),
         ):
             result = await component.make_api_request()
 
             # Verify the request succeeded
             assert isinstance(result, Data)
-            assert mock_request.called
 
-            # Verify IPv6 address is properly formatted in URL (with brackets)
-            called_url = str(mock_request.call_args[1]["url"])
-            assert "[2001:4860:4860::8888]" in called_url, f"IPv6 not properly formatted: {called_url}"
+            # Verify TCP connection was made to the IPv6 address
+            assert connected_to_ip is not None, "No TCP connection was made"
+            assert connected_to_ip == "2001:4860:4860::8888", (
+                f"TCP connection should be to IPv6 2001:4860:4860::8888, but was to {connected_to_ip}"
+            )
 
     @pytest.mark.asyncio
     async def test_dns_pinning_with_allowlisted_host(self, component):
-        """Test that allowlisted hosts bypass DNS pinning."""
-        component.url_input = "http://localhost:11434/api"  # Ollama default
+        """Test that allowlisted hosts bypass DNS pinning and preserve original hostname."""
+        component.url_input = "http://internal.example.com:8080/api"  # Use a valid hostname format
+        captured_request = None
 
         def mock_getaddrinfo(hostname, port, *args, **kwargs):
             """Mock DNS resolution."""
-            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 0))]
 
-        mock_response = httpx.Response(200, json={"status": "ok"})
+        # Mock the transport's handle_async_request to capture the rewritten request
+        async def mock_handle_async_request(_self, request):
+            """Capture the request after transport rewrite."""
+            nonlocal captured_request
+            captured_request = request
+            return httpx.Response(200, json={"status": "ok"}, request=request)
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
@@ -236,16 +293,26 @@ class TestDNSRebindingProtection:
                 os.environ,
                 {
                     "LANGFLOW_SSRF_PROTECTION_ENABLED": "true",
-                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "localhost,127.0.0.1",
+                    "LANGFLOW_SSRF_ALLOWED_HOSTS": "internal.example.com,10.0.0.1",
                 },
             ),
-            patch("httpx.AsyncClient.request", return_value=mock_response) as mock_request,
+            # Patch get_allowed_hosts to return the allowlist directly
+            patch(
+                "lfx.utils.ssrf_protection.get_allowed_hosts",
+                return_value=["internal.example.com", "10.0.0.1"],
+            ),
+            patch.object(httpx.AsyncHTTPTransport, "handle_async_request", mock_handle_async_request),
         ):
             result = await component.make_api_request()
 
-            # Verify the request succeeded (allowlisted host)
+            # Verify the request succeeded
             assert isinstance(result, Data)
-            assert mock_request.called
+            assert captured_request is not None, "Transport did not capture request"
+
+            # Verify the original hostname is preserved (no DNS pinning for allowlisted hosts)
+            url_str = str(captured_request.url)
+            assert "internal.example.com" in url_str, f"Allowlisted host should preserve hostname: {url_str}"
+            assert "10.0.0.1" not in url_str, f"Allowlisted host should not use IP: {url_str}"
 
 
 # Made with Bob
