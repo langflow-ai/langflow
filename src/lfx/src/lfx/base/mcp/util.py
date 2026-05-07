@@ -1547,6 +1547,73 @@ class MCPSessionManager:
                 self._context_to_session.pop(context_id, None)
 
 
+# OS-essential env vars to forward into MCP stdio subprocesses.
+#
+# Why this list exists: Node-based MCP servers (e.g. `@wonderwhy-er/desktop-commander`)
+# call `os.homedir()` at module load. On Windows that reads `USERPROFILE` (or the
+# `HOMEDRIVE`+`HOMEPATH` fallback); when the var is missing the call returns
+# `null` and any `path.join(homedir, ...)` blows up — surfacing to MCP clients
+# as an opaque "Connection closed" / TaskGroup sub-exception. The same is true
+# of locale, temp-dir, and shell-related vars for other server families.
+#
+# Why not pass `os.environ` wholesale: the parent Langflow process may carry
+# secrets (AWS_*, GITHUB_TOKEN, OPENAI_API_KEY, ...) that have no business
+# being inherited by an arbitrary MCP server subprocess. We curate.
+#
+# User-supplied env (from server config) still wins via merge order.
+_PASSTHROUGH_ENV_VARS_WINDOWS: tuple[str, ...] = (
+    # `os.homedir()` lookup chain on Windows.
+    "USERPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    # Per-user app data directories — many MCP servers store config here.
+    "APPDATA",
+    "LOCALAPPDATA",
+    # Temp dirs — required by tools that spawn helper subprocesses.
+    "TEMP",
+    "TMP",
+    # Required for `cmd /c` and child Win32 APIs.
+    "SYSTEMROOT",
+    "SYSTEMDRIVE",
+    "WINDIR",
+    "COMSPEC",
+    # Without PATHEXT, `cmd /c npx ...` cannot resolve `npx.cmd` from PATH.
+    "PATHEXT",
+)
+_PASSTHROUGH_ENV_VARS_UNIX: tuple[str, ...] = (
+    # `os.homedir()` reads HOME first; getpwuid() is only the fallback.
+    "HOME",
+    "USER",
+    "LOGNAME",
+    # Shell-aware tools.
+    "SHELL",
+    "TERM",
+    "TMPDIR",
+    # Locale — affects text encoding, sort order, error messages.
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+)
+
+
+def _build_subprocess_env(user_env: dict[str, str] | None) -> dict[str, str]:
+    """Build the env dict passed to MCP stdio subprocesses.
+
+    Always-set keys: ``DEBUG=true`` (legacy) and ``PATH`` (so tools resolve).
+    Forwarded if present in the parent env: a curated list of OS-essential
+    vars (``USERPROFILE`` etc on Windows, ``HOME`` etc on Unix). Anything in
+    ``user_env`` overrides everything else.
+    """
+    passthrough = _PASSTHROUGH_ENV_VARS_WINDOWS if platform.system() == "Windows" else _PASSTHROUGH_ENV_VARS_UNIX
+    env: dict[str, str] = {"DEBUG": "true", "PATH": os.environ.get("PATH", "")}
+    for var in passthrough:
+        if var in os.environ:
+            env[var] = os.environ[var]
+    if user_env:
+        env.update(user_env)
+    return env
+
+
 class MCPStdioClient:
     def __init__(self, component_cache=None):
         self.session: ClientSession | None = None
@@ -1576,7 +1643,7 @@ class MCPStdioClient:
         from mcp import StdioServerParameters
 
         command = shlex.split(command_str)
-        env_data: dict[str, str] = {"DEBUG": "true", "PATH": os.environ["PATH"], **(env or {})}
+        env_data: dict[str, str] = _build_subprocess_env(env)
 
         if platform.system() == "Windows":
             server_params = StdioServerParameters(

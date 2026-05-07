@@ -105,6 +105,7 @@ async def auto_configure_default_mcp_servers(session: AsyncSession) -> None:
                     "mcpServers", {}
                 )
                 persisted = existing_servers.get(server_name)
+                is_reconcile = False
                 if persisted is not None:
                     persisted_meta = persisted.get("metadata") or {}
                     if not persisted_meta.get("auto_configured"):
@@ -124,18 +125,10 @@ async def auto_configure_default_mcp_servers(session: AsyncSession) -> None:
                             reason="already_in_sync",
                         )
                         continue
-                    # Spec drifted (e.g. user upgraded across a commit that changed the
-                    # canonical payload). Reconcile by overwriting with the new spec —
-                    # `auto_configured: True` was our marker that the entry is ours.
-                    # Platform context lets ops correlate reconciliations against the
-                    # reported OS when the prior version's payload is too short for
-                    # that OS (notably first-run npx timeouts on Windows).
-                    await logger.ainfo(
-                        "default_mcp_server_reconciled",
-                        user_id=str(user.id),
-                        server_name=server_name,
-                        platform=platform.system(),
-                    )
+                    # Spec drifted (e.g. user upgraded across a commit that changed
+                    # the canonical payload). `auto_configured: True` was our marker
+                    # that the entry is ours, so overwriting is safe.
+                    is_reconcile = True
                 await update_server(
                     server_name=server_name,
                     server_config=payload,
@@ -144,11 +137,23 @@ async def auto_configure_default_mcp_servers(session: AsyncSession) -> None:
                     storage_service=storage_service,
                     settings_service=settings_service,
                 )
-                await logger.ainfo(
-                    "default_mcp_server_added",
-                    user_id=str(user.id),
-                    server_name=server_name,
-                )
+                # Distinct event names so Sentry/Datadog filtering can separate
+                # fresh installs from upgrade-driven reconciliations. Platform is
+                # included on reconcile because the bug that motivated this path
+                # (first-run `npx -y` timeouts on Windows) is OS-correlated.
+                if is_reconcile:
+                    await logger.ainfo(
+                        "default_mcp_server_reconciled",
+                        user_id=str(user.id),
+                        server_name=server_name,
+                        platform=platform.system(),
+                    )
+                else:
+                    await logger.ainfo(
+                        "default_mcp_server_added",
+                        user_id=str(user.id),
+                        server_name=server_name,
+                    )
             except (
                 HTTPException,
                 sqlalchemy_exc.SQLAlchemyError,
