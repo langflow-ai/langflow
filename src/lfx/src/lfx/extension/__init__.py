@@ -33,6 +33,7 @@ from lfx.extension.errors import (
     format_extension_error,
 )
 from lfx.extension.loader import (
+    DEFAULT_MODULE_NAMESPACE,
     SLOT_EXTRA,
     SLOT_OFFICIAL,
     LoadedComponent,
@@ -70,6 +71,7 @@ from lfx.extension.validate import (
 
 __all__ = [
     "BUNDLE_API_VERSION",
+    "DEFAULT_MODULE_NAMESPACE",
     "DEFAULT_SEED_DIR",
     "ERROR_CODES",
     "EXTENSION_SCHEMA_URL",

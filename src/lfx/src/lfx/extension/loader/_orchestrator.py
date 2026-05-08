@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Literal
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader._detection import collect_component_classes
 from lfx.extension.loader._discovery import (
+    DEFAULT_MODULE_NAMESPACE,
     SKIP_DIR_NAMES,
     import_bundle_module,
     iter_bundle_python_files,
@@ -125,10 +126,14 @@ def _load_bundle_directory(
     slot: Literal["official", "extra"],
     distribution: str | None,
     result: LoadResult,
+    module_namespace: str = DEFAULT_MODULE_NAMESPACE,
 ) -> None:
     """Walk ``bundle_root``, import every .py file, register Component subclasses.
 
     Mutates ``result`` in place.  Empty bundles emit ``bundle-empty``.
+
+    ``module_namespace`` controls the top-level package name used in
+    ``sys.modules``; see :func:`lfx.extension.loader._discovery.module_name_for`.
     """
     files = list(iter_bundle_python_files(bundle_root))
     if not files:
@@ -153,7 +158,7 @@ def _load_bundle_directory(
     call_local_errors_emitted = 0
 
     for file_path in files:
-        module_name = module_name_for(file_path, bundle_root, bundle_name, slot)
+        module_name = module_name_for(file_path, bundle_root, bundle_name, slot, namespace=module_namespace)
         module, import_error = import_bundle_module(module_name, file_path)
         if import_error is not None:
             result.errors.append(import_error)
@@ -220,6 +225,7 @@ def load_extension(
     *,
     slot: Literal["official", "extra"] = SLOT_OFFICIAL,
     distribution: str | None = None,
+    module_namespace: str = DEFAULT_MODULE_NAMESPACE,
 ) -> LoadResult:
     """Load an Extension at ``root``.
 
@@ -234,6 +240,11 @@ def load_extension(
             Extension was installed from.  ``None`` for filesystem-only
             extensions (e.g. ``langflow extension dev`` against a working
             tree before pip install).
+        module_namespace: Top-level package name used when registering bundle
+            modules in ``sys.modules``.  Defaults to ``_lfx_ext`` for normal
+            loads.  Reload (LE-1018) passes ``__reload_staging__.<id>`` so
+            Stage 1 lands in an isolated namespace; do not override this in
+            normal application code.
 
     Returns:
         A :class:`LoadResult`.  ``ok`` is False on any structural failure;
@@ -320,6 +331,7 @@ def load_extension(
         slot=slot,
         distribution=distribution,
         result=result,
+        module_namespace=module_namespace,
     )
     return result
 

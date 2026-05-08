@@ -6,6 +6,7 @@ from langflow.api.v1 import (
     api_key_router,
     chat_router,
     endpoints_router,
+    extensions_router,
     files_router,
     flow_events_router,
     flow_version_router,
@@ -76,6 +77,7 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(extensions_router)
 include_deployment_router(router_v1)
 
 
