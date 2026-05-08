@@ -59,8 +59,11 @@ def _saved_flow(*nodes: dict) -> dict:
 
 @pytest.mark.integration
 def test_legacy_bare_name_flow_upgrades(migration_table) -> None:
-    """A pre-Phase-A flow saved with bare class name ``DuckDuckGoSearchComponent``
-    upgrades to the canonical namespaced ID.
+    """Pre-Phase-A flow saved with the bare class name upgrades to the canonical ID.
+
+    A flow that serialized ``DuckDuckGoSearchComponent`` (the bare class name
+    Langflow used for years before the bundle move) must rewrite to
+    ``ext:duckduckgo:DuckDuckGoSearchComponent@official``.
     """
     from lfx.extension.migration.rewrite import migrate_flow_payload
 
@@ -99,8 +102,10 @@ def test_legacy_import_path_flow_upgrades(migration_table) -> None:
 
 @pytest.mark.integration
 def test_short_import_path_flow_upgrades(migration_table) -> None:
-    """The package-level import path ``lfx.components.duckduckgo.DuckDuckGoSearchComponent``
-    (the form re-exported by ``__init__.py``) also upgrades.
+    """Package-level import-path form (re-exported by ``__init__.py``) also upgrades.
+
+    Catches flows that referenced ``lfx.components.duckduckgo.DuckDuckGoSearchComponent``
+    via the package-level re-export rather than the file-level dotted path.
     """
     from lfx.extension.migration.rewrite import migrate_flow_payload
 
@@ -117,12 +122,41 @@ def test_lfx_duckduckgo_distribution_is_importable() -> None:
 
     Catches the case where the package layout drifts from what
     ``langflow.extensions`` references in the entry-point.
+
+    Skipped when the bundle is not installed in the test environment
+    (lfx's own venv does not list lfx-duckduckgo as a dep); the langflow
+    workspace venv pulls it in transitively from langflow's pyproject.
     """
-    from lfx_duckduckgo import DuckDuckGoSearchComponent
+    try:
+        from lfx_duckduckgo import DuckDuckGoSearchComponent
+    except ImportError:
+        pytest.skip("lfx-duckduckgo not installed in this test environment")
 
     # The class must round-trip its canonical class name (used by the
     # migration table's ``bare_class_name`` entry).
     assert DuckDuckGoSearchComponent.__name__ == "DuckDuckGoSearchComponent"
+
+
+def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
+    """Detect an editable install (``pip install -e``).
+
+    Editable installs surface only the ``.dist-info`` entries in
+    ``dist.files``; the package contents live in the source tree and are
+    reachable via the ``.pth`` file, not via ``dist.files``.  We check for
+    this by looking for an ``editable`` flag in ``direct_url.json`` (the
+    PEP 660 marker) so the test can exercise the wheel layout differently
+    when only the editable shape is available.
+    """
+    direct_url = dist.read_text("direct_url.json")
+    if not direct_url:
+        return False
+    # JSON encoders may or may not insert whitespace; parse rather than
+    # string-match to be robust against either form.
+    try:
+        payload = json.loads(direct_url)
+    except json.JSONDecodeError:
+        return False
+    return bool(payload.get("dir_info", {}).get("editable"))
 
 
 @pytest.mark.integration
@@ -133,23 +167,45 @@ def test_lfx_duckduckgo_ships_manifest() -> None:
     at server startup; if the wheel doesn't include the manifest, the
     bundle never registers and the AC ("pip install langflow still pulls
     in the pilot bundle as before") fails silently.
+
+    Editable installs (``pip install -e``) hide package files from
+    ``dist.files`` -- only ``dist-info`` entries appear -- so for editable
+    mode we instead resolve the manifest via the source-tree path encoded
+    in ``direct_url.json`` and assert the same content.
     """
     try:
         dist = importlib_metadata.distribution("lfx-duckduckgo")
     except importlib_metadata.PackageNotFoundError:
         pytest.skip("lfx-duckduckgo not installed in this test environment")
 
-    files = dist.files or []
-    manifests = [f for f in files if f.parts and f.parts[-1] == "extension.json"]
-    assert manifests, (
-        "lfx-duckduckgo distribution does not ship extension.json in its "
-        "wheel; the loader will skip it.  Check pyproject's "
-        "[tool.hatch.build.targets.wheel] include rules."
-    )
+    if _is_editable_install(dist):
+        # Editable install: walk the source tree to verify manifest layout.
+        # This is the same shape a real wheel install will ship; we just
+        # cannot use dist.files to discover it.
+        import lfx_duckduckgo
+
+        package_dir = Path(lfx_duckduckgo.__file__).parent
+        manifest_path = package_dir / "extension.json"
+        assert manifest_path.is_file(), (
+            f"lfx-duckduckgo source tree at {package_dir} does not ship "
+            "extension.json next to __init__.py; the wheel build will "
+            "not include it either.  Check pyproject's "
+            "[tool.hatch.build.targets.wheel] include rules."
+        )
+    else:
+        # Non-editable wheel install: assert dist.files surfaces the manifest
+        # (the path LE-1022's loader walks at runtime).
+        files = dist.files or []
+        manifests = [f for f in files if f.parts and f.parts[-1] == "extension.json"]
+        assert manifests, (
+            "lfx-duckduckgo distribution does not ship extension.json in its "
+            "wheel; the loader will skip it.  Check pyproject's "
+            "[tool.hatch.build.targets.wheel] include rules."
+        )
+        manifest_path = Path(dist.locate_file(manifests[0]))
 
     # Round-trip the manifest: it must parse, declare lfx.compat=['1'],
     # and point at a bundle named 'duckduckgo'.
-    manifest_path = Path(dist.locate_file(manifests[0]))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["id"] == "lfx-duckduckgo"
     assert manifest["lfx"]["compat"] == ["1"]
