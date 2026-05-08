@@ -33,7 +33,10 @@ EXPECTED_TARGET = "ext:duckduckgo:DuckDuckGoSearchComponent@official"
 
 @pytest.fixture(scope="module")
 def migration_table():
-    return load_migration_table(TABLE_PATH)
+    table, error = load_migration_table(TABLE_PATH)
+    assert error is None, f"failed to load migration table: {error}"
+    assert table is not None
+    return table
 
 
 def _saved_flow_node(node_id: str, type_value: str) -> dict:
