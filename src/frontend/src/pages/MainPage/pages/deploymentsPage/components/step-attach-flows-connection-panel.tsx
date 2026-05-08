@@ -52,7 +52,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Select or Create New Connection
+        {t("deployments.selectOrCreateConnection")}
       </div>
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden px-4 py-4">
         {/* Tab toggle */}
@@ -157,7 +157,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                     onClick={onAddEnvVar}
                     className="text-sm text-muted-foreground hover:text-foreground"
                   >
-                    + Add variable
+                    {t("deployments.addVariable")}
                   </button>
                 </div>
               </div>
@@ -172,14 +172,14 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             onClick={onChangeFlow}
             data-testid="connection-change-flow"
           >
-            Change Flow
+            {t("deployments.changeFlow")}
           </Button>
           <Button
             variant="outline"
             onClick={onSkipConnection}
             data-testid="connection-skip"
           >
-            Skip
+            {t("deployments.skip")}
           </Button>
           {connectionTab === "available" ? (
             <Button
@@ -188,7 +188,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               onClick={onAttachConnection}
               data-testid="connection-attach"
             >
-              Attach Connection to Flow
+              {t("deployments.attachConnectionToFlow")}
             </Button>
           ) : (
             <Button

@@ -157,7 +157,7 @@ export function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate bg-transparent text-mmd">
-                  {isDefaultSession ? "Default Session" : session}
+                  {isDefaultSession ? t("chat.defaultSession") : session}
                 </span>
               </div>
             </ShadTooltip>

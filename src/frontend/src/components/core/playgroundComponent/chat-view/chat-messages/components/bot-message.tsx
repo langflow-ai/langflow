@@ -166,15 +166,15 @@ export const BotMessage = memo(
                   )}
                   <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
-                      <span>Running... {formatSeconds(displayTime)}</span>
+                      <span>{t("chat.runningStatus")} {formatSeconds(displayTime)}</span>
                     ) : !thinkingActive && displayTime > 0 ? (
                       <>
                         <span className="text-muted-foreground">
-                          Finished in
+                          {t("chat.finishedIn")}
                         </span>
                         <MessageMetadata
                           duration={displayTime}
-                          usage={chat.properties?.usage}
+                          usage={chat.properties?.usage ?? undefined}
                           timestamp={chat.timestamp}
                         />
                       </>

@@ -77,12 +77,12 @@ export function FlowInsightsContent({
 
   const { mutate: deleteTraces } = useDeleteTracesMutation({
     onSuccess: () => {
-      setSuccessData({ title: "Records cleared successfully" });
+      setSuccessData({ title: t("trace.clearedSuccess") });
       refetch();
     },
     onError: (error) => {
       setErrorData({
-        title: "Error clearing records",
+        title: t("trace.clearError"),
         list: [error.message],
       });
     },
@@ -227,9 +227,9 @@ export function FlowInsightsContent({
           <AccordionItem key={sessionId} value={sessionId}>
             <AccordionTrigger className="px-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="font-medium text-foreground">Session</span>
+                <span className="font-medium text-foreground">{t("trace.session")}</span>
                 <span className="font-mono text-xs">{sessionId}</span>
-                <span className="text-xs">{sessionRows.length} runs</span>
+                <span className="text-xs">{t("trace.runsCount", { count: sessionRows.length })}</span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
@@ -260,14 +260,14 @@ export function FlowInsightsContent({
             className="border-b border-border px-4 py-3"
             data-testid="flow-activity-header"
           >
-            <h2 className="text-base font-semibold">Flow Activity</h2>
+            <h2 className="text-base font-semibold">{t("trace.flowActivity")}</h2>
           </div>
         )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">
           <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
             <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium">Runs</span>
-              <span className="text-muted-foreground">Total {totalRuns}</span>
+              <span className="font-medium">{t("trace.runs")}</span>
+              <span className="text-muted-foreground">{t("trace.total", { count: totalRuns })}</span>
             </div>
             <Button
               variant="ghost"
@@ -280,7 +280,7 @@ export function FlowInsightsContent({
               aria-pressed={groupBySession}
             >
               <IconComponent name="Layers" className="h-4 w-4" />
-              Group by Session
+              {t("trace.groupBySession")}
             </Button>
           </div>
 
@@ -303,9 +303,9 @@ export function FlowInsightsContent({
                 <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ok">Success</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="all">{t("trace.allStatus")}</SelectItem>
+                <SelectItem value="ok">{t("trace.success")}</SelectItem>
+                <SelectItem value="error">{t("trace.error")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -337,20 +337,18 @@ export function FlowInsightsContent({
                       name="Trash2"
                       className="h-5 w-5 text-destructive"
                     />
-                    Clear All Records
+                    {t("trace.clearAllRecords")}
                   </DialogTitle>
                 </DialogHeader>
                 <p className="text-sm text-muted-foreground">
-                  Are you sure you want to clear all records? This will
-                  permanently delete all related Flow Activity Traces and cannot
-                  be undone.
+                  {t("trace.clearAllConfirm")}
                 </p>
                 <DialogFooter>
                   <Button
                     variant="outline"
                     onClick={() => setClearConfirmOpen(false)}
                   >
-                    Cancel
+                    {t("trace.cancel")}
                   </Button>
                   <Button
                     variant="destructive"
@@ -359,7 +357,7 @@ export function FlowInsightsContent({
                       setClearConfirmOpen(false);
                     }}
                   >
-                    Clear All
+                    {t("trace.clearAll")}
                   </Button>
                 </DialogFooter>
               </DialogContent>

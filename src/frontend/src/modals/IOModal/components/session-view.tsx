@@ -64,7 +64,20 @@ export default function SessionView({
     }
   }, [queryData, setMessages]);
 
-  const columns = extractColumnsFromRows(messages, "intersection");
+  const columnHeaderMap: Record<string, string> = {
+    timestamp: t("messages.column.timestamp"),
+    text: t("messages.column.text"),
+    sender: t("messages.column.sender"),
+    sender_name: t("messages.column.senderName"),
+    session_id: t("messages.column.sessionId"),
+    files: t("messages.column.files"),
+  };
+
+  const columns = extractColumnsFromRows(messages, "intersection").map((col) =>
+    col.field && columnHeaderMap[col.field]
+      ? { ...col, headerName: columnHeaderMap[col.field] }
+      : col,
+  );
   const isFetchingCount = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
     exact: false,
@@ -152,7 +165,7 @@ export default function SessionView({
       onDelete={playgroundPage ? undefined : handleRemoveMessages}
       readOnlyEdit
       editable={editable}
-      overlayNoRowsTemplate="No data available"
+      overlayNoRowsTemplate={t("table.noRowsToShow")}
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}

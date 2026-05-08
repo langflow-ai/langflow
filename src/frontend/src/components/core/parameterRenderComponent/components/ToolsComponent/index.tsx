@@ -121,7 +121,7 @@ export default function ToolsComponent({
             ))}
             {remainingCount > 0 && (
               <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
-                +{remainingCount} more
+                {t("input.moreActions", { count: remainingCount })}
               </span>
             )}
           </div>
@@ -130,7 +130,7 @@ export default function ToolsComponent({
           isAction && (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
-                No actions added to this server
+                {t("input.noActionsAddedToServer")}
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
                 <span>{t("input.addActions")}</span>
@@ -152,8 +152,8 @@ export default function ToolsComponent({
             <span>
               {placeholder ||
                 (value.length === 0
-                  ? "No actions available"
-                  : "Select actions")}
+                  ? t("input.noActionsAvailable")
+                  : t("input.selectActions"))}
             </span>
           </Button>
         )}

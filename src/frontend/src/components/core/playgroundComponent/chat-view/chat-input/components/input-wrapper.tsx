@@ -101,7 +101,7 @@ const InputWrapper = ({
         {/* Text input area */}
         <div className="w-full">
           <TextAreaWrapper
-            CHAT_INPUT_PLACEHOLDER={"Send a message"}
+            CHAT_INPUT_PLACEHOLDER={t("chat.inputPlaceholderSend")}
             isBuilding={isBuilding}
             checkSendingOk={checkSendingOk}
             send={send}

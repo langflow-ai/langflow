@@ -27,6 +27,7 @@ function EnvironmentTabToggle({
   activeTab: EnvironmentTab;
   onTabChange: (tab: EnvironmentTab) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-border bg-muted p-1">
       <div className="grid grid-cols-2 gap-4">
@@ -43,8 +44,8 @@ function EnvironmentTabToggle({
             )}
           >
             {tab === "existing"
-              ? "Choose existing environment"
-              : "Add new environment"}
+              ? t("deployments.chooseExistingEnvironment")
+              : t("deployments.addNewEnvironment")}
           </button>
         ))}
       </div>
@@ -65,7 +66,7 @@ function EnvironmentList({
   return (
     <div className="flex flex-col gap-3">
       <span className="text-sm text-muted-foreground">
-        Select from your existing environments
+        {t("deployments.selectFromExistingEnvironments")}
       </span>
       <div
         role="radiogroup"
@@ -144,23 +145,23 @@ export default function StepProvider() {
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
+          {t("deployments.wxoConfigureCredentials")}{" "}
           <a
             href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
           >
-            Sign up for watsonx Orchestrate
+            {t("deployments.wxoSignUp")}
           </a>
-          . Already have an account?{" "}
+          . {t("deployments.wxoAlreadyHaveAccount")}{" "}
           <a
             href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
           >
-            Find your credentials
+            {t("deployments.wxoFindCredentials")}
           </a>
           .
         </p>

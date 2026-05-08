@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -29,10 +30,11 @@ function EnvironmentPickerRow({
   selectedProviderId: string;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
       <span className="shrink-0 text-sm text-muted-foreground">
-        Environment:
+        {t("deployments.environmentLabel")}
       </span>
       <Select value={selectedProviderId} onValueChange={onSelect}>
         <SelectTrigger className="w-[220px]">
@@ -51,6 +53,7 @@ function EnvironmentPickerRow({
 }
 
 export default function DeploymentsPage() {
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId ?? undefined;
@@ -100,8 +103,8 @@ export default function DeploymentsPage() {
           >
             <ForwardedIconComponent name="Plus" className="h-4 w-4" />
             {activeSubTab === "providers"
-              ? "New Environment"
-              : "New Deployment"}
+              ? t("deployments.newEnvironment")
+              : t("deployments.newDeployment")}
           </Button>
         )}
       </div>
@@ -112,7 +115,7 @@ export default function DeploymentsPage() {
           data-testid="deployments-shared-toolbar"
         >
           <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-            These environments are used when you create or run deployments.
+            {t("deployments.environmentsDescription")}
           </p>
         </div>
       )}

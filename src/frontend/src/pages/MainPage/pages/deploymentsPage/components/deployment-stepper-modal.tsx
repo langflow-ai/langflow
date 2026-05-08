@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import {
   Dialog,
@@ -53,6 +54,7 @@ export default function DeploymentStepperModal({
   initialInstance,
   editingDeployment,
 }: DeploymentStepperModalProps) {
+  const { t } = useTranslation();
   const [isDeploying, setIsDeploying] = useState(false);
   const isEditMode = !!editingDeployment;
   const { folderId } = useParams();
@@ -141,7 +143,7 @@ export default function DeploymentStepperModal({
         {isLoadingEditData ? (
           <div className="flex flex-1 items-center justify-center">
             <span className="text-sm text-muted-foreground">
-              Loading deployment data...
+              {t("deployments.loadingDeploymentData")}
             </span>
           </div>
         ) : (
@@ -215,6 +217,7 @@ function DeploymentStepperModalContent({
     buildDeploymentUpdatePayload,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const showError = useErrorAlert();
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
@@ -243,7 +246,7 @@ function DeploymentStepperModalContent({
         const newAccount = await createProviderAccount(accountPayload);
         setSelectedInstance(newAccount);
       } catch (err: unknown) {
-        showError("Failed to create provider account", err);
+        showError(t("deployments.failedToCreateProviderAccount"), err);
         return;
       } finally {
         setIsCreatingAccount(false);
@@ -289,8 +292,7 @@ function DeploymentStepperModalContent({
     } catch (err: unknown) {
       setDeploymentPhase("idle");
       onDeployingChange(false);
-      const action = isEditMode ? "update" : "create";
-      showError(`Failed to ${action} deployment`, err);
+      showError(isEditMode ? t("deployments.failedToUpdateDeployment") : t("deployments.failedToCreateDeployment"), err);
     }
   };
 
@@ -300,17 +302,17 @@ function DeploymentStepperModalContent({
     setOpen(false);
   };
 
-  const actionLabel = isEditMode ? "Update" : "Deploy";
+  const actionLabel = isEditMode ? t("deployments.update") : t("deployments.deploy");
   const actionIcon = isEditMode ? "Save" : "Rocket";
-  const progressLabel = isEditMode ? "Updating..." : "Deploying...";
+  const progressLabel = isEditMode ? t("deployments.updating") : t("deployments.deploying");
 
   return (
     <>
       <DialogTitle className="sr-only">
-        {isEditMode ? "Update Deployment" : "Create New Deployment"}
+        {isEditMode ? t("deployments.updateDeployment") : t("deployments.createNewDeploymentTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
-        Step {currentStep} of {totalSteps}
+        {t("deployments.stepOf", { current: currentStep, total: totalSteps })}
       </DialogDescription>
 
       {/* Title + Stepper */}
@@ -320,10 +322,10 @@ function DeploymentStepperModalContent({
           data-testid="stepper-modal-title"
         >
           {isDeployed && !isEditMode
-            ? "Deployed"
+            ? t("deployments.deployed")
             : isEditMode
-              ? "Update Deployment"
-              : "Create New Deployment"}
+              ? t("deployments.updateDeployment")
+              : t("deployments.createNewDeploymentTitle")}
         </h2>
         <DeploymentStepper
           steps={!isEditMode && isDeployed ? CREATE_DEPLOYED_STEPS : undefined}

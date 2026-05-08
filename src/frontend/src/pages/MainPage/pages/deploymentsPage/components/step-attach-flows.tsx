@@ -261,7 +261,7 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Flows</h2>
+      <h2 className="text-lg font-semibold">{t("deployments.stepFlows")}</h2>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel

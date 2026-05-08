@@ -31,7 +31,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Available
+        {t("deployments.available")}
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {flows.map((flow) => {
@@ -89,7 +89,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                         size="tag"
                         className="bg-accent-blue-muted text-accent-blue-muted-foreground"
                       >
-                        ATTACHED
+                        {t("deployments.attached")}
                       </Badge>
                     )}
                     {isRemoved && (
@@ -98,7 +98,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                         size="tag"
                         className="bg-destructive/10 text-destructive"
                       >
-                        REMOVED
+                        {t("deployments.removed")}
                       </Badge>
                     )}
                   </div>
