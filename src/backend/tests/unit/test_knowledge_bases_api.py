@@ -741,12 +741,14 @@ class TestKnowledgeBaseAPI:
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base(
         self,
         mock_root,
         mock_get_record,
+        mock_delete_record,
         mock_create_backend,
         mock_delete,
         client: AsyncClient,
@@ -772,15 +774,18 @@ class TestKnowledgeBaseAPI:
         backend.delete_collection.assert_awaited_once()
         backend.teardown.assert_awaited_once()
         mock_delete.assert_called_once()
+        mock_delete_record.assert_awaited_once()
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.create_backend")
+    @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.delete_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.knowledge_base_service.get_by_user_and_name", new_callable=AsyncMock)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_delete_knowledge_base_survives_remote_backend_auth_failure(
         self,
         mock_root,
         mock_get_record,
+        mock_delete_record,  # noqa: ARG002 - patch fixture; presence is the assertion
         mock_create_backend,
         mock_delete,
         client: AsyncClient,
@@ -895,6 +900,146 @@ class TestKnowledgeBaseAPI:
 
         response = await client.delete("api/v1/knowledge_bases/Nonexistent", headers=logged_in_headers)
         assert response.status_code == 404
+
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_delete_knowledge_base_cancels_inflight_ingestion(
+        self,
+        mock_root,
+        mock_delete,  # noqa: ARG002
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        """Deleting a KB while ingestion is in flight must cancel the job.
+
+        Regression for the "deleted KB reappears after ~5s" bug.
+        Without cancellation, the background ingestion keeps writing
+        chunks via the backend's persistent client, which auto-recreates
+        the KB directory after rmtree. The list endpoint's disk-fallback
+        path then re-discovers the recreated dir and the KB pops back
+        into the UI.
+
+        Verifies that:
+        - Any ``QUEUED``/``IN_PROGRESS`` job for the KB transitions to
+          ``CANCELLED`` with a ``finished_timestamp`` set.
+        - The KB row itself is removed.
+        """
+        from langflow.services.database.models.jobs.model import JobStatus, JobType
+        from langflow.services.deps import get_job_service
+
+        mock_root.return_value = tmp_path
+        kb_name = "Inflight_Ingest_KB"
+
+        # Seed a real KB row + sidecar so the delete endpoint takes
+        # the normal "directory present" branch.
+        record = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
+        kb_dir = tmp_path / active_user.username / kb_name
+        kb_dir.mkdir(parents=True)
+        (kb_dir / "embedding_metadata.json").write_text(json.dumps({"id": str(record.id)}))
+
+        # Seed an in-flight ingestion job for that KB.
+        job_service = get_job_service()
+        job_id = uuid.uuid4()
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=job_id,
+            job_type=JobType.INGESTION,
+            asset_id=record.id,
+            asset_type="knowledge_base",
+            user_id=active_user.id,
+        )
+        await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+        response = await client.delete(
+            f"api/v1/knowledge_bases/{kb_name}",
+            headers=logged_in_headers,
+        )
+
+        assert response.status_code == 200
+
+        cancelled_job = await job_service.get_job_by_job_id(job_id)
+        assert cancelled_job is not None
+        assert cancelled_job.status == JobStatus.CANCELLED
+        assert cancelled_job.finished_timestamp is not None
+
+        # The KB row is gone — the ingestion can no longer rehydrate
+        # it because its next ``is_job_cancelled`` poll will trip.
+        refetched = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
+        assert refetched is None
+
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_delete_knowledge_base_leaves_unrelated_jobs_alone(
+        self,
+        mock_root,
+        mock_delete,  # noqa: ARG002
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        """Cancel-on-delete must scope strictly to the deleted KB.
+
+        A user with multiple KBs ingesting in parallel should not see
+        their OTHER ingestions cancelled when one KB is deleted. The
+        scope is enforced via ``(asset_id, asset_type)`` — this test
+        regresses against an over-broad query that would match every
+        ``IN_PROGRESS`` job.
+        """
+        from langflow.services.database.models.jobs.model import JobStatus, JobType
+        from langflow.services.deps import get_job_service
+
+        mock_root.return_value = tmp_path
+        kb_name = "Target_KB"
+        other_kb_name = "Untouched_KB"
+
+        target = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
+        other = await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=other_kb_name,
+            model_selection={"name": "text-embedding-3-small", "provider": "OpenAI"},
+        )
+        for r in (target, other):
+            d = tmp_path / active_user.username / r.name
+            d.mkdir(parents=True)
+            (d / "embedding_metadata.json").write_text(json.dumps({"id": str(r.id)}))
+
+        job_service = get_job_service()
+        target_job_id = uuid.uuid4()
+        other_job_id = uuid.uuid4()
+        for jid, asset_id in ((target_job_id, target.id), (other_job_id, other.id)):
+            await job_service.create_job(
+                job_id=jid,
+                flow_id=jid,
+                job_type=JobType.INGESTION,
+                asset_id=asset_id,
+                asset_type="knowledge_base",
+                user_id=active_user.id,
+            )
+            await job_service.update_job_status(jid, JobStatus.IN_PROGRESS)
+
+        response = await client.delete(
+            f"api/v1/knowledge_bases/{kb_name}",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+
+        target_job = await job_service.get_job_by_job_id(target_job_id)
+        other_job = await job_service.get_job_by_job_id(other_job_id)
+        assert target_job is not None
+        assert target_job.status == JobStatus.CANCELLED
+        assert other_job is not None
+        assert other_job.status == JobStatus.IN_PROGRESS
 
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.delete_storage", return_value=True)
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
