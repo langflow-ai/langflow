@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
+from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -119,12 +120,9 @@ class AgentComponent(ToolCallingAgentComponent):
             display_name="Agent Instructions",
             info=(
                 "System Prompt: Initial instructions and context provided to guide the agent's behavior. "
-                "Supports dynamic placeholders: {current_date}, {model_name}."
+                "Supports dynamic placeholders: {current_date}, {model_name}, {optional_user_context}."
             ),
-            value=(
-                "You are a helpful assistant that can use tools to answer questions and perform tasks. "
-                "Today is {current_date}. You are powered by {model_name}."
-            ),
+            value=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
             advanced=False,
         ),
         MessageTextInput(
@@ -368,16 +366,20 @@ class AgentComponent(ToolCallingAgentComponent):
         return ""
 
     def _inject_dynamic_prompt_values(self, prompt: str | None) -> str | None:
-        """Replace {current_date} / {model_name} placeholders in the system prompt.
+        """Replace known env placeholders in the system prompt.
 
-        Uses str.replace (not str.format) so user prompts containing literal braces
-        such as JSON examples ({"key": 1}) never break the agent.
+        Handles {current_date}, {model_name}, and {optional_user_context} (the
+        last one ships with the structured DEFAULT_SYSTEM_PROMPT_TEMPLATE and
+        is currently unused at the AgentComponent layer, so it resolves to "").
+        Uses str.replace (not str.format) so user prompts containing literal
+        braces such as JSON examples ({"key": 1}) never break the agent.
         """
         if not prompt:
             return prompt
         replacements = {
             "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "{model_name}": self._get_resolved_model_name(),
+            "{optional_user_context}": "",
         }
         for placeholder, value in replacements.items():
             prompt = prompt.replace(placeholder, value)
