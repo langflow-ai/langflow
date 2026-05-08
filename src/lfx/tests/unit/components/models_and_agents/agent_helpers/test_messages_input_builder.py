@@ -5,6 +5,7 @@ This helper lives PRIVATE to AgentComponent (`models_and_agents/agent_helpers/`)
 imported by other components — if a second consumer ever appears, move it up to base/.
 """
 
+import pytest
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
     build_initial_messages,
@@ -180,6 +181,21 @@ def test_should_inject_continue_message_when_input_is_blank_and_history_ends_wit
     # And the history is preserved before the safeguard.
     assert len(messages) == 5
     assert _content_text(messages[0]) == "Calculate 17 * 23"
+
+
+def test_should_propagate_non_value_error_from_to_lc_message() -> None:
+    """Non-ValueError exceptions from `to_lc_message()` must propagate, not be swallowed.
+
+    Only `ValueError` is a "malformed entry, skip it" signal. Genuine bugs in
+    `to_lc_message()` (e.g., `KeyError` from a typo, `AttributeError` from a None
+    deref) MUST surface — otherwise the safety net hides regressions in the
+    Data/Message conversion code itself.
+    """
+    from unittest.mock import patch
+
+    history = [Data(text="ok", sender=MESSAGE_SENDER_USER)]
+    with patch.object(Data, "to_lc_message", side_effect=KeyError("missing-key")), pytest.raises(KeyError):
+        build_initial_messages(input_value="ping", chat_history=history)
 
 
 def test_should_skip_malformed_chat_history_items_without_crashing_the_turn() -> None:

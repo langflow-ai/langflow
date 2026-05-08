@@ -15,6 +15,11 @@ WatsonX models.
 Single-shot correction only: if the corrective re-invoke still emits
 placeholders, return that response unchanged so the agent loop doesn't
 spin in a re-invoke cycle.
+
+Cost note: each placeholder correction consumes an extra model call against
+`ModelCallLimitMiddleware.run_limit`. WatsonX agents may therefore exhaust
+`max_iterations` faster than non-WatsonX agents on flows that trigger the
+corrective path; size `max_iterations` accordingly.
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ from lfx.components.langchain_utilities.ibm_granite_handler import detect_placeh
 from lfx.log.logger import logger
 
 _CORRECTIVE_CONTENT = (
-    "Provide your final answer using the actual values from previous tool results. "
+    "Re-issue this tool call using the actual values from previous tool results. "
     "Do not use placeholder syntax like <result-from-...> in tool arguments — use the real values."
 )
 
@@ -82,10 +87,11 @@ def _has_placeholder(response: Any) -> bool:
 def _corrective_request(request: Any) -> Any:
     """Append a corrective SystemMessage to the request's messages.
 
-    Prefers `ModelRequest.override(...)` (the documented immutable pattern,
+    Prefers `ModelRequest.override(...)` (the documented immutable pattern;
     direct attribute assignment is deprecated on `ModelRequest`). Falls back
-    to `dataclasses.replace` and finally to direct setattr so unit tests
-    using lightweight stubs still work.
+    to `dataclasses.replace` for plain `@dataclass` requests. We never mutate
+    the caller's request in place — callbacks and streaming consumers may hold
+    a reference to it.
     """
     corrective_msg = SystemMessage(content=_CORRECTIVE_CONTENT)
     existing = list(getattr(request, "messages", None) or [])
@@ -94,8 +100,4 @@ def _corrective_request(request: Any) -> Any:
     override = getattr(request, "override", None)
     if callable(override):
         return override(messages=new_messages)
-    try:
-        return replace(request, messages=new_messages)
-    except TypeError:
-        request.messages = new_messages
-        return request
+    return replace(request, messages=new_messages)

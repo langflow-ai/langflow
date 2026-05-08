@@ -23,6 +23,8 @@ from langchain.agents.middleware import (
 )
 from langchain_core.messages import AIMessage
 
+from lfx.log.logger import logger
+
 
 class SingleToolCallMiddleware(AgentMiddleware):
     """Keep only the first tool call when a model emits several in one turn."""
@@ -35,11 +37,10 @@ class SingleToolCallMiddleware(AgentMiddleware):
 
 
 def _clamp(response: Any) -> Any:
-    # `wrap_model_call` may return any of three shapes (per AgentMiddleware
-    # signature): ModelResponse, AIMessage, or ExtendedModelResponse. Older
-    # versions of this middleware only handled ModelResponse, so a handler
-    # returning AIMessage (e.g. ToolRetryMiddleware on a fallback path) would
-    # silently bypass the clamp. Cover all three.
+    # `wrap_model_call` may return any of three shapes per AgentMiddleware:
+    # ModelResponse, AIMessage, or ExtendedModelResponse. Each wraps tool_calls
+    # differently — cover all three so a handler returning AIMessage (e.g.
+    # ToolRetryMiddleware on a fallback path) doesn't silently bypass the clamp.
     if isinstance(response, ExtendedModelResponse):
         new_inner = _clamp(response.model_response)
         if new_inner is response.model_response:
@@ -56,6 +57,14 @@ def _clamp(response: Any) -> Any:
         clamped = _clamp_ai_message(response)
         return clamped if clamped is not None else response
 
+    # If a future langchain version adds a fourth response shape, the clamp
+    # silently no-ops and the user just sees the original WatsonX 400 with no
+    # hint that the middleware was bypassed. Log loudly so the regression is
+    # visible.
+    logger.warning(
+        "[SingleToolCallMiddleware] Unrecognized response shape %s — clamp bypassed",
+        type(response).__name__,
+    )
     return response
 
 
@@ -78,4 +87,10 @@ def _clamp_ai_message(message: AIMessage) -> AIMessage | None:
     tool_calls = message.tool_calls or []
     if len(tool_calls) <= 1:
         return None
+    logger.debug(
+        "[SingleToolCallMiddleware] Clamped %d tool calls to 1: kept=%s dropped=%s",
+        len(tool_calls),
+        tool_calls[0].get("name"),
+        [tc.get("name") for tc in tool_calls[1:]],
+    )
     return message.model_copy(update={"tool_calls": tool_calls[:1]})

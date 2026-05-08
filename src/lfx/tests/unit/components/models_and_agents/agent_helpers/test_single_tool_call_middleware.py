@@ -127,6 +127,48 @@ def test_should_clamp_when_handler_returns_extended_model_response() -> None:
     assert len(result.model_response.result[0].tool_calls) == 1
 
 
+def test_should_preserve_identity_when_extended_response_already_has_single_tool_call() -> None:
+    """Returns the original `ExtendedModelResponse` by identity when nothing changes.
+
+    Allocating a new wrapper when the inner response is unchanged would waste
+    allocations and break callers that use referential equality (e.g., caching
+    consumers). The clamp must preserve identity in the no-op case.
+    """
+    middleware = SingleToolCallMiddleware()
+    single_call = _ai_message_with_tool_calls("calculator")
+    inner = ModelResponse(result=[single_call])
+    response = ExtendedModelResponse(model_response=inner, command=None)
+    handler = MagicMock(return_value=response)
+
+    result = middleware.wrap_model_call(MagicMock(), handler)
+
+    assert result is response, "expected unchanged ExtendedModelResponse to be returned by identity"
+
+
+def test_should_log_warning_when_response_shape_is_unrecognized() -> None:
+    """Logs a warning when an unknown response shape is encountered.
+
+    If a future langchain version adds a new response shape, the clamp silently
+    no-ops. A warning makes the bypass visible instead of letting the user hit
+    the raw WatsonX 400 with no signal that the middleware was skipped.
+    """
+    from unittest.mock import patch
+
+    middleware = SingleToolCallMiddleware()
+    unknown_shape = object()
+    handler = MagicMock(return_value=unknown_shape)
+
+    with patch(
+        "lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware.logger"
+    ) as mock_logger:
+        result = middleware.wrap_model_call(MagicMock(), handler)
+
+    assert result is unknown_shape
+    assert mock_logger.warning.called, "expected a warning when response shape is unrecognized"
+    warning_args = mock_logger.warning.call_args.args
+    assert "unrecognized response shape" in warning_args[0].lower()
+
+
 def test_should_pass_through_when_last_message_is_not_ai_message() -> None:
     """Defensive: don't crash, don't clamp when last message is not an AIMessage.
 

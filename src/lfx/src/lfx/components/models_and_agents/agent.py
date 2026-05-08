@@ -486,13 +486,18 @@ class AgentComponent(ToolCallingAgentComponent):
             try:
                 llm.bind_tools(tools)
             except (NotImplementedError, AttributeError, TypeError) as exc:
+                # Include the underlying error so a broken tool schema or a
+                # provider implementation bug is not silently disguised as a
+                # "model can't call tools" UX error.
                 msg = (
-                    f"{self.display_name} does not support tool calling. "
-                    "Please connect a tool-calling capable language model."
+                    f"{self.display_name} does not support tool calling, "
+                    "or one of the connected tools failed to bind. "
+                    "Please connect a tool-calling capable language model and "
+                    f"verify your tools are well-formed. Underlying error: {exc!s}"
                 )
                 raise NotImplementedError(msg) from exc
 
-        middleware = self._build_middleware()
+        middleware = self._build_middleware(llm)
         return create_agent(
             model=llm,
             tools=tools,
@@ -500,7 +505,11 @@ class AgentComponent(ToolCallingAgentComponent):
             middleware=middleware or None,
         )
 
-    def _build_middleware(self) -> list:
+    def _build_middleware(self, llm: Any) -> list:
+        # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
+        # because some providers do credential resolution / client instantiation
+        # lazily on each call. The caller — `create_agent_runnable` — already
+        # resolved it once for `bind_tools`, so reuse that instance here.
         middleware: list = []
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations:
@@ -508,8 +517,8 @@ class AgentComponent(ToolCallingAgentComponent):
         if getattr(self, "handle_parsing_errors", False):
             middleware.append(ToolRetryMiddleware(max_retries=2))
         # WatsonX models have two known platform quirks; both still reproduce on
-        # the current API per field reports, so we keep the protections from the
-        # legacy `create_granite_agent` path.
+        # the current API, so we keep the protections from the legacy
+        # `create_granite_agent` path.
         # 1. Multi-tool-call assistant turns are rejected ("This model only
         #    supports single tool-calls at once!"). Clamp to one per turn.
         # 2. Tool args occasionally come back as literal placeholder strings
@@ -518,7 +527,7 @@ class AgentComponent(ToolCallingAgentComponent):
         # Order: SingleToolCallMiddleware first (outermost) so the clamp is
         # applied to the final response, including any corrective re-invoke
         # produced by WatsonXPlaceholderMiddleware.
-        if is_watsonx_model(self._get_llm()):
+        if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
         return middleware

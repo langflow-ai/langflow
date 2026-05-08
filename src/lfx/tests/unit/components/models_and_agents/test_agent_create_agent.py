@@ -5,7 +5,9 @@ It does NOT rely on `LCAgentComponent.run_agent()` or `ToolCallingAgentComponent
 internally — those code paths still exist for legacy components but are bypassed here.
 """
 
+import os
 from collections.abc import AsyncIterator
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -322,6 +324,77 @@ async def test_should_order_single_tool_call_middleware_outside_watsonx_placehol
     assert single_idx < placeholder_idx, (
         "SingleToolCallMiddleware must come before WatsonXPlaceholderMiddleware (outermost wraps innermost)"
     )
+
+
+@pytest.mark.asyncio
+async def test_should_yield_clean_single_tool_call_when_watsonx_response_has_placeholders_and_multiple_tools() -> None:
+    """End-state composition test: verifies BEHAVIOR, not list-index ordering.
+
+    A future refactor that flips both the list ordering AND langchain's composition
+    convention would pass the index-based test but break the contract. This test
+    feeds a response that needs BOTH protections (placeholders + multi tool-calls)
+    through the real middleware chain and asserts the final state: one tool call,
+    no placeholders, no leakage of the corrective re-invoke into the user-visible
+    output.
+    """
+    from langchain.agents.middleware import ModelResponse
+    from langchain_core.messages import AIMessage
+    from lfx.components.models_and_agents.agent_helpers.placeholder_corrective_middleware import (
+        WatsonXPlaceholderMiddleware,
+    )
+    from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware import (
+        SingleToolCallMiddleware,
+    )
+
+    placeholder_call = {
+        "id": "call_1",
+        "name": "search",
+        "args": {"query": "<result-from-previous-search>"},
+        "type": "tool_call",
+    }
+    extra_call_one = {"id": "call_2", "name": "fetch", "args": {"url": "https://x"}, "type": "tool_call"}
+    extra_call_two = {"id": "call_3", "name": "calc", "args": {"expr": "1+1"}, "type": "tool_call"}
+
+    # First handler call: response with placeholder + 3 tool calls (worst-case
+    # watsonx response). Second call (corrective re-invoke): same multi-call shape
+    # but placeholders cleaned up.
+    bad = ModelResponse(result=[AIMessage(content="", tool_calls=[placeholder_call, extra_call_one, extra_call_two])])
+    cleaned = ModelResponse(
+        result=[AIMessage(
+            content="",
+            tool_calls=[
+                {**placeholder_call, "args": {"query": "real value"}},
+                extra_call_one,
+                extra_call_two,
+            ],
+        )]
+    )
+    handler_calls: list = []
+
+    def model_call(request):
+        handler_calls.append(request)
+        return cleaned if len(handler_calls) > 1 else bad
+
+    # Compose as `_build_middleware` produces: SingleToolCall outermost,
+    # WatsonXPlaceholder innermost. Outer wraps inner wraps the raw model call.
+    placeholder_mw = WatsonXPlaceholderMiddleware()
+    single_mw = SingleToolCallMiddleware()
+
+    def _override(**kw):
+        return SimpleNamespace(messages=kw["messages"], override=lambda **_kw: None)
+
+    request = SimpleNamespace(messages=[], override=_override)
+
+    def inner_wrapped(req):
+        return placeholder_mw.wrap_model_call(req, model_call)
+
+    final = single_mw.wrap_model_call(request, inner_wrapped)
+
+    final_msg = final.result[0]
+    assert len(final_msg.tool_calls) == 1, "SingleToolCall must clamp to one"
+    assert final_msg.tool_calls[0]["args"] == {"query": "real value"}, "placeholder must be replaced before clamp"
+    # Sanity: corrective re-invoke happened exactly once.
+    assert len(handler_calls) == 2
 
 
 @pytest.mark.asyncio
@@ -671,6 +744,52 @@ async def test_should_return_final_ai_text_when_message_response_runs_end_to_end
 
     assert isinstance(result, _Msg)
     assert "answer is 4" in (result.text or "")
+
+
+@pytest.mark.asyncio
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
+async def test_should_call_tool_and_populate_token_usage_when_running_against_real_openai_model() -> None:
+    """Drives `message_response()` end-to-end against a real model with one tool attached.
+
+    Validates the bind_tools → create_agent → graph → token callback →
+    result.properties.usage chain in a single shot — fakes can't validate
+    streaming order, real bind_tools, or the token callback wiring at the
+    same time.
+
+    Skipped without `OPENAI_API_KEY`; uses `gpt-4o-mini` to keep the run cheap.
+    """
+    from langchain_core.tools import tool
+    from langchain_openai import ChatOpenAI
+
+    @tool
+    def echo(text: str) -> str:
+        """Echo the given text back verbatim."""
+        return text
+
+    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+    component = _build_component()
+    component.set_attributes(
+        {
+            "input_value": "Use the echo tool to echo the literal word 'pong', then tell me what it returned.",
+            "chat_history": [],
+        }
+    )
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=llm),
+        patch.object(type(component), "get_agent_requirements", new=AsyncMock(return_value=(llm, [echo], []))),
+        patch.object(type(component), "send_message", new=AsyncMock(side_effect=lambda message, **_kw: message)),
+    ):
+        result = await component.message_response()
+
+    from lfx.schema.message import Message as _Msg
+
+    assert isinstance(result, _Msg)
+    # Token usage was populated by TokenUsageCallbackHandler on a real call.
+    usage = getattr(getattr(result, "properties", None), "usage", None)
+    assert usage is not None, "result.properties.usage must be populated for billing/observability"
+    assert (usage.get("input_tokens") or 0) > 0, "input_tokens must be reported by the real model"
 
 
 @pytest.mark.asyncio

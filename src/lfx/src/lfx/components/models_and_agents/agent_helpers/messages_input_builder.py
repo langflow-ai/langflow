@@ -36,7 +36,7 @@ def build_initial_messages(
         # No fresh user input this turn. Always inject a deterministic continuation
         # prompt — never let blank content reach the provider, and never let the LLM
         # see a tail-AIMessage with no fresh user turn (causes silent re-execution
-        # of earlier tool calls; observed in manual Smoke #5).
+        # of earlier tool calls).
         messages.append(HumanMessage(content=CONTINUE_MESSAGE))
 
     return messages
