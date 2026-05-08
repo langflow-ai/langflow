@@ -516,6 +516,7 @@ class RedisJobQueueService(JobQueueService):
         self._ttl = ttl
         self._client = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
+        self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
 
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
@@ -557,6 +558,9 @@ class RedisJobQueueService(JobQueueService):
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
         self._bridge_tasks.clear()
+        for wrapper in list(self._consumer_wrappers.values()):
+            await wrapper.cancel()
+        self._consumer_wrappers.clear()
         await super().stop()
         if self._client:
             await self._client.aclose()
@@ -609,6 +613,14 @@ class RedisJobQueueService(JobQueueService):
         except asyncio.CancelledError:
             return
 
+    def _get_consumer_wrapper(self, job_id: str) -> RedisQueueWrapper:
+        """Return the cached Redis stream consumer for a job, creating it if needed."""
+        wrapper = self._consumer_wrappers.get(job_id)
+        if wrapper is None:
+            wrapper = RedisQueueWrapper(job_id, self._client, self._ttl)
+            self._consumer_wrappers[job_id] = wrapper
+        return wrapper
+
     def get_queue_data(self, job_id: str) -> tuple[RedisQueueWrapper, EventManager, asyncio.Task | None, float | None]:
         """Return queue data for a job, always backed by a Redis Stream consumer.
 
@@ -633,7 +645,7 @@ class RedisJobQueueService(JobQueueService):
             # stream wrapper to the consumer so the bridge is the only local-queue reader.
             _, event_manager, task, cleanup_time = self._queues[job_id]
             return (
-                RedisQueueWrapper(job_id, self._client, self._ttl),
+                self._get_consumer_wrapper(job_id),
                 event_manager,
                 task,
                 cleanup_time,
@@ -642,7 +654,7 @@ class RedisJobQueueService(JobQueueService):
         # Cross-worker path: create a Redis-backed consumer for the stream.
         # EventManager(None) is a null manager — send_event is a no-op (queue is None-guarded).
         return (
-            RedisQueueWrapper(job_id, self._client, self._ttl),
+            self._get_consumer_wrapper(job_id),
             EventManager(None),
             None,
             None,
@@ -650,6 +662,10 @@ class RedisJobQueueService(JobQueueService):
 
     async def cleanup_job(self, job_id: str) -> None:
         """Cancel local task and bridge, then delete the Redis Stream and owner keys."""
+        wrapper = self._consumer_wrappers.pop(job_id, None)
+        if wrapper is not None:
+            await wrapper.cancel()
+
         bridge = self._bridge_tasks.pop(job_id, None)
         if bridge and not bridge.done():
             bridge.cancel()

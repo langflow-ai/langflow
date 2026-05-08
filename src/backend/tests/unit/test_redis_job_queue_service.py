@@ -47,6 +47,9 @@ async def _stop_service(service: RedisJobQueueService) -> None:
             with contextlib.suppress(asyncio.CancelledError):
                 await bridge
     service._bridge_tasks.clear()
+    for wrapper in list(service._consumer_wrappers.values()):
+        await wrapper.cancel()
+    service._consumer_wrappers.clear()
     if service._client:
         await service._client.aclose()
         service._client = None
@@ -229,6 +232,49 @@ async def test_redis_service_local_job_returns_redis_wrapper():
         assert isinstance(queue, RedisQueueWrapper)
         # Task reference is still available from the local registry
         assert task is not None
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_reuses_consumer_wrapper_for_sequential_polls():
+    """Repeated get_queue_data calls for a job continue from the last Redis Stream ID."""
+    service, fake_client = await _make_service()
+    try:
+        job_id = str(uuid.uuid4())
+        stream_key = f"langflow:queue:{job_id}"
+
+        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"first", "ts": "1.0"})
+        await fake_client.xadd(stream_key, {"event_id": "e2", "data": b"second", "ts": "2.0"})
+
+        first_queue, _, _, _ = service.get_queue_data(job_id)
+        first_event = await asyncio.wait_for(first_queue.get(), timeout=5)
+
+        second_queue, _, _, _ = service.get_queue_data(job_id)
+        second_event = await asyncio.wait_for(second_queue.get(), timeout=5)
+
+        assert second_queue is first_queue
+        assert first_event == ("e1", b"first", 1.0)
+        assert second_event == ("e2", b"second", 2.0)
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_cleanup_cancels_cached_consumer_wrapper():
+    """cleanup_job cancels the cached Redis consumer fill task for the job."""
+    service, _ = await _make_service()
+    try:
+        job_id = str(uuid.uuid4())
+        queue, _, _, _ = service.get_queue_data(job_id)
+
+        assert isinstance(queue, RedisQueueWrapper)
+        assert job_id in service._consumer_wrappers
+
+        await service.cleanup_job(job_id)
+
+        assert job_id not in service._consumer_wrappers
+        assert queue._fill_task.done()
     finally:
         await _stop_service(service)
 
