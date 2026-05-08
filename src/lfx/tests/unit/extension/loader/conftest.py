@@ -155,6 +155,60 @@ def make_installed_extension(parent: Path, distribution_name: str) -> FakeDist:
     )
 
 
+def make_installed_pyproject_extension(parent: Path, distribution_name: str) -> FakeDist:
+    """Create a fake installed Extension whose manifest lives in pyproject.toml.
+
+    Mirrors :func:`make_installed_extension` but exercises the
+    ``[tool.langflow.extension]`` discovery path. ``files`` points at a
+    real ``pyproject.toml`` containing a v0-shaped section so the
+    installed-distribution discovery treats it as an Extension.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    bundle_name = distribution_name.replace("-", "_")
+    pyproject_text = f"""\
+[project]
+name = "{distribution_name}"
+
+[tool.langflow.extension]
+id = "{distribution_name}"
+version = "1.0.0"
+name = "{distribution_name}"
+
+[tool.langflow.extension.lfx]
+compat = ["1"]
+
+[[tool.langflow.extension.bundles]]
+name = "{bundle_name}"
+path = "components"
+"""
+    (pkg_dir / "pyproject.toml").write_text(pyproject_text, encoding="utf-8")
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
+    )
+
+
+def make_installed_pyproject_no_extension(parent: Path, distribution_name: str) -> FakeDist:
+    """Fake distribution shipping pyproject.toml WITHOUT [tool.langflow.extension].
+
+    Used to assert that a stray pyproject.toml from an unrelated package is
+    not mistakenly treated as a manifest.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    (pkg_dir / "pyproject.toml").write_text(
+        f'[project]\nname = "{distribution_name}"\n',
+        encoding="utf-8",
+    )
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Autouse: scrub loader-installed modules between tests
 # ---------------------------------------------------------------------------

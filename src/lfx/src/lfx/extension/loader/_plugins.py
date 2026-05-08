@@ -51,20 +51,35 @@ def canonicalize_distribution(name: str) -> str:
 def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path | None:
     """Locate an extension manifest shipped by ``dist``, if any.
 
-    A wheel that ships ``extension.json`` as package data exposes it via
-    ``Distribution.files``.  The pyproject form is detected via the same
-    mechanism: build backends that wire ``[tool.langflow.extension]`` are
-    expected to also install the rendered ``extension.json`` alongside.
-    Pure-pyproject distributions without that wiring will not be detected
-    here; they should ship ``extension.json`` for the loader to see them.
+    Both v0 manifest forms are supported:
+
+        1. A wheel that ships ``extension.json`` as package data (preferred
+           because it carries ``$schema`` for editor support).
+        2. A distribution that ships ``pyproject.toml`` with a
+           ``[tool.langflow.extension]`` section.
+
+    ``extension.json`` wins on collision so an Extension that ships both
+    is treated as a single Extension whose canonical manifest is the JSON
+    file, matching :func:`lfx.extension.manifest.load_manifest`'s discovery
+    order.
+
+    For the pyproject form, the file is only accepted as a manifest if its
+    ``[tool.langflow.extension]`` section is actually present and parses;
+    a stray ``pyproject.toml`` shipped by an unrelated distribution is
+    ignored.
 
     Returns the absolute path to the manifest file, or ``None``.
     """
     files = dist.files
     if files is None:
         return None
+
+    pyproject_candidate: Path | None = None
     for relative in files:
-        if relative.parts and relative.parts[-1] == "extension.json":
+        if not relative.parts:
+            continue
+        last = relative.parts[-1]
+        if last == "extension.json":
             try:
                 located = Path(dist.locate_file(relative))
             except (OSError, ValueError):
@@ -73,8 +88,39 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
                 # without breaking the rest of the scan.
                 continue
             if located.is_file():
+                # extension.json wins outright -- skip any pyproject seen later.
                 return located
+        elif last == "pyproject.toml" and pyproject_candidate is None:
+            try:
+                located = Path(dist.locate_file(relative))
+            except (OSError, ValueError):
+                continue
+            if located.is_file():
+                pyproject_candidate = located
+
+    if pyproject_candidate is not None and _pyproject_has_extension_section(pyproject_candidate):
+        return pyproject_candidate
     return None
+
+
+def _pyproject_has_extension_section(pyproject_path: Path) -> bool:
+    """Return True iff ``pyproject_path`` has a parseable ``[tool.langflow.extension]``.
+
+    Uses :func:`load_manifest` so the validation rule lives in exactly one
+    place. A pyproject without the section, or one whose section is malformed,
+    returns False so the distribution is treated as a regular non-manifest
+    package.
+    """
+    # Imported here rather than at module level to avoid a potential cycle:
+    # manifest.py -> errors.py -> extension/__init__.py -> loader/__init__.py
+    # would otherwise route back through this module during package init.
+    from lfx.extension.manifest import load_manifest
+
+    try:
+        source = load_manifest(pyproject_path.parent)
+    except (FileNotFoundError, ValueError, TypeError, OSError):
+        return False
+    return source.kind == "pyproject.toml"
 
 
 def _distribution_canonical_name(dist: importlib_metadata.Distribution) -> str | None:

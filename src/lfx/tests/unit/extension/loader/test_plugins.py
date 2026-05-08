@@ -28,7 +28,13 @@ from lfx.extension import (
 )
 from lfx.extension.loader._plugins import canonicalize_distribution
 
-from .conftest import FakeDist, FakeEntryPoint, make_installed_extension
+from .conftest import (
+    FakeDist,
+    FakeEntryPoint,
+    make_installed_extension,
+    make_installed_pyproject_extension,
+    make_installed_pyproject_no_extension,
+)
 
 
 class _FakePluginComponent:
@@ -79,6 +85,104 @@ def test_handles_files_none(tmp_path: Path) -> None:
     dist = FakeDist("orphan", tmp_path, files=None)
     roots = installed_extension_roots(distributions=[dist])
     assert roots == {}
+
+
+# ---------------------------------------------------------------------------
+# pyproject.toml manifest discovery (the AC's second supported manifest form)
+# ---------------------------------------------------------------------------
+
+
+def test_finds_pyproject_only_distribution(tmp_path: Path) -> None:
+    """A distribution shipping pyproject.toml with [tool.langflow.extension] is found."""
+    dist = make_installed_pyproject_extension(tmp_path, "lfx-pyproject")
+    roots = installed_extension_roots(distributions=[dist])
+    assert "lfx-pyproject" in roots
+    assert (roots["lfx-pyproject"] / "pyproject.toml").is_file()
+
+
+def test_pyproject_without_extension_section_is_ignored(tmp_path: Path) -> None:
+    """A pyproject.toml without [tool.langflow.extension] is NOT treated as a manifest.
+
+    Defensive: many regular packages ship pyproject.toml; we must only
+    accept it as a manifest source when the section actually exists.
+    """
+    dist = make_installed_pyproject_no_extension(tmp_path, "plain-pyproject")
+    roots = installed_extension_roots(distributions=[dist])
+    assert roots == {}
+
+
+def test_extension_json_wins_over_pyproject(tmp_path: Path) -> None:
+    """When both forms ship, extension.json wins (matches load_manifest order)."""
+    pkg_dir = tmp_path / "lfx-both"
+    pkg_dir.mkdir()
+    manifest = {
+        "id": "lfx-both",
+        "version": "1.0.0",
+        "name": "lfx-both",
+        "lfx": {"compat": ["1"]},
+        "bundles": [{"name": "both", "path": "components"}],
+    }
+    (pkg_dir / "extension.json").write_text(__import__("json").dumps(manifest), encoding="utf-8")
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "lfx-both"\n[tool.langflow.extension]\nid = "lfx-both"\n',
+        encoding="utf-8",
+    )
+    dist = FakeDist(
+        name="lfx-both",
+        root=tmp_path,
+        files=[Path("lfx-both") / "extension.json", Path("lfx-both") / "pyproject.toml"],
+    )
+    roots = installed_extension_roots(distributions=[dist])
+    # Both forms point at the same root directory, but the manifest path
+    # used for resolution should be the JSON file.
+    assert "lfx-both" in roots
+    assert (roots["lfx-both"] / "extension.json").is_file()
+
+
+def test_pyproject_only_extension_loads_at_official_slot(tmp_path: Path) -> None:
+    """End-to-end: a pyproject-only Extension is discovered by load_installed_extensions.
+
+    Without this path the AC's "extension.json or [tool.langflow.extension]"
+    wording is half-implemented.
+    """
+    from lfx.extension import load_installed_extensions
+
+    dist = make_installed_pyproject_extension(tmp_path, "lfx-pyproject")
+    # Populate the bundle directory referenced by the pyproject manifest.
+    bundle_dir = tmp_path / "lfx-pyproject" / "components"
+    bundle_dir.mkdir(parents=True)
+    (bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\nclass Thing(Component):\n    pass\n",
+        encoding="utf-8",
+    )
+
+    results = load_installed_extensions(distributions=[dist])
+    assert len(results) == 1
+    result = results[0]
+    assert result.ok, [e.code for e in result.errors]
+    assert result.distribution == "lfx-pyproject"
+    assert result.extension_id == "lfx-pyproject"
+    # Bundle name comes from the pyproject manifest section.
+    assert result.bundle == "lfx_pyproject"
+    assert result.components, "pyproject-form Extension should yield components"
+
+
+def test_pyproject_only_distribution_suppresses_legacy_component_entry_point(tmp_path: Path) -> None:
+    """Manifest-first precedence applies to pyproject-form Extensions too.
+
+    A legacy ``langflow.plugins`` component entry-point on a pyproject-form
+    manifest-shipping distribution must be skipped exactly like the JSON
+    form, otherwise the same-distribution double-registration the AC
+    forbids would still occur.
+    """
+    dist = make_installed_pyproject_extension(tmp_path, "lfx-pyproject")
+    component_ep = FakeEntryPoint("PyComponent", dist, loaded_value=_LegacyPluginComponent)
+
+    owners = manifest_owning_distributions(distributions=[dist])
+    assert "lfx-pyproject" in owners
+    kept, skipped = filter_component_entry_points([component_ep], skip=owners)
+    assert [ep.name for ep in skipped] == ["PyComponent"]
+    assert kept == []
 
 
 # ---------------------------------------------------------------------------
