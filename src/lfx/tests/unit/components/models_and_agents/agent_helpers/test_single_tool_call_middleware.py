@@ -158,9 +158,7 @@ def test_should_log_warning_when_response_shape_is_unrecognized() -> None:
     unknown_shape = object()
     handler = MagicMock(return_value=unknown_shape)
 
-    with patch(
-        "lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware.logger"
-    ) as mock_logger:
+    with patch("lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware.logger") as mock_logger:
         result = middleware.wrap_model_call(MagicMock(), handler)
 
     assert result is unknown_shape

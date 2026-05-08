@@ -360,14 +360,16 @@ async def test_should_yield_clean_single_tool_call_when_watsonx_response_has_pla
     # but placeholders cleaned up.
     bad = ModelResponse(result=[AIMessage(content="", tool_calls=[placeholder_call, extra_call_one, extra_call_two])])
     cleaned = ModelResponse(
-        result=[AIMessage(
-            content="",
-            tool_calls=[
-                {**placeholder_call, "args": {"query": "real value"}},
-                extra_call_one,
-                extra_call_two,
-            ],
-        )]
+        result=[
+            AIMessage(
+                content="",
+                tool_calls=[
+                    {**placeholder_call, "args": {"query": "real value"}},
+                    extra_call_one,
+                    extra_call_two,
+                ],
+            )
+        ]
     )
     handler_calls: list = []
 
