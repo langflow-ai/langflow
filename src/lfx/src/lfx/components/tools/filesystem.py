@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 
@@ -121,6 +122,26 @@ _WINDOWS_RESERVED_NAMES = frozenset(
 # Note: ':' is NOT included — drive letters (C:) are valid; bare ':' inside a
 # basename will be caught by the OS at write time anyway.
 _WINDOWS_FORBIDDEN_CHARS = frozenset('<>"|?*')
+
+# Deny-list: even when a path lies inside `root_path`, refuse access to
+# basenames or path components that match well-known credential / secret
+# patterns. This is the "default-deny inside an allowed root" pattern from
+# Claude Code Sandboxing — it limits the blast radius of a flow author who
+# misconfigures `root_path` to cover $HOME or the project root. Pure-string
+# checks; runs before any I/O so the agent never observes the file's
+# existence, contents, or absence-vs-denied distinction beyond the error
+# string itself.
+#
+# Match semantics (all case-insensitive):
+#   * literals — exact basename match (e.g. `.env`, `.netrc`)
+#   * prefixes — basename startswith (e.g. `id_rsa`, `id_rsa.pub`, `id_ed25519`)
+#   * suffixes — basename endswith (e.g. `cert.pem`, `private.key`)
+#   * fragments — any DIRECTORY component equals the fragment (e.g. `.ssh/`,
+#     `.aws/config`); the basename itself is not matched against fragments.
+_DENY_BASENAME_LITERALS = frozenset({".env", ".netrc", ".pgpass", ".htpasswd", "authorized_keys"})
+_DENY_BASENAME_PREFIXES = ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials")
+_DENY_BASENAME_SUFFIXES = (".pem", ".key", ".pfx", ".p12")
+_DENY_PATH_FRAGMENTS = frozenset({".ssh", ".aws", ".gnupg", ".docker", ".kube", ".git"})
 
 
 def _looks_binary(head: bytes) -> bool:
@@ -611,6 +632,8 @@ class FileSystemToolComponent(Component):
         if not candidate.is_relative_to(root_resolved):
             msg = f"Path escapes workspace boundary: {path}"
             raise PermissionError(msg)
+        if hardlink_error := _check_hardlink(candidate):
+            raise PermissionError(hardlink_error)
         return candidate
 
     def _read_file(self, path: str, offset: int | None = None, limit: int | None = None) -> dict:
@@ -635,15 +658,14 @@ class FileSystemToolComponent(Component):
             }
 
         try:
-            with resolved.open("rb") as fh:
-                head = fh.read(BINARY_SNIFF_BYTES)
+            head = _read_head_no_follow(resolved, BINARY_SNIFF_BYTES)
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
         if _looks_binary(head):
             return {"error": f"Refusing to read binary file: {path}", "path": path}
 
         try:
-            text = resolved.read_text(encoding="utf-8", errors="replace")
+            text = _read_bytes_no_follow(resolved).decode("utf-8", errors="replace")
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
 
@@ -682,7 +704,7 @@ class FileSystemToolComponent(Component):
 
         existed = resolved.exists()
         try:
-            resolved.write_bytes(encoded)
+            _write_bytes_no_follow(resolved, encoded)
         except OSError as exc:
             return {"error": f"Cannot write file: {exc.strerror or exc}", "path": path}
 
@@ -720,7 +742,7 @@ class FileSystemToolComponent(Component):
             return {"error": "old_string must not be empty", "path": path}
 
         try:
-            current = resolved.read_text(encoding="utf-8", errors="replace")
+            current = _read_bytes_no_follow(resolved).decode("utf-8", errors="replace")
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
 
@@ -766,7 +788,7 @@ class FileSystemToolComponent(Component):
             }
 
         try:
-            resolved.write_bytes(encoded)
+            _write_bytes_no_follow(resolved, encoded)
         except OSError as exc:
             return {"error": f"Cannot write file: {exc.strerror or exc}", "path": path}
 
