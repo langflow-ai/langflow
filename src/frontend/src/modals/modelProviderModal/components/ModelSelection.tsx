@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
@@ -46,6 +47,8 @@ const ModelRow = ({
         checked={enabled}
         onCheckedChange={(checked) => onToggle(model.model_name, checked)}
         data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
+        stopPropagation
       />
     )}
   </div>
@@ -62,6 +65,7 @@ const ModelSelection = ({
   providerName,
   isEnabledModel,
 }: ModelProviderSelectionProps) => {
+  const { t } = useTranslation();
   const { data: enabledModelsData } = useGetEnabledModels();
 
   const isModelEnabled = (modelName: string): boolean => {
@@ -118,16 +122,14 @@ const ModelSelection = ({
             className="w-10 h-10 mb-4 text-muted-foreground"
           />
           <h3 className="mb-2 text-sm font-semibold text-foreground">
-            No models available
+            {t("modelProviders.noModelsAvailable")}
           </h3>
           <p className="max-w-[300px] text-xs text-muted-foreground leading-relaxed">
-            It looks like you don't have any
             {modelType === "llm"
-              ? " language"
+              ? t("modelProviders.ollamaNoModelsLlm")
               : modelType === "embeddings"
-                ? " embedding"
-                : ""}{" "}
-            models installed for Ollama. Please pull the models you want to use.
+                ? t("modelProviders.ollamaNoModelsEmbeddings")
+                : t("modelProviders.ollamaNoModelsAll")}
           </p>
           <a
             href="https://ollama.com/library"
@@ -135,25 +137,33 @@ const ModelSelection = ({
             rel="noreferrer"
             className="mt-6 text-xs font-medium text-primary underline underline-offset-4 hover:opacity-80 transition-opacity"
           >
-            Check Ollama Library
+            {t("modelProviders.checkOllamaLibrary")}
           </a>
         </div>
       ) : (
         <>
           {modelType === "all" ? (
             <>
-              {renderModelSection("Language Models", llmModels, "llm")}
               {renderModelSection(
-                "Embedding Models",
+                t("modelProviders.languageModels"),
+                llmModels,
+                "llm",
+              )}
+              {renderModelSection(
+                t("modelProviders.embeddingModels"),
                 embeddingModels,
                 "embeddings",
               )}
             </>
           ) : modelType === "llm" ? (
-            renderModelSection("Language Models", llmModels, "llm")
+            renderModelSection(
+              t("modelProviders.languageModels"),
+              llmModels,
+              "llm",
+            )
           ) : (
             renderModelSection(
-              "Embedding Models",
+              t("modelProviders.embeddingModels"),
               embeddingModels,
               "embeddings",
             )

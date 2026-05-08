@@ -34,6 +34,7 @@ from lfx.utils.flow_validation import (
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
+from langflow.api.v1.files import get_flow
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -61,8 +62,17 @@ from langflow.services.auth.utils import (
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_auth_service,
+    get_job_service,
+    get_memory_base_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -101,17 +111,23 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all():
+async def get_all(request: Request):
     """Retrieve all component types with compression for better performance.
 
-    Returns a compressed response containing all available component types.
+    Returns a compressed response containing all available component types,
+    with display_names translated to the locale indicated by Accept-Language.
     """
     from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
-        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-        # Return compressed response using our utility function
-        return compress_response(all_types)
+        all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+
+        locale = getattr(request.state, "locale", "en")
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+
+        component_display_names = build_component_display_names(all_types_en)
+        return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -172,8 +188,8 @@ async def simple_run_flow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
-        if run_id is None:
-            run_id = str(uuid4())
+        run_id_uuid = uuid4() if run_id is None else UUID(run_id)
+        run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
@@ -196,15 +212,57 @@ async def simple_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
                 )
             ]
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=input_request.session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-            event_manager=event_manager,
-        )
+
+        # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to run flows.",
+            )
+
+        try:
+            _job_svc = get_job_service()
+            await _job_svc.create_job(
+                job_id=run_id_uuid,
+                flow_id=flow.id,
+                user_id=user_id,
+                job_type=JobType.WORKFLOW,
+            )
+            task_result, session_id = await _job_svc.execute_with_status(
+                run_id_uuid,
+                run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=input_request.session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+                event_manager=event_manager,
+            )
+        except Exception as exc:
+            await logger.aerror(
+                "Workflow job execution failed for flow %s: %s",
+                flow.id,
+                str(exc),
+                exc_info=True,
+            )
+            raise APIException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                exception=exc,
+                flow=flow,
+            ) from exc
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -411,6 +469,33 @@ async def check_flow_user_permission(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
 
 
+async def get_flow_for_api_key_user(
+    flow_id_or_name: str,
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
+) -> FlowRead:
+    """Auth-aware wrapper around ``get_flow_by_id_or_endpoint_name`` for API-key routes.
+
+    Using the raw helper as a FastAPI ``Depends`` exposed ``user_id`` as a
+    plain query parameter that no real caller sets, so flow lookups on the
+    ``/run*`` routes bypassed user scoping entirely and relied on
+    ``check_flow_user_permission`` later in the handler for a 403.  That gave
+    attackers a 403-vs-404 existence oracle on flow UUIDs.  This wrapper
+    pulls the authenticated user from ``api_key_security`` and passes it to
+    the helper, so cross-user access fails closed with 404 at the helper
+    layer.  ``check_flow_user_permission`` is kept in the handler chain as
+    defense in depth.
+    """
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
+
+
+async def get_flow_for_current_user(
+    flow_id_or_name: str,
+    current_user: CurrentActiveUser,
+) -> FlowRead:
+    """Session-auth variant of :func:`get_flow_for_api_key_user`."""
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id)
+
+
 async def _run_flow_internal(
     *,
     background_tasks: BackgroundTasks,
@@ -555,7 +640,7 @@ async def _run_flow_internal(
 async def simplified_run_flow(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead, Depends(get_flow_for_api_key_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -615,7 +700,7 @@ async def simplified_run_flow(
 async def simplified_run_flow_session(
     *,
     background_tasks: BackgroundTasks,
-    flow: Annotated[FlowRead, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[FlowRead, Depends(get_flow_for_current_user)],
     input_request: SimplifiedAPIRequest | None = None,
     stream: bool = False,
     api_key_user: CurrentActiveUser,
@@ -681,6 +766,7 @@ async def simplified_run_flow_session(
 async def webhook_events_stream(
     flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
     flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -691,9 +777,6 @@ async def webhook_events_stream(
     Authentication: Requires user to be logged in (via cookie) or provide API key.
     The user must own the flow to subscribe to its events.
     """
-    # Authenticate user via cookie or API key
-    user = await get_current_user_for_sse(request)
-
     # Verify user owns the flow
     if str(flow.user_id) != str(user.id):
         raise HTTPException(
@@ -827,7 +910,7 @@ async def webhook_run_flow(
 async def experimental_run_flow(
     *,
     session: DbSession,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    flow: Annotated[Flow, Depends(get_flow_for_api_key_user)],
     inputs: list[InputValueRequest] | None = None,
     outputs: list[str] | None = None,
     tweaks: Annotated[Tweaks | None, Body(embed=True)] = None,
@@ -944,6 +1027,18 @@ async def experimental_run_flow(
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
 
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    try:
+        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow.id,
+            session_id=session_id,
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
     return RunResponse(outputs=task_result, session_id=session_id)
 
 
@@ -989,14 +1084,31 @@ async def get_task_status(_task_id: str) -> TaskStatusResponse:
 )
 async def create_upload_file(
     file: UploadFile,
-    flow_id: UUID,
+    flow: Annotated[Flow, Depends(get_flow)],
+    settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     """Upload a file for a specific flow (Deprecated).
 
     This endpoint is deprecated and will be removed in a future version.
+    Authorization is handled by the ``get_flow`` dependency, which requires an
+    authenticated user and verifies flow ownership.  Mirrors the
+    ``max_file_size_upload`` guard on the non-deprecated twin at
+    ``/api/v1/files/upload/{flow_id}`` so authenticated callers can't fill
+    disk through this route either.
     """
     try:
-        flow_id_str = str(flow_id)
+        max_file_size_upload = settings_service.settings.max_file_size_upload
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if file.size is not None and file.size > max_file_size_upload * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File size is larger than the maximum file size {max_file_size_upload}MB.",
+        )
+
+    try:
+        flow_id_str = str(flow.id)
         file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)
 
         return UploadFileResponse(
@@ -1110,7 +1222,21 @@ async def custom_component_update(
                 if isinstance(field_dict, dict) and field_dict.get("load_from_db") and field_dict.get("value")
             ]
             if isinstance(cc_instance, Component):
-                params = await update_params_with_load_from_db_fields(cc_instance, params, load_from_db_fields)
+                # ``fallback_to_env_vars=True`` so a missing variable (e.g. an
+                # imported flow referencing ``ANTHROPIC_API_KEY`` when the
+                # current user hasn't configured one) degrades to ``None``
+                # instead of raising.  This endpoint only refreshes form
+                # metadata — it does not execute the component — so we don't
+                # need the real credential here.  The runtime build path still
+                # calls ``update_params_with_load_from_db_fields`` with its own
+                # fallback setting, so this change doesn't relax execution-time
+                # requirements.
+                params = await update_params_with_load_from_db_fields(
+                    cc_instance,
+                    params,
+                    load_from_db_fields,
+                    fallback_to_env_vars=True,
+                )
                 cc_instance.set_attributes(params)
         updated_build_config = code_request.get_template()
         await update_component_build_config(

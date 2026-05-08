@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
+from langflow.services.database.models.deployment.orm_guards import ensure_provider_account_identity_immutable
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from langflow.services.database.utils import normalize_string_or_none, parse_uuid
@@ -113,6 +114,43 @@ async def create_provider_account(
     provider_url: str,
     api_key: str,
 ) -> DeploymentProviderAccount:
+    return await _create_provider_account_internal(
+        db=db,
+        user_id=user_id,
+        name=name,
+        provider_tenant_id=provider_tenant_id,
+        provider_key=provider_key,
+        provider_url=provider_url,
+        api_key=api_key,
+    )
+
+
+async def create_provider_account_from_model(
+    db: AsyncSession,
+    *,
+    provider_account: DeploymentProviderAccount,
+) -> DeploymentProviderAccount:
+    return await _create_provider_account_internal(
+        db=db,
+        user_id=provider_account.user_id,
+        name=provider_account.name,
+        provider_tenant_id=provider_account.provider_tenant_id,
+        provider_key=provider_account.provider_key,
+        provider_url=provider_account.provider_url,
+        api_key=provider_account.api_key,
+    )
+
+
+async def _create_provider_account_internal(
+    db: AsyncSession,
+    *,
+    user_id: UUID | str,
+    name: str,
+    provider_tenant_id: str | None,
+    provider_key: str | DeploymentProviderKey,
+    provider_url: str,
+    api_key: str,
+) -> DeploymentProviderAccount:
     user_uuid = parse_uuid(user_id, field_name="user_id")
 
     # The model has its own field validators, but pre-checking here gives
@@ -172,6 +210,26 @@ async def update_provider_account(
     provider_url: str | None = None,
     api_key: str | None = None,
 ) -> DeploymentProviderAccount:
+    requested_provider_key = (
+        _coerce_provider_key(provider_key) if provider_key is not None else provider_account.provider_key
+    )
+    requested_provider_tenant_id = (
+        normalize_string_or_none(provider_tenant_id)
+        if provider_tenant_id is not _UNSET
+        else provider_account.provider_tenant_id
+    )
+    requested_provider_url = (
+        _strip_or_raise(provider_url, "provider_url") if provider_url is not None else provider_account.provider_url
+    )
+    ensure_provider_account_identity_immutable(
+        old_provider_key=provider_account.provider_key,
+        new_provider_key=requested_provider_key,
+        old_provider_tenant_id=provider_account.provider_tenant_id,
+        new_provider_tenant_id=requested_provider_tenant_id,
+        old_provider_url=provider_account.provider_url,
+        new_provider_url=requested_provider_url,
+    )
+
     if name is not None:
         provider_account.name = _strip_or_raise(name, "name")
     if provider_tenant_id is not _UNSET:

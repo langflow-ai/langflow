@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import base64
-import random
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -42,8 +40,6 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.api_key.model import ApiKey
-
-MINIMUM_KEY_LENGTH = 32
 
 
 class AuthService(BaseAuthService):
@@ -644,23 +640,11 @@ class AuthService(BaseAuthService):
 
         return user if self.verify_password(password, user.password) else None
 
-    def _add_padding(self, value: str) -> str:
-        padding_needed = 4 - len(value) % 4
-        return value + "=" * padding_needed
-
-    def _ensure_valid_key(self, raw_key: str) -> bytes:
-        if len(raw_key) < MINIMUM_KEY_LENGTH:
-            random.seed(raw_key)
-            key = bytes(random.getrandbits(8) for _ in range(32))
-            key = base64.urlsafe_b64encode(key)
-        else:
-            key = self._add_padding(raw_key).encode()
-        return key
-
     def _get_fernet(self) -> Fernet:
+        from langflow.services.auth.utils import ensure_fernet_key
+
         secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        valid_key = self._ensure_valid_key(secret_key)
-        return Fernet(valid_key)
+        return Fernet(ensure_fernet_key(secret_key))
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()
@@ -694,7 +678,7 @@ class AuthService(BaseAuthService):
             return fernet.decrypt(encrypted_api_key.encode()).decode()
         except Exception as primary_exception:  # noqa: BLE001
             logger.debug(
-                "Decryption using UTF-8 encoded API key failed. Error: %s. "
+                "Decryption using UTF-8 encoded API key failed. Error: %r. "
                 "Retrying decryption using the raw string input.",
                 primary_exception,
             )
@@ -704,7 +688,7 @@ class AuthService(BaseAuthService):
                 # Decryption failed completely - log warning and return empty string
                 logger.warning(
                     "API key decryption failed after retry. This may indicate a corrupted key or "
-                    "SECRET_KEY mismatch. Primary error: %s, Secondary error: %s",
+                    "SECRET_KEY mismatch. Primary error: %r, Secondary error: %r",
                     primary_exception,
                     secondary_exception,
                 )

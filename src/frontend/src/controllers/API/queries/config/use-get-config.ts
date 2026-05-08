@@ -103,7 +103,7 @@ export const useGetConfig: useQueryFunctionType<
 
       // Set fields present in both public and full config
       setMaxFileSizeUpload(data.max_file_size_upload);
-      setEventDelivery(data.event_delivery ?? EventDeliveryType.POLLING);
+      setEventDelivery(data.event_delivery ?? EventDeliveryType.STREAMING);
       const allowCustomComponents = data.allow_custom_components ?? true;
       setAllowCustomComponents(allowCustomComponents);
       setMcpBaseUrl(data.mcp_base_url ?? "");
@@ -114,7 +114,7 @@ export const useGetConfig: useQueryFunctionType<
         setAutoSaving(data.auto_saving);
         setAutoSavingInterval(data.auto_saving_interval);
         setHealthCheckMaxRetries(data.health_check_max_retries);
-        setFeatureFlags(data.feature_flags);
+        setFeatureFlags(data.feature_flags ?? {});
         setSerializationMaxItemsLength(data.serialization_max_items_length);
         setWebhookPollingInterval(
           data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,

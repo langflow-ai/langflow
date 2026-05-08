@@ -310,6 +310,159 @@ async def test_load_langchain_object_with_cached_session(basic_graph_data):
 #     assert graph1 == graph2
 
 
+def test_tweak_no_node_id_boolean():
+    """Test that boolean tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"enabled": False}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweak_no_node_id_numeric():
+    """Test that numeric tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                                "max_tokens": {"value": 100, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"temperature": 0.7, "max_tokens": 256}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                                "max_tokens": {"value": 256, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweaks_schema_accepts_bool():
+    """Tweaks model must accept boolean root-level values without coercion."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"stream": False, "enabled": True})
+    assert tweaks.root["stream"] is False
+    assert tweaks.root["enabled"] is True
+    # Verify bool is preserved and not coerced to int
+    assert isinstance(tweaks.root["stream"], bool)
+    assert isinstance(tweaks.root["enabled"], bool)
+
+
+def test_tweaks_schema_accepts_numerics():
+    """Tweaks model must accept int and float root-level values."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"temperature": 0.7, "max_tokens": 256})
+    assert tweaks.root["temperature"] == 0.7
+    assert tweaks.root["max_tokens"] == 256
+
+
+def test_tweaks_schema_rejects_invalid():
+    """Tweaks model should still reject unsupported value types."""
+    import pytest
+    from lfx.schema.graph import Tweaks
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Tweaks(root={"param": [1, 2, 3]})
+
+
 def test_apply_tweaks_code_override_prevention():
     """Test that code tweaks are prevented and logged as warning."""
     from unittest.mock import patch

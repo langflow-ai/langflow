@@ -71,22 +71,40 @@ describe("useGetDeploymentsByProviders", () => {
     });
   });
 
-  it("combine merges deployments and injects provider_account_id", () => {
+  it("includes project_id in API params when folder id is provided", async () => {
+    mockApiGet.mockResolvedValue({
+      data: { deployments: [], page: 1, size: 20, total: 0 },
+    });
+
+    useGetDeploymentsByProviders(["prov-1"], "folder-1");
+    await capturedConfig.queries[0].queryFn();
+
+    expect(mockApiGet).toHaveBeenCalledWith("/api/v1/deployments", {
+      params: {
+        provider_id: "prov-1",
+        project_id: "folder-1",
+        page: 1,
+        size: 20,
+      },
+    });
+  });
+
+  it("combine merges deployments and preserves provider_id", () => {
     useGetDeploymentsByProviders(["prov-1", "prov-2"]);
 
     const mockResults = [
       {
         data: {
           deployments: [
-            { id: "d1", name: "Agent 1" },
-            { id: "d2", name: "Agent 2" },
+            { id: "d1", name: "Agent 1", provider_id: "prov-1" },
+            { id: "d2", name: "Agent 2", provider_id: "prov-1" },
           ],
         },
         isLoading: false,
       },
       {
         data: {
-          deployments: [{ id: "d3", name: "Agent 3" }],
+          deployments: [{ id: "d3", name: "Agent 3", provider_id: "prov-2" }],
         },
         isLoading: false,
       },
@@ -96,12 +114,30 @@ describe("useGetDeploymentsByProviders", () => {
 
     expect(combined.deployments).toHaveLength(3);
     expect(combined.deployments[0]).toEqual(
-      expect.objectContaining({ id: "d1", provider_account_id: "prov-1" }),
+      expect.objectContaining({ id: "d1", provider_id: "prov-1" }),
     );
     expect(combined.deployments[2]).toEqual(
-      expect.objectContaining({ id: "d3", provider_account_id: "prov-2" }),
+      expect.objectContaining({ id: "d3", provider_id: "prov-2" }),
     );
     expect(combined.isLoading).toBe(false);
+  });
+
+  it("combine fills provider_id from query when list item omits it", () => {
+    useGetDeploymentsByProviders(["prov-1"]);
+
+    const mockResults = [
+      {
+        data: {
+          deployments: [{ id: "d1", name: "Agent 1" }],
+        },
+        isLoading: false,
+      },
+    ];
+
+    const combined = capturedConfig.combine(mockResults);
+
+    expect(combined.deployments).toHaveLength(1);
+    expect(combined.deployments[0].provider_id).toBe("prov-1");
   });
 
   it("combine reports isLoading when any query is loading", () => {
@@ -123,7 +159,9 @@ describe("useGetDeploymentsByProviders", () => {
     const mockResults = [
       { data: undefined, isLoading: true },
       {
-        data: { deployments: [{ id: "d1", name: "Agent" }] },
+        data: {
+          deployments: [{ id: "d1", name: "Agent", provider_id: "prov-2" }],
+        },
         isLoading: false,
       },
     ];
@@ -131,7 +169,7 @@ describe("useGetDeploymentsByProviders", () => {
     const combined = capturedConfig.combine(mockResults);
 
     expect(combined.deployments).toHaveLength(1);
-    expect(combined.deployments[0].provider_account_id).toBe("prov-2");
+    expect(combined.deployments[0].provider_id).toBe("prov-2");
   });
 
   it("returns empty deployments for empty provider list", () => {

@@ -7,13 +7,8 @@ export type DetectEnvVarsPayload = {
   flow_version_ids: string[];
 };
 
-export type DetectedEnvVar = {
-  key: string;
-  global_variable_name?: string | null;
-};
-
 export type DetectEnvVarsResponse = {
-  variables: DetectedEnvVar[];
+  variables: string[];
 };
 
 export const usePostDetectEnvVars: useMutationFunctionType<

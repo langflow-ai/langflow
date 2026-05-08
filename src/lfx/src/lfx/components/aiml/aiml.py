@@ -1,5 +1,4 @@
 from langchain_openai import ChatOpenAI
-from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 from lfx.base.models.aiml_constants import AimlModels
@@ -14,6 +13,7 @@ from lfx.inputs.inputs import (
     SliderInput,
     StrInput,
 )
+from lfx.utils.secrets import secret_value_to_str
 
 
 class AIMLModelComponent(LCModelComponent):
@@ -79,7 +79,7 @@ class AIMLModelComponent(LCModelComponent):
         model_kwargs = self.model_kwargs or {}
         aiml_api_base = self.aiml_api_base or "https://api.aimlapi.com/v2"
 
-        openai_api_key = aiml_api_key.get_secret_value() if isinstance(aiml_api_key, SecretStr) else aiml_api_key
+        openai_api_key = secret_value_to_str(aiml_api_key)
 
         # TODO: Once OpenAI fixes their o1 models, this part will need to be removed
         # to work correctly with o1 temperature settings.

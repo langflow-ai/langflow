@@ -78,9 +78,11 @@ describe("useGetProviderAccounts", () => {
         {
           id: "prov-1",
           name: "My WxO",
-          provider_tenant_id: "tenant-1",
-          provider_key: "watsonx_orchestrate",
-          provider_url: "https://api.wxo.ibm.com",
+          provider_key: "watsonx-orchestrate",
+          provider_data: {
+            url: "https://api.wxo.ibm.com",
+            tenant_id: "tenant-1",
+          },
           created_at: "2026-01-01T00:00:00Z",
           updated_at: null,
         },
@@ -96,10 +98,12 @@ describe("useGetProviderAccounts", () => {
 
     expect(result.data).toBeDefined();
     if (!result.data) return;
-    expect(result.data).toEqual(responseData);
     expect(result.data.provider_accounts).toHaveLength(1);
     expect(result.data.provider_accounts[0].provider_key).toBe(
-      "watsonx_orchestrate",
+      "watsonx-orchestrate",
+    );
+    expect(result.data.provider_accounts[0].provider_data?.url).toBe(
+      "https://api.wxo.ibm.com",
     );
   });
 });

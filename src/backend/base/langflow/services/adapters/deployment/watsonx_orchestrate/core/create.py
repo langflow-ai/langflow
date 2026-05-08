@@ -28,7 +28,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared impor
     OrderedUniqueStrs,
     RawConnectionCreatePlan,
     RawToolCreatePlan,
-    create_connection_with_conflict_mapping,
     create_raw_tools_with_bindings,
     log_batch_errors,
     resolve_connections_for_operations,
@@ -52,6 +51,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
+    raise_as_deployment_error,
     validate_wxo_name,
 )
 
@@ -198,11 +198,15 @@ async def apply_provider_create_plan_with_rollback(
     # - operation_to_provider_app_id: operation app_id → provider app_id
     #     (identity mapping for both existing and raw-created connections).
     # - resolved_connections: provider_app_id → connection_id map for bind calls.
+    # - created_app_ids_journal: app_ids recorded immediately after successful
+    #     provider connection creation; used to ensure rollback sees partial
+    #     successes even if create later fails before returning.
     created_snapshot_bindings: list[WatsonxToolRefBinding] = []
     created_tool_app_bindings: list[WatsonxToolAppBinding] = []
     agent_create_response = None
     operation_to_provider_app_id: dict[str, str] = {}
     resolved_connections: dict[str, str] = {}
+    created_app_ids_journal: list[str] = []
 
     try:
         try:
@@ -214,7 +218,7 @@ async def apply_provider_create_plan_with_rollback(
                 raw_connections_to_create=plan.raw_connections_to_create,
                 error_prefix=ErrorPrefix.CREATE.value,
                 validate_connection_fn=validate_connection,
-                create_connection_fn=create_connection_with_conflict_mapping,
+                created_app_ids_journal=created_app_ids_journal,
             )
             operation_to_provider_app_id = connection_result.operation_to_provider_app_id
             resolved_connections = connection_result.resolved_connections
@@ -425,7 +429,16 @@ async def create_agent_deployment(
         tool_ids=tool_ids,
         llm=llm,
     )
-    return await asyncio.to_thread(clients.agent.create, payload)
+    try:
+        return await asyncio.to_thread(clients.agent.create, payload)
+    except Exception as exc:  # noqa: BLE001
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.CREATE,
+            log_msg="Unexpected provider error during wxO agent create",
+            resource="agent",
+            resource_name=agent_name,
+        )
 
 
 def validate_create_flow_provider_data(

@@ -36,27 +36,24 @@ describe("usePostDeployment", () => {
 
   const validPayload: DeploymentCreateRequest = {
     provider_id: "prov-1",
-    spec: { name: "My Agent", description: "A test agent", type: "agent" },
+    name: "My Agent",
+    description: "A test agent",
+    type: "agent",
     provider_data: {
       llm: "ibm/granite-3-8b-instruct",
-      operations: [
+      add_flows: [
         {
-          op: "bind",
           flow_version_id: "fv-1",
           app_ids: ["app-1"],
           tool_name: "my_tool",
         },
       ],
-      connections: {
-        raw_payloads: [
-          {
-            app_id: "app-1",
-            environment_variables: {
-              API_KEY: { value: "secret", source: "raw" },
-            },
-          },
-        ],
-      },
+      connections: [
+        {
+          app_id: "app-1",
+          credentials: [{ key: "API_KEY", value: "secret", source: "raw" }],
+        },
+      ],
     },
   };
 
@@ -83,14 +80,12 @@ describe("usePostDeployment", () => {
     });
   });
 
-  it("sends operations without tool_name when not provided", async () => {
+  it("sends add_flows without tool_name when not provided", async () => {
     const payloadNoToolName: DeploymentCreateRequest = {
       ...validPayload,
       provider_data: {
         ...validPayload.provider_data,
-        operations: [
-          { op: "bind", flow_version_id: "fv-1", app_ids: ["app-1"] },
-        ],
+        add_flows: [{ flow_version_id: "fv-1", app_ids: ["app-1"] }],
       },
     };
     mockApiPost.mockResolvedValue({ data: { id: "dep-1" } });
@@ -99,6 +94,6 @@ describe("usePostDeployment", () => {
     await mutation.mutate(payloadNoToolName);
 
     const sentPayload = mockApiPost.mock.calls[0][1];
-    expect(sentPayload.provider_data.operations[0].tool_name).toBeUndefined();
+    expect(sentPayload.provider_data.add_flows[0].tool_name).toBeUndefined();
   });
 });

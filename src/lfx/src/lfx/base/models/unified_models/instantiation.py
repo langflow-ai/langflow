@@ -74,8 +74,22 @@ def get_llm(
         )
         raise ValueError(msg)
 
-    # Get model class from metadata
+    # Get model class from metadata, falling back to the provider-level
+    # mapping when the stored model value was sourced from
+    # ``get_unified_models_detailed`` (which, unlike
+    # ``get_language_model_options``, does not inject ``model_class`` into
+    # each model's metadata).  This happens for example immediately after a
+    # user configures a provider and the frontend augments its dropdown from
+    # ``/api/v1/models`` before the backend has repopulated
+    # ``template[model]["options"]``; the resulting stored selection only
+    # carries the raw ``create_model_metadata`` fields, so we have to derive
+    # ``model_class`` from the provider mapping that
+    # ``get_language_model_options`` would have used.
     model_class_name = metadata.get("model_class")
+    if not model_class_name and provider:
+        from lfx.base.models.model_metadata import get_provider_param_mapping
+
+        model_class_name = get_provider_param_mapping(provider).get("model_class")
     if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)

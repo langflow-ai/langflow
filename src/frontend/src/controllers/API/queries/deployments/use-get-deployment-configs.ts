@@ -7,6 +7,7 @@ export interface DeploymentConfigItem {
   connection_id: string;
   app_id: string;
   type?: string;
+  environment?: string;
 }
 
 export interface DeploymentConfigListResponse {

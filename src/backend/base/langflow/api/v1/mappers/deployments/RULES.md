@@ -37,7 +37,7 @@ Not allowed in routes:
 The mapper translates API payloads to Adapters and the Langflow DB:
 
 - **API → Adapter** — reshapes the API request's `provider_data` into adapter-layer input models (e.g. `VerifyCredentials`, `AdapterDeploymentCreate`). The adapter then makes the actual provider SDK/network calls.
-- **API → DB** — extracts provider-specific fields from the API request and returns a flat `dict[str, Any]` of DB column-value pairs that the route spreads into CRUD kwargs (e.g. `resolve_credential_fields` returns `{"api_key": "..."}`, `resolve_provider_account_update` returns the full update diff).
+- **API → DB** — extracts provider-specific fields from the API request and assembles typed DB-bound create/update contracts (e.g. `resolve_provider_account_create` returns a `DeploymentProviderAccount` model and `resolve_provider_account_update` returns the full update diff dict).
 
 Mapper responsibility includes:
 
@@ -293,8 +293,14 @@ The mapper is the **single** component that understands a provider's credential 
 **Credential flow (API → DB):**
 
 - The API schema exposes credentials as an opaque `provider_data: dict[str, Any]`. It does not validate the dict's contents.
-- The mapper's `resolve_credential_fields(provider_data=...)` validates, extracts, and returns a `dict[str, Any]` of DB column-value pairs (e.g. `{"api_key": "..."}` for WXO today). The route spreads these into the CRUD layer's keyword arguments.
+- The mapper's `resolve_credentials(provider_data=...)` validates and extracts credential DB fields (e.g. `{"api_key": "..."}` for WXO today). Mapper create/update assemblers own how these fields are applied.
 - The DB model keeps a fixed column set (currently `api_key: str`). If a future provider requires a different storage layout (multiple columns, a serialised JSON blob, etc.), only the mapper and CRUD layer need to evolve — the route and schema remain unchanged.
+
+**Create assembly (API → DB):**
+
+- The mapper's `resolve_provider_account_create(payload=..., user_id=...)` assembles the complete provider-account create model for CRUD, including provider URL, tenant/account identifiers, and credential fields.
+- The base mapper does not implement provider-account create assembly; provider mappers must implement `resolve_provider_account_create(...)`.
+- Routes must not manually compose provider-specific create kwargs from `provider_data`; they delegate create assembly to the mapper.
 
 **Update assembly (API → DB):**
 
@@ -302,10 +308,10 @@ The mapper is the **single** component that understands a provider's credential 
 - Provider mappers override this method to add provider-specific update logic. Provider-account updates currently allow changing display name and credentials only; URL/tenant identifiers must remain immutable after create.
 - The base mapper provides a concrete default that handles common mutable fields (display name + credentials). Provider overrides call `super()` for the common fields and only add their own cross-field rules.
 
-**Defense-in-depth (DB model validator):**
+**DB model validator:**
 
 - The `DeploymentProviderAccount` model has a `model_validator` that calls `validate_tenant_url_consistency()`. This catches inconsistent tenant/URL pairs regardless of entry point — even if a future code path bypasses the mapper.
-- The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO mapper's `resolve_provider_tenant_id` delegate to the same `extract_tenant_from_url()` function.
+- The validation logic lives in `deployment_provider_account/utils.py` as the single source of truth. Both the model validator and the WXO create-path mapper logic delegate to the same `extract_tenant_from_url()` function.
 - Provider metadata such as tenant/account identifiers should arrive via `provider_data`; mappers extract and normalize them before persistence.
 
 ---
@@ -409,10 +415,9 @@ Use this checklist before merge:
 - [ ] Mapper boundary result signatures are not over-narrowed to dict-only generics without contract guarantees
 - [ ] Method names follow semantic families (`resolve_*`, `shape_*`, `util_*`)
 - [ ] Registry/contracts/base files remain separated by purpose
-- [ ] Provider-account update logic lives in mapper, not in route conditionals
+- [ ] Provider-account create/update logic lives in mapper, not in route conditionals
 - [ ] Provider-specific cross-field rules (e.g. tenant/URL coupling) are implemented as mapper overrides calling `super()`, not as base-class conditionals
-- [ ] Credential extraction uses `resolve_credential_fields`, not route-level assumptions about `provider_data` contents
-- [ ] Non-persisted provider-originated fields are placed in `provider_data` (never top-level)
+- [ ] Credential extraction uses `resolve_credentials`, not route-level assumptions about `provider_data` contents
 - [ ] DB-level consistency validators exist as defense-in-depth for cross-field invariants
 - [ ] Tests cover both base mapper defaults and provider overrides
 - [ ] Failure cases for missing/unexpected bindings are covered

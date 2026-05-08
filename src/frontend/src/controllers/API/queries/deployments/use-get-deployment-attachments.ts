@@ -9,12 +9,14 @@ import { UseRequestProcessor } from "../../services/request-processor";
  * Identity contract: Langflow tracks provider tools by their immutable
  * `provider_snapshot_id` (wxO tool_id), never by name.
  * - Tool renamed in provider → same snapshot ID, new `provider_data.tool_name`.
- * - Tool deleted in provider → snapshot ID unresolvable, `provider_data.tool_name` is null/missing.
+ * - Tool deleted in provider → missing from snapshot list, so
+ *   `provider_data` is null for that attachment.
  * - Tool deleted + new tool created with same name → different ID, our
  *   attachment still points to the old (missing) ID. The new tool is
  *   invisible to Langflow until explicitly attached.
  *
- * Use `provider_data.tool_name` for display, fall back to `flow_name` when null.
+ * When `provider_data` is non-null, `tool_name` is always present.
+ * Fall back to `flow_name` when `provider_data` is null.
  * Use `provider_snapshot_id` for operations.
  */
 export interface DeploymentFlowVersionItem {
@@ -26,8 +28,7 @@ export interface DeploymentFlowVersionItem {
   provider_snapshot_id: string | null;
   provider_data: {
     app_ids?: string[];
-    /** Provider tool name — null/missing when the tool was deleted or provider is unreachable. */
-    tool_name?: string | null;
+    tool_name: string;
   } | null;
 }
 
@@ -40,7 +41,7 @@ export interface DeploymentFlowVersionListResponse {
 
 interface GetDeploymentAttachmentsParams {
   deploymentId: string;
-  flow_ids?: string;
+  flow_ids?: string[];
 }
 
 export const useGetDeploymentAttachments: useQueryFunctionType<
@@ -50,9 +51,16 @@ export const useGetDeploymentAttachments: useQueryFunctionType<
   const { query } = UseRequestProcessor();
 
   const fn = async (): Promise<DeploymentFlowVersionListResponse> => {
+    const params = {
+      size: 50,
+      ...(flow_ids && flow_ids.length > 0 ? { flow_ids } : {}),
+    };
     const { data } = await api.get<DeploymentFlowVersionListResponse>(
       `${getURL("DEPLOYMENTS")}/${deploymentId}/flows`,
-      { params: { size: 50, flow_ids } },
+      {
+        params,
+        paramsSerializer: { indexes: null },
+      },
     );
     return data;
   };

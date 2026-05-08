@@ -13,12 +13,17 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from cachetools import func
-from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool
-from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool as _create_langflow_tool
+from fastapi import HTTPException
+from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.exceptions import InvalidContentError, InvalidDeploymentOperationError
+from lfx.services.adapters.deployment.exceptions import (
+    InvalidContentError,
+    InvalidDeploymentOperationError,
+)
 from lfx.utils.flow_requirements import generate_requirements_from_flow
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import retry_create
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
@@ -27,11 +32,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     normalize_wxo_name,
+    raise_as_deployment_error,
     require_tool_id,
 )
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
+    from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import LangflowTool
     from lfx.services.adapters.deployment.schema import BaseFlowArtifact, SnapshotItems, SnapshotListResult
 
     from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
@@ -299,14 +306,7 @@ def create_wxo_flow_tool(
     tool: LangflowTool = create_langflow_tool(
         tool_definition=flow_definition,
         connections=connections,
-        show_details=True,
-        # TODO: show_details is only set to true because the adk
-        # has a bug where it fails to create requirements
-        # when it is set to False.
-        # Reset to False when the bug is fixed in the adk.
-        # Even better, for us, remove this parameter entirely
-        # and just default to False internally and not expose
-        # it to the caller.
+        show_details=False,
     )
 
     tool_payload = tool.__tool_spec__.model_dump(
@@ -334,20 +334,6 @@ def create_wxo_flow_tool(
     )
 
     return tool_payload, artifacts
-
-
-def create_langflow_tool(
-    *,
-    tool_definition: dict[str, Any],
-    connections: dict[str, str],
-    show_details: bool,
-) -> LangflowTool:
-    """Module-level wrapper to keep tool creation monkeypatchable in tests."""
-    return _create_langflow_tool(
-        tool_definition=tool_definition,
-        connections=connections,
-        show_details=show_details,
-    )
 
 
 async def create_and_upload_wxo_flow_tools(
@@ -417,7 +403,17 @@ async def upload_wxo_flow_tool(
     artifact_bytes: bytes,
     created_tool_ids_journal: list[str] | None = None,
 ) -> str:
-    tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
+    tool_name = tool_payload.get("name")
+    try:
+        tool_response = await retry_create(asyncio.to_thread, clients.tool.create, tool_payload)
+    except (ClientAPIException, HTTPException) as exc:
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.CREATE,
+            log_msg="Unexpected provider error during wxO tool create",
+            resource="tool",
+            resource_name=tool_name,
+        )
     tool_id = require_tool_id(tool_response)
     logger.debug(
         "upload_wxo_flow_tool: created tool_id='%s', uploading artifact (%d bytes)", tool_id, len(artifact_bytes)
@@ -425,13 +421,22 @@ async def upload_wxo_flow_tool(
     if created_tool_ids_journal is not None:
         created_tool_ids_journal.append(tool_id)
 
-    await retry_create(
-        asyncio.to_thread,
-        upload_tool_artifact_bytes,
-        clients,
-        tool_id=tool_id,
-        artifact_bytes=artifact_bytes,
-    )
+    try:
+        await retry_create(
+            asyncio.to_thread,
+            upload_tool_artifact_bytes,
+            clients,
+            tool_id=tool_id,
+            artifact_bytes=artifact_bytes,
+        )
+    except (ClientAPIException, HTTPException) as exc:
+        raise_as_deployment_error(
+            exc,
+            error_prefix=ErrorPrefix.CREATE,
+            log_msg="Unexpected provider error during wxO tool artifact upload",
+            resource="tool",
+            resource_name=tool_name,
+        )
     return tool_id
 
 
@@ -523,9 +528,6 @@ async def verify_tools_by_ids(
 ) -> SnapshotListResult:
     """Fetch tools by ID and return only those that still exist on the provider."""
     from lfx.services.adapters.deployment.schema import SnapshotItem, SnapshotListResult
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import raise_as_deployment_error
 
     if not snapshot_ids:
         return SnapshotListResult(snapshots=[])

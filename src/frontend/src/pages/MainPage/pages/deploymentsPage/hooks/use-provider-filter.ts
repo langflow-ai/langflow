@@ -27,10 +27,10 @@ export function useProviderFilter(
     }
   }, [providers, selectedProviderId]);
 
-  const providerIdsToQuery = useMemo(() => {
-    if (!selectedProviderId) return [];
-    return [selectedProviderId];
-  }, [selectedProviderId]);
+  const providerIdsToQuery = useMemo(
+    () => (selectedProviderId ? [selectedProviderId] : []),
+    [selectedProviderId],
+  );
 
   const providerMap = useMemo(
     () =>

@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
+from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import create_langflow_tool
 from lfx.services.adapters.deployment.base import BaseDeploymentService
 from lfx.services.adapters.deployment.exceptions import (
     AuthenticationError,
     AuthorizationError,
     AuthSchemeError,
-    DeploymentConflictError,
     DeploymentError,
     DeploymentNotFoundError,
     DeploymentSupportError,
@@ -22,8 +22,11 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentOperationError,
     InvalidDeploymentTypeError,
     OperationNotSupportedError,
+    ResourceConflictError,
     ResourceNotFoundError,
-    raise_for_status_and_detail,
+)
+from lfx.services.adapters.deployment.exceptions import (
+    raise_as_deployment_error as raise_deployment_error_from_status,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
@@ -75,12 +78,15 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution im
     create_agent_run,
     get_agent_run,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.core.models import (
+    fetch_models_adapter,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
     rollback_created_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
-    derive_agent_environment,
+    get_agent_environments,
     get_deployment_detail_metadata,
     get_deployment_metadata,
 )
@@ -103,7 +109,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentLlmListResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
+    WatsonxModelOut,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
@@ -121,8 +129,6 @@ if TYPE_CHECKING:
 
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
-
-    from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 
 
 class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
@@ -224,7 +230,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             )
         except (
             AuthenticationError,
-            DeploymentConflictError,
+            ResourceConflictError,
             InvalidContentError,
             InvalidDeploymentOperationError,
             InvalidDeploymentTypeError,
@@ -293,8 +299,18 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> DeploymentListLlmsResult:
         """List provider-available LLM model names."""
         client_manager = await self._get_provider_clients(user_id=user_id, db=db)
+
+        # hardcode known default models to the top of the list
+        # (these are not included in wxO's API response)
+        raw_models = [
+            WatsonxModelOut(model_name="groq/openai/gpt-oss-120b"),
+            WatsonxModelOut(model_name="bedrock/openai.gpt-oss-120b-1:0"),
+        ]
+        hardcoded_names = {m.model_name for m in raw_models}
+
         try:
-            raw_models = await asyncio.to_thread(client_manager.get_models_raw)
+            api_models = await asyncio.to_thread(fetch_models_adapter, client_manager)
+            raw_models.extend(m for m in api_models if m["model_name"] not in hardcoded_names)
             parsed_models: WatsonxDeploymentLlmListResultData = self._parse_provider_payload(
                 slot=self.payload_schemas.deployment_llm_list_result,
                 slot_name="deployment_llm_list_result",
@@ -338,12 +354,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise InvalidDeploymentTypeError(message=msg)
 
             query_params: dict[str, Any] = {}
+            environment_filter: str | None = None
 
             if params and params.provider_params:
-                query_params = params.provider_params
+                provider_params = dict(params.provider_params)
+                environment_raw = provider_params.pop("environment", None)
+                if environment_raw is not None:
+                    normalized_environment = str(environment_raw).strip().lower()
+                    environment_filter = normalized_environment or None
+                query_params = provider_params
 
             if params and params.deployment_ids and "ids" not in query_params:
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
+
+            if params and params.deployment_names and "names" not in query_params:
+                query_params["names"] = list(params.deployment_names)
 
             # if different deployment types
             # are distinct resources in wxO
@@ -355,13 +380,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 client_manager.get_agents_raw,
                 params=query_params or None,
             )
+            if environment_filter is not None:
+                raw_agents = [agent for agent in raw_agents if environment_filter in get_agent_environments(agent)]
             deployments = [
                 get_deployment_metadata(
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
                     provider_data={
                         "tool_ids": extract_agent_tool_ids(agent),
-                        "environment": derive_agent_environment(agent),
+                        "environments": get_agent_environments(agent),
                     },
                 )
                 for agent in raw_agents
@@ -400,13 +427,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
+        environments = get_agent_environments(agent) if isinstance(agent, dict) and "environments" in agent else []
         return get_deployment_detail_metadata(
             data=agent,
             deployment_type=DeploymentType.AGENT,
             provider_data={
+                "tool_ids": extract_agent_tool_ids(agent),
+                "environment": environments[0] if environments else "unknown",
                 **({"llm": agent["llm"]} if isinstance(agent, dict) and agent.get("llm") else {}),
-            }
-            or None,
+            },
         )
 
     async def update(
@@ -500,7 +529,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             DeploymentNotFoundError,
             InvalidContentError,
             InvalidDeploymentOperationError,
-            DeploymentConflictError,
+            ResourceConflictError,
         ):
             raise
         except Exception as exc:
@@ -603,7 +632,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             id=agent_id,
             provider_data={
                 "status": "connected",
-                "environment": derive_agent_environment(agent),
+                "environments": get_agent_environments(agent),
             },
         )
 
@@ -639,9 +668,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionCreateResult(
             execution_id=agent_run_result.get("execution_id"),
             deployment_id=agent_id,
-            provider_result=self.payload_schemas.execution_create_result.parse(agent_run_result).model_dump(
-                exclude_none=True
-            ),
+            provider_result=self.payload_schemas.execution_create_result.parse(agent_run_result).model_dump(),
         )
 
     async def get_execution(
@@ -672,9 +699,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         return ExecutionStatusResult(
             execution_id=run_id,
             deployment_id=agent_run_result.get("agent_id"),
-            provider_result=self.payload_schemas.execution_status_result.parse(agent_run_result).model_dump(
-                exclude_none=True
-            ),
+            provider_result=self.payload_schemas.execution_status_result.parse(agent_run_result).model_dump(),
         )
 
     # TODO: allow listing all configs without filtering by deployment_id
@@ -703,17 +728,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter.
 
-        Supports three modes:
+        Supports four modes:
         - **deployment-scoped**: requires exactly one ``deployment_id`` in params;
           returns tools bound to that agent.
         - **snapshot-ids-only**: when ``snapshot_ids`` is provided and
           ``deployment_ids`` is empty/None, fetches tools directly by ID to
           verify which ones still exist in the provider.
+        - **snapshot-names**: when ``snapshot_names`` is provided and
+          ``deployment_ids`` is empty/None, fetches tools by name to check
+          which ones exist in the provider tenant.
         - **tenant-scoped**: when neither deployment_ids nor snapshot_ids are
           provided, returns all draft tools visible in the provider tenant.
         """
         has_deployment_ids = params and params.deployment_ids
         has_snapshot_ids = params and params.snapshot_ids
+        has_snapshot_names = params and params.snapshot_names
 
         if has_snapshot_ids and has_deployment_ids:
             logger.warning(
@@ -725,6 +754,30 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if has_snapshot_ids and not has_deployment_ids:
             return await verify_tools_by_ids(clients, params.snapshot_ids)  # type: ignore[union-attr]
+        if has_snapshot_names and not has_deployment_ids:
+            try:
+                raw_tools = await asyncio.to_thread(clients.tool.get_drafts_by_names, params.snapshot_names)  # type: ignore[union-attr]
+            except Exception as exc:  # noqa: BLE001
+                raise_as_deployment_error(
+                    exc,
+                    error_prefix=ErrorPrefix.LIST,
+                    log_msg="Unexpected error while listing wxO snapshots by name",
+                )
+            snapshots = [
+                SnapshotItem(
+                    id=tool["id"],
+                    name=tool.get("name") or tool["id"],
+                    provider_data=self._validate_snapshot_item_provider_data(
+                        {"connections": extract_langflow_connections_binding(tool)}
+                    ),
+                )
+                for tool in (raw_tools or [])
+                if isinstance(tool, dict) and tool.get("id")
+            ]
+            return SnapshotListResult(
+                snapshots=snapshots,
+                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
+            )
         if not has_deployment_ids:
             try:
                 raw_tools = await asyncio.to_thread(clients.get_tools_raw)
@@ -832,7 +885,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         user_id: IdLike,  # noqa: ARG002
         payload: VerifyCredentials,
     ) -> VerifyCredentialsResult:
-        """Verify WXO credentials by obtaining a token from the provider."""
+        """Verify WXO credentials for the target instance.
+
+        Obtains an IAM/MCSP token, then calls the wxO models listing API for the
+        configured instance URL. Token-only checks are insufficient because a
+        valid API key may authenticate while still lacking access to the tenant
+        represented by the instance URL.
+        """
         verify_slot = self.payload_schemas.verify_credentials
         if verify_slot is None:
             msg = "Required slot 'verify_credentials' is not configured."
@@ -872,8 +931,33 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 "Credential verification failed (status=%s)",
                 exc.status_code,
             )
-            raise_for_status_and_detail(
+            raise_deployment_error_from_status(
                 status_code=exc.status_code,
+                detail="Credential verification failed.",
+                message_prefix="Credential verification",
+                cause=None,
+            )
+        except Exception as exc:
+            raise DeploymentError(
+                message="Credential verification failed unexpectedly.",
+                error_code="deployment_error",
+                cause=exc,
+            ) from exc
+
+        def _probe_instance_models() -> None:
+            wxo_client = WxOClient(instance_url=payload.base_url, authenticator=authenticator)
+            fetch_models_adapter(wxo_client)
+
+        try:
+            await asyncio.to_thread(_probe_instance_models)
+        except ClientAPIException as exc:
+            status_code = exc.response.status_code if exc.response is not None else None
+            logger.error(  # noqa: TRY400
+                "Credential verification failed: wxO instance probe rejected request (status=%s)",
+                status_code,
+            )
+            raise_deployment_error_from_status(
+                status_code=status_code,
                 detail="Credential verification failed.",
                 message_prefix="Credential verification",
                 cause=None,
@@ -935,10 +1019,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         method; this prevents accidental overwrites of externally managed
         WXO tools.
         """
-        from ibm_watsonx_orchestrate_core.types.tools.langflow_tool import (
-            create_langflow_tool as _create_langflow_tool,
-        )
-
         from langflow.utils.version import get_version_info
 
         clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -968,10 +1048,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if detected_version:
                 flow_definition["last_tested_version"] = detected_version
 
-        tool = _create_langflow_tool(
+        tool = create_langflow_tool(
             tool_definition=flow_definition,
             connections={},
-            show_details=True,
+            show_details=False,
         )
 
         artifact_bytes = build_langflow_artifact_bytes(

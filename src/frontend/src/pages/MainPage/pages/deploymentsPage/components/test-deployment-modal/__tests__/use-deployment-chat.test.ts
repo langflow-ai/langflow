@@ -4,20 +4,20 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockPostExecution = jest.fn();
-const mockGetExecution = jest.fn();
+const mockPostRun = jest.fn();
+const mockGetRun = jest.fn();
 
 jest.mock(
-  "@/controllers/API/queries/deployments/use-post-deployment-execution",
+  "@/controllers/API/queries/deployments/use-post-deployment-run",
   () => ({
-    usePostDeploymentExecution: () => ({ mutateAsync: mockPostExecution }),
+    usePostDeploymentRun: () => ({ mutateAsync: mockPostRun }),
   }),
 );
 
 jest.mock(
-  "@/controllers/API/queries/deployments/use-get-deployment-execution",
+  "@/controllers/API/queries/deployments/use-get-deployment-run",
   () => ({
-    useGetDeploymentExecution: () => ({ mutateAsync: mockGetExecution }),
+    useGetDeploymentRun: () => ({ mutateAsync: mockGetRun }),
   }),
 );
 
@@ -27,23 +27,23 @@ import { useDeploymentChat } from "../use-deployment-chat";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Make a postExecution response with the given provider_data overrides. */
+/** Make a postRun response with the given provider_data overrides. */
 const makePostResponse = (
   providerDataOverrides: Record<string, unknown> = {},
 ) => ({
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "pending",
     ...providerDataOverrides,
   },
 });
 
-/** Make a getExecution response (defaults to completed with text content). */
+/** Make a getRun response (defaults to completed with text content). */
 const makeGetResponse = (
   providerDataOverrides: Record<string, unknown> = {},
 ) => ({
   provider_data: {
-    execution_id: "exec-1",
+    id: "exec-1",
     status: "completed",
     result: {
       data: {
@@ -56,7 +56,7 @@ const makeGetResponse = (
   },
 });
 
-/** Make a completed getExecution response with no result (falls back to status string). */
+/** Make a completed getRun response with no result (falls back to status string). */
 const makePendingGetResponse = () =>
   makeGetResponse({ status: "pending", result: undefined });
 
@@ -67,8 +67,8 @@ const makePendingGetResponse = () =>
 describe("useDeploymentChat", () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    mockPostExecution.mockClear();
-    mockGetExecution.mockClear();
+    mockPostRun.mockClear();
+    mockGetRun.mockClear();
   });
 
   afterEach(() => {
@@ -102,7 +102,7 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("   ");
     });
 
-    expect(mockPostExecution).not.toHaveBeenCalled();
+    expect(mockPostRun).not.toHaveBeenCalled();
     expect(result.current.messages).toHaveLength(0);
   });
 
@@ -115,13 +115,13 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("");
     });
 
-    expect(mockPostExecution).not.toHaveBeenCalled();
+    expect(mockPostRun).not.toHaveBeenCalled();
   });
 
   it("does not send a second message while waiting for response from the first", async () => {
-    mockPostExecution.mockResolvedValue(makePostResponse());
-    // Keep getExecution pending forever (never resolves) so isWaitingForResponse stays true
-    mockGetExecution.mockReturnValue(new Promise(() => {}));
+    mockPostRun.mockResolvedValue(makePostResponse());
+    // Keep getRun pending forever (never resolves) so isWaitingForResponse stays true
+    mockGetRun.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),
@@ -142,16 +142,16 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("second");
     });
 
-    expect(mockPostExecution).toHaveBeenCalledTimes(1);
+    expect(mockPostRun).toHaveBeenCalledTimes(1);
   });
 
   // -------------------------------------------------------------------------
-  // postExecution request shape
+  // postRun request shape
   // -------------------------------------------------------------------------
 
-  it("sends the message text and deployment/provider ids to postExecution", async () => {
-    mockPostExecution.mockResolvedValueOnce(
-      makePostResponse({ status: "completed", execution_id: null }),
+  it("sends the message text and deployment/provider ids to postRun", async () => {
+    mockPostRun.mockResolvedValueOnce(
+      makePostResponse({ status: "completed", id: null }),
     );
 
     const { result } = renderHook(() =>
@@ -162,7 +162,7 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("hello world");
     });
 
-    expect(mockPostExecution).toHaveBeenCalledWith(
+    expect(mockPostRun).toHaveBeenCalledWith(
       expect.objectContaining({
         deployment_id: "my-dep",
         provider_data: expect.objectContaining({ input: "hello world" }),
@@ -170,14 +170,32 @@ describe("useDeploymentChat", () => {
     );
   });
 
+  it("never sends agent_id in provider_data when creating a run", async () => {
+    mockPostRun.mockResolvedValueOnce(
+      makePostResponse({ status: "completed", id: null }),
+    );
+
+    const { result } = renderHook(() =>
+      useDeploymentChat({ providerId: "my-provider", deploymentId: "my-dep" }),
+    );
+
+    await act(async () => {
+      await result.current.sendMessage("hello world");
+    });
+
+    expect(mockPostRun).toHaveBeenCalledTimes(1);
+    const firstCallPayload = mockPostRun.mock.calls[0][0];
+    expect(firstCallPayload.provider_data).not.toHaveProperty("agent_id");
+  });
+
   // -------------------------------------------------------------------------
   // Immediate terminal — no polling
   // -------------------------------------------------------------------------
 
   it("handles an immediately-completed response (status=completed)", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({
-        execution_id: "exec-1",
+        id: "exec-1",
         status: "completed",
         result: {
           data: {
@@ -206,11 +224,11 @@ describe("useDeploymentChat", () => {
       isLoading: false,
     });
     expect(result.current.isWaitingForResponse).toBe(false);
-    expect(mockGetExecution).not.toHaveBeenCalled();
+    expect(mockGetRun).not.toHaveBeenCalled();
   });
 
   it("handles an immediately-completed response via completed_at", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({
         completed_at: "2025-01-01T00:00:00Z",
         result: {
@@ -232,11 +250,11 @@ describe("useDeploymentChat", () => {
     });
 
     expect(result.current.messages[1].content).toBe("Done via completed_at");
-    expect(mockGetExecution).not.toHaveBeenCalled();
+    expect(mockGetRun).not.toHaveBeenCalled();
   });
 
   it("falls back to status string when result has no text content", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({ status: "success", result: undefined }),
     );
 
@@ -252,12 +270,12 @@ describe("useDeploymentChat", () => {
   });
 
   // -------------------------------------------------------------------------
-  // No execution ID returned
+  // No run ID returned
   // -------------------------------------------------------------------------
 
-  it("shows error when no execution_id is returned and response is not terminal", async () => {
-    mockPostExecution.mockResolvedValueOnce(
-      makePostResponse({ execution_id: null, status: "pending" }),
+  it("shows error when no run id is returned and response is not terminal", async () => {
+    mockPostRun.mockResolvedValueOnce(
+      makePostResponse({ id: null, status: "pending" }),
     );
 
     const { result } = renderHook(() =>
@@ -271,18 +289,18 @@ describe("useDeploymentChat", () => {
     expect(result.current.messages[1]).toMatchObject({
       role: "assistant",
       isLoading: false,
-      error: "Execution started but no execution ID was returned.",
+      error: "Run started but no run ID was returned.",
     });
     expect(result.current.isWaitingForResponse).toBe(false);
-    expect(mockGetExecution).not.toHaveBeenCalled();
+    expect(mockGetRun).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
-  // postExecution throws
+  // postRun throws
   // -------------------------------------------------------------------------
 
-  it("shows error message when postExecution throws an Error", async () => {
-    mockPostExecution.mockRejectedValueOnce(new Error("Network error"));
+  it("shows error message when postRun throws an Error", async () => {
+    mockPostRun.mockRejectedValueOnce(new Error("Network error"));
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),
@@ -300,8 +318,8 @@ describe("useDeploymentChat", () => {
     expect(result.current.isWaitingForResponse).toBe(false);
   });
 
-  it("shows generic error when postExecution throws a non-Error value", async () => {
-    mockPostExecution.mockRejectedValueOnce("unexpected string error");
+  it("shows generic error when postRun throws a non-Error value", async () => {
+    mockPostRun.mockRejectedValueOnce("unexpected string error");
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),
@@ -313,7 +331,7 @@ describe("useDeploymentChat", () => {
 
     expect(result.current.messages[1]).toMatchObject({
       isLoading: false,
-      error: "Failed to start execution",
+      error: "Failed to start run",
     });
   });
 
@@ -322,8 +340,8 @@ describe("useDeploymentChat", () => {
   // -------------------------------------------------------------------------
 
   it("polls until terminal status then updates assistant message", async () => {
-    mockPostExecution.mockResolvedValueOnce(makePostResponse());
-    mockGetExecution
+    mockPostRun.mockResolvedValueOnce(makePostResponse());
+    mockGetRun
       .mockResolvedValueOnce(makePendingGetResponse()) // poll 1: still pending
       .mockResolvedValueOnce(makeGetResponse()); // poll 2: completed
 
@@ -335,7 +353,7 @@ describe("useDeploymentChat", () => {
       void result.current.sendMessage("hello");
     });
 
-    // Flush postExecution
+    // Flush postRun
     await act(async () => {
       await Promise.resolve();
     });
@@ -348,7 +366,7 @@ describe("useDeploymentChat", () => {
       await Promise.resolve();
     });
 
-    expect(mockGetExecution).toHaveBeenCalledTimes(1);
+    expect(mockGetRun).toHaveBeenCalledTimes(1);
     expect(result.current.isWaitingForResponse).toBe(true); // still waiting
 
     // Poll 2
@@ -368,14 +386,12 @@ describe("useDeploymentChat", () => {
       content: "Hello back!",
       isLoading: false,
     });
-    expect(mockGetExecution).toHaveBeenCalledTimes(2);
+    expect(mockGetRun).toHaveBeenCalledTimes(2);
   });
 
-  it("passes provider_id and execution_id to getExecution during polling", async () => {
-    mockPostExecution.mockResolvedValueOnce(
-      makePostResponse({ execution_id: "my-exec-id" }),
-    );
-    mockGetExecution.mockResolvedValueOnce(makeGetResponse());
+  it("passes provider_id and run_id to getRun during polling", async () => {
+    mockPostRun.mockResolvedValueOnce(makePostResponse({ id: "my-exec-id" }));
+    mockGetRun.mockResolvedValueOnce(makeGetResponse());
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "my-provider", deploymentId: "d1" }),
@@ -395,9 +411,9 @@ describe("useDeploymentChat", () => {
       await Promise.resolve();
     });
 
-    expect(mockGetExecution).toHaveBeenCalledWith({
+    expect(mockGetRun).toHaveBeenCalledWith({
       deployment_id: "d1",
-      execution_id: "my-exec-id",
+      run_id: "my-exec-id",
     });
   });
 
@@ -406,9 +422,9 @@ describe("useDeploymentChat", () => {
   // -------------------------------------------------------------------------
 
   it("shows timeout error after MAX_POLL_ATTEMPTS (30) polls all return pending", async () => {
-    mockPostExecution.mockResolvedValueOnce(makePostResponse());
+    mockPostRun.mockResolvedValueOnce(makePostResponse());
     // All 31 polls return pending (MAX_POLL_ATTEMPTS = 30, timeout fires at attempt 31)
-    mockGetExecution.mockResolvedValue(makePendingGetResponse());
+    mockGetRun.mockResolvedValue(makePendingGetResponse());
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),
@@ -433,7 +449,7 @@ describe("useDeploymentChat", () => {
 
     await waitFor(() => {
       expect(result.current.messages[1].error).toBe(
-        "Execution timed out. Please try again.",
+        "Run timed out. Please try again.",
       );
     });
 
@@ -442,8 +458,8 @@ describe("useDeploymentChat", () => {
   });
 
   it("shows error when a poll call throws", async () => {
-    mockPostExecution.mockResolvedValueOnce(makePostResponse());
-    mockGetExecution.mockRejectedValueOnce(new Error("Poll failed"));
+    mockPostRun.mockResolvedValueOnce(makePostResponse());
+    mockGetRun.mockRejectedValueOnce(new Error("Poll failed"));
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),
@@ -470,9 +486,9 @@ describe("useDeploymentChat", () => {
     expect(result.current.isWaitingForResponse).toBe(false);
   });
 
-  it("shows 'Execution failed.' when execution has failed_at and no last_error", async () => {
-    mockPostExecution.mockResolvedValueOnce(makePostResponse());
-    mockGetExecution.mockResolvedValueOnce(
+  it("shows 'Run failed.' when run has failed_at and no last_error", async () => {
+    mockPostRun.mockResolvedValueOnce(makePostResponse());
+    mockGetRun.mockResolvedValueOnce(
       makeGetResponse({
         failed_at: "2025-01-01T00:00:00Z",
         status: "failed",
@@ -499,13 +515,13 @@ describe("useDeploymentChat", () => {
     });
 
     await waitFor(() => {
-      expect(result.current.messages[1].error).toBe("Execution failed.");
+      expect(result.current.messages[1].error).toBe("Run failed.");
     });
   });
 
-  it("shows last_error when execution has failed_at with a specific error message", async () => {
-    mockPostExecution.mockResolvedValueOnce(makePostResponse());
-    mockGetExecution.mockResolvedValueOnce(
+  it("shows last_error when run has failed_at with a specific error message", async () => {
+    mockPostRun.mockResolvedValueOnce(makePostResponse());
+    mockGetRun.mockResolvedValueOnce(
       makeGetResponse({
         failed_at: "2025-01-01T00:00:00Z",
         last_error: "Tool invocation failed: timeout",
@@ -545,7 +561,7 @@ describe("useDeploymentChat", () => {
 
   it("extracts and persists thread_id for subsequent messages", async () => {
     const terminalResponse = {
-      execution_id: null,
+      id: null,
       thread_id: "thread-abc",
       status: "completed",
       result: {
@@ -555,7 +571,7 @@ describe("useDeploymentChat", () => {
       },
     };
 
-    mockPostExecution
+    mockPostRun
       .mockResolvedValueOnce({ provider_data: terminalResponse })
       .mockResolvedValueOnce({ provider_data: terminalResponse });
 
@@ -573,8 +589,8 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("second");
     });
 
-    expect(mockPostExecution).toHaveBeenCalledTimes(2);
-    expect(mockPostExecution).toHaveBeenNthCalledWith(
+    expect(mockPostRun).toHaveBeenCalledTimes(2);
+    expect(mockPostRun).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         provider_data: expect.objectContaining({ thread_id: "thread-abc" }),
@@ -583,8 +599,8 @@ describe("useDeploymentChat", () => {
   });
 
   it("does not send thread_id on the first message", async () => {
-    mockPostExecution.mockResolvedValueOnce(
-      makePostResponse({ execution_id: null, status: "completed" }),
+    mockPostRun.mockResolvedValueOnce(
+      makePostResponse({ id: null, status: "completed" }),
     );
 
     const { result } = renderHook(() =>
@@ -595,7 +611,7 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("hello");
     });
 
-    expect(mockPostExecution).toHaveBeenCalledWith(
+    expect(mockPostRun).toHaveBeenCalledWith(
       expect.objectContaining({
         provider_data: expect.not.objectContaining({
           thread_id: expect.anything(),
@@ -605,10 +621,10 @@ describe("useDeploymentChat", () => {
   });
 
   it("extracts thread_id from nested result.data.message.context.wxo_thread_id", async () => {
-    mockPostExecution
+    mockPostRun
       .mockResolvedValueOnce({
         provider_data: {
-          execution_id: null,
+          id: null,
           status: "completed",
           result: {
             data: {
@@ -622,7 +638,7 @@ describe("useDeploymentChat", () => {
       })
       .mockResolvedValueOnce({
         provider_data: {
-          execution_id: null,
+          id: null,
           status: "completed",
           result: {
             data: { message: { content: [{ type: "text", text: "Second" }] } },
@@ -641,7 +657,7 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("second");
     });
 
-    expect(mockPostExecution).toHaveBeenNthCalledWith(
+    expect(mockPostRun).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         provider_data: expect.objectContaining({ thread_id: "wxo-thread-xyz" }),
@@ -654,9 +670,9 @@ describe("useDeploymentChat", () => {
   // -------------------------------------------------------------------------
 
   it("attaches tool traces to the assistant message when present", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({
-        execution_id: null,
+        id: null,
         status: "completed",
         result: {
           data: {
@@ -702,9 +718,9 @@ describe("useDeploymentChat", () => {
   });
 
   it("does not attach toolTraces when step_history is empty", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({
-        execution_id: null,
+        id: null,
         status: "completed",
         result: {
           data: { message: { content: [{ type: "text", text: "Reply" }] } },
@@ -728,9 +744,9 @@ describe("useDeploymentChat", () => {
   // -------------------------------------------------------------------------
 
   it("resetChat clears all messages and resets waiting state", async () => {
-    mockPostExecution.mockResolvedValueOnce(
+    mockPostRun.mockResolvedValueOnce(
       makePostResponse({
-        execution_id: null,
+        id: null,
         status: "completed",
         result: {
           data: { message: { content: [{ type: "text", text: "Reply" }] } },
@@ -756,10 +772,10 @@ describe("useDeploymentChat", () => {
   });
 
   it("resetChat clears thread_id so the next message has no thread_id", async () => {
-    mockPostExecution
+    mockPostRun
       .mockResolvedValueOnce({
         provider_data: {
-          execution_id: null,
+          id: null,
           thread_id: "thread-to-clear",
           status: "completed",
           result: {
@@ -768,7 +784,7 @@ describe("useDeploymentChat", () => {
         },
       })
       .mockResolvedValueOnce(
-        makePostResponse({ execution_id: null, status: "completed" }),
+        makePostResponse({ id: null, status: "completed" }),
       );
 
     const { result } = renderHook(() =>
@@ -787,7 +803,7 @@ describe("useDeploymentChat", () => {
       await result.current.sendMessage("new conversation");
     });
 
-    expect(mockPostExecution).toHaveBeenNthCalledWith(
+    expect(mockPostRun).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         provider_data: expect.not.objectContaining({
@@ -803,7 +819,7 @@ describe("useDeploymentChat", () => {
 
   it("adds user and assistant (loading) messages immediately on send", async () => {
     // Use a never-resolving promise to keep the hook in loading state
-    mockPostExecution.mockReturnValueOnce(new Promise(() => {}));
+    mockPostRun.mockReturnValueOnce(new Promise(() => {}));
 
     const { result } = renderHook(() =>
       useDeploymentChat({ providerId: "p1", deploymentId: "d1" }),

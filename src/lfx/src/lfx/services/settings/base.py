@@ -92,6 +92,34 @@ class Settings(BaseSettings):
     If not provided, a hash of the database URL will be used. Useful when multiple Langflow
     instances share the same database and need coordinated migration locking."""
 
+    root_path: str = ""
+    """ASGI root_path for deployments behind a reverse proxy that strips a URL
+    prefix (e.g. '/langflow').  When set, the MCP SSE transport includes this
+    prefix in the POST-back URL so clients can reach the correct endpoint.
+    Can also be set via the LANGFLOW_ROOT_PATH environment variable."""
+
+    @field_validator("root_path", mode="before")
+    @classmethod
+    def validate_root_path(cls, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            msg = "root_path must be a string"
+            raise TypeError(msg)
+
+        value = value.strip()
+        if not value or value == "/":
+            return ""
+
+        if "://" in value or "?" in value or "#" in value:
+            msg = "root_path must be an ASGI path prefix only, without scheme, query string, or fragment"
+            raise ValueError(msg)
+
+        if not value.startswith("/"):
+            value = f"/{value}"
+
+        return value.rstrip("/")
+
     mcp_base_url: str = ""
     """External base URL used to build MCP server URLs in the UI configuration JSON
     (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
@@ -152,10 +180,12 @@ class Settings(BaseSettings):
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
 
     # cache configuration
-    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    cache_type: Literal["async", "redis", "memory"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
+    cache_dir: str | None = None
+    """Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
@@ -291,6 +321,7 @@ class Settings(BaseSettings):
     max_flow_version_entries_per_flow: int = 50
     """Max version history entries per flow. Oldest entries pruned on next snapshot.
 
+
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
@@ -308,6 +339,7 @@ class Settings(BaseSettings):
     max_items_length: int = MAX_ITEMS_LENGTH
     """Maximum number of items to store and display in the UI. Lists longer than this
     will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
+    max_ingestion_timeout_secs: int = 600
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -522,6 +554,26 @@ class Settings(BaseSettings):
             # Create a .langflow directory inside the cache directory
             value = Path(cache_dir)
             value.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(value, str):
+            value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
+        if not value.exists():
+            value.mkdir(parents=True, exist_ok=True)
+
+        return str(value)
+
+    @field_validator("cache_dir", mode="before")
+    @classmethod
+    def validate_cache_dir(cls, value):
+        """Validate and normalize cache_dir path.
+
+        If not set, returns None and the factory will fall back to config_dir.
+        If set, resolves to an absolute path and creates the directory if needed.
+        """
+        if not value:
+            return None
 
         if isinstance(value, str):
             value = Path(value)

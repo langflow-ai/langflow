@@ -31,20 +31,26 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
-from langflow.services.database.utils import validate_non_empty_string
 
 _ALLOWED_URL_SCHEMES = frozenset({"https"})
 _MAX_URL_LENGTH = 2048
 
 
-def validate_provider_url(v: str, info: object) -> str:
+def validate_provider_url(v: str, info: object | None = None, *, field_name: str | None = None) -> str:
     """Validate and normalize a provider URL.
 
     Enforces HTTPS-only, rejects embedded credentials, validates the URL
     structure, and normalises scheme + host to lowercase.
+
+    *info* is the Pydantic ``ValidationInfo`` passed by field validators.
+    When calling outside a Pydantic context, pass *field_name* directly
+    instead.
     """
-    stripped = validate_non_empty_string(v, info)
-    field = getattr(info, "field_name", "Field")
+    field = field_name or getattr(info, "field_name", None) or "Field"
+    stripped = v.strip()
+    if not stripped:
+        msg = f"{field} must not be empty"
+        raise ValueError(msg)
 
     if len(stripped) > _MAX_URL_LENGTH:
         msg = f"{field} exceeds maximum length of {_MAX_URL_LENGTH}"
@@ -122,8 +128,12 @@ def check_provider_url_allowed(url: str, provider_key: str | DeploymentProviderK
 def _extract_wxo_tenant_from_url(url: str) -> str | None:
     """Extract the tenant/instance id from a WXO URL path.
 
-    WXO URLs embed the tenant in the path as ``/instances/{tenant_id}/...``.
-    Returns ``None`` if the path does not contain an ``instances`` segment.
+    WXO URLs end with ``/instances/{tenant_id}`` — the tenant must be the
+    **last** path segment.  Returns ``None`` if the URL does not match this
+    pattern (no ``instances`` segment, nothing after it, or extra trailing
+    segments).
+
+    See https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-endpoint
     """
     parsed = urlparse(url)
     path_segments = [segment for segment in parsed.path.split("/") if segment]
@@ -131,10 +141,13 @@ def _extract_wxo_tenant_from_url(url: str) -> str | None:
         instances_index = path_segments.index("instances")
     except ValueError:
         return None
-    account_index = instances_index + 1
-    if account_index >= len(path_segments):
+    tenant_index = instances_index + 1
+    if tenant_index >= len(path_segments):
         return None
-    return path_segments[account_index].strip() or None
+    # Tenant must be the terminal segment — reject URLs like /instances/not-an-id/random-path
+    if tenant_index != len(path_segments) - 1:
+        return None
+    return path_segments[tenant_index].strip() or None
 
 
 _PROVIDER_TENANT_EXTRACTORS: dict[DeploymentProviderKey, Callable[[str], str | None]] = {

@@ -22,6 +22,7 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import type { FlowTabType } from "../../types";
 import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
+import { isFolderEmpty } from "./utils/isFolderEmpty";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const { t } = useTranslation();
@@ -101,14 +102,15 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   useEffect(() => {
-    const isEmpty =
-      flows?.find(
-        (flow) =>
-          flow.folder_id === (folderId ?? myCollectionId) &&
-          (ENABLE_MCP ? flow.is_component === false : true),
-      ) === undefined;
-    setIsEmptyFolder(isEmpty);
-  }, [flows, folderId, myCollectionId]);
+    setIsEmptyFolder(
+      isFolderEmpty({
+        flows,
+        folderId: folderId ?? myCollectionId ?? "",
+        folderTotal: folderData?.flows?.total,
+        enableMcp: ENABLE_MCP,
+      }),
+    );
+  }, [flows, folderId, myCollectionId, folderData]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 

@@ -13,8 +13,6 @@ COMETAPI_MODELS: Final[list[str]] = [
     "gpt-5.4",
     "gpt-5.4-mini",
     "gpt-5.4-pro",
-    "gpt-5.3",
-    "gpt-5.3-instant",
     "gpt-5.3-codex",
     "gpt-5-chat-latest",
     "chatgpt-4o-latest",

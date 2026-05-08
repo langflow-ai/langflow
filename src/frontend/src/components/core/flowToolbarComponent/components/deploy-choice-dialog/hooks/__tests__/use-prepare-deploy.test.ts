@@ -68,9 +68,8 @@ import { usePrepareDeploy } from "../use-prepare-deploy";
 const makeProvider = (): ProviderAccount => ({
   id: "p1",
   name: "WxO Prod",
-  provider_tenant_id: null,
   provider_key: "watsonx-orchestrate",
-  provider_url: "https://wxo.example.com",
+  provider_data: { url: "https://wxo.example.com" },
   created_at: null,
   updated_at: null,
 });

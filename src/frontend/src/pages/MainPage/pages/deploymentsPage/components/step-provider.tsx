@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { Badge } from "@/components/ui/badge";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
@@ -12,7 +13,7 @@ const PROVIDERS: DeploymentProvider[] = [
     id: "watsonx",
     type: "watsonx",
     name: "watsonx Orchestrate",
-    icon: "Bot",
+    icon: "WatsonxOrchestrate",
   },
 ];
 
@@ -85,7 +86,9 @@ function EnvironmentList({
                   {environment.name}
                 </span>
                 <span className="text-sm leading-tight text-muted-foreground">
-                  {environment.url}
+                  {typeof environment.provider_data?.url === "string"
+                    ? environment.provider_data.url
+                    : "—"}
                 </span>
               </span>
             </RadioSelectItem>
@@ -126,12 +129,38 @@ export default function StepProvider() {
     <div className="flex h-full w-full flex-col gap-6 overflow-y-auto py-3">
       <h2 className="text-lg font-semibold">Provider</h2>
 
-      <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
-        <ForwardedIconComponent
-          name={provider.icon}
-          className="h-8 w-8 text-foreground"
-        />
-        <span className="text-sm font-medium">{provider.name}</span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
+          <ForwardedIconComponent
+            name={provider.icon}
+            className="h-8 w-8 text-foreground"
+          />
+          <span className="text-sm font-medium">{provider.name}</span>
+          <Badge variant="purpleStatic" size="xq" className="shrink-0">
+            Beta
+          </Badge>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
+          <a
+            href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Sign up for watsonx Orchestrate
+          </a>
+          . Already have an account?{" "}
+          <a
+            href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Find your credentials
+          </a>
+          .
+        </p>
       </div>
 
       {hasEnvironments ? (

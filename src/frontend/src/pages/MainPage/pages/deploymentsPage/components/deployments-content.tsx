@@ -1,15 +1,8 @@
 import { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
-import type { Deployment, ProviderAccount } from "../types";
+import { type Deployment, type ProviderAccount } from "../types";
 import DeploymentDetailsModal from "./deployment-details-modal/deployment-details-modal";
 import DeploymentStepperModal from "./deployment-stepper-modal";
 import DeploymentsEmptyState from "./deployments-empty-state";
@@ -24,8 +17,6 @@ interface DeploymentsContentProps {
   providers: ProviderAccount[];
   deployments: Deployment[];
   isLoading: boolean;
-  selectedProviderId: string;
-  setSelectedProviderId: (id: string) => void;
   providerMap: Record<string, string>;
   stepperOpen: boolean;
   setStepperOpen: (open: boolean) => void;
@@ -35,8 +26,6 @@ export default function DeploymentsContent({
   providers,
   deployments,
   isLoading,
-  selectedProviderId,
-  setSelectedProviderId,
   providerMap,
   stepperOpen,
   setStepperOpen,
@@ -80,27 +69,6 @@ export default function DeploymentsContent({
 
   return (
     <>
-      {providers.length >= 1 && deployments.length > 0 && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Environment:</span>
-          <Select
-            value={selectedProviderId}
-            onValueChange={setSelectedProviderId}
-          >
-            <SelectTrigger className="w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {providers.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
       {content}
 
       <DeploymentStepperModal
@@ -112,10 +80,8 @@ export default function DeploymentsContent({
         onTestDeployment={testModal.handleTestFromStepper}
         editingDeployment={editingDeployment}
         initialInstance={
-          editingDeployment?.provider_account_id
-            ? providers.find(
-                (p) => p.id === editingDeployment.provider_account_id,
-              )
+          editingDeployment?.provider_id
+            ? providers.find((p) => p.id === editingDeployment.provider_id)
             : undefined
         }
       />
@@ -135,7 +101,7 @@ export default function DeploymentsContent({
         deployment={detailsDeployment}
         providerName={
           detailsDeployment
-            ? (providerMap[detailsDeployment.provider_account_id ?? ""] ?? "—")
+            ? (providerMap[detailsDeployment.provider_id ?? ""] ?? "—")
             : ""
         }
       />

@@ -1,7 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { ENABLE_DEPLOYMENTS } from "@/customization/feature-flags";
 import DeploymentStepperModal from "@/pages/MainPage/pages/deploymentsPage/components/deployment-stepper-modal";
 import { useNavigateToTest } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-navigate-to-test";
+import { useUtilityStore } from "@/stores/utilityStore";
 import DeployChoiceDialog from "./deploy-choice-dialog";
 import { usePrepareDeploy } from "./deploy-choice-dialog/hooks/use-prepare-deploy";
 
@@ -79,6 +79,9 @@ function DeployButtonInner() {
 }
 
 export default function DeployButton() {
-  if (!ENABLE_DEPLOYMENTS) return null;
+  const deploymentsEnabled = useUtilityStore(
+    (s) => s.featureFlags.wxo_deployments === true,
+  );
+  if (!deploymentsEnabled) return null;
   return <DeployButtonInner />;
 }

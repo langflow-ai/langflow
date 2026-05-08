@@ -24,6 +24,7 @@ export default function DeploymentFlowList({
               key={fv.id}
               flowName={fv.flow_name}
               versionNumber={fv.version_number}
+              toolName={fv.provider_data?.tool_name ?? null}
               connectionNames={getConnectionNames(fv)}
             />
           ))}

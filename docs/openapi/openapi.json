@@ -324,28 +324,36 @@
       "Body_upload_file_api_v1_flows_upload__post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "type": "string"
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
           }
         },
-        "required": [
-          "file"
-        ],
         "title": "Body_upload_file_api_v1_flows_upload__post",
         "type": "object"
       },
       "Body_upload_file_api_v1_projects_upload__post": {
         "properties": {
           "file": {
-            "contentMediaType": "application/octet-stream",
-            "title": "File",
-            "type": "string"
+            "anyOf": [
+              {
+                "contentMediaType": "application/octet-stream",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
           }
         },
-        "required": [
-          "file"
-        ],
         "title": "Body_upload_file_api_v1_projects_upload__post",
         "type": "object"
       },
@@ -597,6 +605,10 @@
       "ConfigResponse": {
         "description": "Full configuration response for authenticated users.\n\nThe 'type' field is a discriminator to distinguish from PublicConfigResponse.",
         "properties": {
+          "allow_custom_components": {
+            "title": "Allow Custom Components",
+            "type": "boolean"
+          },
           "auto_saving": {
             "title": "Auto Saving",
             "type": "boolean"
@@ -637,6 +649,10 @@
             "title": "Max File Size Upload",
             "type": "integer"
           },
+          "mcp_base_url": {
+            "title": "Mcp Base Url",
+            "type": "string"
+          },
           "public_flow_cleanup_interval": {
             "title": "Public Flow Cleanup Interval",
             "type": "integer"
@@ -673,11 +689,12 @@
           }
         },
         "required": [
+          "feature_flags",
           "max_file_size_upload",
           "event_delivery",
           "voice_mode_available",
           "frontend_timeout",
-          "feature_flags",
+          "mcp_base_url",
           "serialization_max_items_length",
           "serialization_max_text_length",
           "auto_saving",
@@ -688,7 +705,8 @@
           "public_flow_expiration",
           "webhook_auth_enable",
           "default_folder_name",
-          "hide_getting_started_progress"
+          "hide_getting_started_progress",
+          "allow_custom_components"
         ],
         "title": "ConfigResponse",
         "type": "object"
@@ -791,6 +809,11 @@
           "mvp_components": {
             "default": false,
             "title": "Mvp Components",
+            "type": "boolean"
+          },
+          "wxo_deployments": {
+            "default": false,
+            "title": "Wxo Deployments",
             "type": "boolean"
           }
         },
@@ -916,6 +939,18 @@
               }
             ],
             "title": "Icon Bg Color"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
           },
           "is_component": {
             "anyOf": [
@@ -1052,6 +1087,78 @@
           "edges"
         ],
         "title": "FlowDataRequest",
+        "type": "object"
+      },
+      "FlowEventCreate": {
+        "properties": {
+          "summary": {
+            "default": "",
+            "maxLength": 500,
+            "title": "Summary",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "component_added",
+              "component_removed",
+              "component_configured",
+              "connection_added",
+              "connection_removed",
+              "flow_updated",
+              "flow_settled"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "FlowEventCreate",
+        "type": "object"
+      },
+      "FlowEventResponse": {
+        "properties": {
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "number"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "timestamp",
+          "summary"
+        ],
+        "title": "FlowEventResponse",
+        "type": "object"
+      },
+      "FlowEventsResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/FlowEventResponse"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "settled": {
+            "title": "Settled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "events",
+          "settled"
+        ],
+        "title": "FlowEventsResponse",
         "type": "object"
       },
       "FlowHeader": {
@@ -2362,6 +2469,18 @@
             "title": "Session Id",
             "type": "string"
           },
+          "session_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Metadata"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -2493,6 +2612,18 @@
             "title": "Session Id",
             "type": "string"
           },
+          "session_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Metadata"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -2604,6 +2735,18 @@
               }
             ],
             "title": "Session Id"
+          },
+          "session_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Metadata"
           },
           "text": {
             "anyOf": [
@@ -2875,6 +3018,10 @@
       "PublicConfigResponse": {
         "description": "Configuration response for public/unauthenticated endpoints like the public playground.\n\nContains only the configuration values needed for public features, without sensitive data.\nThe 'type' field is a discriminator to distinguish from full ConfigResponse.",
         "properties": {
+          "allow_custom_components": {
+            "title": "Allow Custom Components",
+            "type": "boolean"
+          },
           "event_delivery": {
             "enum": [
               "polling",
@@ -2884,6 +3031,9 @@
             "title": "Event Delivery",
             "type": "string"
           },
+          "feature_flags": {
+            "$ref": "#/components/schemas/FeatureFlags"
+          },
           "frontend_timeout": {
             "title": "Frontend Timeout",
             "type": "integer"
@@ -2891,6 +3041,10 @@
           "max_file_size_upload": {
             "title": "Max File Size Upload",
             "type": "integer"
+          },
+          "mcp_base_url": {
+            "title": "Mcp Base Url",
+            "type": "string"
           },
           "type": {
             "const": "public",
@@ -2904,10 +3058,13 @@
           }
         },
         "required": [
+          "feature_flags",
           "max_file_size_upload",
           "event_delivery",
           "voice_mode_available",
-          "frontend_timeout"
+          "frontend_timeout",
+          "mcp_base_url",
+          "allow_custom_components"
         ],
         "title": "PublicConfigResponse",
         "type": "object"
@@ -3013,6 +3170,16 @@
               }
             ],
             "title": "Timedelta"
+          },
+          "token_usage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Usage"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "used_frozen_result": {
             "anyOf": [
@@ -4226,7 +4393,6 @@
             "type": "string"
           },
           "path": {
-            "format": "path",
             "title": "Path",
             "type": "string"
           },
@@ -4259,7 +4425,6 @@
         "description": "Upload file response schema.",
         "properties": {
           "file_path": {
-            "format": "path",
             "title": "File Path",
             "type": "string"
           },
@@ -4379,7 +4544,7 @@
   },
   "info": {
     "title": "Langflow",
-    "version": "1.8.1"
+    "version": "1.9.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -4545,7 +4710,7 @@
     },
     "/api/v1/build/{job_id}/cancel": {
       "post": {
-        "description": "Cancel a specific build job.<br><br>Requires authentication to prevent unauthorized build cancellation.",
+        "description": "Cancel a specific build job.<br><br>Requires authentication and ownership verification to prevent a user from<br>aborting another user's running build (DoS via job cancellation).<br>Jobs with no registered owner (build_public_tmp) are accessible to any<br>authenticated user, consistent with get_build_events.",
         "operationId": "cancel_build_api_v1_build__job_id__cancel_post",
         "parameters": [
           {
@@ -4599,7 +4764,7 @@
     },
     "/api/v1/build/{job_id}/events": {
       "get": {
-        "description": "Get events for a specific build job.<br><br>Requires authentication to prevent unauthorized access to build events.",
+        "description": "Get events for a specific build job.<br><br>Requires authentication and ownership verification. A job owner is registered<br>when build_flow is called; if a registered owner does not match the requesting<br>user the endpoint returns 404 to avoid leaking job existence.<br>Jobs started via build_public_tmp have no registered owner and remain accessible<br>to any authenticated user.",
         "operationId": "get_build_events_api_v1_build__job_id__events_get",
         "parameters": [
           {
@@ -4660,7 +4825,7 @@
     },
     "/api/v1/build_public_tmp/{flow_id}/flow": {
       "post": {
-        "description": "Build a public flow without requiring authentication.<br><br>This endpoint is specifically for public flows that don't require authentication.<br>It uses a client_id cookie to create a deterministic flow ID for tracking purposes.<br><br>Security Note:<br>- The 'data' parameter is NOT accepted to prevent flow definition tampering<br>- Public flows must execute the stored flow definition only<br>- The flow definition is always loaded from the database<br><br>The endpoint:<br>1. Verifies the requested flow is marked as public in the database<br>2. Creates a deterministic UUID based on client_id and flow_id<br>3. Uses the flow owner's permissions to build the flow<br>4. Always loads the flow definition from the database<br><br>Requirements:<br>- The flow must be marked as PUBLIC in the database<br>- The request must include a client_id cookie<br><br>Args:<br>    flow_id: UUID of the public flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    flow_name: Optional name for the flow<br>    request: FastAPI request object (needed for cookie access)<br>    queue_service: Queue service for job management<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
+        "description": "Build a public flow without requiring authentication.<br><br>This endpoint is specifically for public flows that don't require authentication.<br>It uses a client_id cookie to create a deterministic flow ID for tracking purposes.<br><br>Security Note:<br>- The 'data' parameter is NOT accepted to prevent flow definition tampering<br>- Public flows must execute the stored flow definition only<br>- The flow definition is always loaded from the database<br><br>The endpoint:<br>1. Verifies the requested flow is marked as public in the database<br>2. Creates a deterministic UUID based on client_id and flow_id<br>3. Uses the flow owner's permissions to build the flow<br>4. Always loads the flow definition from the database<br><br>Requirements:<br>- The flow must be marked as PUBLIC in the database<br>- The request must include a client_id cookie<br><br>Args:<br>    flow_id: UUID of the public flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    flow_name: Optional name for the flow<br>    request: FastAPI request object (needed for cookie access)<br>    queue_service: Queue service for job management<br>    authenticated_user: Optional authenticated user (resolved from cookie/token if present)<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
         "operationId": "build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post",
         "parameters": [
           {
@@ -4778,6 +4943,99 @@
           }
         },
         "summary": "Build Public Tmp",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/v1/build_public_tmp/{job_id}/cancel": {
+      "post": {
+        "description": "Cancel a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to cancel builds.",
+        "operationId": "cancel_build_public_api_v1_build_public_tmp__job_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelFlowResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Build Public",
+        "tags": [
+          "Chat"
+        ]
+      }
+    },
+    "/api/v1/build_public_tmp/{job_id}/events": {
+      "get": {
+        "description": "Get events for a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to consume build events.",
+        "operationId": "get_build_events_public_api_v1_build_public_tmp__job_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "event_delivery",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/EventDeliveryType",
+              "default": "streaming"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Build Events Public",
         "tags": [
           "Chat"
         ]
@@ -4953,20 +5211,20 @@
         "parameters": [
           {
             "in": "path",
-            "name": "flow_id",
+            "name": "file_name",
             "required": true,
             "schema": {
-              "format": "uuid",
-              "title": "Flow Id",
+              "title": "File Name",
               "type": "string"
             }
           },
           {
             "in": "path",
-            "name": "file_name",
+            "name": "flow_id",
             "required": true,
             "schema": {
-              "title": "File Name",
+              "format": "uuid",
+              "title": "Flow Id",
               "type": "string"
             }
           }
@@ -4991,6 +5249,17 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
         "summary": "Download Image",
         "tags": [
           "Files"
@@ -5185,7 +5454,7 @@
     },
     "/api/v1/flows/": {
       "delete": {
-        "description": "Delete multiple flows by their IDs.<br><br>Args:<br>    flow_ids (List[str]): The list of flow IDs to delete.<br>    user (User, optional): The user making the request. Defaults to the current active user.<br>    db (Session, optional): The database session.<br><br>Returns:<br>    dict: A dictionary containing the number of flows deleted.",
+        "description": "Delete multiple flows by their IDs.",
         "operationId": "delete_multiple_flows_api_v1_flows__delete",
         "requestBody": {
           "content": {
@@ -5239,7 +5508,7 @@
         ]
       },
       "get": {
-        "description": "Retrieve a list of flows with pagination support.<br><br>Args:<br>    current_user (User): The current authenticated user.<br>    session (Session): The database session.<br>    settings_service (SettingsService): The settings service.<br>    components_only (bool, optional): Whether to return only components. Defaults to False.<br><br>    get_all (bool, optional): Whether to return all flows without pagination. Defaults to True.<br>    **This field must be True because of backward compatibility with the frontend - Release: 1.0.20**<br><br>    folder_id (UUID, optional): The project ID. Defaults to None.<br>    params (Params): Pagination parameters.<br>    remove_example_flows (bool, optional): Whether to remove example flows. Defaults to False.<br>    header_flows (bool, optional): Whether to return only specific headers of the flows. Defaults to False.<br><br>Returns:<br>    list[FlowRead] | Page[FlowRead] | list[FlowHeader]<br>    A list of flows or a paginated response containing the list of flows or a list of flow headers.",
+        "description": "Retrieve a list of flows with optional pagination, filtering, and header-only mode.",
         "operationId": "read_flows_api_v1_flows__get",
         "parameters": [
           {
@@ -5431,7 +5700,7 @@
     },
     "/api/v1/flows/basic_examples/": {
       "get": {
-        "description": "Retrieve a list of basic example flows.<br><br>Args:<br>    session (Session): The database session.<br><br>Returns:<br>    list[FlowRead]: A list of basic example flows.",
+        "description": "Retrieve a list of basic example flows.",
         "operationId": "read_basic_examples_api_v1_flows_basic_examples__get",
         "responses": {
           "200": {
@@ -5614,7 +5883,7 @@
     },
     "/api/v1/flows/upload/": {
       "post": {
-        "description": "Upload flows from a file.",
+        "description": "Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs).",
         "operationId": "upload_file_api_v1_flows_upload__post",
         "parameters": [
           {
@@ -5642,8 +5911,7 @@
                 "$ref": "#/components/schemas/Body_upload_file_api_v1_flows_upload__post"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -5854,6 +6122,198 @@
         "summary": "Update Flow",
         "tags": [
           "Flows"
+        ]
+      },
+      "put": {
+        "description": "Create or update a flow with a specific ID (upsert).<br><br>Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.",
+        "operationId": "upsert_flow_api_v1_flows__flow_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Upsert Flow",
+        "tags": [
+          "Flows"
+        ]
+      }
+    },
+    "/api/v1/flows/{flow_id}/events": {
+      "get": {
+        "operationId": "get_flow_events_api_v1_flows__flow_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flow Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "UTC timestamp to get events after",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": 0.0,
+              "description": "UTC timestamp to get events after",
+              "title": "Since",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowEventsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Flow Events",
+        "tags": [
+          "Flow Events"
+        ]
+      },
+      "post": {
+        "description": "Append an event to a flow's event queue.",
+        "operationId": "create_flow_event_api_v1_flows__flow_id__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowEventCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FlowEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Flow Event",
+        "tags": [
+          "Flow Events"
         ]
       }
     },
@@ -6499,6 +6959,7 @@
     },
     "/api/v1/monitor/messages/session/{session_id}": {
       "delete": {
+        "description": "Delete messages for a single session.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.",
         "operationId": "delete_messages_session_api_v1_monitor_messages_session__session_id__delete",
         "parameters": [
           {
@@ -6544,6 +7005,59 @@
       }
     },
     "/api/v1/monitor/messages/sessions": {
+      "delete": {
+        "description": "Bulk delete messages for multiple sessions at once.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.<br><br>Args:<br>    session_ids: List of session IDs to delete (max 500)<br>    session: Database session<br>    current_user: Current authenticated user<br><br>Returns:<br>    Confirmation message with count of deleted sessions<br><br>Raises:<br>    HTTPException: 400 if session_ids list exceeds 500 items<br>    HTTPException: 500 if database operation fails",
+        "operationId": "delete_messages_sessions_api_v1_monitor_messages_sessions_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Session Ids",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Messages Sessions",
+        "tags": [
+          "Monitor"
+        ]
+      },
       "get": {
         "operationId": "get_message_sessions_api_v1_monitor_messages_sessions_get",
         "parameters": [
@@ -6603,6 +7117,378 @@
           }
         ],
         "summary": "Get Message Sessions",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
+    "/api/v1/monitor/messages/shared": {
+      "get": {
+        "description": "Get messages for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
+        "operationId": "get_shared_messages_api_v1_monitor_messages_shared_get",
+        "parameters": [
+          {
+            "description": "The original public flow ID",
+            "in": "query",
+            "name": "source_flow_id",
+            "required": true,
+            "schema": {
+              "description": "The original public flow ID",
+              "format": "uuid",
+              "title": "Source Flow Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": "timestamp",
+              "title": "Order By"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageResponse"
+                  },
+                  "title": "Response Get Shared Messages Api V1 Monitor Messages Shared Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Shared Messages",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
+    "/api/v1/monitor/messages/shared/session/{old_session_id}": {
+      "patch": {
+        "description": "Rename a session on a shared/public flow, scoped to the authenticated user.",
+        "operationId": "rename_shared_session_api_v1_monitor_messages_shared_session__old_session_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "old_session_id",
+            "required": true,
+            "schema": {
+              "title": "Old Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The new session ID",
+            "in": "query",
+            "name": "new_session_id",
+            "required": true,
+            "schema": {
+              "description": "The new session ID",
+              "title": "New Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The original public flow ID",
+            "in": "query",
+            "name": "source_flow_id",
+            "required": true,
+            "schema": {
+              "description": "The original public flow ID",
+              "format": "uuid",
+              "title": "Source Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MessageResponse"
+                  },
+                  "title": "Response Rename Shared Session Api V1 Monitor Messages Shared Session  Old Session Id  Patch",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Rename Shared Session",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
+    "/api/v1/monitor/messages/shared/session/{session_id}": {
+      "delete": {
+        "description": "Delete messages for a session on a shared/public flow, scoped to the authenticated user.",
+        "operationId": "delete_shared_messages_session_api_v1_monitor_messages_shared_session__session_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The original public flow ID",
+            "in": "query",
+            "name": "source_flow_id",
+            "required": true,
+            "schema": {
+              "description": "The original public flow ID",
+              "format": "uuid",
+              "title": "Source Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Shared Messages Session",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
+    "/api/v1/monitor/messages/shared/sessions": {
+      "get": {
+        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
+        "operationId": "get_shared_message_sessions_api_v1_monitor_messages_shared_sessions_get",
+        "parameters": [
+          {
+            "description": "The original public flow ID",
+            "in": "query",
+            "name": "source_flow_id",
+            "required": true,
+            "schema": {
+              "description": "The original public flow ID",
+              "format": "uuid",
+              "title": "Source Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Shared Message Sessions Api V1 Monitor Messages Shared Sessions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Shared Message Sessions",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
+    "/api/v1/monitor/messages/shared/{message_id}": {
+      "put": {
+        "description": "Update a message on a shared/public flow, scoped to the authenticated user.",
+        "operationId": "update_shared_message_api_v1_monitor_messages_shared__message_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The original public flow ID",
+            "in": "query",
+            "name": "source_flow_id",
+            "required": true,
+            "schema": {
+              "description": "The original public flow ID",
+              "format": "uuid",
+              "title": "Source Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Shared Message",
         "tags": [
           "Monitor"
         ]
@@ -7208,7 +8094,7 @@
     },
     "/api/v1/projects/upload/": {
       "post": {
-        "description": "Upload flows from a file.",
+        "description": "Upload flows from a file.<br><br>Accepts either a JSON file with project metadata (folder_name, folder_description, flows)<br>or a ZIP file containing individual flow JSON files (as produced by the download endpoint).",
         "operationId": "upload_file_api_v1_projects_upload__post",
         "requestBody": {
           "content": {
@@ -7217,8 +8103,7 @@
                 "$ref": "#/components/schemas/Body_upload_file_api_v1_projects_upload__post"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -7771,6 +8656,22 @@
               "title": "Limit",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
           }
         ],
         "responses": {
@@ -8232,6 +9133,16 @@
               "title": "Append",
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "ephemeral",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Ephemeral",
+              "type": "boolean"
+            }
           }
         ],
         "requestBody": {
@@ -8359,6 +9270,16 @@
             "schema": {
               "default": false,
               "title": "Append",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ephemeral",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Ephemeral",
               "type": "boolean"
             }
           }

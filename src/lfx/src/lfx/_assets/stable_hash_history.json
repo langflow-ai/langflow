@@ -2163,5 +2163,15 @@
       "0.3.0": "8b5ca1f38f6e",
       "0.3.1": "8b5ca1f38f6e"
     }
+  },
+  "policies": {
+    "versions": {
+      "0.3.0": "fe3303671fea"
+    }
+  },
+  "policies": {
+    "versions": {
+      "0.3.0": "9bf5e6f39e2d"
+    }
   }
 }

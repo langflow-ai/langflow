@@ -9,11 +9,20 @@ export interface DeploymentListResponse {
   page: number;
   size: number;
   total: number;
+  provider_data?: {
+    deployments?: Array<{
+      name?: string;
+      display_name?: string;
+      [key: string]: unknown;
+    }>;
+  };
 }
 
 interface GetDeploymentsParams {
   provider_id: string;
-  flow_ids?: string;
+  flow_ids?: string[];
+  project_id?: string;
+  names?: string[];
   page?: number;
   size?: number;
 }
@@ -21,19 +30,36 @@ interface GetDeploymentsParams {
 export const useGetDeployments: useQueryFunctionType<
   GetDeploymentsParams,
   DeploymentListResponse
-> = ({ provider_id, flow_ids, page = 1, size = 20 }, options) => {
+> = (
+  { provider_id, flow_ids, project_id, names, page = 1, size = 20 },
+  options,
+) => {
   const { query } = UseRequestProcessor();
 
   const getDeploymentsFn = async (): Promise<DeploymentListResponse> => {
+    const params = {
+      provider_id,
+      ...(flow_ids && flow_ids.length > 0 ? { flow_ids } : {}),
+      ...(project_id ? { project_id } : {}),
+      ...(names && names.length > 0 ? { names } : {}),
+      page,
+      size,
+    };
     const { data } = await api.get<DeploymentListResponse>(
       `${getURL("DEPLOYMENTS")}`,
-      { params: { provider_id, flow_ids, page, size } },
+      {
+        params,
+        paramsSerializer: { indexes: null },
+      },
     );
     return data;
   };
 
   return query(
-    ["useGetDeployments", { provider_id, flow_ids, page, size }],
+    [
+      "useGetDeployments",
+      { provider_id, flow_ids, project_id, names, page, size },
+    ],
     getDeploymentsFn,
     options,
   );

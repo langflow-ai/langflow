@@ -6,14 +6,15 @@ Provider-account credential contract
 Provider credentials arrive in the API request as an opaque
 ``provider_data: dict`` and leave via two mapper methods:
 
-* **API -> Adapter** (``resolve_verify_credentials``): packs the request's
-  ``provider_data`` into the adapter-layer ``VerifyCredentials`` model so the
-  deployment adapter can validate the credentials against the provider.
+* **API -> Adapter** (``resolve_verify_credentials_for_create``): packs the
+  request's ``provider_data`` into the adapter-layer ``VerifyCredentials``
+  model so the deployment adapter can validate the credentials against the
+  provider.
 
-* **API -> DB** (``resolve_credential_fields``): extracts credentials from
-  ``provider_data`` and returns a ``dict[str, Any]`` of DB column-value
-  pairs (e.g. ``{"api_key": "..."}``).  The route spreads these into the
-  CRUD layer's keyword arguments.
+* **API -> DB** (``resolve_credentials``): extracts credentials from
+  ``provider_data`` and returns DB column-value pairs
+  (e.g. ``{"api_key": "..."}``) used by mapper-owned create/update
+  assembly methods.
 
 The mapper is the **single** component that understands a provider's
 credential shape.  The API schema treats ``provider_data`` as opaque and
@@ -38,8 +39,11 @@ from lfx.services.adapters.deployment.schema import (
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListLlmsResult,
+    DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -54,7 +58,7 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import PayloadSlot
+from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -71,9 +75,9 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentSnapshotListResponse,
     DeploymentUpdateRequest,
     DeploymentUpdateResponse,
-    ExecutionCreateRequest,
-    ExecutionCreateResponse,
-    ExecutionStatusResponse,
+    RunCreateRequest,
+    RunCreateResponse,
+    RunStatusResponse,
 )
 
 from .contracts import (
@@ -81,6 +85,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from .helpers import page_offset
@@ -106,6 +111,10 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
     Langflow-specific references and reshaping requirements. Adapter-side
     slot population is defined separately via ``DeploymentPayloadSchemas``.
     """
+
+    provider_account_create: PayloadSlot | None = None
+    provider_account_update: PayloadSlot | None = None
+    provider_account_response: PayloadSlot | None = None
 
 
 class BaseDeploymentMapper:
@@ -213,23 +222,19 @@ class BaseDeploymentMapper:
         *,
         deployment_resource_key: str,
         db: AsyncSession,
-        payload: ExecutionCreateRequest,
+        payload: RunCreateRequest,
     ) -> ExecutionCreate:
         return ExecutionCreate(
             deployment_id=deployment_resource_key,
             provider_data=await self.resolve_execution_input(payload.provider_data, db),
         )
 
-    async def resolve_deployment_list_params(
-        self, raw: dict[str, Any] | None, db: AsyncSession
-    ) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.deployment_list_params, raw)
+    def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
+        """Return provider_params for provider-backed deployment listing.
 
-    async def resolve_config_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.config_list_params, raw)
-
-    async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
+        Default behavior applies no provider-specific filters.
+        """
+        return None
 
     def resolve_snapshot_update_artifact(
         self,
@@ -274,30 +279,43 @@ class BaseDeploymentMapper:
                 ),
             ) from exc
 
+    async def resolve_deployment_list_adapter_params(
+        self,
+        *,
+        deployment_type: DeploymentType | None,
+        names: list[str] | None = None,
+        provider_params: dict[str, Any] | None,
+    ) -> DeploymentListParams | None:
+        if deployment_type is None and not names and provider_params is None:
+            return None
+        return DeploymentListParams(
+            deployment_types=[deployment_type] if deployment_type is not None else None,
+            deployment_names=names or None,
+            provider_params=provider_params,
+        )
+
     async def resolve_config_list_adapter_params(
         self,
         *,
         deployment_resource_key: str | None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> ConfigListParams:
-        resolved_provider_params = await self.resolve_config_list_params(provider_params, db)
         return ConfigListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     async def resolve_snapshot_list_adapter_params(
         self,
         *,
         deployment_resource_key: str | None,
+        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> SnapshotListParams:
-        resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            provider_params=resolved_provider_params,
+            snapshot_names=snapshot_names or None,
+            provider_params=provider_params,
         )
 
     def shape_deployment_list_items(
@@ -306,7 +324,9 @@ class BaseDeploymentMapper:
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
         provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
     ) -> list[DeploymentListItem]:
+        _ = provider_data_by_resource_key
         return [
             DeploymentListItem(
                 id=row.id,
@@ -395,36 +415,37 @@ class BaseDeploymentMapper:
             provider_data=provider_data,
         )
 
-    def resolve_provider_tenant_id(
+    def validate_create_provider_url(
         self,
         *,
-        provider_url: str,
         provider_data: dict[str, Any],
-    ) -> str | None:
-        """Resolve provider tenant id for provider-account create/update."""
-        _ = provider_url
-        return self.resolve_provider_tenant_id_from_data(provider_data=provider_data)
+    ) -> str:
+        """Resolve and validate provider URL from create provider_data.
 
-    def resolve_provider_tenant_id_from_data(self, *, provider_data: dict[str, Any]) -> str | None:
-        """Extract optional tenant/account identifier from provider_data."""
-        raw_tenant_id = provider_data.get("tenant_id")
-        if raw_tenant_id is None:
-            return None
-        if not isinstance(raw_tenant_id, str):
-            msg = "provider_data.tenant_id must be a string when provided."
-            raise ValueError(msg)  # noqa: TRY004 - route layer maps ValueError to HTTP 4xx
-        tenant_id = raw_tenant_id.strip()
-        return tenant_id or None
+        Provider mappers must override this for provider-account create.
+        """
+        _ = provider_data
+        raise NotImplementedError
 
-    def format_conflict_detail(self, raw_message: str) -> str:
+    def format_conflict_detail(
+        self,
+        raw_message: str,
+        *,
+        resource: str | None = None,
+        resource_name: str | None = None,
+    ) -> str:
         """Format provider conflict errors for API responses.
 
         Provider-specific mappers may override this to map provider-native
-        conflict wording to clearer end-user guidance.
+        conflict wording to clearer end-user guidance.  Subclasses use
+        *resource* and *resource_name* to produce targeted messages.
         """
-        return f"A resource with this name already exists in the provider. {raw_message}"
+        _ = raw_message, resource, resource_name
+        return (
+            "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+        )
 
-    def resolve_credential_fields(
+    def resolve_credentials(
         self,
         *,
         provider_data: dict[str, Any],
@@ -436,6 +457,20 @@ class BaseDeploymentMapper:
         a future provider could return multiple columns or a serialized JSON
         blob).
         """
+        raise NotImplementedError
+
+    def resolve_provider_account_create(
+        self,
+        *,
+        payload: DeploymentProviderAccountCreateRequest,
+        user_id: UUID,
+    ) -> DeploymentProviderAccount:
+        """Assemble provider-account DB model for create.
+
+        Provider mappers must override this so provider-specific create
+        semantics stay out of the base mapper.
+        """
+        _ = (payload, user_id)
         raise NotImplementedError
 
     def resolve_provider_account_update(
@@ -459,23 +494,22 @@ class BaseDeploymentMapper:
             if payload.provider_data is None:
                 msg = "'provider_data' cannot be null when provided."
                 raise ValueError(msg)
-            update_kwargs.update(self.resolve_credential_fields(provider_data=payload.provider_data))
+            update_kwargs.update(self.resolve_credentials(provider_data=payload.provider_data))
         return update_kwargs
 
-    def resolve_verify_credentials(
+    def resolve_verify_credentials_for_create(
         self,
         *,
         payload: DeploymentProviderAccountCreateRequest,
     ) -> VerifyCredentials:
-        """Build adapter verify-credentials input from the API create request.
+        """Build adapter verify-credentials input from create payload.
 
-        The base implementation extracts only ``base_url``.  Credentials
-        are provider-specific and must be packed into ``provider_data`` by
-        provider mapper overrides.
+        The base implementation extracts ``base_url`` from
+        ``provider_data.url``. Credentials are provider-specific and must be
+        packed into ``provider_data`` by provider mapper overrides.
         """
-        return VerifyCredentials(
-            base_url=payload.url,
-        )
+        _ = payload
+        raise NotImplementedError
 
     def resolve_verify_credentials_for_update(
         self,
@@ -495,7 +529,7 @@ class BaseDeploymentMapper:
         msg = "Credential verification for provider account updates is not implemented for this provider."
         raise NotImplementedError(msg)
 
-    def shape_provider_account_response(
+    def resolve_provider_account_response(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> DeploymentProviderAccountGetResponse:
@@ -503,24 +537,17 @@ class BaseDeploymentMapper:
             id=provider_account.id,
             name=provider_account.name,
             provider_key=provider_account.provider_key,
-            url=provider_account.provider_url,
-            provider_data=self.shape_provider_account_provider_data(provider_account),
+            provider_data=self.resolve_provider_account_provider_data(provider_account),
             created_at=provider_account.created_at,
             updated_at=provider_account.updated_at,
         )
 
-    def shape_provider_account_provider_data(
+    def resolve_provider_account_provider_data(
         self,
         provider_account: DeploymentProviderAccount,
     ) -> dict[str, Any] | None:
         """Return non-sensitive provider metadata for provider-account responses."""
-        raw_tenant_id = provider_account.provider_tenant_id
-        if raw_tenant_id is None:
-            return None
-        tenant_id = str(raw_tenant_id).strip()
-        if not tenant_id:
-            return None
-        return {"tenant_id": tenant_id}
+        return {"url": provider_account.provider_url}
 
     def util_create_flow_artifact_provider_data(
         self,
@@ -546,7 +573,7 @@ class BaseDeploymentMapper:
     ) -> str | None:
         """Return provider deployment id to reuse on create, if requested."""
         _ = payload
-        return None
+        raise NotImplementedError
 
     def util_should_mutate_provider_for_existing_deployment_create(
         self,
@@ -554,7 +581,7 @@ class BaseDeploymentMapper:
     ) -> bool:
         """Return whether existing-resource create should call provider update."""
         _ = payload
-        return True
+        raise NotImplementedError
 
     def util_create_result_from_existing_update(
         self,
@@ -567,11 +594,8 @@ class BaseDeploymentMapper:
         Routes use this when create-time onboarding reuses an existing provider
         resource and mutates it through ``adapter.update``.
         """
-        provider_result = result.provider_result if isinstance(result.provider_result, dict) else None
-        return DeploymentCreateResult(
-            id=existing_resource_key,
-            provider_result=provider_result,
-        )
+        _ = (existing_resource_key, result)
+        raise NotImplementedError
 
     def util_create_result_from_existing_resource(
         self,
@@ -629,24 +653,78 @@ class BaseDeploymentMapper:
         _ = payload
         return FlowVersionPatch()
 
-    def util_snapshot_ids_to_verify(
+    def extract_snapshot_bindings(
         self,
-        attachments: list[Any],
-    ) -> list[str]:
-        """Extract provider snapshot IDs that should be verified against the provider.
+        provider_view: DeploymentListResult,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract per-deployment snapshot bindings from an already-fetched provider list response.
 
-        Called by read-path snapshot-level sync to determine which attachments
-        carry a provider-trackable snapshot identity.  The route passes the
-        returned IDs to the adapter's ``list_snapshots`` by-IDs mode and
-        deletes DB rows whose IDs are no longer present on the provider.
+        Returns a flat list of (resource_key, snapshot_id) pairs representing
+        the authoritative binding state on the provider. Deployments absent
+        from the response (e.g. deleted) produce no entries.
 
-        The base implementation returns an empty list, meaning snapshot-level
-        sync is a no-op for providers that do not track snapshots separately.
-        Provider mappers that assign ``provider_snapshot_id`` on attachments
-        must override this to extract those IDs.
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        these deployments." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for any provider that inherits the base implementation.
+        Raising ``NotImplementedError`` prevents that destructive
+        interpretation entirely: call sites either guard with
+        ``except NotImplementedError`` (skipping the destructive sync) or
+        surface a loud failure pointing at the unimplemented method.
         """
-        _ = attachments
-        return []
+        _ = provider_view
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Extract per-deployment list-item provider_data from an already-fetched provider list response.
+
+        Returns a {resource_key -> provider_data} dict. Base returns an empty
+        dict so providers without per-item list metadata omit provider_data.
+        """
+        _ = provider_view
+        return {}
+
+    def extract_snapshot_bindings_for_get(
+        self,
+        get_result: DeploymentGetResult,
+        *,
+        resource_key: str,
+    ) -> list[ProviderSnapshotBinding]:
+        """Extract bindings from a single-deployment provider GET payload.
+
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        this deployment." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for the GETted deployment for any provider that inherits
+        the base implementation. Raising ``NotImplementedError`` prevents
+        that destructive interpretation entirely: the GET call site
+        guards with ``except NotImplementedError`` and skips the
+        destructive sync (returning unverified attachment counts) rather
+        than wiping local state.
+        """
+        _ = get_result, resource_key
+        msg = (
+            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
 
     async def resolve_rollback_update(
         self,
@@ -773,11 +851,11 @@ class BaseDeploymentMapper:
         result: ExecutionCreateResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionCreateResponse:
+    ) -> RunCreateResponse:
         provider_result = self.shape_execution_create_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionCreateResponse(
+        return RunCreateResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -787,11 +865,11 @@ class BaseDeploymentMapper:
         result: ExecutionStatusResult,
         *,
         deployment_id: UUID,
-    ) -> ExecutionStatusResponse:
+    ) -> RunStatusResponse:
         provider_result = self.shape_execution_status_provider_data(
             result.provider_result if isinstance(result.provider_result, dict) else None
         )
-        return ExecutionStatusResponse(
+        return RunStatusResponse(
             deployment_id=deployment_id,
             provider_data=provider_result,
         )
@@ -809,6 +887,16 @@ class BaseDeploymentMapper:
 
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
+
+    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+        """Shape provider_data for single-deployment GET responses."""
+        _ = provider_data
+        msg = (
+            "BaseDeploymentMapper does not implement shape_deployment_get_data; "
+            "must be implemented by subclasses (e.g. watsonx_orchestrate). "
+            "GET provider_data shaping is unavailable for this provider."
+        )
+        raise NotImplementedError(msg)
 
     def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data

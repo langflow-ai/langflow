@@ -47,10 +47,10 @@ describe("useGetDeployments", () => {
     expect(mockApiGet).toHaveBeenCalledWith("/api/v1/deployments", {
       params: {
         provider_id: "prov-1",
-        flow_ids: undefined,
         page: 1,
         size: 20,
       },
+      paramsSerializer: { indexes: null },
     });
   });
 
@@ -61,14 +61,20 @@ describe("useGetDeployments", () => {
 
     useGetDeployments({
       provider_id: "prov-1",
-      flow_ids: "f1,f2",
+      flow_ids: ["f1", "f2"],
       page: 2,
       size: 10,
     });
     await flushPromises();
 
     expect(mockApiGet).toHaveBeenCalledWith("/api/v1/deployments", {
-      params: { provider_id: "prov-1", flow_ids: "f1,f2", page: 2, size: 10 },
+      params: {
+        provider_id: "prov-1",
+        flow_ids: ["f1", "f2"],
+        page: 2,
+        size: 10,
+      },
+      paramsSerializer: { indexes: null },
     });
   });
 
@@ -77,7 +83,7 @@ describe("useGetDeployments", () => {
 
     useGetDeployments({
       provider_id: "prov-1",
-      flow_ids: "f1",
+      flow_ids: ["f1"],
       page: 3,
       size: 5,
     });
@@ -85,7 +91,7 @@ describe("useGetDeployments", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       [
         "useGetDeployments",
-        { provider_id: "prov-1", flow_ids: "f1", page: 3, size: 5 },
+        { provider_id: "prov-1", flow_ids: ["f1"], page: 3, size: 5 },
       ],
       expect.any(Function),
       undefined,

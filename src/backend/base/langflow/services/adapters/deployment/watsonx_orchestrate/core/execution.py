@@ -115,7 +115,6 @@ def create_agent_run_result(payload: dict[str, Any] | None) -> dict[str, Any]:
 
 async def get_agent_run(client: WxOClient, *, run_id: str) -> dict[str, Any]:
     payload = await asyncio.to_thread(client.get_run, run_id)
-
     if not payload:
         msg = f"Watsonx Orchestrate returned an empty response when fetching execution '{run_id}'."
         raise DeploymentError(message=msg, error_code="empty_provider_response")

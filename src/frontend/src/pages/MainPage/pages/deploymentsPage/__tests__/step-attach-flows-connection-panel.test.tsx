@@ -143,6 +143,7 @@ describe("Available tab — with connections", () => {
   const connections: ConnectionItem[] = [
     {
       id: "conn-1",
+      connectionId: "conn-1",
       name: "Prod Connection",
       variableCount: 0,
       isNew: false,
@@ -150,6 +151,7 @@ describe("Available tab — with connections", () => {
     },
     {
       id: "conn-2",
+      connectionId: "conn-2",
       name: "New Connection",
       variableCount: 1,
       isNew: true,

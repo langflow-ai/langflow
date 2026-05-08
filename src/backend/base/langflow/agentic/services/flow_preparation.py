@@ -5,6 +5,16 @@ from pathlib import Path
 
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
 
+import lfx
+
+# Relative path embedded in the bundled LangflowAssistant.json flow for the
+# Directory component that scans built-in lfx components. It only resolves
+# correctly when the process CWD is the monorepo root, which is never the
+# case for a packaged install (Langflow Desktop, `pip install langflow`,
+# Docker, etc.). inject_lfx_components_path rewrites it to an absolute path
+# derived from the installed lfx package at runtime.
+LFX_COMPONENTS_PATH_SENTINEL = "./src/lfx/src/lfx/components/"
+
 
 def get_provider_config(provider: str) -> dict | None:
     """Return provider metadata for backward compatibility with existing callers/tests."""
@@ -97,6 +107,32 @@ def inject_model_into_flow(
     return flow_data
 
 
+def inject_lfx_components_path(flow_data: dict) -> dict:
+    """Rewrite Directory nodes targeting bundled lfx components to an absolute path.
+
+    The bundled LangflowAssistant flow hardcodes a relative path that only
+    resolves from the monorepo root. In any packaged install the process CWD
+    is different and the Directory component raises "Path ... must exist and
+    be a directory.", causing the Langflow Assistant to fail with
+    "An internal error occurred while executing the flow." on first use.
+
+    This function walks the flow nodes and, for each Directory node whose
+    `path` value equals LFX_COMPONENTS_PATH_SENTINEL, replaces it with the
+    absolute path derived from the installed lfx package.
+    """
+    absolute_path = str(Path(lfx.__file__).parent / "components")
+
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Directory":
+            continue
+        path_field = node_data.get("node", {}).get("template", {}).get("path")
+        if path_field and path_field.get("value") == LFX_COMPONENTS_PATH_SENTINEL:
+            path_field["value"] = absolute_path
+
+    return flow_data
+
+
 def load_and_prepare_flow(
     flow_path: Path,
     provider: str | None,
@@ -109,5 +145,7 @@ def load_and_prepare_flow(
 
     if provider and model_name:
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)
+
+    flow_data = inject_lfx_components_path(flow_data)
 
     return json.dumps(flow_data)

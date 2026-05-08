@@ -12,7 +12,7 @@ const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment =>
   ({
     id: "dep-1",
     name: "My Deployment",
-    provider_account_id: "prov-1",
+    provider_id: "prov-1",
     ...overrides,
   }) as Deployment;
 
@@ -51,7 +51,7 @@ describe("useTestDeploymentModal", () => {
       const deployment = makeDeployment({
         id: "d1",
         name: "Bot",
-        provider_account_id: "p1",
+        provider_id: "p1",
       });
 
       act(() => {
@@ -64,28 +64,28 @@ describe("useTestDeploymentModal", () => {
       });
     });
 
-    it("sets testProviderId from deployment.provider_account_id", () => {
+    it("sets testProviderId from deployment.provider_id", () => {
       const { result } = renderHook(() => useTestDeploymentModal(), {
         wrapper: withRouter(),
       });
 
       act(() => {
         result.current.handleTestDeployment(
-          makeDeployment({ provider_account_id: "prov-99" }),
+          makeDeployment({ provider_id: "prov-99" }),
         );
       });
 
       expect(result.current.testProviderId).toBe("prov-99");
     });
 
-    it("uses empty string for testProviderId when provider_account_id is null", () => {
+    it("uses empty string for testProviderId when provider_id is null", () => {
       const { result } = renderHook(() => useTestDeploymentModal(), {
         wrapper: withRouter(),
       });
 
       act(() => {
         result.current.handleTestDeployment(
-          makeDeployment({ provider_account_id: null as unknown as string }),
+          makeDeployment({ provider_id: null as unknown as string }),
         );
       });
 

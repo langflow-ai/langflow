@@ -2,8 +2,12 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   ATTACHMENTS_MOCK,
+  ATTACHMENTS_WITH_CONNECTIONS_MOCK,
+  CONFIGS_WITH_CONNECTIONS_MOCK,
   DEPLOYMENT_DETAIL_MOCK,
   DEPLOYMENTS_MOCK,
+  FLOW_VERSIONS_MOCK,
+  FLOWS_MOCK,
   LLMS_MOCK,
   PROVIDERS_MOCK,
 } from "../../utils/deployment-mocks";
@@ -79,9 +83,23 @@ async function openEditDialog(page: Parameters<typeof test>[2]["page"]) {
   await page.waitForSelector('[data-testid="stepper-modal-title"]');
 }
 
+async function expectDeploymentTypeStep(
+  page: Parameters<typeof test>[2]["page"],
+) {
+  await expect(
+    page.getByRole("heading", { name: /Deployment Type/i }),
+  ).toBeVisible();
+}
+
+async function expectFlowsStep(page: Parameters<typeof test>[2]["page"]) {
+  await expect(page.getByRole("heading", { name: /^Flows$/i })).toBeVisible();
+}
+
 test(
   "Opens edit stepper from actions menu",
-  { tag: ["@release", "@workspace", "@api"] },
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -106,7 +124,9 @@ test(
 
 test(
   "Edit mode skips provider step — starts at Type",
-  { tag: ["@release", "@workspace", "@api"] },
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -122,7 +142,7 @@ test(
     await openEditDialog(page);
 
     // Wait for stepper body to render (parallel fetches must complete)
-    await page.waitForSelector('h2:has-text("Deployment Type")');
+    await expectDeploymentTypeStep(page);
 
     await expect(page.getByText("Deployment Type")).toBeVisible();
 
@@ -137,7 +157,9 @@ test(
 
 test(
   "Name field pre-populated in edit mode",
-  { tag: ["@release", "@workspace", "@api"] },
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -153,7 +175,7 @@ test(
     await openEditDialog(page);
 
     // Wait for stepper body to render
-    await page.waitForSelector('h2:has-text("Deployment Type")');
+    await expectDeploymentTypeStep(page);
 
     const nameInput = page.getByPlaceholder("e.g., Sales Bot");
     await expect(nameInput).toHaveValue("Test Deployment");
@@ -162,7 +184,9 @@ test(
 
 test(
   "Submitting PATCH closes modal",
-  { tag: ["@release", "@workspace", "@api"] },
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -178,13 +202,13 @@ test(
     await openEditDialog(page);
 
     // Wait for stepper body to render (parallel fetches must complete)
-    await page.waitForSelector('h2:has-text("Deployment Type")');
+    await expectDeploymentTypeStep(page);
 
     // Navigate through the stepper steps to reach Review
     // Step: Type → click Next
     await page.getByTestId("deployment-stepper-next").click();
 
-    // Step: Attach Flows → click Next
+    // Step: Flows → click Next
     await page.getByTestId("deployment-stepper-next").click();
 
     // Step: Review → click Update (final step)
@@ -205,7 +229,9 @@ test(
 
 test(
   "Cancel during edit closes modal without calling PATCH",
-  { tag: ["@release", "@workspace", "@api"] },
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -221,7 +247,7 @@ test(
     await openEditDialog(page);
 
     // Wait for stepper body to render
-    await page.waitForSelector('h2:has-text("Deployment Type")');
+    await expectDeploymentTypeStep(page);
 
     let patchCalled = false;
     page.on("request", (req) => {
@@ -241,5 +267,302 @@ test(
 
     // PATCH must not have been called
     expect(patchCalled).toBe(false);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Helper: set up routes with connection data for edit-mode connection tests
+// ---------------------------------------------------------------------------
+async function setupRoutesWithConnections(
+  page: Parameters<typeof test>[2]["page"],
+  folderId: string,
+) {
+  // Broad catch-all FIRST
+  await page.route("**/api/v1/deployments*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(DEPLOYMENTS_MOCK),
+    });
+  });
+
+  await page.route("**/api/v1/deployments/configs*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(CONFIGS_WITH_CONNECTIONS_MOCK),
+    });
+  });
+
+  await page.route("**/api/v1/deployments/llms*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(LLMS_MOCK),
+    });
+  });
+
+  await page.route("**/api/v1/deployments/providers*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(PROVIDERS_MOCK),
+    });
+  });
+
+  await page.route("**/api/v1/deployments/dep-1", (route) => {
+    if (route.request().method() === "PATCH") {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({}),
+      });
+    } else {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(DEPLOYMENT_DETAIL_MOCK),
+      });
+    }
+  });
+
+  // Attachments with provider_data containing app_ids
+  await page.route("**/api/v1/deployments/dep-1/flows*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(ATTACHMENTS_WITH_CONNECTIONS_MOCK),
+    });
+  });
+
+  // Flows list
+  await page.route("**/api/v1/flows/**", (route) => {
+    const url = route.request().url();
+    if (url.includes("/versions/")) {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(FLOW_VERSIONS_MOCK),
+      });
+      return;
+    }
+    const flows = FLOWS_MOCK.map((f) => ({ ...f, folder_id: folderId }));
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(flows),
+    });
+  });
+
+  // Global variables
+  await page.route("**/api/v1/variables**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+
+  // Env var detection
+  await page.route("**/api/v1/variables/detections**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ variables: [] }),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Test: PATCH includes new connections added to a pre-existing flow
+// ---------------------------------------------------------------------------
+test(
+  "Edit mode includes new connections in PATCH request",
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    // Capture folder ID from the projects API before bootstrap
+    const projectsResponsePromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/projects") && resp.status() === 200,
+      { timeout: 30000 },
+    );
+
+    await awaitBootstrapTest(page, { skipModal: true });
+
+    let folderId = "";
+    try {
+      const projectsResp = await projectsResponsePromise;
+      const folders = await projectsResp.json();
+      const match = Array.isArray(folders)
+        ? (folders.find(
+            (f: { name: string; id: string }) => f.name === "Starter Project",
+          ) ?? folders[0])
+        : null;
+      folderId = (match as { id: string } | null)?.id ?? "";
+    } catch {
+      // proceed
+    }
+
+    await setupRoutesWithConnections(page, folderId);
+    await page.getByTestId("deployments-btn").click();
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
+
+    // Open edit dialog
+    await page
+      .getByTestId("deployment-row-dep-1")
+      .waitFor({ state: "visible" });
+    await page.getByTestId("actions-deployment-dep-1").click();
+    await page.getByRole("menuitem", { name: "Update" }).click();
+    await page.waitForSelector('[data-testid="stepper-modal-title"]');
+
+    // Step 1 (Type) → Next
+    await expectDeploymentTypeStep(page);
+    await page.getByTestId("deployment-stepper-next").click();
+
+    // Step 2 (Flows) — flow "f1" should already be attached
+    await expectFlowsStep(page);
+    await page.waitForSelector('[data-testid="flow-item-f1"]');
+
+    // Click the pre-attached flow and its version to open the connection panel
+    await page.getByTestId("flow-item-f1").click();
+    await page.waitForSelector('[data-testid="version-item-fv1"]');
+    await page.getByTestId("version-item-fv1").click();
+
+    // Wait for connection panel to appear with available connections
+    await page.waitForSelector('[data-testid="connection-item-existing-app"]');
+    await page.waitForSelector('[data-testid="connection-item-new-app"]');
+
+    // The existing connection should already be checked; select the new one too
+    await page.getByTestId("connection-item-new-app").click();
+
+    // Attach connections
+    await page.getByTestId("connection-attach").click();
+
+    // Step 3 (Review) → click Next
+    await page.getByTestId("deployment-stepper-next").click();
+
+    // Intercept the PATCH request and verify its body
+    const patchRequestPromise = page.waitForRequest(
+      (req) =>
+        req.url().includes("/api/v1/deployments/dep-1") &&
+        req.method() === "PATCH",
+    );
+
+    // Click Update
+    await page.getByTestId("deployment-stepper-next").click();
+    const patchRequest = await patchRequestPromise;
+    const body = patchRequest.postDataJSON();
+
+    // Verify the PATCH body includes the new connection
+    const upsertFlows = body?.provider_data?.upsert_flows ?? [];
+    const flowEntry = upsertFlows.find(
+      (f: { flow_version_id: string }) => f.flow_version_id === "fv1",
+    );
+    expect(flowEntry).toBeDefined();
+    expect(flowEntry.add_app_ids).toContain("new-app");
+    // The existing connection should NOT appear in add_app_ids (it was already there)
+    expect(flowEntry.add_app_ids).not.toContain("existing-app");
+    // Nothing was removed
+    expect(flowEntry.remove_app_ids).toEqual([]);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Test: PATCH includes removed connections from a pre-existing flow
+// ---------------------------------------------------------------------------
+test(
+  "Edit mode includes removed connections in PATCH request",
+  {
+    tag: ["@release", "@workspace", "@api"],
+  },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    const projectsResponsePromise = page.waitForResponse(
+      (resp) =>
+        resp.url().includes("/api/v1/projects") && resp.status() === 200,
+      { timeout: 30000 },
+    );
+
+    await awaitBootstrapTest(page, { skipModal: true });
+
+    let folderId = "";
+    try {
+      const projectsResp = await projectsResponsePromise;
+      const folders = await projectsResp.json();
+      const match = Array.isArray(folders)
+        ? (folders.find(
+            (f: { name: string; id: string }) => f.name === "Starter Project",
+          ) ?? folders[0])
+        : null;
+      folderId = (match as { id: string } | null)?.id ?? "";
+    } catch {
+      // proceed
+    }
+
+    await setupRoutesWithConnections(page, folderId);
+    await page.getByTestId("deployments-btn").click();
+    await page.waitForSelector('[data-testid="subtab-deployments"]');
+
+    // Open edit dialog
+    await page
+      .getByTestId("deployment-row-dep-1")
+      .waitFor({ state: "visible" });
+    await page.getByTestId("actions-deployment-dep-1").click();
+    await page.getByRole("menuitem", { name: "Update" }).click();
+    await page.waitForSelector('[data-testid="stepper-modal-title"]');
+
+    // Step 1 (Type) → Next
+    await expectDeploymentTypeStep(page);
+    await page.getByTestId("deployment-stepper-next").click();
+
+    // Step 2 (Flows)
+    await expectFlowsStep(page);
+    await page.waitForSelector('[data-testid="flow-item-f1"]');
+    await page.getByTestId("flow-item-f1").click();
+    await page.waitForSelector('[data-testid="version-item-fv1"]');
+    await page.getByTestId("version-item-fv1").click();
+
+    // Wait for connection panel
+    await page.waitForSelector('[data-testid="connection-item-existing-app"]');
+
+    // Deselect the existing connection (uncheck it)
+    await page.getByTestId("connection-item-existing-app").click();
+
+    // Select only the new connection
+    await page.getByTestId("connection-item-new-app").click();
+    await page.getByTestId("connection-attach").click();
+
+    // Step 3 (Review) → click Next
+    await page.getByTestId("deployment-stepper-next").click();
+
+    const patchRequestPromise = page.waitForRequest(
+      (req) =>
+        req.url().includes("/api/v1/deployments/dep-1") &&
+        req.method() === "PATCH",
+    );
+
+    // Click Update
+    await page.getByTestId("deployment-stepper-next").click();
+    const patchRequest = await patchRequestPromise;
+    const body = patchRequest.postDataJSON();
+
+    const upsertFlows = body?.provider_data?.upsert_flows ?? [];
+    const flowEntry = upsertFlows.find(
+      (f: { flow_version_id: string }) => f.flow_version_id === "fv1",
+    );
+    expect(flowEntry).toBeDefined();
+    expect(flowEntry.add_app_ids).toContain("new-app");
+    expect(flowEntry.remove_app_ids).toContain("existing-app");
   },
 );

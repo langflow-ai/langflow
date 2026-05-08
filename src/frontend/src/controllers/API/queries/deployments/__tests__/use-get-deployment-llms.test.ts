@@ -55,7 +55,7 @@ describe("useGetDeploymentLlms", () => {
     expect(mockQuery).toHaveBeenCalledWith(
       ["useGetDeploymentLlms", { providerId: "prov-1" }],
       expect.any(Function),
-      undefined,
+      { retry: false, staleTime: 60000 },
     );
   });
 

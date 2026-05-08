@@ -6,10 +6,18 @@ import type { DeploymentListResponse } from "./use-get-deployments";
 
 async function fetchDeployments(
   providerId: string,
+  projectId?: string,
 ): Promise<DeploymentListResponse> {
   const { data } = await api.get<DeploymentListResponse>(
     `${getURL("DEPLOYMENTS")}`,
-    { params: { provider_id: providerId, page: 1, size: 20 } },
+    {
+      params: {
+        provider_id: providerId,
+        ...(projectId ? { project_id: projectId } : {}),
+        page: 1,
+        size: 20,
+      },
+    },
   );
   return data;
 }
@@ -21,22 +29,39 @@ interface UseGetDeploymentsByProvidersResult {
 
 export function useGetDeploymentsByProviders(
   providerIds: string[],
+  projectId?: string,
 ): UseGetDeploymentsByProvidersResult {
   return useQueries({
     queries: providerIds.map((pid) => ({
-      queryKey: ["useGetDeployments", { provider_id: pid, page: 1, size: 20 }],
-      queryFn: () => fetchDeployments(pid),
+      queryKey: [
+        "useGetDeployments",
+        {
+          provider_id: pid,
+          ...(projectId ? { project_id: projectId } : {}),
+          page: 1,
+          size: 20,
+        },
+      ],
+      queryFn: () => fetchDeployments(pid, projectId),
       enabled: !!pid,
     })),
     combine: (results): UseGetDeploymentsByProvidersResult => {
       const merged: Deployment[] = [];
       for (let i = 0; i < results.length; i++) {
-        const data = results[i].data;
-        if (data?.deployments) {
-          const pid = providerIds[i];
-          for (const dep of data.deployments) {
-            merged.push({ ...dep, provider_account_id: pid });
-          }
+        const result = results[i];
+        const pid = providerIds[i];
+        const data = result.data;
+        if (!data?.deployments || !pid) {
+          continue;
+        }
+        for (const d of data.deployments) {
+          merged.push({
+            ...d,
+            provider_id:
+              d.provider_id !== undefined && d.provider_id !== null
+                ? String(d.provider_id)
+                : String(pid),
+          });
         }
       }
       return {

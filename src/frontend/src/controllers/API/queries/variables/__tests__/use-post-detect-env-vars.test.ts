@@ -48,12 +48,9 @@ describe("usePostDetectEnvVars", () => {
     );
   });
 
-  it("returns detected variables with global_variable_name", async () => {
+  it("returns detected global variable names", async () => {
     const response: DetectEnvVarsResponse = {
-      variables: [
-        { key: "OPENAI_API_KEY", global_variable_name: "openai_key" },
-        { key: "CUSTOM_VAR", global_variable_name: null },
-      ],
+      variables: ["OPENAI_API_KEY", "CUSTOM_VAR"],
     };
     mockApiPost.mockResolvedValue({ data: response });
 
@@ -64,8 +61,8 @@ describe("usePostDetectEnvVars", () => {
 
     expect(result).toEqual(response);
     expect(result.variables).toHaveLength(2);
-    expect(result.variables[0].global_variable_name).toBe("openai_key");
-    expect(result.variables[1].global_variable_name).toBeNull();
+    expect(result.variables[0]).toBe("OPENAI_API_KEY");
+    expect(result.variables[1]).toBe("CUSTOM_VAR");
   });
 
   it("returns empty variables array when no env vars detected", async () => {

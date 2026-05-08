@@ -13,8 +13,10 @@ const mockHandleDeploy = jest.fn();
 const mockSetChoiceDialogOpen = jest.fn();
 const mockSetDeployModalOpen = jest.fn();
 
-jest.mock("@/customization/feature-flags", () => ({
-  ENABLE_DEPLOYMENTS: true,
+jest.mock("@/stores/utilityStore", () => ({
+  useUtilityStore: (
+    selector: (s: { featureFlags: Record<string, unknown> }) => unknown,
+  ) => selector({ featureFlags: { wxo_deployments: true } }),
 }));
 
 jest.mock("../deploy-choice-dialog/hooks/use-prepare-deploy", () => ({

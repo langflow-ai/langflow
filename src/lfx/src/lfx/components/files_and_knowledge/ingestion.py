@@ -7,7 +7,6 @@ import re
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -18,6 +17,9 @@ from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.components.files_and_knowledge._kb_paths import (
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+)
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -40,25 +42,12 @@ from lfx.services.deps import (
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
 if TYPE_CHECKING:
-    from lfx.schema.dataframe import DataFrame
+    from pathlib import Path
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+    from lfx.schema.dataframe import DataFrame
 
 # Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge ingestion is not supported in Astra cloud environment."
-
-
-def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
-        settings = get_settings_service().settings
-        knowledge_directory = settings.knowledge_bases_dir
-        if not knowledge_directory:
-            msg = "Knowledge bases directory is not set in the settings."
-            raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeIngestionComponent(Component):
@@ -87,7 +76,6 @@ class KnowledgeIngestionComponent(Component):
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
-                            "03_api_key",
                         ],
                         "template": {
                             "01_new_kb_name": StrInput(
@@ -99,16 +87,12 @@ class KnowledgeIngestionComponent(Component):
                             "02_embedding_model": ModelInput(
                                 name="embedding_model",
                                 display_name="Choose Embedding Model",
-                                info="Select the embedding model to use for this knowledge base.",
+                                info=(
+                                    "Select the embedding model to use for this knowledge base. "
+                                    "Langflow uses the configured credentials for that model provider."
+                                ),
                                 required=True,
                                 model_type="embedding",
-                            ),
-                            "03_api_key": SecretStrInput(
-                                name="api_key",
-                                display_name="Embedding Provider API Key",
-                                info="Optional API key override used to validate and save this knowledge base.",
-                                required=False,
-                                advanced=True,
                             ),
                         },
                     },
@@ -254,7 +238,7 @@ class KnowledgeIngestionComponent(Component):
         Args:
             model_selection: Model selection list from ModelInput
                 (e.g. [{'name': ..., 'provider': ..., 'metadata': ...}])
-            api_key: Optional API key override.
+            api_key: Optional runtime API key override.
         """
         model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
         embedding_model = model_dict.get("name", "")
@@ -718,13 +702,10 @@ class KnowledgeIngestionComponent(Component):
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
 
-                api_key = field_value.get("03_api_key") or None
-
                 # Build and validate the embedding model via the shared utility
                 embed_model = get_embeddings(
                     model=model_selection,
                     user_id=self.user_id,
-                    api_key=api_key,
                 )
 
                 # Try to generate a dummy embedding to validate without blocking the event loop
@@ -749,7 +730,6 @@ class KnowledgeIngestionComponent(Component):
                 self._save_embedding_metadata(
                     kb_path=kb_path,
                     model_selection=model_selection,
-                    api_key=api_key,
                 )
 
             # Update the knowledge base options dynamically

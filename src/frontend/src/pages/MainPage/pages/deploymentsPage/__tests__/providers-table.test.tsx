@@ -21,7 +21,7 @@ const makeProvider = (
   id: "prov-1",
   name: "Production WxO",
   provider_key: "watsonx-orchestrate",
-  url: "https://api.example.com",
+  provider_data: { url: "https://api.example.com" },
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-05-10T00:00:00Z",
   ...overrides,

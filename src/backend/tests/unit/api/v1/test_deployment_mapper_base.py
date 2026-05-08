@@ -17,7 +17,12 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.mappers.deployments.registry import DeploymentMapperRegistry
-from langflow.api.v1.schemas.deployments import DeploymentCreateRequest, DeploymentUpdateRequest, ExecutionCreateRequest
+from langflow.api.v1.schemas.deployments import (
+    DeploymentCreateRequest,
+    DeploymentProviderAccountCreateRequest,
+    DeploymentUpdateRequest,
+    RunCreateRequest,
+)
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
@@ -55,18 +60,6 @@ class _ApiExecutionInput(BaseModel):
     invocation_id: str
 
 
-class _ApiDeploymentListParams(BaseModel):
-    env: str
-
-
-class _ApiConfigListParams(BaseModel):
-    config_tag: str
-
-
-class _ApiSnapshotListParams(BaseModel):
-    snapshot_tag: str
-
-
 class _TypedMapper(BaseDeploymentMapper):
     api_payloads = DeploymentApiPayloads(
         deployment_create=PayloadSlot(_ApiCreate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
@@ -74,9 +67,6 @@ class _TypedMapper(BaseDeploymentMapper):
         deployment_config=PayloadSlot(_ApiConfig, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         deployment_update=PayloadSlot(_ApiUpdate, policy=PayloadSlotPolicy.VALIDATE_ONLY),
         execution_input=PayloadSlot(_ApiExecutionInput, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        deployment_list_params=PayloadSlot(_ApiDeploymentListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        config_list_params=PayloadSlot(_ApiConfigListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
-        snapshot_list_params=PayloadSlot(_ApiSnapshotListParams, policy=PayloadSlotPolicy.VALIDATE_ONLY),
     )
 
 
@@ -90,9 +80,6 @@ INBOUND_METHOD_CASES = [
     ("resolve_deployment_spec", {"region": "us-east-1"}),
     ("resolve_deployment_config", {"retries": 3}),
     ("resolve_execution_input", {"invocation_id": "inv-1"}),
-    ("resolve_deployment_list_params", {"env": "prod"}),
-    ("resolve_config_list_params", {"config_tag": "release"}),
-    ("resolve_snapshot_list_params", {"snapshot_tag": "nightly"}),
 ]
 
 INBOUND_SLOT_NAMES = [
@@ -100,9 +87,6 @@ INBOUND_SLOT_NAMES = [
     "deployment_config",
     "deployment_update",
     "execution_input",
-    "deployment_list_params",
-    "config_list_params",
-    "snapshot_list_params",
 ]
 
 OUTBOUND_SLOT_NAMES = [
@@ -118,9 +102,9 @@ OUTBOUND_SLOT_NAMES = [
 
 
 def test_api_payload_field_names_match_adapter_registry() -> None:
-    api_fields = [field.name for field in fields(DeploymentApiPayloads)]
-    adapter_fields = [field.name for field in fields(DeploymentPayloadSchemas)]
-    assert api_fields == adapter_fields
+    api_fields = {field.name for field in fields(DeploymentApiPayloads)}
+    adapter_fields = {field.name for field in fields(DeploymentPayloadSchemas)}
+    assert adapter_fields.issubset(api_fields), f"Adapter fields not in API payloads: {adapter_fields - api_fields}"
 
 
 @pytest.mark.asyncio
@@ -288,7 +272,7 @@ async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_da
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_configured() -> None:
     mapper = BaseDeploymentMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -305,7 +289,7 @@ async def test_base_mapper_resolve_execution_create_passthrough_when_slot_not_co
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_validates_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invocation_id": "inv-1"},
     )
 
@@ -322,7 +306,7 @@ async def test_base_mapper_resolve_execution_create_validates_provider_data_when
 @pytest.mark.asyncio
 async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_data_when_slot_configured() -> None:
     mapper = _TypedMapper()
-    payload = ExecutionCreateRequest(
+    payload = RunCreateRequest(
         provider_data={"invalid": "value"},
     )
 
@@ -332,6 +316,90 @@ async def test_base_mapper_resolve_execution_create_rejects_invalid_provider_dat
             db=None,  # type: ignore[arg-type]
             payload=payload,
         )
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=DeploymentType.AGENT,
+        names=["A", "B"],
+        provider_params={"env": "prod"},
+    )
+    assert params.deployment_types == [DeploymentType.AGENT]
+    assert params.deployment_names == ["A", "B"]
+    assert params.provider_params == {"env": "prod"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_deployment_list_adapter_params_returns_none_when_unfiltered() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_deployment_list_adapter_params(
+        deployment_type=None,
+        names=None,
+        provider_params=None,
+    )
+    assert params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        provider_params={"tag": "release"},
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.provider_params == {"tag": "release"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_config_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_config_list_adapter_params(
+        deployment_resource_key=None,
+        provider_params=None,
+    )
+    assert params.deployment_ids is None
+    assert params.provider_params is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_passthrough() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=["snap-a", "snap-b"],
+        provider_params={"tag": "nightly"},
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names == ["snap-a", "snap-b"]
+    assert params.provider_params == {"tag": "nightly"}
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_normalizes_empty_names_to_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key="dep-key-1",
+        snapshot_names=[],
+        provider_params=None,
+    )
+    assert params.deployment_ids == ["dep-key-1"]
+    assert params.snapshot_names is None
+
+
+@pytest.mark.asyncio
+async def test_base_mapper_resolve_snapshot_list_adapter_params_omits_deployment_ids_when_key_none() -> None:
+    mapper = BaseDeploymentMapper()
+    params = await mapper.resolve_snapshot_list_adapter_params(
+        deployment_resource_key=None,
+        snapshot_names=None,
+        provider_params=None,
+    )
+    assert params.deployment_ids is None
+    assert params.snapshot_names is None
+    assert params.provider_params is None
 
 
 def test_mapper_has_resolve_method_for_all_inbound_slots() -> None:
@@ -358,6 +426,12 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
     shaper = getattr(mapper, method_name)
     shaped = shaper(payload)
     assert shaped is payload
+
+
+def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    with pytest.raises(NotImplementedError, match="shape_deployment_get_data"):
+        mapper.shape_deployment_get_data({"ok": True})
 
 
 def test_base_mapper_shapes_deployment_create_result() -> None:
@@ -513,6 +587,7 @@ def test_shape_deployment_list_items_without_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids is None
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter() -> None:
@@ -539,6 +614,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == [fv_id]
+    assert items[0].provider_data is None
 
 
 def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
@@ -564,6 +640,7 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
     assert items[0].provider_id == provider_account_id
     assert items[0].provider_key == "test-provider"
     assert items[0].flow_version_ids == []
+    assert items[0].provider_data is None
 
 
 def test_base_mapper_execution_provider_data_shapers_passthrough() -> None:
@@ -579,7 +656,10 @@ def test_base_mapper_formats_conflict_detail_with_generic_fallback() -> None:
 
     detail = mapper.format_conflict_detail("provider conflict detail")
 
-    assert detail == "A resource with this name already exists in the provider. provider conflict detail"
+    assert (
+        detail
+        == "A resource conflict occurred in the deployment provider. The requested operation could not be completed."
+    )
 
 
 def test_base_mapper_shapes_deployment_update_result() -> None:
@@ -691,24 +771,6 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     assert mapper.util_resource_key_from_execution(exec_result) == "dep-1"
 
 
-def test_base_mapper_resolve_provider_tenant_id_passthrough() -> None:
-    mapper = BaseDeploymentMapper()
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://example.com/instances/abc",
-            provider_data={"tenant_id": "tenant-1"},
-        )
-        == "tenant-1"
-    )
-    assert (
-        mapper.resolve_provider_tenant_id(
-            provider_url="https://example.com/instances/abc",
-            provider_data={},
-        )
-        is None
-    )
-
-
 def test_base_mapper_shapes_provider_account_response() -> None:
     mapper = BaseDeploymentMapper()
     timestamp = datetime.now(tz=timezone.utc)
@@ -722,12 +784,11 @@ def test_base_mapper_shapes_provider_account_response() -> None:
         updated_at=timestamp,
     )
 
-    shaped = mapper.shape_provider_account_response(account)
+    shaped = mapper.resolve_provider_account_response(account)
     assert shaped.id == account.id
     assert shaped.name == "staging"
-    assert shaped.provider_data == {"tenant_id": "tenant-1"}
+    assert shaped.provider_data == {"url": "https://provider.example"}
     assert shaped.provider_key == "watsonx-orchestrate"
-    assert shaped.url == "https://provider.example"
 
 
 def test_mapper_registry_returns_default_when_unregistered() -> None:
@@ -772,33 +833,83 @@ def test_mapper_registry_get_returns_cached_instance_for_key() -> None:
 
 
 # ---------------------------------------------------------------------------
-# resolve_verify_credentials
+# resolve_verify_credentials_for_create
 # ---------------------------------------------------------------------------
 
 
-def test_base_mapper_resolve_verify_credentials_extracts_url() -> None:
-    """Base mapper builds VerifyCredentials with url only."""
+def test_base_mapper_resolve_verify_credentials_raises_not_implemented() -> None:
+    """Base mapper does not implement create credential verification."""
     from langflow.api.v1.schemas.deployments import DeploymentProviderAccountCreateRequest
-    from lfx.services.adapters.deployment.schema import VerifyCredentials
 
     mapper = BaseDeploymentMapper()
     payload = DeploymentProviderAccountCreateRequest(
         name="test-account",
         provider_key="watsonx-orchestrate",
-        url="https://api.us-south.wxo.cloud.ibm.com",
-        provider_data={"api_key": "secret-key"},  # pragma: allowlist secret
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com",
+            "api_key": "secret-key",  # pragma: allowlist secret
+        },
     )
-    result = mapper.resolve_verify_credentials(payload=payload)
-    assert isinstance(result, VerifyCredentials)
-    assert "cloud.ibm.com" in result.base_url
-    assert result.provider_data is None
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_verify_credentials_for_create(payload=payload)
 
 
-def test_base_mapper_resolve_credential_fields_raises_not_implemented() -> None:
-    """Base mapper does not implement resolve_credential_fields."""
+def test_base_mapper_resolve_credentials_raises_not_implemented() -> None:
+    """Base mapper does not implement resolve_credentials."""
     mapper = BaseDeploymentMapper()
     with pytest.raises(NotImplementedError):
-        mapper.resolve_credential_fields(provider_data={"api_key": "key"})  # pragma: allowlist secret
+        mapper.resolve_credentials(provider_data={"api_key": "key"})  # pragma: allowlist secret
+
+
+def test_base_mapper_resolve_provider_account_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentProviderAccountCreateRequest(
+        name="provider-account",
+        provider_key="watsonx-orchestrate",
+        provider_data={
+            "url": "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+            "tenant_id": "tenant-1",
+            "api_key": "secret-key",  # pragma: allowlist secret
+        },
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.resolve_provider_account_create(payload=payload, user_id=uuid4())
+
+
+def test_base_mapper_util_existing_deployment_resource_key_for_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="deploy",
+        description="",
+        type="agent",
+        provider_data={},
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.util_existing_deployment_resource_key_for_create(payload)
+
+
+def test_base_mapper_util_should_mutate_provider_for_existing_deployment_create_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        name="deploy",
+        description="",
+        type="agent",
+        provider_data={},
+    )
+    with pytest.raises(NotImplementedError):
+        mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
+
+
+def test_base_mapper_util_create_result_from_existing_update_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    result = DeploymentUpdateResult(id="provider-deploy-id")
+    with pytest.raises(NotImplementedError):
+        mapper.util_create_result_from_existing_update(
+            existing_resource_key="provider-deploy-id",
+            result=result,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -809,8 +920,8 @@ def test_base_mapper_resolve_credential_fields_raises_not_implemented() -> None:
 def _make_existing_account():
     """Build a minimal fake existing DeploymentProviderAccount."""
     return SimpleNamespace(
-        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/old-tenant/agents",
-        provider_tenant_id="old-tenant",
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/30000000-0000-0000-0000-000000000001",
+        provider_tenant_id="30000000-0000-0000-0000-000000000001",
         provider_key="watsonx-orchestrate",
     )
 

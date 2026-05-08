@@ -29,6 +29,20 @@ jest.mock("@/customization/config-constants", () => ({
   BASE_URL_API: "http://localhost:7860/api/v1/",
 }));
 
+// Mocking the customization layer for the user avatar is how we prove the
+// Desktop Langflow Assistant avatar bug is fixed: the component must render
+// CustomProfileIcon (which the Desktop customization overrides to prepend an
+// absolute baseURL), not a bare <img> with a relative URL.
+jest.mock("@/customization/components/custom-profile-icon", () => ({
+  CustomProfileIcon: ({ className }: { className?: string }) => (
+    <img
+      data-testid="custom-profile-icon"
+      data-classname={className}
+      alt="User"
+    />
+  ),
+}));
+
 jest.mock("@/assets/langflow_assistant.svg", () => "langflow-icon.svg");
 
 jest.mock("../assistant-component-result", () => ({
@@ -117,6 +131,30 @@ describe("AssistantMessageItem", () => {
 
       expect(screen.getByText("User")).toBeInTheDocument();
       expect(screen.getByAltText("User")).toBeInTheDocument();
+    });
+
+    // Regression guard: Langflow Desktop shipped with a broken user avatar in
+    // the Assistant panel because the bare <img> used a relative URL that
+    // resolved against the Tauri origin instead of the Python sidecar. The
+    // fix routes the avatar through CustomProfileIcon so Desktop's
+    // customization override prepends the absolute baseURL. If someone later
+    // replaces CustomProfileIcon with an inline <img> again, this test fails.
+    it("should_render_user_avatar_via_custom_profile_icon_when_message_is_from_user", () => {
+      const message = createMessage({
+        role: "user",
+        content: "Build a component",
+        status: "complete",
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      const avatar = screen.getByTestId("custom-profile-icon");
+      expect(avatar).toBeInTheDocument();
+      // The h-7 sizing must be forwarded through the className prop so the
+      // Desktop override can honor the Assistant panel's avatar size.
+      expect(avatar.getAttribute("data-classname")).toContain("h-7");
+      expect(avatar.getAttribute("data-classname")).toContain("w-7");
+      expect(avatar.getAttribute("data-classname")).toContain("rounded-full");
     });
 
     it("should render user message content", () => {

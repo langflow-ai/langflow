@@ -45,6 +45,7 @@ DeploymentProviderName = Annotated[
 ]  # the name of the deployment provider.
 
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
 DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
@@ -471,6 +472,11 @@ class DeploymentListParams(_BaseListParams[T_DeploymentListParams]):
         None,
         description="Config ids to filter by.",
     )
+    deployment_names: list[NormalizedStr] | None = Field(
+        None,
+        min_length=1,
+        description="Deployment names to filter by.",
+    )
 
     @field_validator("deployment_types")
     @classmethod
@@ -506,6 +512,11 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
     snapshot_ids: list[IdLike] | None = Field(
         None,
         description="Snapshot ids to filter by.",
+    )
+    snapshot_names: list[NormalizedStr] | None = Field(
+        None,
+        min_length=1,
+        description="Snapshot names to filter by.",
     )
 
     @field_validator("snapshot_ids")

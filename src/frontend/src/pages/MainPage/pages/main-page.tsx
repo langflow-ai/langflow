@@ -1,8 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Outlet } from "react-router-dom";
 import SideBarFoldersButtonsComponent from "@/components/core/folderSidebarComponent/components/sideBarFolderButtons";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useDeleteFolders } from "@/controllers/API/queries/folders";
 import CustomEmptyPageCommunity from "@/customization/components/custom-empty-page";
 import CustomLoader from "@/customization/components/custom-loader";
@@ -11,7 +13,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import ModalsComponent from "../components/modalsComponent";
-import EmptyPageCommunity from "./empty-page";
+import { shouldShowMainContent } from "./main-page-utils";
 
 export default function CollectionPage(): JSX.Element {
   const [openModal, setOpenModal] = useState(false);
@@ -22,6 +24,7 @@ export default function CollectionPage(): JSX.Element {
   const examples = useFlowsManagerStore((state) => state.examples);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const { t } = useTranslation();
   const folderToEdit = useFolderStore((state) => state.folderToEdit);
   const folders = useFolderStore((state) => state.folders);
   const queryClient = useQueryClient();
@@ -40,47 +43,44 @@ export default function CollectionPage(): JSX.Element {
       {
         onSuccess: () => {
           setSuccessData({
-            title: "Project deleted successfully.",
+            title: t("project.deletedSuccessfully"),
           });
           navigate("/all");
         },
         onError: (err) => {
           console.error(err);
           setErrorData({
-            title: "Error deleting project.",
+            title: t("project.errorDeleting"),
           });
         },
       },
     );
   };
 
+  const showMainContent = shouldShowMainContent(flows, examples, folders);
+
   return (
     <SidebarProvider width="280px">
-      {flows &&
-        examples &&
-        folders &&
-        ((flows?.length !== examples?.length && folders?.length > 0) ||
-          folders?.length > 1) && (
-          <SideBarFoldersButtonsComponent
-            handleChangeFolder={(id: string) => {
-              navigate(`all/folder/${id}`);
-            }}
-            handleDeleteFolder={(item) => {
-              setFolderToEdit(item);
-              setOpenDeleteFolderModal(true);
-            }}
-            handleFilesClick={() => {
-              navigate("assets");
-            }}
-          />
-        )}
+      {flows && examples && folders && showMainContent && (
+        <SideBarFoldersButtonsComponent
+          handleChangeFolder={(id: string) => {
+            navigate(`all/folder/${id}`);
+          }}
+          handleDeleteFolder={(item) => {
+            setFolderToEdit(item);
+            setOpenDeleteFolderModal(true);
+          }}
+          handleFilesClick={() => {
+            navigate("assets");
+          }}
+        />
+      )}
       <main className="flex h-full w-full overflow-hidden">
         {flows && examples && folders ? (
           <div
             className={`relative mx-auto flex h-full w-full flex-col overflow-hidden`}
           >
-            {(flows?.length !== examples?.length && folders?.length > 0) ||
-            folders?.length > 1 ? (
+            {showMainContent ? (
               <Outlet />
             ) : (
               <CustomEmptyPageCommunity setOpenModal={setOpenModal} />

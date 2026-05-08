@@ -14,6 +14,11 @@ export type APITemplateType = {
   [key: string]: InputFieldType;
 };
 
+export type ComponentDisplayNamesType = Record<
+  string,
+  { display_name: string[]; description: string[] }
+>;
+
 export type APICodeValidateType = {
   imports: { errors: Array<string> };
   function: { errors: Array<string> };
@@ -120,6 +125,7 @@ export type OutputFieldType = {
   group_outputs?: boolean;
   method?: string;
   display_name: string;
+  info?: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
@@ -249,7 +255,7 @@ export type LogsLogType = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
-  logs: { [key: string]: LogsLogType };
+  logs: { [key: string]: LogsLogType[] };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;

@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -360,6 +361,7 @@ class Graph:
         event_manager: EventManager | None = None,
         *,
         reset_output_values: bool = True,
+        fallback_to_env_vars: bool = False,
     ):
         # Preserve start_component_id from constructor if available
         start_component_id = self._start.get_id() if self._start else None
@@ -378,7 +380,9 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(
+                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            )
             yield result
             if isinstance(result, Finish):
                 return
@@ -690,7 +694,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
@@ -1432,6 +1444,8 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
+        *,
+        fallback_to_env_vars: bool = False,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -1470,6 +1484,7 @@ class Graph:
             get_cache=get_cache_func,
             set_cache=set_cache_func,
             event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(

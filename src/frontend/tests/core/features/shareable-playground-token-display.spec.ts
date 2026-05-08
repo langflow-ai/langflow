@@ -56,6 +56,9 @@ test(
     await newPage.waitForTimeout(3000);
 
     // Token count should be visible (Coins icon indicates token display)
+    await newPage.waitForSelector('[data-testid="icon-Coins"]', {
+      timeout: 30000,
+    });
     const coinsIcons = await newPage
       .locator('[data-testid="icon-Coins"]')
       .count();
