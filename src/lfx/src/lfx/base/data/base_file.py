@@ -116,6 +116,11 @@ class BaseFileComponent(Component, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Eagerly create the per-instance lock used to serialize load_files_base.
+        # Lazy creation inside load_files_base would itself be racy on the very
+        # first concurrent entry — two threads could each create their own Lock
+        # and bypass serialization on the call this PR is meant to fix.
+        self._load_files_base_lock = threading.Lock()
         # Dynamically update FileInput to include valid extensions and bundles
         self.get_base_inputs()[0].file_types = [
             *self.valid_extensions,
@@ -245,14 +250,6 @@ class BaseFileComponent(Component, ABC):
         Returns:
             list[Data]: Parsed data from the processed files.
         """
-        if not hasattr(self, "_load_files_base_lock"):
-            # Lazily attach a per-instance lock so we don't need to override __init__.
-            # First-touch lock-creation is itself racy in theory, but in practice
-            # every call goes through the same Python attribute write, and the lock
-            # only needs to exist before the next entry — see test
-            # ``test_concurrent_output_calls_are_serialized``.
-            self._load_files_base_lock = threading.Lock()
-
         cache_key = self._load_files_paths_cache_key()
         paths_subkey = cache_key[:-1]  # paths only, ignoring markdown flag
 
