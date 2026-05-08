@@ -1,5 +1,4 @@
 from langchain_community.tools import DuckDuckGoSearchRun
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import IntInput, MessageTextInput
 from lfx.schema.data import Data

@@ -101,9 +101,7 @@ def test_short_import_path_flow_upgrades(migration_table) -> None:
     """
     from lfx.extension.migration.rewrite import migrate_flow_payload
 
-    flow = _saved_flow(
-        _saved_flow_node("ddg-3", "lfx.components.duckduckgo.DuckDuckGoSearchComponent")
-    )
+    flow = _saved_flow(_saved_flow_node("ddg-3", "lfx.components.duckduckgo.DuckDuckGoSearchComponent"))
 
     report = migrate_flow_payload(flow, table=migration_table)
     assert report.rewritten_count == 1
