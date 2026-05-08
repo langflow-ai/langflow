@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+import threading
 from pathlib import Path
 
 from lfx.base.data.base_file import BaseFileComponent
@@ -315,3 +316,73 @@ class TestDeleteAfterProcessingRaceCondition:
 
         with pytest.raises(ValueError, match="File not found"):
             self.component.load_files_base()
+
+    def test_concurrent_output_calls_are_serialized(self):
+        """Concurrent load_files_base() calls on the same instance must share parsed data.
+
+        Exercises the lock + keyed cache path: two threads enter load_files_base at the
+        same time. Only one should execute the read+process+delete cycle; the other must
+        observe the cached parsed result rather than racing past validation and producing
+        empty output.
+        """
+        server_file = self.temp_path / "concurrent_file.txt"
+        server_file.write_text("concurrent-content", encoding="utf-8")
+
+        self.component.file_path = Data(data={"file_path": str(server_file)})
+        self.component.delete_server_file_after_processing = True
+        self.component.silent_errors = False
+
+        results: list[list[Data]] = []
+        errors: list[BaseException] = []
+        barrier = threading.Barrier(2)
+
+        def worker():
+            try:
+                barrier.wait(timeout=5)
+                results.append(self.component.load_files_base())
+            except BaseException as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert not errors, f"Concurrent load_files_base() raised: {errors!r}"
+        assert len(results) == 2
+        assert results[0], "First completed call should return non-empty parsed data"
+        assert results[0] == results[1], (
+            "Concurrent calls must return identical parsed data — neither caller should "
+            "silently fall through to empty output when the other deletes the server file."
+        )
+        assert not server_file.exists(), "Server file should have been deleted exactly once"
+
+    def test_cache_does_not_pollute_legitimate_empty_input(self):
+        """An empty validation result (no input configured) must not return stale cached data.
+
+        Covers the secondary blocker: race-recovery should only activate when validation
+        actually skipped a missing ``delete_after_processing=True`` server file, not for
+        every empty validation result.
+        """
+        # Configure a fresh component with no inputs at all.
+        self.component.file_path = None
+        self.component.path = []
+        self.component.delete_server_file_after_processing = True
+
+        # First call has no input → returns empty without populating recovery cache.
+        first = self.component.load_files_base()
+        assert first == [], "Empty input should yield empty output, not stale cache"
+
+        # Now simulate that a *different* prior call did populate the cache for some
+        # other set of paths. The empty-input call must not pick that up.
+        cached_data = [Data(data={"text": "stale", "file_path": "/tmp/old.txt"})]
+        self.component._load_files_base_processed_cache = {  # type: ignore[attr-defined]
+            ((), ("/tmp/old.txt",), False): cached_data,
+        }
+
+        second = self.component.load_files_base()
+        assert second == [], (
+            "Race-recovery must be keyed to the current paths and gated on the "
+            "validation-skip flag; an empty input must not return a stale cached result."
+        )
