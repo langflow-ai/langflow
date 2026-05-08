@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Markdown from "react-markdown";
+import { useTranslation } from "react-i18next";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
@@ -23,6 +24,7 @@ export const ErrorView = ({
   fitViewNode: (id: string) => void;
   chat: any;
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
@@ -177,9 +179,9 @@ export const ErrorView = ({
                                   Steps to fix:
                                 </h3>
                                 <ol className="list-decimal pl-5">
-                                  <li>Check the component settings</li>
-                                  <li>Ensure all required fields are filled</li>
-                                  <li>Re-run your flow</li>
+                                  <li>{t("instructions.checkSettings")}</li>
+                                  <li>{t("instructions.fillRequiredFields")}</li>
+                                  <li>{t("instructions.rerunFlow")}</li>
                                 </ol>
                               </div>
                             )}

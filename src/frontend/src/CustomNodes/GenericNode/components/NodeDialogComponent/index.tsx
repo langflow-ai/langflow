@@ -205,7 +205,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 
     if (missingRequiredFields.length > 0) {
       handleErrorData({
-        title: "Missing required fields",
+        title: t("errors.missingRequiredFields"),
         list: missingRequiredFields,
       });
       return;

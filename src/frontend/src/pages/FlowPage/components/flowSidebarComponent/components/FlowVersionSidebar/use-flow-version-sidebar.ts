@@ -142,7 +142,7 @@ export function useFlowVersionSidebar(flowId: string) {
   useEffect(() => {
     if (processedPreview?.error) {
       setErrorData({
-        title: "This version's data could not be rendered for preview",
+        title: t("flowVersion.dataCannotBeRendered"),
         ...(processedPreview.errorMessage
           ? { list: [processedPreview.errorMessage] }
           : {}),
@@ -285,7 +285,7 @@ export function useFlowVersionSidebar(flowId: string) {
         const detail = err?.response?.data?.detail;
         const message = detail ?? err?.message ?? "Unknown error";
         setErrorData({
-          title: "Failed to export version",
+          title: t("errors.failedToExportVersion"),
           list: [message],
         });
       }
@@ -320,7 +320,7 @@ export function useFlowVersionSidebar(flowId: string) {
           onError: (err: any) => {
             const detail = err?.response?.data?.detail;
             setErrorData({
-              title: "Failed to delete version",
+              title: t("errors.failedToDeleteVersion"),
               ...(detail ? { list: [detail] } : {}),
             });
           },

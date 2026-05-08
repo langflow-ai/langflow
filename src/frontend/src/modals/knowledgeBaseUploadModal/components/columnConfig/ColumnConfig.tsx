@@ -1,5 +1,5 @@
 import type { AgGridReact } from "ag-grid-react";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
@@ -8,38 +8,6 @@ import type { ColumnField } from "@/types/utils/functions";
 import { FormatterType } from "@/types/utils/functions";
 import { FormatColumns } from "@/utils/utils";
 import type { ColumnConfigRow } from "../../types";
-
-const COLUMN_CONFIG_COLUMNS: ColumnField[] = [
-  {
-    name: "column_name",
-    display_name: "Column Name",
-    sortable: true,
-    filterable: true,
-    formatter: FormatterType.text,
-    description: "Name of the column in the source DataFrame",
-    edit_mode: "inline",
-  },
-  {
-    name: "vectorize",
-    display_name: "Vectorize",
-    sortable: false,
-    filterable: false,
-    formatter: FormatterType.boolean,
-    description: "Create embeddings for this column",
-    default: false,
-    edit_mode: "inline",
-  },
-  {
-    name: "identifier",
-    display_name: "Identifier",
-    sortable: false,
-    filterable: false,
-    formatter: FormatterType.boolean,
-    description: "Use this column as unique identifier",
-    default: false,
-    edit_mode: "inline",
-  },
-];
 
 interface ColumnConfigProps {
   columnConfig: ColumnConfigRow[];
@@ -51,6 +19,40 @@ export function ColumnConfig({
   onColumnConfigChange,
 }: ColumnConfigProps) {
   const { t } = useTranslation();
+  const COLUMN_CONFIG_COLUMNS: ColumnField[] = useMemo(
+    () => [
+      {
+        name: "column_name",
+        display_name: "Column Name",
+        sortable: true,
+        filterable: true,
+        formatter: FormatterType.text,
+        description: t("knowledge.columnNameDescription"),
+        edit_mode: "inline",
+      },
+      {
+        name: "vectorize",
+        display_name: "Vectorize",
+        sortable: false,
+        filterable: false,
+        formatter: FormatterType.boolean,
+        description: t("knowledge.columnEmbeddingDescription"),
+        default: false,
+        edit_mode: "inline",
+      },
+      {
+        name: "identifier",
+        display_name: "Identifier",
+        sortable: false,
+        filterable: false,
+        formatter: FormatterType.boolean,
+        description: t("knowledge.columnIdDescription"),
+        default: false,
+        edit_mode: "inline",
+      },
+    ],
+    [t],
+  );
   const AgColumns = FormatColumns(COLUMN_CONFIG_COLUMNS);
   const agGrid = useRef<AgGridReact>(null);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);

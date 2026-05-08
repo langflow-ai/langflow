@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
@@ -22,6 +23,7 @@ export function ModelSelector({
   selectedModel,
   onModelChange,
 }: ModelSelectorProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
 
@@ -101,7 +103,7 @@ export function ModelSelector({
         disabled
       >
         <span className="text-muted-foreground">•</span>
-        <span>No models configured</span>
+        <span>{t("assistant.noModels")}</span>
       </Button>
     );
   }

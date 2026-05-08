@@ -320,7 +320,7 @@ export function FlowInsightsContent({
               <Button
                 variant="ghost"
                 className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                aria-label="Clear All"
+                aria-label={t("trace.clearAll")}
                 onClick={(e) => {
                   (e.currentTarget as HTMLButtonElement).blur();
                   setClearConfirmOpen(true);

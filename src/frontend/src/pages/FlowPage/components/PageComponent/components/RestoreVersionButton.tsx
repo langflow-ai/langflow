@@ -69,7 +69,7 @@ export default function RestoreVersionButton({
                   name="RotateCcw"
                   className="h-5 w-5 text-primary"
                 />
-                <span className="text-lg font-semibold">Restore Version</span>
+                <span className="text-lg font-semibold">{t("modal.restoreVersion")}</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Restore <strong>{versionTag}</strong>? This will replace your

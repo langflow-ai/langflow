@@ -68,7 +68,7 @@ export default function OutputModal({
           className="flex items-center"
           data-testid={`${nodeId}-${outputName}-output-modal`}
         >
-          <span className="pr-2">Component Output</span>
+          <span className="pr-2">{t("output.componentOutput")}</span>
         </div>
 
         <Button

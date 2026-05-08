@@ -557,8 +557,8 @@ export default function ModelInputComponent({
                 setOpenManageProvidersDialog(true);
               }}
               data-testid={`${id}-configure`}
-              aria-label="Configure this model's provider"
-              title="This model isn't enabled for your user. Click to configure its provider."
+              aria-label={t("model.configureProvider")}
+              title={t("model.notEnabledTitle")}
               className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
             >
               <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />

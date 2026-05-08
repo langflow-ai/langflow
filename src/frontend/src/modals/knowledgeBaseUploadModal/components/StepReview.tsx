@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function StepReview({
   separator,
   selectedEmbeddingModel,
 }: StepReviewProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-3 h-full min-h-0">
       {/* Chunk Preview Header */}
@@ -52,7 +54,7 @@ export function StepReview({
             name="Layers"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">Chunk Preview</span>
+          <span className="text-sm font-medium">{t("modal.chunkPreview")}</span>
         </div>
         <div className="flex items-center gap-1">
           {files.length > 1 && (
@@ -205,7 +207,7 @@ export function StepReview({
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <ForwardedIconComponent name="Cpu" className="h-4 w-4" />
-            <span>Embedding Model</span>
+            <span>{t("knowledge.embeddingModelLabel")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {selectedEmbeddingModel[0]?.icon && (

@@ -42,7 +42,7 @@ export const useKnowledgeBaseActions = ({
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
-        title: "Failed to cancel ingestion",
+        title: t("errors.failedToCancelIngestion"),
         list: [
           error?.response?.data?.detail ||
             error?.message ||
@@ -60,7 +60,7 @@ export const useKnowledgeBaseActions = ({
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
-        title: "Failed to delete knowledge base",
+        title: t("errors.failedToDeleteKnowledgeBase"),
         list: [
           error?.response?.data?.detail ||
             error?.message ||
@@ -79,7 +79,7 @@ export const useKnowledgeBaseActions = ({
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
       setErrorData({
-        title: "Failed to delete knowledge bases",
+        title: t("knowledge.failedToDelete"),
         list: [
           error?.response?.data?.detail ||
             error?.message ||

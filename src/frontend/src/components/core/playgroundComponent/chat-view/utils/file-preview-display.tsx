@@ -158,7 +158,7 @@ export default function FilePreviewDisplay({
           onClick={onDelete}
           className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
           type="button"
-          aria-label="Delete file"
+          aria-label={t("playgroundComponent.deleteFile")}
         >
           <ForwardedIconComponent name="X" className="h-3 w-3" />
         </button>

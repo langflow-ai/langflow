@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import RenderKey from "@/components/common/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
@@ -41,6 +42,7 @@ export default function EditShortcutButton({
   disable?: boolean;
   setSelected: (selected: string[]) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const shortcutInitialValue = findShortcutByName(
     shortcuts,
     shortcut[0],
@@ -83,7 +85,7 @@ export default function EditShortcutButton({
   function editCombination(): void {
     if (!key) {
       setErrorData({
-        title: "Error saving key combination",
+        title: t("errors.errorSavingKeyCombination"),
         list: ["No key combination recorded."],
       });
       return;
@@ -91,7 +93,7 @@ export default function EditShortcutButton({
     const normalizedCombination = normalizeRecordedCombination(key);
     if (isDuplicateCombination(shortcuts, shortcut[0], normalizedCombination)) {
       setErrorData({
-        title: "Error saving key combination",
+        title: t("errors.errorSavingKeyCombination"),
         list: ["This combination already exists!"],
       });
       return;
@@ -116,14 +118,14 @@ export default function EditShortcutButton({
     )?.shortcut;
     if (!defaultShortcut) {
       setErrorData({
-        title: "Error resetting shortcut",
+        title: t("errors.errorResettingShortcut"),
         list: ["Default shortcut not found."],
       });
       return;
     }
     if (isDuplicateCombination(shortcuts, shortcut[0], defaultShortcut)) {
       setErrorData({
-        title: "Error resetting shortcut",
+        title: t("errors.errorResettingShortcut"),
         list: ["This combination already exists!"],
       });
       return;
@@ -163,7 +165,7 @@ export default function EditShortcutButton({
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
       <BaseModal.Header description={"Recording your keyboard"}>
-        <span className="pr-2"> Key Combination </span>
+        <span className="pr-2">{t("modal.keyCombination")}</span>
         <ForwardedIconComponent
           name="Keyboard"
           className="h-6 w-6 pl-1 text-primary"

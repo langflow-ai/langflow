@@ -177,7 +177,7 @@ export default function MultiselectComponent({
                 data-testid={`${option}-${id ?? ""}-option`}
               >
                 {(customValues.includes(option) || searchValue === option) && (
-                  <span className="text-muted-foreground">Text:&nbsp;</span>
+                  <span className="text-muted-foreground">{t("multiselect.textPrefix")}&nbsp;</span>
                 )}
                 <span className="truncate">{option}</span>
                 <ForwardedIconComponent

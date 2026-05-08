@@ -311,7 +311,7 @@ export default function CodeAreaModal({
           title="Caution"
         >
           <ConfirmationModal.Content>
-            <p>Are you sure you want to exit without saving your changes?</p>
+            <p>{t("modal.exitWithoutSaving")}</p>
           </ConfirmationModal.Content>
         </ConfirmationModal>
       </BaseModal.Content>

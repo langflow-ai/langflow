@@ -1,5 +1,6 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type Content,
   createJSONEditor,
@@ -38,6 +39,7 @@ const JsonEditor = ({
   allowFilter = false,
   initialFilter,
 }: JsonEditorProps) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -112,7 +114,7 @@ const JsonEditor = ({
               return;
             } catch (_jsonError) {
               setErrorData({
-                title: "Invalid Result",
+                title: t("jsonEditor.invalidResult"),
                 list: [
                   "The filtered result contains values that cannot be serialized to JSON",
                 ],
@@ -121,7 +123,7 @@ const JsonEditor = ({
             }
           } else {
             setErrorData({
-              title: "Invalid Result",
+              title: t("jsonEditor.invalidResult"),
               list: [
                 "The filtered result must be a JSON object or array, not a primitive value",
               ],
@@ -145,7 +147,7 @@ const JsonEditor = ({
       for (const key of path) {
         if (result === undefined || result === null) {
           setErrorData({
-            title: "Invalid Path",
+            title: t("jsonEditor.invalidPath"),
             list: [`Path '${transformQuery}' led to undefined or null value`],
           });
           return;
@@ -157,7 +159,7 @@ const JsonEditor = ({
             const index = parseInt(indexMatch[1]);
             if (index >= result.length) {
               setErrorData({
-                title: "Invalid Array Index",
+                title: t("jsonEditor.invalidArrayIndex"),
                 list: [
                   `Index ${index} is out of bounds for array of length ${result.length}`,
                 ],
@@ -172,7 +174,7 @@ const JsonEditor = ({
             .map((item) => {
               if (!(key in item)) {
                 setErrorData({
-                  title: "Invalid Property",
+                  title: t("jsonEditor.invalidProperty"),
                   list: [`Property '${key}' does not exist in array items`],
                 });
                 return undefined;
@@ -183,7 +185,7 @@ const JsonEditor = ({
         } else {
           if (!(key in result)) {
             setErrorData({
-              title: "Invalid Property",
+              title: t("jsonEditor.invalidProperty"),
               list: [`Property '${key}' does not exist in object`],
             });
             return;
@@ -210,7 +212,7 @@ const JsonEditor = ({
             return;
           } catch (_jsonError) {
             setErrorData({
-              title: "Invalid Result",
+              title: t("jsonEditor.invalidResult"),
               list: [
                 "The filtered result contains values that cannot be serialized to JSON",
               ],
@@ -218,7 +220,7 @@ const JsonEditor = ({
           }
         } else {
           setErrorData({
-            title: "Invalid Result",
+            title: t("jsonEditor.invalidResult"),
             list: [
               "The filtered result must be a JSON object or array, not a primitive value",
             ],
@@ -226,14 +228,14 @@ const JsonEditor = ({
         }
       } else {
         setErrorData({
-          title: "Invalid Result",
+          title: t("jsonEditor.invalidResult"),
           list: ["Transform resulted in undefined value"],
         });
       }
     } catch (error) {
       console.error("Error applying transform:", error);
       setErrorData({
-        title: "Transform Error",
+        title: t("jsonEditor.transformError"),
         list: [(error as Error).message],
       });
     }

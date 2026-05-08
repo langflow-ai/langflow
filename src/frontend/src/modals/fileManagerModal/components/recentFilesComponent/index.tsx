@@ -225,7 +225,7 @@ export default function RecentFilesComponent({
         },
         onError: (error: Error) => {
           setErrorData({
-            title: "Error deleting files",
+            title: t("files.errorDeleting"),
             list: [
               error?.message || "An error occurred while deleting the files",
             ],

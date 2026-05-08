@@ -1,5 +1,6 @@
 import { cloneDeep } from "lodash";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUtilityStore } from "@/stores/utilityStore";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -41,6 +42,7 @@ export default function ShareModal({
   setOpen?: (open: boolean) => void;
   disabled?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const version = useDarkStore((state) => state.version);
   const hasStore = useStoreStore((state) => state.hasStore);
   const hasApiKey = useStoreStore((state) => state.hasApiKey);
@@ -118,7 +120,7 @@ export default function ShareModal({
         sharePublic,
       ).then(successShare, (err) => {
         setErrorData({
-          title: "Error sharing " + (is_component ? "component" : "flow"),
+          title: t("errors.errorSharing") + " " + (is_component ? "component" : "flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -130,7 +132,7 @@ export default function ShareModal({
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
-          title: "Error sharing " + is_component ? "component" : "flow",
+          title: t("errors.errorSharing") + " " + (is_component ? "component" : "flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -252,7 +254,7 @@ export default function ShareModal({
                 </label>
               </div>
               <span className="text-xs text-destructive">
-                <b>Attention:</b> API keys in specified fields are automatically
+                <b>{t("modal.attention")}</b> API keys in specified fields are automatically
                 removed upon sharing.
               </span>
             </>

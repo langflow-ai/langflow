@@ -197,7 +197,7 @@ export default function IOFieldView({
             );
           case IOOutputTypes.IMAGE:
             return left ? (
-              <div>Expand the view to see the image</div>
+              <div>{t("output.imgView")}</div>
             ) : (
               <ImageViewer
                 image={
