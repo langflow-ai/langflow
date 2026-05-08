@@ -80,8 +80,7 @@ def test_should_use_consistent_user_id_within_a_single_tool_call(
     leaked = bob_dir / "alice_secret.txt"
 
     assert not leaked.exists(), (
-        f"identity-shift TOCTOU: alice's write leaked into bob's namespace at "
-        f"{leaked!s}; result={result!r}"
+        f"identity-shift TOCTOU: alice's write leaked into bob's namespace at {leaked!s}; result={result!r}"
     )
 
     # Acceptable outcomes: refused with a mismatch error, OR landed under alice.
