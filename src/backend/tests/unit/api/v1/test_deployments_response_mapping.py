@@ -21,7 +21,7 @@ def _make_deployment_row(**overrides):
     defaults = {
         "id": uuid4(),
         "deployment_provider_account_id": uuid4(),
-        "name": "db-deployment-name",
+        "display_name": "db-deployment-name",
         "description": "db-description",
         "deployment_type": DeploymentType.AGENT,
         "resource_key": "provider-deployment-id",
@@ -44,7 +44,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     deployment_row = SimpleNamespace(
         id=uuid4(),
         deployment_provider_account_id=provider_account_id,
-        name="db-deployment-name",
+        display_name="db-deployment-name",
         description="db-description",
         deployment_type=DeploymentType.AGENT,
         resource_key="provider-deployment-id",
@@ -61,7 +61,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     assert response.id == deployment_row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "test-provider"
-    assert response.name == deployment_row.name
+    assert response.name == deployment_row.display_name
     assert response.description == "db-description"
     assert response.created_at == now
     assert response.updated_at == now
@@ -114,7 +114,7 @@ def test_shape_deployment_update_result_maps_db_identity_and_provider_result() -
     assert response.id == row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "my-provider"
-    assert response.name == row.name
+    assert response.name == row.display_name
     assert response.description == row.description
     assert response.type == DeploymentType.AGENT
     assert response.created_at == now
@@ -236,7 +236,7 @@ def test_shape_deployment_list_items_basic() -> None:
         id=dep_id,
         deployment_provider_account_id=prov_id,
         deployment_type=DeploymentType.AGENT,
-        name="My Dep",
+        display_name="My Dep",
         description="desc",
         resource_key="rk-1",
         created_at=now,

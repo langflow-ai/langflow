@@ -146,7 +146,7 @@ async def deployment(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="test-deployment",
+        display_name="test-deployment",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(d)
@@ -463,7 +463,7 @@ class TestUpdateFlowVersionByProviderSnapshotId:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="test-deployment-2",
+            display_name="test-deployment-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add_all([flow_version_2, deployment_2])
@@ -560,7 +560,7 @@ class TestDeleteDeploymentAttachmentsByKeys:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-keys-2",
-            name="deploy-keys-2",
+            display_name="deploy-keys-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -640,7 +640,7 @@ class TestListAttachmentsByDeploymentIds:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
         )
         db.add(d2)
         await db.commit()
@@ -843,7 +843,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -884,7 +884,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -930,7 +930,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)

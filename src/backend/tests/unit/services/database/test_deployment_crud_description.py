@@ -28,7 +28,7 @@ async def test_create_deployment_rejects_description_over_max_length():
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             resource_key="rk-1",
-            name="deployment",
+            display_name="deployment",
             deployment_type=DeploymentType.AGENT,
             description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
         )
@@ -45,7 +45,7 @@ async def test_update_deployment_rejects_description_over_max_length():
         user_id=uuid4(),
         project_id=uuid4(),
         deployment_provider_account_id=uuid4(),
-        name="deployment",
+        display_name="deployment",
         deployment_type=DeploymentType.AGENT,
     )
 
@@ -71,7 +71,7 @@ async def test_create_deployment_accepts_description_at_max_length():
         project_id=uuid4(),
         deployment_provider_account_id=uuid4(),
         resource_key="rk-1",
-        name="deployment",
+        display_name="deployment",
         deployment_type=DeploymentType.AGENT,
         description=description,
     )

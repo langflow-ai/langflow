@@ -467,7 +467,7 @@ async def list_attachments_for_flow_with_deployment_info(
 
     Each tuple contains:
       - the attachment row
-      - the deployment's ``name``
+      - the deployment's ``display_name``
       - the deployment's ``deployment_type`` value
       - the provider account's ``provider_key``
 
@@ -481,7 +481,7 @@ async def list_attachments_for_flow_with_deployment_info(
     stmt = (
         select(
             FlowVersionDeploymentAttachment,
-            Deployment.name,
+            Deployment.display_name,
             Deployment.deployment_type,
             DeploymentProviderAccount.provider_key,
         )
