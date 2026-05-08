@@ -97,6 +97,7 @@ dependencies = [
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
     "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "protobuf>=6.33.6,<7.0.0",
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
@@ -110,7 +111,7 @@ dev = [
     "ipykernel>=6.29.0",
     "ruff>=0.12.7",
     "httpx[http2]>=0.27",
-    "pytest>=8.2.0",
+    "pytest>=9.0.3",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
     "pytest-mock>=3.14.0",
@@ -194,7 +195,7 @@ elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
 faiss = ["faiss-cpu==1.9.0.post1"]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.12.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -261,7 +262,7 @@ fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython==3.1.47"]
+gitpython = ["GitPython>=3.1.48"]
 nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
@@ -287,7 +288,7 @@ composio = [
 ragstack = ["ragstack-ai-knowledge-store==0.2.1"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
-mem0 = ["mem0ai>=0.1.34"]
+mem0 = ["mem0ai>=2.0.2"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]

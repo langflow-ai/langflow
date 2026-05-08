@@ -11,6 +11,7 @@
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0",
     "picomatch": "^4.0.4",
+    "ip-address": "^10.1.1",
     "jest-util": {
       "picomatch": "^4.0.4"
     },
