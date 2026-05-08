@@ -1,4 +1,5 @@
 import asyncio
+import atexit
 import os
 import pickle
 import tempfile
@@ -42,6 +43,9 @@ def _warn_redis_experimental_once() -> None:
         os.close(fd)
     except FileExistsError:
         return  # Another worker already logged the warning
+
+    # Best-effort cleanup so we don't leave a stale file in /tmp after every restart.
+    atexit.register(sentinel.unlink, missing_ok=True)
 
     logger.warning(
         "RedisCache is an experimental feature and may not work as expected."

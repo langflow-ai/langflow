@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
@@ -15,6 +15,11 @@ if TYPE_CHECKING:
 
 # Sentinel value written to Redis Streams to signal end-of-stream to consumers.
 _STREAM_SENTINEL_DATA = b"__sentinel__"
+
+# Shared Redis key prefix for job event streams. Producer (RedisJobQueueService) and
+# consumer (RedisQueueWrapper) MUST agree on this — keep a single source of truth.
+_STREAM_PREFIX = "langflow:queue:"
+_OWNER_PREFIX = "langflow:owner:"
 
 
 class JobQueueNotFoundError(Exception):
@@ -393,9 +398,15 @@ class RedisQueueWrapper:
     that consumers in ``build.py`` see the normal end-of-stream signal.
     """
 
-    STREAM_PREFIX = "langflow:queue:"
+    STREAM_PREFIX = _STREAM_PREFIX
 
-    def __init__(self, job_id: str, client, ttl: int) -> None:
+    # Tunables for the background fill task. Kept as class-level constants so
+    # subclasses or tests can override without touching the loop body.
+    _XREAD_BLOCK_MS = 1000  # how long XREAD blocks waiting for new entries
+    _XREAD_BATCH_COUNT = 100  # max entries fetched per XREAD call
+    _READ_ERROR_BACKOFF_S = 0.5  # backoff after a transient XREAD failure
+
+    def __init__(self, job_id: str, client: Any, ttl: int) -> None:
         self._job_id = job_id
         self._client = client
         self._ttl = ttl
@@ -414,12 +425,12 @@ class RedisQueueWrapper:
                 try:
                     results = await self._client.xread(
                         {self._stream_key: self._last_id},
-                        block=1000,
-                        count=100,
+                        block=self._XREAD_BLOCK_MS,
+                        count=self._XREAD_BATCH_COUNT,
                     )
                 except Exception as exc:  # noqa: BLE001
                     await logger.awarning(f"RedisQueueWrapper read error for {self._job_id}: {exc}")
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                     continue
 
                 if results:
@@ -497,8 +508,8 @@ class RedisJobQueueService(JobQueueService):
       additional Redis signal channel checked inside the build loop.
     """
 
-    STREAM_PREFIX = "langflow:queue:"
-    OWNER_PREFIX = "langflow:owner:"
+    STREAM_PREFIX = _STREAM_PREFIX
+    OWNER_PREFIX = _OWNER_PREFIX
 
     def __init__(
         self,
@@ -514,7 +525,7 @@ class RedisJobQueueService(JobQueueService):
         self._redis_db = db
         self._redis_url = url
         self._ttl = ttl
-        self._client = None
+        self._client: Any = None
         self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
         self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
@@ -637,7 +648,7 @@ class RedisJobQueueService(JobQueueService):
             self._consumer_wrappers[job_id] = wrapper
         return wrapper
 
-    def get_queue_data(self, job_id: str) -> tuple[RedisQueueWrapper, EventManager, asyncio.Task | None, float | None]:
+    def get_queue_data(self, job_id: str) -> tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:  # type: ignore[override]
         """Return queue data for a job, always backed by a Redis Stream consumer.
 
         The queue returned is always a :class:`RedisQueueWrapper` that reads from the
@@ -660,7 +671,7 @@ class RedisJobQueueService(JobQueueService):
             # Same-worker: keep task + event_manager from local registry; give a Redis
             # stream wrapper to the consumer so the bridge is the only local-queue reader.
             _, event_manager, task, cleanup_time = self._queues[job_id]
-            return (
+            return (  # type: ignore[return-value]
                 self._get_consumer_wrapper(job_id),
                 event_manager,
                 task,
@@ -669,7 +680,7 @@ class RedisJobQueueService(JobQueueService):
 
         # Cross-worker path: create a Redis-backed consumer for the stream.
         # EventManager(None) is a null manager — send_event is a no-op (queue is None-guarded).
-        return (
+        return (  # type: ignore[return-value]
             self._get_consumer_wrapper(job_id),
             EventManager(None),
             None,
