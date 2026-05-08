@@ -18,6 +18,7 @@ easy to unit-test in isolation.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -45,6 +46,9 @@ from lfx.extension.manifest import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -325,9 +329,11 @@ def _read_inline_bundle_json(bundle_root: Path) -> dict[str, str]:
         return {}
     try:
         data = json.loads(candidate.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except (OSError, ValueError) as exc:
+        logger.debug("Ignoring malformed bundle.json at %s: %s", candidate, exc)
         return {}
     if not isinstance(data, dict):
+        logger.debug("Ignoring bundle.json at %s: top-level value is not an object", candidate)
         return {}
     return {k: v for k, v in data.items() if isinstance(v, str)}
 

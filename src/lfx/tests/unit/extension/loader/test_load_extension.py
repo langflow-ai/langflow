@@ -240,7 +240,20 @@ def test_component_order_is_deterministic(tmp_path: Path) -> None:
 
 
 def test_skips_re_imported_class(tmp_path: Path) -> None:
-    """A class imported (not declared) in another module shouldn't double-register."""
+    """A class imported (not declared) in another module shouldn't double-register.
+
+    NOTE for future maintainers: this test passes for two reasons today.
+    First, the loader's ``__module__``-equality check in
+    :func:`collect_component_classes` rejects re-exported classes outright.
+    Second, the relative-import statement below fails at import time because
+    the synthetic ``_lfx_ext.<slot>.<bundle>...`` modules are not registered
+    as packages, which on its own would also stop ``Primary`` from being
+    re-collected. If a later milestone adds package-style relative-import
+    support, the second guard disappears and only the ``__module__`` check
+    will protect against duplicate registration. Keep that check intact, or
+    rewrite this test to use an absolute re-import that exercises the
+    ``__module__`` path directly.
+    """
     files = {
         "primary.py": component_source("Primary"),
         # Re-export -- the loader should skip the imported class because its

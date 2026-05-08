@@ -135,7 +135,13 @@ def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modul
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
-    except BaseException as exc:  # noqa: BLE001 - surface every import-time failure
+    except BaseException as exc:  # noqa: BLE001
+        # Deliberately broad: a bundle's top-level code may raise SystemExit,
+        # KeyboardInterrupt, or any other BaseException subclass. At server
+        # startup we want one bad bundle to surface as a typed error rather
+        # than abort the whole loader pass. Re-raising the user's interrupt
+        # is the wrong choice here because the loader runs before the user
+        # has any way to drive interruption; the trade-off is intentional.
         # Roll back the optimistic sys.modules entry on failure so a retry
         # does not pick up a half-initialized module.
         sys.modules.pop(module_name, None)
