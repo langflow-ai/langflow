@@ -1351,5 +1351,10 @@
   "header.goToGithub": "Go to GitHub repo",
   "header.goToDiscord": "Go to Discord server",
   "misc.addChatInputOutputPlayground": "Add a Chat Input or Chat Output to use the playground",
-  "chat.options": "Options"
+  "chat.options": "Options",
+  "chat.editMessage": "Edit message",
+  "chat.copied": "Copied!",
+  "chat.copyMessage": "Copy message",
+  "chat.helpful": "Helpful",
+  "chat.notHelpful": "Not helpful"
 }
