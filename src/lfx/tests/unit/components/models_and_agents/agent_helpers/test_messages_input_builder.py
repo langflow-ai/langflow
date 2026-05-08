@@ -80,8 +80,8 @@ def test_should_emit_continue_message_when_input_is_none_and_history_is_empty() 
     """Empty/None input must produce a deterministic prompt — never let blank reach the LLM.
 
     Why: Anthropic API rejects empty content blocks. More subtly, an empty submit with a
-    history ending in AIMessage causes the model to "continue" — observed in manual smoke
-    tests as the agent silently re-running tool calls from an earlier turn.
+    history ending in AIMessage causes the model to "continue" — re-running tool calls
+    from an earlier turn.
     """
     messages = build_initial_messages(input_value=None, chat_history=None)
 
@@ -147,7 +147,7 @@ def test_should_preserve_input_message_when_text_is_blank_but_files_are_attached
 
 
 def test_should_emit_continue_message_when_input_text_is_blank_and_files_is_empty() -> None:
-    """Regression guard for S5: do NOT promote a fully blank Message just because files exists.
+    """Do NOT promote a fully blank Message just because `files` exists.
 
     Only attached files should keep the message alive. An empty files list (or None)
     must still trigger the Continue.. fallback.
@@ -161,11 +161,11 @@ def test_should_emit_continue_message_when_input_text_is_blank_and_files_is_empt
 
 
 def test_should_inject_continue_message_when_input_is_blank_and_history_ends_with_ai_message() -> None:
-    """T2 regression guard: the LLM must never see a tail-AIMessage with no fresh user turn.
+    """The LLM must never see a tail-AIMessage with no fresh user turn.
 
-    Manual Smoke #5 caught this: the agent re-executed the calculator and URL-fetch tool
-    calls from a much earlier turn when the user submitted an empty message. The fix is
-    to ALWAYS append a fresh continuation prompt when no user input is given this turn.
+    Without this guard, an empty submit on top of a history ending in AIMessage causes
+    the agent to silently re-execute tool calls from an earlier turn. Always append a
+    fresh continuation prompt when no user input is given this turn.
     """
     history = [
         Data(text="Calculate 17 * 23", sender=MESSAGE_SENDER_USER),
