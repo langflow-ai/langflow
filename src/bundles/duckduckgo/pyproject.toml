@@ -1,0 +1,52 @@
+[project]
+name = "lfx-duckduckgo"
+version = "0.1.0"
+description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle (LE-1023 pilot)."
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) and the langchain-community
+# binding that wraps the duckduckgo-search Python client.  We pin lfx to a
+# range that includes the BUNDLE_API_VERSION=1 contract; langchain-community
+# is the same range the lfx tree uses to keep co-installation lockstep.
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "ddgs>=9.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point (LE-1022).  The value is the dotted
+# path to the package containing ``extension.json`` -- the loader walks
+# ``importlib.metadata.files()`` from there to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-duckduckgo = "lfx_duckduckgo"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_duckduckgo package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_duckduckgo"]
+include = ["src/lfx_duckduckgo/extension.json", "src/lfx_duckduckgo/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_duckduckgo",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
