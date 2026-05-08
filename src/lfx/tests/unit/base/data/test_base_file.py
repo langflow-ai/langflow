@@ -264,14 +264,18 @@ class TestDeleteAfterProcessingRaceCondition:
         """Clean up test fixtures."""
         self.temp_dir.cleanup()
 
-    def test_validate_and_resolve_paths_skips_missing_file_when_delete_after_processing(self):
-        """When delete_after_processing=True, a missing server file should be silently skipped.
+    def test_concurrent_output_calls_share_processed_result_when_delete_after_processing(self):
+        """Concurrent output calls share the cached parsed result after the server file is gone.
 
-        This covers the race condition where multiple concurrent output calls both invoke
-        load_files_base(). The first call processes and deletes the server file; the second
-        call must not raise ValueError when it finds the file already gone.
+        When delete_after_processing=True and the server file has already been deleted by a
+        prior output call on the same component instance, load_files_base must return the cached
+        processed result so downstream outputs receive the same parsed data instead of empty Data.
+
+        This covers the race condition where a File component with multiple connected outputs
+        invokes load_files_base() more than once: the first call processes and deletes the
+        server file; the second call must neither raise nor silently drop output data.
         """
-        # Create a real file, then delete it to simulate the race condition
+        # Create a real file with known content
         server_file = self.temp_path / "server_file.txt"
         server_file.write_text("content", encoding="utf-8")
 
@@ -282,12 +286,18 @@ class TestDeleteAfterProcessingRaceCondition:
         self.component.silent_errors = False  # Ensure errors would normally propagate
 
         # First call: processes and deletes the file
-        self.component.load_files_base()
+        first_result = self.component.load_files_base()
         assert not server_file.exists(), "File should have been deleted after first call"
+        assert first_result, "First call should return non-empty parsed data"
 
-        # Second call: file is already gone; should NOT raise ValueError
-        result = self.component.load_files_base()
-        assert result == [], "Second call on deleted server file should return empty list"
+        # Second call: file is already gone; should NOT raise and must NOT drop the data.
+        # The cached processed result from the first call should be returned so a second
+        # downstream output sees the same content rather than an empty Data wrapper.
+        second_result = self.component.load_files_base()
+        assert second_result == first_result, (
+            "Second call on deleted server file must return the cached processed data "
+            "(not an empty list), to preserve output correctness for concurrent outputs."
+        )
 
     def test_validate_raises_for_missing_file_when_not_delete_after_processing(self):
         """When delete_after_processing=False, a missing file should still raise ValueError.

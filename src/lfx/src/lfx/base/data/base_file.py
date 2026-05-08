@@ -214,6 +214,20 @@ class BaseFileComponent(Component, ABC):
             # Step 1: Validate the provided paths
             files = self._validate_and_resolve_paths()
 
+            # Race-condition recovery: when a server file is configured with
+            # ``delete_server_file_after_processing=True`` and another output
+            # method on the same component already processed and deleted it,
+            # ``_validate_and_resolve_paths`` returns an empty list. Without
+            # recovery the call would silently produce empty data. Reuse the
+            # processed result cached from the first call so every connected
+            # output sees the same parsed file content.
+            if not files and getattr(self, "_load_files_base_processed_cache", None) is not None:
+                self.log(
+                    "Server file already processed and deleted by a prior call on this "
+                    "component instance; returning cached parsed data to avoid data loss."
+                )
+                return self._load_files_base_processed_cache
+
             # Step 2: Handle bundles recursively
             all_files = self._unpack_and_collect_files(files)
 
@@ -224,7 +238,11 @@ class BaseFileComponent(Component, ABC):
             processed_files = self.process_files(final_files)
 
             # Extract and flatten Data objects to return
-            return [data for file in processed_files for data in file.data if file.data]
+            result = [data for file in processed_files for data in file.data if file.data]
+            # Cache the processed result so concurrent output methods can recover
+            # it when the server file gets deleted between calls.
+            self._load_files_base_processed_cache = result
+            return result
 
         finally:
             # Delete temporary directories
