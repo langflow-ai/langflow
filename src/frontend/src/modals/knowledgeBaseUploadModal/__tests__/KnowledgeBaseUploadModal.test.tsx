@@ -24,6 +24,17 @@ jest.mock(
   }),
 );
 
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs",
+  () => ({
+    useGetIngestionRuns: () => ({
+      data: { runs: [], total: 0, page: 1, limit: 10, total_pages: 0 },
+      isLoading: false,
+      isError: false,
+    }),
+  }),
+);
+
 const mockApiPost = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: { post: mockApiPost, get: jest.fn() },

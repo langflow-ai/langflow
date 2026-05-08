@@ -19,8 +19,16 @@ export const OPENSEARCH_VARIABLES = {
   VERIFY_CERTS: "OPENSEARCH_VERIFY_CERTS",
 } as const;
 
+export const CHROMA_CLOUD_VARIABLES = {
+  TENANT: "CHROMA_TENANT",
+  DATABASE: "CHROMA_DATABASE",
+  API_KEY: "CHROMA_API_KEY", // pragma: allowlist secret
+  REGION: "CHROMA_REGION",
+} as const;
+
 export type DBProviderId =
   | "chroma"
+  | "chroma_cloud"
   | "opensearch"
   | "astra"
   | "mongodb"
@@ -28,7 +36,7 @@ export type DBProviderId =
 
 export type AvailableDBProviderId = Extract<
   DBProviderId,
-  "chroma" | "opensearch"
+  "chroma" | "chroma_cloud" | "opensearch"
 >;
 
 export interface DBProviderTextField {
@@ -66,13 +74,51 @@ export interface DBProviderOption {
 export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
   {
     id: "chroma",
-    label: "Chroma",
+    label: "Chroma Local",
     description:
       "Local vector storage bundled with Langflow. No additional configuration required.",
     icon: "Chroma",
     status: "available",
     defaultEnabled: true,
     configFields: [],
+  },
+  {
+    id: "chroma_cloud",
+    label: "Chroma Cloud",
+    description: "Managed Chroma Cloud vector storage via api.trychroma.com.",
+    icon: "Chroma",
+    status: "available",
+    configFields: [
+      {
+        label: "API Key",
+        variableKey: CHROMA_CLOUD_VARIABLES.API_KEY,
+        required: true,
+        isSecret: true,
+        placeholder: "ck-…",
+      },
+      {
+        label: "Tenant",
+        variableKey: CHROMA_CLOUD_VARIABLES.TENANT,
+        required: false,
+        isSecret: false,
+        placeholder: "default-tenant",
+      },
+      {
+        label: "Database",
+        variableKey: CHROMA_CLOUD_VARIABLES.DATABASE,
+        required: false,
+        isSecret: false,
+        placeholder: "default-database",
+      },
+      {
+        label: "Region",
+        variableKey: CHROMA_CLOUD_VARIABLES.REGION,
+        required: false,
+        isSecret: false,
+        placeholder: "us-east-1",
+        defaultValue: "us-east-1",
+      },
+    ],
   },
   {
     id: "opensearch",
@@ -115,8 +161,8 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
         variableKey: OPENSEARCH_VARIABLES.VECTOR_FIELD,
         required: false,
         isSecret: false,
-        placeholder: "vector_field",
-        defaultValue: "vector_field",
+        placeholder: "chunk_embedding",
+        defaultValue: "chunk_embedding",
       },
       {
         label: "Text field",
@@ -216,7 +262,9 @@ export function getActiveDBProvider(
     variables,
     ACTIVE_DB_PROVIDER_VARIABLE,
   );
-  return configuredProvider === "opensearch" ? "opensearch" : "chroma";
+  if (configuredProvider === "opensearch") return "opensearch";
+  if (configuredProvider === "chroma_cloud") return "chroma_cloud";
+  return "chroma";
 }
 
 export function getDBProviderOption(
@@ -234,6 +282,18 @@ export function getDBProviderConfig(
   providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
 ): Record<string, DBProviderConfigValue> {
+  if (providerType === "chroma_cloud") {
+    return {
+      mode: "cloud",
+      tenant_variable: CHROMA_CLOUD_VARIABLES.TENANT,
+      database_variable: CHROMA_CLOUD_VARIABLES.DATABASE,
+      api_key_variable: CHROMA_CLOUD_VARIABLES.API_KEY,
+      cloud_region:
+        getGlobalVariableValue(variables, CHROMA_CLOUD_VARIABLES.REGION) ??
+        "us-east-1",
+    };
+  }
+
   if (providerType !== "opensearch") {
     return {};
   }
@@ -246,7 +306,7 @@ export function getDBProviderConfig(
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ?? "",
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
-      "vector_field",
+      "chunk_embedding",
     text_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
       "text",
@@ -266,6 +326,34 @@ export function getDBProviderConfig(
   };
 }
 
+/**
+ * Translate a frontend provider UI ID to the backend API ``backend_type``
+ * string. ``"chroma_cloud"`` maps to ``"chroma"`` because the backend
+ * disambiguates local vs. cloud via ``backend_config["mode"]``.
+ */
+export function toAPIBackendType(frontendId: AvailableDBProviderId): string {
+  return frontendId === "chroma_cloud" ? "chroma" : frontendId;
+}
+
+/**
+ * Re-hydrate a stored ``(backend_type, backend_config)`` pair from the
+ * server into the frontend's UI provider ID. The DB always stores
+ * ``backend_type = "chroma"`` for both local and cloud Chroma; the
+ * ``mode`` key in ``backend_config`` is the discriminator.
+ */
+export function resolveUIBackendType(
+  backendType: string | undefined,
+  backendConfig: Record<string, unknown> | undefined,
+): AvailableDBProviderId {
+  if (backendType === "opensearch") return "opensearch";
+  // Already a frontend UI ID — pass through directly.
+  if (backendType === "chroma_cloud") return "chroma_cloud";
+  // Server always stores "chroma" for both modes; mode discriminates.
+  if (backendType === "chroma" && backendConfig?.["mode"] === "cloud")
+    return "chroma_cloud";
+  return "chroma";
+}
+
 export function isDBProviderConfigured(
   providerType: AvailableDBProviderId,
   variables: GlobalVariable[],
@@ -282,9 +370,15 @@ export function isDBProviderConfigured(
       (field): field is DBProviderTextField =>
         field.kind !== "boolean" && field.required,
     )
-    .every((field) =>
-      Boolean(getGlobalVariableValue(variables, field.variableKey)),
-    );
+    .every((field) => {
+      if (field.isSecret) {
+        // Credential-type variables have their values masked (empty) in the
+        // global-variables API response, so checking the value would always
+        // return false even when the secret is saved. Check existence instead.
+        return variables.some((v) => v.name === field.variableKey);
+      }
+      return Boolean(getGlobalVariableValue(variables, field.variableKey));
+    });
 }
 
 export function getDefaultDBProviderConfig(variables: GlobalVariable[]): {

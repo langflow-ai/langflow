@@ -28,10 +28,12 @@ import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
+import { IngestionHistoryPanel } from "./IngestionHistoryPanel";
 import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
+  kbName?: string;
   sourceName: string;
   onSourceNameChange: (value: string) => void;
   selectedEmbeddingModel: ModelOption[];
@@ -54,8 +56,10 @@ interface StepConfigurationProps {
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
   backendType: AvailableDBProviderId;
-  onBackendTypeChange: (value: AvailableDBProviderId) => void;
-  onBackendConfigChange: (value: Record<string, DBProviderConfigValue>) => void;
+  onBackendChange: (
+    type: AvailableDBProviderId,
+    config: Record<string, DBProviderConfigValue>,
+  ) => void;
   globalVariables: GlobalVariable[];
   metadataPairs: MetadataPair[];
   onMetadataPairsChange: (pairs: MetadataPair[]) => void;
@@ -63,6 +67,7 @@ interface StepConfigurationProps {
 
 export function StepConfiguration({
   isAddSourcesMode,
+  kbName,
   sourceName,
   onSourceNameChange,
   selectedEmbeddingModel,
@@ -85,8 +90,7 @@ export function StepConfiguration({
   columnConfig,
   onColumnConfigChange,
   backendType,
-  onBackendTypeChange,
-  onBackendConfigChange,
+  onBackendChange,
   globalVariables,
   metadataPairs,
   onMetadataPairsChange,
@@ -95,6 +99,11 @@ export function StepConfiguration({
   return (
     <div className="relative">
       <div className="flex flex-col">
+        {isAddSourcesMode && kbName && (
+          <div className="pb-4">
+            <IngestionHistoryPanel kbName={kbName} />
+          </div>
+        )}
         {/* Name */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="source-name" className="text-sm font-medium">
@@ -183,8 +192,7 @@ export function StepConfiguration({
               globalVariables={globalVariables}
               disabled={isAddSourcesMode}
               onValueChange={(nextBackendType, nextBackendConfig) => {
-                onBackendTypeChange(nextBackendType);
-                onBackendConfigChange(nextBackendConfig);
+                onBackendChange(nextBackendType, nextBackendConfig);
                 onFieldChange?.();
               }}
             />

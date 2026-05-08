@@ -77,6 +77,7 @@ async def _insert_run(
     items: list[dict] | None = None,
     succeeded: int = 1,
     failed: int = 0,
+    source_config: dict | None = None,
 ) -> uuid.UUID:
     """Seed a ``Job`` row carrying KB ingestion-run data on its metadata.
 
@@ -115,7 +116,7 @@ async def _insert_run(
                 "kb_name": kb_name,
                 "kb_id": str(kb_id) if kb_id is not None else None,
                 "source_type": source_type,
-                "source_config": {"source_name": "demo"},
+                "source_config": {"source_name": "demo"} if source_config is None else source_config,
                 "status": status.value,
                 "error_message": None,
                 "total_items": succeeded + failed,
@@ -189,6 +190,41 @@ class TestListIngestionRuns:
         assert str(mine) in ids
         # Must not leak the other user's run even though kb_name matches
         assert str(foreign_run_id) not in ids
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_exposes_source_name_from_source_config(
+        self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path
+    ):
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "named_kb"
+        kb_dir.mkdir(parents=True)
+
+        await _insert_run(
+            user_id=active_user.id,
+            kb_name="named_kb",
+            source_config={"source_name": "Test6"},
+        )
+        await _insert_run(
+            user_id=active_user.id,
+            kb_name="named_kb",
+            source_config={},
+        )
+        await _insert_run(
+            user_id=active_user.id,
+            kb_name="named_kb",
+            source_config={"source_name": "   "},
+        )
+
+        response = await client.get(
+            "api/v1/knowledge_bases/named_kb/runs",
+            headers=logged_in_headers,
+        )
+        assert response.status_code == 200
+        names = [r["source_name"] for r in response.json()["runs"]]
+        # Order is newest-first: whitespace, missing, then "Test6".
+        assert "Test6" in names
+        # Whitespace-only collapses to ``None``.
+        assert names.count(None) == 2
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_pagination(self, mock_root, client: AsyncClient, logged_in_headers, active_user, tmp_path):

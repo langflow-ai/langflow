@@ -67,6 +67,13 @@ _DEFAULT_OPENSEARCH_CONFIG = {
     "text_field": "text",
 }
 
+_DEFAULT_CHROMA_CLOUD_CONFIG = {
+    "mode": "cloud",
+    "tenant_variable": "CHROMA_TENANT",
+    "database_variable": "CHROMA_DATABASE",
+    "api_key_variable": "CHROMA_API_KEY",  # pragma: allowlist secret
+}
+
 
 class KnowledgeIngestionComponent(Component):
     """Create or append to Langflow Knowledge from a DataFrame."""
@@ -409,14 +416,20 @@ class KnowledgeIngestionComponent(Component):
             return BackendType.CHROMA.value, {}
 
         backend_type = str(value.get("backend_type") or value.get("id") or BackendType.CHROMA.value)
-        if backend_type != BackendType.OPENSEARCH.value:
-            return BackendType.CHROMA.value, {}
 
-        backend_config = value.get("backend_config") or value.get("config") or {}
-        if not isinstance(backend_config, dict):
-            backend_config = {}
-        merged_config = {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
-        return BackendType.OPENSEARCH.value, merged_config
+        if backend_type == BackendType.OPENSEARCH.value:
+            backend_config = value.get("backend_config") or value.get("config") or {}
+            if not isinstance(backend_config, dict):
+                backend_config = {}
+            return BackendType.OPENSEARCH.value, {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
+
+        if backend_type == "chroma_cloud":
+            backend_config = value.get("backend_config") or value.get("config") or {}
+            if not isinstance(backend_config, dict):
+                backend_config = {}
+            return BackendType.CHROMA.value, {**_DEFAULT_CHROMA_CLOUD_CONFIG, **backend_config}
+
+        return BackendType.CHROMA.value, {}
 
     @staticmethod
     def _get_backend_from_metadata(kb_path: Path) -> tuple[str, dict[str, Any]]:

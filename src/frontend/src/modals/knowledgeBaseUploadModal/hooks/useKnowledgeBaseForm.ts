@@ -8,6 +8,8 @@ import {
   getDBProviderOption,
   getDefaultDBProviderConfig,
   isDBProviderConfigured,
+  resolveUIBackendType,
+  toAPIBackendType,
 } from "@/constants/dbProviderConstants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -52,6 +54,10 @@ function validateBackendConfig(
   backendType: AvailableDBProviderId,
   config: Record<string, DBProviderConfigValue>,
 ): string | null {
+  if (backendType === "chroma_cloud") {
+    // API key is validated by isDBProviderConfigured; no literal fields here.
+    return null;
+  }
   if (backendType === "opensearch") {
     const indexName = config.index_name;
     if (typeof indexName !== "string" || !indexName.trim()) {
@@ -140,6 +146,13 @@ export function useKnowledgeBaseForm({
   const [backendConfig, setBackendConfig] = useState<
     Record<string, DBProviderConfigValue>
   >({});
+  // Persists per-provider configs across provider switches within the modal
+  // so that switching away and back restores the config seen on first entry.
+  const perProviderConfigsRef = useRef<
+    Partial<
+      Record<AvailableDBProviderId, Record<string, DBProviderConfigValue>>
+    >
+  >({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(!hideAdvanced);
 
@@ -148,6 +161,23 @@ export function useKnowledgeBaseForm({
     [globalVariables],
   );
   const [isFilePanelOpen, setIsFilePanelOpen] = useState(false);
+
+  // Combined provider-switch handler. Saves the current config under the
+  // outgoing provider key and restores any previously cached config for the
+  // incoming provider, falling back to the freshly-hydrated config from the
+  // dropdown when no prior selection exists.
+  const handleBackendProviderChange = useCallback(
+    (
+      newType: AvailableDBProviderId,
+      freshConfig: Record<string, DBProviderConfigValue>,
+    ) => {
+      perProviderConfigsRef.current[backendType] = backendConfig;
+      const restored = perProviderConfigsRef.current[newType] ?? freshConfig;
+      setBackendType(newType);
+      setBackendConfig(restored);
+    },
+    [backendType, backendConfig],
+  );
 
   // Preview state
   const [chunkPreviews, setChunkPreviews] = useState<ChunkPreview[]>([]);
@@ -228,9 +258,12 @@ export function useKnowledgeBaseForm({
         setColumnConfig(existingKnowledgeBase.columnConfig);
       }
       setBackendType(
-        existingKnowledgeBase.backendType === "opensearch"
-          ? "opensearch"
-          : "chroma",
+        resolveUIBackendType(
+          existingKnowledgeBase.backendType,
+          existingKnowledgeBase.backendConfig as
+            | Record<string, unknown>
+            | undefined,
+        ),
       );
       setBackendConfig(
         (existingKnowledgeBase.backendConfig as Record<
@@ -276,6 +309,7 @@ export function useKnowledgeBaseForm({
     setSelectedEmbeddingModel([]);
     setBackendType("chroma");
     setBackendConfig({});
+    perProviderConfigsRef.current = {};
     setMetadataPairs([]);
     setPerFileMetadata({});
     setChunkPreviews([]);
@@ -424,7 +458,7 @@ export function useKnowledgeBaseForm({
           embedding_model: selectedModel.id || selectedModel.name,
           model_selection: selectedModel,
           column_config: columnConfig,
-          backend_type: backendType,
+          backend_type: toAPIBackendType(backendType),
           backend_config: backendConfig,
         });
       }
@@ -630,6 +664,7 @@ export function useKnowledgeBaseForm({
     setBackendType,
     backendConfig,
     setBackendConfig,
+    handleBackendProviderChange,
     globalVariables,
 
     // Validation

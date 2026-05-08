@@ -37,6 +37,7 @@ from langflow.schema.knowledge_base import (
     IngestionRunDetail,
     IngestionRunInfo,
     IngestionRunItemInfo,
+    KbMetadataKeysResponse,
     KnowledgeBaseInfo,
     PaginatedChunkResponse,
     PaginatedIngestionRunResponse,
@@ -51,6 +52,7 @@ from langflow.services.memory_base.kb_path_helpers import validate_kb_path
 from langflow.services.task.service import TaskService
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
+    KB_METADATA_RESERVED_KEYS,
     MAX_CHUNK_OVERLAP,
     MAX_CHUNK_SIZE,
     MAX_MAX_CHUNKS,
@@ -59,6 +61,12 @@ from langflow.utils.kb_constants import (
     MIN_KB_NAME_LENGTH,
     MIN_MAX_CHUNKS,
 )
+
+# Cap on distinct values per metadata key returned by ``/metadata/keys``.
+# Distinct value sets in the wild can be unbounded (free-form strings),
+# so the endpoint truncates and signals the cap via the ``truncated`` flag
+# on its response. Keep small enough to keep the popover dropdown usable.
+KB_METADATA_KEYS_VALUES_CAP = 50
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
@@ -437,7 +445,7 @@ async def _delete_remote_backend_collection(
         kb_path=kb_path,
         current_user=current_user,
     )
-    if backend_type_value == BackendType.CHROMA.value:
+    if backend_type_value == BackendType.CHROMA.value and backend_config.get("mode") != "cloud":
         return None
 
     backend = create_backend(
@@ -1357,7 +1365,9 @@ async def get_knowledge_base_chunks(
         # Local-Chroma short-circuit: if the KB lives on disk and has no
         # files yet, return empty without booting a Chroma client (which
         # would otherwise hit 'readonly database' on the empty dir).
-        if backend_type_value == BackendType.CHROMA.value:
+        # Cloud KBs store nothing locally, so this check must be skipped for them.
+        chroma_mode = str((backend_config or {}).get("mode", "local")).lower()
+        if backend_type_value == BackendType.CHROMA.value and chroma_mode != "cloud":
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
             if not has_data:
                 return PaginatedChunkResponse(
@@ -1441,7 +1451,7 @@ async def get_knowledge_base_chunks(
         matched: list[tuple[str, str, dict[str, Any]]] = []
         matched_count = 0
         try:
-            async for batch in backend.iter_documents(batch_size=1000):
+            async for batch in backend.iter_documents():
                 for entry in batch:
                     if not matches_filters(entry.metadata, entry.content):
                         continue
@@ -1486,6 +1496,117 @@ async def get_knowledge_base_chunks(
         # ``SharedSystemClient`` registry entry. Calling it for a
         # MongoDB/Astra/Postgres-backed KB would mutate that registry
         # for unrelated Chroma KBs served from the same path.
+        if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
+            KBStorageHelper.release_chroma_resources(kb_path)
+
+
+@router.get(
+    "/{kb_name}/metadata/keys",
+    status_code=HTTPStatus.OK,
+    dependencies=[Depends(_check_memory_base_association)],
+)
+async def get_knowledge_base_metadata_keys(
+    kb_name: str,
+    current_user: CurrentActiveUser,
+) -> KbMetadataKeysResponse:
+    """List distinct user-supplied metadata keys (and a sample of values) for a KB.
+
+    Powers the chunks-browser filter popover so users can pick from keys
+    that actually exist in the KB instead of typing blind.
+
+    Reserved ingestion-internal keys (``file_name``, ``source``, ``job_id``,
+    etc.) are excluded — those have dedicated filters on the chunks endpoint
+    and would clutter the user-tag dropdown.
+
+    Iterates the chunk stream once and dedupes per key. Distinct value sets
+    are capped at ``KB_METADATA_KEYS_VALUES_CAP`` per key to keep the popover
+    dropdown usable when a key has unbounded free-form values; the response
+    sets ``truncated=true`` so the UI can surface a "showing first N values"
+    hint. Native distinct queries are deferred to backend-specific work
+    (same trade-off as the chunks-endpoint post-filter pass).
+    """
+    kb_path: Path | None = None
+    backend = None
+    backend_type_value: str = BackendType.CHROMA.value
+    try:
+        kb_path = _resolve_kb_path(kb_name, current_user)
+
+        backend_type_value, backend_config = await _resolve_backend_selection(
+            kb_name=kb_name,
+            kb_path=kb_path,
+            current_user=current_user,
+        )
+
+        # Local-Chroma short-circuit: empty KB without a Chroma store on
+        # disk would otherwise hit 'readonly database' on the empty dir.
+        if backend_type_value == BackendType.CHROMA.value:
+            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
+            if not has_data:
+                return KbMetadataKeysResponse(keys={}, truncated=False)
+
+        backend = create_backend(
+            backend_type_value,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            user_id=current_user.id,
+        )
+
+        # Per-key ordered set of stringified distinct values. Insertion
+        # order is preserved so the UI dropdown shows values in the order
+        # they were first ingested rather than a hash-shuffled order.
+        distinct: dict[str, dict[str, None]] = {}
+        truncated = False
+        try:
+            async for batch in backend.iter_documents(batch_size=1000):
+                for entry in batch:
+                    raw = (entry.metadata or {}).get("source_metadata")
+                    if not raw:
+                        continue
+                    try:
+                        stored = json.loads(raw) if isinstance(raw, str) else raw
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(stored, dict):
+                        continue
+                    for key, value in stored.items():
+                        if key in KB_METADATA_RESERVED_KEYS:
+                            continue
+                        bucket = distinct.setdefault(key, {})
+                        # Array-valued metadata expands into one distinct value
+                        # per array entry so the popover dropdown shows every
+                        # tag that could be filtered on.
+                        candidates = value if isinstance(value, list) else [value]
+                        for candidate in candidates:
+                            if candidate is None:
+                                continue
+                            stringified = str(candidate)
+                            if stringified in bucket:
+                                continue
+                            if len(bucket) >= KB_METADATA_KEYS_VALUES_CAP:
+                                truncated = True
+                                break
+                            bucket[stringified] = None
+        except Exception as iter_error:
+            await logger.aerror("iter_documents failed while listing metadata keys for '%s': %s", kb_name, iter_error)
+            raise HTTPException(status_code=500, detail="Error listing metadata keys.") from iter_error
+
+        return KbMetadataKeysResponse(
+            keys={key: list(values.keys()) for key, values in sorted(distinct.items())},
+            truncated=truncated,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await logger.aerror("Error listing metadata keys for '%s': %s", kb_name, e)
+        raise HTTPException(status_code=500, detail="Error listing metadata keys.") from e
+    finally:
+        if backend is not None:
+            try:
+                await backend.teardown()
+            except Exception as teardown_exc:  # noqa: BLE001
+                await logger.adebug("Backend teardown failed: %s", teardown_exc)
         if kb_path is not None and backend_type_value == BackendType.CHROMA.value:
             KBStorageHelper.release_chroma_resources(kb_path)
 
@@ -1685,12 +1806,16 @@ def _run_row_to_info(row) -> IngestionRunInfo:
     key on their ``job_metadata`` blob.
     """
     user_metadata = getattr(row, "user_metadata", None) or {}
+    source_config = getattr(row, "source_config", None) or {}
+    raw_source_name = source_config.get("source_name")
+    source_name = raw_source_name.strip() if isinstance(raw_source_name, str) and raw_source_name.strip() else None
     return IngestionRunInfo(
         id=str(row.id),
         kb_name=row.kb_name,
         kb_id=str(row.kb_id) if row.kb_id else None,
         job_id=str(row.job_id) if row.job_id else None,
         source_type=row.source_type,
+        source_name=source_name,
         status=row.status,
         error_message=row.error_message,
         total_items=row.total_items,

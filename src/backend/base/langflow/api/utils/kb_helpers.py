@@ -37,7 +37,6 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     KBIngestionSource,
 )
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus, IngestionRunStatus
-from lfx.base.models.unified_models import get_embedding_model_options
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
@@ -1068,17 +1067,49 @@ class KBIngestionHelper:
 
     @staticmethod
     async def build_embeddings(provider: str, model: str, current_user):
-        """Internal helper to build embeddings object."""
-        options = get_embedding_model_options(user_id=current_user.id)
-        selected_option = next((o for o in options if o["provider"] == provider and o["name"] == model), None)
+        """Build a LangChain embeddings instance for a stored KB.
 
-        if not selected_option:
-            all_options = get_embedding_model_options()
-            selected_option = next((o for o in all_options if o["provider"] == provider and o["name"] == model), None)
+        The provider/model pair is the source of truth recorded in the KB's
+        ``embedding_metadata.json`` at creation time. We resolve the embedding
+        class and parameter mapping straight from the static registry rather
+        than the user-filtered catalog, so retrieval keeps working when:
 
-            if not selected_option:
-                msg = f"Embedding model '{model}' for provider '{provider}' not found."
-                raise ValueError(msg)
+        - the call originates from a context where the credential lookup
+          inside ``get_embedding_model_options`` silently returns an empty
+          set of enabled providers (e.g. a thread-bridged async hop), or
+        - the user has since disabled the model in their settings.
+
+        The runtime credential is still resolved by ``get_embeddings`` via
+        ``get_api_key_for_provider``, so a missing API key still raises a
+        clear, user-actionable error at instantiation time.
+        """
+        from lfx.base.models.unified_models.class_registry import (
+            EMBEDDING_PARAM_MAPPINGS,
+            EMBEDDING_PROVIDER_CLASS_MAPPING,
+        )
+
+        embedding_class = EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+        param_mapping = EMBEDDING_PARAM_MAPPINGS.get(provider)
+        if not embedding_class or not param_mapping:
+            supported = ", ".join(sorted(EMBEDDING_PROVIDER_CLASS_MAPPING))
+            msg = (
+                f"Embedding model '{model}' for provider '{provider}' could not be "
+                f"resolved: provider '{provider}' is not registered. Supported "
+                f"providers: {supported}."
+            )
+            raise ValueError(msg)
+
+        selected_option = {
+            "name": model,
+            "provider": provider,
+            "category": provider,
+            "icon": provider,
+            "metadata": {
+                "embedding_class": embedding_class,
+                "param_mapping": param_mapping,
+                "model_type": "embeddings",
+            },
+        }
 
         embedding_model = EmbeddingModelComponent(model=[selected_option], _user_id=current_user.id)
         return embedding_model.build_embeddings()

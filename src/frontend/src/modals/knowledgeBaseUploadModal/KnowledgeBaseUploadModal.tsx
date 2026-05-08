@@ -47,6 +47,7 @@ export default function KnowledgeBaseUploadModal({
         return (
           <StepConfiguration
             isAddSourcesMode={form.isAddSourcesMode}
+            kbName={existingKnowledgeBase?.name}
             sourceName={form.sourceName}
             onSourceNameChange={form.setSourceName}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
@@ -69,8 +70,7 @@ export default function KnowledgeBaseUploadModal({
             columnConfig={form.columnConfig}
             onColumnConfigChange={form.setColumnConfig}
             backendType={form.backendType}
-            onBackendTypeChange={form.setBackendType}
-            onBackendConfigChange={form.setBackendConfig}
+            onBackendChange={form.handleBackendProviderChange}
             globalVariables={form.globalVariables}
             metadataPairs={form.metadataPairs}
             onMetadataPairsChange={form.setMetadataPairs}
