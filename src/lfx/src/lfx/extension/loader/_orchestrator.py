@@ -425,6 +425,73 @@ def _read_inline_bundle_json(
     return {k: v for k, v in data.items() if isinstance(v, str)}
 
 
+def load_inline_bundle(
+    bundle_root: Path | str,
+    *,
+    module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+) -> LoadResult:
+    """Load a single inline (@extra) bundle directly from its bundle directory.
+
+    Mirrors the per-bundle subset of :func:`discover_inline_bundles`, but
+    targets one already-known bundle directory instead of walking a parent
+    LANGFLOW_COMPONENTS_PATH entry.  Used by the reload pipeline so a
+    bundle whose live ``source_path`` is the bundle directory itself (the
+    shape recorded for inline @extra bundles) can be reloaded without
+    confusing it with a manifest root.
+
+    Identity is derived from the directory name plus optional ``bundle.json``
+    metadata, just like first-time discovery; the bundle name pattern is
+    re-checked here so a forged record cannot resurrect a malformed bundle.
+    """
+    root = Path(bundle_root).resolve()
+    result = LoadResult(slot=SLOT_EXTRA, source_path=root)
+
+    if not root.is_dir():
+        result.errors.append(
+            ExtensionError(
+                code="inline-path-missing",
+                message=f"Inline bundle path {root} does not exist or is not a directory.",
+                location=str(root),
+                content=str(root),
+                hint=("Restore the bundle directory or uninstall the bundle from the registry."),
+            )
+        )
+        return result
+
+    name = root.name
+    if not BUNDLE_NAME_RE.match(name):
+        result.errors.append(
+            ExtensionError(
+                code="inline-bundle-name-invalid",
+                message=(f"Inline bundle directory {name!r} does not match the bundle name pattern."),
+                location=str(root),
+                content=name,
+                hint=("Rename the directory to lowercase snake_case starting with a letter, 2-64 characters."),
+            )
+        )
+        return result
+
+    bundle_meta = _read_inline_bundle_json(root, result=result)
+    extension_id = bundle_meta.get("id") or name
+    extension_version = bundle_meta.get("version") or _INLINE_BUNDLE_DEFAULT_VERSION
+
+    result.extension_id = extension_id
+    result.extension_version = extension_version
+    result.bundle = name
+
+    _load_bundle_directory(
+        bundle_root=root,
+        bundle_name=name,
+        extension_id=extension_id,
+        extension_version=extension_version,
+        slot=SLOT_EXTRA,
+        distribution=None,
+        result=result,
+        module_namespace=module_namespace,
+    )
+    return result
+
+
 def discover_inline_bundles(
     paths: Iterable[Path | str] | None,
 ) -> list[LoadResult]:

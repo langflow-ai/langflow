@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Disclosure,
@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
+import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import type { BundleItemProps } from "../types";
 import BundleHeaderActions from "./bundleHeaderActions";
 import SidebarItemsList from "./sidebarItemsList";
@@ -35,12 +36,21 @@ export const BundleItem = memo(
       [item.name, setOpenCategories],
     );
 
+    // The static SIDEBAR_BUNDLES list does not populate ``extension_id``;
+    // fall back to deriving it from the bundle's component templates so a
+    // runtime-discovered extension (installed package OR ``lfx extension dev``)
+    // surfaces the Reload action without manual registration in the static list.
+    const extensionId = useMemo(
+      () => item.extension_id ?? deriveBundleExtensionId(item.name, dataFilter),
+      [item.extension_id, item.name, dataFilter],
+    );
+
     // The actions menu is only meaningful when both the feature flag is
     // on AND the bundle was loaded from a manifest-shipping Extension; the
     // BundleHeaderActions component itself handles those checks but we
     // also use the same predicate here to avoid registering a context-menu
     // capture handler that has nothing to show.
-    const showActions = Boolean(ENABLE_EXTENSION_RELOAD && item.extension_id);
+    const showActions = Boolean(ENABLE_EXTENSION_RELOAD && extensionId);
 
     // Right-click on the Bundle header opens the same overflow menu as
     // the kebab icon to the right of the chevron.  Implemented by
@@ -81,7 +91,7 @@ export const BundleItem = memo(
                 {showActions && (
                   <BundleHeaderActions
                     bundleName={item.name}
-                    extensionId={item.extension_id}
+                    extensionId={extensionId}
                     displayName={item.display_name}
                   />
                 )}

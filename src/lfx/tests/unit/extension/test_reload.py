@@ -400,3 +400,55 @@ def test_reload_error_codes_have_branch(code: str) -> None:
     rendered = errors_mod.format_extension_error(err)
     assert rendered.startswith(f"error[{code}]:")
     assert "see:" in rendered
+
+
+# ---------------------------------------------------------------------------
+# @extra slot reload: source_path is the bundle directory itself
+# ---------------------------------------------------------------------------
+
+
+def _write_inline_bundle(parent: Path, *, name: str, files: dict[str, str]) -> Path:
+    """Lay out an inline @extra bundle (no manifest at root) and return its dir."""
+    bundle_dir = parent / name
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+    for filename, source in files.items():
+        target = bundle_dir / filename
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source, encoding="utf-8")
+    return bundle_dir
+
+
+def test_extra_slot_reload_uses_bundle_directory(tmp_path: Path) -> None:
+    """Inline @extra bundles record source_path = bundle dir, no manifest there.
+
+    Reload must walk the bundle directory directly (the same way startup
+    discovery does) instead of insisting on a manifest at the source path.
+    Regression: before the @extra-aware branch, this returned
+    ``manifest-not-found`` even for bundles surfaced from a valid
+    LANGFLOW_COMPONENTS_PATH entry.
+    """
+    bundle_dir = _write_inline_bundle(
+        tmp_path,
+        name="local_bundle",
+        files={"thing.py": _component_source("LocalThing")},
+    )
+
+    registry = BundleRegistry()
+    initial = reload_bundle(
+        registry,
+        "local_bundle",
+        source_path=bundle_dir,
+        slot="extra",
+    )
+    assert initial.ok, initial.errors
+    record = registry.get_bundle("local_bundle")
+    assert record.slot == "extra"
+    assert record.class_names == frozenset({"LocalThing"})
+
+    # Rename the class on disk and reload using the recorded source_path.
+    (bundle_dir / "thing.py").write_text(_component_source("RenamedLocalThing"), encoding="utf-8")
+    result = reload_bundle(registry, "local_bundle")
+    assert result.ok, result.errors
+    assert result.components_added == ("RenamedLocalThing",)
+    assert result.components_removed == ("LocalThing",)
+    assert registry.get_bundle("local_bundle").class_names == frozenset({"RenamedLocalThing"})

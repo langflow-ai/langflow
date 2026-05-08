@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -8,7 +8,10 @@ import {
   DisclosureTrigger,
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import type { APIClassType } from "@/types/api";
+import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
+import BundleHeaderActions from "./bundleHeaderActions";
 import SidebarItemsList from "./sidebarItemsList";
 
 export const CategoryDisclosure = memo(function CategoryDisclosure({
@@ -55,6 +58,28 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
     },
     [item.name, setOpenCategories],
   );
+
+  // Categories rendered here are bundles that are NOT in the static
+  // SIDEBAR_BUNDLES list -- including runtime-discovered extensions
+  // (installed packages or `lfx extension dev` registrations).  Surface
+  // the Reload action whenever the category's templates carry an
+  // ``extension`` field, matching the bundle path's behavior.
+  const extensionId = useMemo(
+    () => deriveBundleExtensionId(item.name, dataFilter),
+    [item.name, dataFilter],
+  );
+  const showActions = Boolean(ENABLE_EXTENSION_RELOAD && extensionId);
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!showActions) return;
+      event.preventDefault();
+      const trigger = event.currentTarget.querySelector<HTMLElement>(
+        `[data-testid="bundle-header-overflow-${item.name}"]`,
+      );
+      trigger?.click();
+    },
+    [item.name, showActions],
+  );
   return (
     <Disclosure open={isOpen} onOpenChange={handleOpenChange}>
       <SidebarMenuItem>
@@ -65,6 +90,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
               role="button"
               tabIndex={0}
               onKeyDown={handleKeyDownInput}
+              onContextMenu={handleContextMenu}
               className="user-select-none flex cursor-pointer items-center gap-2"
             >
               <ForwardedIconComponent
@@ -81,6 +107,13 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
                   {t(item.display_name, { defaultValue: item.display_name })}
                 </span>
               </ShadTooltip>
+              {showActions && (
+                <BundleHeaderActions
+                  bundleName={item.name}
+                  extensionId={extensionId}
+                  displayName={item.display_name}
+                />
+              )}
               <ForwardedIconComponent
                 name="ChevronRight"
                 className="h-4 w-4 text-muted-foreground transition-all group-aria-expanded/collapsible:rotate-90"
