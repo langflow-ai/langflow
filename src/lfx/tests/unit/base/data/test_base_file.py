@@ -290,10 +290,14 @@ class TestDeleteAfterProcessingRaceCondition:
         assert result == [], "Second call on deleted server file should return empty list"
 
     def test_validate_raises_for_missing_file_when_not_delete_after_processing(self):
-        """When delete_after_processing=False, a missing file should still raise ValueError."""
+        """When delete_after_processing=False, a missing file should still raise ValueError.
+
+        Exercises the ``file_path`` decision branch in load_files_base (not the ``self.path``
+        branch) so the non-race-condition error path is covered for server-file inputs.
+        """
         missing_path = self.temp_path / "nonexistent.txt"
 
-        self.component.path = [str(missing_path)]
+        self.component.file_path = Data(data={"file_path": str(missing_path)})
         self.component.delete_server_file_after_processing = False
         self.component.silent_errors = False
 
