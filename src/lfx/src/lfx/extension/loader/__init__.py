@@ -56,6 +56,7 @@ from lfx.extension.loader._discovery import DEFAULT_MODULE_NAMESPACE
 from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
     load_extension,
+    load_inline_bundle,
     load_installed_extensions,
 )
 from lfx.extension.loader._plugins import (
@@ -84,6 +85,7 @@ __all__ = [
     "filter_plugin_entry_points",
     "installed_extension_roots",
     "load_extension",
+    "load_inline_bundle",
     "load_installed_extensions",
     "manifest_owning_distributions",
 ]

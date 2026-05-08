@@ -79,10 +79,12 @@ from lfx.extension.bundle_registry import (
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader import (
     DEFAULT_MODULE_NAMESPACE,
+    SLOT_EXTRA,
     SLOT_OFFICIAL,
     LoadedComponent,
     LoadResult,
     load_extension,
+    load_inline_bundle,
 )
 
 if TYPE_CHECKING:
@@ -306,11 +308,22 @@ def _run_pipeline(
             previous=previous,
         )
 
-    staging: LoadResult = load_extension(
-        effective_source,
-        slot=effective_slot,
-        module_namespace=staging_namespace,
-    )
+    # @extra inline bundles record source_path as the bundle directory
+    # itself (no manifest at that level), so load_extension() would
+    # respond with manifest-not-found.  Route those through the inline
+    # loader, which derives identity from the directory name + optional
+    # bundle.json the same way startup discovery does.
+    if effective_slot == SLOT_EXTRA:
+        staging: LoadResult = load_inline_bundle(
+            effective_source,
+            module_namespace=staging_namespace,
+        )
+    else:
+        staging = load_extension(
+            effective_source,
+            slot=effective_slot,
+            module_namespace=staging_namespace,
+        )
 
     # ---------- Stage 2: validate ----------
     if not staging.ok:

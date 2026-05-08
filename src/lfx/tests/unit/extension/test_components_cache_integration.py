@@ -279,3 +279,123 @@ def test_post_swap_hook_noop_when_cache_not_built() -> None:
     # Must not raise.
     refresh_bundle_cache_from_record(record)
     assert component_cache.all_types_dict is None
+
+
+def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
+    """After reload, the precomputed hash lookups must be invalidated.
+
+    ``flow_validation.get_component_hash_lookups_for_validation`` only
+    rebuilds the maps when both fields are None.  Without invalidation,
+    flows running with custom components disabled keep validating against
+    pre-reload class bodies and reject post-reload code as "unrecognized".
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface.components import (
+        component_cache,
+        refresh_bundle_cache_from_record,
+    )
+
+    component_cache.all_types_dict = {"delta": {"old": {"display_name": "old"}}}
+    component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}
+    component_cache.all_known_hashes = {"abc123def456"}
+
+    class _Component:
+        pass
+
+    class _DeltaThing(_Component):
+        display_name = "Delta"
+
+        def build(self) -> None:
+            return None
+
+    loaded = LoadedComponent(
+        extension_id="lfx-delta",
+        extension_version="1.0.0",
+        bundle="delta",
+        class_name="DeltaThing",
+        slot="official",
+        klass=_DeltaThing,
+        module_name="_lfx_ext.official.delta.thing",
+        file_path=tmp_path / "thing.py",
+        distribution=None,
+    )
+    record = BundleRecord(
+        bundle="delta",
+        extension_id="lfx-delta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(loaded,),
+    )
+
+    with patch("lfx.interface.components.create_component_template", side_effect=_stub_template):
+        refresh_bundle_cache_from_record(record)
+
+    assert component_cache.type_to_current_hash is None
+    assert component_cache.all_known_hashes is None
+
+
+@pytest.mark.asyncio
+async def test_dev_extension_components_loaded_via_official_slot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dev extensions registered via ``lfx extension dev`` must enter the @official pathway.
+
+    Earlier wiring appended their bundle directories to LANGFLOW_COMPONENTS_PATH,
+    causing them to fall back to legacy custom-component loading without
+    extension metadata or BundleRegistry entries.  Now they share the same
+    pathway as installed extensions.
+    """
+    import json
+
+    from lfx.extension import register_dev_extension
+    from lfx.extension.bundle_registry import BundleRegistry
+
+    # Build a manifest-shipping extension on disk.
+    ext_root = tmp_path / "my-ext"
+    ext_root.mkdir()
+    bundle_dir = ext_root / "components"
+    bundle_dir.mkdir()
+    (bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\n"
+        "class DevThing(Component):\n"
+        "    display_name = 'Dev'\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+    (ext_root / "extension.json").write_text(
+        json.dumps(
+            {
+                "id": "lfx-dev-fixture",
+                "version": "0.1.0",
+                "name": "Dev Fixture",
+                "lfx": {"compat": ["1"]},
+                "bundles": [{"name": "devbundle", "path": "components"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Point the dev registry at an isolated state file via env var so the
+    # test does not pollute the user's real cache dir.
+    monkeypatch.setenv("LANGFLOW_DEV_EXTENSIONS_DIR", str(tmp_path / "registry"))
+    register_dev_extension(ext_root)
+
+    fresh_registry = BundleRegistry()
+    settings_service = _FakeSettingsService(components_path=[])
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+        patch("lfx.interface.components.get_default_registry", return_value=fresh_registry),
+    ):
+        result = await import_extension_components(settings_service)
+
+    assert "devbundle" in result
+    record = fresh_registry.get_bundle("devbundle")
+    assert record is not None
+    assert record.slot == "official"
+    assert "DevThing" in record.class_names
+    expected_id = "ext:devbundle:DevThing@official"
+    assert expected_id in result["devbundle"]
+    assert result["devbundle"][expected_id]["extension"] == "lfx-dev-fixture"

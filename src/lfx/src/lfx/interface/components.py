@@ -17,6 +17,7 @@ from lfx.extension import (
     LoadResult,
     discover_inline_bundles,
     format_extension_error,
+    load_dev_extensions,
     load_installed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
@@ -728,8 +729,17 @@ async def import_extension_components(
     with a logged warning -- one bad bundle must not abort the cache build.
     """
     extension_results = load_installed_extensions()
+    # Dev extensions registered via ``lfx extension dev`` ship the same v0
+    # manifest contract as installed extensions; load them through the
+    # @official-slot pathway so they enter the BundleRegistry, expose the
+    # extension_id/version/namespaced_id metadata the palette needs, and
+    # become reloadable via the same endpoint.  This replaces an earlier
+    # approach that appended their bundle directories to LANGFLOW_COMPONENTS_PATH,
+    # which silently fell back to legacy custom-component loading without
+    # extension metadata.
+    dev_results = load_dev_extensions()
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
-    _emit_extension_diagnostics([*extension_results, *inline_results])
+    _emit_extension_diagnostics([*extension_results, *dev_results, *inline_results])
 
     # Populate the process-default BundleRegistry so the reload endpoint
     # (POST /api/v1/extensions/{id}/bundles/{name}/reload) can find a
@@ -740,7 +750,8 @@ async def import_extension_components(
     # :func:`refresh_extension_components_cache` keeps ``component_cache``
     # in sync after a swap.
     registry = get_default_registry()
-    for result in [*extension_results, *inline_results]:
+    all_results = [*extension_results, *dev_results, *inline_results]
+    for result in all_results:
         if not result.bundle or not result.components or result.slot is None:
             continue
         record = BundleRecord(
@@ -755,7 +766,7 @@ async def import_extension_components(
         registry.install_bundle(record)
 
     components_dict: dict[str, dict[str, Any]] = {}
-    for result in [*extension_results, *inline_results]:
+    for result in all_results:
         if not result.bundle:
             continue
         bundle_dict = components_dict.setdefault(result.bundle, {})
@@ -832,6 +843,13 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             namespaced_id=loaded.namespaced_id,
         )
     component_cache.all_types_dict[record.bundle] = bundle_dict
+
+    # Invalidate the precomputed code-hash lookups so flow validation
+    # picks up the freshly-loaded class bodies instead of comparing
+    # against the pre-reload hashes.  ``get_component_hash_lookups_for_validation``
+    # rebuilds them lazily on the next call when both fields are None.
+    component_cache.type_to_current_hash = None
+    component_cache.all_known_hashes = None
 
 
 async def get_and_cache_all_types_dict(

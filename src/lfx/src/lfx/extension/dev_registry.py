@@ -296,10 +296,6 @@ def load_dev_extensions(*, state_dir: Path | None = None) -> list[LoadResult]:
 def dev_extension_component_paths(*, state_dir: Path | None = None) -> tuple[list[Path], list[ExtensionError]]:
     """Return ``(bundle_paths, errors)`` for the registered dev extensions.
 
-    Used by the Langflow startup hook to extend ``components_path`` with
-    the bundle directory of each registered extension, so the existing
-    palette discovery picks up the components alongside the in-tree set.
-
     Surface contract:
         - ``bundle_paths`` includes only entries whose manifest parses
           and whose bundle directory exists.  Each path is the resolved
@@ -308,10 +304,10 @@ def dev_extension_component_paths(*, state_dir: Path | None = None) -> tuple[lis
           could not be loaded (missing path, malformed manifest, etc.).
           Callers should log these but should NOT abort startup.
 
-    The startup hook is intentionally narrow: it only wants paths it can
-    feed to the existing ``components_path`` discovery.  Full
-    :class:`LoadResult` consumers (events pipeline, reload) should call
-    :func:`load_dev_extensions` instead.
+    Kept for callers that only need bundle directories (tools that walk
+    paths, IDE integrations).  The Langflow startup path itself uses
+    :func:`load_dev_extensions` so dev extensions land in the
+    BundleRegistry alongside installed extensions and become reloadable.
     """
     bundle_paths: list[Path] = []
     errors: list[ExtensionError] = []
