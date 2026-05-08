@@ -511,18 +511,26 @@ class TestAPIRequestSSRFProtection:
             result = await component.make_api_request()
             assert isinstance(result, Data)
 
-    async def test_ssrf_protection_warn_only_mode(self, component):
-        """Test that warn_only mode logs warnings instead of blocking."""
+    async def test_ssrf_protection_enforcement_mode(self, component):
+        """Test that SSRF protection enforces blocking (no warn-only mode for API Request)."""
         component.url_input = "http://127.0.0.1:8080/admin"
 
-        with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}), respx.mock:
-            respx.get("http://127.0.0.1:8080/admin").mock(return_value=Response(200, json={"status": "ok"}))
+        with (
+            patch.dict(
+                os.environ,
+                {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true", "LANGFLOW_SSRF_ALLOWED_HOSTS": ""},
+                clear=False,
+            ),
+            patch("lfx.components.data_source.api_request.validate_and_resolve_url") as mock_validate,
+        ):
+            from lfx.utils.ssrf_protection import SSRFProtectionError
 
-            # In warn_only mode (default), should not raise but should log
-            result = await component.make_api_request()
-            assert isinstance(result, Data)
+            # API Request component always enforces SSRF protection (no warn-only mode)
+            # This is the desired behavior for security
+            mock_validate.side_effect = SSRFProtectionError("Access to 127.0.0.1 blocked")
 
-            # TODO: In next major version, this should raise instead of just warning
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.make_api_request()
 
     async def test_follow_redirects_security_warning(self, component):
         """Test that enabling follow_redirects logs a security warning."""
@@ -534,7 +542,10 @@ class TestAPIRequestSSRFProtection:
         # Mock the log method to capture what's being logged
         component.log = MagicMock()
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("https://example.com/api").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
@@ -557,7 +568,10 @@ class TestAPIRequestSSRFProtection:
         # Test URL without protocol
         component.url_input = "example.com"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("https://example.com").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
@@ -569,7 +583,10 @@ class TestAPIRequestSSRFProtection:
         # Test http:// is preserved
         component.url_input = "http://example.com"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("http://example.com").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
@@ -579,7 +596,10 @@ class TestAPIRequestSSRFProtection:
         # Test https:// is preserved
         component.url_input = "https://example.com"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("https://example.com").mock(return_value=Response(200, json={"status": "ok"}))
 
             result = await component.make_api_request()
