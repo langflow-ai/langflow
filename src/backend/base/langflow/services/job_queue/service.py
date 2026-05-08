@@ -592,9 +592,13 @@ class RedisJobQueueService(JobQueueService):
         stream_key = self._stream_key(job_id)
         _max_retry_delay = 4.0
         _retry_delay = 0.1
+        in_flight_item = None
+        published = False
         try:
             while True:
                 item = await local_queue.get()
+                in_flight_item = item
+                published = False
                 event_id, data, ts = item
                 fields = (
                     {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": str(ts)}
@@ -603,8 +607,11 @@ class RedisJobQueueService(JobQueueService):
                 )
                 while True:
                     try:
-                        await self._client.xadd(stream_key, fields)
+                        if not published:
+                            await self._client.xadd(stream_key, fields)
+                            published = True
                         await self._client.expire(stream_key, self._ttl)
+                        in_flight_item = None
                         _retry_delay = 0.1
                         break
                     except asyncio.CancelledError:
@@ -618,6 +625,8 @@ class RedisJobQueueService(JobQueueService):
                 if data is None:
                     return
         except asyncio.CancelledError:
+            if in_flight_item is not None and not published:
+                local_queue.put_nowait(in_flight_item)
             return
 
     def _get_consumer_wrapper(self, job_id: str) -> RedisQueueWrapper:

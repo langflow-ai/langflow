@@ -9,6 +9,7 @@ import asyncio
 import contextlib
 import time
 import uuid
+from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
@@ -53,6 +54,21 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     if service._client:
         await service._client.aclose()
         service._client = None
+
+
+class _BlockingXaddClient:
+    """Redis client wrapper that blocks inside xadd until the caller cancels it."""
+
+    def __init__(self, client: fakeredis_aio.FakeRedis) -> None:
+        self._client = client
+        self.xadd_started = asyncio.Event()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+    async def xadd(self, *_args: Any, **_kwargs: Any) -> None:
+        self.xadd_started.set()
+        await asyncio.Event().wait()
 
 
 # ---------------------------------------------------------------------------
@@ -431,5 +447,29 @@ async def test_redis_service_bridge_publishes_sentinel_on_end():
         assert messages, "Expected at least one message in the stream"
         last_fields = messages[-1][1]
         assert last_fields.get(b"data") == _STREAM_SENTINEL_DATA
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_bridge_requeues_sentinel_when_cancelled_during_xadd():
+    """A cancelled bridge restores an unpublished sentinel instead of dropping it."""
+    service, fake_client = await _make_service()
+    blocking_client = _BlockingXaddClient(fake_client)
+    service._client = blocking_client
+    try:
+        job_id = str(uuid.uuid4())
+        local_queue, _event_manager = service.create_queue(job_id)
+        sentinel = (None, None, time.time())
+
+        await local_queue.put(sentinel)
+        await asyncio.wait_for(blocking_client.xadd_started.wait(), timeout=1)
+
+        bridge = service._bridge_tasks[job_id]
+        bridge.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await bridge
+
+        assert local_queue.get_nowait() == sentinel
     finally:
         await _stop_service(service)
