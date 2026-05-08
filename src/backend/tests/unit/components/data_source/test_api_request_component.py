@@ -393,14 +393,17 @@ class TestAPIRequestSSRFProtection:
         return component_class(**default_kwargs)
 
     async def test_ssrf_protection_disabled_by_default(self, component):
-        """Test that SSRF protection is disabled by default (warn-only mode)."""
+        """Test that SSRF protection can be disabled."""
         # Even with protection disabled, this should not raise
         component.url_input = "http://127.0.0.1:8080"
 
-        with respx.mock:
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}),
+            respx.mock,
+        ):
             respx.get("http://127.0.0.1:8080").mock(return_value=Response(200, json={"status": "ok"}))
 
-            # Should not raise (protection is off by default)
+            # Should not raise (protection is disabled)
             result = await component.make_api_request()
             assert isinstance(result, Data)
 
@@ -411,7 +414,7 @@ class TestAPIRequestSSRFProtection:
         # Enable SSRF protection in enforcement mode
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
+            patch("lfx.components.data_source.api_request.validate_and_resolve_url") as mock_validate,
         ):
             from lfx.utils.ssrf_protection import SSRFProtectionError
 
@@ -433,7 +436,7 @@ class TestAPIRequestSSRFProtection:
             for url in private_ips:
                 component.url_input = url
 
-                with patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate:
+                with patch("lfx.components.data_source.api_request.validate_and_resolve_url") as mock_validate:
                     from lfx.utils.ssrf_protection import SSRFProtectionError
 
                     mock_validate.side_effect = SSRFProtectionError(f"Access to {url} blocked")
@@ -447,7 +450,7 @@ class TestAPIRequestSSRFProtection:
 
         with (
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
-            patch("lfx.components.data_source.api_request.validate_url_for_ssrf") as mock_validate,
+            patch("lfx.components.data_source.api_request.validate_and_resolve_url") as mock_validate,
         ):
             from lfx.utils.ssrf_protection import SSRFProtectionError
 
