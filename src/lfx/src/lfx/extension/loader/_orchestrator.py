@@ -239,6 +239,16 @@ def load_extension(
         A :class:`LoadResult`.  ``ok`` is False on any structural failure;
         partial loads (some files imported, others failed) yield ``ok``
         False with successfully-loaded components still listed.
+
+    Single-load-per-process contract:
+        Calling this function a second time for the same bundle overwrites
+        the prior bundle's entries in ``sys.modules`` with no cleanup;
+        previously-issued :class:`LoadedComponent` ``klass`` references
+        remain bound to the old class objects. The reload pipeline (LE-1018)
+        is responsible for scrubbing registry entries AND the matching
+        ``_lfx_ext.<slot>.<bundle>.*`` namespace before re-invoking this
+        loader; direct callers should not rely on this function to refresh
+        already-loaded bundles.
     """
     if slot not in SLOT_VALUES:
         msg = f"slot must be one of {SLOT_VALUES!r}, got {slot!r}"
@@ -377,25 +387,10 @@ def _read_inline_bundle_json(
 def discover_inline_bundles(
     paths: Iterable[Path | str] | None,
 ) -> list[LoadResult]:
-    """Discover and load inline bundles from LANGFLOW_COMPONENTS_PATH.
+    """Discover inline bundles from LANGFLOW_COMPONENTS_PATH at the @extra slot.
 
-    Each entry in ``paths`` is a parent directory; every immediate
-    subdirectory is treated as a Bundle at the ``extra`` slot.  Walk order:
-    the user-declared ``paths`` order is preserved, and within each path
-    subdirectories are sorted lexicographically (so ``a/`` is loaded before
-    ``b/`` regardless of the underlying filesystem).
-
-    Duplicate-name handling: when a bundle name appears in two different
-    ``paths`` entries, the first one wins and the second emits a typed
-    warning (``duplicate-inline-bundle``).  The warning lives on the
-    *second* result so the events pipeline can attribute it to the path
-    that actually got skipped.
-
-    Subdirectories whose names do not match the bundle-name pattern (e.g.
-    ``__pycache__``, dirs starting with ``.``) are silently skipped without
-    a result.  A directory that *looks* like an intended bundle (no leading
-    dot, but invalid characters) emits ``inline-bundle-name-invalid`` so
-    the developer is told why their bundle isn't loading.
+    First-wins on duplicate bundle names across paths; the loser emits a
+    typed ``duplicate-inline-bundle`` warning.
     """
     results: list[LoadResult] = []
     if paths is None:
@@ -431,7 +426,23 @@ def discover_inline_bundles(
 
         try:
             children = sorted(path_obj.iterdir(), key=lambda p: p.name)
-        except OSError:
+        except OSError as exc:
+            # Permission denied / other directory-enumeration failure on a
+            # user-configured path. The user explicitly pointed us here, so
+            # silently swallowing the error would lose the message entirely;
+            # surface a typed warning carrying str(exc) so an operator can
+            # diagnose the misconfiguration.
+            unreadable_result = LoadResult(slot=SLOT_EXTRA, source_path=path_obj)
+            unreadable_result.errors.append(
+                ExtensionError(
+                    code="inline-path-unreadable",
+                    message=f"{type(exc).__name__}: {exc}",
+                    location=str(path_obj),
+                    content=str(path_obj),
+                    hint=("Check filesystem permissions on the path or remove it from LANGFLOW_COMPONENTS_PATH."),
+                )
+            )
+            results.append(unreadable_result)
             continue
 
         for child in children:
@@ -467,11 +478,7 @@ def discover_inline_bundles(
                         message=(f"Inline bundle {name!r} already loaded from {seen_names[name]}; skipping {child}."),
                         location=f"{seen_names[name]} -> {child}",
                         content=name,
-                        hint=(
-                            "Rename one of the bundle directories or remove it from "
-                            "LANGFLOW_COMPONENTS_PATH; first-wins resolution will "
-                            "become a hard error in a later release."
-                        ),
+                        hint=("Rename one of the bundle directories or remove it from LANGFLOW_COMPONENTS_PATH."),
                     )
                 )
                 results.append(result)

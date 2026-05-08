@@ -49,26 +49,10 @@ def canonicalize_distribution(name: str) -> str:
 
 
 def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path | None:
-    """Locate an extension manifest shipped by ``dist``, if any.
+    """Return the manifest path shipped by ``dist`` (extension.json or pyproject.toml), or None.
 
-    Both v0 manifest forms are supported:
-
-        1. A wheel that ships ``extension.json`` as package data (preferred
-           because it carries ``$schema`` for editor support).
-        2. A distribution that ships ``pyproject.toml`` with a
-           ``[tool.langflow.extension]`` section.
-
-    ``extension.json`` wins on collision so an Extension that ships both
-    is treated as a single Extension whose canonical manifest is the JSON
-    file, matching :func:`lfx.extension.manifest.load_manifest`'s discovery
-    order.
-
-    For the pyproject form, the file is only accepted as a manifest if its
-    ``[tool.langflow.extension]`` section is actually present and parses;
-    a stray ``pyproject.toml`` shipped by an unrelated distribution is
-    ignored.
-
-    Returns the absolute path to the manifest file, or ``None``.
+    extension.json wins on collision; pyproject.toml is accepted only when
+    it declares ``[tool.langflow.extension]``.
     """
     files = dist.files
     if files is None:
@@ -170,21 +154,16 @@ def installed_extension_roots(
 ) -> dict[str, Path]:
     """Map canonical distribution name -> extension root for installed manifests.
 
-    Used by the entry-point bridge to skip ``langflow.plugins`` registrations
-    for distributions that ship a manifest (manifest-first precedence).
-    The full discovery + warning surface used at server startup is
-    :func:`discover_installed_extensions` -- this primitive only returns the
-    resolved mapping, never warnings.
-
     Args:
         distributions: Override the distribution iterator (test seam).
             Defaults to ``importlib.metadata.distributions()``.
 
     Returns:
         Dict keyed by canonical distribution name; the value is the
-        directory containing ``extension.json``.  When two distributions
-        share a canonical name (broken venv), the lexicographically-first
-        manifest path wins for determinism.
+        directory containing the manifest. When two distributions share a
+        canonical name (broken venv), the lexicographically-first manifest
+        path wins for determinism; :func:`load_installed_extensions` emits
+        the typed ``duplicate-distribution`` error in that case.
     """
     return {name: root for name, (root, _) in _resolve_distribution_roots(distributions).items()}
 
@@ -223,16 +202,16 @@ def _resolve_distribution_roots(
 def manifest_owning_distributions(
     distributions: Iterable[importlib_metadata.Distribution] | None = None,
 ) -> frozenset[str]:
-    """Return the set of canonical distribution names that ship a manifest.
+    """Return the canonical distribution names that ship an extension manifest.
 
-    Callers of ``langflow.plugins`` entry-point loading should consult this
-    set and skip any entry point whose distribution is in it: the manifest
-    is the source of truth for those distributions' components, and loading
-    them again via the legacy entry-point would double-register.
-
-    Non-component entry-points (services, routes) on the same distribution
-    are NOT affected by this filter; the caller's loop is responsible for
-    distinguishing component entry-points from other kinds.
+    Two distributions sharing a canonical name (broken venv) collapse to a
+    single entry in the returned set; the typed ``duplicate-distribution``
+    error is emitted by :func:`load_installed_extensions`, not this
+    primitive. Callers that consume this set in isolation (e.g. directly
+    feeding ``filter_component_entry_points``) get the conservative
+    behavior -- both distributions' component entry-points are skipped --
+    but should also call ``load_installed_extensions`` to surface the
+    diagnostic to operators.
     """
     return frozenset(installed_extension_roots(distributions=distributions).keys())
 

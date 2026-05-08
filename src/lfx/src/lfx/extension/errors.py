@@ -64,6 +64,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
         "inline-path-missing",
+        "inline-path-unreadable",
         "bundle-json-invalid",
     }
 )
@@ -199,6 +200,7 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "inline-path-missing": (
         "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
     ),
+    "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
     "bundle-json-invalid": (
         "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
     ),

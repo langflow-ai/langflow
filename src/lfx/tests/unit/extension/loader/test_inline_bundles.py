@@ -190,3 +190,38 @@ def test_non_existent_path_emits_inline_path_missing(tmp_path: Path) -> None:
     warning = next(w for w in result.warnings if w.code == "inline-path-missing")
     assert str(bogus) in warning.location
     assert warning.hint  # AC: fix-hint payload
+
+
+def test_unreadable_path_emits_inline_path_unreadable(tmp_path: Path, monkeypatch) -> None:
+    """An OSError during iterdir surfaces ``inline-path-unreadable``, not a silent skip.
+
+    Permission-denied on a configured LANGFLOW_COMPONENTS_PATH entry is a
+    real misconfiguration -- the user explicitly pointed us here. The
+    OSError message must be carried through so an operator can diagnose.
+    """
+    from pathlib import Path as _Path  # imported here to keep TYPE_CHECKING block clean
+
+    parent = tmp_path / "p"
+    parent.mkdir()
+
+    # Patch ``Path.iterdir`` to raise PermissionError just for this dir.
+    real_iterdir = _Path.iterdir
+
+    def _fake_iterdir(self):
+        if self == parent.resolve():
+            msg = "Permission denied"
+            raise PermissionError(msg)
+        return real_iterdir(self)
+
+    monkeypatch.setattr(_Path, "iterdir", _fake_iterdir)
+
+    results = discover_inline_bundles([parent])
+    assert len(results) == 1
+    result = results[0]
+    assert not result.ok
+    codes = [e.code for e in result.errors]
+    assert "inline-path-unreadable" in codes
+    err = next(e for e in result.errors if e.code == "inline-path-unreadable")
+    assert "Permission denied" in err.message
+    assert str(parent.resolve()) in err.location
+    assert err.hint  # AC: fix-hint payload
