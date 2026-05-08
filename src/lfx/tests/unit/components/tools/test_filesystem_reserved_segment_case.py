@@ -1,7 +1,9 @@
-"""Regression: the ``.lfsig`` reservation is enforced via case-sensitive
-equality at ``_validate_path``. APFS and NTFS treat ``.LFSIG`` and
-``.lfsig`` as the same directory, so any uppercase / mixed-case variant
-bypasses the reservation on those platforms.
+"""Regression for the ``.lfsig`` reservation case-sensitivity bypass.
+
+The reservation is enforced via case-sensitive equality at
+``_validate_path``. APFS and NTFS treat ``.LFSIG`` and ``.lfsig`` as the
+same directory, so any uppercase / mixed-case variant bypasses the
+reservation on those platforms.
 
 The guard must reject every case variation regardless of host OS — flows
 authored on Linux must not silently break the reservation on macOS or
@@ -11,7 +13,6 @@ Windows.
 from pathlib import Path
 
 import pytest
-
 from lfx.components.tools.filesystem import FileSystemToolComponent
 
 

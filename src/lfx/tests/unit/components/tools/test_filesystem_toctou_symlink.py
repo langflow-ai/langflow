@@ -16,7 +16,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from lfx.components.tools.filesystem import FileSystemToolComponent
 
 
@@ -38,7 +37,8 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
     """Validation passes (target does not exist); a concurrent process
-    creates a symlink at the validated path; ``open()`` must NOT follow it."""
+    creates a symlink at the validated path; ``open()`` must NOT follow it.
+    """
     leak_target = base_dir / "outside.txt"
     leak_target.write_text("original", encoding="utf-8")
 
@@ -48,7 +48,7 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
     real_os_open = os.open
     raced = {"done": False}
 
-    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):  # noqa: ARG001
+    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):
         # Right before opening the validated target, drop a symlink at it
         # — exactly the TOCTOU window. Only race once so the eventual
         # error path's open (e.g. for logging) is not also racing.
@@ -84,7 +84,8 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
     """Same race for reads: a symlink dropped at the validated read target
-    must not be followed to a file outside <BASE>."""
+    must not be followed to a file outside <BASE>.
+    """
     secret_outside = base_dir / "outside_secret.txt"
     secret_outside.write_text("TOP SECRET", encoding="utf-8")
 
@@ -96,7 +97,7 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     real_os_open = os.open
     raced = {"done": False}
 
-    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):  # noqa: ARG001
+    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):
         if (
             not raced["done"]
             and isinstance(path, (str, os.PathLike))
