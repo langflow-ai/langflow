@@ -11,7 +11,6 @@ Windows.
 from pathlib import Path
 
 import pytest
-
 from lfx.components.tools.filesystem import FileSystemToolComponent
 
 
@@ -36,16 +35,12 @@ def component(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FileSystemTool
         "subdir/.LfSig",
     ],
 )
-def test_should_reject_uppercase_reserved_segment_variants(
-    component: FileSystemToolComponent, variant: str
-) -> None:
+def test_should_reject_uppercase_reserved_segment_variants(component: FileSystemToolComponent, variant: str) -> None:
     """write_file must refuse every case variant of the reserved segment."""
     leaf = variant if "/" in variant else f"{variant}/poison.json"
     result = component._write_file(leaf, "{}")
 
-    assert "error" in result, (
-        f"variant {leaf!r} bypassed the .lfsig reservation; result={result!r}"
-    )
+    assert "error" in result, f"variant {leaf!r} bypassed the .lfsig reservation; result={result!r}"
     assert "reserved" in result["error"].lower()
 
 

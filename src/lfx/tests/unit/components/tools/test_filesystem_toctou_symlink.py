@@ -16,7 +16,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-
 from lfx.components.tools.filesystem import FileSystemToolComponent
 
 
@@ -38,7 +37,8 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
     """Validation passes (target does not exist); a concurrent process
-    creates a symlink at the validated path; ``open()`` must NOT follow it."""
+    creates a symlink at the validated path; ``open()`` must NOT follow it.
+    """
     leak_target = base_dir / "outside.txt"
     leak_target.write_text("original", encoding="utf-8")
 
@@ -48,15 +48,11 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
     real_os_open = os.open
     raced = {"done": False}
 
-    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):  # noqa: ARG001
+    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):
         # Right before opening the validated target, drop a symlink at it
         # — exactly the TOCTOU window. Only race once so the eventual
         # error path's open (e.g. for logging) is not also racing.
-        if (
-            not raced["done"]
-            and isinstance(path, (str, os.PathLike))
-            and str(path) == str(target_path)
-        ):
+        if not raced["done"] and isinstance(path, (str, os.PathLike)) and str(path) == str(target_path):
             raced["done"] = True
             namespace_root.mkdir(parents=True, exist_ok=True)
             os.symlink(leak_target, target_path)
@@ -67,8 +63,7 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
 
     # The file OUTSIDE the namespace MUST remain untouched.
     assert leak_target.read_text(encoding="utf-8") == "original", (
-        "TOCTOU: the write followed a symlink created mid-call and clobbered "
-        f"a file outside <BASE>; result={result!r}"
+        f"TOCTOU: the write followed a symlink created mid-call and clobbered a file outside <BASE>; result={result!r}"
     )
     # If the tool reports success, the result must be a regular file inside
     # the namespace — never a symlink.
@@ -84,7 +79,8 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
     """Same race for reads: a symlink dropped at the validated read target
-    must not be followed to a file outside <BASE>."""
+    must not be followed to a file outside <BASE>.
+    """
     secret_outside = base_dir / "outside_secret.txt"
     secret_outside.write_text("TOP SECRET", encoding="utf-8")
 
@@ -96,12 +92,8 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     real_os_open = os.open
     raced = {"done": False}
 
-    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):  # noqa: ARG001
-        if (
-            not raced["done"]
-            and isinstance(path, (str, os.PathLike))
-            and str(path) == str(target_path)
-        ):
+    def racing_os_open(path, flags, mode=0o777, *args, **kwargs):
+        if not raced["done"] and isinstance(path, (str, os.PathLike)) and str(path) == str(target_path):
             raced["done"] = True
             target_path.unlink()
             os.symlink(secret_outside, target_path)
@@ -114,7 +106,6 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     # content; it MUST NOT return the secret outside <BASE>.
     if "error" not in result:
         assert "TOP SECRET" not in result.get("content", ""), (
-            "TOCTOU: the read followed a symlink to a file outside <BASE>; "
-            f"result={result!r}"
+            f"TOCTOU: the read followed a symlink to a file outside <BASE>; result={result!r}"
         )
     assert raced["done"], "the racing fixture never triggered"

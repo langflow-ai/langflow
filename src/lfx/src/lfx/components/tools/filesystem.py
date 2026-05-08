@@ -186,10 +186,7 @@ def _check_hardlink(candidate: Path) -> str | None:
     import stat as _stat_module
 
     if _stat_module.S_ISREG(st.st_mode) and st.st_nlink > 1:
-        return (
-            "Refusing to operate on multi-hardlink file "
-            f"(nlink={st.st_nlink})"
-        )
+        return f"Refusing to operate on multi-hardlink file (nlink={st.st_nlink})"
     return None
 
 
@@ -470,9 +467,7 @@ class FileSystemToolComponent(Component):
         _, err = self._user_binding_check(bound_user_id)
         return err
 
-    def _user_binding_check(
-        self, bound_user_id: str | None
-    ) -> tuple[str | None, dict | None]:
+    def _user_binding_check(self, bound_user_id: str | None) -> tuple[str | None, dict | None]:
         """Atomic capture of the user_id for the current invocation.
 
         Returns ``(captured_user_id, error_or_none)``. The captured value is

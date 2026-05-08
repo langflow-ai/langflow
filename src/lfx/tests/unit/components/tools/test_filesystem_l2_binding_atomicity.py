@@ -15,7 +15,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from lfx.components.tools._filesystem_namespace import (
     compute_user_namespace,
     load_or_create_pepper,
@@ -76,8 +75,7 @@ def test_should_use_consistent_user_id_within_a_single_tool_call(
     leaked = bob_dir / "alice_secret.txt"
 
     assert not leaked.exists(), (
-        f"identity-shift TOCTOU: alice's write leaked into bob's namespace at "
-        f"{leaked!s}; result={result!r}"
+        f"identity-shift TOCTOU: alice's write leaked into bob's namespace at {leaked!s}; result={result!r}"
     )
 
     # Acceptable outcomes: refused with a mismatch error, OR landed under alice.
@@ -95,7 +93,8 @@ def test_should_refuse_when_binding_check_sees_different_user_than_capture(
 ) -> None:
     """Sanity check: when the binding check itself sees a different user
     from the one captured at ``_get_tools()``, the call must be refused
-    outright (this is the existing L2 contract — pin it in this file)."""
+    outright (this is the existing L2 contract — pin it in this file).
+    """
     component._user_id = "alice"
     tools = asyncio.run(component._get_tools())
     write_tool = next(t for t in tools if t.name == "write_file")
