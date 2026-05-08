@@ -1,4 +1,4 @@
-"""Public dataclasses and slot constants for the extension loader (LE-1015).
+"""Public dataclasses and slot constants for the extension loader.
 
 Kept module-level so consumers (events pipeline, registry, tests) can import
 them without paying the cost of dragging in the discovery / detection /
@@ -41,10 +41,22 @@ class LoadedComponent:
     """A successfully loaded Component class plus its registry coordinates.
 
     Frozen so callers can place these in sets / dicts and emit them across
-    the events pipeline (LE-1017) without worrying about mutation.
+    the events pipeline without worrying about mutation.
 
     The :attr:`namespaced_id` is the canonical address used by saved flows
-    after the migration table (LE-1020) rewrites legacy references.
+    after the migration table rewrites legacy references.
+
+    Slot / distribution invariant
+    -----------------------------
+    ``@extra`` components MUST NOT carry a ``distribution``: they're loose
+    folders from ``LANGFLOW_COMPONENTS_PATH``, never pip-installed. The
+    reverse (``@official`` with ``distribution=None``) is permitted because
+    ``load_extension`` is used for dev-mode loads against a working tree
+    *before* the package gets installed (the LE-1016 ``extension dev``
+    flow); only ``load_installed_extensions`` is required to carry a
+    canonical PEP-503 name through. Enforced in :meth:`__post_init__` so
+    the rule travels with the type when LE-1018 reload and LE-1022 startup
+    discovery start constructing :class:`LoadedComponent` directly.
     """
 
     extension_id: str
@@ -57,7 +69,17 @@ class LoadedComponent:
     file_path: Path
     distribution: str | None = None
     """Canonical PEP-503 distribution name when loaded from an installed
-    package; ``None`` for inline LANGFLOW_COMPONENTS_PATH bundles."""
+    package; ``None`` for inline LANGFLOW_COMPONENTS_PATH bundles AND for
+    @official dev-mode loads against a not-yet-installed working tree."""
+
+    def __post_init__(self) -> None:
+        if self.slot == SLOT_EXTRA and self.distribution is not None:
+            msg = (
+                f"LoadedComponent {self.bundle}:{self.class_name} is at @extra "
+                f"slot but carries distribution={self.distribution!r}; @extra "
+                "components are loose folders and must not have a distribution."
+            )
+            raise ValueError(msg)
 
     @property
     def namespaced_id(self) -> str:
@@ -78,6 +100,19 @@ class LoadResult:
     typed failures.  ``ok`` is the single bit downstream code should branch
     on (e.g. the events pipeline emits ``extension_loaded`` when ``ok`` and
     ``extension_error`` otherwise).
+
+    Partial-success contract
+    ------------------------
+    ``components`` MAY be non-empty when ``errors`` is non-empty -- this
+    represents a partial load where some bundle modules imported cleanly
+    but others failed (e.g. one ``module-import-failed`` plus three
+    successfully-registered classes from sibling files). Callers that only
+    branch on ``ok`` get strict success; callers that want to surface
+    "partial X of Y loaded" diagnostics should consume ``components`` and
+    ``errors`` together. The events pipeline (LE-1017) is expected to fan
+    out as: ``extension_loaded`` when ``ok``, ``extension_error`` when not,
+    plus per-component ``component_registered`` events for everything in
+    ``components`` regardless of ``ok``.
 
     ``extension_id`` and ``bundle`` are populated whenever the manifest /
     bundle-name was resolved, even if a later failure prevented full load.

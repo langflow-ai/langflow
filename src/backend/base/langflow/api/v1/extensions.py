@@ -2,7 +2,7 @@
 
 Currently exposes a single endpoint, ``POST /extensions/{extension_id}/bundles/{bundle_name}/reload``,
 which drives the LE-1018 atomic-swap pipeline against the process-default
-:class:`~lfx.extension.registry.BundleRegistry`.
+:class:`~lfx.extension.bundle_registry.BundleRegistry`.
 
 LE-1019 (UI) and LE-1020 (migration) will add list / status / migrate
 endpoints alongside this one.  Mode A only -- in Mode B/C the path is to
@@ -12,7 +12,7 @@ rebuild the Docker image, and this endpoint is not registered.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from lfx.extension.registry import get_default_registry
+from lfx.extension.bundle_registry import get_default_registry
 from lfx.extension.reload import ReloadInProgressError, reload_bundle
 from lfx.log.logger import logger
 

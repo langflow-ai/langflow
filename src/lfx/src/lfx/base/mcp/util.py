@@ -1672,6 +1672,9 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
+        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
+        # floor so default deployments aren't shorter than the previous hardcoded 30s.
+        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
         max_retries = 2
         last_error_type = None
 
@@ -1683,7 +1686,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1952,6 +1955,9 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
+        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
+        # floor so default deployments aren't shorter than the previous hardcoded 30s.
+        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
         max_retries = 2
         last_error_type = None
 
@@ -1963,7 +1969,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__

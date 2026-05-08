@@ -1,4 +1,4 @@
-"""Single-Bundle loader for the Langflow Extension System (LE-1015).
+"""Single-Bundle loader for the Langflow Extension System.
 
 This package turns a directory tree on disk (an Extension or a loose
 LANGFLOW_COMPONENTS_PATH entry) into a list of :class:`LoadedComponent`
@@ -45,19 +45,21 @@ Internal layout (all underscore-prefixed; not part of the public surface):
     - ``_plugins``     -- manifest-first precedence over ``langflow.plugins``;
                           installed-distribution discovery primitives.
 
-LE-1022 will reuse ``_plugins.installed_extension_roots`` for the read-only
-@official slot at server startup; LE-1018 will reuse ``_orchestrator`` plus
-the discovery layer to drive atomic-swap reload.  Splitting the loader into
-small files now keeps each follow-on ticket touching one banner-section at
-a time.
+A future installed-package / seed-dir discovery flow will reuse
+``_plugins.installed_extension_roots`` for the read-only @official slot at
+server startup, and atomic-swap reload will reuse ``_orchestrator`` plus the
+discovery layer.  Splitting the loader into small files now keeps each
+follow-on touching one banner-section at a time.
 """
 
 from lfx.extension.loader._discovery import DEFAULT_MODULE_NAMESPACE
 from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
     load_extension,
+    load_installed_extensions,
 )
 from lfx.extension.loader._plugins import (
+    filter_component_entry_points,
     filter_plugin_entry_points,
     installed_extension_roots,
     manifest_owning_distributions,
@@ -78,8 +80,10 @@ __all__ = [
     "LoadResult",
     "LoadedComponent",
     "discover_inline_bundles",
+    "filter_component_entry_points",
     "filter_plugin_entry_points",
     "installed_extension_roots",
     "load_extension",
+    "load_installed_extensions",
     "manifest_owning_distributions",
 ]

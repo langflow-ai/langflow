@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING
 import pytest
 from lfx.extension import errors as errors_mod
 from lfx.extension import reload as reload_mod
+from lfx.extension.bundle_registry import BundleRegistry
 from lfx.extension.errors import ExtensionError
-from lfx.extension.registry import BundleRegistry
 from lfx.extension.reload import ReloadInProgressError, ReloadResult, reload_bundle
 
 if TYPE_CHECKING:
@@ -47,7 +47,7 @@ _BASE_MANIFEST: dict = {
     "id": "lfx-pilot",
     "version": "1.2.3",
     "name": "Pilot Bundle",
-    "lfx": {"bundle_api": [1]},
+    "lfx": {"compat": ["1"]},
     "bundles": [{"name": "pilot", "path": "components"}],
 }
 

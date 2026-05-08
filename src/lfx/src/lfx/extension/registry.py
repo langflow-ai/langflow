@@ -1,297 +1,451 @@
-"""In-memory component registry for installed Bundles (LE-1018).
+"""Read-only Extension registry for production-install sources (LE-1022).
 
-The :class:`BundleRegistry` is the single piece of mutable shared state the
-Extension System owns at runtime.  It maps a Bundle name to a frozen record
-of the components that Bundle currently exposes, and serializes mutation so
-the atomic-swap reload pipeline (see :mod:`lfx.extension.reload`) can update
-one Bundle without races.
+Where :mod:`lfx.extension.discovery` *finds* manifest-shipping packages
+and seed directories, this module *registers* them: it owns the in-memory
+state that ``lfx extension list`` (and, downstream, the loader and the
+events pipeline) read from.
 
-Concurrency model
------------------
+Every registered Extension lives at the ``@official`` slot in this
+milestone.  Two source kinds reach the registry:
 
-Two locks live on the registry:
+    * **installed** -- a pip-installed distribution shipping a manifest.
+      Installed at image-build time in Mode B/C, at ``pip install`` time
+      in Mode A.
 
-* ``_write_lock`` (a re-entrant ``threading.Lock``) covers every mutation.
-  Read paths take a quick lock to copy out a snapshot, then release; they
-  hold it for the duration of a dict copy, never longer.
+    * **seed** -- an immediate subdirectory of a seed root (default
+      ``/opt/langflow/bundles``, overridable via ``$LANGFLOW_SEED_DIR``).
+      Used by Docker images that prefer an explicit on-disk layout.
 
-* ``_in_progress`` is a ``set[str]`` of bundle names that currently have a
-  reload running.  The reload core acquires :meth:`begin_reload` before
-  Stage 1 and releases it via :meth:`finish_reload` (or the
-  :meth:`reload_in_progress` context manager) after Stage 5.  A second
-  reload attempt for the same bundle while one is in flight raises
-  :class:`ReloadInProgressError` so the caller can return a typed
-  ``reload-in-progress`` response.
+Both source kinds are **immutable at runtime**.  ``autoUpdate`` is
+forced ``False`` for installed/seed Extensions; any mutation verb
+exposed by the service layer (uninstall, disable, enable, install,
+update) raises :class:`ExtensionImmutableError` carrying a typed
+:class:`~lfx.extension.errors.ExtensionError` with code
+``installed-extension-immutable`` or ``seed-directory-immutable``.
 
-Snapshots returned by :meth:`snapshot` / :meth:`get_bundle` /
-:meth:`list_components` are *immutable views*: ``BundleRecord`` is frozen
-and ``LoadedComponent`` is frozen, so callers cannot mutate the registry
-through the snapshot.  This is the property the concurrent-read tests rely
-on -- a reader holding a snapshot from before Stage 3 sees the pre-swap
-class set even after Stage 3 has flipped the registry's internal pointer.
-
-Slot semantics
---------------
-
-The registry stores both ``official`` and ``extra`` slot bundles in the
-same map keyed by bundle name.  Bundle names are unique across slots in
-v0; the LE-1015 loader and ``discover_inline_bundles`` both enforce this
-upstream so the registry does not need to disambiguate by slot.
+Mutation verbs are exposed at the *service* layer here so the invariant
+is testable today (LE-1022 acceptance), but the **CLI** uninstall surface
+ships in B4 follow-up.  Routes that try to mount these as HTTP handlers
+are blocked by the router-trust CI guard (LE-1017); see
+``langflow-extension-system-design.md`` for the full trust model.
 """
 
 from __future__ import annotations
 
-import json
-import threading
-from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from enum import Enum
+from threading import RLock
+from typing import TYPE_CHECKING, Literal
+
+from lfx.extension.errors import ExtensionError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable
     from pathlib import Path
-    from typing import Literal
 
-    from lfx.extension.loader import LoadedComponent
+    from lfx.extension.discovery import DiscoveredExtension, SourceKind
+    from lfx.extension.manifest import ManifestSource
 
 
 # ---------------------------------------------------------------------------
-# Errors
+# LoadStatus
 # ---------------------------------------------------------------------------
 
 
-class ReloadInProgressError(RuntimeError):
-    """Raised when a second reload is requested for a Bundle already mid-reload.
+class LoadStatus(str, Enum):
+    """Lifecycle state surfaced through ``lfx extension list``.
 
-    Carries the ``bundle`` name so the API layer can put it in the typed
-    error body without parsing a string.
+    Discovery alone produces ``DISCOVERED``; the loader (LE-1015) flips
+    entries to ``LOADED`` once their components register, and to
+    ``FAILED`` on any per-bundle import error.  Keeping the enum here --
+    rather than in the loader -- means ``extension list`` can render the
+    full life-cycle without a circular import once both subsystems land.
     """
 
-    def __init__(self, bundle: str) -> None:
-        super().__init__(f"reload already in progress for bundle {bundle!r}")
-        self.bundle = bundle
+    DISCOVERED = "discovered"
+    LOADED = "loaded"
+    FAILED = "failed"
+
+    def __str__(self) -> str:  # pragma: no cover - enum convenience
+        return self.value
 
 
 # ---------------------------------------------------------------------------
-# BundleRecord
+# Extension
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
-class BundleRecord:
-    """Immutable snapshot of a Bundle's registered components.
+class Extension:
+    """A registered Extension at the @official slot.
 
-    The reload pipeline builds a brand-new ``BundleRecord`` in Stage 1+2 and
-    swaps it into the registry in Stage 3.  In-flight code paths that hold
-    a reference to the *previous* ``BundleRecord`` keep operating against
-    the pre-swap class set; this is the property the in-flight-flow test
-    relies on.
+    Frozen so the registry can hand instances out without callers
+    accidentally mutating shared state.  The registry holds the
+    authoritative copy and replaces (rather than mutates) entries when
+    state changes -- e.g. when the loader marks a bundle ``LOADED``.
+
+    The slot is a stored field (not a property) because we expect future
+    milestones to extend the registry with additional slots, and locking
+    the field shape now keeps serialization stable.
     """
 
-    bundle: str
     extension_id: str
-    extension_version: str
-    slot: Literal["official", "extra"]
-    components: tuple[LoadedComponent, ...] = ()
-    distribution: str | None = None
-    source_path: Path | None = None
+    version: str
+    bundle_name: str
+    slot: Literal["official"]
+    source_kind: SourceKind
+    source: str
+    extension_root: Path
+    manifest: ManifestSource
+    auto_update: bool = False
+    load_status: LoadStatus = LoadStatus.DISCOVERED
+    load_error: ExtensionError | None = None
 
     @property
-    def class_names(self) -> frozenset[str]:
-        """Set of component class names in this bundle."""
-        return frozenset(c.class_name for c in self.components)
+    def namespaced_slot(self) -> str:
+        """Slot rendered with the canonical ``@`` prefix (e.g. ``@official``).
 
-    def by_class_name(self) -> dict[str, LoadedComponent]:
-        """Return ``{class_name: LoadedComponent}`` for this bundle."""
-        return {c.class_name: c for c in self.components}
+        Convenience for human-readable output (``extension list`` and the
+        events pipeline).  The stored :attr:`slot` keeps the bare token
+        so collection keys stay simple.
+        """
+        return f"@{self.slot}"
 
 
 # ---------------------------------------------------------------------------
-# BundleRegistry
+# ExtensionImmutableError
 # ---------------------------------------------------------------------------
 
 
-class BundleRegistry:
-    """Thread-safe registry of installed Bundles, keyed by bundle name.
+class ExtensionImmutableError(RuntimeError):
+    """Raised when a caller tries to mutate an installed or seed Extension.
 
-    Designed for many concurrent readers and one writer at a time.  All
-    mutations go through the write lock; reads take the lock just long
-    enough to copy out an immutable snapshot.
+    Wraps a typed :class:`~lfx.extension.errors.ExtensionError` so HTTP
+    callers can surface ``error.to_dict()`` directly and CLI callers can
+    feed the same object into ``format_extension_error``.
 
-    The registry can optionally persist a flat ``components_index.json``
-    after every write so external tooling (the dev server, the CLI status
-    command) can introspect the live set without poking into the process.
-    Pass ``index_path`` at construction time to enable.
+    The wrapped code is one of:
+        * ``installed-extension-immutable`` -- the entry came from a
+          pip-installed distribution; mutate the install (rebuild the
+          image, change the lockfile) instead of poking the runtime.
+        * ``seed-directory-immutable`` -- the entry came from a seed
+          subdirectory; mutate the directory layout, not the runtime.
     """
 
-    def __init__(self, *, index_path: Path | None = None) -> None:
-        self._write_lock = threading.RLock()
-        self._bundles: dict[str, BundleRecord] = {}
-        self._in_progress: set[str] = set()
-        self._index_path: Path | None = index_path
+    def __init__(self, error: ExtensionError) -> None:
+        super().__init__(error.message)
+        self.error = error
 
-    # -- read paths ----------------------------------------------------------
+    def to_dict(self) -> dict[str, object]:
+        """Forward to :meth:`ExtensionError.to_dict` for HTTP/JSON output."""
+        return self.error.to_dict()
 
-    def snapshot(self) -> dict[str, BundleRecord]:
-        """Return a shallow copy of the bundle map.
 
-        ``BundleRecord`` is frozen, so the copy is safe to hand out without
-        defensive cloning.  Callers iterating across a long-running flow
-        should grab one snapshot at the start and reuse it; the registry
-        does not guarantee that two consecutive ``snapshot()`` calls return
-        the same dict.
+# ---------------------------------------------------------------------------
+# ExtensionRegistry
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class _RegistryEntry:
+    """Internal mutable wrapper so the registry can swap in updated state.
+
+    Public consumers never see this; :meth:`ExtensionRegistry.list` and
+    :meth:`ExtensionRegistry.get` always return the frozen
+    :class:`Extension` snapshot via :attr:`extension`.
+    """
+
+    extension: Extension
+
+
+class ExtensionRegistry:
+    """Service-layer registry for installed and seed Extensions.
+
+    Thread-safe (operations are guarded by a re-entrant lock so the
+    loader can call back into the registry from within
+    :meth:`mark_loaded` /``mark_failed`` without deadlocking).
+
+    The registry is *additive* at startup: discovery results are pinned
+    in via :meth:`register_installed` / :meth:`register_seed` and never
+    leave the registry until the process exits.  Mutation verbs exist
+    only to enforce the immutability invariant.
+    """
+
+    def __init__(self) -> None:
+        self._entries: dict[str, _RegistryEntry] = {}
+        self._lock = RLock()
+
+    # ------------------------------------------------------------------
+    # Read API
+    # ------------------------------------------------------------------
+
+    def list_extensions(self) -> list[Extension]:
+        """Return every registered Extension in registration order.
+
+        Insertion order is preserved (Python's ``dict`` is ordered) so
+        ``lfx extension list`` produces stable output even when the
+        underlying source iterators do not.
         """
-        with self._write_lock:
-            return dict(self._bundles)
+        with self._lock:
+            return [entry.extension for entry in self._entries.values()]
 
-    def get_bundle(self, bundle: str) -> BundleRecord | None:
-        with self._write_lock:
-            return self._bundles.get(bundle)
+    def get(self, extension_id: str) -> Extension | None:
+        """Return the registered Extension by id, or ``None`` if absent."""
+        with self._lock:
+            entry = self._entries.get(extension_id)
+            return entry.extension if entry is not None else None
 
-    def list_components(self) -> list[LoadedComponent]:
-        """Flatten every bundle's components into one list.
+    def __contains__(self, extension_id: str) -> bool:
+        with self._lock:
+            return extension_id in self._entries
 
-        Order: bundle names sorted lexicographically, then component order
-        within each bundle (preserved from the loader).  Stable so the
-        components_index.json output is reproducible.
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._entries)
+
+    # ------------------------------------------------------------------
+    # Registration (called from startup discovery)
+    # ------------------------------------------------------------------
+
+    def register_installed(self, discovered: DiscoveredExtension) -> Extension:
+        """Pin an installed-package Extension into the registry.
+
+        Raises:
+            ValueError: ``discovered.source_kind`` is not ``installed``
+                (callers should route seed entries through
+                :meth:`register_seed`).
         """
-        snap = self.snapshot()
-        out: list[LoadedComponent] = []
-        for name in sorted(snap):
-            out.extend(snap[name].components)
-        return out
+        if discovered.source_kind != "installed":
+            msg = f"register_installed received source_kind={discovered.source_kind!r}; expected 'installed'."
+            raise ValueError(msg)
+        return self._register(discovered)
 
-    # -- write paths ---------------------------------------------------------
+    def register_seed(self, discovered: DiscoveredExtension) -> Extension:
+        """Pin a seed-directory Extension into the registry.
 
-    def install_bundle(self, record: BundleRecord) -> BundleRecord | None:
-        """Insert or replace a Bundle's record.
-
-        Returns the *previous* record if one existed (so the reload caller
-        can compute added/removed components), or ``None`` for a fresh
-        install.  Concurrent reads observe either the old record or the
-        new record, never a partial state.
+        Raises:
+            ValueError: ``discovered.source_kind`` is not ``seed``.
         """
-        with self._write_lock:
-            previous = self._bundles.get(record.bundle)
-            self._bundles[record.bundle] = record
-            self._write_index_locked()
-            return previous
+        if discovered.source_kind != "seed":
+            msg = f"register_seed received source_kind={discovered.source_kind!r}; expected 'seed'."
+            raise ValueError(msg)
+        return self._register(discovered)
 
-    def remove_bundle(self, bundle: str) -> BundleRecord | None:
-        """Drop a Bundle from the registry.
+    def _register(self, discovered: DiscoveredExtension) -> Extension:
+        """Internal registration path shared by installed and seed."""
+        extension = Extension(
+            extension_id=discovered.extension_id,
+            version=discovered.version,
+            bundle_name=discovered.bundle_name,
+            slot=discovered.slot,
+            source_kind=discovered.source_kind,
+            source=discovered.source,
+            extension_root=discovered.extension_root,
+            manifest=discovered.manifest,
+            auto_update=False,  # installed/seed Extensions never auto-update
+            load_status=LoadStatus.DISCOVERED,
+        )
+        with self._lock:
+            existing = self._entries.get(extension.extension_id)
+            if existing is not None:
+                msg = (
+                    f"Extension {extension.extension_id!r} already registered "
+                    f"from {existing.extension.source_kind} source "
+                    f"{existing.extension.source!r}; refusing to register "
+                    f"{extension.source_kind} source {extension.source!r}."
+                )
+                raise DuplicateExtensionError(
+                    ExtensionError(
+                        code="duplicate-extension-id",
+                        message=msg,
+                        location=existing.extension.source,
+                        content=extension.extension_id,
+                        hint=(
+                            "Each extension id must be registered exactly once. "
+                            "Pick one source: a pip install or a seed directory."
+                        ),
+                    )
+                )
+            self._entries[extension.extension_id] = _RegistryEntry(extension=extension)
+            return extension
 
-        Returns the removed record, or ``None`` if it was not present.
+    # ------------------------------------------------------------------
+    # Load-state updates (called from the loader once it lands)
+    # ------------------------------------------------------------------
+
+    def mark_loaded(self, extension_id: str) -> Extension:
+        """Flip an entry's :attr:`load_status` to ``LOADED``.
+
+        Used by the loader (LE-1015) once a bundle's components have
+        successfully registered.  This is *not* a mutation of the
+        immutability surface -- the install record itself is unchanged;
+        we're recording the side effect of loading the install.
         """
-        with self._write_lock:
-            previous = self._bundles.pop(bundle, None)
-            if previous is not None:
-                self._write_index_locked()
-            return previous
+        return self._replace_status(extension_id, status=LoadStatus.LOADED, error=None)
 
-    # -- reload-in-progress guard -------------------------------------------
+    def mark_failed(self, extension_id: str, error: ExtensionError) -> Extension:
+        """Flip an entry's :attr:`load_status` to ``FAILED`` with *error* attached.
 
-    def begin_reload(self, bundle: str) -> None:
-        """Mark a Bundle as mid-reload, raising if one is already in flight."""
-        with self._write_lock:
-            if bundle in self._in_progress:
-                raise ReloadInProgressError(bundle)
-            self._in_progress.add(bundle)
-
-    def finish_reload(self, bundle: str) -> None:
-        """Clear the mid-reload marker.  Idempotent: silent if not set."""
-        with self._write_lock:
-            self._in_progress.discard(bundle)
-
-    @contextmanager
-    def reload_in_progress(self, bundle: str) -> Iterator[None]:
-        """Context manager pairing :meth:`begin_reload` / :meth:`finish_reload`.
-
-        Always clears the marker on exit, even if the ``with`` body raises.
+        Same rationale as :meth:`mark_loaded`: this records the loader's
+        observation, not a mutation of the install.
         """
-        self.begin_reload(bundle)
+        return self._replace_status(extension_id, status=LoadStatus.FAILED, error=error)
+
+    def _replace_status(
+        self,
+        extension_id: str,
+        *,
+        status: LoadStatus,
+        error: ExtensionError | None,
+    ) -> Extension:
+        with self._lock:
+            entry = self._entries.get(extension_id)
+            if entry is None:
+                msg = f"Cannot update load status: no Extension registered with id {extension_id!r}."
+                raise KeyError(msg)
+            updated = Extension(
+                extension_id=entry.extension.extension_id,
+                version=entry.extension.version,
+                bundle_name=entry.extension.bundle_name,
+                slot=entry.extension.slot,
+                source_kind=entry.extension.source_kind,
+                source=entry.extension.source,
+                extension_root=entry.extension.extension_root,
+                manifest=entry.extension.manifest,
+                auto_update=entry.extension.auto_update,
+                load_status=status,
+                load_error=error,
+            )
+            entry.extension = updated
+            return updated
+
+    # ------------------------------------------------------------------
+    # Mutation surface (always raises for installed/seed in this milestone)
+    # ------------------------------------------------------------------
+
+    def uninstall(self, extension_id: str) -> None:
+        """Refuse to uninstall an installed/seed Extension.
+
+        Always raises :class:`ExtensionImmutableError`.  The CLI verb
+        lands in B4; this method exists today so the invariant is
+        testable.
+        """
+        self._refuse_mutation(extension_id, verb="uninstall")
+
+    def disable(self, extension_id: str) -> None:
+        """Refuse to disable an installed/seed Extension."""
+        self._refuse_mutation(extension_id, verb="disable")
+
+    def enable(self, extension_id: str) -> None:
+        """Refuse to enable an installed/seed Extension."""
+        self._refuse_mutation(extension_id, verb="enable")
+
+    def install(self, extension_id: str) -> None:
+        """Refuse to install via the runtime registry service.
+
+        Production install in this milestone is ``pip install`` in a
+        Dockerfile, never a runtime call.  The router-trust CI guard
+        (LE-1017) blocks any HTTP handler that tries to mount this verb.
+        """
+        self._refuse_mutation(extension_id, verb="install")
+
+    def update_entry(self, extension_id: str, **changes: object) -> None:
+        """Refuse to mutate an installed/seed Extension's metadata.
+
+        Distinct from :meth:`mark_loaded` / :meth:`mark_failed`, which
+        record load-state transitions: ``update_entry`` rejects edits to
+        the install record itself (auto_update, source, version, ...).
+        Always raises.
+        """
+        # ``changes`` is captured so the rejection message can mention
+        # what the caller tried to change, but we don't actually need to
+        # process it -- every change is refused.
+        del changes
+        self._refuse_mutation(extension_id, verb="update")
+
+    def _refuse_mutation(self, extension_id: str, *, verb: str) -> None:
+        with self._lock:
+            entry = self._entries.get(extension_id)
+            if entry is None:
+                msg = f"Cannot {verb}: no Extension registered with id {extension_id!r}."
+                raise KeyError(msg)
+            extension = entry.extension
+
+        if extension.source_kind == "installed":
+            code = "installed-extension-immutable"
+            hint = (
+                f"To {verb} {extension_id!r}, change the pip install "
+                "(remove the package from the image / lockfile) and restart Langflow. "
+                "Runtime mutation of installed Extensions is intentionally not supported."
+            )
+        elif extension.source_kind == "seed":
+            code = "seed-directory-immutable"
+            hint = (
+                f"To {verb} {extension_id!r}, edit the seed directory layout and "
+                "restart Langflow. Runtime mutation of seed Extensions is intentionally not supported."
+            )
+        else:  # pragma: no cover - defensive: every source_kind is covered above
+            msg = f"Unknown source_kind {extension.source_kind!r} on Extension {extension_id!r}."
+            raise RuntimeError(msg)
+
+        error = ExtensionError(
+            code=code,
+            message=(
+                f"Refusing to {verb} Extension {extension_id!r} from "
+                f"{extension.source_kind} source {extension.source!r}."
+            ),
+            location=extension.source,
+            content=extension_id,
+            hint=hint,
+        )
+        raise ExtensionImmutableError(error)
+
+
+# ---------------------------------------------------------------------------
+# DuplicateExtensionError
+# ---------------------------------------------------------------------------
+
+
+class DuplicateExtensionError(RuntimeError):
+    """Raised when two sources claim the same ``extension_id``.
+
+    Distinct from :class:`ExtensionImmutableError` so callers can branch
+    on the failure mode: an immutability error means "stop trying to
+    mutate the runtime" while a duplicate means "fix the install layout".
+    """
+
+    def __init__(self, error: ExtensionError) -> None:
+        super().__init__(error.message)
+        self.error = error
+
+    def to_dict(self) -> dict[str, object]:
+        return self.error.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Convenience: build a registry directly from discovery results
+# ---------------------------------------------------------------------------
+
+
+def build_registry_from_discovery(
+    extensions: Iterable[DiscoveredExtension],
+) -> tuple[ExtensionRegistry, list[ExtensionError]]:
+    """Construct a fresh registry and pin every *extensions* entry.
+
+    Convenience for the server-startup path: discovery hands the list
+    over and the result is a registry plus any duplicate-id errors that
+    surfaced.  Per-source errors from discovery itself are *not* re-
+    emitted here; the caller has already received them as the discovery
+    return value.
+    """
+    registry = ExtensionRegistry()
+    errors: list[ExtensionError] = []
+    for ext in extensions:
         try:
-            yield
-        finally:
-            self.finish_reload(bundle)
-
-    def is_reload_in_progress(self, bundle: str) -> bool:
-        with self._write_lock:
-            return bundle in self._in_progress
-
-    # -- components_index.json ----------------------------------------------
-
-    def _write_index_locked(self) -> None:
-        """Write ``components_index.json`` while holding the write lock.
-
-        Tolerates filesystem errors silently: the index file is a cache,
-        not a source of truth, and a transient write failure must not
-        abort an otherwise-successful registry mutation.  The CLI's
-        ``extension status`` (LE-1019 territory) surfaces stale indexes.
-        """
-        if self._index_path is None:
-            return
-        payload = {
-            "bundles": [
-                {
-                    "name": rec.bundle,
-                    "extension_id": rec.extension_id,
-                    "extension_version": rec.extension_version,
-                    "slot": rec.slot,
-                    "distribution": rec.distribution,
-                    "source_path": str(rec.source_path) if rec.source_path else None,
-                    "components": [
-                        {
-                            "class_name": c.class_name,
-                            "namespaced_id": c.namespaced_id,
-                            "module_name": c.module_name,
-                            "file_path": str(c.file_path),
-                        }
-                        for c in rec.components
-                    ],
-                }
-                for rec in (self._bundles[name] for name in sorted(self._bundles))
-            ],
-        }
-        try:
-            self._index_path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
-            tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
-            tmp.replace(self._index_path)
-        except OSError:
-            # Cache miss only -- next successful write replaces it.
-            pass
-
-
-# ---------------------------------------------------------------------------
-# Process-wide default registry
-# ---------------------------------------------------------------------------
-
-
-_default_registry: BundleRegistry | None = None
-_default_registry_lock = threading.Lock()
-
-
-def get_default_registry() -> BundleRegistry:
-    """Return the lazily-created process-wide registry.
-
-    The HTTP endpoint and CLI both target this registry by default; tests
-    construct fresh registries directly so they do not bleed state.  LE-1022
-    will replace this lazy initializer with a startup-time install at the
-    @official slot; until then the registry begins empty.
-    """
-    global _default_registry  # noqa: PLW0603
-    with _default_registry_lock:
-        if _default_registry is None:
-            _default_registry = BundleRegistry()
-        return _default_registry
-
-
-def reset_default_registry() -> None:
-    """Drop the process-wide registry (test-only).
-
-    Calling this in normal application code throws away component state and
-    should never be necessary.
-    """
-    global _default_registry  # noqa: PLW0603
-    with _default_registry_lock:
-        _default_registry = None
+            if ext.source_kind == "installed":
+                registry.register_installed(ext)
+            else:
+                registry.register_seed(ext)
+        except DuplicateExtensionError as exc:
+            errors.append(exc.error)
+    return registry, errors

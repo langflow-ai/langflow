@@ -1,5 +1,6 @@
 import importlib
 import io
+import os
 import re
 
 import requests
@@ -265,11 +266,30 @@ class URLComponent(Component):
         }
         extractor = extractors.get(self.format, self._text_extractor)
 
+        proxy_env_keys = (
+            "http_proxy",
+            "HTTP_PROXY",
+            "https_proxy",
+            "HTTPS_PROXY",
+            "all_proxy",
+            "ALL_PROXY",
+        )
+        has_proxy = any((os.environ.get(key) or "").strip() for key in proxy_env_keys)
+
+        final_use_async = self.use_async
+        if has_proxy and self.use_async:
+            logger.warning(
+                "Proxy environment variables detected. Disabling 'use_async' in URLComponent "
+                "as the underlying async loader does not reliably respect system proxies. "
+                "Crawling will proceed synchronously (which may be slower)."
+            )
+            final_use_async = False
+
         return RecursiveUrlLoader(
             url=url,
             max_depth=self.max_depth,
             prevent_outside=self.prevent_outside,
-            use_async=self.use_async,
+            use_async=final_use_async,
             extractor=extractor,
             timeout=self.timeout,
             headers=headers_dict,

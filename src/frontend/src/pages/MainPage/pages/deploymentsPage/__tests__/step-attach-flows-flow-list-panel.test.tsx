@@ -13,6 +13,19 @@ jest.mock(
 
 import { FlowListPanel } from "../components/step-attach-flows-flow-list-panel";
 
+function selectedVersion(
+  flowId: string,
+  versionId: string,
+  versionTag: string,
+) {
+  return {
+    key: `${flowId}:${versionId}`,
+    flowId,
+    versionId,
+    versionTag,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -54,16 +67,11 @@ const connections: ConnectionItem[] = [
 const defaultProps = {
   flows,
   selectedFlowId: null as string | null,
-  selectedVersionByFlow: new Map<
-    string,
-    { versionId: string; versionTag: string }
-  >(),
+  selectedVersionByFlow: new Map<string, ReturnType<typeof selectedVersion>>(),
   attachedConnectionByFlow: new Map<string, string[]>(),
   connections,
   removedFlowIds: new Set<string>(),
   onSelectFlow: jest.fn(),
-  onRemoveFlow: jest.fn(),
-  onUndoRemoveFlow: jest.fn(),
 };
 
 function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
@@ -89,21 +97,21 @@ describe("Rendering flow items", () => {
 });
 
 // ---------------------------------------------------------------------------
-// ATTACHED badge
+// Attached version badges
 // ---------------------------------------------------------------------------
 
-describe("ATTACHED badge", () => {
-  it("shows ATTACHED badge for flows in selectedVersionByFlow map", () => {
+describe("Attached version badges", () => {
+  it("shows version count badge for flows in selectedVersionByFlow map", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
     renderPanel({ selectedVersionByFlow });
-    expect(screen.getByText("ATTACHED")).toBeInTheDocument();
+    expect(screen.getByText("1 VERSION")).toBeInTheDocument();
   });
 
-  it("does not show ATTACHED badge for flows not in the map", () => {
+  it("does not show version count badge for flows not in the map", () => {
     renderPanel();
-    expect(screen.queryByText("ATTACHED")).not.toBeInTheDocument();
+    expect(screen.queryByText(/VERSION/)).not.toBeInTheDocument();
   });
 });
 
@@ -114,13 +122,12 @@ describe("ATTACHED badge", () => {
 describe("REMOVED badge and opacity", () => {
   it("shows REMOVED badge for flows in removedFlowIds set", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
-    const removedFlowIds = new Set(["f1"]);
+    const removedFlowIds = new Set(["f1:v1"]);
     renderPanel({ selectedVersionByFlow, removedFlowIds });
     expect(screen.getByText("REMOVED")).toBeInTheDocument();
-    // ATTACHED should not show for removed flows
-    expect(screen.queryByText("ATTACHED")).not.toBeInTheDocument();
+    expect(screen.queryByText("1 VERSION")).not.toBeInTheDocument();
   });
 });
 
@@ -131,7 +138,7 @@ describe("REMOVED badge and opacity", () => {
 describe("Version labels", () => {
   it("shows version label when attached and not removed", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
     renderPanel({ selectedVersionByFlow });
     expect(screen.getByText("v1.0")).toBeInTheDocument();
@@ -139,9 +146,9 @@ describe("Version labels", () => {
 
   it("does not show version label for removed flows", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
-    const removedFlowIds = new Set(["f1"]);
+    const removedFlowIds = new Set(["f1:v1"]);
     renderPanel({ selectedVersionByFlow, removedFlowIds });
     expect(screen.queryByText("v1.0")).not.toBeInTheDocument();
   });
@@ -154,9 +161,9 @@ describe("Version labels", () => {
 describe("Connection names", () => {
   it("correctly maps connection IDs to names using connections array", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
-    const attachedConnectionByFlow = new Map([["f1", ["conn-1", "conn-2"]]]);
+    const attachedConnectionByFlow = new Map([["f1:v1", ["conn-1", "conn-2"]]]);
     renderPanel({ selectedVersionByFlow, attachedConnectionByFlow });
     expect(
       screen.getByText("Prod Connection, Dev Connection"),
@@ -165,10 +172,10 @@ describe("Connection names", () => {
 
   it("does not show connection names for removed flows", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
     ]);
-    const attachedConnectionByFlow = new Map([["f1", ["conn-1"]]]);
-    const removedFlowIds = new Set(["f1"]);
+    const attachedConnectionByFlow = new Map([["f1:v1", ["conn-1"]]]);
+    const removedFlowIds = new Set(["f1:v1"]);
     renderPanel({
       selectedVersionByFlow,
       attachedConnectionByFlow,
@@ -179,78 +186,23 @@ describe("Connection names", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Remove button
+// Removed version summary
 // ---------------------------------------------------------------------------
 
-describe("Remove button", () => {
-  it("triggers onRemoveFlow callback when clicking the detach button", async () => {
-    const user = userEvent.setup();
-    const onRemoveFlow = jest.fn();
+describe("Removed version summary", () => {
+  it("shows removed count when some versions are removed and others stay active", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      ["f1:v1", selectedVersion("f1", "v1", "v1.0")],
+      ["f1:v2", selectedVersion("f1", "v2", "v2.0")],
     ]);
-    renderPanel({ selectedVersionByFlow, onRemoveFlow });
 
-    await user.click(screen.getByTestId("detach-flow-f1"));
-    expect(onRemoveFlow).toHaveBeenCalledWith("f1");
-  });
-
-  it("does not propagate click to onSelectFlow", async () => {
-    const user = userEvent.setup();
-    const onSelectFlow = jest.fn();
-    const onRemoveFlow = jest.fn();
-    const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
-    ]);
-    renderPanel({ selectedVersionByFlow, onRemoveFlow, onSelectFlow });
-
-    await user.click(screen.getByTestId("detach-flow-f1"));
-    expect(onSelectFlow).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Undo button
-// ---------------------------------------------------------------------------
-
-describe("Undo button", () => {
-  it("triggers onUndoRemoveFlow callback when clicking the undo button", async () => {
-    const user = userEvent.setup();
-    const onUndoRemoveFlow = jest.fn();
-    const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
-    ]);
-    const removedFlowIds = new Set(["f1"]);
-    renderPanel({ selectedVersionByFlow, removedFlowIds, onUndoRemoveFlow });
-
-    await user.click(screen.getByTestId("undo-remove-flow-f1"));
-    expect(onUndoRemoveFlow).toHaveBeenCalledWith("f1");
-  });
-
-  it("undo button only visible for removed flows", () => {
-    const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
-      ["f2", { versionId: "v2", versionTag: "v2.0" }],
-    ]);
-    const removedFlowIds = new Set(["f1"]);
-    renderPanel({ selectedVersionByFlow, removedFlowIds });
-
-    expect(screen.getByTestId("undo-remove-flow-f1")).toBeInTheDocument();
-    expect(screen.queryByTestId("undo-remove-flow-f2")).not.toBeInTheDocument();
-  });
-
-  it("undo button not visible when onUndoRemoveFlow is not provided", () => {
-    const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
-    ]);
-    const removedFlowIds = new Set(["f1"]);
     renderPanel({
       selectedVersionByFlow,
-      removedFlowIds,
-      onUndoRemoveFlow: undefined,
+      removedFlowIds: new Set(["f1:v2"]),
     });
 
-    expect(screen.queryByTestId("undo-remove-flow-f1")).not.toBeInTheDocument();
+    expect(screen.getByText("1 removed")).toBeInTheDocument();
+    expect(screen.getByText("1 VERSION")).toBeInTheDocument();
   });
 });
 

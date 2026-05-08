@@ -31,12 +31,13 @@ the form ``#<error-code>`` (e.g. ``#manifest-invalid``).
 # Error code registry
 # ---------------------------------------------------------------------------
 
-# Phase-1 (LE-1014) error codes.  Each code shipped here MUST have:
+# Phase-1 error codes.  Each code shipped here MUST have:
 #   1. a branch in ``format_extension_error``,
 #   2. a snapshot test in ``tests/unit/extension/test_errors.py``,
 #   3. a documented reference URL anchor.
 #
-# Loader / reload / migration / events codes are added in their own tickets.
+# Loader / reload / migration / events codes are added when those subsystems
+# land.
 ERROR_CODES: frozenset[str] = frozenset(
     {
         # Schema / manifest discovery
@@ -56,11 +57,30 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
-        # Loader-specific codes (LE-1015)
+        # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
+        "duplicate-distribution",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        "inline-path-missing",
+        "inline-path-unreadable",
+        "bundle-json-invalid",
+        # init / dev CLI codes (LE-1016)
+        "extension-target-exists",
+        "extension-target-invalid",
+        "local-extension-missing",
+        # Migration-specific codes
+        "migration-table-missing",
+        "migration-table-unreadable",
+        "migration-table-invalid",
+        "component-not-found-with-hint",
+        "component-name-ambiguous",
+        # Production install / discovery (LE-1022)
+        "installed-extension-immutable",
+        "seed-directory-immutable",
+        "seed-directory-not-found",
+        "duplicate-extension-id",
         # Reload-specific codes (LE-1018)
         "reload-in-progress",
         "reload-bundle-not-installed",
@@ -68,9 +88,6 @@ ERROR_CODES: frozenset[str] = frozenset(
         "reload-source-missing",
     }
 )
-# NOTE: ``duplicate-distribution`` will be added by LE-1022 (installed-pkg
-# discovery) once there is a startup flow + events surface that can actually
-# emit it.  We hold the line that every registered code must have a producer.
 
 
 # ---------------------------------------------------------------------------
@@ -189,6 +206,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Duplicate Component class name {content!r} in bundle {location}; "
         "component class names must be unique within a bundle."
     ),
+    "duplicate-distribution": (
+        "Two installed distributions share the canonical name {content!r}; "
+        "the lexicographically-first manifest path wins. Locations: {location}."
+    ),
     "duplicate-inline-bundle": (
         "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
         "first wins. Locations: {location}."
@@ -196,6 +217,31 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
     ),
+    "inline-path-missing": (
+        "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
+    ),
+    "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
+    "bundle-json-invalid": (
+        "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
+    ),
+    "extension-target-exists": ("Cannot create extension at {location}: directory already exists and is not empty."),
+    "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
+    "local-extension-missing": (
+        "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
+    ),
+    "migration-table-missing": ("Migration table not found at {location}."),
+    "migration-table-unreadable": ("Could not read migration table at {location}: {message}"),
+    "migration-table-invalid": ("Invalid migration table at {location}: {message}"),
+    "component-not-found-with-hint": (
+        "Legacy component reference {content!r} (in flow node {location}) is not in the migration table."
+    ),
+    "component-name-ambiguous": (
+        "Legacy component reference {content!r} (in flow node {location}) matches more than one migration entry."
+    ),
+    "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
+    "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
+    "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
         "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
     ),

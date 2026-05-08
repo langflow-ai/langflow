@@ -1,4 +1,4 @@
-"""Tests for the loader's public dataclasses (LE-1015).
+"""Tests for the loader's public dataclasses.
 
 ``LoadedComponent`` and ``LoadResult`` are the values the rest of the
 Langflow stack consumes (events pipeline, registry, future reload).
