@@ -298,5 +298,6 @@ class TestDeleteAfterProcessingRaceCondition:
         self.component.silent_errors = False
 
         import pytest
+
         with pytest.raises(ValueError, match="File not found"):
             self.component.load_files_base()
