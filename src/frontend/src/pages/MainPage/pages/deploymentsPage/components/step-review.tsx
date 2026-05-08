@@ -8,10 +8,11 @@ import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
-
-function normalizeWxoName(s: string): string {
-  return s.replace(/[\s-]/g, "_").replace(/[^a-zA-Z0-9_]/g, "");
-}
+import {
+  INVALID_WXO_TOOL_NAME_MESSAGE,
+  isValidWxoName,
+  normalizeWxoName,
+} from "../utils/wxo-name";
 
 function EditableToolName({
   value,
@@ -195,8 +196,12 @@ export default function StepReview() {
     const batchNames = new Map<string, string>(); // normalized -> flowId (first seen)
 
     for (const item of reviewFlows) {
+      if (!isValidWxoName(item.toolName)) {
+        errors.set(item.flowId, INVALID_WXO_TOOL_NAME_MESSAGE);
+        continue;
+      }
+
       const normalized = normalizeWxoName(item.toolName).toLowerCase();
-      if (!normalized) continue;
 
       // Check batch duplicates (two flows with same tool name in this deployment)
       const firstFlowId = batchNames.get(normalized);

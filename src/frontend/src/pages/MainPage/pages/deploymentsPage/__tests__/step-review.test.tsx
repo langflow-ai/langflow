@@ -313,7 +313,7 @@ describe("Connection details", () => {
         name: "New API Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { API_KEY: "my-secret-key" },
+        environmentVariables: { API_KEY: "my-secret-key" }, // pragma: allowlist secret
       },
     ];
 
@@ -341,7 +341,7 @@ describe("Connection details", () => {
         name: "New Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { SECRET_KEY: "actual-secret-value" },
+        environmentVariables: { SECRET_KEY: "actual-secret-value" }, // pragma: allowlist secret
       },
     ];
 
@@ -735,6 +735,57 @@ describe("StepReview duplicate tool name detection in edit mode", () => {
       "Duplicate tool name within this deployment",
     );
     expect(errors.length).toBe(2);
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
+  });
+});
+
+describe("StepReview invalid tool name validation", () => {
+  beforeEach(() => {
+    mockedUseFolderStore.mockImplementation((selector) =>
+      selector({ myCollectionId: "folder-1" } as never),
+    );
+    mockedUseGetRefreshFlowsQuery.mockReturnValue({
+      data: [{ id: "flow-1", name: "12925", folder_id: "folder-1" }],
+    } as never);
+    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
+  });
+
+  it("shows inline error when flow-derived tool name starts with number", () => {
+    const setHasToolNameErrors = jest.fn();
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({
+        selectedInstance: { id: "inst-1" },
+        setHasToolNameErrors,
+      }),
+    );
+
+    render(<StepReview />);
+
+    expect(
+      screen.getByText(
+        "Tool name must start with a letter and contain at least one alphanumeric character.",
+      ),
+    ).toBeInTheDocument();
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
+  });
+
+  it("shows inline error when custom tool name normalizes to invalid name", () => {
+    const setHasToolNameErrors = jest.fn();
+    mockedUseDeploymentStepper.mockReturnValue(
+      buildBaseStepper({
+        selectedInstance: { id: "inst-1" },
+        toolNameByFlow: new Map([["flow-1", "!!!"]]),
+        setHasToolNameErrors,
+      }),
+    );
+
+    render(<StepReview />);
+
+    expect(
+      screen.getByText(
+        "Tool name must start with a letter and contain at least one alphanumeric character.",
+      ),
+    ).toBeInTheDocument();
     expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
   });
 });
