@@ -338,6 +338,29 @@ class TestBackfillFromDisk:
         )
         assert inserted == 0
 
+    async def test_backfill_skips_directories_with_deletion_sentinel(self, active_user, tmp_path: Path):
+        """Backfill must skip directories carrying the ``.kb_deleted`` sentinel.
+
+        A KB whose row was deleted but whose bytes remain on disk (locked
+        Chroma SQLite, etc.) carries a ``.kb_deleted`` sentinel.  The backfill
+        must NOT re-insert such directories or the deleted KB would
+        reappear on every server restart.
+        """
+        from langflow.api.utils.kb_helpers import KB_DELETED_SENTINEL
+
+        kb_root = tmp_path / active_user.username
+        kb_root.mkdir()
+        kb_dir = kb_root / "tombstoned"
+        kb_dir.mkdir()
+        (kb_dir / "embedding_metadata.json").write_text(
+            json.dumps({"embedding_provider": "OpenAI", "embedding_model": "m"})
+        )
+        (kb_dir / KB_DELETED_SENTINEL).touch()
+
+        inserted = await knowledge_base_service.backfill_from_disk(user_id=active_user.id, kb_user_root=kb_root)
+        assert inserted == 0
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, "tombstoned") is None
+
 
 class TestBackfillAllUsersFromDisk:
     async def test_backfill_all_users_scans_each_user_root(self, active_user, tmp_path: Path):

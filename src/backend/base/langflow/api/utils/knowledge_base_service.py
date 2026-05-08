@@ -386,9 +386,18 @@ async def backfill_from_disk(
     if not kb_user_root.exists():
         return 0
 
+    from langflow.api.utils.kb_helpers import KBStorageHelper
+
     inserted = 0
     for kb_dir in kb_user_root.iterdir():
         if not kb_dir.is_dir() or kb_dir.name.startswith("."):
+            continue
+
+        # Skip directories carrying the ``.kb_deleted`` sentinel: their DB
+        # row was intentionally deleted but the bytes could not be removed
+        # (typically a Windows Chroma SQLite lock).  Without this check the
+        # next startup re-inserts the row and the deleted KB reappears.
+        if KBStorageHelper.is_kb_dir_deleted(kb_dir):
             continue
 
         name = kb_dir.name
