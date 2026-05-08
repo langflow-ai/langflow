@@ -75,7 +75,6 @@ from langflow.services.adapters.deployment.context import deployment_provider_sc
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
-    deployment_name_exists,
     get_deployment_by_resource_key,
 )
 from langflow.services.database.models.deployment.crud import (
@@ -494,20 +493,6 @@ async def create_deployment(
     )
     telemetry.provider = provider_account.provider_key
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
-    # fail fast if the deployment name already exists
-    # we could have races but that is more
-    # acceptable than provider-side rollback failure
-    if await deployment_name_exists(
-        session,
-        user_id=current_user.id,
-        deployment_provider_account_id=provider_id,
-        name=payload.name,
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"A deployment named '{payload.name}' already exists. "
-            "Please choose a different name or delete the existing deployment first.",
-        )
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
@@ -587,7 +572,7 @@ async def create_deployment(
             project_id=project_id,
             deployment_provider_account_id=provider_id,
             resource_key=str(provider_create_result.id),
-            name=payload.name,
+            display_name=payload.name,
             deployment_type=payload.type,
             description=payload.description or None,
         )
@@ -720,6 +705,11 @@ async def list_deployments(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="project_id filtering is not supported when loading deployments directly from the provider.",
+        )
+    if not load_from_provider and names:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="names filtering is only supported when loading deployments directly from the provider.",
         )
 
     effective_flow_version_ids = flow_version_ids
@@ -1317,7 +1307,7 @@ async def get_deployment(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
         provider_key=provider_key,
-        name=deployment_row.name,
+        name=deployment_row.display_name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
         # Timestamps are local DB audit fields, not provider payload fields.
@@ -1402,8 +1392,8 @@ async def update_deployment(
         )
 
         update_kwargs: dict = {}
-        if payload.name is not None and payload.name != deployment_row.name:
-            update_kwargs["name"] = payload.name
+        if payload.name is not None and payload.name != deployment_row.display_name:
+            update_kwargs["display_name"] = payload.name
         if _field_was_explicitly_set(payload, "description"):
             if payload.description != deployment_row.description:
                 update_kwargs["description"] = payload.description
@@ -1510,7 +1500,7 @@ async def get_deployment_status(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
         provider_key=provider_key,
-        name=deployment_row.name,
+        name=deployment_row.display_name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,

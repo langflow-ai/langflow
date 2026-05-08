@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment"
     __table_args__ = (
-        UniqueConstraint("deployment_provider_account_id", "name", name="uq_deployment_name_in_provider"),
         UniqueConstraint(
             "deployment_provider_account_id", "resource_key", name="uq_deployment_resource_key_in_provider"
         ),
@@ -41,7 +40,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
         )
     )
-    name: str = Field(index=True)
+    display_name: str = Field()
     description: str | None = Field(
         default=None,
         sa_column=Column(sa.Text(), nullable=True),
@@ -116,7 +115,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     deployment_provider_account: "DeploymentProviderAccount" = Relationship(back_populates="deployments")
     folder: "Folder" = Relationship(back_populates="deployments")
 
-    @field_validator("name", "resource_key")
+    @field_validator("display_name", "resource_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
         return validate_non_empty_string(v, info)
@@ -128,7 +127,7 @@ class DeploymentRead(SQLModel):
     user_id: UUID
     project_id: UUID
     deployment_provider_account_id: UUID
-    name: str
+    display_name: str
     description: str | None = None
     deployment_type: DeploymentType
     created_at: datetime

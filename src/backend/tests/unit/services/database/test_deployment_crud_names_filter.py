@@ -60,7 +60,7 @@ async def _seed_flow_and_version(async_session: AsyncSession, user_id, project_i
 
 
 @pytest.mark.asyncio
-async def test_names_filter_combinations(async_session: AsyncSession):
+async def test_names_filter_ignored_for_local_deployment_queries(async_session: AsyncSession):
     user, provider_account, project_a, project_b = await _seed_user_provider_and_projects(async_session)
 
     _flow_a, fv_a = await _seed_flow_and_version(async_session, user.id, project_a.id)
@@ -73,7 +73,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_a.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="A",
+        display_name="A",
         deployment_type=DeploymentType.AGENT,
     )
     dep_b1 = await create_deployment(
@@ -82,7 +82,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_a.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="B",
+        display_name="B",
         deployment_type=DeploymentType.AGENT,
     )
     dep_b2 = await create_deployment(
@@ -91,7 +91,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_b.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="C",
+        display_name="C",
         deployment_type=DeploymentType.AGENT,
     )
 
@@ -140,37 +140,29 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         assert count == len(expected_ids)
         assert {d[0].id for d in page} == set(expected_ids)
 
-    # Single name match
-    await assert_names(["A"], [dep_a.id])
+    all_ids = [dep_a.id, dep_b1.id, dep_b2.id]
 
-    # Multi-name match
-    await assert_names(["A", "B", "C"], [dep_a.id, dep_b1.id, dep_b2.id])
+    # Local DB-backed queries no longer filter by display name; names are provider-name-only.
+    await assert_names(["A"], all_ids)
+    await assert_names(["A", "B", "C"], all_ids)
+    await assert_names(["D"], all_ids)
+    await assert_names(["a"], all_ids)
+    await assert_names([" A "], all_ids)
+    await assert_names(["A", "A"], all_ids)
 
-    # No match
-    await assert_names(["D"], [])
-
-    # Case-sensitive
-    await assert_names(["a"], [])
-
-    # Whitespace handling (CRUD does not strip, API does)
-    await assert_names([" A "], [])
-
-    # Duplicate names in input
-    await assert_names(["A", "A"], [dep_a.id])
-
-    # Names + project_id
-    await assert_names(["B"], [dep_b1.id], project_id=project_a.id)
+    # Names + project_id still applies only the project filter.
+    await assert_names(["B"], [dep_a.id, dep_b1.id], project_id=project_a.id)
     await assert_names(["C"], [dep_b2.id], project_id=project_b.id)
-    await assert_names(["A"], [], project_id=project_b.id)
+    await assert_names(["A"], [dep_b2.id], project_id=project_b.id)
 
-    # Names + flow_version_ids
-    await assert_names(["B"], [dep_b1.id], flow_version_ids=[fv_a.id])
+    # Names + flow_version_ids still applies only the flow-version filter.
+    await assert_names(["B"], [dep_a.id, dep_b1.id], flow_version_ids=[fv_a.id])
     await assert_names(["C"], [dep_b2.id], flow_version_ids=[fv_b.id])
-    await assert_names(["A"], [], flow_version_ids=[fv_b.id])
+    await assert_names(["A"], [dep_b2.id], flow_version_ids=[fv_b.id])
 
-    # Names + project_id + flow_version_ids
-    await assert_names(["B"], [dep_b1.id], project_id=project_a.id, flow_version_ids=[fv_a.id])
-    await assert_names(["C"], [], project_id=project_a.id, flow_version_ids=[fv_a.id])
+    # Names + project_id + flow_version_ids applies the non-name filters.
+    await assert_names(["B"], [dep_a.id, dep_b1.id], project_id=project_a.id, flow_version_ids=[fv_a.id])
+    await assert_names(["C"], [dep_a.id, dep_b1.id], project_id=project_a.id, flow_version_ids=[fv_a.id])
 
     # Pagination interaction
     page = await list_deployments_page(
@@ -188,4 +180,4 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         deployment_provider_account_id=provider_account.id,
         names=["B", "C"],
     )
-    assert count == 2
+    assert count == 3

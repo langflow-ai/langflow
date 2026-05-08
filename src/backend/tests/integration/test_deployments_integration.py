@@ -75,7 +75,7 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
             project_id=project_a.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=f"rk-{uuid4()}",
-            name="Agent Alpha",
+            display_name="Agent Alpha",
             deployment_type=DeploymentType.AGENT,
         )
         await create_deployment(
@@ -84,7 +84,7 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
             project_id=project_a.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=f"rk-{uuid4()}",
-            name="Agent Beta",
+            display_name="Agent Beta",
             deployment_type=DeploymentType.AGENT,
         )
         await create_deployment(
@@ -93,7 +93,7 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
             project_id=project_a.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=f"rk-{uuid4()}",
-            name="Agent Gamma",
+            display_name="Agent Gamma",
             deployment_type=DeploymentType.AGENT,
         )
         provider_id = provider_account.id
@@ -270,7 +270,7 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
             project_id=project_a.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=f"rk-{uuid4()}",
-            name="Agent Alpha",
+            display_name="Agent Alpha",
             deployment_type=DeploymentType.AGENT,
         )
         # Agent Beta in Project B
@@ -280,7 +280,7 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
             project_id=project_b.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=f"rk-{uuid4()}",
-            name="Agent Beta",
+            display_name="Agent Beta",
             deployment_type=DeploymentType.AGENT,
         )
 

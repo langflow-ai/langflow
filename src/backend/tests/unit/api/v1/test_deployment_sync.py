@@ -77,6 +77,7 @@ def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) 
     return SimpleNamespace(
         id=uuid4(),
         resource_key=resource_key,
+        display_name="Deployment",
         deployment_type=deployment_type,
         deployment_provider_account_id=uuid4(),
     )
@@ -1937,7 +1938,7 @@ class TestWxoResolveRollbackUpdate:
         in the DB from before the non-empty invariant was enforced at the app level.
         """
         dep = MagicMock()
-        dep.name = "test-dep"
+        dep.display_name = "test-dep"
         dep.description = "desc"
         mock_get_dep.return_value = dep
 
@@ -1973,7 +1974,7 @@ class TestWxoResolveRollbackUpdate:
     async def test_empty_attachments_produces_empty_put_tools(self, mock_get_dep, mock_list_att):
         """When no attachments exist, put_tools is an empty list (clears all tools)."""
         dep = MagicMock()
-        dep.name = "test-dep"
+        dep.display_name = "test-dep"
         dep.description = None
         mock_get_dep.return_value = dep
         mock_list_att.return_value = []

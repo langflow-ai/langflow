@@ -9,7 +9,6 @@ from langflow.services.database.models.deployment.crud import (
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
     delete_deployments_by_ids,
-    deployment_name_exists,
     get_deployment,
     list_deployments_page,
     update_deployment,
@@ -137,22 +136,22 @@ async def test_create_deployment_empty_resource_key_raises():
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             resource_key="   ",
-            name="my-deploy",
+            display_name="my-deploy",
             deployment_type=DeploymentType.AGENT,
         )
 
 
 @pytest.mark.asyncio
-async def test_create_deployment_empty_name_raises():
+async def test_create_deployment_empty_display_name_raises():
     db = _make_db()
-    with pytest.raises(ValueError, match="name must not be empty"):
+    with pytest.raises(ValueError, match="display_name must not be empty"):
         await create_deployment(
             db,
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             resource_key="rk-1",
-            name="",
+            display_name="",
             deployment_type=DeploymentType.AGENT,
         )
 
@@ -221,11 +220,11 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
 
 
 @pytest.mark.asyncio
-async def test_update_deployment_empty_name_raises():
+async def test_update_deployment_empty_display_name_raises():
     db = _make_db()
     deploy = MagicMock()
-    with pytest.raises(ValueError, match="name must not be empty"):
-        await update_deployment(db, deployment=deploy, name="   ")
+    with pytest.raises(ValueError, match="display_name must not be empty"):
+        await update_deployment(db, deployment=deploy, display_name="   ")
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +364,7 @@ async def test_delete_by_id_prunes_attachments_when_fk_disabled():
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-fk-off",
-            name="deployment-fk-off",
+            display_name="deployment-fk-off",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(deployment)
@@ -434,7 +433,7 @@ async def test_create_deployment_strips_whitespace(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="  rk-1  ",
-        name="  my-deploy  ",
+        display_name="  my-deploy  ",
         deployment_type=DeploymentType.AGENT,
     )
     await db.commit()
@@ -442,7 +441,7 @@ async def test_create_deployment_strips_whitespace(
     fetched = await get_deployment(db, user_id=user.id, deployment_id=row.id)
     assert fetched is not None
     assert fetched.resource_key == "rk-1"
-    assert fetched.name == "my-deploy"
+    assert fetched.display_name == "my-deploy"
 
 
 @pytest.mark.asyncio
@@ -456,17 +455,17 @@ async def test_update_deployment_strips_whitespace(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="original",
+        display_name="original",
         deployment_type=DeploymentType.AGENT,
     )
     await db.commit()
 
-    updated = await update_deployment(db, deployment=row, name="  new-name  ")
+    updated = await update_deployment(db, deployment=row, display_name="  new-name  ")
     await db.commit()
 
     fetched = await get_deployment(db, user_id=user.id, deployment_id=updated.id)
     assert fetched is not None
-    assert fetched.name == "new-name"
+    assert fetched.display_name == "new-name"
 
 
 @pytest.mark.asyncio
@@ -488,7 +487,7 @@ async def test_delete_by_id_removes_attached_rows_with_fk_on(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-id",
-        name="delete-id",
+        display_name="delete-id",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -546,7 +545,7 @@ async def test_delete_by_ids_removes_multiple_deployments_and_attached_rows(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-ids-1",
-        name="delete-ids-1",
+        display_name="delete-ids-1",
         deployment_type=DeploymentType.AGENT,
     )
     deployment_2 = await create_deployment(
@@ -555,7 +554,7 @@ async def test_delete_by_ids_removes_multiple_deployments_and_attached_rows(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-ids-2",
-        name="delete-ids-2",
+        display_name="delete-ids-2",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -618,7 +617,7 @@ async def test_delete_by_resource_key_removes_attached_rows_with_fk_on(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-rk",
-        name="delete-rk",
+        display_name="delete-rk",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -652,66 +651,3 @@ async def test_delete_by_resource_key_removes_attached_rows_with_fk_on(
     ).all()
     assert deployment_row is None
     assert attachment_rows == []
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_returns_true_when_found(
-    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
-):
-    assert folder.id is not None
-    await create_deployment(
-        db,
-        user_id=user.id,
-        project_id=folder.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-1",
-        name="existing-deploy",
-        deployment_type=DeploymentType.AGENT,
-    )
-    await db.commit()
-
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="existing-deploy",
-    )
-    assert result is True
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_returns_false_when_not_found(
-    db: AsyncSession, user: User, provider_account: DeploymentProviderAccount
-):
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="nonexistent",
-    )
-    assert result is False
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_strips_whitespace(
-    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
-):
-    assert folder.id is not None
-    await create_deployment(
-        db,
-        user_id=user.id,
-        project_id=folder.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-1",
-        name="my-deploy",
-        deployment_type=DeploymentType.AGENT,
-    )
-    await db.commit()
-
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="  my-deploy  ",
-    )
-    assert result is True

@@ -935,7 +935,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=deployment.name,
+                name=deployment.display_name,
                 description=deployment.description or "",
             ),
             provider_data=provider_payload,
@@ -993,7 +993,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
+            name=deployment_row.display_name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -1026,7 +1026,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
+            name=deployment_row.display_name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -1275,7 +1275,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     provider_key=provider_key,
                     resource_key=row.resource_key,
                     type=row.deployment_type,
-                    name=row.name,
+                    name=row.display_name,
                     description=row.description,
                     attached_count=attached_count,
                     created_at=row.created_at,

@@ -74,7 +74,7 @@ def _fake_deployment_row(**overrides) -> SimpleNamespace:
     return SimpleNamespace(
         id=overrides.get("id", uuid4()),
         resource_key=overrides.get("resource_key", "rk-1"),
-        name=overrides.get("name", "test-deployment"),
+        display_name=overrides.get("display_name", overrides.get("name", "test-deployment")),
         description=overrides.get("description"),
         deployment_type=overrides.get("deployment_type", "agent"),
         deployment_provider_account_id=overrides.get("deployment_provider_account_id", uuid4()),
@@ -144,12 +144,10 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_rollback_called_on_commit_failure(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -206,12 +204,10 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_no_rollback_on_success(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -265,12 +261,10 @@ class TestCreateDeploymentRollback:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_mutation_commit_failure_uses_non_delete_rollback(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_by_resource_key,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
@@ -335,12 +329,10 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_without_mutation_skips_provider_calls(
         self,
         mock_get_pa,
-        mock_name_exists,
         mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -379,7 +371,7 @@ class TestCreateDeploymentExistingAgent:
             session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
         )
 
-        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
+        _ = (mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
         adapter.update.assert_not_awaited()
         mapper.util_create_result_from_existing_resource.assert_called_once_with(
@@ -395,12 +387,10 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_with_mutation_uses_provider_update(
         self,
         mock_get_pa,
-        mock_name_exists,
         mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -442,7 +432,7 @@ class TestCreateDeploymentExistingAgent:
             session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
         )
 
-        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
+        _ = (mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
         adapter.update.assert_awaited_once()
         mapper.resolve_deployment_update_for_existing_create.assert_awaited_once()
@@ -456,12 +446,10 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock, return_value=None)
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_with_mutation_uses_mapper_create_result_normalizer(
         self,
         mock_get_pa,
-        mock_name_exists,
         mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -508,7 +496,7 @@ class TestCreateDeploymentExistingAgent:
             session=session, payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
         )
 
-        _ = (mock_name_exists, mock_get_by_resource_key, mock_validate_fv, mock_attach)
+        _ = (mock_get_by_resource_key, mock_validate_fv, mock_attach)
         adapter.create.assert_not_awaited()
         adapter.update.assert_awaited_once()
         mapper.resolve_deployment_update_for_existing_create.assert_awaited_once()
@@ -528,12 +516,10 @@ class TestCreateDeploymentExistingAgent:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_deployment_by_resource_key", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_existing_agent_conflict_when_resource_key_already_persisted(
         self,
         mock_get_pa,
-        mock_name_exists,
         mock_get_by_resource_key,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -562,7 +548,6 @@ class TestCreateDeploymentExistingAgent:
             )
 
         assert exc_info.value.status_code == 409
-        _ = mock_name_exists
         mock_create_db.assert_not_awaited()
         adapter.create.assert_not_awaited()
         adapter.update.assert_not_awaited()
@@ -845,42 +830,23 @@ class TestListDeploymentsProjectIdFilter:
 
 class TestDeploymentNamesFilter:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
-    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_names_passed_to_db_helper(
-        self,
-        mock_get_pa,
-        mock_get_mapper,
-        mock_resolve_adapter,
-        mock_list_synced,
-    ):
-        """When names is supplied in DB mode, it is forwarded to list_deployments_synced."""
+    async def test_names_rejected_in_db_mode(self):
+        """Local deployment rows do not support provider-name filtering."""
         from langflow.api.v1.deployments import list_deployments
 
-        pa = _fake_provider_account()
-        mock_get_pa.return_value = pa
-        mock_resolve_adapter.return_value = MagicMock()
-        mapper = MagicMock()
-        mapper.shape_deployment_list_items.return_value = []
-        mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0, {})
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=False,
+                names=["A", "B"],
+            )
 
-        names = ["A", "B"]
-
-        await list_deployments(
-            provider_id=pa.id,
-            session=AsyncMock(),
-            current_user=_fake_user(),
-            params=SimpleNamespace(page=1, size=20),
-            deployment_type=None,
-            load_from_provider=False,
-            names=names,
-        )
-
-        mock_list_synced.assert_awaited_once()
-        assert mock_list_synced.call_args.kwargs["names"] == names
+        assert exc_info.value.status_code == 422
+        assert "names filtering is only supported" in exc_info.value.detail
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
@@ -930,48 +896,25 @@ class TestDeploymentNamesFilter:
         )
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.list_deployments_synced", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
-    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_names_combined_with_project_id_and_flow_version_ids(
-        self,
-        mock_get_pa,
-        mock_get_mapper,
-        mock_resolve_adapter,
-        mock_list_synced,
-    ):
-        """All three filters are forwarded to list_deployments_synced."""
+    async def test_names_rejected_in_db_mode_with_other_filters(self):
+        """The provider-name-only filter is invalid even alongside local filters."""
         from langflow.api.v1.deployments import list_deployments
 
-        pa = _fake_provider_account()
-        mock_get_pa.return_value = pa
-        mock_resolve_adapter.return_value = MagicMock()
-        mapper = MagicMock()
-        mapper.shape_deployment_list_items.return_value = []
-        mock_get_mapper.return_value = mapper
-        mock_list_synced.return_value = ([], 0, {})
+        with pytest.raises(HTTPException) as exc_info:
+            await list_deployments(
+                provider_id=uuid4(),
+                session=AsyncMock(),
+                current_user=_fake_user(),
+                params=SimpleNamespace(page=1, size=20),
+                deployment_type=None,
+                load_from_provider=False,
+                names=["A"],
+                project_id=uuid4(),
+                flow_version_ids=[uuid4()],
+            )
 
-        names = ["A"]
-        pid = uuid4()
-        fvid = uuid4()
-
-        await list_deployments(
-            provider_id=pa.id,
-            session=AsyncMock(),
-            current_user=_fake_user(),
-            params=SimpleNamespace(page=1, size=20),
-            deployment_type=None,
-            load_from_provider=False,
-            names=names,
-            project_id=pid,
-            flow_version_ids=[fvid],
-        )
-
-        mock_list_synced.assert_awaited_once()
-        assert mock_list_synced.call_args.kwargs["names"] == names
-        assert mock_list_synced.call_args.kwargs["project_id"] == pid
-        assert mock_list_synced.call_args.kwargs["flow_version_ids"] == [fvid]
+        assert exc_info.value.status_code == 422
+        assert "names filtering is only supported" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_blank_name_rejected(self):
@@ -2167,11 +2110,11 @@ class TestUpdateDeploymentMetadataPersistence:
         """PATCH should persist an explicitly-cleared description alongside other spec updates."""
         from langflow.api.v1.deployments import update_deployment
 
-        dep_row = _fake_deployment_row(name="old-name", description="old-description")
+        dep_row = _fake_deployment_row(display_name="old-name", description="old-description")
         updated_row = _fake_deployment_row(
             id=dep_row.id,
             resource_key=dep_row.resource_key,
-            name="renamed",
+            display_name="renamed",
             description=None,
             deployment_provider_account_id=dep_row.deployment_provider_account_id,
             project_id=dep_row.project_id,
@@ -2205,7 +2148,7 @@ class TestUpdateDeploymentMetadataPersistence:
 
         mock_update_db.assert_awaited_once()
         update_kwargs = mock_update_db.call_args.kwargs
-        assert update_kwargs["name"] == "renamed"
+        assert update_kwargs["display_name"] == "renamed"
         assert "description" in update_kwargs
         assert update_kwargs["description"] is None
 
@@ -2318,7 +2261,7 @@ class TestGetDeploymentSync:
         updated_at = datetime(2026, 1, 3, 4, 5, 6, tzinfo=timezone.utc)
         dep_row = _fake_deployment_row(
             resource_key="provider-rk-1",
-            name="db-owned-name",
+            display_name="db-owned-name",
             description="db-owned-description",
             deployment_type="agent",
             created_at=created_at,
@@ -2693,61 +2636,6 @@ class TestDeleteDeployment:
 # ---------------------------------------------------------------------------
 
 
-class TestCreateDeploymentDuplicateName:
-    @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=True)
-    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_duplicate_name_returns_409(
-        self,
-        mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
-    ):
-        """When a deployment with the same name already exists, 409 is returned without calling the provider."""
-        from langflow.api.v1.deployments import create_deployment
-
-        pa = _fake_provider_account()
-        mock_get_pa.return_value = pa
-
-        payload = MagicMock()
-        payload.provider_id = pa.id
-        payload.name = "duplicate-name"
-
-        with pytest.raises(HTTPException) as exc_info:
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
-
-        assert exc_info.value.status_code == 409
-        assert "duplicate-name" in exc_info.value.detail
-
-    @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=True)
-    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_duplicate_name_does_not_call_provider(
-        self,
-        mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
-        mock_resolve_adapter,
-    ):
-        """When name already exists, the provider adapter is never invoked."""
-        from langflow.api.v1.deployments import create_deployment
-
-        pa = _fake_provider_account()
-        mock_get_pa.return_value = pa
-
-        payload = MagicMock()
-        payload.provider_id = pa.id
-        payload.name = "taken"
-
-        with pytest.raises(HTTPException):
-            await create_deployment(
-                session=AsyncMock(), payload=payload, current_user=_fake_user(), telemetry=_fake_telemetry()
-            )
-
-        mock_resolve_adapter.assert_not_called()
-
-
 # ---------------------------------------------------------------------------
 # create_deployment: project-scoped flow version validation
 # ---------------------------------------------------------------------------
@@ -2759,12 +2647,10 @@ class TestCreateDeploymentProjectValidation:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_validation_called_before_adapter(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -2807,12 +2693,10 @@ class TestCreateDeploymentProjectValidation:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_empty_flow_version_ids_skips_validation(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,
@@ -2862,12 +2746,10 @@ class TestCreateDeploymentSchemaValidation:
     @patch(f"{ROUTES_MODULE}.resolve_project_id_for_deployment_create", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
-    @patch(f"{ROUTES_MODULE}.deployment_name_exists", new_callable=AsyncMock, return_value=False)
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
     async def test_mapper_schema_validation_error_surfaces_422(
         self,
         mock_get_pa,
-        mock_name_exists,  # noqa: ARG002
         mock_get_mapper,
         mock_resolve_adapter,
         mock_resolve_project,

@@ -87,7 +87,6 @@ def mock_db_crud(mock_mapper):
         mock_get_owned = stack.enter_context(patch("langflow.api.v1.deployments.get_owned_provider_account_or_404"))
         _mock_del_prov = stack.enter_context(patch("langflow.api.v1.deployments.delete_provider_account_row"))
         _mock_upd_prov = stack.enter_context(patch("langflow.api.v1.deployments.update_provider_account_row"))
-        mock_name_exists = stack.enter_context(patch("langflow.api.v1.deployments.deployment_name_exists"))
         mock_proj_id = stack.enter_context(
             patch("langflow.api.v1.deployments.resolve_project_id_for_deployment_create")
         )
@@ -129,7 +128,6 @@ def mock_db_crud(mock_mapper):
         mock_get_owned.return_value = AsyncMock(
             id=uuid4(), provider_key="watsonx-orchestrate", provider_tenant_id="tenant-test"
         )
-        mock_name_exists.return_value = False
         mock_proj_id.return_value = uuid4()
         mock_create_dep.return_value = AsyncMock(id=uuid4())
 

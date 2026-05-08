@@ -47,12 +47,12 @@ async def create_deployment(
     project_id: UUID,
     deployment_provider_account_id: UUID,
     resource_key: str,
-    name: str,
     deployment_type: DeploymentType,
+    display_name: str,
     description: str | None = None,
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
-    name_s = _strip_or_raise(name, "name")
+    display_name_s = _strip_or_raise(display_name, "display_name")
     description_s = _validate_description_max_length(description)
 
     row = Deployment(
@@ -60,7 +60,7 @@ async def create_deployment(
         project_id=project_id,
         deployment_provider_account_id=deployment_provider_account_id,
         resource_key=resource_key_s,
-        name=name_s,
+        display_name=display_name_s,
         deployment_type=deployment_type,
         description=description_s,
     )
@@ -70,25 +70,13 @@ async def create_deployment(
     except IntegrityError as exc:
         await db.rollback()
         await logger.aerror("IntegrityError creating deployment: %s", exc)
-        msg = f"Deployment conflicts with an existing record (resource_key={resource_key!r}, name={name!r})"
+        msg = (
+            "Deployment conflicts with an existing record "
+            f"(resource_key={resource_key!r}, display_name={display_name_s!r})"
+        )
         raise ValueError(msg) from exc
     await db.refresh(row)
     return row
-
-
-async def deployment_name_exists(
-    db: AsyncSession,
-    *,
-    user_id: UUID,
-    deployment_provider_account_id: UUID,
-    name: str,
-) -> bool:
-    stmt = select(Deployment.id).where(
-        Deployment.user_id == user_id,
-        Deployment.deployment_provider_account_id == deployment_provider_account_id,
-        Deployment.name == name.strip(),
-    )
-    return (await db.exec(stmt)).first() is not None
 
 
 async def get_deployment_by_resource_key(
@@ -127,7 +115,7 @@ async def update_deployment(
     db: AsyncSession,
     *,
     deployment: Deployment,
-    name: str | None = None,
+    display_name: str | None = None,
     project_id: UUID | None = None,
     deployment_type: DeploymentType | object = _UNSET,
     description: str | None | object = _UNSET,
@@ -145,8 +133,8 @@ async def update_deployment(
         new_provider_account_id=deployment.deployment_provider_account_id,
     )
 
-    if name is not None:
-        deployment.name = _strip_or_raise(name, "name")
+    if display_name is not None:
+        deployment.display_name = _strip_or_raise(display_name, "display_name")
     if project_id is not None:
         deployment.project_id = project_id
     if deployment_type is not _UNSET:
@@ -189,6 +177,8 @@ async def list_deployments_page(
     if limit <= 0:
         msg = "limit must be greater than 0"
         raise ValueError(msg)
+    # ``names`` is provider-name-only after display names become non-unique.
+    _ = names
 
     attachment_counts_subquery = (
         select(
@@ -218,8 +208,6 @@ async def list_deployments_page(
     )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
-    if names:
-        stmt = stmt.where(col(Deployment.name).in_(names))
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
@@ -358,14 +346,14 @@ async def count_deployments_by_provider(
     project_id: UUID | None = None,
     names: list[str] | None = None,
 ) -> int:
+    # ``names`` is provider-name-only after display names become non-unique.
+    _ = names
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
-    if names:
-        stmt = stmt.where(col(Deployment.name).in_(names))
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
