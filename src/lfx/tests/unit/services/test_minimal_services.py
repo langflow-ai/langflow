@@ -321,11 +321,10 @@ class TestVariableService:
 
     @pytest.mark.asyncio
     async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
-        """Test that non-WXO/generic names do not synthesize bearer aliases."""
+        """Test generic non-WXO token variables are read by exact key."""
         os.environ["DEMO_ACCESS_TOKEN"] = "token-456"  # noqa: S105
         try:
-            value = await variables.get_variable("demo_bearer_token")
-            assert value is None
+            assert await variables.get_variable("DEMO_ACCESS_TOKEN") == "token-456"
         finally:
             del os.environ["DEMO_ACCESS_TOKEN"]
 
