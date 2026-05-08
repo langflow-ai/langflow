@@ -288,6 +288,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-extensions-production",
+          label: "Production install pattern for Extensions",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },

@@ -90,16 +90,34 @@ def iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
 # ---------------------------------------------------------------------------
 
 
-def module_name_for(file_path: Path, bundle_root: Path, bundle_name: str, slot: str) -> str:
+DEFAULT_MODULE_NAMESPACE: str = "_lfx_ext"
+"""Default top-level package name for bundle modules in ``sys.modules``.
+
+Reload (LE-1018) overrides this with ``__reload_staging__.<reload_id>`` so a
+parallel load lands in an isolated namespace and Stage 3 can swap it in
+atomically without ever touching the live modules.
+"""
+
+
+def module_name_for(
+    file_path: Path,
+    bundle_root: Path,
+    bundle_name: str,
+    slot: str,
+    namespace: str = DEFAULT_MODULE_NAMESPACE,
+) -> str:
     """Build a stable, collision-resistant module name for a bundle file.
 
-    Shape: ``_lfx_ext.<slot>.<bundle>.<dotted relative path without .py>``.
-    The leading underscore-prefixed package keeps these out of the regular
+    Shape: ``<namespace>.<slot>.<bundle>.<dotted relative path without .py>``.
+    With the default namespace this is ``_lfx_ext.<slot>.<bundle>.<dotted>``;
+    the leading underscore-prefixed package keeps these out of the regular
     import namespace so a bundle named ``json`` doesn't shadow the stdlib.
+    Reload supplies a ``__reload_staging__.<id>`` namespace so Stage 1 lands
+    in an isolated subtree of ``sys.modules`` (LE-1018).
     """
     rel = file_path.relative_to(bundle_root).with_suffix("")
     dotted = ".".join(rel.parts)
-    return f"_lfx_ext.{slot}.{bundle_name}.{dotted}"
+    return f"{namespace}.{slot}.{bundle_name}.{dotted}"
 
 
 def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.ModuleType | None, ExtensionError | None]:
@@ -127,15 +145,25 @@ def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modul
             hint="Confirm that the path points at a regular .py file.",
         )
     module = importlib.util.module_from_spec(spec)
-    # Install in sys.modules so absolute imports of this module from within
-    # the bundle resolve.  Relative imports (``from .sibling import X``) are
-    # NOT supported in v0: the intermediate package entries are not
-    # registered as packages, so authors must use absolute references between
-    # bundle modules until that lands in a later milestone.
+    # Single-load-per-process contract: this assignment overwrites any prior
+    # entry under the same synthetic ``_lfx_ext.<slot>.<bundle>...`` name
+    # with no cleanup. Consumers holding a previous LoadedComponent.klass
+    # keep the old class object across reloads, so isinstance checks against
+    # newly-loaded instances will return False. LE-1018 reload owns the
+    # invalidation: it must scrub registry entries (and the matching
+    # ``_lfx_ext.<slot>.<bundle>.*`` sys.modules namespace) before calling
+    # back into this loader. Absolute imports only between bundle modules;
+    # relative imports unsupported.
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
-    except BaseException as exc:  # noqa: BLE001 - surface every import-time failure
+    except BaseException as exc:  # noqa: BLE001
+        # Deliberately broad: a bundle's top-level code may raise SystemExit,
+        # KeyboardInterrupt, or any other BaseException subclass. At server
+        # startup we want one bad bundle to surface as a typed error rather
+        # than abort the whole loader pass. Re-raising the user's interrupt
+        # is the wrong choice here because the loader runs before the user
+        # has any way to drive interruption; the trade-off is intentional.
         # Roll back the optimistic sys.modules entry on failure so a retry
         # does not pick up a half-initialized module.
         sys.modules.pop(module_name, None)

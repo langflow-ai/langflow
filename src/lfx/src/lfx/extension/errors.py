@@ -60,18 +60,28 @@ ERROR_CODES: frozenset[str] = frozenset(
         # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
+        "duplicate-distribution",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        "inline-path-missing",
+        "inline-path-unreadable",
+        "bundle-json-invalid",
         # init / dev CLI codes (LE-1016)
         "extension-target-exists",
         "extension-target-invalid",
         "local-extension-missing",
+        # Production install / discovery (LE-1022)
+        "installed-extension-immutable",
+        "seed-directory-immutable",
+        "seed-directory-not-found",
+        "duplicate-extension-id",
+        # Reload-specific codes (LE-1018)
+        "reload-in-progress",
+        "reload-bundle-not-installed",
+        "reload-bundle-name-mismatch",
+        "reload-source-missing",
     }
 )
-# NOTE: ``duplicate-distribution`` will be added with the installed-package
-# discovery flow once there is a startup path + events surface that can
-# actually emit it.  We hold the line that every registered code must have a
-# producer.
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +200,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Duplicate Component class name {content!r} in bundle {location}; "
         "component class names must be unique within a bundle."
     ),
+    "duplicate-distribution": (
+        "Two installed distributions share the canonical name {content!r}; "
+        "the lexicographically-first manifest path wins. Locations: {location}."
+    ),
     "duplicate-inline-bundle": (
         "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
         "first wins. Locations: {location}."
@@ -197,10 +211,35 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
     ),
+    "inline-path-missing": (
+        "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
+    ),
+    "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
+    "bundle-json-invalid": (
+        "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
+    ),
     "extension-target-exists": ("Cannot create extension at {location}: directory already exists and is not empty."),
     "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
     "local-extension-missing": (
         "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
+    ),
+    "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
+    "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
+    "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
+    "reload-in-progress": (
+        "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
+    ),
+    "reload-bundle-not-installed": (
+        "Cannot reload bundle {content!r}: it is not registered. "
+        "Install the extension first or pass an explicit source path."
+    ),
+    "reload-bundle-name-mismatch": (
+        "Reload source at {location} declares bundle name {content!r}, "
+        "which does not match the registered bundle being reloaded."
+    ),
+    "reload-source-missing": (
+        "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
     ),
 }
 
