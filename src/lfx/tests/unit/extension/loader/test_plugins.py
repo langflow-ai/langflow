@@ -21,6 +21,7 @@ from importlib import metadata as importlib_metadata
 from pathlib import Path
 
 from lfx.extension import (
+    filter_component_entry_points,
     filter_plugin_entry_points,
     installed_extension_roots,
     manifest_owning_distributions,
@@ -28,6 +29,24 @@ from lfx.extension import (
 from lfx.extension.loader._plugins import canonicalize_distribution
 
 from .conftest import FakeDist, FakeEntryPoint, make_installed_extension
+
+
+class _FakePluginComponent:
+    """Base class whose name ends in 'Component' -- triggers loader heuristic."""
+
+
+class _LegacyPluginComponent(_FakePluginComponent):
+    """Stands in for a legacy component-style entry-point value.
+
+    Inherits from a base whose name ends in 'Component' so
+    ``is_component_subclass`` recognizes it as a component class without
+    requiring the real heavyweight Component machinery.
+    """
+
+
+def _route_register(_app):
+    """Stands in for a non-component entry-point value (route registrar)."""
+
 
 # ---------------------------------------------------------------------------
 # installed_extension_roots
@@ -152,3 +171,63 @@ def test_canonicalize_distribution_matches_pep503() -> None:
 def test_importlib_metadata_distribution_is_available() -> None:
     """Sanity check that the stdlib API the precedence helpers rely on exists."""
     assert hasattr(importlib_metadata, "distributions")
+
+
+# ---------------------------------------------------------------------------
+# filter_component_entry_points: type-aware (the runtime AC test)
+# ---------------------------------------------------------------------------
+
+
+def test_component_filter_skips_only_component_entry_points(tmp_path: Path) -> None:
+    """AC: same distribution exposes BOTH a component EP and a non-component EP.
+
+    Manifest-shipping distribution -> component EP gets skipped (manifest
+    is the source of truth), but the non-component (route) EP keeps loading
+    via the legacy path. This is the case the previous reviewer flagged as
+    missing.
+    """
+    manifest_dist = make_installed_extension(tmp_path, "lfx-pilot")
+    component_ep = FakeEntryPoint("PilotComponent", manifest_dist, loaded_value=_LegacyPluginComponent)
+    route_ep = FakeEntryPoint("pilot_routes", manifest_dist, loaded_value=_route_register)
+
+    kept, skipped = filter_component_entry_points(
+        [component_ep, route_ep],
+        skip=manifest_owning_distributions(distributions=[manifest_dist]),
+    )
+    assert [ep.name for ep in kept] == ["pilot_routes"]
+    assert [ep.name for ep in skipped] == ["PilotComponent"]
+
+
+def test_component_filter_keeps_components_on_non_manifest_distribution(tmp_path: Path) -> None:
+    """A component EP on a distribution that does NOT ship a manifest stays kept.
+
+    The legacy ``langflow.plugins`` path is still the registration channel
+    for those distributions; filtering them would silently drop them.
+    """
+    other_dist = FakeDist("legacy-pkg", tmp_path, files=[Path("legacy_pkg/__init__.py")])
+    component_ep = FakeEntryPoint("LegacyComponent", other_dist, loaded_value=_LegacyPluginComponent)
+    kept, skipped = filter_component_entry_points([component_ep], skip=frozenset())
+    assert [ep.name for ep in kept] == ["LegacyComponent"]
+    assert skipped == []
+
+
+def test_component_filter_handles_unloadable_entry_point(tmp_path: Path) -> None:
+    """Defensive: an entry-point whose load() raises is treated as non-component.
+
+    The resulting partition keeps it (so the legacy loader can decide what
+    to do), rather than swallowing it as if it were component.
+    """
+
+    class _ExplodingEP(FakeEntryPoint):
+        def load(self) -> object:
+            msg = "boom"
+            raise RuntimeError(msg)
+
+    manifest_dist = make_installed_extension(tmp_path, "lfx-pilot")
+    bad_ep = _ExplodingEP("Boom", manifest_dist, loaded_value=None)
+    kept, skipped = filter_component_entry_points(
+        [bad_ep],
+        skip=manifest_owning_distributions(distributions=[manifest_dist]),
+    )
+    assert [ep.name for ep in kept] == ["Boom"]
+    assert skipped == []

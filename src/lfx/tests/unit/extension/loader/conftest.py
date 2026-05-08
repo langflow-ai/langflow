@@ -113,11 +113,21 @@ class FakeDist:
 
 
 class FakeEntryPoint:
-    """Minimal entry-point stand-in carrying ``name`` and ``dist`` only."""
+    """Minimal entry-point stand-in carrying ``name``, ``dist``, and a load() value.
 
-    def __init__(self, name: str, dist: FakeDist | None) -> None:
+    The optional ``loaded_value`` lets tests exercise the type-aware
+    :func:`filter_component_entry_points` partition: pass a Component
+    subclass to model a "legacy component entry-point" or a callable to
+    model a route registrar.
+    """
+
+    def __init__(self, name: str, dist: FakeDist | None, loaded_value: object | None = None) -> None:
         self.name = name
         self.dist = dist
+        self._loaded_value = loaded_value
+
+    def load(self) -> object:
+        return self._loaded_value
 
 
 def make_installed_extension(parent: Path, distribution_name: str) -> FakeDist:

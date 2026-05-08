@@ -30,6 +30,7 @@ from lfx.extension.loader._discovery import (
     iter_bundle_python_files,
     module_name_for,
 )
+from lfx.extension.loader._plugins import _resolve_distribution_roots
 from lfx.extension.loader._types import (
     SLOT_EXTRA,
     SLOT_OFFICIAL,
@@ -46,6 +47,7 @@ from lfx.extension.manifest import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+    from importlib import metadata as importlib_metadata
 
 
 logger = logging.getLogger(__name__)
@@ -443,4 +445,60 @@ def discover_inline_bundles(
             )
             results.append(result)
 
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Public entry point: load_installed_extensions (server-startup discovery)
+# ---------------------------------------------------------------------------
+
+
+def load_installed_extensions(
+    distributions: Iterable[importlib_metadata.Distribution] | None = None,
+) -> list[LoadResult]:
+    """Discover all installed Extensions and load them at the @official slot.
+
+    This is the startup-time discovery flow: it scans every distribution
+    in ``distributions`` (defaults to the live environment), finds those
+    that ship an ``extension.json``, and calls :func:`load_extension` on
+    each of their package roots.
+
+    Two distributions sharing a canonical name (broken venv) are resolved
+    by lexicographically-first manifest path (the "winner") and surface a
+    typed ``duplicate-distribution`` warning on the winner's
+    :class:`LoadResult`. The losing distribution's components are NOT
+    loaded; the warning's ``location`` field names every involved manifest
+    path so the operator can fix the conflict.
+
+    Args:
+        distributions: Override the distribution iterator (test seam).
+            Defaults to ``importlib.metadata.distributions()``.
+
+    Returns:
+        One :class:`LoadResult` per unique canonical distribution name.
+        Order is lexicographic by canonical name for determinism.
+    """
+    resolved = _resolve_distribution_roots(distributions)
+    results: list[LoadResult] = []
+    for canonical in sorted(resolved):
+        winner_root, manifests = resolved[canonical]
+        result = load_extension(winner_root, slot=SLOT_OFFICIAL, distribution=canonical)
+        if len(manifests) > 1:
+            paths_csv = ", ".join(str(m) for m in manifests)
+            result.warnings.append(
+                ExtensionError(
+                    code="duplicate-distribution",
+                    message=(
+                        f"Two installed distributions share the canonical name {canonical!r}; "
+                        f"loading from {manifests[0]} and ignoring the others."
+                    ),
+                    location=paths_csv,
+                    content=canonical,
+                    hint=(
+                        "Uninstall the duplicate distribution(s) or rename one so each canonical "
+                        "name maps to a single installed package."
+                    ),
+                )
+            )
+        results.append(result)
     return results

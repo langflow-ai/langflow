@@ -669,18 +669,24 @@ class Settings(BaseSettings):
         appended to the provided list if not already present. If the input list is empty or missing, it is
         set to an empty list.
         """
-        if os.getenv("LANGFLOW_COMPONENTS_PATH"):
+        env_value = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_value:
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if Path(langflow_component_path).exists() and langflow_component_path not in value:
-                if isinstance(langflow_component_path, list):
-                    for path in langflow_component_path:
-                        if path not in value:
-                            value.append(path)
-                    logger.debug(f"Extending {langflow_component_path} to components_path")
-                elif langflow_component_path not in value:
-                    value.append(langflow_component_path)
-                    logger.debug(f"Appending {langflow_component_path} to components_path")
+            # LE-1015: split on os.pathsep so multi-entry env vars
+            # ("/path/A:/path/B" on POSIX, "C:\\a;D:\\b" on Windows) are
+            # parsed as multiple components paths instead of one literal
+            # non-existent path. Empty segments (e.g. trailing pathsep) are
+            # ignored.
+            for raw_entry in env_value.split(os.pathsep):
+                entry = raw_entry.strip()
+                if not entry:
+                    continue
+                if not Path(entry).exists():
+                    logger.debug(f"Skipping non-existent components path: {entry}")
+                    continue
+                if entry not in value:
+                    value.append(entry)
+                    logger.debug(f"Appending {entry} to components_path")
 
         if not value:
             value = [BASE_COMPONENTS_PATH]

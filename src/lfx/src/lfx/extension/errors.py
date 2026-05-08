@@ -60,14 +60,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
+        "duplicate-distribution",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
     }
 )
-# NOTE: ``duplicate-distribution`` will be added with the installed-package
-# discovery flow once there is a startup path + events surface that can
-# actually emit it.  We hold the line that every registered code must have a
-# producer.
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +182,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "duplicate-component-name": (
         "Duplicate Component class name {content!r} in bundle {location}; "
         "component class names must be unique within a bundle."
+    ),
+    "duplicate-distribution": (
+        "Two installed distributions share the canonical name {content!r}; "
+        "the lexicographically-first manifest path wins. Locations: {location}."
     ),
     "duplicate-inline-bundle": (
         "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "

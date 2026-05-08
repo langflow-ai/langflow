@@ -17,13 +17,18 @@ import surface to reach for.
 
 from __future__ import annotations
 
+import logging
 import re
 from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from lfx.extension.loader._detection import is_component_subclass
+
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -73,12 +78,17 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
 
 
 def _distribution_canonical_name(dist: importlib_metadata.Distribution) -> str | None:
-    """Return the PEP-503-canonical name of a distribution, or ``None``."""
+    """Return the PEP-503-canonical name of a distribution, or ``None``.
+
+    Defensive: a non-string ``Name`` (e.g. a MagicMock in tests, or an
+    unusual metadata backend) returns ``None`` so the canonical-name
+    machinery doesn't crash an entry-point partition pass.
+    """
     try:
         raw = dist.metadata["Name"]
-    except (KeyError, AttributeError):
+    except (KeyError, AttributeError, TypeError):
         return None
-    if not raw:
+    if not isinstance(raw, str) or not raw:
         return None
     return canonicalize_distribution(raw)
 
@@ -93,11 +103,11 @@ def installed_extension_roots(
 ) -> dict[str, Path]:
     """Map canonical distribution name -> extension root for installed manifests.
 
-    Used by:
-        - the loader, to invoke :func:`load_extension` on every installed
-          bundle at server startup;
-        - the entry-point bridge, to skip ``langflow.plugins`` registrations
-          for distributions that ship a manifest (manifest-first precedence).
+    Used by the entry-point bridge to skip ``langflow.plugins`` registrations
+    for distributions that ship a manifest (manifest-first precedence).
+    The full discovery + warning surface used at server startup is
+    :func:`discover_installed_extensions` -- this primitive only returns the
+    resolved mapping, never warnings.
 
     Args:
         distributions: Override the distribution iterator (test seam).
@@ -105,19 +115,27 @@ def installed_extension_roots(
 
     Returns:
         Dict keyed by canonical distribution name; the value is the
-        directory containing ``extension.json``.  When a single distribution
-        ships more than one ``extension.json`` (atypical but not forbidden),
-        the lexicographically-first manifest path wins for determinism.
+        directory containing ``extension.json``.  When two distributions
+        share a canonical name (broken venv), the lexicographically-first
+        manifest path wins for determinism.
+    """
+    return {name: root for name, (root, _) in _resolve_distribution_roots(distributions).items()}
+
+
+def _resolve_distribution_roots(
+    distributions: Iterable[importlib_metadata.Distribution] | None,
+) -> dict[str, tuple[Path, list[Path]]]:
+    """Inner helper: resolve roots and collect duplicate manifest paths.
+
+    Returns a dict keyed by canonical name, value is
+    ``(winning_root, list_of_all_manifest_paths)``.  When the list has more
+    than one entry, the canonical name was claimed by multiple distributions
+    and the caller may surface ``duplicate-distribution`` warnings.
     """
     if distributions is None:
         distributions = importlib_metadata.distributions()
 
-    # Two distributions with the same canonical name (rare but possible in
-    # broken venvs) are resolved by keeping the lexicographically-first
-    # manifest path for determinism.  The startup-time discovery flow will
-    # surface the conflict as a typed warning when it lands; this primitive
-    # only returns the resolved mapping, never an error.
-    found: dict[str, tuple[Path, str]] = {}
+    intermediate: dict[str, list[Path]] = {}
     for dist in distributions:
         manifest_path = _distribution_manifest_path(dist)
         if manifest_path is None:
@@ -125,12 +143,14 @@ def installed_extension_roots(
         canonical = _distribution_canonical_name(dist)
         if canonical is None:
             continue
-        root = manifest_path.parent
-        existing = found.get(canonical)
-        if existing is None or str(manifest_path) < existing[1]:
-            found[canonical] = (root, str(manifest_path))
+        intermediate.setdefault(canonical, []).append(manifest_path)
 
-    return {name: root for name, (root, _) in found.items()}
+    resolved: dict[str, tuple[Path, list[Path]]] = {}
+    for canonical, manifests in intermediate.items():
+        sorted_manifests = sorted(manifests, key=str)
+        winner = sorted_manifests[0].parent
+        resolved[canonical] = (winner, sorted_manifests)
+    return resolved
 
 
 def manifest_owning_distributions(
@@ -185,6 +205,73 @@ def filter_plugin_entry_points(
             kept.append(ep)
             continue
         if canonical in skip_set:
+            skipped.append(ep)
+        else:
+            kept.append(ep)
+    return kept, skipped
+
+
+def _entry_point_loads_to_component(ep: importlib_metadata.EntryPoint) -> bool:
+    """Try to load ``ep`` and decide whether the loaded value is a Component.
+
+    Defensive: any load-time failure returns False so the entry-point is
+    treated as non-component (kept) by the caller. Surfacing the failure
+    as a typed error belongs to the layer that actually wants to load the
+    component (LE-1015 loader proper); this helper exists only to drive
+    manifest-first precedence for runtime entry-point consumers.
+    """
+    try:
+        value = ep.load()
+    except BaseException as exc:  # noqa: BLE001
+        # Same trade-off as the bundle loader: at startup we never want
+        # one bad entry-point to abort the whole filter pass.
+        logger.debug("Could not load entry-point %r for component check: %s", ep.name, exc)
+        return False
+    return is_component_subclass(value)
+
+
+def filter_component_entry_points(
+    entry_points: Iterable[importlib_metadata.EntryPoint],
+    *,
+    skip: Iterable[str] | None = None,
+    is_component: Callable[[importlib_metadata.EntryPoint], bool] | None = None,
+) -> tuple[list[importlib_metadata.EntryPoint], list[importlib_metadata.EntryPoint]]:
+    """Type-aware partition: skip COMPONENT entry-points on manifest-shipping dists.
+
+    Where :func:`filter_plugin_entry_points` partitions by distribution name
+    only, this function additionally inspects each entry-point's loaded
+    value: only those that load to a Component subclass are eligible for
+    skipping. This is the function runtime callers (``plugin_routes`` etc.)
+    should use so that non-component entry-points (routes, services, hooks)
+    on a manifest-shipping distribution still load through the legacy path,
+    per the AC's "non-component entry-points are unaffected" promise.
+
+    Args:
+        entry_points: Entry points from ``importlib.metadata.entry_points``.
+        skip: Canonical distribution names whose component entry-points
+            should be skipped. Defaults to
+            :func:`manifest_owning_distributions`.
+        is_component: Predicate that loads + inspects an EP. Defaults to
+            :func:`_entry_point_loads_to_component`. Test seam.
+
+    Returns:
+        ``(kept, skipped)``. Stable ordering preserved within each list.
+    """
+    skip_set = frozenset(skip) if skip is not None else manifest_owning_distributions()
+    is_component_fn = is_component if is_component is not None else _entry_point_loads_to_component
+
+    kept: list[importlib_metadata.EntryPoint] = []
+    skipped: list[importlib_metadata.EntryPoint] = []
+    for ep in entry_points:
+        dist = getattr(ep, "dist", None)
+        if dist is None:
+            kept.append(ep)
+            continue
+        canonical = _distribution_canonical_name(dist)
+        if canonical is None:
+            kept.append(ep)
+            continue
+        if canonical in skip_set and is_component_fn(ep):
             skipped.append(ep)
         else:
             kept.append(ep)

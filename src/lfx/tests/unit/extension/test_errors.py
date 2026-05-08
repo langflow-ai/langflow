@@ -77,6 +77,7 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
     "module-import-failed": "error[module-import-failed]: Failed to import bundle module loc: msg",
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
+    "duplicate-distribution": "error[duplicate-distribution]: Two installed distributions share the canonical name 'content'; the lexicographically-first manifest path wins. Locations: loc.",  # noqa: E501
     "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
     "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
 }
