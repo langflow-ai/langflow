@@ -17,7 +17,7 @@ export function AssistantNoModelsState() {
       <div className="mb-6 flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl">
         <img
           src={langflowAssistantIcon}
-          alt="Langflow Assistant"
+          alt={t("assistant.title")}
           className="h-full w-full object-cover"
         />
       </div>

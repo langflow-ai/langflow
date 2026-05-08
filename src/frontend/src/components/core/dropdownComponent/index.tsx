@@ -447,7 +447,7 @@ export default function Dropdown({
       <input
         onChange={searchRoleByTerm}
         onKeyDown={handleInputKeyDown}
-        placeholder="Search options..."
+        placeholder={t("input.searchOptions")}
         className="flex h-9 w-full rounded-md bg-transparent py-3 text-[13px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
         autoComplete="off"
         data-testid="dropdown_search_input"

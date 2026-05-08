@@ -260,7 +260,7 @@ export function AssistantMessageItem({
           <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img
               src={langflowAssistantIcon}
-              alt="Langflow Assistant"
+              alt={t("assistant.title")}
               className="h-full w-full object-cover"
             />
           </div>

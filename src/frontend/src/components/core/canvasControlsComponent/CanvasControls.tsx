@@ -107,7 +107,7 @@ const CanvasControls = ({
             {/* Colorful icon - hover state */}
             <img
               src={langflowAssistantIcon}
-              alt="Langflow Assistant"
+              alt={t("assistant.title")}
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-150 group-hover:opacity-100"
             />
           </Button>
