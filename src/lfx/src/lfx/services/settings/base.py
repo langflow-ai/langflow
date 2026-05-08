@@ -682,7 +682,12 @@ class Settings(BaseSettings):
                 if not entry:
                     continue
                 if not Path(entry).exists():
-                    logger.debug(f"Skipping non-existent components path: {entry}")
+                    # Surface at warning so a typo in LANGFLOW_COMPONENTS_PATH
+                    # is visible in default log levels rather than silently
+                    # producing zero components and zero diagnostics. The
+                    # extension loader emits a typed ``inline-path-missing``
+                    # warning at the same layer for events-pipeline consumers.
+                    logger.warning(f"Skipping non-existent components path: {entry}")
                     continue
                 if entry not in value:
                     value.append(entry)

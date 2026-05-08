@@ -63,6 +63,8 @@ ERROR_CODES: frozenset[str] = frozenset(
         "duplicate-distribution",
         "duplicate-inline-bundle",
         "inline-bundle-name-invalid",
+        "inline-path-missing",
+        "bundle-json-invalid",
     }
 )
 
@@ -193,6 +195,12 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "inline-bundle-name-invalid": (
         "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "inline-path-missing": (
+        "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
+    ),
+    "bundle-json-invalid": (
+        "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
     ),
 }
 

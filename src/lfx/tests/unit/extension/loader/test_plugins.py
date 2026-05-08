@@ -243,17 +243,18 @@ def test_keeps_entry_points_without_distribution() -> None:
 def test_uses_real_distributions_by_default(tmp_path: Path) -> None:
     """When ``skip`` is omitted, the filter consults the real environment.
 
-    The default value calls into ``importlib.metadata.distributions``; we
-    don't expect any test-runtime distribution to ship an extension
-    manifest, so the result is a no-op partition (everything kept).  This
-    exercises the default-path code without coupling the test to the host
-    environment's installed packages.
+    The default value calls into ``importlib.metadata.distributions``;
+    Langflow itself does not ship an extension manifest today, but if a
+    transitive test-only dep ever does, ``kept`` / ``skipped`` could pick
+    up additional entries we don't control. Robust assertion: pin the
+    synthetic ``ep``'s placement (kept, not skipped) without requiring the
+    output lists to be exactly ``[ep]`` / ``[]``.
     """
     plain = FakeDist("plain-pkg", tmp_path, files=[Path("plain_pkg/__init__.py")])
     ep = FakeEntryPoint("PlainComponent", plain)
     kept, skipped = filter_plugin_entry_points([ep])
-    assert kept == [ep]
-    assert skipped == []
+    assert ep in kept
+    assert ep not in skipped
 
 
 # ---------------------------------------------------------------------------

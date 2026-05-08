@@ -57,6 +57,30 @@ def test_walk_order_is_lexicographic(tmp_path: Path) -> None:
     assert names == ["alpha", "mike", "zeta"]
 
 
+def test_user_declared_path_order_is_preserved(tmp_path: Path) -> None:
+    """AC #8: user-declared path list order is preserved across paths.
+
+    Distinct bundle names in two paths -> ``[path_b, path_a]`` produces
+    results in the order the user declared them, not a global lex sort.
+    Catches a future refactor that accidentally sorts paths globally.
+    """
+    path_a = tmp_path / "first"
+    path_b = tmp_path / "second"
+    path_a.mkdir()
+    path_b.mkdir()
+    # Each path holds a uniquely-named bundle so duplicate-resolution
+    # never kicks in -- the assertion is purely about path order.
+    make_inline_bundle(path_a, "alpha")
+    make_inline_bundle(path_b, "zeta")
+
+    # Reverse user-declared order: path_b first, then path_a.
+    results = discover_inline_bundles([path_b, path_a])
+    names = [r.bundle for r in results]
+    # Path order beats lex order: zeta (from path_b) appears before alpha
+    # (from path_a) because the user declared path_b first.
+    assert names == ["zeta", "alpha"]
+
+
 def test_first_wins_emits_duplicate_warning(tmp_path: Path) -> None:
     first = tmp_path / "first"
     second = tmp_path / "second"
@@ -108,11 +132,61 @@ def test_respects_bundle_json(tmp_path: Path) -> None:
     assert results[0].extension_version == "9.9.9"
 
 
+def test_inline_module_import_failure_attributes_identity(tmp_path: Path) -> None:
+    """AC #10: load results carry extension_id/bundle on partial failure (@extra).
+
+    Mirror of test_module_import_failure (which covers @official) for the
+    inline-bundle path: a broken.py that raises at import time produces
+    a typed ``module-import-failed`` error AND the LoadResult still
+    carries the bundle identity so the events pipeline can attribute the
+    failure to a specific source.
+    """
+    parent = tmp_path / "p"
+    parent.mkdir()
+    make_inline_bundle(
+        parent,
+        "alpha",
+        files={
+            # One healthy file plus one that blows up at import-time.
+            "thing.py": "class Component:\n    pass\nclass Thing(Component):\n    pass\n",
+            "broken.py": "raise RuntimeError('boom at import')\n",
+        },
+    )
+    results = discover_inline_bundles([parent])
+    assert len(results) == 1
+    result = results[0]
+    # Identity is attributed even though one file failed to import.
+    assert result.bundle == "alpha"
+    assert result.extension_id == "alpha"  # default-derived from dir name
+    assert result.extension_version  # at least the default "0.0.0"
+    # Typed error surfaced.
+    codes = [e.code for e in result.errors]
+    assert "module-import-failed" in codes
+    failure = next(e for e in result.errors if e.code == "module-import-failed")
+    assert "boom at import" in failure.message
+    assert failure.hint  # AC: fix-hint payload
+    # Healthy sibling still loaded.
+    assert any(c.class_name == "Thing" for c in result.components)
+
+
 def test_handles_none_paths() -> None:
     assert discover_inline_bundles(None) == []
 
 
-def test_skips_non_existent_path(tmp_path: Path) -> None:
+def test_non_existent_path_emits_inline_path_missing(tmp_path: Path) -> None:
+    """A non-existent or non-dir path produces a typed warning, not silent skip.
+
+    A typo in LANGFLOW_COMPONENTS_PATH would otherwise yield zero
+    components and zero diagnostics -- the AC item the second reviewer
+    flagged as a tough debug experience.
+    """
     bogus = tmp_path / "does-not-exist"
     results = discover_inline_bundles([bogus])
-    assert results == []
+    assert len(results) == 1
+    result = results[0]
+    # Path-level diagnostic: no bundle was identified.
+    assert result.bundle is None
+    assert any(w.code == "inline-path-missing" for w in result.warnings)
+    warning = next(w for w in result.warnings if w.code == "inline-path-missing")
+    assert str(bogus) in warning.location
+    assert warning.hint  # AC: fix-hint payload

@@ -146,12 +146,18 @@ def _load_bundle_directory(
     # class_name -> first-seen LoadedComponent (for duplicate detection).
     seen_classes: dict[str, LoadedComponent] = {}
     found_any_component = False
+    # Track call-local failures so the no-component-subclass diagnostic stays
+    # accurate when a future caller reuses a LoadResult (e.g. multi-bundle or
+    # a batch wrapper) and the aggregate ``result.errors`` list already has
+    # entries from a sibling call.
+    call_local_errors_emitted = 0
 
     for file_path in files:
         module_name = module_name_for(file_path, bundle_root, bundle_name, slot)
         module, import_error = import_bundle_module(module_name, file_path)
         if import_error is not None:
             result.errors.append(import_error)
+            call_local_errors_emitted += 1
             continue
 
         for klass in collect_component_classes(module):
@@ -182,14 +188,17 @@ def _load_bundle_directory(
                         hint=("Rename one of the component classes; class names must be unique within a bundle."),
                     )
                 )
+                call_local_errors_emitted += 1
                 continue
             seen_classes[class_name] = loaded
             result.components.append(loaded)
             found_any_component = True
 
-    if not found_any_component and not result.errors:
+    if not found_any_component and call_local_errors_emitted == 0:
         # Only emit the "no Component subclass" error if no other failure
-        # already explained why the bundle yielded nothing.
+        # *from this call* already explained why the bundle yielded nothing.
+        # Gating on the aggregate ``result.errors`` would silently drop this
+        # diagnostic when a caller reuses a LoadResult.
         result.errors.append(
             ExtensionError(
                 code="no-component-subclass",
@@ -318,24 +327,49 @@ def load_extension(
 _INLINE_BUNDLE_DEFAULT_VERSION = "0.0.0"
 
 
-def _read_inline_bundle_json(bundle_root: Path) -> dict[str, str]:
+def _read_inline_bundle_json(
+    bundle_root: Path,
+    *,
+    result: LoadResult | None = None,
+) -> dict[str, str]:
     """Read optional ``bundle.json`` from a LANGFLOW_COMPONENTS_PATH bundle.
 
-    Best-effort: a malformed file yields the defaults plus a warning would
-    be ideal, but inline bundles are dev-only and a malformed bundle.json
-    silently falls back to defaults to keep the dev loop moving.  The CLI
-    surface (``extension validate``) is the right place to lint these.
+    A malformed or non-object file falls back to derived defaults so the
+    dev loop keeps moving (the CLI ``extension validate`` is the right
+    place for an authoritative lint), but if a ``result`` is provided the
+    misconfig is also surfaced as a typed ``bundle-json-invalid`` warning
+    so a developer who typo'd JSON gets a working-looking bundle without
+    silent identity rewrites.
     """
     candidate = bundle_root / "bundle.json"
     if not candidate.is_file():
         return {}
+
+    def _warn(detail: str) -> None:
+        if result is None:
+            return
+        result.warnings.append(
+            ExtensionError(
+                code="bundle-json-invalid",
+                message=f"bundle.json at {candidate} ignored: {detail}",
+                location=str(candidate),
+                content=str(candidate),
+                hint=(
+                    "Fix the JSON syntax or the schema (top-level must be an object) "
+                    "or remove bundle.json to use the directory-derived id/version."
+                ),
+            )
+        )
+
     try:
         data = json.loads(candidate.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         logger.debug("Ignoring malformed bundle.json at %s: %s", candidate, exc)
+        _warn(f"{type(exc).__name__}: {exc}")
         return {}
     if not isinstance(data, dict):
         logger.debug("Ignoring bundle.json at %s: top-level value is not an object", candidate)
+        _warn("top-level value is not an object")
         return {}
     return {k: v for k, v in data.items() if isinstance(v, str)}
 
@@ -371,9 +405,28 @@ def discover_inline_bundles(
     for path in paths:
         path_obj = Path(path).resolve()
         if not path_obj.is_dir():
-            # Silently skip non-existent paths; consistent with the existing
-            # LANGFLOW_COMPONENTS_PATH resolver in services/settings/base.py
-            # which only appends paths that exist.
+            # The settings layer also filters non-existent entries, but a
+            # typo here would otherwise produce zero components and zero
+            # diagnostics -- a tough debug experience. Surface a typed
+            # warning per skipped path so the operator sees what got
+            # ignored. The result has no bundle (we never identified one)
+            # so the events pipeline emits this as a path-level diagnostic.
+            missing_result = LoadResult(slot=SLOT_EXTRA, source_path=path_obj)
+            missing_result.warnings.append(
+                ExtensionError(
+                    code="inline-path-missing",
+                    message=(
+                        f"LANGFLOW_COMPONENTS_PATH entry {path_obj} does not exist or is not a directory; skipped."
+                    ),
+                    location=str(path_obj),
+                    content=str(path_obj),
+                    hint=(
+                        "Remove the path from LANGFLOW_COMPONENTS_PATH or create the "
+                        "directory; the loader needs an existing parent dir to scan."
+                    ),
+                )
+            )
+            results.append(missing_result)
             continue
 
         try:
@@ -426,7 +479,7 @@ def discover_inline_bundles(
 
             seen_names[name] = child
 
-            bundle_meta = _read_inline_bundle_json(child)
+            bundle_meta = _read_inline_bundle_json(child, result=result)
             extension_id = bundle_meta.get("id") or name
             extension_version = bundle_meta.get("version") or _INLINE_BUNDLE_DEFAULT_VERSION
 
