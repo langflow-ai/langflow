@@ -196,10 +196,7 @@ const NodeToolbarComponent = memo(
         updateNodeInternals(data.id);
         return;
       }
-      setNoticeData({
-        title:
-          "Minimization is only available for components with one active connection or fewer.",
-      });
+      setNoticeData({ title: t("node.minimizeNotAvailable") });
     }, [isMinimal, showNode, data.id]);
 
     useEffect(() => {
@@ -244,13 +241,11 @@ const NodeToolbarComponent = memo(
 
     const handleCodeModal = useCallback(() => {
       if (!hasCode) {
-        setNoticeData({ title: `You can not access ${data.id} code` });
+        setNoticeData({ title: t("node.cannotAccessCode", { id: data.id }) });
         return;
       }
       if (!allowCustomComponents) {
-        setNoticeData({
-          title: `Custom component editing is disabled`,
-        });
+        setNoticeData({ title: t("node.customComponentEditingDisabled") });
         return;
       }
       setOpenModal((state) => !state);
@@ -272,23 +267,27 @@ const NodeToolbarComponent = memo(
       if (data.node?.documentation) {
         return customOpenNewTab(data.node.documentation);
       }
-      setNoticeData({
-        title: `${data.id} docs is not available at the moment.`,
-      });
+      setNoticeData({ title: t("node.docsUnavailable", { id: data.id }) });
     }, [data.id, data.node?.documentation]);
 
     const handleDownloadNode = useCallback(async () => {
       try {
         await downloadNode(flowComponent!);
         setSuccessData({
-          title: `${flowComponent?.name || "Node"} downloaded successfully`,
+          title: t("node.downloadSuccess", {
+            name: flowComponent?.name || "Node",
+          }),
         });
       } catch (error) {
         console.error("Error downloading node:", error);
         const nodeName = flowComponent?.name || "Node";
         setErrorData({
-          title: `Failed to download ${nodeName}`,
-          list: [error instanceof Error ? error.message : "Unknown error"],
+          title: t("node.downloadFailed", { name: nodeName }),
+          list: [
+            error instanceof Error
+              ? error.message
+              : t("node.downloadUnknownError"),
+          ],
         });
       }
     }, [flowComponent]);

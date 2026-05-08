@@ -100,20 +100,21 @@ const ToolbarModals = memo(
         {showOverrideModal && (
           <ConfirmationModal
             open={showOverrideModal}
-            title="Replace"
+            title={t("flow.replaceComponent")}
             onConfirm={handleConfirm}
             onClose={handleClose}
             onCancel={handleCancel}
-            cancelText="Create New"
-            confirmationText="Replace"
+            cancelText={t("node.createNew")}
+            confirmationText={t("flow.replaceComponent")}
             size="x-small"
             icon="SaveAll"
             index={6}
           >
             <ConfirmationModal.Content>
               <span>
-                It seems {data.node?.display_name} already exists. Do you want
-                to replace it with the current or create a new one?
+                {t("node.replaceConfirmBody", {
+                  name: data.node?.display_name,
+                })}
               </span>
             </ConfirmationModal.Content>
           </ConfirmationModal>
