@@ -24,8 +24,8 @@ const LanguageSelect = ({
   return (
     <div className="grid w-full items-center gap-2">
       <span className="flex w-full items-center text-sm">
-        Preferred Language
-        <ShadTooltip content="Select the language for speech recognition">
+        {t("voice.preferredLanguageLabel")}
+        <ShadTooltip content={t("voice.languageSelectTooltip")}>
           <div>
             <IconComponent
               name="Info"

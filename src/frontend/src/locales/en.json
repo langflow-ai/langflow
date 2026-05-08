@@ -1356,5 +1356,22 @@
   "chat.copied": "Copied!",
   "chat.copyMessage": "Copy message",
   "chat.helpful": "Helpful",
-  "chat.notHelpful": "Not helpful"
+  "chat.notHelpful": "Not helpful",
+  "voice.audioSettings": "Audio Settings",
+  "voice.settingsTitle": "Voice settings",
+  "voice.settingsDescription": "Voice chat is powered by OpenAI. You can also add more voices with ElevenLabs.",
+  "voice.voiceLabel": "Voice",
+  "voice.voiceSelectTooltip": "You can select ElevenLabs voices if you have an ElevenLabs API key. Otherwise, you can only select OpenAI voices.",
+  "voice.preferredLanguageLabel": "Preferred Language",
+  "voice.languageSelectTooltip": "Select the language for speech recognition",
+  "voice.audioInputLabel": "Audio Input",
+  "voice.microphoneSelectTooltip": "Select which microphone to use for voice input",
+  "voice.noMicrophonesFound": "No microphones found",
+  "voice.openaiApiKeyLabel": "OpenAI API Key",
+  "voice.openaiKeyTooltip": "OpenAI API key is required to use the voice assistant.",
+  "voice.openaiApiKeyPlaceholder": "Enter your OpenAI API key",
+  "voice.elevenLabsApiKeyLabel": "ElevenLabs API Key",
+  "voice.elevenLabsKeyTooltip": "If you have an ElevenLabs API key, you can select ElevenLabs voices.",
+  "voice.elevenLabsApiKeyPlaceholder": "Enter your ElevenLabs API key",
+  "voice.globalVariables": "Global Variables"
 }

@@ -76,8 +76,8 @@ const MicrophoneSelect = ({
       data-testid="voice-assistant-settings-modal-microphone-select"
     >
       <span className="flex w-full items-center text-sm">
-        Audio Input
-        <ShadTooltip content="Select which microphone to use for voice input">
+        {t("voice.audioInputLabel")}
+        <ShadTooltip content={t("voice.microphoneSelectTooltip")}>
           <div>
             <IconComponent
               name="Info"
@@ -104,7 +104,7 @@ const MicrophoneSelect = ({
             ))}
             {microphones?.length === 0 && (
               <SelectItem value="no-microphones" disabled>
-                No microphones found
+                {t("voice.noMicrophonesFound")}
               </SelectItem>
             )}
           </SelectGroup>
