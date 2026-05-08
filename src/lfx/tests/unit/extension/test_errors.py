@@ -75,6 +75,10 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "import-star-disallowed": "error[import-star-disallowed]: Top-level wildcard import in loc: content",
     "top-level-io-disallowed": "error[top-level-io-disallowed]: Top-level I/O primitive 'content' used in loc; bundle module import must be side-effect free.",  # noqa: E501
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
+    "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
+    "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
+    "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501
+    "duplicate-extension-id": "error[duplicate-extension-id]: Extension id 'content' is registered more than once (already at loc).",  # noqa: E501
 }
 
 

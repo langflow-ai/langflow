@@ -57,6 +57,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
+        # Production install / discovery (LE-1022)
+        "installed-extension-immutable",
+        "seed-directory-immutable",
+        "seed-directory-not-found",
+        "duplicate-extension-id",
     }
 )
 
@@ -172,6 +177,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Top-level I/O primitive {content!r} used in {location}; bundle module import must be side-effect free."
     ),
     "execute-imports-failed": ("Subprocess import probe (--execute-imports) failed for {location}: {message}"),
+    "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
+    "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
+    "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
 }
 
 
