@@ -33,6 +33,7 @@ from .conftest import (
     FakeEntryPoint,
     make_installed_extension,
     make_installed_pyproject_extension,
+    make_installed_pyproject_malformed_extension,
     make_installed_pyproject_no_extension,
 )
 
@@ -109,6 +110,58 @@ def test_pyproject_without_extension_section_is_ignored(tmp_path: Path) -> None:
     dist = make_installed_pyproject_no_extension(tmp_path, "plain-pyproject")
     roots = installed_extension_roots(distributions=[dist])
     assert roots == {}
+
+
+def test_malformed_pyproject_section_surfaces_manifest_invalid(tmp_path: Path) -> None:
+    """A pyproject with [tool.langflow.extension] missing required fields surfaces manifest-invalid.
+
+    Detection MUST be presence-only: if the section exists but pydantic
+    validation fails, the distribution is still discovered as a
+    manifest-shipping Extension and ``load_installed_extensions`` produces
+    a typed ``manifest-invalid`` :class:`LoadResult`. Conflating "section
+    absent" with "section malformed" would silently drop the
+    distribution, hiding the typo from operators and skipping the
+    manifest-first suppression of legacy component entry-points.
+    """
+    from lfx.extension import load_installed_extensions
+
+    dist = make_installed_pyproject_malformed_extension(tmp_path, "lfx-bad-pyproject")
+    # Discovery must classify the distribution as manifest-shipping despite
+    # the broken section, so manifest-first precedence still suppresses any
+    # legacy entry-points it might have.
+    owners = manifest_owning_distributions(distributions=[dist])
+    assert "lfx-bad-pyproject" in owners
+
+    # And load_installed_extensions must produce a typed failure result, not
+    # silently return an empty list.
+    results = load_installed_extensions(distributions=[dist])
+    assert len(results) == 1, f"expected exactly one LoadResult, got {results}"
+    result = results[0]
+    assert not result.ok
+    codes = [e.code for e in result.errors]
+    assert "manifest-invalid" in codes, codes
+    assert result.distribution == "lfx-bad-pyproject"
+    err = next(e for e in result.errors if e.code == "manifest-invalid")
+    assert err.hint  # AC: fix-hint payload on failure
+    assert err.ref_url
+
+
+def test_malformed_pyproject_section_suppresses_legacy_component_entry_point(tmp_path: Path) -> None:
+    """Manifest-first precedence applies even when the pyproject manifest is malformed.
+
+    If the section exists, the distribution is manifest-shipping by intent;
+    its legacy ``langflow.plugins`` component entry-points must be
+    suppressed regardless of whether the manifest itself validates --
+    otherwise the AC's "loaded once via manifest" promise breaks for any
+    pyproject author who typo'd a field.
+    """
+    dist = make_installed_pyproject_malformed_extension(tmp_path, "lfx-bad-pyproject")
+    component_ep = FakeEntryPoint("BadComp", dist, loaded_value=_LegacyPluginComponent)
+
+    owners = manifest_owning_distributions(distributions=[dist])
+    kept, skipped = filter_component_entry_points([component_ep], skip=owners)
+    assert [ep.name for ep in skipped] == ["BadComp"]
+    assert kept == []
 
 
 def test_extension_json_wins_over_pyproject(tmp_path: Path) -> None:

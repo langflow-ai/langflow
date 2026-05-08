@@ -209,6 +209,37 @@ def make_installed_pyproject_no_extension(parent: Path, distribution_name: str) 
     )
 
 
+def make_installed_pyproject_malformed_extension(
+    parent: Path,
+    distribution_name: str,
+) -> FakeDist:
+    """Fake distribution shipping pyproject with [tool.langflow.extension] missing required fields.
+
+    The section exists (so the loader must classify it as a manifest-shipping
+    distribution) but the required ``id`` / ``version`` / ``bundles`` keys are
+    missing. ``load_extension`` is expected to surface ``manifest-invalid`` --
+    NOT silently drop the distribution.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    (pkg_dir / "pyproject.toml").write_text(
+        f"""\
+[project]
+name = "{distribution_name}"
+
+[tool.langflow.extension]
+# Intentionally missing id/version/lfx/bundles -- pydantic must reject.
+description = "incomplete"
+""",
+        encoding="utf-8",
+    )
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Autouse: scrub loader-installed modules between tests
 # ---------------------------------------------------------------------------

@@ -104,23 +104,44 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
 
 
 def _pyproject_has_extension_section(pyproject_path: Path) -> bool:
-    """Return True iff ``pyproject_path`` has a parseable ``[tool.langflow.extension]``.
+    """Return True iff ``pyproject_path`` declares ``[tool.langflow.extension]``.
 
-    Uses :func:`load_manifest` so the validation rule lives in exactly one
-    place. A pyproject without the section, or one whose section is malformed,
-    returns False so the distribution is treated as a regular non-manifest
-    package.
+    Detects section *presence* only -- intentionally does NOT run schema
+    validation. A pyproject whose ``[tool.langflow.extension]`` section
+    exists but has missing/invalid required fields still returns True so
+    the caller registers it as a manifest-shipping distribution; the
+    typed ``manifest-invalid`` error is then surfaced by
+    :func:`load_extension`'s normal failure path. Conflating "section
+    absent" with "section malformed" would silently drop pyproject-form
+    Extensions whose authors typo'd a field.
+
+    Behavior matrix:
+        - Section absent or pyproject TOML unparseable -> False (treat as
+          a regular non-manifest package).
+        - Section present and is a table (valid or schema-invalid) -> True.
+        - Section present but is not a table (e.g. list) -> True; the
+          author clearly intended to declare an extension and the
+          downstream loader should report it.
     """
     # Imported here rather than at module level to avoid a potential cycle:
     # manifest.py -> errors.py -> extension/__init__.py -> loader/__init__.py
     # would otherwise route back through this module during package init.
-    from lfx.extension.manifest import load_manifest
+    from lfx.extension.manifest import _read_pyproject_extension
 
     try:
-        source = load_manifest(pyproject_path.parent)
-    except (FileNotFoundError, ValueError, TypeError, OSError):
+        section = _read_pyproject_extension(pyproject_path)
+    except ValueError:
+        # Unparseable TOML: not specifically a langflow extension issue,
+        # let the rest of the system treat it as a regular package.
         return False
-    return source.kind == "pyproject.toml"
+    except TypeError:
+        # [tool.langflow.extension] exists but isn't a table. The author
+        # intended to declare an extension; let load_extension produce
+        # the typed manifest-invalid error rather than silently drop.
+        return True
+    except OSError:
+        return False
+    return section is not None
 
 
 def _distribution_canonical_name(dist: importlib_metadata.Distribution) -> str | None:
