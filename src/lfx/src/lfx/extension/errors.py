@@ -57,6 +57,15 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
+        # Loader-specific codes
+        "module-import-failed",
+        "duplicate-component-name",
+        "duplicate-distribution",
+        "duplicate-inline-bundle",
+        "inline-bundle-name-invalid",
+        "inline-path-missing",
+        "inline-path-unreadable",
+        "bundle-json-invalid",
         # Production install / discovery (LE-1022)
         "installed-extension-immutable",
         "seed-directory-immutable",
@@ -177,6 +186,29 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Top-level I/O primitive {content!r} used in {location}; bundle module import must be side-effect free."
     ),
     "execute-imports-failed": ("Subprocess import probe (--execute-imports) failed for {location}: {message}"),
+    "module-import-failed": ("Failed to import bundle module {location}: {message}"),
+    "duplicate-component-name": (
+        "Duplicate Component class name {content!r} in bundle {location}; "
+        "component class names must be unique within a bundle."
+    ),
+    "duplicate-distribution": (
+        "Two installed distributions share the canonical name {content!r}; "
+        "the lexicographically-first manifest path wins. Locations: {location}."
+    ),
+    "duplicate-inline-bundle": (
+        "Inline bundle name {content!r} appears in multiple LANGFLOW_COMPONENTS_PATH entries; "
+        "first wins. Locations: {location}."
+    ),
+    "inline-bundle-name-invalid": (
+        "Inline bundle directory {content!r} does not match the bundle name pattern (lowercase snake_case)."
+    ),
+    "inline-path-missing": (
+        "LANGFLOW_COMPONENTS_PATH entry {content!r} does not exist or is not a directory; skipped."
+    ),
+    "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
+    "bundle-json-invalid": (
+        "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
+    ),
     "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
     "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
     "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
