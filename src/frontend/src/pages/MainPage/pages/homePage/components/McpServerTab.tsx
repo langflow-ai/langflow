@@ -126,7 +126,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-md border border-dashed border-border p-4">
             {hasOAuthError ? (
               <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
