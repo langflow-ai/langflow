@@ -130,7 +130,7 @@ class TestDistanceToSimilarity:
 class TestBuildWhereClause:
     def test_session_filter_on_returns_session_predicate(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
-        assert component._build_where_clause(session_id="s1") == {"session_id": "s1"}
+        assert component._build_where_clause(session_id="s1") == {"session_id": {"$eq": "s1"}}
 
     def test_session_filter_off_returns_none(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
@@ -139,6 +139,19 @@ class TestBuildWhereClause:
     def test_no_session_id_returns_none(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         assert component._build_where_clause(session_id=None) is None
+
+    def test_session_filter_truthy_string_does_not_disable_toggle(self):
+        # Regression: a previous version used the raw attribute as a bool, so
+        # an externally-set "false" string would be truthy and silently allow
+        # cross-session retrieval. Confirm bool() coerces properly.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
+        component.filter_by_session = "false"  # non-bool value
+        assert component._build_where_clause(session_id="s1") == {"session_id": {"$eq": "s1"}}
+
+    def test_session_filter_falsy_value_disables_toggle(self):
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
+        component.filter_by_session = ""  # falsy non-bool
+        assert component._build_where_clause(session_id="s1") is None
 
 
 # ---------------------------------------------------------------------------
@@ -399,7 +412,7 @@ class TestMemoryBaseRetrievalBehavior:
 
         kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
         assert kwargs["k"] == 5
-        assert kwargs["filter"] == {"session_id": "s1"}
+        assert kwargs["filter"] == {"session_id": {"$eq": "s1"}}
 
     async def test_similarity_search_no_filter_when_disabled(self):
         flow_id = uuid.uuid4()
