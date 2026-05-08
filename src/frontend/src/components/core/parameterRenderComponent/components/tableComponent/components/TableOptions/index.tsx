@@ -142,7 +142,7 @@ export default function TableOptions({
         </div>
         {paginationInfo && (
           <div className="ml-2 text-xs text-muted-foreground">
-            <ShadTooltip content="Pagination Info">
+            <ShadTooltip content={t("table.paginationInfo")}>
               <span>{paginationInfo}</span>
             </ShadTooltip>
           </div>

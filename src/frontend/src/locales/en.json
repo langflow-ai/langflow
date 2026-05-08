@@ -1343,5 +1343,9 @@
   "table.nextPage": "Next Page",
   "table.lastPage": "Last Page",
   "table.firstPage": "First Page",
-  "table.previousPage": "Previous Page"
+  "table.previousPage": "Previous Page",
+  "noteNode.pickColor": "Pick Color",
+  "node.clickToCopyFullId": "Click to copy full ID",
+  "node.addToCanvas": "Add to canvas",
+  "table.paginationInfo": "Pagination Info"
 }

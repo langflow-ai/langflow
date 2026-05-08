@@ -118,7 +118,7 @@ export default function InspectionPanelHeader({
         onMouseLeave={() => setIsHoveringContent(false)}
       >
         <div className="absolute -left-2 top-[18px] w-7 pr-2">
-          <ShadTooltip content={editMode ? "Save" : "Edit"} side="top">
+          <ShadTooltip content={editMode ? t("settings.saveButton") : t("admin.editTitle")} side="top">
             <Button
               unstyled
               onClick={() => {
@@ -154,7 +154,7 @@ export default function InspectionPanelHeader({
             <span className="font-semibold truncate" data-testid="panel-name">
               {nameElement}
             </span>
-            <ShadTooltip content="Click to copy full ID">
+            <ShadTooltip content={t("node.clickToCopyFullId")}>
               <Badge
                 variant="secondaryStatic"
                 size="sm"
