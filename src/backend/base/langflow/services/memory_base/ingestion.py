@@ -317,6 +317,8 @@ async def purge_session_data(
     """
     from sqlalchemy import delete as sa_delete
 
+    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
+
     if not session_ids:
         return 0
 
@@ -361,10 +363,21 @@ async def purge_session_data(
     affected_session_ids = {sid for _, sid in pair_keys}
 
     async with session_scope() as db:
+        # Scheduler state, not audit: count_pending_messages keys on (memory_base_id, session_id)
+        # string, so leaving these rows would carry pending counts into a future session that
+        # reuses the same session_id and trigger a phantom ingestion. Audit lives on Job.
         await db.exec(  # type: ignore[call-overload]
             sa_delete(MemoryBaseWorkflowRun)
             .where(col(MemoryBaseWorkflowRun.memory_base_id).in_(affected_mb_ids))
             .where(col(MemoryBaseWorkflowRun.session_id).in_(affected_session_ids))
+        )
+        # Defensive: callers normally delete the underlying messages first (which cascades
+        # MessageIngestionRecord via message.id FK), but if a caller invokes purge_session_data
+        # without that, the records would leak and block re-ingestion via the unique constraint.
+        await db.exec(  # type: ignore[call-overload]
+            sa_delete(MessageIngestionRecord)
+            .where(col(MessageIngestionRecord.memory_base_id).in_(affected_mb_ids))
+            .where(col(MessageIngestionRecord.session_id).in_(affected_session_ids))
         )
         await db.exec(  # type: ignore[call-overload]
             sa_delete(MemoryBaseSession)
