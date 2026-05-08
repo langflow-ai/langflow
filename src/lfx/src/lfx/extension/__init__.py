@@ -33,14 +33,17 @@ from lfx.extension.errors import (
     format_extension_error,
 )
 from lfx.extension.loader import (
+    DEFAULT_MODULE_NAMESPACE,
     SLOT_EXTRA,
     SLOT_OFFICIAL,
     LoadedComponent,
     LoadResult,
     discover_inline_bundles,
+    filter_component_entry_points,
     filter_plugin_entry_points,
     installed_extension_roots,
     load_extension,
+    load_installed_extensions,
     manifest_owning_distributions,
 )
 from lfx.extension.manifest import (
@@ -68,6 +71,7 @@ from lfx.extension.validate import (
 
 __all__ = [
     "BUNDLE_API_VERSION",
+    "DEFAULT_MODULE_NAMESPACE",
     "DEFAULT_SEED_DIR",
     "ERROR_CODES",
     "EXTENSION_SCHEMA_URL",
@@ -95,10 +99,12 @@ __all__ = [
     "discover_inline_bundles",
     "discover_installed_extensions",
     "discover_seed_extensions",
+    "filter_component_entry_points",
     "filter_plugin_entry_points",
     "format_extension_error",
     "installed_extension_roots",
     "load_extension",
+    "load_installed_extensions",
     "load_manifest",
     "manifest_owning_distributions",
     "validate_extension",

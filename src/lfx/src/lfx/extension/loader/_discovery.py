@@ -1,4 +1,4 @@
-"""Filesystem walk + module import for the extension loader (LE-1015).
+"""Filesystem walk + module import for the extension loader.
 
 This module owns the "find files / build module names / actually import"
 half of the loader pipeline.  It deliberately knows nothing about Component
@@ -145,15 +145,25 @@ def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modul
             hint="Confirm that the path points at a regular .py file.",
         )
     module = importlib.util.module_from_spec(spec)
-    # Install in sys.modules so absolute imports of this module from within
-    # the bundle resolve.  Relative imports (``from .sibling import X``) are
-    # NOT supported in v0: the intermediate package entries are not
-    # registered as packages, so authors must use absolute references between
-    # bundle modules until that lands in a later milestone.
+    # Single-load-per-process contract: this assignment overwrites any prior
+    # entry under the same synthetic ``_lfx_ext.<slot>.<bundle>...`` name
+    # with no cleanup. Consumers holding a previous LoadedComponent.klass
+    # keep the old class object across reloads, so isinstance checks against
+    # newly-loaded instances will return False. LE-1018 reload owns the
+    # invalidation: it must scrub registry entries (and the matching
+    # ``_lfx_ext.<slot>.<bundle>.*`` sys.modules namespace) before calling
+    # back into this loader. Absolute imports only between bundle modules;
+    # relative imports unsupported.
     sys.modules[module_name] = module
     try:
         spec.loader.exec_module(module)
-    except BaseException as exc:  # noqa: BLE001 - surface every import-time failure
+    except BaseException as exc:  # noqa: BLE001
+        # Deliberately broad: a bundle's top-level code may raise SystemExit,
+        # KeyboardInterrupt, or any other BaseException subclass. At server
+        # startup we want one bad bundle to surface as a typed error rather
+        # than abort the whole loader pass. Re-raising the user's interrupt
+        # is the wrong choice here because the loader runs before the user
+        # has any way to drive interruption; the trade-off is intentional.
         # Roll back the optimistic sys.modules entry on failure so a retry
         # does not pick up a half-initialized module.
         sys.modules.pop(module_name, None)

@@ -113,11 +113,21 @@ class FakeDist:
 
 
 class FakeEntryPoint:
-    """Minimal entry-point stand-in carrying ``name`` and ``dist`` only."""
+    """Minimal entry-point stand-in carrying ``name``, ``dist``, and a load() value.
 
-    def __init__(self, name: str, dist: FakeDist | None) -> None:
+    The optional ``loaded_value`` lets tests exercise the type-aware
+    :func:`filter_component_entry_points` partition: pass a Component
+    subclass to model a "legacy component entry-point" or a callable to
+    model a route registrar.
+    """
+
+    def __init__(self, name: str, dist: FakeDist | None, loaded_value: object | None = None) -> None:
         self.name = name
         self.dist = dist
+        self._loaded_value = loaded_value
+
+    def load(self) -> object:
+        return self._loaded_value
 
 
 def make_installed_extension(parent: Path, distribution_name: str) -> FakeDist:
@@ -142,6 +152,91 @@ def make_installed_extension(parent: Path, distribution_name: str) -> FakeDist:
         name=distribution_name,
         root=parent,
         files=[Path(distribution_name) / "extension.json"],
+    )
+
+
+def make_installed_pyproject_extension(parent: Path, distribution_name: str) -> FakeDist:
+    """Create a fake installed Extension whose manifest lives in pyproject.toml.
+
+    Mirrors :func:`make_installed_extension` but exercises the
+    ``[tool.langflow.extension]`` discovery path. ``files`` points at a
+    real ``pyproject.toml`` containing a v0-shaped section so the
+    installed-distribution discovery treats it as an Extension.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    bundle_name = distribution_name.replace("-", "_")
+    pyproject_text = f"""\
+[project]
+name = "{distribution_name}"
+
+[tool.langflow.extension]
+id = "{distribution_name}"
+version = "1.0.0"
+name = "{distribution_name}"
+
+[tool.langflow.extension.lfx]
+compat = ["1"]
+
+[[tool.langflow.extension.bundles]]
+name = "{bundle_name}"
+path = "components"
+"""
+    (pkg_dir / "pyproject.toml").write_text(pyproject_text, encoding="utf-8")
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
+    )
+
+
+def make_installed_pyproject_no_extension(parent: Path, distribution_name: str) -> FakeDist:
+    """Fake distribution shipping pyproject.toml WITHOUT [tool.langflow.extension].
+
+    Used to assert that a stray pyproject.toml from an unrelated package is
+    not mistakenly treated as a manifest.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    (pkg_dir / "pyproject.toml").write_text(
+        f'[project]\nname = "{distribution_name}"\n',
+        encoding="utf-8",
+    )
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
+    )
+
+
+def make_installed_pyproject_malformed_extension(
+    parent: Path,
+    distribution_name: str,
+) -> FakeDist:
+    """Fake distribution shipping pyproject with [tool.langflow.extension] missing required fields.
+
+    The section exists (so the loader must classify it as a manifest-shipping
+    distribution) but the required ``id`` / ``version`` / ``bundles`` keys are
+    missing. ``load_extension`` is expected to surface ``manifest-invalid`` --
+    NOT silently drop the distribution.
+    """
+    pkg_dir = parent / distribution_name
+    pkg_dir.mkdir(parents=True, exist_ok=True)
+    (pkg_dir / "pyproject.toml").write_text(
+        f"""\
+[project]
+name = "{distribution_name}"
+
+[tool.langflow.extension]
+# Intentionally missing id/version/lfx/bundles -- pydantic must reject.
+description = "incomplete"
+""",
+        encoding="utf-8",
+    )
+    return FakeDist(
+        name=distribution_name,
+        root=parent,
+        files=[Path(distribution_name) / "pyproject.toml"],
     )
 
 

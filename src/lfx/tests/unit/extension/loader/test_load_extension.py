@@ -1,4 +1,4 @@
-"""Tests for ``load_extension`` -- happy path and failure modes (LE-1015).
+"""Tests for ``load_extension`` -- happy path and failure modes.
 
 Covers the AC items for the @official slot:
     - single-Bundle happy path + identity tuple population
@@ -239,21 +239,51 @@ def test_component_order_is_deterministic(tmp_path: Path) -> None:
     assert names_first == ["Alpha", "Mike", "Zeta"]
 
 
-def test_skips_re_imported_class(tmp_path: Path) -> None:
-    """A class imported (not declared) in another module shouldn't double-register."""
+def test_re_imported_class_is_skipped_via_module_filter(tmp_path: Path) -> None:
+    """The ``__module__``-equality filter prevents re-imported classes from double-registering.
+
+    Previous incarnation of this test relied on a relative import that
+    coincidentally failed because the loader's synthetic ``_lfx_ext.*``
+    modules aren't registered as packages -- it passed via
+    ``module-import-failed``, not via the filter under test, so a future
+    refactor could weaken the actual guard without the test catching it.
+
+    This version uses ``sys.modules`` injection: a sibling module's value
+    is inserted into the alias module's namespace at import time, with the
+    class's ``__module__`` still pointing at its original definition. The
+    only thing that prevents double-registration here is the
+    ``__module__``-equality check in
+    :func:`lfx.extension.loader._detection.collect_component_classes`.
+    """
+    # Note: the loader walks files in lex order, so we name the alias
+    # file ``z_alias.py`` to guarantee it runs AFTER ``primary.py``
+    # (otherwise the sys.modules lookup below would StopIteration on an
+    # empty generator).
     files = {
         "primary.py": component_source("Primary"),
-        # Re-export -- the loader should skip the imported class because its
-        # __module__ does not match this file's synthetic module name.
-        "alias.py": "from .primary import Primary  # noqa: F401\n",
+        # Pull the already-loaded primary module out of sys.modules and
+        # alias its Primary class into our namespace WITHOUT changing the
+        # class's __module__. The loader's filter must reject it because
+        # __module__ != alias's synthetic module name.
+        "z_alias.py": (
+            "import sys\n"
+            "_primary = next(\n"
+            "    m for name, m in sys.modules.items()\n"
+            "    if name.startswith('_lfx_ext.') and name.endswith('primary')\n"
+            ")\n"
+            "Primary = _primary.Primary  # re-export, NOT re-declaration\n"
+        ),
     }
     root = make_extension(tmp_path, files=files)
     result = load_extension(root)
-    # The alias module's relative import will fail because the synthetic
-    # module package isn't a real package; that's an expected import-time
-    # error. The primary class should still register.
-    primary_names = [c.class_name for c in result.components if c.class_name == "Primary"]
-    assert len(primary_names) == 1
+    # No import errors: both files imported cleanly. This is the key
+    # difference from the old test -- if alias.py had failed, we would
+    # have been testing the wrong code path.
+    import_errors = [e for e in result.errors if e.code == "module-import-failed"]
+    assert import_errors == [], f"alias.py should import cleanly; got {import_errors}"
+    # Exactly one Primary registration -- the filter rejected the alias.
+    primary_count = sum(1 for c in result.components if c.class_name == "Primary")
+    assert primary_count == 1, f"__module__ filter failed: expected 1 Primary registration, got {primary_count}"
 
 
 # ---------------------------------------------------------------------------

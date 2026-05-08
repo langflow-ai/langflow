@@ -77,8 +77,12 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
     "module-import-failed": "error[module-import-failed]: Failed to import bundle module loc: msg",
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
+    "duplicate-distribution": "error[duplicate-distribution]: Two installed distributions share the canonical name 'content'; the lexicographically-first manifest path wins. Locations: loc.",  # noqa: E501
     "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
     "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
+    "inline-path-missing": "error[inline-path-missing]: LANGFLOW_COMPONENTS_PATH entry 'content' does not exist or is not a directory; skipped.",  # noqa: E501
+    "inline-path-unreadable": "error[inline-path-unreadable]: LANGFLOW_COMPONENTS_PATH entry 'content' could not be enumerated: msg",  # noqa: E501
+    "bundle-json-invalid": "error[bundle-json-invalid]: Inline bundle.json at loc is unreadable or malformed; falling back to derived id/version.",  # noqa: E501
     "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501

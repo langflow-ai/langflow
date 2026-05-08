@@ -13,6 +13,12 @@ import orjson
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
+from lfx.extension import (
+    LoadResult,
+    discover_inline_bundles,
+    format_extension_error,
+    load_installed_extensions,
+)
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
@@ -627,6 +633,123 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
     logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
 
 
+def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
+    """Inline-bundle parent paths derived from settings.components_path.
+
+    Each entry in components_path is treated as a parent directory whose
+    immediate subfolders are inline bundles at the @extra slot. The base
+    Langflow components path is excluded (it is not an inline-bundle root).
+    """
+    paths: list[Path] = []
+    for raw in settings_service.settings.components_path or []:
+        if raw == BASE_COMPONENTS_PATH:
+            continue
+        candidate = Path(raw)
+        if candidate.is_dir():
+            paths.append(candidate)
+    return paths
+
+
+def _decorate_template_with_extension(
+    template: dict[str, Any],
+    *,
+    extension_id: str,
+    bundle: str,
+    extension_version: str,
+    namespaced_id: str,
+) -> dict[str, Any]:
+    """Stamp the AC-required identity fields onto a frontend-node template.
+
+    The ``namespaced_id`` is also written to the template so a consumer that
+    only looks at the value (not the dict key) still sees the canonical
+    ``ext:<bundle>:<Class>@<slot>`` identifier.
+    """
+    template["extension"] = extension_id
+    template["bundle"] = bundle
+    template["extension_version"] = extension_version
+    template["namespaced_id"] = namespaced_id
+    return template
+
+
+def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
+    """Surface typed errors/warnings from a batch of LoadResults to the logger.
+
+    The events pipeline (LE-1017) will replace this with structured emission;
+    until then we want operators to see what the loader rejected without
+    silently dropping the typed payload.
+    """
+    for result in results:
+        for err in result.errors:
+            logger.error("Extension load error: %s", format_extension_error(err))
+        for warn in result.warnings:
+            logger.warning("Extension load warning: %s", format_extension_error(warn))
+
+
+async def import_extension_components(
+    settings_service: "SettingsService",
+) -> dict[str, dict[str, Any]]:
+    """Build templates for every Component loaded via the Extension System.
+
+    Two sources feed this:
+        - Installed Extensions (any pip-installed distribution shipping
+          ``extension.json``) -> ``@official`` slot.
+        - Subfolders of every ``LANGFLOW_COMPONENTS_PATH`` entry (parsed
+          via the settings layer's pathsep split) -> ``@extra`` slot.
+
+    For each :class:`LoadedComponent`, instantiates the class, builds a
+    frontend-node template via :func:`create_component_template`, and
+    stamps ``extension``, ``bundle``, and ``extension_version`` onto the
+    template so consumers of ``/api/v1/all`` can identify the source.
+
+    Returns a mapping shaped like ``{bundle_name: {namespaced_id: template}}``
+    where ``namespaced_id`` is the canonical ``ext:<bundle>:<Class>@<slot>``
+    address from :class:`LoadedComponent`. The bundle name remains the
+    top-level category so ``/all`` continues to group components by source,
+    matching the existing built-in / custom layout.
+
+    Components whose class fails to instantiate or template are skipped
+    with a logged warning -- one bad bundle must not abort the cache build.
+    """
+    extension_results = load_installed_extensions()
+    inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
+    _emit_extension_diagnostics([*extension_results, *inline_results])
+
+    components_dict: dict[str, dict[str, Any]] = {}
+    for result in [*extension_results, *inline_results]:
+        if not result.bundle:
+            continue
+        bundle_dict = components_dict.setdefault(result.bundle, {})
+        for loaded in result.components:
+            try:
+                instance = loaded.klass()
+                template, _ = create_component_template(
+                    component_extractor=instance,
+                    module_name=loaded.module_name,
+                )
+            except Exception as exc:  # noqa: BLE001
+                # Defensive: a class whose name ends in "Component" but that
+                # doesn't actually inherit from the lfx Component base will
+                # blow up here. Skip and log; the rest of the bundle loads.
+                await logger.awarning(
+                    "Could not build template for %s in bundle %r (skipped): %s",
+                    loaded.class_name,
+                    loaded.bundle,
+                    exc,
+                )
+                continue
+            # Register under the namespaced ID per AC: ``ext:<bundle>:<Class>@<slot>``.
+            # This is the canonical address saved flows reference after the
+            # LE-1020 migration table rewrites legacy class-name lookups.
+            bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
+                template,
+                extension_id=loaded.extension_id,
+                bundle=loaded.bundle,
+                extension_version=loaded.extension_version,
+                namespaced_id=loaded.namespaced_id,
+            )
+    return components_dict
+
+
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
     telemetry_service: Any | None = None,
@@ -635,8 +758,8 @@ async def get_and_cache_all_types_dict(
 
     Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
     components and either fully loads all components or loads only their metadata, depending on the
-    lazy loading setting. Merges built-in and custom components into the cache and returns the
-    resulting dictionary.
+    lazy loading setting. Merges built-in, custom, and Extension-System components into the cache
+    and returns the resulting dictionary.
 
     Args:
         settings_service: Settings service instance
@@ -647,14 +770,24 @@ async def get_and_cache_all_types_dict(
 
         langflow_components = await import_langflow_components(settings_service, telemetry_service)
         custom_components_dict = await _determine_loading_strategy(settings_service)
+        try:
+            extension_components = await import_extension_components(settings_service)
+        except Exception as exc:  # noqa: BLE001
+            # Extension loading failures should never block legacy component
+            # loading: surface and continue.
+            await logger.aerror("Extension System load failed; continuing without it: %s", exc)
+            extension_components = {}
 
         # Flatten custom dict if it has a "components" wrapper
         custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
-        # Merge built-in and custom components (no wrapper at cache level)
+        # Merge built-in, custom, and extension components (no wrapper at cache level).
+        # Extension components win on collision so a manifest-shipping bundle
+        # supersedes any same-named legacy entry.
         component_cache.all_types_dict = {
             **langflow_components["components"],
             **custom_flat,
+            **extension_components,
         }
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
