@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import type { SelectedFlowVersion } from "../types";
 
 jest.mock(
   "@/components/common/genericIconComponent",
@@ -60,12 +61,10 @@ const defaultProps = {
   versions,
   isLoadingVersions: false,
   isCreatingDraftVersion: false,
-  selectedVersionByFlow: new Map<
-    string,
-    { versionId: string; versionTag: string }
-  >(),
+  selectedVersionByFlow: new Map<string, SelectedFlowVersion>(),
   onAttach: jest.fn(),
   onCreateFromDraft: jest.fn(),
+  onDetach: jest.fn(),
 };
 
 function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
@@ -159,7 +158,15 @@ describe("Rendering version items", () => {
 describe("ATTACHED badge", () => {
   it("shows ATTACHED badge for the currently attached version", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      [
+        "f1:v1",
+        {
+          key: "f1:v1",
+          flowId: "f1",
+          versionId: "v1",
+          versionTag: "v1.0",
+        },
+      ],
     ]);
     renderPanel({ selectedVersionByFlow });
     expect(screen.getByText("ATTACHED")).toBeInTheDocument();
