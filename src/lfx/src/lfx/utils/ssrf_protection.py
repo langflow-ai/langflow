@@ -77,6 +77,16 @@ def is_ssrf_protection_enabled() -> bool:
     Returns:
         bool: True if SSRF protection is enabled, False otherwise.
     """
+    # Read directly from environment variable to support test mocking with patch.dict()
+    # This ensures tests can override the protection state without settings service caching issues
+    import os
+
+    env_value = os.getenv("LANGFLOW_SSRF_PROTECTION_ENABLED")
+    if env_value is not None:
+        # Environment variable is set - use it (supports test mocking)
+        return env_value.lower() in ("true", "1", "yes", "on")
+
+    # Fall back to settings service for non-test scenarios
     return get_settings_service().settings.ssrf_protection_enabled
 
 
