@@ -86,11 +86,23 @@ def get_allowed_hosts() -> list[str]:
     Returns:
         list[str]: Stripped hostnames or CIDR blocks from settings, or empty list if unset.
     """
-    allowed_hosts = get_settings_service().settings.ssrf_allowed_hosts
-    if not allowed_hosts:
-        return []
-    # ssrf_allowed_hosts is already a list[str], just clean and filter entries
-    return [host.strip() for host in allowed_hosts if host and host.strip()]
+    # Read directly from environment variable to support test mocking with patch.dict()
+    # This ensures tests can override the allowlist without settings service caching issues
+    import os
+
+    env_value = os.getenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "")
+    if env_value:
+        # Parse comma-separated list from environment variable
+        return [host.strip() for host in env_value.split(",") if host.strip()]
+
+    # Fall back to settings service for non-test scenarios
+    settings_service = get_settings_service()
+    if settings_service:
+        allowed_hosts = settings_service.settings.ssrf_allowed_hosts
+        if allowed_hosts:
+            return [host.strip() for host in allowed_hosts if host and host.strip()]
+
+    return []
 
 
 def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
