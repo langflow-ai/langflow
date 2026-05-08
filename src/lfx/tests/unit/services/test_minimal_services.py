@@ -321,11 +321,11 @@ class TestVariableService:
 
     @pytest.mark.asyncio
     async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
-        """Test that generic access token names also expose bearer aliases."""
+        """Test that non-WXO/generic names do not synthesize bearer aliases."""
         os.environ["DEMO_ACCESS_TOKEN"] = "token-456"  # noqa: S105
         try:
             value = await variables.get_variable("demo_bearer_token")
-            assert value == "Bearer token-456"
+            assert value is None
         finally:
             del os.environ["DEMO_ACCESS_TOKEN"]
 
@@ -340,19 +340,21 @@ class TestVariableService:
             del os.environ["WXO_DEMO_ACCESS_TOKEN"]
 
     @pytest.mark.asyncio
-    async def test_token_access_token_alias_resolution_from_request_variables(self, variables):
-        """Test token/access_token canonical alias resolution from request-scoped variables."""
+    async def test_strict_no_token_access_token_alias_resolution(self, variables):
+        """Strict matching: token and access_token are not interchangeable."""
         os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"access_token":"request-access"}'
         try:
-            assert await variables.get_variable("token") == "request-access"
+            assert await variables.get_variable("token") is None
+            assert await variables.get_variable("access_token") == "request-access"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
 
     @pytest.mark.asyncio
-    async def test_prefixed_token_alias_resolution_from_request_variables(self, variables):
-        """Test prefixed app token/access_token aliases are interchangeable."""
-        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"my_app_token":"prefixed-token"}'
+    async def test_strict_no_prefixed_token_alias_resolution(self, variables):
+        """Strict matching for prefixed token/access_token variables."""
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"my_app_access_token":"prefixed-token"}'
         try:
+            assert await variables.get_variable("my_app_token") is None
             assert await variables.get_variable("my_app_access_token") == "prefixed-token"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
@@ -363,7 +365,7 @@ class TestVariableService:
         os.environ["x-langflow-global-var-access-token"] = "global-token"  # noqa: SIM112
         try:
             assert await variables.get_variable("access_token") == "global-token"
-            assert await variables.get_variable("token") == "global-token"
+            assert await variables.get_variable("token") is None
         finally:
             del os.environ["x-langflow-global-var-access-token"]  # noqa: SIM112
 
