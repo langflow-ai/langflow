@@ -161,8 +161,8 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
         variableKey: OPENSEARCH_VARIABLES.VECTOR_FIELD,
         required: false,
         isSecret: false,
-        placeholder: "vector_field",
-        defaultValue: "vector_field",
+        placeholder: "chunk_embedding",
+        defaultValue: "chunk_embedding",
       },
       {
         label: "Text field",
@@ -306,7 +306,7 @@ export function getDBProviderConfig(
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ?? "",
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
-      "vector_field",
+      "chunk_embedding",
     text_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
       "text",
