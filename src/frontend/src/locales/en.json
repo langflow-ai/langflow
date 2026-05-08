@@ -1347,5 +1347,9 @@
   "noteNode.pickColor": "Pick Color",
   "node.clickToCopyFullId": "Click to copy full ID",
   "node.addToCanvas": "Add to canvas",
-  "table.paginationInfo": "Pagination Info"
+  "table.paginationInfo": "Pagination Info",
+  "header.goToGithub": "Go to GitHub repo",
+  "header.goToDiscord": "Go to Discord server",
+  "misc.addChatInputOutputPlayground": "Add a Chat Input or Chat Output to use the playground",
+  "chat.options": "Options"
 }
