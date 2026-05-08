@@ -18,6 +18,14 @@ All three components evolve together: the schema defines what ``validate``
 checks, and the formatter renders ``validate``'s output.
 """
 
+from lfx.extension.discovery import (
+    DEFAULT_SEED_DIR,
+    SEED_DIR_ENV_VAR,
+    DiscoveredExtension,
+    discover_all_extensions,
+    discover_installed_extensions,
+    discover_seed_extensions,
+)
 from lfx.extension.errors import (
     ERROR_CODES,
     ExtensionError,
@@ -47,6 +55,14 @@ from lfx.extension.manifest import (
     ManifestSource,
     load_manifest,
 )
+from lfx.extension.registry import (
+    DuplicateExtensionError,
+    Extension,
+    ExtensionImmutableError,
+    ExtensionRegistry,
+    LoadStatus,
+    build_registry_from_discovery,
+)
 from lfx.extension.validate import (
     ValidateReport,
     validate_extension,
@@ -54,21 +70,33 @@ from lfx.extension.validate import (
 
 __all__ = [
     "BUNDLE_API_VERSION",
+    "DEFAULT_SEED_DIR",
     "ERROR_CODES",
     "EXTENSION_SCHEMA_URL",
     "SCHEMA_VERSION",
+    "SEED_DIR_ENV_VAR",
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
     "BundleRef",
+    "DiscoveredExtension",
+    "DuplicateExtensionError",
+    "Extension",
     "ExtensionError",
     "ExtensionErrorCollection",
+    "ExtensionImmutableError",
     "ExtensionManifest",
+    "ExtensionRegistry",
     "LfxCompat",
     "LoadResult",
+    "LoadStatus",
     "LoadedComponent",
     "ManifestSource",
     "ValidateReport",
+    "build_registry_from_discovery",
+    "discover_all_extensions",
     "discover_inline_bundles",
+    "discover_installed_extensions",
+    "discover_seed_extensions",
     "filter_component_entry_points",
     "filter_plugin_entry_points",
     "format_extension_error",

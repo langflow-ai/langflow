@@ -66,6 +66,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         "inline-path-missing",
         "inline-path-unreadable",
         "bundle-json-invalid",
+        # Production install / discovery (LE-1022)
+        "installed-extension-immutable",
+        "seed-directory-immutable",
+        "seed-directory-not-found",
+        "duplicate-extension-id",
     }
 )
 
@@ -204,6 +209,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "bundle-json-invalid": (
         "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
     ),
+    "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
+    "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
+    "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
 }
 
 
