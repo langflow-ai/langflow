@@ -1,13 +1,14 @@
-"""Regression: a race between path validation and the actual ``open()``
-call. A concurrent process can create a symlink at the validated target
+"""Regression for the validate-then-open TOCTOU symlink race.
+
+A concurrent process can create a symlink at the validated target
 between the validation step and the open(), causing the write to follow
 the symlink and land outside the sandbox.
 
-We deterministically reproduce the race by patching ``builtins.open`` (in
-``os``) so that, right before the real open runs, a malicious symlink is
-dropped at the candidate path. With ``O_NOFOLLOW`` semantics in the
-write helper this open must fail with ``ELOOP``; the file outside
-``<BASE>`` must remain untouched.
+We deterministically reproduce the race by patching ``os.open`` so that,
+right before the real open runs, a malicious symlink is dropped at the
+candidate path. With ``O_NOFOLLOW`` semantics in the write helper this
+open must fail with ``ELOOP``; the file outside ``<BASE>`` must remain
+untouched.
 """
 
 import json
@@ -26,7 +27,8 @@ def base_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 @pytest.fixture
-def component(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> FileSystemToolComponent:
+def component(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> FileSystemToolComponent:  # noqa: ARG001
+    # base_dir fixture is consumed for its env-setting side effect.
     c = FileSystemToolComponent(root_path="", read_only=False)
     monkeypatch.setattr(c, "_resolve_auto_login", lambda: True)  # shared mode for simplicity
     return c
@@ -36,8 +38,11 @@ def component(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> FileSystemTool
 def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
-    """Validation passes (target does not exist); a concurrent process
-    creates a symlink at the validated path; ``open()`` must NOT follow it.
+    """``open()`` must not follow a symlink dropped after validation.
+
+    Validation passes (target does not exist); a concurrent process
+    creates a symlink at the validated path; ``open()`` must NOT follow
+    it.
     """
     leak_target = base_dir / "outside.txt"
     leak_target.write_text("original", encoding="utf-8")
@@ -59,7 +64,7 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
         ):
             raced["done"] = True
             namespace_root.mkdir(parents=True, exist_ok=True)
-            os.symlink(leak_target, target_path)
+            target_path.symlink_to(leak_target)
         return real_os_open(path, flags, mode, *args, **kwargs)
 
     with patch("os.open", racing_os_open):
@@ -83,8 +88,10 @@ def test_should_refuse_when_target_becomes_symlink_between_validation_and_open(
 def test_should_refuse_to_read_through_symlink_dropped_mid_call(
     component: FileSystemToolComponent, base_dir: Path
 ) -> None:
-    """Same race for reads: a symlink dropped at the validated read target
-    must not be followed to a file outside <BASE>.
+    """Reads must not follow a symlink dropped after validation.
+
+    Same race as the write case: a symlink dropped at the validated read
+    target must not be followed to a file outside ``<BASE>``.
     """
     secret_outside = base_dir / "outside_secret.txt"
     secret_outside.write_text("TOP SECRET", encoding="utf-8")
@@ -105,7 +112,7 @@ def test_should_refuse_to_read_through_symlink_dropped_mid_call(
         ):
             raced["done"] = True
             target_path.unlink()
-            os.symlink(secret_outside, target_path)
+            target_path.symlink_to(secret_outside)
         return real_os_open(path, flags, mode, *args, **kwargs)
 
     with patch("os.open", racing_os_open):
