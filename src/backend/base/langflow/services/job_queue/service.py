@@ -515,6 +515,7 @@ class RedisJobQueueService(JobQueueService):
         self._redis_url = url
         self._ttl = ttl
         self._client = None
+        self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
         self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
 
@@ -552,6 +553,12 @@ class RedisJobQueueService(JobQueueService):
 
     async def stop(self) -> None:
         """Stop the service, cancel all bridge tasks, and close the Redis client."""
+        if self._connection_check_task and not self._connection_check_task.done():
+            self._connection_check_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._connection_check_task
+        self._connection_check_task = None
+
         for bridge in list(self._bridge_tasks.values()):
             if not bridge.done():
                 bridge.cancel()
