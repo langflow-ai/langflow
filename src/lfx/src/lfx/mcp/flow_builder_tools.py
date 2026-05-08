@@ -423,11 +423,43 @@ class ConnectComponents(Component):
 
     def connect_components(self) -> Data:
         flow = _ensure_working_flow()
+        # ModelInput targets (`type='model'`) render an inline dropdown by
+        # default. The "Connect other models" UX in the dropdown switches
+        # the field to connection mode by setting `_connectionMode=true` on
+        # the node — only THEN does the left handle accept an external
+        # model edge visibly. We mirror that flag at connect time so the
+        # canvas renders the edge instead of the dropdown.
+        target_node = _find_node(flow, self.target_id)
+        target_is_model_input = False
+        if target_node is not None:
+            target_template = target_node.get("data", {}).get("node", {}).get("template", {})
+            target_field = target_template.get(self.target_input) or {}
+            target_is_model_input = isinstance(target_field, dict) and target_field.get("type") == "model"
+
         try:
             fb_add_connection(flow, self.source_id, self.source_output, self.target_id, self.target_input)
             layout_flow(flow)
+            if target_is_model_input and target_node is not None:
+                target_node["data"]["_connectionMode"] = True
+                _emit("set_connection_mode", component_id=self.target_id, enabled=True)
             edge = flow["data"]["edges"][-1]
             _emit("connect", edge=edge)
+            # When the source has multiple outputs, mirror the connected output
+            # into the source node's `selected_output` so the canvas dropdown
+            # reflects what the agent actually wired (e.g. switching OpenAIModel
+            # from "Model Response" to "Language Model" when connected via
+            # `model_output`). Without this the edge exists in state but the
+            # node label stays on the default output, looking unconnected.
+            source_node = _find_node(flow, self.source_id)
+            if source_node is not None:
+                outputs = source_node.get("data", {}).get("node", {}).get("outputs", [])
+                if len(outputs) > 1:
+                    # Frontend reads `data.selected_output` (top-level on the
+                    # ReactFlow node) to decide which output handle is rendered
+                    # for components with multiple outputs. Setting this at
+                    # `data.node.selected_output` is invisible to the canvas.
+                    source_node["data"]["selected_output"] = self.source_output
+                    _emit("select_output", component_id=self.source_id, output_name=self.source_output)
             return Data(
                 data={
                     "text": f"Connected {self.source_id}.{self.source_output} -> {self.target_id}.{self.target_input}",
@@ -479,12 +511,53 @@ class ConfigureComponent(Component):
 
         try:
             fb_configure(flow, self.component_id, params)
+            # Special case: ModelInput (`type='model'`) has a frontend dropdown
+            # that displays via `options.find(o.name === value[0].name)`. If
+            # the new model isn't in `options`, the dropdown silently falls
+            # back to the previous selection — making the swap invisible to
+            # the user. Mirror the new value into `options` so the match
+            # succeeds and the canvas reflects the change immediately.
+            _mirror_model_value_into_options(flow, self.component_id, params)
             _emit("configure", component_id=self.component_id, params=params)
             summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
             return Data(data={"text": f"Set {summary} on {self.component_id}", "configured": list(params.keys())})
         except (ValueError, KeyError) as e:
             logger.warning("configure_component failed: %s", e)
             return Data(data={"error": str(e)})
+
+
+def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict) -> None:
+    """For each ModelInput field touched in `params`, ensure the new selection
+    is present in the field's `options` array.
+
+    No-op for non-model fields. Idempotent: existing entries with the same
+    name+provider are not duplicated.
+    """
+    node = _find_node(flow, component_id)
+    if node is None:
+        return
+    template = node.get("data", {}).get("node", {}).get("template", {})
+    for field_name, value in params.items():
+        field = template.get(field_name)
+        if not isinstance(field, dict) or field.get("type") != "model":
+            continue
+        if not isinstance(value, list) or not value:
+            continue
+        first = value[0]
+        if not isinstance(first, dict):
+            continue
+        new_name = first.get("name")
+        new_provider = first.get("provider")
+        if not new_name:
+            continue
+        options = field.get("options") or []
+        if any(
+            isinstance(o, dict) and o.get("name") == new_name and o.get("provider") == new_provider
+            for o in options
+        ):
+            continue
+        options.append({"name": new_name, "provider": new_provider})
+        field["options"] = options
 
 
 class BuildFlowFromSpec(Component):
@@ -534,6 +607,19 @@ class BuildFlowFromSpec(Component):
             logger.warning("build_flow_from_spec failed: %s", result["error"])
             result["text"] = error_msg
         elif "flow" in result:
+            orphan_ids = _find_orphan_nodes(result["flow"])
+            if orphan_ids:
+                # Reject orphan-bearing flows so the LLM retries instead of
+                # rendering an unconnected component on the user's canvas.
+                # The agent prompt explicitly forbids orphans; this is the
+                # safety net for when it slips through anyway.
+                error_msg = (
+                    f"Flow build rejected: orphan components with no edges: {orphan_ids}. "
+                    "Either wire each component into the flow or remove it from the spec, "
+                    "then call build_flow again."
+                )
+                logger.warning("build_flow_from_spec produced orphans: %s", orphan_ids)
+                return Data(data={"error": error_msg, "text": error_msg, "orphans": orphan_ids})
             result["text"] = (
                 f"Flow '{result['name']}' built successfully "
                 f"({result['node_count']} nodes, {result['edge_count']} edges)."
@@ -541,3 +627,31 @@ class BuildFlowFromSpec(Component):
             _working_flow_var.set(result["flow"])
             _emit("set_flow", flow=result["flow"])
         return Data(data=result)
+
+
+def _find_orphan_nodes(flow: dict) -> list[str]:
+    """Return the IDs of nodes that have no edges (incoming or outgoing).
+
+    A 1-node flow is treated as all-orphans by definition: a flow with no edges
+    has no execution path. Callers can distinguish 1-node specs by inspecting
+    the result's node_count if needed.
+    """
+    data = flow.get("data") or {}
+    nodes = data.get("nodes") or []
+    edges = data.get("edges") or []
+
+    connected: set[str] = set()
+    for edge in edges:
+        src = edge.get("source")
+        tgt = edge.get("target")
+        if src:
+            connected.add(src)
+        if tgt:
+            connected.add(tgt)
+
+    orphans: list[str] = []
+    for node in nodes:
+        node_id = node.get("id") or node.get("data", {}).get("id")
+        if node_id and node_id not in connected:
+            orphans.append(node_id)
+    return orphans

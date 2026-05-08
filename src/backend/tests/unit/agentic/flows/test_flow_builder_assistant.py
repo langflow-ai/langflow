@@ -35,6 +35,59 @@ class TestFlowBuilderPrompt:
         assert "search" in FLOW_BUILDER_PROMPT.lower()
         assert "describe" in FLOW_BUILDER_PROMPT.lower()
 
+    # Regression guards for wiring mistakes seen in production builds where
+    # the agent left orphan model components, mis-wired memory to Tools, and
+    # produced agents with empty system prompts.
+    def test_should_forbid_orphan_components(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "orphan" in prompt_lower or "every component" in prompt_lower, (
+            "Prompt must instruct the agent that every added component must be connected."
+        )
+
+    def test_should_explain_tools_input_only_takes_tool_outputs(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "component_as_tool" in prompt_lower, (
+            "Prompt must clarify that the Tools input requires `component_as_tool` outputs."
+        )
+
+    def test_should_warn_about_agents_built_in_model(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "built-in model" in prompt_lower and (
+            "only" in prompt_lower or "unless" in prompt_lower
+        ), "Prompt must say the Agent has a built-in model and external models are opt-in."
+
+    def test_should_require_system_prompt_for_persona_use_cases(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "system_prompt" in prompt_lower and "persona" in prompt_lower, (
+            "Prompt must instruct the agent to fill system_prompt when the user describes a persona."
+        )
+
+    def test_should_have_chatbot_or_assistant_example_with_system_prompt(self):
+        # The example must show both the input wiring AND a populated system prompt.
+        assert "system_prompt" in FLOW_BUILDER_PROMPT
+        assert "config:" in FLOW_BUILDER_PROMPT, (
+            "Prompt examples must show how to set field values via the `config:` block."
+        )
+
+    def test_should_instruct_to_swap_model_via_configure_component(self):
+        """When the user says 'change the model to X', the agent must update
+        the Agent's `model` field via configure_component instead of adding
+        an external OpenAIModel/AnthropicModel component."""
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        # Must mention the editing path explicitly.
+        assert "configure_component" in prompt_lower
+        assert "change the model" in prompt_lower or "switch" in prompt_lower, (
+            "Prompt must explicitly cover the 'change the model' user request."
+        )
+
+    def test_should_show_model_field_value_structure(self):
+        """The agent needs the exact JSON shape for the Agent's model field
+        value so it can call configure_component without guessing."""
+        # The structure is `[{"provider": "...", "name": "..."}]`.
+        assert "\"provider\"" in FLOW_BUILDER_PROMPT and "\"name\"" in FLOW_BUILDER_PROMPT, (
+            "Prompt must show the model field value structure (provider+name)."
+        )
+
 
 class TestTranslationPromptBuildFlow:
     def test_should_contain_build_flow_intent(self):

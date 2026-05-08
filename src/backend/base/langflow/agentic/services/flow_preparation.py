@@ -7,6 +7,8 @@ from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider
 
 import lfx
 
+from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_root
+
 # Relative path embedded in the bundled LangflowAssistant.json flow for the
 # Directory component that scans built-in lfx components. It only resolves
 # correctly when the process CWD is the monorepo root, which is never the
@@ -133,6 +135,43 @@ def inject_lfx_components_path(flow_data: dict) -> dict:
     return flow_data
 
 
+def inject_assistant_fs_root(flow_data: dict) -> dict:
+    """Replace empty FileSystemTool.root_path with the resolved sandbox path.
+
+    The shipped LangflowAssistant flow leaves FileSystemTool.root_path empty
+    on purpose so the path can be resolved per-host at runtime (see
+    helpers.assistant_workspace.resolve_assistant_fs_root). Hardcoding any
+    value in the JSON would break portability across macOS, Linux, Windows
+    and Docker.
+
+    Only nodes whose root_path value is empty/whitespace are rewritten — an
+    operator's explicit override is preserved.
+
+    When ``resolve_assistant_fs_root`` returns ``None`` (PR #13031's per-user
+    isolation module is present), this function is a no-op: any injected
+    value would be misread as a relative sub_path under the user's namespace
+    and break the per-user boundary. The component handles its own resolution.
+    """
+    resolved_path = resolve_assistant_fs_root()
+    if resolved_path is None:
+        return flow_data
+    resolved = str(resolved_path)
+
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "FileSystemTool":
+            continue
+        root_field = node_data.get("node", {}).get("template", {}).get("root_path")
+        if not root_field:
+            continue
+        current = root_field.get("value", "")
+        if isinstance(current, str) and current.strip():
+            continue
+        root_field["value"] = resolved
+
+    return flow_data
+
+
 def load_and_prepare_flow(
     flow_path: Path,
     provider: str | None,
@@ -147,5 +186,6 @@ def load_and_prepare_flow(
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)
 
     flow_data = inject_lfx_components_path(flow_data)
+    flow_data = inject_assistant_fs_root(flow_data)
 
     return json.dumps(flow_data)

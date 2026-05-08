@@ -9,11 +9,23 @@ import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
 
-// Steps where the "thinking" animation is showing in the message area
+// Steps where the "thinking" animation is showing in the message area.
+// During these the input renders a static placeholder (no rotating
+// animated text) so the user sees a stable, intent-specific label.
 const GENERATING_STEPS: AgenticStepType[] = [
   "generating",
   "generating_component",
+  "generating_flow",
 ];
+
+// Static placeholder shown in the textarea during generating steps. The
+// label mirrors the user's intent so we do NOT cycle random "thinking"
+// messages while the LLM is producing a component or flow.
+const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
+  generating: "Generating response...",
+  generating_component: "Generating component...",
+  generating_flow: "Generating flow...",
+};
 
 // Hook for rotating placeholder messages during post-generation processing
 function useAnimatedPlaceholder(
@@ -176,7 +188,8 @@ export function AssistantInput({
               isProcessing
                 ? isPostGenerationStep
                   ? ""
-                  : "Working on it..."
+                  : (currentStep && GENERATING_PLACEHOLDER[currentStep]) ||
+                    "Working on it..."
                 : (placeholder ?? idlePlaceholder)
             }
             disabled={disabled || isProcessing}

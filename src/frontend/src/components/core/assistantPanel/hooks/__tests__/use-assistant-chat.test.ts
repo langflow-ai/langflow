@@ -3,6 +3,13 @@ import { useAssistantChat } from "../use-assistant-chat";
 
 // --- Mocks ---
 
+// useUpdateNodeInternals requires a ReactFlow provider at runtime. The hook
+// is only used to refresh handle positions after the assistant mutates a
+// node, which is irrelevant in pure-logic tests for the chat hook.
+jest.mock("@xyflow/react", () => ({
+  useUpdateNodeInternals: () => () => {},
+}));
+
 const mockPostAssistStream = jest.fn();
 jest.mock("@/controllers/API/queries/agentic", () => ({
   postAssistStream: (...args: unknown[]) => mockPostAssistStream(...args),

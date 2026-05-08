@@ -1,3 +1,4 @@
+import { useUpdateNodeInternals } from "@xyflow/react";
 import { useCallback, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 import {
@@ -50,6 +51,13 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
+  // ReactFlow caches handle positions per node. When we mutate node data
+  // that changes which handles are rendered or their position (e.g. flipping
+  // _connectionMode on a ModelInput, switching selected_output, replacing a
+  // node via set_flow), we MUST notify ReactFlow so existing edges find
+  // their endpoints — otherwise the edge stays in state but renders as
+  // disconnected.
+  const updateNodeInternals = useUpdateNodeInternals();
   /** Apply a flow_update event to the canvas in real time */
   const applyFlowUpdate = useCallback((event: AgenticFlowUpdateEvent) => {
     switch (event.action) {
@@ -78,6 +86,12 @@ export function useAssistantChat(): UseAssistantChatReturn {
         if (edge) {
           const setEdges = useFlowStore.getState().setEdges;
           setEdges((prev) => [...prev, edge as never]);
+          // Refresh both endpoints so ReactFlow reconciles handle positions
+          // and renders the new edge between them.
+          const src = edge.source as string | undefined;
+          const tgt = edge.target as string | undefined;
+          if (src) updateNodeInternals(src);
+          if (tgt) updateNodeInternals(tgt);
         }
         break;
       }
@@ -136,6 +150,68 @@ export function useAssistantChat(): UseAssistantChatReturn {
               } as never;
             }),
           );
+        }
+        break;
+      }
+      case "select_output": {
+        // The frontend's GenericNode reads `data.selected_output` (top-level
+        // on the ReactFlow node data, NOT inside data.node) to decide which
+        // output's handle to render and which label to show in the
+        // dropdown. Patch at the same level so OpenAIModel switches from
+        // "Model Response" to "Language Model" when wired via model_output.
+        const compId = event.component_id as string;
+        const outputName = event.output_name as string;
+        if (compId && outputName) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) =>
+            prev.map((n) => {
+              const node = n as Record<string, unknown>;
+              if (node.id !== compId) return n;
+              const data = (node.data ?? {}) as Record<string, unknown>;
+              return {
+                ...node,
+                data: {
+                  ...data,
+                  selected_output: outputName,
+                },
+              } as never;
+            }),
+          );
+          // The selected output's handle is the only one rendered for nodes
+          // with multiple outputs, so the handle position changes when we
+          // switch which output is "active" — refresh ReactFlow's cache.
+          updateNodeInternals(compId);
+        }
+        break;
+      }
+      case "set_connection_mode": {
+        // ModelInput dropdown reads `data._connectionMode` to switch from
+        // its inline model picker to "Connect other models" mode (which
+        // exposes the left handle for an external model edge). Mirror the
+        // backend flip so the connected edge actually renders.
+        const compId = event.component_id as string;
+        const enabled = event.enabled as boolean;
+        if (compId !== undefined) {
+          const setNodes = useFlowStore.getState().setNodes;
+          setNodes((prev) =>
+            prev.map((n) => {
+              const node = n as Record<string, unknown>;
+              if (node.id !== compId) return n;
+              const data = (node.data ?? {}) as Record<string, unknown>;
+              return {
+                ...node,
+                data: {
+                  ...data,
+                  _connectionMode: enabled,
+                },
+              } as never;
+            }),
+          );
+          // Toggling _connectionMode swaps the model field's UI between an
+          // inline dropdown and a connection handle. The handle's DOM
+          // position changes — without this notification ReactFlow keeps
+          // the cached position and the edge can't find its target.
+          updateNodeInternals(compId);
         }
         break;
       }

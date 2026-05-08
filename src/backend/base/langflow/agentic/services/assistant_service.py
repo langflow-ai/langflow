@@ -280,18 +280,24 @@ async def execute_flow_with_validation_streaming(
 
             logger.debug(f"Starting attempt {attempt}, is_disconnected provided: {is_disconnected is not None}")
 
-            # Step 1: Generating (different step name based on intent)
+            # Step 1: Generating — step name AND user-facing message vary by
+            # intent so the frontend can show "Generating component..." vs
+            # "Generating flow..." instead of a generic "Generating response..."
+            # while the LLM is producing the answer.
             if is_component_request:
                 step_name: StepType = "generating_component"
+                step_message = "Generating component..."
             elif is_flow_request:
                 step_name = "generating_flow"
+                step_message = "Generating flow..."
             else:
                 step_name = "generating"
+                step_message = "Generating response..."
             yield format_progress_event(
                 step_name,
                 attempt + 1,
                 total_attempts,
-                message="Generating response...",
+                message=step_message,
             )
 
             result = None

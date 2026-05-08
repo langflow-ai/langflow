@@ -80,8 +80,9 @@ export function AssistantMessageItem({
   // Generate randomized messages once per message
   const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
 
-  // Steps that indicate component/flow generation mode (not just Q&A)
-  const componentGenerationSteps = [
+  // Steps where the dedicated AssistantLoadingState replaces the simple
+  // "thinking" indicator. Covers both component generation and flow building.
+  const RICH_LOADING_STEPS = [
     "generating_component",
     "generating_flow",
     "extracting_code",
@@ -95,20 +96,22 @@ export function AssistantMessageItem({
     "flow_build_failed",
   ];
 
-  // Detect component code in streaming content (handles misclassified intent)
+  // Detect component code in streaming content (handles misclassified intent
+  // when the LLM emits a component class without a generating_component step).
   const contentLooksLikeComponentCode =
     isStreaming &&
     message.content &&
     /```python[\s\S]*class\s+\w+.*Component/.test(message.content);
 
-  // Check if we're in component generation mode
-  const isComponentGeneration =
+  // True when the rich loading state (component or flow build) should render
+  // instead of the simple thinking indicator.
+  const showsRichLoadingState =
     (message.progress &&
-      componentGenerationSteps.includes(message.progress.step)) ||
+      RICH_LOADING_STEPS.includes(message.progress.step)) ||
     contentLooksLikeComponentCode;
 
-  // Show loading state during component generation
-  const isGeneratingCode = isStreaming && isComponentGeneration;
+  // Show loading state during component generation or flow build.
+  const isGeneratingCode = isStreaming && showsRichLoadingState;
 
   const renderContent = () => {
     // Show detailed loading state during component generation

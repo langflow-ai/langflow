@@ -66,7 +66,7 @@ describe("AssistantInput", () => {
   });
 
   describe("placeholder behavior", () => {
-    it("should show 'Working on it...' during generating steps", () => {
+    it("should show 'Generating response...' during 'generating' step (Q&A)", () => {
       render(
         <AssistantInput
           {...defaultProps}
@@ -76,7 +76,38 @@ describe("AssistantInput", () => {
       );
 
       expect(
-        screen.getByPlaceholderText("Working on it..."),
+        screen.getByPlaceholderText("Generating response..."),
+      ).toBeInTheDocument();
+    });
+
+    it("should show 'Generating component...' during 'generating_component' step", () => {
+      render(
+        <AssistantInput
+          {...defaultProps}
+          isProcessing={true}
+          currentStep="generating_component"
+        />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Generating component..."),
+      ).toBeInTheDocument();
+    });
+
+    it("should show 'Generating flow...' during 'generating_flow' step", () => {
+      // Regression: 'generating_flow' must behave like the other generating
+      // steps (no rotating placeholder, static intent-specific text) so the
+      // user sees a stable label instead of cycling random messages.
+      render(
+        <AssistantInput
+          {...defaultProps}
+          isProcessing={true}
+          currentStep="generating_flow"
+        />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Generating flow..."),
       ).toBeInTheDocument();
     });
 

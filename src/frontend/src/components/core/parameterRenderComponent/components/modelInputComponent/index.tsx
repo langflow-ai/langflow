@@ -60,17 +60,21 @@ export default function ModelInputComponent({
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  // Connection mode: local state for reactivity, persisted in node data for reload
-  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+  // Connection mode is persisted in node data (for reload + external
+  // mutations like the agentic flow_builder). We subscribe to the live
+  // store value so updates from outside the component (e.g. when the
+  // assistant flips `_connectionMode` after wiring an external model)
+  // re-render the dropdown immediately. Falling back to local-only state
+  // would freeze the UI on the value captured at mount.
+  const isConnectionMode = useFlowStore((state) => {
     if (!nodeId) return false;
-    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    const node = state.nodes.find((n) => n.id === nodeId);
     const data = node?.data as { _connectionMode?: boolean } | undefined;
     return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
     (enabled: boolean) => {
-      setIsConnectionMode(enabled);
       if (!nodeId) return;
       const store = useFlowStore.getState();
       store.setNode(
