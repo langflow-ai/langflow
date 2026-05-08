@@ -71,6 +71,11 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from lfx.extension.bundle_registry import (
+    BundleRecord,
+    BundleRegistry,
+    ReloadInProgressError,
+)
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader import (
     DEFAULT_MODULE_NAMESPACE,
@@ -78,11 +83,6 @@ from lfx.extension.loader import (
     LoadedComponent,
     LoadResult,
     load_extension,
-)
-from lfx.extension.bundle_registry import (
-    BundleRecord,
-    BundleRegistry,
-    ReloadInProgressError,
 )
 
 if TYPE_CHECKING:

@@ -29,8 +29,8 @@ from typing import TYPE_CHECKING
 import pytest
 from lfx.extension import errors as errors_mod
 from lfx.extension import reload as reload_mod
-from lfx.extension.errors import ExtensionError
 from lfx.extension.bundle_registry import BundleRegistry
+from lfx.extension.errors import ExtensionError
 from lfx.extension.reload import ReloadInProgressError, ReloadResult, reload_bundle
 
 if TYPE_CHECKING:
