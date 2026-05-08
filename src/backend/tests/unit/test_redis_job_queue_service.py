@@ -321,6 +321,35 @@ async def test_redis_service_cleanup_deletes_redis_keys():
 
 
 @pytest.mark.asyncio
+async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
+    """cleanup_job removes Redis keys even when local task cancellation is re-raised."""
+    service, fake_client = await _make_service()
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        async def _long_running():
+            await asyncio.Event().wait()
+
+        service.start_job(job_id, _long_running())
+        await asyncio.sleep(0.05)
+
+        stream_key = f"langflow:queue:{job_id}"
+        owner_key = f"langflow:owner:{job_id}"
+
+        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"})
+        await fake_client.set(owner_key, "some-user")
+
+        with pytest.raises(asyncio.CancelledError):
+            await service.cleanup_job(job_id)
+
+        assert not await fake_client.exists(stream_key)
+        assert not await fake_client.exists(owner_key)
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
 async def test_redis_service_owner_stored_in_redis():
     """register_job_owner writes to Redis; get_job_owner reads it cross-worker."""
     service, fake_client = await _make_service()

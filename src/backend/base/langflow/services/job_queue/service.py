@@ -672,11 +672,12 @@ class RedisJobQueueService(JobQueueService):
             with contextlib.suppress(asyncio.CancelledError):
                 await bridge
 
-        await super().cleanup_job(job_id)
-
-        if self._client:
-            await self._client.delete(self._stream_key(job_id), self._owner_key(job_id))
-            await logger.adebug(f"Redis keys deleted for job_id {job_id}")
+        try:
+            await super().cleanup_job(job_id)
+        finally:
+            if self._client:
+                await self._client.delete(self._stream_key(job_id), self._owner_key(job_id))
+                await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
         """Store the job owner in Redis for cross-worker ownership checks."""
