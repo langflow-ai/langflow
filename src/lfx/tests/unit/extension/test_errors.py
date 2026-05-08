@@ -86,6 +86,11 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "extension-target-exists": "error[extension-target-exists]: Cannot create extension at loc: directory already exists and is not empty.",  # noqa: E501
     "extension-target-invalid": "error[extension-target-invalid]: Cannot create extension at loc: msg",
     "local-extension-missing": "error[local-extension-missing]: Registered dev extension at loc is missing or no longer a directory; skipping until it reappears.",  # noqa: E501
+    "migration-table-missing": "error[migration-table-missing]: Migration table not found at loc.",
+    "migration-table-unreadable": "error[migration-table-unreadable]: Could not read migration table at loc: msg",
+    "migration-table-invalid": "error[migration-table-invalid]: Invalid migration table at loc: msg",
+    "component-not-found-with-hint": "error[component-not-found-with-hint]: Legacy component reference 'content' (in flow node loc) is not in the migration table.",  # noqa: E501
+    "component-name-ambiguous": "error[component-name-ambiguous]: Legacy component reference 'content' (in flow node loc) matches more than one migration entry.",  # noqa: E501
     "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501

@@ -1177,10 +1177,22 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.extension.migration import migrate_flow_payload
         from lfx.utils.flow_validation import validate_flow_for_current_settings
 
         if "data" in payload:
             payload = payload["data"]
+        # Rewrite legacy component references in place against the append-only
+        # extension migration table.  Best-effort: a corrupt table or unmapped
+        # reference produces typed errors on the report but never raises, so
+        # flow load remains as forgiving as it was pre-Phase-A.
+        migration_report = migrate_flow_payload(payload)
+        # TODO(LE-1017): when the extension events pipeline lands, emit a
+        # single ``flow-migrated`` event per flow per session here using
+        # ExtensionEventsService (best-effort: deserialization must not
+        # block on event service health).  For now we keep the report on
+        # the local stack so the wiring is in place.
+        _ = migration_report
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API

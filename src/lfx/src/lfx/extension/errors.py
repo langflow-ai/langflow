@@ -70,6 +70,12 @@ ERROR_CODES: frozenset[str] = frozenset(
         "extension-target-exists",
         "extension-target-invalid",
         "local-extension-missing",
+        # Migration-specific codes
+        "migration-table-missing",
+        "migration-table-unreadable",
+        "migration-table-invalid",
+        "component-not-found-with-hint",
+        "component-name-ambiguous",
         # Production install / discovery (LE-1022)
         "installed-extension-immutable",
         "seed-directory-immutable",
@@ -222,6 +228,15 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
     "local-extension-missing": (
         "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
+    ),
+    "migration-table-missing": ("Migration table not found at {location}."),
+    "migration-table-unreadable": ("Could not read migration table at {location}: {message}"),
+    "migration-table-invalid": ("Invalid migration table at {location}: {message}"),
+    "component-not-found-with-hint": (
+        "Legacy component reference {content!r} (in flow node {location}) is not in the migration table."
+    ),
+    "component-name-ambiguous": (
+        "Legacy component reference {content!r} (in flow node {location}) matches more than one migration entry."
     ),
     "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
     "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
