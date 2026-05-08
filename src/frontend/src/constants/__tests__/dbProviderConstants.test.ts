@@ -88,11 +88,39 @@ describe("dbProviderConstants", () => {
       ]),
     ).toBe(false);
 
+    // URL + index alone is no longer enough — basic-auth credentials
+    // are required so the settings UI matches the runtime contract
+    // (the OpenSearch components default to basic auth and reject a
+    // run with empty username/password).
     expect(
       isDBProviderConfigured("opensearch", [
         variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
         variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
       ]),
+    ).toBe(false);
+
+    expect(
+      isDBProviderConfigured("opensearch", [
+        variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
+        variable(OPENSEARCH_VARIABLES.USERNAME, "admin"),
+        variable(OPENSEARCH_VARIABLES.PASSWORD, "secret"),
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+      ]),
     ).toBe(true);
+  });
+
+  it("flags OpenSearch as not-configured when only one of username/password is set", () => {
+    // Asymmetric credentials are a footgun: the backend treats
+    // ``http_auth`` as a tuple of (username, password) and falls back
+    // to no-auth when only one is set, which silently masquerades as
+    // success against auth-disabled clusters but fails against real
+    // ones. Force both fields to be present.
+    expect(
+      isDBProviderConfigured("opensearch", [
+        variable(OPENSEARCH_VARIABLES.URL, "https://search.example.com:9200"),
+        variable(OPENSEARCH_VARIABLES.USERNAME, "admin"),
+        variable(OPENSEARCH_VARIABLES.INDEX_NAME, "kb-index"),
+      ]),
+    ).toBe(false);
   });
 });
