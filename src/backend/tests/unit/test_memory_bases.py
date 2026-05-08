@@ -626,6 +626,157 @@ class TestMemoryBaseServiceMismatch:
         assert result is False
 
 
+class TestMemoryBaseServicePurgeSessionData:
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @pytest.mark.asyncio
+    async def test_purge_no_sessions_returns_zero(self, service):
+        result = await service.purge_session_data(uuid.uuid4(), [])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_no_matching_pairs_returns_zero(self, service):
+        # No (mb, session) pairs found in DB → nothing to do, no chunk wipes attempted.
+        with patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope:
+            mock_db = AsyncMock()
+            empty_result = MagicMock()
+            empty_result.all = MagicMock(return_value=[])
+            mock_db.exec = AsyncMock(return_value=empty_result)
+
+            class FakeCtx:
+                async def __aenter__(self):
+                    return mock_db
+
+                async def __aexit__(self, *a):
+                    pass
+
+            mock_scope.return_value = FakeCtx()
+
+            result = await service.purge_session_data(uuid.uuid4(), ["s1"])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_deletes_chroma_chunks_and_tracking_rows(self, service, tmp_path):
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        # First scope: lookup pairs + resolve username. Second scope: delete tracking rows.
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        adelete_mock = AsyncMock()
+        fake_chroma = MagicMock()
+        fake_chroma.adelete = adelete_mock
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.ingestion.KBStorageHelper.release_chroma_resources"),
+            patch(
+                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding",
+                return_value=("OpenAI", "text-embedding-3-small"),
+            ),
+            patch("langflow.services.memory_base.ingestion.Chroma", return_value=fake_chroma),
+            patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge"),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        # Chroma was asked to drop chunks for the deleted session using $eq form.
+        adelete_mock.assert_awaited_once_with(where={"session_id": {"$eq": "sess-x"}})
+        # Tracking-row deletes were committed.
+        assert second_db.commit.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_purge_continues_when_chunk_delete_fails(self, service, tmp_path):
+        # Chunk delete failure must not block tracking-row cleanup — the user
+        # already pressed "delete session" and expects bookkeeping to clear.
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion._delete_chunks_for_session",
+                AsyncMock(side_effect=OSError("boom")),
+            ),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        assert second_db.commit.await_count == 1
+
+
 class TestMemoryBaseServiceRegenerate:
     @pytest.fixture
     def service(self):

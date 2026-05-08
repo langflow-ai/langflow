@@ -112,10 +112,18 @@ class MemoryBaseComponent(Component):
     ]
 
     def _build_where_clause(self, *, session_id: str | None = None) -> dict | None:
-        """Compose the Chroma ``where`` clause based on opt-in filters and manual params."""
+        """Compose the Chroma ``where`` clause based on opt-in filters and manual params.
+
+        Uses the canonical ``$eq`` operator form rather than the implicit
+        ``{"key": "value"}`` shorthand. Both are accepted by chromadb, but the
+        explicit form is unambiguous across versions and tooling.
+        """
         predicates: list[dict] = []
-        if self.filter_by_session and session_id:
-            predicates.append({"session_id": session_id})
+        # Defensive bool() — BoolInput coerces strings, but if this attribute is
+        # ever overridden externally with a non-bool value, ``"false"`` would be
+        # truthy and silently disable the toggle.
+        if bool(self.filter_by_session) and session_id:
+            predicates.append({"session_id": {"$eq": str(session_id)}})
 
         if not predicates:
             return None
