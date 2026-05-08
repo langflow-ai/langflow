@@ -85,15 +85,20 @@ def test_duplicate_distribution_emits_warning(tmp_path: Path) -> None:
     assert result.distribution == "lfx-pilot"
     # Winner is the lexicographically-first manifest path.
     assert result.source_path == first_root.resolve()
-
-    codes = [w.code for w in result.warnings]
+    # AC: duplicate-distribution is surfaced as an ERROR (LoadResult.ok=False)
+    # so the events pipeline emits ``extension_error`` rather than treating
+    # the conflict as a successful load.
+    assert not result.ok
+    codes = [e.code for e in result.errors]
     assert "duplicate-distribution" in codes
-    warning = next(w for w in result.warnings if w.code == "duplicate-distribution")
+    err = next(e for e in result.errors if e.code == "duplicate-distribution")
     # The location field names BOTH manifest paths so the operator can resolve.
-    assert "first" in warning.location
-    assert "second" in warning.location
-    assert warning.content == "lfx-pilot"
-    assert warning.hint  # AC: fix-hint payload
+    assert "first" in err.location
+    assert "second" in err.location
+    assert err.content == "lfx-pilot"
+    assert err.hint  # AC: fix-hint payload
+    # Winner's components still load -- only the conflict status changes.
+    assert result.components, "Winner's components should still be loaded"
 
 
 def test_no_installed_extensions_returns_empty(tmp_path: Path) -> None:

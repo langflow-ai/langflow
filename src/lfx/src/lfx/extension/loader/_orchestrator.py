@@ -465,10 +465,15 @@ def load_installed_extensions(
 
     Two distributions sharing a canonical name (broken venv) are resolved
     by lexicographically-first manifest path (the "winner") and surface a
-    typed ``duplicate-distribution`` warning on the winner's
-    :class:`LoadResult`. The losing distribution's components are NOT
-    loaded; the warning's ``location`` field names every involved manifest
-    path so the operator can fix the conflict.
+    typed ``duplicate-distribution`` *error* on the winner's
+    :class:`LoadResult` (so ``LoadResult.ok`` becomes False and the events
+    pipeline emits ``extension_error``, per the AC's "duplicate-distribution
+    error surfaced" wording). The winner's components still appear in
+    ``result.components`` so flows already pinned to them keep working;
+    the operator-actionable error is what changes status. The losing
+    distribution's components are NOT loaded; the error's ``location``
+    field names every involved manifest path so the operator can fix the
+    conflict.
 
     Args:
         distributions: Override the distribution iterator (test seam).
@@ -485,7 +490,7 @@ def load_installed_extensions(
         result = load_extension(winner_root, slot=SLOT_OFFICIAL, distribution=canonical)
         if len(manifests) > 1:
             paths_csv = ", ".join(str(m) for m in manifests)
-            result.warnings.append(
+            result.errors.append(
                 ExtensionError(
                     code="duplicate-distribution",
                     message=(

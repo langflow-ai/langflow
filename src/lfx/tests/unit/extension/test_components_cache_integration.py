@@ -56,10 +56,12 @@ def test_decorate_template_stamps_required_fields() -> None:
         extension_id="lfx-pilot",
         bundle="pilot",
         extension_version="1.2.3",
+        namespaced_id="ext:pilot:PilotThing@official",
     )
     assert decorated["extension"] == "lfx-pilot"
     assert decorated["bundle"] == "pilot"
     assert decorated["extension_version"] == "1.2.3"
+    assert decorated["namespaced_id"] == "ext:pilot:PilotThing@official"
     # Existing keys are preserved.
     assert decorated["display_name"] == "X"
 
@@ -97,11 +99,20 @@ async def test_inline_bundle_components_decorated_with_extension_metadata(tmp_pa
         result = await import_extension_components(settings_service)
 
     assert "alpha" in result
-    assert "AlphaThing" in result["alpha"]
-    template = result["alpha"]["AlphaThing"]
+    # AC: components are registered under ``ext:<bundle>:<Class>@<slot>``,
+    # NOT under the bare class name.
+    expected_id = "ext:alpha:AlphaThing@extra"
+    assert expected_id in result["alpha"], (
+        f"Expected namespaced ID {expected_id!r} as dict key; got {list(result['alpha'])}"
+    )
+    assert "AlphaThing" not in result["alpha"], (
+        "Bare class name must NOT be the registry key (would collide with built-in IDs)"
+    )
+    template = result["alpha"][expected_id]
     assert template["bundle"] == "alpha"
     assert template["extension"]  # id derived from bundle.json or default
     assert template["extension_version"]  # default "0.0.0" when no bundle.json
+    assert template["namespaced_id"] == expected_id
 
 
 @pytest.mark.asyncio

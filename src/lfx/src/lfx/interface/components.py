@@ -656,11 +656,18 @@ def _decorate_template_with_extension(
     extension_id: str,
     bundle: str,
     extension_version: str,
+    namespaced_id: str,
 ) -> dict[str, Any]:
-    """Stamp the AC-required identity fields onto a frontend-node template."""
+    """Stamp the AC-required identity fields onto a frontend-node template.
+
+    The ``namespaced_id`` is also written to the template so a consumer that
+    only looks at the value (not the dict key) still sees the canonical
+    ``ext:<bundle>:<Class>@<slot>`` identifier.
+    """
     template["extension"] = extension_id
     template["bundle"] = bundle
     template["extension_version"] = extension_version
+    template["namespaced_id"] = namespaced_id
     return template
 
 
@@ -694,8 +701,11 @@ async def import_extension_components(
     stamps ``extension``, ``bundle``, and ``extension_version`` onto the
     template so consumers of ``/api/v1/all`` can identify the source.
 
-    Returns a mapping shaped like ``{bundle_name: {class_name: template}}``,
-    ready to merge into ``component_cache.all_types_dict``.
+    Returns a mapping shaped like ``{bundle_name: {namespaced_id: template}}``
+    where ``namespaced_id`` is the canonical ``ext:<bundle>:<Class>@<slot>``
+    address from :class:`LoadedComponent`. The bundle name remains the
+    top-level category so ``/all`` continues to group components by source,
+    matching the existing built-in / custom layout.
 
     Components whose class fails to instantiate or template are skipped
     with a logged warning -- one bad bundle must not abort the cache build.
@@ -727,11 +737,15 @@ async def import_extension_components(
                     exc,
                 )
                 continue
-            bundle_dict[loaded.class_name] = _decorate_template_with_extension(
+            # Register under the namespaced ID per AC: ``ext:<bundle>:<Class>@<slot>``.
+            # This is the canonical address saved flows reference after the
+            # LE-1020 migration table rewrites legacy class-name lookups.
+            bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
                 template,
                 extension_id=loaded.extension_id,
                 bundle=loaded.bundle,
                 extension_version=loaded.extension_version,
+                namespaced_id=loaded.namespaced_id,
             )
     return components_dict
 
