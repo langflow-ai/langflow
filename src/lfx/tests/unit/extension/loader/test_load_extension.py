@@ -147,6 +147,45 @@ def test_runtime_multi_bundle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert codes == ["multi-bundle-deferred-in-this-milestone"]
 
 
+def test_version_constraint_unsatisfied(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A manifest declaring lfx.compat without our BUNDLE_API_VERSION is rejected.
+
+    The ``compat`` field validator only enforces format (positive-integer
+    strings, unique).  The runtime version check happens here at load time
+    so a bundle declaring only ``["2"]`` against a lfx that ships
+    ``BUNDLE_API_VERSION=1`` cannot silently load and crash later when it
+    touches a contract surface that does not exist yet.
+    """
+    from lfx.extension.loader import _orchestrator
+    from lfx.extension.manifest import (
+        BundleRef,
+        ExtensionManifest,
+        LfxCompat,
+        ManifestSource,
+    )
+
+    (tmp_path / "pilot").mkdir()
+    (tmp_path / "extension.json").write_text("{}", encoding="utf-8")  # placeholder
+
+    forged = ExtensionManifest.model_construct(
+        id="lfx-pilot",
+        version="1.2.3",
+        name="Pilot",
+        lfx=LfxCompat(compat=["999"]),  # well-formed but does not include BUNDLE_API_VERSION
+        bundles=[BundleRef(name="pilot", path="pilot")],
+    )
+    source = ManifestSource.model_construct(manifest=forged, path=tmp_path / "extension.json", kind="extension.json")
+    monkeypatch.setattr(_orchestrator, "load_manifest", lambda _root: source)
+
+    result = load_extension(tmp_path)
+    codes = [e.code for e in result.errors]
+    assert codes == ["version-constraint-unsatisfied"]
+    err = result.errors[0]
+    # The fix-hint must name BUNDLE_API_VERSION so the author knows what to change.
+    assert "BUNDLE_API_VERSION" in err.message
+    assert err.hint
+
+
 def test_missing_bundle_directory(tmp_path: Path) -> None:
     manifest = {**_BASE_MANIFEST, "bundles": [{"name": "pilot", "path": "missing"}]}
     (tmp_path / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")

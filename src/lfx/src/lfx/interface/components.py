@@ -19,6 +19,8 @@ from lfx.extension import (
     format_extension_error,
     load_installed_extensions,
 )
+from lfx.extension.bundle_registry import BundleRecord, get_default_registry
+from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
@@ -52,6 +54,21 @@ class ComponentCache:
 
 # Singleton instance
 component_cache = ComponentCache()
+
+
+def _post_reload_refresh_cache(record: BundleRecord) -> None:
+    """Post-swap hook installed in :data:`_POST_SWAP_HOOKS`.
+
+    Defined here so the hook closes over :data:`component_cache` without
+    needing to thread it through ``lfx.extension.reload``.  Concrete logic
+    lives in :func:`refresh_bundle_cache_from_record` further down (the
+    forward reference is fine; the hook is fired only after first cache
+    build).
+    """
+    refresh_bundle_cache_from_record(record)
+
+
+register_post_swap_hook(_post_reload_refresh_cache)
 
 
 def _parse_dev_mode() -> tuple[bool, list[str] | None]:
@@ -714,6 +731,29 @@ async def import_extension_components(
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
     _emit_extension_diagnostics([*extension_results, *inline_results])
 
+    # Populate the process-default BundleRegistry so the reload endpoint
+    # (POST /api/v1/extensions/{id}/bundles/{name}/reload) can find a
+    # bundle by name.  Without this, every reload returns
+    # ``reload-bundle-not-installed`` even for bundles visible in the
+    # palette, because the registry is never primed at startup.  Reload
+    # later updates the registry directly; the cache hook in
+    # :func:`refresh_extension_components_cache` keeps ``component_cache``
+    # in sync after a swap.
+    registry = get_default_registry()
+    for result in [*extension_results, *inline_results]:
+        if not result.bundle or not result.components or result.slot is None:
+            continue
+        record = BundleRecord(
+            bundle=result.bundle,
+            extension_id=result.extension_id or result.bundle,
+            extension_version=result.extension_version or "0.0.0",
+            slot=result.slot,
+            components=tuple(result.components),
+            distribution=result.distribution,
+            source_path=result.source_path,
+        )
+        registry.install_bundle(record)
+
     components_dict: dict[str, dict[str, Any]] = {}
     for result in [*extension_results, *inline_results]:
         if not result.bundle:
@@ -748,6 +788,50 @@ async def import_extension_components(
                 namespaced_id=loaded.namespaced_id,
             )
     return components_dict
+
+
+def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
+    """Rebuild ``component_cache.all_types_dict`` for a single bundle after reload.
+
+    The reload pipeline updates :class:`~lfx.extension.bundle_registry.BundleRegistry`
+    in place, but the palette / new-graph construction path reads from the
+    flat ``component_cache.all_types_dict``.  Without this, a successful
+    reload swaps the registry but leaves the palette stale until the next
+    server restart.  Called by :func:`lfx.extension.reload.reload_bundle`
+    in Stage 5.
+
+    Components whose class fails to instantiate or template are skipped
+    with a logged warning, mirroring :func:`import_extension_components`.
+    """
+    if component_cache.all_types_dict is None:
+        # Cache hasn't been built yet; nothing to refresh.  The first
+        # ``get_and_cache_all_types_dict`` call will see the fresh registry
+        # entry and pick up the post-reload class set.
+        return
+    bundle_dict: dict[str, Any] = {}
+    for loaded in record.components:
+        try:
+            instance = loaded.klass()
+            template, _ = create_component_template(
+                component_extractor=instance,
+                module_name=loaded.module_name,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Could not build template for %s in bundle %r during reload (skipped): %s",
+                loaded.class_name,
+                record.bundle,
+                exc,
+            )
+            continue
+        bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
+            template,
+            extension_id=loaded.extension_id,
+            bundle=loaded.bundle,
+            extension_version=loaded.extension_version,
+            namespaced_id=loaded.namespaced_id,
+        )
+    component_cache.all_types_dict[record.bundle] = bundle_dict
 
 
 async def get_and_cache_all_types_dict(

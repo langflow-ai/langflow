@@ -77,7 +77,27 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
-router_v1.include_router(extensions_router)
+
+
+# Extension reload is Mode A (local-dev / pip-installed) only -- in Mode B/C
+# bundle changes require a Docker image rebuild and the in-process reload
+# endpoint would mask the real deploy pipeline.  Off by default so authenticated
+# users on self-hosted / production deployments cannot trigger runtime imports
+# without an explicit opt-in via LANGFLOW_ENABLE_EXTENSION_RELOAD.
+def _maybe_include_extensions_router() -> None:
+    from lfx.services.deps import get_settings_service
+
+    try:
+        settings = get_settings_service().settings
+    except Exception:  # noqa: BLE001
+        # Settings may not be available in some import-time contexts (tests
+        # that import the router without a full service stack); fail closed.
+        return
+    if getattr(settings, "enable_extension_reload", False):
+        router_v1.include_router(extensions_router)
+
+
+_maybe_include_extensions_router()
 include_deployment_router(router_v1)
 
 

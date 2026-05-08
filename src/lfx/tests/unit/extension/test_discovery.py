@@ -67,7 +67,12 @@ def _write_pyproject_extension(root: Path, manifest: dict[str, object]) -> Path:
     three "installed" distributions in :func:`fake_installed_distributions`
     uses this form so we get coverage automatically.
     """
-    import tomllib  # type: ignore[import-not-found]  # noqa: F401
+    import sys
+
+    if sys.version_info >= (3, 11):
+        import tomllib  # type: ignore[import-not-found]
+    else:
+        import tomli as tomllib  # type: ignore[import-not-found]  # noqa: F401
 
     root.mkdir(parents=True, exist_ok=True)
     bundle_name = manifest["bundles"][0]["name"]  # type: ignore[index]

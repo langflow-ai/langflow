@@ -254,3 +254,23 @@ def test_dev_refuses_non_directory(
     result = runner.invoke(app, ["extension", "dev", str(bogus), "--skip-launch"])
     assert result.exit_code == 1
     assert "not a directory" in (result.stderr or result.stdout)
+
+
+# ---------------------------------------------------------------------------
+# extension reload (LE-1018) -- argument validation
+# ---------------------------------------------------------------------------
+
+
+def test_reload_requires_explicit_bundle(runner: CliRunner) -> None:
+    """The CLI must not silently default --bundle to the extension id.
+
+    The conventional install shape is ``lfx-<provider>`` ext_id with bundle
+    name ``<provider>``; defaulting bundle to the extension id would POST
+    to ``/extensions/lfx-foo/bundles/lfx-foo/reload`` which always 404s.
+    Until the LE-1019 list endpoint can resolve the single bundle for an
+    extension, --bundle is mandatory.
+    """
+    result = runner.invoke(app, ["extension", "reload", "lfx-pilot"])
+    assert result.exit_code == 2
+    msg = result.stderr or result.stdout
+    assert "--bundle" in msg

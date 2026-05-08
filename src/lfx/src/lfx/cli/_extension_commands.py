@@ -260,8 +260,9 @@ def reload_command(
         "--bundle",
         "-b",
         help=(
-            "Bundle name to reload. Defaults to the extension id when the "
-            "extension ships a single Bundle (the v0 supported case)."
+            "Bundle name to reload.  Required until the LE-1019 list endpoint "
+            "ships -- the conventional shape is extension id 'lfx-<provider>' "
+            "with bundle name '<provider>', so we cannot safely default."
         ),
     ),
     target: str | None = typer.Option(
@@ -311,7 +312,16 @@ def reload_command(
         typer.echo("Invalid --format. Expected one of: text, json.", err=True)
         raise typer.Exit(code=2)
 
-    bundle_name = bundle or extension_id
+    if not bundle:
+        typer.echo(
+            "extension reload requires --bundle until the LE-1019 list endpoint "
+            "ships.  Pass --bundle <name>; conventional shape is "
+            "lfx-<provider> ext_id with <provider> as the bundle name.",
+            err=True,
+        )
+        raise typer.Exit(code=2)
+
+    bundle_name = bundle
     response = reload_via_http(
         target=target,
         api_key=api_key,

@@ -386,6 +386,19 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Extension reload (Mode A only)
+    enable_extension_reload: bool = False
+    """If True, registers ``POST /api/v1/extensions/{id}/bundles/{name}/reload``
+    so authenticated users can hot-swap a Bundle's components in-process.
+
+    This is a Mode A (local-dev / pip-installed) facility only.  In Mode B/C
+    (Docker image with baked-in bundles) Bundle changes require an image
+    rebuild and the in-process reload route would mask the real deploy
+    pipeline.  Defaults to ``False`` so self-hosted / production deployments
+    do not expose runtime imports through an HTTP endpoint without an
+    explicit opt-in.  Set ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` in your
+    local dev environment to turn it on."""
+
     # Custom Component Security
     allow_custom_components: bool = True
     """If set to False, blocks execution of components whose code does not match a known

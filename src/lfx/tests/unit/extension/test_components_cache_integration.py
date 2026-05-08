@@ -150,3 +150,132 @@ async def test_components_path_empty_string_does_not_crash(monkeypatch) -> None:
     # No patch needed -- there's nothing to load.
     result = await import_extension_components(settings_service)
     assert result == {}
+
+
+@pytest.mark.asyncio
+async def test_import_extension_components_populates_bundle_registry(tmp_path: Path) -> None:
+    """Startup wiring: discovered bundles must be installed in the BundleRegistry.
+
+    Without this, a real POST /api/v1/extensions/{id}/bundles/{name}/reload
+    returns ``reload-bundle-not-installed`` for bundles that ARE visible in
+    the palette, because the reload endpoint reads a separate registry that
+    nothing populates.
+    """
+    from lfx.extension.bundle_registry import BundleRegistry, get_default_registry
+
+    parent = tmp_path / "components_root"
+    bundle_dir = parent / "beta"
+    bundle_dir.mkdir(parents=True)
+    (bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\n"
+        "class BetaThing(Component):\n"
+        "    display_name = 'Beta'\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+
+    # Replace the process-default registry with a fresh one for this test
+    # so we don't observe state from earlier tests in the suite.
+    fresh_registry = BundleRegistry()
+    settings_service = _FakeSettingsService(components_path=[str(parent)])
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+        patch("lfx.interface.components.get_default_registry", return_value=fresh_registry),
+    ):
+        await import_extension_components(settings_service)
+
+    record = fresh_registry.get_bundle("beta")
+    assert record is not None, "bundle 'beta' must be registered after import"
+    assert record.bundle == "beta"
+    assert record.slot == "extra"
+    # The class should be visible in the registry too (so reload's diff works).
+    assert "BetaThing" in record.class_names
+
+    # Sanity: get_default_registry() unmocked is also still callable.
+    assert get_default_registry() is not None
+
+
+def test_post_swap_hook_refreshes_component_cache(tmp_path: Path) -> None:
+    """After reload_bundle's Stage-3 swap, the component cache picks up the new class set.
+
+    Without the post-swap hook, ``component_cache.all_types_dict`` keeps the
+    pre-reload templates and the palette / new-graph path stays stale until
+    the next server restart.
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface.components import (
+        component_cache,
+        refresh_bundle_cache_from_record,
+    )
+
+    # Seed the cache with a placeholder pre-reload template for bundle 'gamma'.
+    component_cache.all_types_dict = {"gamma": {"old": {"display_name": "old"}}}
+
+    # Build a BundleRecord with a fake LoadedComponent.  We use the same
+    # toy Component shim the other tests use; create_component_template
+    # would fail on it, so patch the builder to return a stub.
+    class _Component:
+        pass
+
+    class _GammaThing(_Component):
+        display_name = "Gamma"
+
+        def build(self) -> None:
+            return None
+
+    loaded = LoadedComponent(
+        extension_id="lfx-gamma",
+        extension_version="1.0.0",
+        bundle="gamma",
+        class_name="GammaThing",
+        slot="official",
+        klass=_GammaThing,
+        module_name="_lfx_ext.official.gamma.thing",
+        file_path=tmp_path / "thing.py",
+        distribution=None,
+    )
+    record = BundleRecord(
+        bundle="gamma",
+        extension_id="lfx-gamma",
+        extension_version="1.0.0",
+        slot="official",
+        components=(loaded,),
+    )
+
+    with patch("lfx.interface.components.create_component_template", side_effect=_stub_template):
+        refresh_bundle_cache_from_record(record)
+
+    assert "gamma" in component_cache.all_types_dict
+    assert "old" not in component_cache.all_types_dict["gamma"], (
+        "post-swap refresh must replace the pre-reload bundle dict, not merge"
+    )
+    expected_id = "ext:gamma:GammaThing@official"
+    assert expected_id in component_cache.all_types_dict["gamma"]
+
+
+def test_post_swap_hook_noop_when_cache_not_built() -> None:
+    """If the cache hasn't been built yet, the hook must be a safe no-op.
+
+    The first ``get_and_cache_all_types_dict`` call will see the fresh
+    registry entry and pick up the post-reload class set; we don't want
+    the hook to crash on a None cache.
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.interface.components import (
+        component_cache,
+        refresh_bundle_cache_from_record,
+    )
+
+    component_cache.all_types_dict = None
+    record = BundleRecord(
+        bundle="empty",
+        extension_id="lfx-empty",
+        extension_version="1.0.0",
+        slot="official",
+        components=(),
+    )
+    # Must not raise.
+    refresh_bundle_cache_from_record(record)
+    assert component_cache.all_types_dict is None

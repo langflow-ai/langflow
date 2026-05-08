@@ -40,6 +40,7 @@ from lfx.extension.loader._types import (
     LoadResult,
 )
 from lfx.extension.manifest import (
+    BUNDLE_API_VERSION,
     BUNDLE_NAME_RE,
     BundleRef,
     ExtensionManifest,
@@ -297,6 +298,34 @@ def load_extension(
     manifest: ExtensionManifest = source.manifest
     result.extension_id = manifest.id
     result.extension_version = manifest.version
+
+    # Version-constraint check: the manifest's lfx.compat list must include
+    # this lfx package's BUNDLE_API_VERSION.  A bundle declaring only
+    # ``["2"]`` against a lfx that ships ``BUNDLE_API_VERSION=1`` would
+    # otherwise import successfully and crash later when it touched a
+    # contract surface that did not exist yet.  This is the runtime half
+    # of the contract-version check; the validator surfaces malformed
+    # entries earlier with ``manifest-invalid``.
+    declared = list(manifest.lfx.compat)
+    if str(BUNDLE_API_VERSION) not in declared:
+        result.errors.append(
+            ExtensionError(
+                code="version-constraint-unsatisfied",
+                message=(
+                    f"Extension {manifest.id!r} declares lfx.compat={declared!r}, "
+                    f"which does not include this lfx package's "
+                    f"BUNDLE_API_VERSION={BUNDLE_API_VERSION!s}."
+                ),
+                location=str(source.path),
+                content=str(declared),
+                hint=(
+                    f"Update the manifest's lfx.compat to include "
+                    f'"{BUNDLE_API_VERSION!s}", or install a Langflow whose '
+                    f"BUNDLE_API_VERSION matches the bundle's declared compat."
+                ),
+            )
+        )
+        return result
 
     # Multi-bundle is rejected by the schema, but we re-check here because
     # the loader is the runtime gate; a forged manifest that bypassed the

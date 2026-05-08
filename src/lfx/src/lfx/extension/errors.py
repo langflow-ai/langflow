@@ -57,6 +57,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "import-star-disallowed",
         "top-level-io-disallowed",
         "execute-imports-failed",
+        "version-constraint-unsatisfied",
         # Loader-specific codes
         "module-import-failed",
         "duplicate-component-name",
@@ -201,6 +202,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Top-level I/O primitive {content!r} used in {location}; bundle module import must be side-effect free."
     ),
     "execute-imports-failed": ("Subprocess import probe (--execute-imports) failed for {location}: {message}"),
+    "version-constraint-unsatisfied": (
+        "Manifest at {location} declares lfx.compat={content!r}, which does not "
+        "include this lfx package's BUNDLE_API_VERSION; refusing to load."
+    ),
     "module-import-failed": ("Failed to import bundle module {location}: {message}"),
     "duplicate-component-name": (
         "Duplicate Component class name {content!r} in bundle {location}; "

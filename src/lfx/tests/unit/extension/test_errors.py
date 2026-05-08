@@ -75,6 +75,7 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "import-star-disallowed": "error[import-star-disallowed]: Top-level wildcard import in loc: content",
     "top-level-io-disallowed": "error[top-level-io-disallowed]: Top-level I/O primitive 'content' used in loc; bundle module import must be side-effect free.",  # noqa: E501
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
+    "version-constraint-unsatisfied": "error[version-constraint-unsatisfied]: Manifest at loc declares lfx.compat='content', which does not include this lfx package's BUNDLE_API_VERSION; refusing to load.",  # noqa: E501
     "module-import-failed": "error[module-import-failed]: Failed to import bundle module loc: msg",
     "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
     "duplicate-distribution": "error[duplicate-distribution]: Two installed distributions share the canonical name 'content'; the lexicographically-first manifest path wins. Locations: loc.",  # noqa: E501

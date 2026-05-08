@@ -86,10 +86,47 @@ from lfx.extension.loader import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
     from typing import Literal
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Post-swap hooks
+# ---------------------------------------------------------------------------
+#
+# Layers above lfx (the langflow component cache; eventually the events
+# service) need to react to a successful reload.  ``lfx`` cannot import
+# ``langflow``, so we expose a tiny registration API: ``langflow`` calls
+# :func:`register_post_swap_hook` at startup; this module calls every
+# registered hook in Stage 5 with the new BundleRecord.  Hooks must be
+# fast and exception-tolerant -- we wrap calls in ``logger.exception`` so
+# one bad subscriber does not break reload.
+
+_POST_SWAP_HOOKS: list[Callable[[BundleRecord], None]] = []
+
+
+def register_post_swap_hook(hook: Callable[[BundleRecord], None]) -> None:
+    """Register a callback to fire after a successful Stage-3 swap.
+
+    Idempotent: registering the same callable twice is a no-op.  The
+    canonical use case is the langflow component cache, which needs to
+    rebuild its templates for the bundle so the palette / new-graph path
+    sees post-reload classes without a server restart.
+    """
+    if hook not in _POST_SWAP_HOOKS:
+        _POST_SWAP_HOOKS.append(hook)
+
+
+def _fire_post_swap_hooks(record: BundleRecord) -> None:
+    for hook in _POST_SWAP_HOOKS:
+        try:
+            hook(record)
+        except Exception:
+            # A failing hook (cache rebuild error, etc.) must not roll back
+            # the swap or block the next hook.  Log and continue.
+            logger.exception("post-swap reload hook %r failed for bundle %r", hook, record.bundle)
 
 
 # ---------------------------------------------------------------------------
@@ -342,6 +379,12 @@ def _run_pipeline(
 
     # ---------- Stage 4: cleanup leftover staging entries ----------
     _drop_staging_modules(staging_namespace)
+
+    # Fire post-swap hooks (component cache rebuild, etc.) BEFORE we emit
+    # the result so callers blocking on the HTTP response see a consistent
+    # registry + cache state.  Hook failures are logged but do not roll back
+    # the swap.
+    _fire_post_swap_hooks(new_record)
 
     # ---------- Stage 5: emit bundle_reloaded ----------
     added, removed = _diff(previous, new_record)
