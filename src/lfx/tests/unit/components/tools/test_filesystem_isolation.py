@@ -21,9 +21,7 @@ if TYPE_CHECKING:
 class TestLoadIsolationConfig:
     """``load_isolation_config`` reads env vars into a frozen ``IsolationConfig``."""
 
-    def test_should_default_base_dir_under_default_config_dir_when_env_var_unset(
-        self, tmp_path: Path
-    ) -> None:
+    def test_should_default_base_dir_under_default_config_dir_when_env_var_unset(self, tmp_path: Path) -> None:
         from lfx.components.tools._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)

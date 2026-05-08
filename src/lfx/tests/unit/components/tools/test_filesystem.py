@@ -508,8 +508,6 @@ class TestBuildMetadata:
         assert set(result.data["tools_registered"]) == {"read_file", "glob_search", "grep_search"}
 
 
-
-
 # Note: TestRootPathAllowlist (Slice 27) was deleted with the refactor that
 # replaced the legacy LANGFLOW_FS_TOOL_ALLOWED_ROOTS env var and the Astra cloud
 # special-case with the AUTO_LOGIN-driven model. The boundary guarantee that

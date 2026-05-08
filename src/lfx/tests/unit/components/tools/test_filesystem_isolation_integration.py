@@ -47,9 +47,7 @@ def _make_component(
 class TestSharedModeWhenAutoLoginTrue:
     """Slice S3 — AUTO_LOGIN=True puts every file under <BASE>/shared/<sub>."""
 
-    def test_should_create_files_inside_shared_namespace(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_should_create_files_inside_shared_namespace(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         base = tmp_path / "base"
         component = _make_component(
             monkeypatch=monkeypatch,
@@ -97,9 +95,7 @@ class TestSharedModeWhenAutoLoginTrue:
         # user_id happens to be available — that would mix the two layouts.
         assert not (base / "users").exists()
 
-    def test_should_serve_anonymous_calls_in_shared_mode(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_should_serve_anonymous_calls_in_shared_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         # AUTO_LOGIN=True implies a single trusted operator; the absence of a
         # user_id is the norm, not an error.
         component = _make_component(
@@ -117,9 +113,7 @@ class TestSharedModeWhenAutoLoginTrue:
 class TestIsolatedModeWhenAutoLoginFalse:
     """Slice S4 — AUTO_LOGIN=False scopes every call under <BASE>/users/<hash>/."""
 
-    def test_should_create_files_inside_user_namespace(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_should_create_files_inside_user_namespace(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         base = tmp_path / "base"
         component = _make_component(
             monkeypatch=monkeypatch,
@@ -309,9 +303,7 @@ class TestReservedSignatureDirectory:
 class TestSharedModeBoundaryEnforcement:
     """Slice S7 — shared mode must enforce the same boundary rules as isolated."""
 
-    def test_should_reject_dotdot_escape_in_shared_mode(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_should_reject_dotdot_escape_in_shared_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         base = tmp_path / "base"
         # Drop a marker outside <BASE>/shared/ that traversal would expose.
         outside = tmp_path / "outside.txt"
@@ -327,9 +319,7 @@ class TestSharedModeBoundaryEnforcement:
 
         assert "error" in result, f"Traversal escape not blocked in shared mode: {result}"
 
-    def test_should_reject_absolute_path_in_shared_mode(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_should_reject_absolute_path_in_shared_mode(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         component = _make_component(
             monkeypatch=monkeypatch,
             base_dir=tmp_path / "base",
