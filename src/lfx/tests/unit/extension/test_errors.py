@@ -83,6 +83,9 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "inline-path-missing": "error[inline-path-missing]: LANGFLOW_COMPONENTS_PATH entry 'content' does not exist or is not a directory; skipped.",  # noqa: E501
     "inline-path-unreadable": "error[inline-path-unreadable]: LANGFLOW_COMPONENTS_PATH entry 'content' could not be enumerated: msg",  # noqa: E501
     "bundle-json-invalid": "error[bundle-json-invalid]: Inline bundle.json at loc is unreadable or malformed; falling back to derived id/version.",  # noqa: E501
+    "extension-target-exists": "error[extension-target-exists]: Cannot create extension at loc: directory already exists and is not empty.",  # noqa: E501
+    "extension-target-invalid": "error[extension-target-invalid]: Cannot create extension at loc: msg",
+    "local-extension-missing": "error[local-extension-missing]: Registered dev extension at loc is missing or no longer a directory; skipping until it reappears.",  # noqa: E501
     "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501

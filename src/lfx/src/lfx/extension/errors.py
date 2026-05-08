@@ -66,6 +66,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "inline-path-missing",
         "inline-path-unreadable",
         "bundle-json-invalid",
+        # init / dev CLI codes (LE-1016)
+        "extension-target-exists",
+        "extension-target-invalid",
+        "local-extension-missing",
         # Production install / discovery (LE-1022)
         "installed-extension-immutable",
         "seed-directory-immutable",
@@ -213,6 +217,11 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "inline-path-unreadable": ("LANGFLOW_COMPONENTS_PATH entry {content!r} could not be enumerated: {message}"),
     "bundle-json-invalid": (
         "Inline bundle.json at {location} is unreadable or malformed; falling back to derived id/version."
+    ),
+    "extension-target-exists": ("Cannot create extension at {location}: directory already exists and is not empty."),
+    "extension-target-invalid": ("Cannot create extension at {location}: {message}"),
+    "local-extension-missing": (
+        "Registered dev extension at {location} is missing or no longer a directory; skipping until it reappears."
     ),
     "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
     "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),

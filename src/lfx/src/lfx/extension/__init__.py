@@ -18,6 +18,15 @@ All three components evolve together: the schema defines what ``validate``
 checks, and the formatter renders ``validate``'s output.
 """
 
+from lfx.extension.dev_registry import (
+    DevExtensionEntry,
+    dev_extension_component_paths,
+    list_dev_extensions,
+    load_dev_extensions,
+    register_dev_extension,
+    state_file_path,
+    unregister_dev_extension,
+)
 from lfx.extension.discovery import (
     DEFAULT_SEED_DIR,
     SEED_DIR_ENV_VAR,
@@ -31,6 +40,11 @@ from lfx.extension.errors import (
     ExtensionError,
     ExtensionErrorCollection,
     format_extension_error,
+)
+from lfx.extension.init_template import (
+    BASIC_TEMPLATE,
+    InitOptions,
+    init_extension,
 )
 from lfx.extension.loader import (
     DEFAULT_MODULE_NAMESPACE,
@@ -70,6 +84,7 @@ from lfx.extension.validate import (
 )
 
 __all__ = [
+    "BASIC_TEMPLATE",
     "BUNDLE_API_VERSION",
     "DEFAULT_MODULE_NAMESPACE",
     "DEFAULT_SEED_DIR",
@@ -80,6 +95,7 @@ __all__ = [
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
     "BundleRef",
+    "DevExtensionEntry",
     "DiscoveredExtension",
     "DuplicateExtensionError",
     "Extension",
@@ -88,6 +104,7 @@ __all__ = [
     "ExtensionImmutableError",
     "ExtensionManifest",
     "ExtensionRegistry",
+    "InitOptions",
     "LfxCompat",
     "LoadResult",
     "LoadStatus",
@@ -95,6 +112,7 @@ __all__ = [
     "ManifestSource",
     "ValidateReport",
     "build_registry_from_discovery",
+    "dev_extension_component_paths",
     "discover_all_extensions",
     "discover_inline_bundles",
     "discover_installed_extensions",
@@ -102,10 +120,16 @@ __all__ = [
     "filter_component_entry_points",
     "filter_plugin_entry_points",
     "format_extension_error",
+    "init_extension",
     "installed_extension_roots",
+    "list_dev_extensions",
+    "load_dev_extensions",
     "load_extension",
     "load_installed_extensions",
     "load_manifest",
     "manifest_owning_distributions",
+    "register_dev_extension",
+    "state_file_path",
+    "unregister_dev_extension",
     "validate_extension",
 ]
