@@ -4,6 +4,8 @@ Revision ID: 1b8b740a6fa3
 Revises: f3b2d1f1002d
 Create Date: 2025-04-10 10:17:32.493181
 
+
+Phase: EXPAND
 """
 
 from collections.abc import Sequence
@@ -11,9 +13,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
-from sqlalchemy.engine.reflection import Inspector
-
 from langflow.utils import migration
+from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision: str = "1b8b740a6fa3"
@@ -103,8 +104,11 @@ def upgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("vertex_build")
-        op.rename_table(temp_table_name, "vertex_build")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "vertex_build" CASCADE')
+        else:
+            op.drop_table("vertex_build")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "vertex_build"')
 
     # 2. Handle transaction table
     if migration.table_exists("transaction", conn):
@@ -141,8 +145,11 @@ def upgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("transaction")
-        op.rename_table(temp_table_name, "transaction")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "transaction" CASCADE')
+        else:
+            op.drop_table("transaction")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "transaction"')
 
     # 3. Handle message table
     if migration.table_exists("message", conn):
@@ -183,8 +190,11 @@ def upgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("message")
-        op.rename_table(temp_table_name, "message")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "message" CASCADE')
+        else:
+            op.drop_table("message")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "message"')
 
 
 def downgrade() -> None:
@@ -241,8 +251,11 @@ def downgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("vertex_build")
-        op.rename_table(temp_table_name, "vertex_build")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "vertex_build" CASCADE')
+        else:
+            op.drop_table("vertex_build")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "vertex_build"')
 
     # 2. Handle transaction table
     if migration.table_exists("transaction", conn):
@@ -287,8 +300,11 @@ def downgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("transaction")
-        op.rename_table(temp_table_name, "transaction")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "transaction" CASCADE')
+        else:
+            op.drop_table("transaction")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "transaction"')
 
     # 3. Handle message table
     if migration.table_exists("message", conn):
@@ -337,6 +353,9 @@ def downgrade() -> None:
         """)
 
         # Drop original table and rename temp table
-        op.drop_table("message")
-        op.rename_table(temp_table_name, "message")
+        if conn.dialect.name == "postgresql":
+            op.execute('DROP TABLE "message" CASCADE')
+        else:
+            op.drop_table("message")
+        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "message"')
     # ### end Alembic commands ###

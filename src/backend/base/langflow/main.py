@@ -251,6 +251,29 @@ def get_lifespan(*, fix_migration=False, version=None):
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Load locally-registered dev extensions (``lfx extension dev``).
+            # Each registered directory's bundle path is appended to
+            # ``components_path`` so the existing palette discovery picks
+            # up its components.  Stale entries surface as
+            # ``local-extension-missing`` warnings and do not abort
+            # startup -- the author can fix the path and re-run.
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Loading dev extensions")
+            try:
+                from lfx.extension import dev_extension_component_paths, format_extension_error
+
+                dev_paths, dev_errors = dev_extension_component_paths()
+            except ImportError:  # pragma: no cover - defensive: lfx must be present
+                dev_paths, dev_errors = [], []
+            for error in dev_errors:
+                await logger.awarning(format_extension_error(error))
+            if dev_paths:
+                get_settings_service().settings.components_path.extend(str(p) for p in dev_paths)
+            await logger.adebug(
+                f"Dev extensions loaded in {asyncio.get_event_loop().time() - current_time:.2f}s "
+                f"({len(dev_paths)} path(s), {len(dev_errors)} warning(s))"
+            )
+
             # Gate: Cache component types
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
             # local handle for create_or_update_starter_projects. starter_projects_created can remain False

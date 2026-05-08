@@ -18,21 +18,46 @@ All three components evolve together: the schema defines what ``validate``
 checks, and the formatter renders ``validate``'s output.
 """
 
+from lfx.extension.dev_registry import (
+    DevExtensionEntry,
+    dev_extension_component_paths,
+    list_dev_extensions,
+    load_dev_extensions,
+    register_dev_extension,
+    state_file_path,
+    unregister_dev_extension,
+)
+from lfx.extension.discovery import (
+    DEFAULT_SEED_DIR,
+    SEED_DIR_ENV_VAR,
+    DiscoveredExtension,
+    discover_all_extensions,
+    discover_installed_extensions,
+    discover_seed_extensions,
+)
 from lfx.extension.errors import (
     ERROR_CODES,
     ExtensionError,
     ExtensionErrorCollection,
     format_extension_error,
 )
+from lfx.extension.init_template import (
+    BASIC_TEMPLATE,
+    InitOptions,
+    init_extension,
+)
 from lfx.extension.loader import (
+    DEFAULT_MODULE_NAMESPACE,
     SLOT_EXTRA,
     SLOT_OFFICIAL,
     LoadedComponent,
     LoadResult,
     discover_inline_bundles,
+    filter_component_entry_points,
     filter_plugin_entry_points,
     installed_extension_roots,
     load_extension,
+    load_installed_extensions,
     manifest_owning_distributions,
 )
 from lfx.extension.manifest import (
@@ -55,26 +80,46 @@ from lfx.extension.migration import (
     load_migration_table,
     migrate_flow_payload,
 )
+from lfx.extension.registry import (
+    DuplicateExtensionError,
+    Extension,
+    ExtensionImmutableError,
+    ExtensionRegistry,
+    LoadStatus,
+    build_registry_from_discovery,
+)
 from lfx.extension.validate import (
     ValidateReport,
     validate_extension,
 )
 
 __all__ = [
+    "BASIC_TEMPLATE",
     "BUNDLE_API_VERSION",
+    "DEFAULT_MODULE_NAMESPACE",
+    "DEFAULT_SEED_DIR",
     "ERROR_CODES",
     "EXTENSION_SCHEMA_URL",
     "MIGRATION_SCHEMA_VERSION",
     "MIGRATION_TABLE_PATH",
     "SCHEMA_VERSION",
+    "SEED_DIR_ENV_VAR",
     "SLOT_EXTRA",
     "SLOT_OFFICIAL",
     "BundleRef",
+    "DevExtensionEntry",
+    "DiscoveredExtension",
+    "DuplicateExtensionError",
+    "Extension",
     "ExtensionError",
     "ExtensionErrorCollection",
+    "ExtensionImmutableError",
     "ExtensionManifest",
+    "ExtensionRegistry",
+    "InitOptions",
     "LfxCompat",
     "LoadResult",
+    "LoadStatus",
     "LoadedComponent",
     "ManifestSource",
     "MigrationEntry",
@@ -82,14 +127,27 @@ __all__ = [
     "MigrationTable",
     "NodeRewriteRecord",
     "ValidateReport",
+    "build_registry_from_discovery",
+    "dev_extension_component_paths",
+    "discover_all_extensions",
     "discover_inline_bundles",
+    "discover_installed_extensions",
+    "discover_seed_extensions",
+    "filter_component_entry_points",
     "filter_plugin_entry_points",
     "format_extension_error",
+    "init_extension",
     "installed_extension_roots",
+    "list_dev_extensions",
+    "load_dev_extensions",
     "load_extension",
+    "load_installed_extensions",
     "load_manifest",
     "load_migration_table",
     "manifest_owning_distributions",
     "migrate_flow_payload",
+    "register_dev_extension",
+    "state_file_path",
+    "unregister_dev_extension",
     "validate_extension",
 ]
