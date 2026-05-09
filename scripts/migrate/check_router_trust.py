@@ -41,9 +41,29 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Files to scan.  Add additional modules here when /api/v1/extensions/**
-# routes move into new files.
-SCAN_PATHS: tuple[Path, ...] = (REPO_ROOT / "src" / "backend" / "base" / "langflow" / "api" / "v1" / "extensions.py",)
+# Roots to scan recursively.  Any ``.py`` file under these roots that
+# declares an ``APIRouter(prefix=...)`` whose prefix mounts under
+# ``/extensions`` is checked.  This is broader than a hard-coded file list
+# so a future PR that splits the extensions HTTP surface across multiple
+# modules cannot bypass the guard by introducing a new file.
+SCAN_ROOTS: tuple[Path, ...] = (
+    REPO_ROOT / "src" / "backend" / "base" / "langflow" / "api",
+    REPO_ROOT / "src" / "lfx" / "src" / "lfx",
+)
+
+# A router is "in scope" if its prefix string contains ``/extensions``.
+# Detected via a substring match against the literal in the
+# ``APIRouter(prefix="...")`` call.
+ROUTER_PREFIX_RE = re.compile(
+    r"APIRouter\([^)]*prefix\s*=\s*['\"]([^'\"]*?/?extensions[^'\"]*?)['\"]",
+    re.DOTALL,
+)
+# An app-level mount with the same prefix string also counts (used by
+# ``app.include_router(... prefix=...)`` and direct ``@app.post`` chains).
+APP_INCLUDE_RE = re.compile(
+    r"include_router\([^)]*prefix\s*=\s*['\"]([^'\"]*?/?extensions[^'\"]*?)['\"]",
+    re.DOTALL,
+)
 
 # Forbidden tokens.  We match both naming conventions because route paths
 # are kebab-case (``/install``) and function names are snake_case
@@ -92,6 +112,22 @@ def _line_violates(line: str) -> str | None:
     return None
 
 
+def file_is_in_scope(src: str) -> bool:
+    """Return True if *src* declares or mounts a router under ``/extensions``.
+
+    The check is best-effort textual: we trust authors not to obfuscate a
+    forbidden route by computing the prefix at runtime.  Any future
+    refactor that introduces a non-literal prefix should add an
+    ``# router-trust: in-scope`` marker (a tag-line check is in
+    ``_explicit_in_scope`` below).
+    """
+    if ROUTER_PREFIX_RE.search(src):
+        return True
+    if APP_INCLUDE_RE.search(src):
+        return True
+    return "# router-trust: in-scope" in src
+
+
 def scan_file(path: Path) -> list[str]:
     """Return a list of human-readable violations found in *path*."""
     if not path.exists():
@@ -99,8 +135,12 @@ def scan_file(path: Path) -> list[str]:
         # routes, not to require the API module to exist.
         return []
 
-    violations: list[str] = []
     src = path.read_text(encoding="utf-8")
+    if not file_is_in_scope(src):
+        # Module exists but registers no /extensions routes; nothing to check.
+        return []
+
+    violations: list[str] = []
     lines = src.splitlines()
 
     in_decorator = False
@@ -142,19 +182,38 @@ def scan_file(path: Path) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
+def discover_paths(roots: tuple[Path, ...]) -> list[Path]:
+    """Walk every ``.py`` file under ``roots`` (skipping caches)."""
+    out: list[Path] = []
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*.py")):
+            if "__pycache__" in path.parts:
+                continue
+            out.append(path)
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--paths",
         nargs="*",
         type=Path,
-        default=list(SCAN_PATHS),
-        help="Override the default file list (mostly useful for tests).",
+        default=None,
+        help=(
+            "Override the default scan with an explicit file list "
+            "(mostly useful for tests).  When unset, every ``.py`` under "
+            "the configured scan roots is walked."
+        ),
     )
     args = parser.parse_args()
 
+    targets = list(args.paths) if args.paths else discover_paths(SCAN_ROOTS)
+
     all_violations: list[str] = []
-    for path in args.paths:
+    for path in targets:
         all_violations.extend(scan_file(path))
 
     if all_violations:

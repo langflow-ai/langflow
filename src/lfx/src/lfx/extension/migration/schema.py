@@ -218,6 +218,69 @@ class MigrationEntry(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# AmbiguousBareName
+# ---------------------------------------------------------------------------
+
+
+class AmbiguousBareName(BaseModel):
+    """An ambiguity marker for a bare class name that exists in multiple bundles.
+
+    A bare name like ``MergeDataComponent`` lives in two bundles (the
+    ``processing`` bundle and the ``deactivated`` bundle) so it cannot be
+    auto-rewritten -- picking either target would silently load the wrong
+    component.  We register the ambiguity here so the rewriter can surface
+    ``component-name-ambiguous`` with the candidate targets enumerated,
+    instead of the generic ``component-not-found-with-hint`` that an
+    unmapped reference would otherwise produce.
+
+    The CI guard in ``scripts/migrate/check_bare_names.py`` cross-checks
+    every bare name found in 2+ bundle folders against this list so a new
+    ambiguity introduced by a future bundle move is caught at build time
+    rather than the next time someone loads an old flow.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    name: StrictStr = Field(
+        ...,
+        description="The unqualified Python class identifier (e.g. ``MergeDataComponent``).",
+    )
+    candidates: list[StrictStr] = Field(
+        ...,
+        min_length=2,
+        description=(
+            "Every canonical ``ext:<bundle>:<Class>@<slot>`` ID this bare name "
+            "could refer to.  Surfaced verbatim in the typed error so the "
+            "operator can pick the right one."
+        ),
+    )
+    added_in: StrictStr | None = Field(
+        default=None,
+        description="Langflow version that introduced this ambiguity entry.",
+    )
+
+    @field_validator("name")
+    @classmethod
+    def _validate_name(cls, value: str) -> str:
+        if not _BARE_CLASS_RE.fullmatch(value):
+            msg = f"name must be a Python identifier (got {value!r})"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("candidates")
+    @classmethod
+    def _validate_candidates(cls, value: list[str]) -> list[str]:
+        for candidate in value:
+            if not _NAMESPACED_ID_RE.fullmatch(candidate):
+                msg = f"candidate {candidate!r} must be a canonical 'ext:<bundle>:<Class>@<slot>' ID"
+                raise ValueError(msg)
+        if len(set(value)) != len(value):
+            msg = "candidates must be unique"
+            raise ValueError(msg)
+        return value
+
+
+# ---------------------------------------------------------------------------
 # MigrationTable
 # ---------------------------------------------------------------------------
 
@@ -252,6 +315,15 @@ class MigrationTable(BaseModel):
         default_factory=list,
         description="Append-only list of legacy -> canonical mappings.",
     )
+    ambiguous_bare_names: list[AmbiguousBareName] = Field(
+        default_factory=list,
+        description=(
+            "Bare class names that exist in 2+ bundles and therefore cannot "
+            "be auto-rewritten.  The rewriter surfaces "
+            "``component-name-ambiguous`` with the candidate targets so the "
+            "operator can pick the right one.  Append-only like ``entries``."
+        ),
+    )
 
     @field_validator("schema_version")
     @classmethod
@@ -276,6 +348,24 @@ class MigrationTable(BaseModel):
                 )
                 raise ValueError(msg)
             seen.add(key)
+
+        # ambiguous_bare_names must be unique by name and must not collide
+        # with a regular bare_class_name entry (the regular entry would
+        # auto-rewrite, defeating the ambiguity surface).
+        ambig_names: set[str] = set()
+        bare_targets: set[str] = {e.bare_class_name for e in self.entries if e.bare_class_name is not None}
+        for ambig in self.ambiguous_bare_names:
+            if ambig.name in ambig_names:
+                msg = f"Duplicate ambiguous_bare_names entry for {ambig.name!r}."
+                raise ValueError(msg)
+            if ambig.name in bare_targets:
+                msg = (
+                    f"Bare name {ambig.name!r} is in both ``entries`` and "
+                    f"``ambiguous_bare_names``; an ambiguous name must not "
+                    f"have an auto-rewrite entry."
+                )
+                raise ValueError(msg)
+            ambig_names.add(ambig.name)
         return self
 
     # ------------------------------------------------------------------
@@ -299,6 +389,18 @@ class MigrationTable(BaseModel):
         for entry in self.entries:
             if entry.legacy_slot == slot:
                 return entry
+        return None
+
+    def lookup_ambiguous_bare(self, name: str) -> AmbiguousBareName | None:
+        """Return the ambiguity marker for ``name``, or ``None`` if unmapped.
+
+        Used by the rewriter to surface ``component-name-ambiguous`` for
+        bare names that exist in 2+ bundles instead of falling through to
+        the generic ``component-not-found-with-hint`` path.
+        """
+        for ambig in self.ambiguous_bare_names:
+            if ambig.name == name:
+                return ambig
         return None
 
     def all_known_legacy_values(self) -> list[str]:

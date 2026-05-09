@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import pytest
 from lfx.extension.migration.rewrite import migrate_flow_payload
-from lfx.extension.migration.schema import MigrationEntry, MigrationTable
+from lfx.extension.migration.schema import (
+    AmbiguousBareName,
+    MigrationEntry,
+    MigrationTable,
+)
 
 
 def _node(node_id: str, type_value: str) -> dict:
@@ -169,6 +173,82 @@ def test_cross_bucket_ambiguity_emits_component_name_ambiguous() -> None:
     # Original node value is left intact -- we never silently load into
     # the wrong bundle.
     assert payload["data"]["nodes"][0]["data"]["type"] == "ConflictedName"
+
+
+@pytest.mark.unit
+def test_ambiguous_bare_name_surfaces_component_name_ambiguous() -> None:
+    """A bare name registered as ambiguous emits the typed code, not "not-found".
+
+    Without this code path, an ambiguous bare class (e.g. ``MergeDataComponent``
+    living in both ``processing`` and ``deactivated``) would have no
+    auto-rewrite entry (CI rejects ambiguous bare-name entries) and would
+    fall through to ``component-not-found-with-hint``, which loses the
+    "you have to choose" semantics.
+    """
+    table = MigrationTable(
+        schema_version=1,
+        entries=[],
+        ambiguous_bare_names=[
+            AmbiguousBareName(
+                name="MergeDataComponent",
+                candidates=[
+                    "ext:processing:MergeDataComponent@official",
+                    "ext:deactivated:MergeDataComponent@official",
+                ],
+                added_in="1.10.0",
+            ),
+        ],
+    )
+
+    payload = _payload(_node("n1", "MergeDataComponent"))
+    report = migrate_flow_payload(payload, table=table)
+
+    [record] = report.records
+    assert record.outcome == "ambiguous"
+    assert record.error is not None
+    assert record.error.code == "component-name-ambiguous"
+    # Both candidate targets must appear in the message verbatim so the
+    # operator can pick one.
+    assert "ext:processing:MergeDataComponent@official" in record.error.message
+    assert "ext:deactivated:MergeDataComponent@official" in record.error.message
+    # Original node value is left intact -- we never silently load into the
+    # wrong bundle.
+    assert payload["data"]["nodes"][0]["data"]["type"] == "MergeDataComponent"
+
+
+@pytest.mark.unit
+def test_unambiguous_bare_name_still_rewrites_with_ambiguous_list_present() -> None:
+    """A bare name in entries wins over the ambiguity list of *other* names.
+
+    Regression guard: the ambiguity check must not short-circuit the
+    happy-path rewrite for an unrelated bare name.
+    """
+    table = MigrationTable(
+        schema_version=1,
+        entries=[
+            MigrationEntry(
+                bare_class_name="OpenAIEmbeddings",
+                target="ext:openai:OpenAIEmbeddings@official",
+                added_in="1.10.0",
+            ),
+        ],
+        ambiguous_bare_names=[
+            AmbiguousBareName(
+                name="MergeDataComponent",
+                candidates=[
+                    "ext:processing:MergeDataComponent@official",
+                    "ext:deactivated:MergeDataComponent@official",
+                ],
+                added_in="1.10.0",
+            ),
+        ],
+    )
+
+    payload = _payload(_node("n1", "OpenAIEmbeddings"))
+    report = migrate_flow_payload(payload, table=table)
+
+    assert report.rewritten_count == 1
+    assert payload["data"]["nodes"][0]["data"]["type"] == "ext:openai:OpenAIEmbeddings@official"
 
 
 @pytest.mark.unit

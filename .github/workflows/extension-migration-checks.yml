@@ -9,7 +9,7 @@ on:
       - "src/lfx/src/lfx/extension/**"
       - "src/lfx/src/lfx/components/**"
       - "src/bundles/**"
-      - "src/backend/base/langflow/api/v1/extensions.py"
+      - "src/backend/base/langflow/api/**.py"
       - ".github/workflows/extension-migration-checks.yml"
 
 jobs:
@@ -69,6 +69,10 @@ jobs:
   router-trust:
     name: Router trust - no install/uninstall under /api/v1/extensions
     runs-on: ubuntu-latest
+    # Trigger on any change to API modules so the guard catches a new
+    # router file that mounts /extensions, not just edits to the existing
+    # extensions.py.  The guard itself filters down to in-scope files.
+    if: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6

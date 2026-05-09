@@ -21,5 +21,31 @@
       "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
       "added_in": "1.10.0"
     }
+  ],
+  "ambiguous_bare_names": [
+    {
+      "name": "MergeDataComponent",
+      "candidates": [
+        "ext:processing:MergeDataComponent@official",
+        "ext:deactivated:MergeDataComponent@official"
+      ],
+      "added_in": "1.10.0"
+    },
+    {
+      "name": "SplitTextComponent",
+      "candidates": [
+        "ext:processing:SplitTextComponent@official",
+        "ext:deactivated:SplitTextComponent@official"
+      ],
+      "added_in": "1.10.0"
+    },
+    {
+      "name": "SubFlowComponent",
+      "candidates": [
+        "ext:flow_controls:SubFlowComponent@official",
+        "ext:deactivated:SubFlowComponent@official"
+      ],
+      "added_in": "1.10.0"
+    }
   ]
 }

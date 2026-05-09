@@ -22,9 +22,11 @@ integration: the *runtime* half of the M1 dogfood gate ("save a flow on
 pre-migration Langflow, upgrade, confirm it loads AND RUNS identically").
 That requires standing up a real Langflow server, executing the flow
 end-to-end, and comparing the search-result payload to a baseline.  It
-lives in the manual dogfood checklist owned by the LE-1023 ticket and
-runs against an actual upgrade in a clean environment, not the test
-suite.
+lives in the manual dogfood checklist at
+``src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`` and runs against an
+actual upgrade in a clean environment, not the test suite.  A completed
+checklist must be linked in the PR description under "M1 dogfood
+evidence" before merge.
 """
 
 from __future__ import annotations

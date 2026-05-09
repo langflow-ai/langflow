@@ -148,10 +148,16 @@ v0 contract:
 
 ---
 
-## Pilot recommendation
+## Pilot bundle: `lfx-duckduckgo`
 
-For LE-1023 (B1 pilot migration), the recommended target is
-**`duckduckgo`**.  Rationale:
+The shipped LE-1023 pilot is **`duckduckgo`**, extracted into the
+standalone distribution
+[`lfx-duckduckgo`](src/bundles/duckduckgo/) under `src/bundles/duckduckgo/`
+with its own `pyproject.toml`.  `langflow`'s own `pyproject.toml`
+declares `lfx-duckduckgo>=0.1.0` as a regular dependency so a flat
+`pip install langflow` continues to ship the bundle as before.
+
+Why this bundle:
 
 - Single component (`DuckDuckGoSearchComponent`) in a single file
   (`duck_duck_go_search_run.py`).
@@ -162,8 +168,12 @@ For LE-1023 (B1 pilot migration), the recommended target is
 - Class name is globally unique across `src/lfx/src/lfx/components/**`, so the
   bare-name migration entry is allowed by `check_bare_names.py`.
 
-This is a recommendation, not a decision — the engineer who picks up B1 owns
-the call.
+The runtime half of the M1 proof-of-delivery gate (save a flow on
+pre-migration Langflow, upgrade, confirm it loads AND runs identically)
+lives in the dogfood checklist at
+[`src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`](src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md);
+the deserialize half is covered by
+`src/lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py`.
 
 ---
 
@@ -186,3 +196,19 @@ the call.
 - CLI table updated to remove the obsolete `dev register` / `dev unregister`
   / `dev list` subcommands; the actual surface is `extension dev <path>`
   plus the Python helpers `register_dev_extension` / `unregister_dev_extension`.
+- `MigrationTable.ambiguous_bare_names` added.  Each entry is
+  `{name, candidates: [list of canonical IDs]}` and registers a bare
+  class name that exists in 2+ bundles.  The deserializer now surfaces
+  `component-name-ambiguous` (with the candidate targets) for any bare
+  name listed here, instead of falling through to the generic
+  `component-not-found-with-hint`.  Seeded with the canonical regression
+  cases (`MergeDataComponent`, `SplitTextComponent`, `SubFlowComponent`).
+  `check_bare_names.py` now verifies every Component class found in
+  2+ bundle folders has a matching marker, so a future bundle move that
+  introduces a new ambiguity is caught at PR time.
+- Router-trust CI guard broadened to scan every `.py` under
+  `src/backend/base/langflow/api/**` and `src/lfx/src/lfx/**`; a new file
+  that mounts an `APIRouter(prefix=".../extensions...")` is auto-detected
+  and checked for forbidden install/uninstall/registry-mutation handlers.
+  Authors of files with non-literal prefixes can opt in via a
+  `# router-trust: in-scope` marker.

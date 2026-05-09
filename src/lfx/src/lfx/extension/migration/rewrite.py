@@ -247,6 +247,38 @@ def _rewrite_one_node(
         )
 
     if winner is None:
+        # Before falling through to ``component-not-found-with-hint``, check
+        # the ambiguous-bare-names list.  A bare class name that exists in
+        # 2+ bundles cannot have a regular auto-rewrite entry (the CI guard
+        # rejects it), so its only surface is the explicit ambiguity
+        # marker.  Surfacing ``component-name-ambiguous`` here -- with the
+        # candidate targets enumerated -- is the LE-1020 contract:
+        # we will not silently load an ambiguous name into the wrong
+        # bundle, and we tell the operator exactly which targets they have
+        # to choose between.
+        ambig_marker = table.lookup_ambiguous_bare(legacy_value)
+        if ambig_marker is not None:
+            target_list = ", ".join(ambig_marker.candidates)
+            err = ExtensionError(
+                code="component-name-ambiguous",
+                message=(f"Bare class name {legacy_value!r} exists in multiple bundles: {target_list}."),
+                location=node_id,
+                content=legacy_value,
+                hint=(
+                    "Open the flow JSON and replace the type field with the "
+                    "specific canonical 'ext:<bundle>:<Class>@official' ID "
+                    "for the bundle you actually want."
+                ),
+            )
+            return NodeRewriteRecord(
+                node_id=node_id,
+                legacy_value=legacy_value,
+                new_value=None,
+                legacy_form_kind=None,
+                outcome="ambiguous",
+                error=err,
+            )
+
         suggestions = _closest_matches(legacy_value, known_legacy)
         if suggestions:
             hint = (
