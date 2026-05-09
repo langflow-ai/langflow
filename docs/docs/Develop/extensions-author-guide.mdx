@@ -7,6 +7,8 @@ This guide covers how to design, build, and ship a Langflow Extension Bundle fro
 
 :::info First-delivery scope
 This page documents the first-delivery slice of the Bundle Separation epic (LE-905). It covers the foundation (manifest, single-Bundle loader, atomic-swap reload) plus the pilot migration pattern. The wider Extension System vision — services, routes, registries, partner handover — is described in the project's internal design docs and ships in later epics.
+
+The structured **events pipeline** (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook, `bundle_reloaded` / `flow-migrated` events) is deferred to LE-1017. Reload and migration emit through the standard logger today and the HTTP response carries the typed result body; the events stream is the additive surface that lands on top.
 :::
 
 ## Concepts
@@ -105,7 +107,7 @@ Atomic-swap reload (Mode A only) is what makes the dev loop tolerable. The five 
 2. **Stage 2 — validate** the staging load. Any error aborts here; the live bundle is unchanged.
 3. **Stage 3 — swap** under the registry write-lock. New flows resolve to the new class; in-flight flows keep their pre-swap class reference.
 4. **Stage 4 — clean up** the staging namespace.
-5. **Stage 5 — emit** a `bundle_reloaded` event with the added/removed component lists.
+5. **Stage 5 — notify**. Today this is a logger emission of the added/removed component lists plus a registered post-swap hook that refreshes the component cache; the typed `bundle_reloaded` events pipeline (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook) is deferred to LE-1017. The reload route's HTTP response body already carries the typed result, so the palette's reload action gets immediate feedback through the existing mutation hook ([`use-reload-bundle.ts`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/controllers/API/queries/extensions/use-reload-bundle.ts)) until the events stream lands.
 
 Reload is **not** a trust boundary. Bundle code was trusted at install time; the reload pipeline only handles the swap mechanics. Mode B/C deployments rebuild the Docker image rather than reload — see [Production install pattern for Extensions](/deployment-extensions-production).
 
