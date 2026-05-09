@@ -57,6 +57,16 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
+      // Mode A only: gates the palette Bundle-header Reload action.
+      // ``feature-flags.ts`` reads this via ``import.meta.env``; without an
+      // entry here Vite never substitutes the value at build time, so the
+      // flag stays undefined for both ``vite dev`` and ``vite build`` and
+      // the Reload UI never appears even when extension templates carry
+      // the metadata.  Default off so production builds keep parity with
+      // the backend's default-off ``LANGFLOW_ENABLE_EXTENSION_RELOAD``.
+      "import.meta.env.LANGFLOW_EXTENSION_RELOAD_ENABLED": JSON.stringify(
+        envLangflow.LANGFLOW_EXTENSION_RELOAD_ENABLED ?? "false",
+      ),
     },
     plugins: [
       react(),

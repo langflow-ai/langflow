@@ -597,14 +597,7 @@ def dev_command(
     typer.echo("")
     typer.echo("Launching: " + " ".join(shlex.quote(part) for part in cmd))
 
-    env = os.environ.copy()
-    # Force eager loading so dev-extension components show up in the
-    # palette within AC #4's 5s budget.  Use unconditional assignment
-    # (not setdefault) so a developer who has lazy loading exported in
-    # their shell does not silently lose dev components from the palette
-    # -- the dev workflow needs eager loading regardless of the global
-    # default.
-    env["LANGFLOW_LAZY_LOAD_COMPONENTS"] = "false"
+    env = _build_dev_launch_env(os.environ)
 
     # Replace the current process so Ctrl-C in the launched langflow
     # propagates without an extra pty/job-control hop.  When ``langflow``
@@ -614,6 +607,36 @@ def dev_command(
         rc = subprocess.run(cmd, env=env, check=False).returncode  # noqa: S603
         raise typer.Exit(code=rc)
     os.execvpe(cmd[0], cmd, env)  # noqa: S606
+
+
+def _build_dev_launch_env(base_env: os._Environ[str] | dict[str, str]) -> dict[str, str]:
+    """Build the env dict handed to the launched ``langflow run`` process.
+
+    Centralizes the per-flag rationale so the contract is testable in one
+    place and a missing flag is caught by a focused unit test rather than
+    only manifesting as a runtime UX gap.
+
+    Flags set:
+        - ``LANGFLOW_LAZY_LOAD_COMPONENTS=false`` (always, overriding the
+          author's shell): dev components must appear in the palette
+          eagerly so the AC's 5-second budget holds.
+        - ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` (setdefault): the
+          backend route only mounts a usable handler when this is set;
+          ``setdefault`` so an author intentionally testing the off path
+          can pre-export ``=false``.
+        - ``LANGFLOW_EXTENSION_RELOAD_ENABLED=true`` (setdefault): the
+          frontend palette gate (``ENABLE_EXTENSION_RELOAD`` in
+          ``feature-flags.ts``) is wired through ``import.meta.env`` and
+          read by Vite at build time; setting it here only affects a
+          ``vite dev`` server launched from the same shell.  Listed for
+          parity with the backend flag so an author who runs both halves
+          locally gets the Reload button without hand-editing ``.env``.
+    """
+    env = dict(base_env)
+    env["LANGFLOW_LAZY_LOAD_COMPONENTS"] = "false"
+    env.setdefault("LANGFLOW_ENABLE_EXTENSION_RELOAD", "true")
+    env.setdefault("LANGFLOW_EXTENSION_RELOAD_ENABLED", "true")
+    return env
 
 
 def _build_langflow_run_argv(extra_args: list[str]) -> list[str]:
