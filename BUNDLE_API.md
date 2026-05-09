@@ -212,3 +212,32 @@ the deserialize half is covered by
   and checked for forbidden install/uninstall/registry-mutation handlers.
   Authors of files with non-literal prefixes can opt in via a
   `# router-trust: in-scope` marker.
+- Router-trust guard rewritten to use AST-based cross-file resolution.
+  A forbidden handler in module A is now caught when module B mounts A's
+  router via `parent.include_router(child, prefix=".../extensions...")`,
+  and the same applies transitively across multi-hop include_router
+  chains.  An imported router that cannot be statically resolved is
+  ignored (the guard never flags routes it cannot prove reachable from
+  `/extensions`); routes co-located with an in-scope router ARE flagged.
+- `check_migration_append_only.py` now compares
+  `ambiguous_bare_names` alongside `entries`.  A marker may not be
+  removed once published, and its `candidates` list may only grow --
+  shrinking it would silently regress flows from
+  `component-name-ambiguous` to `component-not-found-with-hint`.
+- Router-trust guard now resolves dotted attribute references in
+  `include_router` and decorators.  ``include_router(child.api.router,
+  prefix="/extensions")`` after ``import child.api`` (and the
+  ``import child.api as alias; alias.router`` shape) are caught -- not
+  just ``from child.api import router as child_router``.  The parser
+  flattens any ``Name``/``Attribute`` chain, and the resolver walks
+  imports of either kind (``from M import N`` and ``import M``,
+  with or without an asname) back to the source file.
+- Router-trust guard's relative-import resolver is now
+  ``__init__.py``-aware.  Inside a package, ``from .child import Y``
+  anchors at the package itself (level=1 -> ``pkg``); inside a regular
+  module ``pkg.foo`` it anchors at the parent package (level=1 ->
+  ``pkg``).  The arithmetic differs because ``__init__.py``'s file
+  module IS the package, while ``pkg/foo.py``'s file module is
+  ``pkg.foo``.  The resolver tracks ``is_package`` and decrements
+  ``level`` by one for ``__init__.py`` files so both shapes resolve
+  correctly.

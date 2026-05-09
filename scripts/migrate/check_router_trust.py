@@ -7,32 +7,58 @@ at runtime on a live production server.  The router-trust CI guard in
 LE-1017 enforces this: any handler under ``/api/v1/extensions/**``
 matching install, uninstall, registry_add, or registry_remove fails CI."
 
-This script statically scans the extensions API source files for
-FastAPI route handlers whose path or function name contains a forbidden
-verb.  It is intentionally simple -- regex over the route decorator and
-function name -- so a reviewer can audit it in one pass.
+The guard scans every ``.py`` file under the configured roots, parses
+each one with the AST module, and resolves cross-file ``include_router``
+chains so a forbidden handler in module A cannot slip through by being
+mounted under ``/extensions`` in module B.
 
-Files scanned:
-    src/backend/base/langflow/api/v1/extensions.py
-    src/lfx/src/lfx/extension/  (any module that registers /api/v1/extensions
-                                 routes via APIRouter; reserved for future
-                                 modules)
+Resolution model
+----------------
+
+A router instance is identified by ``(source_file, var_name)``.  A
+router is "in scope" -- meaning its decorators must be checked -- if any
+of these hold:
+
+    1. It was constructed with ``APIRouter(prefix="...extensions...")``
+       in its source file.
+    2. Its source file contains the line ``# router-trust: in-scope``
+       (escape hatch for non-literal prefixes computed at runtime).
+    3. Some file calls ``parent.include_router(this, prefix="...extensions...")``
+       where ``this`` resolves to the router's source file.
+    4. Some file calls ``parent.include_router(this, prefix=...)`` where
+       ``parent`` is itself in scope (transitive).
+
+Resolution follows ``from <module> import <name> [as <alias>]`` imports
+across the project's two Python package roots
+(``src/backend/base`` and ``src/lfx/src``).  Relative imports are
+handled.  An imported router that cannot be statically resolved is
+ignored -- the guard never flags routes it cannot prove are reachable
+from ``/extensions``, but a route declared in the same file as an
+in-scope router IS flagged.
 
 Forbidden tokens (kebab- and snake-case both):
     install, uninstall, registry-add, registry_add,
     registry-remove, registry_remove
 
+Allowlisted substrings:
+    installed-extension-immutable, installed_extension_immutable,
+    _uninstall_immutable
+
+These are typed-error code strings, not routes; they appear in
+function bodies / typed-error payloads and must not trip the guard.
+
 Exit codes:
     0 -- no forbidden routes
     1 -- forbidden route found (details to stderr)
-    2 -- usage / IO error
+    2 -- usage / IO / parse error
 """
 
 from __future__ import annotations
 
 import argparse
-import re
+import ast
 import sys
+from dataclasses import dataclass, field
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
@@ -41,33 +67,21 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# Roots to scan recursively.  Any ``.py`` file under these roots that
-# declares an ``APIRouter(prefix=...)`` whose prefix mounts under
-# ``/extensions`` is checked.  This is broader than a hard-coded file list
-# so a future PR that splits the extensions HTTP surface across multiple
-# modules cannot bypass the guard by introducing a new file.
+# Walk every ``.py`` file under each root.
 SCAN_ROOTS: tuple[Path, ...] = (
     REPO_ROOT / "src" / "backend" / "base" / "langflow" / "api",
     REPO_ROOT / "src" / "lfx" / "src" / "lfx",
 )
 
-# A router is "in scope" if its prefix string contains ``/extensions``.
-# Detected via a substring match against the literal in the
-# ``APIRouter(prefix="...")`` call.
-ROUTER_PREFIX_RE = re.compile(
-    r"APIRouter\([^)]*prefix\s*=\s*['\"]([^'\"]*?/?extensions[^'\"]*?)['\"]",
-    re.DOTALL,
-)
-# An app-level mount with the same prefix string also counts (used by
-# ``app.include_router(... prefix=...)`` and direct ``@app.post`` chains).
-APP_INCLUDE_RE = re.compile(
-    r"include_router\([^)]*prefix\s*=\s*['\"]([^'\"]*?/?extensions[^'\"]*?)['\"]",
-    re.DOTALL,
+# Python package roots.  Used to resolve ``from <module> import <name>``
+# back to a file path -- ``langflow.api.v1.extensions`` lives under
+# ``src/backend/base/`` and ``lfx.extension.bundle_registry`` lives under
+# ``src/lfx/src/``.
+MODULE_ROOTS: tuple[Path, ...] = (
+    REPO_ROOT / "src" / "backend" / "base",
+    REPO_ROOT / "src" / "lfx" / "src",
 )
 
-# Forbidden tokens.  We match both naming conventions because route paths
-# are kebab-case (``/install``) and function names are snake_case
-# (``install_extension``).  The router-trust invariant covers both.
 FORBIDDEN_TOKENS: tuple[str, ...] = (
     "install",
     "uninstall",
@@ -77,34 +91,446 @@ FORBIDDEN_TOKENS: tuple[str, ...] = (
     "registry-remove",
 )
 
-# A handful of identifiers contain forbidden tokens but do not register
-# mutation verbs -- e.g. ``installed_extension_immutable`` is the typed
-# error code raised when someone *tries* to mutate an installed extension.
-# Allowlist these by exact substring so the guard can stay simple.
 ALLOWED_SUBSTRINGS: tuple[str, ...] = (
     "installed-extension-immutable",
     "installed_extension_immutable",
-    "_uninstall_immutable",  # reserved for the typed-error code namespace
+    "_uninstall_immutable",
 )
 
-# FastAPI route decorators we recognise.
-ROUTE_DECORATOR_RE = re.compile(
-    r"@(?:router|app)\.(?:get|post|put|patch|delete|options|head)\s*\(",
-)
-DEF_RE = re.compile(r"^\s*(?:async\s+)?def\s+(\w+)\s*\(")
+HTTP_METHODS = frozenset({"get", "post", "put", "patch", "delete", "options", "head"})
+
+IN_SCOPE_MARKER = "# router-trust: in-scope"
 
 
 # ---------------------------------------------------------------------------
-# Scanner
+# Per-file collected info
 # ---------------------------------------------------------------------------
 
 
-def _line_violates(line: str) -> str | None:
-    """Return the forbidden token found in *line*, or ``None`` if clean."""
-    lowered = line.lower()
+@dataclass(frozen=True)
+class ImportTarget:
+    """What an alias in a file's namespace refers to.
+
+    Two kinds:
+        * ``kind="from"`` -- ``from <module> import <name> [as alias]``;
+          the alias names a *value* (router, function, etc.) inside
+          ``<module>``.
+        * ``kind="module"`` -- ``import <module> [as alias]``; the alias
+          names a *module*.  Accessing ``.x`` either descends into a
+          submodule or pulls a value out of the module.
+
+    Kept as its own dataclass so the resolver can branch on the import
+    shape without re-deriving it from the raw string.
+    """
+
+    kind: str  # "from" or "module"
+    module: str  # the module path (for "from": the source module; for "module": the imported module path)
+    name: str | None = None  # for "from": the imported name; for "module": None
+
+
+@dataclass
+class IncludeCall:
+    parent_chain: tuple[str, ...]
+    child_chain: tuple[str, ...]
+    child_prefix: str | None
+    lineno: int
+
+
+@dataclass
+class DecoratorRef:
+    router_chain: tuple[str, ...]
+    method: str
+    path: str
+    lineno: int
+    func_name: str
+
+
+@dataclass
+class FileInfo:
+    path: Path
+    # var -> prefix string (None if no prefix kwarg)
+    local_routers: dict[str, str | None] = field(default_factory=dict)
+    # alias -> ImportTarget describing what the alias refers to
+    imports: dict[str, ImportTarget] = field(default_factory=dict)
+    include_calls: list[IncludeCall] = field(default_factory=list)
+    decorators: list[DecoratorRef] = field(default_factory=list)
+    has_marker: bool = False
+
+
+RouterId = tuple[Path, str]
+
+
+# ---------------------------------------------------------------------------
+# Parsing
+# ---------------------------------------------------------------------------
+
+
+def _is_apirouter_call(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if isinstance(func, ast.Name) and func.id == "APIRouter":
+        return True
+    return bool(isinstance(func, ast.Attribute) and func.attr == "APIRouter")
+
+
+def _kwarg_string(call: ast.Call, name: str) -> str | None:
+    for kw in call.keywords:
+        if kw.arg == name and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+            return kw.value.value
+    return None
+
+
+def _module_for_file(path: Path) -> tuple[str, bool] | None:
+    """Return ``(dotted_module, is_package)`` for *path*.
+
+    ``is_package`` is ``True`` for ``__init__.py`` files (which represent
+    the package itself, not a module *inside* the package).  This matters
+    for relative-import resolution: ``from .x import y`` inside
+    ``pkg/__init__.py`` resolves to ``pkg.x``, but the same statement
+    inside ``pkg/main.py`` also resolves to ``pkg.x`` -- the anchor
+    differs because ``main.py``'s file_module is ``pkg.main`` while
+    ``__init__.py``'s file_module is ``pkg``.
+    """
+    for root in MODULE_ROOTS:
+        try:
+            rel = path.resolve().relative_to(root.resolve())
+        except ValueError:
+            continue
+        parts = list(rel.parts)
+        if not parts:
+            return None
+        is_package = parts[-1] == "__init__.py"
+        if is_package:
+            parts = parts[:-1]
+        elif parts[-1].endswith(".py"):
+            parts[-1] = parts[-1][:-3]
+        if not parts:
+            return None
+        return ".".join(parts), is_package
+    return None
+
+
+def _resolve_relative_module(
+    file_module: str,
+    *,
+    is_package: bool,
+    level: int,
+    module: str | None,
+) -> str | None:
+    """Apply Python's relative-import rules to compute the absolute module name.
+
+    Per PEP 328:
+        * Inside a regular module ``pkg.foo`` (``pkg/foo.py``), ``level=1``
+          anchors at the *parent package* ``pkg``: ``from .x import y``
+          resolves to ``pkg.x``.
+        * Inside a package ``pkg`` (``pkg/__init__.py``), ``level=1``
+          anchors at *the package itself* ``pkg``: ``from .x import y``
+          inside ``pkg/__init__.py`` also resolves to ``pkg.x``, but the
+          arithmetic is different because the file's own dotted module is
+          ``pkg``, not ``pkg.__init__``.
+
+    The ``is_package`` flag tells us which arithmetic to apply -- it
+    decrements ``level`` by one for ``__init__.py`` files so the anchor
+    lands on the right package in both cases.
+    """
+    if level == 0:
+        return module
+    parts = file_module.split(".")
+    # For packages, the file IS the anchor; level=1 means "stay here".
+    # For modules, level=1 means "go up one to the enclosing package".
+    steps = level - 1 if is_package else level
+    if len(parts) < steps:
+        return None
+    base = parts[: len(parts) - steps]
+    if module:
+        base.extend(module.split("."))
+    return ".".join(base) if base else None
+
+
+def _module_to_file(module: str) -> Path | None:
+    parts = module.split(".")
+    if not parts:
+        return None
+    for root in MODULE_ROOTS:
+        candidate = root.joinpath(*parts).with_suffix(".py")
+        if candidate.exists():
+            return candidate
+        candidate = root.joinpath(*parts) / "__init__.py"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _attribute_chain(node: ast.AST) -> tuple[str, ...] | None:
+    """Flatten an ``ast.Name`` / ``ast.Attribute`` chain into a tuple of segments.
+
+    ``foo`` -> ``("foo",)``
+    ``foo.bar`` -> ``("foo", "bar")``
+    ``foo.bar.baz`` -> ``("foo", "bar", "baz")``
+    Anything else (subscript, call, etc.) -> ``None``.
+    """
+    parts: list[str] = []
+    current: ast.AST = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    parts.reverse()
+    return tuple(parts)
+
+
+def parse_file(path: Path) -> FileInfo | None:
+    """Parse one file with AST; return None on syntax error."""
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    try:
+        tree = ast.parse(source, filename=str(path))
+    except SyntaxError:
+        return None
+
+    info = FileInfo(path=path, has_marker=IN_SCOPE_MARKER in source)
+    module_info = _module_for_file(path)
+    if module_info is None:
+        file_module = ""
+        is_package = False
+    else:
+        file_module, is_package = module_info
+
+    for node in ast.walk(tree):
+        # APIRouter(...) assignments
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            target_name = node.targets[0].id
+            if _is_apirouter_call(node.value):
+                prefix = _kwarg_string(node.value, "prefix")
+                info.local_routers[target_name] = prefix
+
+        # Imports.  We record the *kind* of import so the resolver can
+        # distinguish ``from X import Y`` (Y is a value) from ``import X.Y``
+        # (where X.Y is itself a module and ``X.Y.router`` is the value).
+        if isinstance(node, ast.ImportFrom):
+            module = _resolve_relative_module(file_module, is_package=is_package, level=node.level, module=node.module)
+            if module:
+                for alias in node.names:
+                    local_name = alias.asname or alias.name
+                    info.imports[local_name] = ImportTarget(kind="from", module=module, name=alias.name)
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                local_name = alias.asname or alias.name.split(".")[0]
+                info.imports[local_name] = ImportTarget(kind="module", module=alias.name, name=None)
+
+        # parent.include_router(child, prefix=...).  Both parent and child
+        # may be ``ast.Attribute`` chains (``app.api.include_router(...)``
+        # or ``include_router(child.api.router, ...)``), so we flatten both
+        # sides into tuples and let the resolver handle the dotted form.
+        if (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "include_router"
+            and node.args
+        ):
+            parent_chain = _attribute_chain(node.func.value)
+            child_chain = _attribute_chain(node.args[0])
+            if parent_chain is not None and child_chain is not None:
+                prefix = _kwarg_string(node, "prefix")
+                info.include_calls.append(
+                    IncludeCall(
+                        parent_chain=parent_chain,
+                        child_chain=child_chain,
+                        child_prefix=prefix,
+                        lineno=node.lineno,
+                    )
+                )
+
+        # @<router>.<method>(...) on a (Async)FunctionDef.  The router
+        # reference can also be a dotted attribute chain
+        # (``@child.api.router.post(...)``), so flatten it too.
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            for deco in node.decorator_list:
+                if (
+                    isinstance(deco, ast.Call)
+                    and isinstance(deco.func, ast.Attribute)
+                    and deco.func.attr in HTTP_METHODS
+                ):
+                    router_chain = _attribute_chain(deco.func.value)
+                    if router_chain is None:
+                        continue
+                    path_str = ""
+                    if deco.args and isinstance(deco.args[0], ast.Constant) and isinstance(deco.args[0].value, str):
+                        path_str = deco.args[0].value
+                    info.decorators.append(
+                        DecoratorRef(
+                            router_chain=router_chain,
+                            method=deco.func.attr,
+                            path=path_str,
+                            lineno=deco.lineno,
+                            func_name=node.name,
+                        )
+                    )
+
+    return info
+
+
+# ---------------------------------------------------------------------------
+# Resolution + scope computation
+# ---------------------------------------------------------------------------
+
+
+def _resolve_chain(
+    file_info: FileInfo,
+    chain: tuple[str, ...],
+    file_info_map: dict[Path, FileInfo],
+    *,
+    seen: frozenset[tuple[Path, tuple[str, ...]]] = frozenset(),
+) -> RouterId | None:
+    """Map a dotted attribute chain to the (file, var_name) defining the router.
+
+    Handles four name shapes (the ``A``/``B``/``C``/``D`` correspond to
+    cases enumerated in this script's docstring):
+
+      A. ``from X.Y import Z`` then ``Z`` -> chain=("Z",)
+      B. ``from X.Y import Z as alias`` then ``alias`` -> chain=("alias",)
+      C. ``import X.Y`` then ``X.Y.Z`` -> chain=("X","Y","Z")
+      D. ``import X.Y as alias`` then ``alias.Z`` -> chain=("alias","Z")
+
+    Cycles in re-export chains (``a.py`` re-exports from ``b.py`` which
+    re-exports from ``a.py``) are bounded via the ``seen`` set; the
+    resolver returns ``None`` rather than recursing forever.
+    """
+    if not chain:
+        return None
+    head = chain[0]
+    rest = chain[1:]
+
+    # Bound recursion against re-export cycles.
+    fingerprint = (file_info.path, chain)
+    if fingerprint in seen:
+        return None
+    seen = seen | {fingerprint}
+
+    # Local definition (only meaningful for a single Name, not an
+    # attribute chain -- ``foo.bar`` cannot resolve to a local variable
+    # ``foo`` because that would be a method call, not a router lookup).
+    if not rest and head in file_info.local_routers:
+        return (file_info.path, head)
+
+    if head not in file_info.imports:
+        return None
+    imp = file_info.imports[head]
+
+    if imp.kind == "from":
+        if not rest:
+            # `from M import N [as alias]; alias` -> module=M, var=N
+            module = imp.module
+            var = imp.name
+        else:
+            # `from M import N [as alias]; alias.x.y...`
+            # Treat alias as a value living at M.N; the chain after head
+            # walks deeper (rare for routers but handle it cleanly).
+            module = ".".join([imp.module, *([imp.name] if imp.name else []), *rest[:-1]])
+            var = rest[-1]
+        if not var:
+            return None
+    elif imp.kind == "module":
+        # ``import M [as alias]``; ``imp.module`` is M.
+        if head == imp.module:
+            # Case where head is the literal module path (``import x``;
+            # alias matches "x" exactly).  ``head.x.y`` -> module=M+x, var=y.
+            if not rest:
+                return None
+            module = ".".join([imp.module, *rest[:-1]])
+            var = rest[-1]
+        elif imp.module.startswith(head + "."):
+            # Case C: ``import x.y.z`` (no asname).  Python's binding rule:
+            # the local name is the *first* segment ("x"); the rest of the
+            # dotted path lives under it.  Code references must spell out
+            # the full module path before the var: ``x.y.z.router``.
+            module_parts = tuple(imp.module.split("."))
+            # Verify chain prefix == module_parts.
+            if len(chain) <= len(module_parts):
+                return None
+            for idx, mp in enumerate(module_parts):
+                if chain[idx] != mp:
+                    return None
+            sub = chain[len(module_parts) :]
+            if not sub:
+                return None
+            module = ".".join([imp.module, *sub[:-1]])
+            var = sub[-1]
+        else:
+            # Case D: ``import x.y as alias``; head=alias, rest=(...,var)
+            if not rest:
+                return None
+            module = ".".join([imp.module, *rest[:-1]])
+            var = rest[-1]
+    else:
+        return None
+
+    target_file = _module_to_file(module)
+    if target_file is None:
+        return None
+    target_info = file_info_map.get(target_file)
+    if target_info is None:
+        return None
+    if var in target_info.local_routers:
+        return (target_file, var)
+    # Re-export chain: the target file may itself import this name and
+    # forward it on.
+    if var in target_info.imports:
+        return _resolve_chain(target_info, (var,), file_info_map, seen=seen)
+    return None
+
+
+def compute_in_scope(file_info_map: dict[Path, FileInfo]) -> set[RouterId]:
+    in_scope: set[RouterId] = set()
+
+    # Seed: APIRouter(prefix=".../extensions...")
+    for path, info in file_info_map.items():
+        for var, prefix in info.local_routers.items():
+            if prefix and "/extensions" in prefix:
+                in_scope.add((path, var))
+
+    # Seed: explicit marker -> every local router in the file
+    for path, info in file_info_map.items():
+        if info.has_marker:
+            for var in info.local_routers:
+                in_scope.add((path, var))
+
+    # Iterate: propagate via include_router calls
+    changed = True
+    while changed:
+        changed = False
+        for info in file_info_map.values():
+            for call in info.include_calls:
+                child_id = _resolve_chain(info, call.child_chain, file_info_map)
+                if child_id is None or child_id in in_scope:
+                    continue
+                child_in_scope = False
+                if call.child_prefix and "/extensions" in call.child_prefix:
+                    child_in_scope = True
+                else:
+                    parent_id = _resolve_chain(info, call.parent_chain, file_info_map)
+                    if parent_id is not None and parent_id in in_scope:
+                        child_in_scope = True
+                if child_in_scope:
+                    in_scope.add(child_id)
+                    changed = True
+
+    return in_scope
+
+
+# ---------------------------------------------------------------------------
+# Forbidden-token check
+# ---------------------------------------------------------------------------
+
+
+def _violation_token(text: str) -> str | None:
+    lowered = text.lower()
     for allowed in ALLOWED_SUBSTRINGS:
-        # Strip allowlisted substrings before scanning so the typed-error
-        # code namespace does not trip the guard.
         lowered = lowered.replace(allowed, "")
     for token in FORBIDDEN_TOKENS:
         if token in lowered:
@@ -112,68 +538,35 @@ def _line_violates(line: str) -> str | None:
     return None
 
 
-def file_is_in_scope(src: str) -> bool:
-    """Return True if *src* declares or mounts a router under ``/extensions``.
+def scan_in_scope(
+    file_info_map: dict[Path, FileInfo],
+    in_scope: set[RouterId],
+) -> list[str]:
+    """Walk every decorator and flag forbidden handlers on in-scope routers.
 
-    The check is best-effort textual: we trust authors not to obfuscate a
-    forbidden route by computing the prefix at runtime.  Any future
-    refactor that introduces a non-literal prefix should add an
-    ``# router-trust: in-scope`` marker (a tag-line check is in
-    ``_explicit_in_scope`` below).
+    A decorator's router reference is a dotted chain (e.g.
+    ``("router",)`` for ``@router.post(...)`` or ``("child", "api", "router")``
+    for ``@child.api.router.post(...)``).  We resolve the chain back to a
+    ``RouterId`` and check whether that router is in scope.
     """
-    if ROUTER_PREFIX_RE.search(src):
-        return True
-    if APP_INCLUDE_RE.search(src):
-        return True
-    return "# router-trust: in-scope" in src
-
-
-def scan_file(path: Path) -> list[str]:
-    """Return a list of human-readable violations found in *path*."""
-    if not path.exists():
-        # Missing file is not a violation; the guard's job is to catch new
-        # routes, not to require the API module to exist.
-        return []
-
-    src = path.read_text(encoding="utf-8")
-    if not file_is_in_scope(src):
-        # Module exists but registers no /extensions routes; nothing to check.
-        return []
-
     violations: list[str] = []
-    lines = src.splitlines()
 
-    in_decorator = False
-    decorator_path: str = ""
-
-    for lineno, raw in enumerate(lines, start=1):
-        line = raw.strip()
-
-        if ROUTE_DECORATOR_RE.search(line):
-            in_decorator = True
-            decorator_path = line
-            # Decorator may span multiple lines; capture path argument from
-            # the next few lines until we see the closing paren.
-            continue
-
-        if in_decorator:
-            decorator_path += " " + line
-            if ")" in line:
-                in_decorator = False
-                # Now decorator_path holds the full multi-line decorator.
-                token = _line_violates(decorator_path)
-                if token is not None:
-                    violations.append(
-                        f"{path}:{lineno}: forbidden token {token!r} in route decorator: {decorator_path[:160]}"
-                    )
-
-        match = DEF_RE.match(raw)
-        if match:
-            func_name = match.group(1)
-            token = _line_violates(func_name)
+    for path, info in file_info_map.items():
+        check_all = info.has_marker
+        for deco in info.decorators:
+            in_scope_router = check_all
+            if not in_scope_router:
+                deco_router = _resolve_chain(info, deco.router_chain, file_info_map)
+                in_scope_router = deco_router is not None and deco_router in in_scope
+            if not in_scope_router:
+                continue
+            token = _violation_token(deco.path) or _violation_token(deco.func_name)
             if token is not None:
-                violations.append(f"{path}:{lineno}: forbidden token {token!r} in handler name: def {func_name}(...)")
-
+                router_repr = ".".join(deco.router_chain)
+                violations.append(
+                    f"{path}:{deco.lineno}: forbidden token {token!r} in handler "
+                    f"@{router_repr}.{deco.method}({deco.path!r}) def {deco.func_name}(...)"
+                )
     return violations
 
 
@@ -183,7 +576,6 @@ def scan_file(path: Path) -> list[str]:
 
 
 def discover_paths(roots: tuple[Path, ...]) -> list[Path]:
-    """Walk every ``.py`` file under ``roots`` (skipping caches)."""
     out: list[Path] = []
     for root in roots:
         if not root.exists():
@@ -212,11 +604,16 @@ def main() -> int:
 
     targets = list(args.paths) if args.paths else discover_paths(SCAN_ROOTS)
 
-    all_violations: list[str] = []
+    file_info_map: dict[Path, FileInfo] = {}
     for path in targets:
-        all_violations.extend(scan_file(path))
+        info = parse_file(path)
+        if info is not None:
+            file_info_map[path] = info
 
-    if all_violations:
+    in_scope = compute_in_scope(file_info_map)
+    violations = scan_in_scope(file_info_map, in_scope)
+
+    if violations:
         print(
             "router-trust guard: forbidden install/uninstall/registry-mutation route detected.",
             file=sys.stderr,
@@ -234,7 +631,7 @@ def main() -> int:
             file=sys.stderr,
         )
         print("server.\n", file=sys.stderr)
-        for violation in all_violations:
+        for violation in violations:
             print(f"  - {violation}", file=sys.stderr)
         return 1
 
