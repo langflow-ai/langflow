@@ -95,6 +95,51 @@ describe("useReloadBundle", () => {
     expect(onError).toHaveBeenCalled();
   });
 
+  it("unwraps a 422 typed structural failure into the ReloadResult body", async () => {
+    const result = {
+      ok: false,
+      bundle: "openai",
+      reload_id: "abc",
+      components_added: [],
+      components_removed: [],
+      errors: [
+        {
+          code: "module-import-failed",
+          message: "could not import openai_chat",
+          hint: "fix the syntax error",
+          location: "openai/openai_chat.py",
+          content: null,
+          ref_url: null,
+        },
+      ],
+      warnings: [],
+    };
+    mockApiPost.mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          detail: {
+            code: "module-import-failed",
+            message: "could not import openai_chat",
+            result,
+          },
+        },
+      },
+    });
+
+    const onSuccess = jest.fn();
+    const onError = jest.fn();
+    const mutation = useReloadBundle({ onSuccess, onError });
+    await mutation.mutate({ extensionId: "lfx-openai", bundleName: "openai" });
+
+    expect(onSuccess).toHaveBeenCalledWith(
+      result,
+      expect.anything(),
+      undefined,
+    );
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   it("falls back to extractApiErrorMessage for arbitrary failures", async () => {
     mockApiPost.mockRejectedValue(new Error("boom"));
 

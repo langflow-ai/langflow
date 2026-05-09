@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from lfx.extension.migration.schema import (
     MIGRATION_SCHEMA_VERSION,
+    AmbiguousBareName,
     MigrationEntry,
     MigrationTable,
 )
@@ -122,3 +123,101 @@ def test_table_lookup_helpers() -> None:
             "ext:utilities:MergeDataComponent@official-pre-a",
         ]
     )
+
+
+@pytest.mark.unit
+def test_ambiguous_bare_name_requires_at_least_two_candidates() -> None:
+    with pytest.raises(ValidationError):
+        AmbiguousBareName(
+            name="MergeDataComponent",
+            candidates=["ext:processing:MergeDataComponent@official"],
+        )
+
+
+@pytest.mark.unit
+def test_ambiguous_bare_name_rejects_non_canonical_candidate() -> None:
+    with pytest.raises(ValidationError):
+        AmbiguousBareName(
+            name="MergeDataComponent",
+            candidates=[
+                "ext:processing:MergeDataComponent@official",
+                "MergeDataComponent",  # not canonical
+            ],
+        )
+
+
+@pytest.mark.unit
+def test_ambiguous_bare_name_rejects_duplicate_candidates() -> None:
+    with pytest.raises(ValidationError):
+        AmbiguousBareName(
+            name="MergeDataComponent",
+            candidates=[
+                "ext:processing:MergeDataComponent@official",
+                "ext:processing:MergeDataComponent@official",
+            ],
+        )
+
+
+@pytest.mark.unit
+def test_table_rejects_collision_between_entries_and_ambiguous_bare_names() -> None:
+    """A bare name cannot be both auto-rewrite and ambiguous.
+
+    The auto-rewrite would silently win, so the table validator must
+    reject the contradiction at load time.
+    """
+    auto = MigrationEntry(
+        bare_class_name="MergeDataComponent",
+        target="ext:processing:MergeDataComponent@official",
+        added_in="1.10.0",
+    )
+    ambig = AmbiguousBareName(
+        name="MergeDataComponent",
+        candidates=[
+            "ext:processing:MergeDataComponent@official",
+            "ext:deactivated:MergeDataComponent@official",
+        ],
+        added_in="1.10.0",
+    )
+    with pytest.raises(ValidationError):
+        MigrationTable(
+            schema_version=1,
+            entries=[auto],
+            ambiguous_bare_names=[ambig],
+        )
+
+
+@pytest.mark.unit
+def test_table_rejects_duplicate_ambiguous_bare_names() -> None:
+    a1 = AmbiguousBareName(
+        name="MergeDataComponent",
+        candidates=[
+            "ext:processing:MergeDataComponent@official",
+            "ext:deactivated:MergeDataComponent@official",
+        ],
+        added_in="1.10.0",
+    )
+    a2 = AmbiguousBareName(
+        name="MergeDataComponent",
+        candidates=[
+            "ext:processing:MergeDataComponent@official",
+            "ext:other:MergeDataComponent@official",
+        ],
+        added_in="1.10.0",
+    )
+    with pytest.raises(ValidationError):
+        MigrationTable(schema_version=1, entries=[], ambiguous_bare_names=[a1, a2])
+
+
+@pytest.mark.unit
+def test_table_lookup_ambiguous_bare() -> None:
+    ambig = AmbiguousBareName(
+        name="MergeDataComponent",
+        candidates=[
+            "ext:processing:MergeDataComponent@official",
+            "ext:deactivated:MergeDataComponent@official",
+        ],
+        added_in="1.10.0",
+    )
+    table = MigrationTable(schema_version=1, entries=[], ambiguous_bare_names=[ambig])
+    assert table.lookup_ambiguous_bare("MergeDataComponent") is ambig
+    assert table.lookup_ambiguous_bare("Unknown") is None

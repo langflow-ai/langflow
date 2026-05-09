@@ -119,6 +119,7 @@ def test_path_override_bypasses_cache(tmp_path: Path) -> None:
             {
                 "schema_version": cached.schema_version,
                 "entries": [e.model_dump(exclude_none=True) for e in cached.entries],
+                "ambiguous_bare_names": [a.model_dump(exclude_none=True) for a in cached.ambiguous_bare_names],
             }
         ),
         encoding="utf-8",

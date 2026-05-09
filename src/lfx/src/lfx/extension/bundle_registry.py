@@ -163,6 +163,25 @@ class BundleRegistry:
 
     # -- write paths ---------------------------------------------------------
 
+    @contextmanager
+    def write_locked(self) -> Iterator[None]:
+        """Hold the registry write lock across multiple mutations.
+
+        The lock is the same ``RLock`` :meth:`install_bundle` /
+        :meth:`remove_bundle` acquire internally, so callers can wrap a
+        compound atomic operation -- e.g. swapping ``sys.modules`` and
+        installing the new ``BundleRecord`` together -- without the
+        registry briefly exposing a state where one half has flipped and
+        the other has not.  The reentrant acquire inside the inner
+        write methods is a no-op while this context is active.
+
+        The reload pipeline uses this so concurrent readers can never
+        observe new ``sys.modules`` entries with the old ``BundleRecord``
+        (or vice versa).
+        """
+        with self._write_lock:
+            yield
+
     def install_bundle(self, record: BundleRecord) -> BundleRecord | None:
         """Insert or replace a Bundle's record.
 

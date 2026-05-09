@@ -52,6 +52,9 @@ DEFAULT_COMPONENT_ROOTS = (
     REPO_ROOT / "src" / "bundles",
 )
 
+# A class is "ambiguous" if it lives in this many or more bundle folders.
+_AMBIGUITY_THRESHOLD = 2
+
 
 def _iter_component_files(roots: Iterable[Path]) -> Iterable[Path]:
     """Yield every ``.py`` file under each root, skipping caches and dunders."""
@@ -126,6 +129,24 @@ def _bare_name_entries(table: dict) -> list[dict]:
     return [e for e in entries if isinstance(e, dict) and e.get("bare_class_name") is not None]
 
 
+def _ambiguous_bare_name_set(table: dict) -> set[str]:
+    """Return the set of bare names registered as ``ambiguous_bare_names``.
+
+    These are the names the rewriter surfaces ``component-name-ambiguous`` for;
+    any bare name found in 2+ bundle folders must be either here OR have a
+    specific import_path entry per variant so saved flows still resolve.
+    """
+    ambig = table.get("ambiguous_bare_names", [])
+    if not isinstance(ambig, list):
+        msg = "migration table 'ambiguous_bare_names' must be a list"
+        raise TypeError(msg)
+    out: set[str] = set()
+    for entry in ambig:
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str):
+            out.add(entry["name"])
+    return out
+
+
 def find_violations(
     bare_name_entries: list[dict],
     class_to_bundles: dict[str, set[str]],
@@ -154,6 +175,46 @@ def find_violations(
                 f"per legacy location instead."
             )
     return violations
+
+
+def find_unregistered_ambiguities(
+    class_to_bundles: dict[str, set[str]],
+    ambiguous_names: set[str],
+    *,
+    only_components: bool = True,
+) -> list[str]:
+    """Return one message per ambiguous Component class missing from the marker list.
+
+    Per the LE-1020 contract, a bare class name that exists in 2+ bundle
+    folders must surface ``component-name-ambiguous`` at flow-load time.
+    The rewriter's only durable signal is the ``ambiguous_bare_names``
+    list; without an entry there the value falls through to
+    ``component-not-found-with-hint``, which is the wrong code.
+
+    When ``only_components`` is true (the default) we restrict the check to
+    classes whose name ends in ``Component`` -- that's the population a
+    saved flow would reference.  Utility schemas / method enums that share
+    a class name across bundles are not reachable from a flow JSON, so we
+    do not require markers for them.
+    """
+    out: list[str] = []
+    for class_name, bundles in sorted(class_to_bundles.items()):
+        if len(bundles) < _AMBIGUITY_THRESHOLD:
+            continue
+        if only_components and not class_name.endswith("Component"):
+            continue
+        if class_name in ambiguous_names:
+            continue
+        sorted_bundles = sorted(bundles)
+        out.append(
+            f"ambiguous Component class {class_name!r} appears in "
+            f"{len(bundles)} bundle folders ({', '.join(sorted_bundles)}) "
+            f"but is not registered in ``ambiguous_bare_names``.  Add an "
+            f"entry so the deserializer surfaces ``component-name-ambiguous`` "
+            f"with the candidate targets, instead of falling through to "
+            f"``component-not-found-with-hint``."
+        )
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -190,13 +251,10 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         bare_entries = _bare_name_entries(table)
+        ambiguous_names = _ambiguous_bare_name_set(table)
     except TypeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-
-    if not bare_entries:
-        print("ok: no bare_class_name entries to check.")
-        return 0
 
     roots = args.components_root if args.components_root else list(DEFAULT_COMPONENT_ROOTS)
     try:
@@ -205,10 +263,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    violations = find_violations(bare_entries, class_to_bundles)
+    violations: list[str] = []
+    if bare_entries:
+        violations.extend(find_violations(bare_entries, class_to_bundles))
+
+    # Always run the ambiguity-coverage check: any Component class found in
+    # 2+ bundle folders must have an ``ambiguous_bare_names`` entry so the
+    # deserializer surfaces the right typed code.
+    violations.extend(find_unregistered_ambiguities(class_to_bundles, ambiguous_names))
+
     if violations:
         print(
-            "error: bare-name migration entries must map to globally-unique classes; refusing the following:",
+            "error: bare-name migration coverage failed; refusing the following:",
             file=sys.stderr,
         )
         for v in violations:
@@ -216,9 +282,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        f"ok: every bare_class_name entry maps to a globally-unique class "
-        f"({len(bare_entries)} entries checked against "
-        f"{sum(len(b) for b in class_to_bundles.values())} class declarations)."
+        f"ok: {len(bare_entries)} bare_class_name entries checked, "
+        f"{len(ambiguous_names)} ambiguous-bare-name markers checked, "
+        f"against {sum(len(b) for b in class_to_bundles.values())} class declarations."
     )
     return 0
 

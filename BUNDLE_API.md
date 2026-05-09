@@ -116,9 +116,10 @@ requires a `BUNDLE_API_VERSION` bump.
 | `lfx extension validate` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension schema` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension init` (CLI) | `lfx.cli._extension_commands` |
-| `lfx extension dev register` / `unregister` / `list` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension dev` (CLI -- registers a local path and execs `langflow run`) | `lfx.cli._extension_commands` |
 | `lfx extension list` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension reload` (CLI) | `lfx.cli._extension_commands` |
+| `register_dev_extension` / `unregister_dev_extension` (Python API) | `lfx.extension.dev_registry` |
 
 ### Migration
 
@@ -147,10 +148,16 @@ v0 contract:
 
 ---
 
-## Pilot recommendation
+## Pilot bundle: `lfx-duckduckgo`
 
-For LE-1023 (B1 pilot migration), the recommended target is
-**`duckduckgo`**.  Rationale:
+The shipped LE-1023 pilot is **`duckduckgo`**, extracted into the
+standalone distribution
+[`lfx-duckduckgo`](src/bundles/duckduckgo/) under `src/bundles/duckduckgo/`
+with its own `pyproject.toml`.  `langflow`'s own `pyproject.toml`
+declares `lfx-duckduckgo>=0.1.0` as a regular dependency so a flat
+`pip install langflow` continues to ship the bundle as before.
+
+Why this bundle:
 
 - Single component (`DuckDuckGoSearchComponent`) in a single file
   (`duck_duck_go_search_run.py`).
@@ -161,8 +168,12 @@ For LE-1023 (B1 pilot migration), the recommended target is
 - Class name is globally unique across `src/lfx/src/lfx/components/**`, so the
   bare-name migration entry is allowed by `check_bare_names.py`.
 
-This is a recommendation, not a decision — the engineer who picks up B1 owns
-the call.
+The runtime half of the M1 proof-of-delivery gate (save a flow on
+pre-migration Langflow, upgrade, confirm it loads AND runs identically)
+lives in the dogfood checklist at
+[`src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`](src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md);
+the deserialize half is covered by
+`src/lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py`.
 
 ---
 
@@ -171,3 +182,33 @@ the call.
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- `BundleRegistry.write_locked()` exposed as a public context manager so the
+  reload pipeline can hold the registry write lock across both the
+  `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
+  can no longer observe new modules paired with the old record.  No change
+  to the addressable component contract.
+- HTTP reload endpoint (`POST /api/v1/extensions/{id}/bundles/{name}/reload`)
+  returns `422 Unprocessable Entity` for structural failures (broken
+  bundle, missing source path, name mismatch) instead of `200 OK` with
+  `ok=false`.  Body is `{...primaryError, result: ReloadResult}` so the
+  full typed result is preserved under the FastAPI `detail` envelope.
+  `409 Conflict` for `reload-in-progress` is unchanged.
+- CLI table updated to remove the obsolete `dev register` / `dev unregister`
+  / `dev list` subcommands; the actual surface is `extension dev <path>`
+  plus the Python helpers `register_dev_extension` / `unregister_dev_extension`.
+- `MigrationTable.ambiguous_bare_names` added.  Each entry is
+  `{name, candidates: [list of canonical IDs]}` and registers a bare
+  class name that exists in 2+ bundles.  The deserializer now surfaces
+  `component-name-ambiguous` (with the candidate targets) for any bare
+  name listed here, instead of falling through to the generic
+  `component-not-found-with-hint`.  Seeded with the canonical regression
+  cases (`MergeDataComponent`, `SplitTextComponent`, `SubFlowComponent`).
+  `check_bare_names.py` now verifies every Component class found in
+  2+ bundle folders has a matching marker, so a future bundle move that
+  introduces a new ambiguity is caught at PR time.
+- Router-trust CI guard broadened to scan every `.py` under
+  `src/backend/base/langflow/api/**` and `src/lfx/src/lfx/**`; a new file
+  that mounts an `APIRouter(prefix=".../extensions...")` is auto-detected
+  and checked for forbidden install/uninstall/registry-mutation handlers.
+  Authors of files with non-literal prefixes can opt in via a
+  `# router-trust: in-scope` marker.
