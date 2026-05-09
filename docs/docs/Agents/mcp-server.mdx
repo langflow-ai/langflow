@@ -114,6 +114,18 @@ However, the description mentions it's for "Emily's resume" not Alex's. I don't 
 
 </details>
 
+### Configure tool execution timeouts
+
+Langflow times are evaluated in the following order:
+
+1. Per-component timeout is set directly on an MCP Tools component in your flow. To configure per-component timeout in the [**MCP Server** component](/mcp-server), open the advanced settings tab and enter a value in the **Tool Execution Timeout (seconds)** field. A value of `0` disables the per-component override and falls back to the global setting.
+
+2. Global timeout is set with the `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` environment variable. The default is 180 seconds.
+
+3. Langflow enforces a minimum floor of 180 seconds for tool execution, regardless of lower values set at the component or global level.
+
+To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` or the per-component **Tool Execution Timeout (seconds)** field to a value greater than `180`.
+
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to your Langflow MCP server {#connect-clients-to-use-the-servers-actions}
 
@@ -321,20 +333,10 @@ Only use this option when Langflow is running in a trusted environment.
 </TabItem>
 </Tabs>
 
-## MCP server environment variables
 
-The following environment variables set behaviors related to your Langflow projects' MCP servers:
-
-| Variable | Format | Default | Description |
-|----------|--------|---------|-------------|
-| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `True` | Whether to initialize an MCP server for each of your Langflow projects. If `false`, Langflow doesn't initialize MCP servers. |
-| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | `False` | If `true`, Langflow MCP servers send progress notifications. |
-| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | The number of seconds to wait before an MCP server operation expires due to poor connectivity or long-running requests. |
-| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
-| `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
 
 {/* The anchor on this section (deploy-your-server-externally) is currently a link target in the Langflow UI. Do not change. */}
-### Deploy your Langflow MCP server externally {#deploy-your-server-externally}
+## Deploy your Langflow MCP server externally {#deploy-your-server-externally}
 
 To deploy your Langflow MCP server externally, see [Deploy a public Langflow server](/deployment-public-server).
 
@@ -397,6 +399,19 @@ The default address is `http://localhost:6274`.
     From this tab, you can monitor how your flows are being registered as tools by MCP, as well as test the tools with custom input values.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
+
+## MCP server environment variables
+
+The following environment variables set behaviors related to your Langflow projects' MCP servers:
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MCP_SERVER_ENABLED` | Boolean | `True` | Whether to initialize an MCP server for each of your Langflow projects. If `false`, Langflow doesn't initialize MCP servers. |
+| `LANGFLOW_MCP_SERVER_ENABLE_PROGRESS_NOTIFICATIONS` | Boolean | `False` | If `true`, Langflow MCP servers send progress notifications. |
+| `LANGFLOW_MCP_SERVER_TIMEOUT` | Integer | `20` | Timeout in seconds for MCP connection setup and tool execution. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
+| `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` | Integer | `180` | Global timeout in seconds for MCP tool calls. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
+| `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
+| `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
 
 ## Troubleshoot Langflow MCP servers {#troubleshooting-mcp-server}
 
