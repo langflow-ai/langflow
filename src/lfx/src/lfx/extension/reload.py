@@ -380,15 +380,18 @@ def _run_pipeline(
         source_path=effective_source,
     )
 
-    # The registry write lock is held by install_bundle().  Renaming
-    # sys.modules first means callers that look at the registry post-swap
-    # will find the modules under the new prod names.
-    _swap_sys_modules(
-        previous=previous,
-        new_components=new_components,
-        staging_components=staging.components,
-    )
-    registry.install_bundle(new_record)
+    # Atomic swap: hold the registry write lock across BOTH the sys.modules
+    # rename and the BundleRecord install so concurrent readers can never
+    # observe new modules with the old record (or vice versa).  The lock is
+    # an RLock, so install_bundle()'s own internal acquire is a no-op
+    # reentry while this context is active.
+    with registry.write_locked():
+        _swap_sys_modules(
+            previous=previous,
+            new_components=new_components,
+            staging_components=staging.components,
+        )
+        registry.install_bundle(new_record)
 
     # ---------- Stage 4: cleanup leftover staging entries ----------
     _drop_staging_modules(staging_namespace)

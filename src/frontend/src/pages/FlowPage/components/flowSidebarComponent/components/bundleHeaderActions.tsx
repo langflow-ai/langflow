@@ -71,12 +71,14 @@ const BundleHeaderActionsInner = ({
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const { mutate: reloadBundle, isPending } = useReloadBundle({
     onSuccess: (data: ReloadBundleResponse) => {
-      // Two success-path shapes per the reload endpoint contract:
-      //   1) ok=true: clean reload, components_added/removed describe the
-      //      delta.  Show a green toast.
-      //   2) ok=false: the pipeline ran but rejected the new source
-      //      (broken module, name mismatch, missing path).  Show a red
-      //      toast with the typed errors + hints inline.
+      // Two onSuccess body shapes per the reload endpoint contract:
+      //   1) HTTP 200 + ok=true: clean reload, components_added/removed
+      //      describe the delta.  Show a green toast.
+      //   2) HTTP 422 + ok=false: the pipeline ran but rejected the new
+      //      source (broken module, name mismatch, missing path).  The
+      //      hook unwraps detail.result so we still hit onSuccess with
+      //      a ReloadResult-shaped body; show a red toast with the typed
+      //      errors + hints inline.
       if (data.ok) {
         const added = data.components_added.length;
         const removed = data.components_removed.length;

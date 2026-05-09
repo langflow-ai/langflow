@@ -116,9 +116,10 @@ requires a `BUNDLE_API_VERSION` bump.
 | `lfx extension validate` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension schema` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension init` (CLI) | `lfx.cli._extension_commands` |
-| `lfx extension dev register` / `unregister` / `list` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension dev` (CLI -- registers a local path and execs `langflow run`) | `lfx.cli._extension_commands` |
 | `lfx extension list` (CLI) | `lfx.cli._extension_commands` |
 | `lfx extension reload` (CLI) | `lfx.cli._extension_commands` |
+| `register_dev_extension` / `unregister_dev_extension` (Python API) | `lfx.extension.dev_registry` |
 
 ### Migration
 
@@ -171,3 +172,17 @@ the call.
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- `BundleRegistry.write_locked()` exposed as a public context manager so the
+  reload pipeline can hold the registry write lock across both the
+  `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
+  can no longer observe new modules paired with the old record.  No change
+  to the addressable component contract.
+- HTTP reload endpoint (`POST /api/v1/extensions/{id}/bundles/{name}/reload`)
+  returns `422 Unprocessable Entity` for structural failures (broken
+  bundle, missing source path, name mismatch) instead of `200 OK` with
+  `ok=false`.  Body is `{...primaryError, result: ReloadResult}` so the
+  full typed result is preserved under the FastAPI `detail` envelope.
+  `409 Conflict` for `reload-in-progress` is unchanged.
+- CLI table updated to remove the obsolete `dev register` / `dev unregister`
+  / `dev list` subcommands; the actual surface is `extension dev <path>`
+  plus the Python helpers `register_dev_extension` / `unregister_dev_extension`.

@@ -13,8 +13,18 @@ Verifies the save/upgrade/load contract for flows referencing
     4. The lfx-duckduckgo distribution is importable and ships the manifest
        in a location ``importlib.metadata.files`` can discover.
 
-This is the regression suite the B1 acceptance criteria require: saved flows
-from pre-migration Langflow must load without intervention.
+This covers the *deserialize-side* half of the M1 proof gate: a saved flow
+from pre-migration Langflow loads without intervention and the bundle
+distribution is wired correctly.
+
+Not covered here -- explicitly out of scope for a unit-test-style
+integration: the *runtime* half of the M1 dogfood gate ("save a flow on
+pre-migration Langflow, upgrade, confirm it loads AND RUNS identically").
+That requires standing up a real Langflow server, executing the flow
+end-to-end, and comparing the search-result payload to a baseline.  It
+lives in the manual dogfood checklist owned by the LE-1023 ticket and
+runs against an actual upgrade in a clean environment, not the test
+suite.
 """
 
 from __future__ import annotations

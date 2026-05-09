@@ -80,15 +80,15 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
     """Trigger an atomic-swap reload for a single Bundle.
 
     Returns the typed :class:`~lfx.extension.reload.ReloadResult` body on
-    success.  On structural failure (broken bundle, missing source path,
-    name mismatch) returns ``200`` with ``ok=false`` and the typed errors
-    in the body so clients can surface fix hints inline -- this matches
-    the pattern used by other validate-style endpoints in this API and
-    keeps a successful import error from looking like a server fault.
-
-    Surfaces ``409 Conflict`` only for the concurrency-control case
-    (``reload-in-progress``); the body still carries the typed error so
-    the client can render the fix hint.
+    success.  Per the typed-error contract, structural failures
+    (broken bundle, missing source path, name mismatch) surface as
+    ``422 Unprocessable Entity`` with the first typed error in the body
+    so clients can surface fix hints inline; the full ``ReloadResult``
+    payload (with all errors and warnings) is returned via the FastAPI
+    ``detail`` envelope.  Concurrency-control collisions surface as
+    ``409 Conflict`` (``reload-in-progress``).  Non-2xx is the wire
+    contract for every error path -- the body still carries the typed
+    error so the client renders the same fix-hint envelope.
     """
     registry = get_default_registry()
     record = registry.get_bundle(bundle_name)
@@ -130,5 +130,33 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
                 ),
             ),
         ) from exc
+
+    if not result.ok:
+        # Structural failure: surface as 422 with the first typed error so
+        # the body shape matches every other typed-error response in this
+        # router.  The full ReloadResult body (including additional errors
+        # and warnings) is preserved under the HTTPException ``detail``.
+        primary = (
+            result.errors[0]
+            if result.errors
+            else ExtensionError(
+                code="reload-failed",
+                message=f"Reload failed for bundle {bundle_name!r}.",
+                location=f"{extension_id}/{bundle_name}",
+                hint="Run `lfx extension validate` against the bundle source for details.",
+            )
+        )
+        logger.warning(
+            "extension reload failed: bundle=%s code=%s",
+            bundle_name,
+            primary.code,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                **primary.to_dict(),
+                "result": result.to_dict(),
+            },
+        )
 
     return result.to_dict()

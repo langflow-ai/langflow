@@ -1187,12 +1187,29 @@ class Graph:
         # reference produces typed errors on the report but never raises, so
         # flow load remains as forgiving as it was pre-Phase-A.
         migration_report = migrate_flow_payload(payload)
+        # Surface every typed error from the report through the standard
+        # logger so unmapped or ambiguous component references are not
+        # silently dropped.  We log rather than raise because the
+        # rewriter is intentionally tolerant -- a partially-broken flow
+        # still loads, and the frontend renders missing nodes as red
+        # placeholders.  The structured ``code``/``hint`` come from
+        # ``ExtensionError`` so log scrapers can parse the payload.
+        for migration_error in migration_report.errors:
+            logger.warning(
+                "extension migration: {code} flow_id={flow_id} location={location} hint={hint} message={message}",
+                code=migration_error.code,
+                flow_id=flow_id,
+                location=migration_error.location,
+                hint=migration_error.hint,
+                message=migration_error.message,
+            )
         # TODO(LE-1017): when the extension events pipeline lands, emit a
         # single ``flow-migrated`` event per flow per session here using
-        # ExtensionEventsService (best-effort: deserialization must not
-        # block on event service health).  For now we keep the report on
-        # the local stack so the wiring is in place.
-        _ = migration_report
+        # ExtensionEventsService, plus one event per ``ExtensionError`` in
+        # ``migration_report.errors`` so the frontend can surface the
+        # ``component-not-found-with-hint`` / ``component-name-ambiguous``
+        # codes inline.  Until then the warnings above are the only
+        # external-facing surface for these errors.
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
