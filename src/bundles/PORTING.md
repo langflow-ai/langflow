@@ -290,7 +290,8 @@ wrong:
 ```bash
 # 1. The bundle's manifest is structurally valid.  Point ``validate`` at
 #    the package directory (where extension.json lives), not the bundle
-#    root.  Output may include a ``build-method-missing`` warning -- this
+#    root. The manifest is nested inside ``src/lfx_<bundle>/`` so the
+#    wheel ships it. Output may include a ``build-method-missing`` warning -- this
 #    is a known static-AST false positive for components that override
 #    Component machinery via ``run_model`` / ``Output(method=...)`` rather
 #    than a literal ``build`` method; the runtime loader accepts them.
