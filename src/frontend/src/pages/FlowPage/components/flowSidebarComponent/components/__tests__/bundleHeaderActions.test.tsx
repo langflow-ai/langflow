@@ -95,45 +95,49 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 
-// The Select primitive is heavy and tied to Radix; the underlying behavior
-// we care about is "clicking Reload calls onValueChange('reload')", so we
-// stub it via a tiny React context that the SelectItem mock reads.
-const SelectContext = React.createContext<((value: string) => void) | null>(
-  null,
-);
-interface SelectMockProps {
-  children: React.ReactNode;
-  onValueChange?: (value: string) => void;
-}
+// DropdownMenu is the action-menu primitive; the underlying behavior we
+// care about is "clicking the Reload item invokes the item's onSelect
+// callback".  Stub the primitive with plain elements so the click flow is
+// trivially testable without spinning up the full Radix portal.
 interface PassthroughProps {
   children: React.ReactNode;
   [key: string]: unknown;
 }
-interface SelectItemMockProps extends PassthroughProps {
-  value: string;
+interface DropdownMenuItemMockProps extends PassthroughProps {
+  onSelect?: () => void;
+  disabled?: boolean;
 }
-jest.mock("@/components/ui/select-custom", () => ({
-  Select: ({ children, onValueChange }: SelectMockProps) => (
-    <SelectContext.Provider value={onValueChange ?? null}>
-      <div data-testid="select">{children}</div>
-    </SelectContext.Provider>
+jest.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: PassthroughProps) => (
+    <div data-testid="dropdown">{children}</div>
   ),
-  SelectTrigger: ({ children, ...rest }: PassthroughProps) => (
+  DropdownMenuTrigger: ({ children, ...rest }: PassthroughProps) => (
     <button type="button" {...rest}>
       {children}
     </button>
   ),
-  SelectContent: ({ children }: PassthroughProps) => (
-    <div data-testid="select-content">{children}</div>
+  DropdownMenuContent: ({ children, ...rest }: PassthroughProps) => (
+    <div data-testid="dropdown-content" {...rest}>
+      {children}
+    </div>
   ),
-  SelectItem: ({ children, value, ...rest }: SelectItemMockProps) => {
-    const onValueChange = React.useContext(SelectContext);
-    return (
-      <button type="button" onClick={() => onValueChange?.(value)} {...rest}>
-        {children}
-      </button>
-    );
-  },
+  DropdownMenuItem: ({
+    children,
+    onSelect,
+    disabled,
+    ...rest
+  }: DropdownMenuItemMockProps) => (
+    <button
+      type="button"
+      onClick={() => {
+        if (!disabled) onSelect?.();
+      }}
+      disabled={disabled}
+      {...rest}
+    >
+      {children}
+    </button>
+  ),
 }));
 
 // Imported AFTER the mocks above so its module-level imports pick up the

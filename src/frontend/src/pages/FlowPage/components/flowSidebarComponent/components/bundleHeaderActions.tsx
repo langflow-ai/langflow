@@ -2,11 +2,11 @@ import { type MouseEvent, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select-custom";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   ExtensionErrorPayload,
   ReloadBundleResponse,
@@ -15,8 +15,6 @@ import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import useAlertStore from "@/stores/alertStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-
-const RELOAD_VALUE = "reload" as const;
 
 type AlertList = { title: string; list: string[] } | undefined;
 
@@ -136,14 +134,17 @@ const BundleHeaderActionsInner = ({
     },
   });
 
-  const handleSelectChange = useCallback(
-    (value: string) => {
-      if (value !== RELOAD_VALUE) return;
-      if (!extensionId) return;
-      reloadBundle({ extensionId, bundleName });
-    },
-    [extensionId, bundleName, reloadBundle],
-  );
+  // Reload is an action -- not a selection -- so wire it via DropdownMenuItem's
+  // onSelect callback.  Radix's Select primitive (the previous wiring) is
+  // for *value* selection: it gates ``onValueChange`` on value-equality and
+  // its popover-portal click semantics interact poorly with the parent
+  // disclosure-trigger button, which together swallow the click and prevent
+  // the network request from ever firing.  DropdownMenu is purpose-built
+  // for action menus and fires onSelect on every activation.
+  const handleReload = useCallback(() => {
+    if (!extensionId) return;
+    reloadBundle({ extensionId, bundleName });
+  }, [extensionId, bundleName, reloadBundle]);
 
   // Stop propagation so opening the menu / clicking Reload does not also
   // collapse / expand the parent disclosure trigger.
@@ -171,11 +172,11 @@ const BundleHeaderActionsInner = ({
   }
 
   return (
-    <Select onValueChange={handleSelectChange}>
-      <SelectTrigger
+    <DropdownMenu>
+      <DropdownMenuTrigger
         tabIndex={-1}
         onClick={stopPropagation}
-        className="h-6 w-6 border-0 p-0 shadow-none focus:ring-0 [&>svg]:hidden"
+        className="flex h-6 w-6 items-center justify-center rounded border-0 p-0 shadow-none outline-none focus:ring-0"
         data-testid={`bundle-header-overflow-${bundleName}`}
         aria-label={t("sidebar.bundles.reload.overflowAria", {
           bundle: displayName,
@@ -190,30 +191,20 @@ const BundleHeaderActionsInner = ({
               : "h-4 w-4 text-muted-foreground"
           }
         />
-      </SelectTrigger>
-      <SelectContent
-        position="popper"
-        side="bottom"
-        align="end"
-        onClick={stopPropagation}
-      >
-        <SelectItem
-          value={RELOAD_VALUE}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="bottom" align="end" onClick={stopPropagation}>
+        <DropdownMenuItem
           disabled={isPending}
+          onSelect={handleReload}
           data-testid={`bundle-header-reload-${bundleName}`}
         >
-          <div className="flex items-center">
-            <ForwardedIconComponent
-              name="RefreshCw"
-              className="relative top-0.5 mr-2 h-4 w-4"
-            />
-            {t("sidebar.bundles.reload.action", {
-              defaultValue: "Reload",
-            })}
-          </div>
-        </SelectItem>
-      </SelectContent>
-    </Select>
+          <ForwardedIconComponent name="RefreshCw" className="mr-2 h-4 w-4" />
+          {t("sidebar.bundles.reload.action", {
+            defaultValue: "Reload",
+          })}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
