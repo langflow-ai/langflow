@@ -1,4 +1,20 @@
 {
   "schema_version": 1,
-  "entries": []
+  "entries": [
+    {
+      "bare_class_name": "DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.duckduckgo.duck_duck_go_search_run.DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.duckduckgo.DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    }
+  ]
 }

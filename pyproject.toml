@@ -18,6 +18,11 @@ maintainers = [
 # Define your main dependencies here
 dependencies = [
     "langflow-base[complete]>=0.10.0",
+    # Bundle pilot (LE-1023): lfx-duckduckgo ships the DuckDuckGoSearchComponent
+    # as a standalone Extension distribution.  Listed as a regular dep so
+    # ``pip install langflow`` still pulls the component in -- the AC for B1
+    # is "no user-visible change at install time".
+    "lfx-duckduckgo>=0.1.0",
 ]
 
 
@@ -71,6 +76,7 @@ langflow-base = { workspace = true }
 langflow = { workspace = true }
 lfx = { workspace = true }
 langflow-sdk = { workspace = true }
+lfx-duckduckgo = { workspace = true }
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
 
@@ -80,6 +86,7 @@ members = [
     ".",
     "src/lfx",
     "src/sdk",
+    "src/bundles/duckduckgo",
 ]
 
 [tool.hatch.build.targets.wheel]

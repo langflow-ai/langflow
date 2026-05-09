@@ -105,17 +105,29 @@ def test_cache_returns_same_instance() -> None:
 
 @pytest.mark.unit
 def test_path_override_bypasses_cache(tmp_path: Path) -> None:
+    """Explicit ``path`` argument must read from disk, not the process cache.
+
+    Mirrors the cached canonical table into a temp file so we can assert
+    value-equality while still distinguishing object identity, regardless of
+    what the canonical migration_table.json currently contains.  Drift in
+    the canonical table no longer breaks this test.
+    """
+    cached, _ = load_migration_table()
     custom = tmp_path / "custom.json"
     custom.write_text(
-        json.dumps({"schema_version": 1, "entries": []}),
+        json.dumps(
+            {
+                "schema_version": cached.schema_version,
+                "entries": [e.model_dump(exclude_none=True) for e in cached.entries],
+            }
+        ),
         encoding="utf-8",
     )
-    cached, _ = load_migration_table()
     direct, _ = load_migration_table(custom)
-    # Explicit path bypasses cache entirely; direct shouldn't equal cached
-    # (different object) and changes to the custom file should be re-read.
+    # Explicit path bypasses cache entirely; direct must be a fresh instance,
+    # not the cached one, but should compare value-equal when content matches.
     assert direct is not cached
-    assert direct == cached  # both empty but distinct instances
+    assert direct == cached
 
 
 @pytest.mark.unit
