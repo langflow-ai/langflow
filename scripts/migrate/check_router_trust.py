@@ -181,8 +181,17 @@ def _kwarg_string(call: ast.Call, name: str) -> str | None:
     return None
 
 
-def _module_for_file(path: Path) -> str | None:
-    """Convert ``foo/bar.py`` under one of the module roots into ``foo.bar``."""
+def _module_for_file(path: Path) -> tuple[str, bool] | None:
+    """Return ``(dotted_module, is_package)`` for *path*.
+
+    ``is_package`` is ``True`` for ``__init__.py`` files (which represent
+    the package itself, not a module *inside* the package).  This matters
+    for relative-import resolution: ``from .x import y`` inside
+    ``pkg/__init__.py`` resolves to ``pkg.x``, but the same statement
+    inside ``pkg/main.py`` also resolves to ``pkg.x`` -- the anchor
+    differs because ``main.py``'s file_module is ``pkg.main`` while
+    ``__init__.py``'s file_module is ``pkg``.
+    """
     for root in MODULE_ROOTS:
         try:
             rel = path.resolve().relative_to(root.resolve())
@@ -191,28 +200,49 @@ def _module_for_file(path: Path) -> str | None:
         parts = list(rel.parts)
         if not parts:
             return None
-        if parts[-1] == "__init__.py":
+        is_package = parts[-1] == "__init__.py"
+        if is_package:
             parts = parts[:-1]
         elif parts[-1].endswith(".py"):
             parts[-1] = parts[-1][:-3]
         if not parts:
             return None
-        return ".".join(parts)
+        return ".".join(parts), is_package
     return None
 
 
-def _resolve_relative_module(file_module: str, level: int, module: str | None) -> str | None:
-    """Apply Python's relative-import rules to compute the absolute module name."""
+def _resolve_relative_module(
+    file_module: str,
+    *,
+    is_package: bool,
+    level: int,
+    module: str | None,
+) -> str | None:
+    """Apply Python's relative-import rules to compute the absolute module name.
+
+    Per PEP 328:
+        * Inside a regular module ``pkg.foo`` (``pkg/foo.py``), ``level=1``
+          anchors at the *parent package* ``pkg``: ``from .x import y``
+          resolves to ``pkg.x``.
+        * Inside a package ``pkg`` (``pkg/__init__.py``), ``level=1``
+          anchors at *the package itself* ``pkg``: ``from .x import y``
+          inside ``pkg/__init__.py`` also resolves to ``pkg.x``, but the
+          arithmetic is different because the file's own dotted module is
+          ``pkg``, not ``pkg.__init__``.
+
+    The ``is_package`` flag tells us which arithmetic to apply -- it
+    decrements ``level`` by one for ``__init__.py`` files so the anchor
+    lands on the right package in both cases.
+    """
     if level == 0:
         return module
     parts = file_module.split(".")
-    # Walk up ``level`` packages.  The current module's last segment is the
-    # *file* name (or the empty string for ``__init__.py`` which has no
-    # trailing segment).  Python's semantics: level=1 means "current
-    # package"; level=2 means "parent package"; etc.
-    if len(parts) < level:
+    # For packages, the file IS the anchor; level=1 means "stay here".
+    # For modules, level=1 means "go up one to the enclosing package".
+    steps = level - 1 if is_package else level
+    if len(parts) < steps:
         return None
-    base = parts[: len(parts) - level]
+    base = parts[: len(parts) - steps]
     if module:
         base.extend(module.split("."))
     return ".".join(base) if base else None
@@ -264,7 +294,12 @@ def parse_file(path: Path) -> FileInfo | None:
         return None
 
     info = FileInfo(path=path, has_marker=IN_SCOPE_MARKER in source)
-    file_module = _module_for_file(path) or ""
+    module_info = _module_for_file(path)
+    if module_info is None:
+        file_module = ""
+        is_package = False
+    else:
+        file_module, is_package = module_info
 
     for node in ast.walk(tree):
         # APIRouter(...) assignments
@@ -278,7 +313,7 @@ def parse_file(path: Path) -> FileInfo | None:
         # distinguish ``from X import Y`` (Y is a value) from ``import X.Y``
         # (where X.Y is itself a module and ``X.Y.router`` is the value).
         if isinstance(node, ast.ImportFrom):
-            module = _resolve_relative_module(file_module, node.level, node.module)
+            module = _resolve_relative_module(file_module, is_package=is_package, level=node.level, module=node.module)
             if module:
                 for alias in node.names:
                     local_name = alias.asname or alias.name

@@ -384,6 +384,73 @@ def test_module_asname_import_is_caught(tmp_path: Path, monkeypatch) -> None:
     )
 
 
+def test_relative_import_inside_package_init_is_caught(tmp_path: Path, monkeypatch) -> None:
+    """``from .child import router`` in ``pkg/__init__.py`` resolves to ``pkg.child``.
+
+    The earlier resolver computed the relative-import anchor by stripping
+    a "file" segment from the dotted path; for ``__init__.py`` files
+    there is no file segment and Python's ``level=1`` already anchors at
+    the package itself, so the resolver walked one segment too far and
+    produced an unresolvable bare module name.
+
+    Regression for [reviewer's reproducer]:
+        pkg/__init__.py: from .child import router; include_router(..., prefix="/extensions")
+        pkg/child.py:    @router.post("/install")
+    """
+    pkg_root = tmp_path / "src"
+    pkg_root.mkdir()
+    pkg = pkg_root / "pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            from .child import router as child_router
+
+            app_router = APIRouter(prefix="/v1")
+            app_router.include_router(child_router, prefix="/extensions")
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "child.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            router = APIRouter()
+
+            @router.post("/install")
+            async def install_extension():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg_root,))
+
+    file_info_map = {
+        pkg / "__init__.py": guard.parse_file(pkg / "__init__.py"),
+        pkg / "child.py": guard.parse_file(pkg / "child.py"),
+    }
+    init_imports = file_info_map[pkg / "__init__.py"].imports
+    assert init_imports["child_router"].module == "pkg.child", (
+        f"relative import in __init__.py resolved incorrectly: {init_imports!r}"
+    )
+
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    assert any("install" in v for v in violations), (
+        f"relative-from-init bypass not caught.  in_scope={in_scope!r}, violations={violations!r}"
+    )
+
+
 def test_unrelated_install_route_not_flagged(tmp_path: Path, monkeypatch) -> None:
     """A handler named ``install`` on a router never mounted under /extensions is fine.
 

@@ -232,3 +232,12 @@ the deserialize half is covered by
   flattens any ``Name``/``Attribute`` chain, and the resolver walks
   imports of either kind (``from M import N`` and ``import M``,
   with or without an asname) back to the source file.
+- Router-trust guard's relative-import resolver is now
+  ``__init__.py``-aware.  Inside a package, ``from .child import Y``
+  anchors at the package itself (level=1 -> ``pkg``); inside a regular
+  module ``pkg.foo`` it anchors at the parent package (level=1 ->
+  ``pkg``).  The arithmetic differs because ``__init__.py``'s file
+  module IS the package, while ``pkg/foo.py``'s file module is
+  ``pkg.foo``.  The resolver tracks ``is_package`` and decrements
+  ``level`` by one for ``__init__.py`` files so both shapes resolve
+  correctly.
