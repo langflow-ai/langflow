@@ -161,7 +161,8 @@ const BundleHeaderActionsInner = ({
     (state) => state.enableExtensionReload,
   );
   const visible = useMemo(
-    () => ENABLE_EXTENSION_RELOAD && enableReloadRuntime && Boolean(extensionId),
+    () =>
+      ENABLE_EXTENSION_RELOAD && enableReloadRuntime && Boolean(extensionId),
     [enableReloadRuntime, extensionId],
   );
 

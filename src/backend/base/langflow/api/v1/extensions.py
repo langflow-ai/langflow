@@ -100,8 +100,7 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
             error=ExtensionError(
                 code="reload-bundle-not-installed",
                 message=(
-                    f"Bundle {bundle_name!r} is registered to extension "
-                    f"{record.extension_id!r}, not {extension_id!r}."
+                    f"Bundle {bundle_name!r} is registered to extension {record.extension_id!r}, not {extension_id!r}."
                 ),
                 location=f"{extension_id}/{bundle_name}",
                 content=bundle_name,
