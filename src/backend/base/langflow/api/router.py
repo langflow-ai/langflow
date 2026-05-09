@@ -1,4 +1,6 @@
 # Router for base api
+import os
+
 from fastapi import APIRouter
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
@@ -84,16 +86,18 @@ router_v1.include_router(model_options_router)
 # endpoint would mask the real deploy pipeline.  Off by default so authenticated
 # users on self-hosted / production deployments cannot trigger runtime imports
 # without an explicit opt-in via LANGFLOW_ENABLE_EXTENSION_RELOAD.
+#
+# Read the env var directly here rather than going through the settings
+# service: this module is imported during ``langflow run`` startup, before
+# ``--env-file`` has been loaded into the environment.  Calling
+# ``get_settings_service()`` here would initialize settings prematurely and
+# break the documented "env file -> settings" ordering enforced by
+# ``__main__.py``.  Pydantic settings normalize the same flag from the
+# environment when settings are eventually built; this gate just decides
+# whether to attach the route.
 def _maybe_include_extensions_router() -> None:
-    from lfx.services.deps import get_settings_service
-
-    try:
-        settings = get_settings_service().settings
-    except Exception:  # noqa: BLE001
-        # Settings may not be available in some import-time contexts (tests
-        # that import the router without a full service stack); fail closed.
-        return
-    if getattr(settings, "enable_extension_reload", False):
+    raw = os.environ.get("LANGFLOW_ENABLE_EXTENSION_RELOAD", "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
         router_v1.include_router(extensions_router)
 
 
