@@ -75,22 +75,28 @@ RUN npm install \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app/src/backend/base
+# ``--extra duckduckgo`` pulls ``ddgs`` (the only dep the bundle adds on
+# top of langflow-base[complete]) at the version recorded in
+# ``src/backend/base/uv.lock``.  Routing the dep through the locked sync
+# instead of an ad-hoc ``uv pip install ddgs`` keeps the base image
+# reproducible across builds and prevents future ``ddgs`` releases from
+# silently drifting from the tested lock state.
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-dev --no-editable --extra postgresql
+    uv sync --frozen --no-dev --no-editable --extra postgresql --extra duckduckgo
 
 # Pilot Bundle re-attach (LE-1023): ``langflow-base`` no longer pulls in
 # DuckDuckGo (it moved to the standalone ``lfx-duckduckgo`` distribution
 # whose pyproject lives at ``src/bundles/duckduckgo``).  The base image
 # was the user-facing path for that component before the move; install
-# every extracted bundle so the runtime image keeps the same component
-# set.  ``--no-deps`` is intentional: the bundle's runtime deps are
-# already in the langflow-base lockfile (lfx, langchain-community,
-# ddgs); avoid pulling a parallel ``lfx`` install.
+# the extracted bundle so the runtime image keeps the same component
+# set.  ``--no-deps`` is intentional: the bundle's runtime deps (lfx,
+# langchain-community, ddgs) are now all in the langflow-base lockfile
+# above, so installing them here would yank duplicates that fight the
+# locked versions.
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv pip install --no-deps /app/src/bundles/duckduckgo \
-    && uv pip install ddgs
+    uv pip install --no-deps /app/src/bundles/duckduckgo
 
 ################################
 # RUNTIME
