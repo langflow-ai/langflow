@@ -106,8 +106,8 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
                 content=bundle_name,
                 hint=(
                     "Use the bundle's actual extension id (typically the pip "
-                    "distribution name); ``GET /api/v1/extensions`` will list "
-                    "the registered (extension, bundle) pairs."
+                    "distribution name); run ``lfx extension list`` to see the "
+                    "registered (extension, bundle) pairs."
                 ),
             ),
         )
