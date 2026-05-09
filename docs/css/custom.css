@@ -730,13 +730,13 @@ body {
 
 /* Light theme */
 html[data-theme="light"] .sidebar-group-label {
-  color: #2f2f35 !important;
+  color: var(--ifm-heading-color) !important;
   opacity: 1 !important;
 }
 
-/* Dark theme — readable but still clearly a label, not a nav item */
+/* Dark theme */
 [data-theme="dark"] .sidebar-group-label {
-  color: #8a8a9a !important;
+  color: var(--ifm-heading-color) !important;
   opacity: 1 !important;
 }
 
