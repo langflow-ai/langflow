@@ -7,6 +7,11 @@ or mutated.  Adding new entries is allowed; reordering existing entries is
 allowed (the runtime does not care about order); changing the ``target``,
 ``legacy_*`` field, or the value any entry maps from is **not**.
 
+The same invariant applies to the ``ambiguous_bare_names`` list: a marker
+may not be removed once published, and its ``candidates`` list may only
+grow -- shrinking it would regress a saved flow that previously surfaced
+``component-name-ambiguous`` to ``component-not-found-with-hint``.
+
 Usage::
 
     python scripts/migrate/check_migration_append_only.py
@@ -75,7 +80,12 @@ def _git_show(ref: str, relpath: str) -> str | None:
     return completed.stdout
 
 
-def _parse(raw: str, *, source: str) -> list[dict]:
+def _parse(raw: str, *, source: str) -> tuple[list[dict], list[dict]]:
+    """Return ``(entries, ambiguous_bare_names)`` from a migration-table JSON.
+
+    Both lists default to empty when the field is absent so this script can
+    compare across baselines that pre-date a given field.
+    """
     try:
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -88,7 +98,11 @@ def _parse(raw: str, *, source: str) -> list[dict]:
     if not isinstance(entries, list):
         print(f"error: {source} entries field must be a list", file=sys.stderr)
         raise SystemExit(2)
-    return entries
+    ambig = data.get("ambiguous_bare_names", [])
+    if not isinstance(ambig, list):
+        print(f"error: {source} ambiguous_bare_names field must be a list", file=sys.stderr)
+        raise SystemExit(2)
+    return entries, ambig
 
 
 def _compare(baseline: list[dict], current: list[dict]) -> list[str]:
@@ -127,6 +141,60 @@ def _compare(baseline: list[dict], current: list[dict]) -> list[str]:
             violations.append(
                 f"entry target changed: {key[0]}={key[1]!r}: {entry.get('target')!r} -> {match.get('target')!r}"
             )
+    return violations
+
+
+def _ambig_name(entry: dict) -> str | None:
+    """Return the bare-name key of an ambiguity marker, or ``None`` if malformed."""
+    name = entry.get("name")
+    return name if isinstance(name, str) else None
+
+
+def _ambig_candidates(entry: dict) -> set[str]:
+    raw = entry.get("candidates", [])
+    if not isinstance(raw, list):
+        return set()
+    return {c for c in raw if isinstance(c, str)}
+
+
+def _compare_ambiguous(baseline: list[dict], current: list[dict]) -> list[str]:
+    """Return human-readable violations for ambiguous_bare_names changes.
+
+    Append-only contract:
+        * No marker may be removed once published.
+        * The candidate set may only grow; removing a candidate would
+          regress a saved flow that previously surfaced
+          ``component-name-ambiguous`` (with that target as one of the
+          fix-hint options) to ``component-not-found-with-hint``.
+    """
+    violations: list[str] = []
+    current_by_name: dict[str, dict] = {}
+    for entry in current:
+        name = _ambig_name(entry)
+        if name is None:
+            violations.append(f"current ambiguous_bare_names entry malformed (no name): {entry!r}")
+            continue
+        if name in current_by_name:
+            violations.append(f"duplicate ambiguous_bare_names entry in current table: name={name!r}")
+            continue
+        current_by_name[name] = entry
+
+    for entry in baseline:
+        name = _ambig_name(entry)
+        if name is None:
+            violations.append(f"baseline ambiguous_bare_names entry malformed (no name): {entry!r}")
+            continue
+        match = current_by_name.get(name)
+        if match is None:
+            violations.append(
+                f"ambiguous_bare_names marker removed: name={name!r} (added in {entry.get('added_in')!r})"
+            )
+            continue
+        baseline_candidates = _ambig_candidates(entry)
+        current_candidates = _ambig_candidates(match)
+        missing = baseline_candidates - current_candidates
+        if missing:
+            violations.append(f"ambiguous_bare_names candidates shrunk for name={name!r}: removed {sorted(missing)!r}")
     return violations
 
 
@@ -170,9 +238,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no baseline migration table at {args.base}:{TABLE_RELPATH}; nothing to compare.")
         return 0
 
-    baseline = _parse(baseline_raw, source=f"{args.base}:{TABLE_RELPATH}")
-    current = _parse(current_raw, source=str(args.current))
-    violations = _compare(baseline, current)
+    baseline_entries, baseline_ambig = _parse(baseline_raw, source=f"{args.base}:{TABLE_RELPATH}")
+    current_entries, current_ambig = _parse(current_raw, source=str(args.current))
+    violations = _compare(baseline_entries, current_entries)
+    violations.extend(_compare_ambiguous(baseline_ambig, current_ambig))
 
     if violations:
         print(
@@ -184,7 +253,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(
         f"ok: migration table is append-only "
-        f"({len(current)} entries; {len(current) - len(baseline)} added since baseline)"
+        f"(entries: {len(current_entries)}, +{len(current_entries) - len(baseline_entries)}; "
+        f"ambiguous_bare_names: {len(current_ambig)}, +{len(current_ambig) - len(baseline_ambig)})"
     )
     return 0
 

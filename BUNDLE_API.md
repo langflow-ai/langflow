@@ -212,3 +212,15 @@ the deserialize half is covered by
   and checked for forbidden install/uninstall/registry-mutation handlers.
   Authors of files with non-literal prefixes can opt in via a
   `# router-trust: in-scope` marker.
+- Router-trust guard rewritten to use AST-based cross-file resolution.
+  A forbidden handler in module A is now caught when module B mounts A's
+  router via `parent.include_router(child, prefix=".../extensions...")`,
+  and the same applies transitively across multi-hop include_router
+  chains.  An imported router that cannot be statically resolved is
+  ignored (the guard never flags routes it cannot prove reachable from
+  `/extensions`); routes co-located with an in-scope router ARE flagged.
+- `check_migration_append_only.py` now compares
+  `ambiguous_bare_names` alongside `entries`.  A marker may not be
+  removed once published, and its `candidates` list may only grow --
+  shrinking it would silently regress flows from
+  `component-name-ambiguous` to `component-not-found-with-hint`.

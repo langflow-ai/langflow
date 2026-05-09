@@ -117,3 +117,191 @@ def test_real_extensions_module_passes() -> None:
 
     result = _run(real_module)
     assert result.returncode == 0, result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Cross-file resolution
+# ---------------------------------------------------------------------------
+
+
+def test_split_router_pattern_is_caught(tmp_path: Path, monkeypatch) -> None:
+    """A forbidden handler in module A must be caught when module B mounts it under /extensions.
+
+    This is the reviewer's reproducer: the child file declares a router
+    with no /extensions prefix; a separate parent file calls
+    ``include_router(child, prefix="/extensions")``.  A purely
+    file-scoped scan would let the forbidden ``/install`` handler in the
+    child module slip through; the cross-file resolver must catch it.
+    """
+    # Build a synthetic project with two package roots so the script can
+    # resolve ``from child.api import router`` to a real file on disk.
+    pkg = tmp_path / "src"
+    pkg.mkdir()
+    (pkg / "child").mkdir()
+    (pkg / "child" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "child" / "api.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            router = APIRouter()
+
+            @router.post("/install")
+            async def install_extension():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "parent").mkdir()
+    (pkg / "parent" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "parent" / "main.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            from child.api import router as child_router
+
+            app_router = APIRouter(prefix="/v1")
+            app_router.include_router(child_router, prefix="/extensions")
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    # Run the script in a subprocess with PYTHONPATH pointing at our pkg
+    # so its module resolution finds the synthetic project.
+    import os
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(pkg)
+    # Patch MODULE_ROOTS via an env-var hook in the script?  Instead, since
+    # the script reads MODULE_ROOTS from a module constant, we exercise the
+    # API directly here rather than spawning a subprocess.
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg,))
+
+    file_info_map = {
+        pkg / "child" / "api.py": guard.parse_file(pkg / "child" / "api.py"),
+        pkg / "parent" / "main.py": guard.parse_file(pkg / "parent" / "main.py"),
+    }
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    assert any("install" in v for v in violations), (
+        f"split-router pattern was not caught.  in_scope={in_scope!r}, violations={violations!r}"
+    )
+
+
+def test_transitive_include_router_chain_is_caught(tmp_path: Path, monkeypatch) -> None:
+    """Three-hop chain: leaf has the forbidden route; root mounts under /extensions.
+
+    Topology:
+        leaf.py      defines ``leaf_router`` (no prefix) with @leaf_router.post("/uninstall")
+        middle.py    defines ``mid_router`` (no prefix) and does
+                     ``mid_router.include_router(leaf_router)``
+        root.py      defines ``app`` (or any router) and does
+                     ``app.include_router(mid_router, prefix="/extensions")``
+
+    The resolver must chase the chain in both directions: ``mid_router``
+    becomes in-scope because root mounts it under /extensions, and
+    ``leaf_router`` becomes in-scope because mid_router (now in scope)
+    mounts it (no /extensions prefix on the inner mount).
+    """
+    pkg = tmp_path / "src"
+    pkg.mkdir()
+    (pkg / "leaf.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            leaf_router = APIRouter()
+
+            @leaf_router.post("/uninstall")
+            async def uninstall_handler():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "middle.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            from leaf import leaf_router
+
+            mid_router = APIRouter()
+            mid_router.include_router(leaf_router)
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "root.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            from middle import mid_router
+
+            app_router = APIRouter(prefix="/v1")
+            app_router.include_router(mid_router, prefix="/extensions")
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg,))
+
+    paths = [pkg / "leaf.py", pkg / "middle.py", pkg / "root.py"]
+    file_info_map = {p: guard.parse_file(p) for p in paths}
+
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    # Both mid_router and leaf_router should be in scope after iteration.
+    in_scope_var_names = {v for _, v in in_scope}
+    assert "mid_router" in in_scope_var_names
+    assert "leaf_router" in in_scope_var_names
+    assert any("uninstall" in v for v in violations), f"transitive chain not caught.  violations={violations!r}"
+
+
+def test_unrelated_install_route_not_flagged(tmp_path: Path, monkeypatch) -> None:
+    """A handler named ``install`` on a router never mounted under /extensions is fine.
+
+    The guard must not be a generic ban on the word "install" -- only routes
+    reachable from /api/v1/extensions/** are forbidden.
+    """
+    pkg = tmp_path / "src"
+    pkg.mkdir()
+    (pkg / "elsewhere.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            elsewhere_router = APIRouter(prefix="/marketplace")
+
+            @elsewhere_router.post("/install")
+            async def marketplace_install():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg,))
+
+    file_info_map = {pkg / "elsewhere.py": guard.parse_file(pkg / "elsewhere.py")}
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    assert in_scope == set()
+    assert violations == []
