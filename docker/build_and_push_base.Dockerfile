@@ -50,12 +50,6 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 # Copy sdk metadata files since it's a workspace member
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
-# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
-# is a uv workspace member, so each bundle's pyproject.toml must be present
-# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
-# whole tree once rather than enumerating each bundle, so a new bundle does
-# not require a Dockerfile edit.
-COPY ./src/bundles /app/src/bundles
 
 # Install the project's dependencies using the lockfile and settings
 # We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
