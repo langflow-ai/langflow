@@ -101,28 +101,44 @@ HTTP_METHODS = frozenset({"get", "post", "put", "patch", "delete", "options", "h
 
 IN_SCOPE_MARKER = "# router-trust: in-scope"
 
-# An import like ``from foo import bar`` produces a dotted target with at
-# least one dot ("foo.bar").  Names with fewer dots cannot be resolved to a
-# (module, name) pair.
-_MIN_DOTTED_PARTS = 2
-
 
 # ---------------------------------------------------------------------------
 # Per-file collected info
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class ImportTarget:
+    """What an alias in a file's namespace refers to.
+
+    Two kinds:
+        * ``kind="from"`` -- ``from <module> import <name> [as alias]``;
+          the alias names a *value* (router, function, etc.) inside
+          ``<module>``.
+        * ``kind="module"`` -- ``import <module> [as alias]``; the alias
+          names a *module*.  Accessing ``.x`` either descends into a
+          submodule or pulls a value out of the module.
+
+    Kept as its own dataclass so the resolver can branch on the import
+    shape without re-deriving it from the raw string.
+    """
+
+    kind: str  # "from" or "module"
+    module: str  # the module path (for "from": the source module; for "module": the imported module path)
+    name: str | None = None  # for "from": the imported name; for "module": None
+
+
 @dataclass
 class IncludeCall:
-    parent_var: str
-    child_var: str
+    parent_chain: tuple[str, ...]
+    child_chain: tuple[str, ...]
     child_prefix: str | None
     lineno: int
 
 
 @dataclass
 class DecoratorRef:
-    router_var: str
+    router_chain: tuple[str, ...]
     method: str
     path: str
     lineno: int
@@ -134,8 +150,8 @@ class FileInfo:
     path: Path
     # var -> prefix string (None if no prefix kwarg)
     local_routers: dict[str, str | None] = field(default_factory=dict)
-    # alias -> "<module>.<name>" (resolved import target)
-    imports: dict[str, str] = field(default_factory=dict)
+    # alias -> ImportTarget describing what the alias refers to
+    imports: dict[str, ImportTarget] = field(default_factory=dict)
     include_calls: list[IncludeCall] = field(default_factory=list)
     decorators: list[DecoratorRef] = field(default_factory=list)
     has_marker: bool = False
@@ -216,6 +232,26 @@ def _module_to_file(module: str) -> Path | None:
     return None
 
 
+def _attribute_chain(node: ast.AST) -> tuple[str, ...] | None:
+    """Flatten an ``ast.Name`` / ``ast.Attribute`` chain into a tuple of segments.
+
+    ``foo`` -> ``("foo",)``
+    ``foo.bar`` -> ``("foo", "bar")``
+    ``foo.bar.baz`` -> ``("foo", "bar", "baz")``
+    Anything else (subscript, call, etc.) -> ``None``.
+    """
+    parts: list[str] = []
+    current: ast.AST = node
+    while isinstance(current, ast.Attribute):
+        parts.append(current.attr)
+        current = current.value
+    if not isinstance(current, ast.Name):
+        return None
+    parts.append(current.id)
+    parts.reverse()
+    return tuple(parts)
+
+
 def parse_file(path: Path) -> FileInfo | None:
     """Parse one file with AST; return None on syntax error."""
     try:
@@ -238,55 +274,62 @@ def parse_file(path: Path) -> FileInfo | None:
                 prefix = _kwarg_string(node.value, "prefix")
                 info.local_routers[target_name] = prefix
 
-        # Imports
+        # Imports.  We record the *kind* of import so the resolver can
+        # distinguish ``from X import Y`` (Y is a value) from ``import X.Y``
+        # (where X.Y is itself a module and ``X.Y.router`` is the value).
         if isinstance(node, ast.ImportFrom):
             module = _resolve_relative_module(file_module, node.level, node.module)
             if module:
                 for alias in node.names:
                     local_name = alias.asname or alias.name
-                    info.imports[local_name] = f"{module}.{alias.name}"
+                    info.imports[local_name] = ImportTarget(kind="from", module=module, name=alias.name)
         elif isinstance(node, ast.Import):
             for alias in node.names:
                 local_name = alias.asname or alias.name.split(".")[0]
-                info.imports[local_name] = alias.name
+                info.imports[local_name] = ImportTarget(kind="module", module=alias.name, name=None)
 
-        # parent.include_router(child, prefix=...)
+        # parent.include_router(child, prefix=...).  Both parent and child
+        # may be ``ast.Attribute`` chains (``app.api.include_router(...)``
+        # or ``include_router(child.api.router, ...)``), so we flatten both
+        # sides into tuples and let the resolver handle the dotted form.
         if (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
             and node.func.attr == "include_router"
-            and isinstance(node.func.value, ast.Name)
             and node.args
-            and isinstance(node.args[0], ast.Name)
         ):
-            parent_var = node.func.value.id
-            child_var = node.args[0].id
-            prefix = _kwarg_string(node, "prefix")
-            info.include_calls.append(
-                IncludeCall(
-                    parent_var=parent_var,
-                    child_var=child_var,
-                    child_prefix=prefix,
-                    lineno=node.lineno,
+            parent_chain = _attribute_chain(node.func.value)
+            child_chain = _attribute_chain(node.args[0])
+            if parent_chain is not None and child_chain is not None:
+                prefix = _kwarg_string(node, "prefix")
+                info.include_calls.append(
+                    IncludeCall(
+                        parent_chain=parent_chain,
+                        child_chain=child_chain,
+                        child_prefix=prefix,
+                        lineno=node.lineno,
+                    )
                 )
-            )
 
-        # @<router>.<method>(...) on a (Async)FunctionDef
+        # @<router>.<method>(...) on a (Async)FunctionDef.  The router
+        # reference can also be a dotted attribute chain
+        # (``@child.api.router.post(...)``), so flatten it too.
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for deco in node.decorator_list:
                 if (
                     isinstance(deco, ast.Call)
                     and isinstance(deco.func, ast.Attribute)
                     and deco.func.attr in HTTP_METHODS
-                    and isinstance(deco.func.value, ast.Name)
                 ):
-                    router_var = deco.func.value.id
+                    router_chain = _attribute_chain(deco.func.value)
+                    if router_chain is None:
+                        continue
                     path_str = ""
                     if deco.args and isinstance(deco.args[0], ast.Constant) and isinstance(deco.args[0].value, str):
                         path_str = deco.args[0].value
                     info.decorators.append(
                         DecoratorRef(
-                            router_var=router_var,
+                            router_chain=router_chain,
                             method=deco.func.attr,
                             path=path_str,
                             lineno=deco.lineno,
@@ -302,28 +345,108 @@ def parse_file(path: Path) -> FileInfo | None:
 # ---------------------------------------------------------------------------
 
 
-def _resolve_var(file_info: FileInfo, var: str, file_info_map: dict[Path, FileInfo]) -> RouterId | None:
-    """Map ``var`` (a name in ``file_info``) to the (file, var) where it's defined."""
-    if var in file_info.local_routers:
-        return (file_info.path, var)
-    if var in file_info.imports:
-        full = file_info.imports[var]
-        parts = full.split(".")
-        if len(parts) < _MIN_DOTTED_PARTS:
+def _resolve_chain(
+    file_info: FileInfo,
+    chain: tuple[str, ...],
+    file_info_map: dict[Path, FileInfo],
+    *,
+    seen: frozenset[tuple[Path, tuple[str, ...]]] = frozenset(),
+) -> RouterId | None:
+    """Map a dotted attribute chain to the (file, var_name) defining the router.
+
+    Handles four name shapes (the ``A``/``B``/``C``/``D`` correspond to
+    cases enumerated in this script's docstring):
+
+      A. ``from X.Y import Z`` then ``Z`` -> chain=("Z",)
+      B. ``from X.Y import Z as alias`` then ``alias`` -> chain=("alias",)
+      C. ``import X.Y`` then ``X.Y.Z`` -> chain=("X","Y","Z")
+      D. ``import X.Y as alias`` then ``alias.Z`` -> chain=("alias","Z")
+
+    Cycles in re-export chains (``a.py`` re-exports from ``b.py`` which
+    re-exports from ``a.py``) are bounded via the ``seen`` set; the
+    resolver returns ``None`` rather than recursing forever.
+    """
+    if not chain:
+        return None
+    head = chain[0]
+    rest = chain[1:]
+
+    # Bound recursion against re-export cycles.
+    fingerprint = (file_info.path, chain)
+    if fingerprint in seen:
+        return None
+    seen = seen | {fingerprint}
+
+    # Local definition (only meaningful for a single Name, not an
+    # attribute chain -- ``foo.bar`` cannot resolve to a local variable
+    # ``foo`` because that would be a method call, not a router lookup).
+    if not rest and head in file_info.local_routers:
+        return (file_info.path, head)
+
+    if head not in file_info.imports:
+        return None
+    imp = file_info.imports[head]
+
+    if imp.kind == "from":
+        if not rest:
+            # `from M import N [as alias]; alias` -> module=M, var=N
+            module = imp.module
+            var = imp.name
+        else:
+            # `from M import N [as alias]; alias.x.y...`
+            # Treat alias as a value living at M.N; the chain after head
+            # walks deeper (rare for routers but handle it cleanly).
+            module = ".".join([imp.module, *([imp.name] if imp.name else []), *rest[:-1]])
+            var = rest[-1]
+        if not var:
             return None
-        module = ".".join(parts[:-1])
-        target_name = parts[-1]
-        target_file = _module_to_file(module)
-        if target_file is None:
-            return None
-        target_info = file_info_map.get(target_file)
-        if target_info is None:
-            return None
-        if target_name in target_info.local_routers:
-            return (target_file, target_name)
-        # Re-export chain: the target file may itself import this name.
-        if target_name in target_info.imports:
-            return _resolve_var(target_info, target_name, file_info_map)
+    elif imp.kind == "module":
+        # ``import M [as alias]``; ``imp.module`` is M.
+        if head == imp.module:
+            # Case where head is the literal module path (``import x``;
+            # alias matches "x" exactly).  ``head.x.y`` -> module=M+x, var=y.
+            if not rest:
+                return None
+            module = ".".join([imp.module, *rest[:-1]])
+            var = rest[-1]
+        elif imp.module.startswith(head + "."):
+            # Case C: ``import x.y.z`` (no asname).  Python's binding rule:
+            # the local name is the *first* segment ("x"); the rest of the
+            # dotted path lives under it.  Code references must spell out
+            # the full module path before the var: ``x.y.z.router``.
+            module_parts = tuple(imp.module.split("."))
+            # Verify chain prefix == module_parts.
+            if len(chain) <= len(module_parts):
+                return None
+            for idx, mp in enumerate(module_parts):
+                if chain[idx] != mp:
+                    return None
+            sub = chain[len(module_parts) :]
+            if not sub:
+                return None
+            module = ".".join([imp.module, *sub[:-1]])
+            var = sub[-1]
+        else:
+            # Case D: ``import x.y as alias``; head=alias, rest=(...,var)
+            if not rest:
+                return None
+            module = ".".join([imp.module, *rest[:-1]])
+            var = rest[-1]
+    else:
+        return None
+
+    target_file = _module_to_file(module)
+    if target_file is None:
+        return None
+    target_info = file_info_map.get(target_file)
+    if target_info is None:
+        return None
+    if var in target_info.local_routers:
+        return (target_file, var)
+    # Re-export chain: the target file may itself import this name and
+    # forward it on.
+    if var in target_info.imports:
+        return _resolve_chain(target_info, (var,), file_info_map, seen=seen)
     return None
 
 
@@ -348,14 +471,14 @@ def compute_in_scope(file_info_map: dict[Path, FileInfo]) -> set[RouterId]:
         changed = False
         for info in file_info_map.values():
             for call in info.include_calls:
-                child_id = _resolve_var(info, call.child_var, file_info_map)
+                child_id = _resolve_chain(info, call.child_chain, file_info_map)
                 if child_id is None or child_id in in_scope:
                     continue
                 child_in_scope = False
                 if call.child_prefix and "/extensions" in call.child_prefix:
                     child_in_scope = True
                 else:
-                    parent_id = _resolve_var(info, call.parent_var, file_info_map)
+                    parent_id = _resolve_chain(info, call.parent_chain, file_info_map)
                     if parent_id is not None and parent_id in in_scope:
                         child_in_scope = True
                 if child_in_scope:
@@ -384,27 +507,30 @@ def scan_in_scope(
     file_info_map: dict[Path, FileInfo],
     in_scope: set[RouterId],
 ) -> list[str]:
+    """Walk every decorator and flag forbidden handlers on in-scope routers.
+
+    A decorator's router reference is a dotted chain (e.g.
+    ``("router",)`` for ``@router.post(...)`` or ``("child", "api", "router")``
+    for ``@child.api.router.post(...)``).  We resolve the chain back to a
+    ``RouterId`` and check whether that router is in scope.
+    """
     violations: list[str] = []
-    in_scope_files: dict[Path, set[str]] = {}
-    for path, var in in_scope:
-        in_scope_files.setdefault(path, set()).add(var)
 
     for path, info in file_info_map.items():
-        target_vars = in_scope_files.get(path)
-        # If the file has the explicit marker, every decorator counts -- we
-        # cannot trust ``router_var`` to be a literal name.
         check_all = info.has_marker
-        if not target_vars and not check_all:
-            continue
-
         for deco in info.decorators:
-            if not check_all and deco.router_var not in (target_vars or set()):
+            in_scope_router = check_all
+            if not in_scope_router:
+                deco_router = _resolve_chain(info, deco.router_chain, file_info_map)
+                in_scope_router = deco_router is not None and deco_router in in_scope
+            if not in_scope_router:
                 continue
             token = _violation_token(deco.path) or _violation_token(deco.func_name)
             if token is not None:
+                router_repr = ".".join(deco.router_chain)
                 violations.append(
                     f"{path}:{deco.lineno}: forbidden token {token!r} in handler "
-                    f"@{deco.router_var}.{deco.method}({deco.path!r}) def {deco.func_name}(...)"
+                    f"@{router_repr}.{deco.method}({deco.path!r}) def {deco.func_name}(...)"
                 )
     return violations
 

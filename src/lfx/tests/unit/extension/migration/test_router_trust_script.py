@@ -270,6 +270,120 @@ def test_transitive_include_router_chain_is_caught(tmp_path: Path, monkeypatch) 
     assert any("uninstall" in v for v in violations), f"transitive chain not caught.  violations={violations!r}"
 
 
+def test_module_attribute_import_is_caught(tmp_path: Path, monkeypatch) -> None:
+    """``import child.api`` then ``include_router(child.api.router, prefix="/extensions")``.
+
+    The earlier resolver only recognised ``ast.Name`` arguments to
+    ``include_router``; a dotted attribute reference was a bypass.  The
+    parser now flattens any ``Name``/``Attribute`` chain and the
+    resolver follows ``import x.y`` bindings back to the source file.
+    """
+    pkg = tmp_path / "src"
+    pkg.mkdir()
+    (pkg / "child").mkdir()
+    (pkg / "child" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "child" / "api.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            router = APIRouter()
+
+            @router.post("/install")
+            async def install_extension():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "main.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            import child.api
+
+            app_router = APIRouter(prefix="/v1")
+            app_router.include_router(child.api.router, prefix="/extensions")
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg,))
+
+    file_info_map = {
+        pkg / "child" / "api.py": guard.parse_file(pkg / "child" / "api.py"),
+        pkg / "main.py": guard.parse_file(pkg / "main.py"),
+    }
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    assert any("install" in v for v in violations), (
+        f"module-attribute include target not caught.  in_scope={in_scope!r}, violations={violations!r}"
+    )
+
+
+def test_module_asname_import_is_caught(tmp_path: Path, monkeypatch) -> None:
+    """``import child.api as child_api`` then ``include_router(child_api.router, ...)``.
+
+    Distinct case from plain ``import child.api`` because Python binds
+    ``child_api`` as the alias instead of ``child``; the resolver has to
+    treat the alias as the entry point and walk the imported module
+    path from there.
+    """
+    pkg = tmp_path / "src"
+    pkg.mkdir()
+    (pkg / "child").mkdir()
+    (pkg / "child" / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "child" / "api.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+
+            router = APIRouter()
+
+            @router.post("/uninstall")
+            async def uninstall_handler():
+                pass
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+    (pkg / "main.py").write_text(
+        dedent(
+            """
+            from fastapi import APIRouter
+            import child.api as child_api
+
+            app_router = APIRouter(prefix="/v1")
+            app_router.include_router(child_api.router, prefix="/extensions")
+            """,
+        ).strip(),
+        encoding="utf-8",
+    )
+
+    monkeypatch.syspath_prepend(str(REPO_ROOT / "scripts" / "migrate"))
+    import importlib
+
+    guard = importlib.import_module("check_router_trust")
+    monkeypatch.setattr(guard, "MODULE_ROOTS", (pkg,))
+
+    file_info_map = {
+        pkg / "child" / "api.py": guard.parse_file(pkg / "child" / "api.py"),
+        pkg / "main.py": guard.parse_file(pkg / "main.py"),
+    }
+    in_scope = guard.compute_in_scope(file_info_map)
+    violations = guard.scan_in_scope(file_info_map, in_scope)
+
+    assert any("uninstall" in v for v in violations), (
+        f"asname include target not caught.  in_scope={in_scope!r}, violations={violations!r}"
+    )
+
+
 def test_unrelated_install_route_not_flagged(tmp_path: Path, monkeypatch) -> None:
     """A handler named ``install`` on a router never mounted under /extensions is fine.
 

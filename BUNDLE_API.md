@@ -224,3 +224,11 @@ the deserialize half is covered by
   removed once published, and its `candidates` list may only grow --
   shrinking it would silently regress flows from
   `component-name-ambiguous` to `component-not-found-with-hint`.
+- Router-trust guard now resolves dotted attribute references in
+  `include_router` and decorators.  ``include_router(child.api.router,
+  prefix="/extensions")`` after ``import child.api`` (and the
+  ``import child.api as alias; alias.router`` shape) are caught -- not
+  just ``from child.api import router as child_router``.  The parser
+  flattens any ``Name``/``Attribute`` chain, and the resolver walks
+  imports of either kind (``from M import N`` and ``import M``,
+  with or without an asname) back to the source file.
