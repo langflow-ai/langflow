@@ -26,7 +26,13 @@ def _make_settings(*, enable: bool):
 
 
 def test_guard_raises_404_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Guard must return 404 with the typed code when the flag is off."""
+    """Guard must return 404 with the FULL typed-error envelope when the flag is off.
+
+    The body must include ``code``, ``message``, ``hint``, and ``ref_url``
+    fields so palette / CLI consumers render the same shape they do for
+    every other reload error.  An ad-hoc ``{code, message}`` body would
+    drop the hint that tells the user how to enable the flag.
+    """
     monkeypatch.setattr(
         "langflow.api.v1.extensions.get_settings_service",
         lambda: _make_settings(enable=False),
@@ -36,8 +42,14 @@ def test_guard_raises_404_when_disabled(monkeypatch: pytest.MonkeyPatch) -> None
         _require_extension_reload_enabled()
 
     assert exc.value.status_code == status.HTTP_404_NOT_FOUND
-    assert exc.value.detail["code"] == "extension-reload-disabled"
-    assert "LANGFLOW_ENABLE_EXTENSION_RELOAD" in exc.value.detail["message"]
+    detail = exc.value.detail
+    assert isinstance(detail, dict)
+    # Full ExtensionError envelope -- code + hint + docs link must all
+    # survive the trip through HTTPException.
+    assert detail["code"] == "extension-reload-disabled"
+    assert "LANGFLOW_ENABLE_EXTENSION_RELOAD" in detail["message"]
+    assert detail["hint"]
+    assert detail["ref_url"].endswith("#extension-reload-disabled")
 
 
 def test_guard_passes_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:

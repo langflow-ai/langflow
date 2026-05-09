@@ -29,6 +29,17 @@ jest.mock("@/stores/alertStore", () => ({
     selector({ setSuccessData, setErrorData, setNoticeData }),
 }));
 
+// The runtime gate (mirrored from /config) must be on for the rendered-UI
+// tests; the off-path is exercised separately below.
+interface UtilitySlice {
+  enableExtensionReload: boolean;
+}
+let runtimeReloadEnabled = true;
+jest.mock("@/stores/utilityStore", () => ({
+  useUtilityStore: (selector: (state: UtilitySlice) => unknown) =>
+    selector({ enableExtensionReload: runtimeReloadEnabled }),
+}));
+
 // Captured between tests so we can poke the latest onSuccess / onError
 // directly without round-tripping through MSW.
 type ReloadVars = { extensionId: string; bundleName: string };
@@ -175,6 +186,13 @@ describe("BundleHeaderActions", () => {
     setNoticeData.mockReset();
     lastOptions = {};
     pending = false;
+    runtimeReloadEnabled = true;
+  });
+
+  it("renders nothing when the runtime backend flag is off", () => {
+    runtimeReloadEnabled = false;
+    const { container } = render(<BundleHeaderActions {...baseProps} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("renders nothing when extensionId is missing", () => {

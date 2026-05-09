@@ -79,6 +79,19 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-dev --no-editable --extra postgresql
 
+# Pilot Bundle re-attach (LE-1023): ``langflow-base`` no longer pulls in
+# DuckDuckGo (it moved to the standalone ``lfx-duckduckgo`` distribution
+# whose pyproject lives at ``src/bundles/duckduckgo``).  The base image
+# was the user-facing path for that component before the move; install
+# every extracted bundle so the runtime image keeps the same component
+# set.  ``--no-deps`` is intentional: the bundle's runtime deps are
+# already in the langflow-base lockfile (lfx, langchain-community,
+# ddgs); avoid pulling a parallel ``lfx`` install.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/duckduckgo \
+    && uv pip install ddgs
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

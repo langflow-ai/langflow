@@ -15,6 +15,11 @@
       "import_path": "lfx.components.duckduckgo.DuckDuckGoSearchComponent",
       "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:duckduckgo:DuckDuckGoSearchComponent@official-pre-a",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
     }
   ]
 }

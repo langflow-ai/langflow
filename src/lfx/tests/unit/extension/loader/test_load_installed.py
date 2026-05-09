@@ -108,6 +108,70 @@ def test_no_installed_extensions_returns_empty(tmp_path: Path) -> None:
     assert results == []
 
 
+def test_editable_install_discovered_via_direct_url(tmp_path: Path) -> None:
+    """Editable installs (``pip install -e``) typically expose only dist-info files.
+
+    The dist-info pass finds no ``extension.json``; the loader must fall
+    back to PEP 610 ``direct_url.json`` (``editable=true``) which records
+    the source path.  Without this fallback, an ``lfx-duckduckgo`` linked
+    via ``uv sync`` workspace member never reaches
+    :func:`load_installed_extensions` -- the dogfood / dev case skipped
+    the bundle entirely.
+    """
+    # Lay out a real extension on disk to be the "editable source".
+    project_root = tmp_path / "src" / "bundles" / "duckduckgo"
+    bundle_dir = project_root / "components"
+    bundle_dir.mkdir(parents=True)
+    (project_root / "extension.json").write_text(
+        json.dumps(
+            {
+                "id": "lfx-pilot",
+                "version": "1.0.0",
+                "name": "lfx-pilot",
+                "lfx": {"compat": ["1"]},
+                "bundles": [{"name": "pilot", "path": "components"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (bundle_dir / "thing.py").write_text(component_source(), encoding="utf-8")
+
+    class _EditableDist(FakeDist):
+        """FakeDist that exposes the same surface as ``importlib.metadata.Distribution``.
+
+        Editable installs leave ``files`` listing only dist-info entries;
+        the manifest is reachable only via ``read_text("direct_url.json")``.
+        """
+
+        def __init__(self, name: str, project_root: Path) -> None:
+            super().__init__(name=name, root=tmp_path, files=[Path("dist-info") / "METADATA"])
+            self._direct_url = json.dumps(
+                {
+                    "url": project_root.resolve().as_uri(),
+                    "dir_info": {"editable": True},
+                }
+            )
+
+        def read_text(self, name: str) -> str | None:
+            if name == "direct_url.json":
+                return self._direct_url
+            return None
+
+        @property
+        def entry_points(self):
+            return []
+
+    dist = _EditableDist("lfx-pilot", project_root)
+
+    results = load_installed_extensions(distributions=[dist])
+    assert len(results) == 1
+    result = results[0]
+    assert result.ok, [e.code for e in result.errors]
+    assert result.distribution == "lfx-pilot"
+    assert result.source_path == project_root.resolve()
+    assert result.components, "Editable bundle's components must load"
+
+
 def test_results_are_lexicographically_ordered(tmp_path: Path) -> None:
     """Order is deterministic so events / logging are reproducible."""
     for name in ("lfx-zeta", "lfx-alpha", "lfx-mike"):

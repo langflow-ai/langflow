@@ -53,37 +53,157 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
 
     extension.json wins on collision; pyproject.toml is accepted only when
     it declares ``[tool.langflow.extension]``.
+
+    Editable installs (``pip install -e``, ``uv pip install --editable``)
+    typically expose only dist-info files via ``dist.files`` -- the source
+    tree lives outside the site-packages and is reached at import time via
+    a ``.pth`` shim.  When the dist-info pass finds no manifest, fall back
+    to ``direct_url.json`` (PEP 610) to locate the editable project root
+    and look for ``extension.json`` / ``pyproject.toml`` there.  Without
+    this fallback, ``lfx-duckduckgo`` and friends installed via ``uv sync``
+    workspace links never reach :func:`load_installed_extensions`.
     """
     files = dist.files
-    if files is None:
-        return None
-
     pyproject_candidate: Path | None = None
-    for relative in files:
-        if not relative.parts:
-            continue
-        last = relative.parts[-1]
-        if last == "extension.json":
-            try:
-                located = Path(dist.locate_file(relative))
-            except (OSError, ValueError):
-                # ``locate_file`` may raise on unusual setups (e.g. namespace
-                # packages without a concrete root); treat as "not found"
-                # without breaking the rest of the scan.
+    if files is not None:
+        for relative in files:
+            if not relative.parts:
                 continue
-            if located.is_file():
-                # extension.json wins outright -- skip any pyproject seen later.
-                return located
-        elif last == "pyproject.toml" and pyproject_candidate is None:
-            try:
-                located = Path(dist.locate_file(relative))
-            except (OSError, ValueError):
-                continue
-            if located.is_file():
-                pyproject_candidate = located
+            last = relative.parts[-1]
+            if last == "extension.json":
+                try:
+                    located = Path(dist.locate_file(relative))
+                except (OSError, ValueError):
+                    # ``locate_file`` may raise on unusual setups (e.g. namespace
+                    # packages without a concrete root); treat as "not found"
+                    # without breaking the rest of the scan.
+                    continue
+                if located.is_file():
+                    # extension.json wins outright -- skip any pyproject seen later.
+                    return located
+            elif last == "pyproject.toml" and pyproject_candidate is None:
+                try:
+                    located = Path(dist.locate_file(relative))
+                except (OSError, ValueError):
+                    continue
+                if located.is_file():
+                    pyproject_candidate = located
 
     if pyproject_candidate is not None and _pyproject_has_extension_section(pyproject_candidate):
         return pyproject_candidate
+
+    # Fallback: editable install.  PEP 610 ``direct_url.json`` records the
+    # source URL; for editable installs the URL is a ``file://`` path to the
+    # project root, which is where the manifest lives.
+    return _editable_manifest_path(dist)
+
+
+def _editable_manifest_path(dist: importlib_metadata.Distribution) -> Path | None:
+    """Resolve the manifest of an editable install whose ``dist.files`` is dist-info-only.
+
+    Tries two fallbacks in order:
+
+    1. The ``langflow.extensions`` entry-point group.  When a bundle
+       declares ``[project.entry-points."langflow.extensions"] foo = "lfx_foo"``
+       the entry-point's value is the dotted package path that ships
+       ``extension.json``; importing that package gives us the source
+       directory regardless of how the dist was installed.
+
+    2. PEP 610 ``direct_url.json`` for ``editable=true`` distributions.
+       The recorded URL points at the project root; we look for
+       ``extension.json`` (or a ``[tool.langflow.extension]`` pyproject)
+       directly there.
+
+    Returns ``None`` if neither path yields a manifest.  Both paths are
+    necessary because (a) installed wheels list the package's
+    ``extension.json`` in ``dist.files`` so they don't reach this fallback,
+    and (b) editable installs that use ``langflow.extensions`` entry-points
+    point at the package, while editable installs that don't may still
+    have a top-level manifest.
+    """
+    manifest = _manifest_via_entry_point(dist)
+    if manifest is not None:
+        return manifest
+    return _manifest_via_direct_url(dist)
+
+
+def _manifest_via_entry_point(dist: importlib_metadata.Distribution) -> Path | None:
+    """Find a manifest via this distribution's ``langflow.extensions`` entry-point.
+
+    Locates the package directory via ``importlib.util.find_spec`` rather
+    than importing the package, so a manifest-discovery pass at startup
+    does not trigger arbitrary side-effects from a bundle's ``__init__``.
+    """
+    import importlib.util
+
+    try:
+        eps = dist.entry_points
+    except (OSError, AttributeError, TypeError):
+        return None
+    if eps is None:
+        return None
+
+    candidate_modules: list[str] = []
+    for ep in eps:
+        if getattr(ep, "group", None) == "langflow.extensions":
+            value = (getattr(ep, "value", "") or "").split(":", 1)[0].strip()
+            if value:
+                candidate_modules.append(value)
+
+    for module_name in candidate_modules:
+        try:
+            spec = importlib.util.find_spec(module_name)
+        except (ImportError, ValueError, ModuleNotFoundError):
+            continue
+        if spec is None or spec.origin is None:
+            continue
+        package_dir = Path(spec.origin).parent
+        manifest = package_dir / "extension.json"
+        if manifest.is_file():
+            return manifest
+    return None
+
+
+def _manifest_via_direct_url(dist: importlib_metadata.Distribution) -> Path | None:
+    """Resolve the manifest from PEP 610 ``direct_url.json`` for editable installs."""
+    import json
+    from urllib.parse import urlparse
+
+    try:
+        raw = dist.read_text("direct_url.json")
+    except (OSError, FileNotFoundError, AttributeError):
+        # ``AttributeError`` covers test doubles that don't implement the
+        # full ``Distribution`` interface; ``OSError`` covers the production
+        # case where the file is missing or unreadable.
+        return None
+    if not raw:
+        return None
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    if not payload.get("dir_info", {}).get("editable"):
+        return None
+
+    url = payload.get("url")
+    if not isinstance(url, str):
+        return None
+    parsed = urlparse(url)
+    if parsed.scheme != "file":
+        return None
+    project_root = Path(parsed.path)
+    if not project_root.is_dir():
+        return None
+
+    manifest = project_root / "extension.json"
+    if manifest.is_file():
+        return manifest
+
+    pyproject = project_root / "pyproject.toml"
+    if pyproject.is_file() and _pyproject_has_extension_section(pyproject):
+        return pyproject
     return None
 
 

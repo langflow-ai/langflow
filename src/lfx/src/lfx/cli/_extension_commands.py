@@ -620,22 +620,15 @@ def _build_dev_launch_env(base_env: os._Environ[str] | dict[str, str]) -> dict[s
         - ``LANGFLOW_LAZY_LOAD_COMPONENTS=false`` (always, overriding the
           author's shell): dev components must appear in the palette
           eagerly so the AC's 5-second budget holds.
-        - ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` (setdefault): the
-          backend route only mounts a usable handler when this is set;
-          ``setdefault`` so an author intentionally testing the off path
-          can pre-export ``=false``.
-        - ``LANGFLOW_EXTENSION_RELOAD_ENABLED=true`` (setdefault): the
-          frontend palette gate (``ENABLE_EXTENSION_RELOAD`` in
-          ``feature-flags.ts``) is wired through ``import.meta.env`` and
-          read by Vite at build time; setting it here only affects a
-          ``vite dev`` server launched from the same shell.  Listed for
-          parity with the backend flag so an author who runs both halves
-          locally gets the Reload button without hand-editing ``.env``.
+        - ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` (setdefault): turns on
+          the in-process Bundle reload route AND the ``/config`` flag the
+          packaged frontend reads at runtime to surface the palette
+          Reload button.  ``setdefault`` so an author intentionally
+          testing the off path can pre-export ``=false``.
     """
     env = dict(base_env)
     env["LANGFLOW_LAZY_LOAD_COMPONENTS"] = "false"
     env.setdefault("LANGFLOW_ENABLE_EXTENSION_RELOAD", "true")
-    env.setdefault("LANGFLOW_EXTENSION_RELOAD_ENABLED", "true")
     return env
 
 

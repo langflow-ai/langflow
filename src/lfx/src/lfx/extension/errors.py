@@ -87,6 +87,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        # HTTP route gate (Mode A only): the runtime guard that hides the
+        # reload route on Mode B/C deployments returns this code so the
+        # client gets the same typed envelope as every other reload error.
+        "extension-reload-disabled",
     }
 )
 
@@ -260,6 +264,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "reload-source-missing": (
         "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
+    ),
+    "extension-reload-disabled": (
+        "Extension reload is disabled on this server.  "
+        "Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A)."
     ),
 }
 

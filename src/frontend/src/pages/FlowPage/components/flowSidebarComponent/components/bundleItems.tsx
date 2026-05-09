@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import type { BundleItemProps } from "../types";
 import BundleHeaderActions from "./bundleHeaderActions";
@@ -45,12 +46,21 @@ export const BundleItem = memo(
       [item.extension_id, item.name, dataFilter],
     );
 
-    // The actions menu is only meaningful when both the feature flag is
-    // on AND the bundle was loaded from a manifest-shipping Extension; the
-    // BundleHeaderActions component itself handles those checks but we
-    // also use the same predicate here to avoid registering a context-menu
-    // capture handler that has nothing to show.
-    const showActions = Boolean(ENABLE_EXTENSION_RELOAD && extensionId);
+    // The actions menu is only meaningful when:
+    //   * the build-time kill switch is on (corporate Mode B/C builds can
+    //     dead-code-eliminate the UI by setting it to false),
+    //   * the backend has the reload route enabled (runtime mirror of
+    //     ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` from ``/config``), AND
+    //   * the bundle was loaded from a manifest-shipping Extension (we
+    //     have an extensionId to send to the reload endpoint).
+    // BundleHeaderActions itself re-checks; the predicate here also gates
+    // the context-menu capture handler.
+    const enableReloadRuntime = useUtilityStore(
+      (state) => state.enableExtensionReload,
+    );
+    const showActions = Boolean(
+      ENABLE_EXTENSION_RELOAD && enableReloadRuntime && extensionId,
+    );
 
     // Right-click on the Bundle header opens the same overflow menu as
     // the kebab icon to the right of the chevron.  Implemented by

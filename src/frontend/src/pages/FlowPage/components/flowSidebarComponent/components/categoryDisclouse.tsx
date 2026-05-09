@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/disclosure";
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { APIClassType } from "@/types/api";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import BundleHeaderActions from "./bundleHeaderActions";
@@ -68,7 +69,14 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
     () => deriveBundleExtensionId(item.name, dataFilter),
     [item.name, dataFilter],
   );
-  const showActions = Boolean(ENABLE_EXTENSION_RELOAD && extensionId);
+  // Mirror the BundleItem gate: build-time kill switch AND runtime
+  // backend-reload flag (from /config) AND a derivable extension id.
+  const enableReloadRuntime = useUtilityStore(
+    (state) => state.enableExtensionReload,
+  );
+  const showActions = Boolean(
+    ENABLE_EXTENSION_RELOAD && enableReloadRuntime && extensionId,
+  );
   const handleContextMenu = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (!showActions) return;

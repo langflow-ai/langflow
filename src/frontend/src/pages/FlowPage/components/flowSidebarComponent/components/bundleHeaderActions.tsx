@@ -14,6 +14,7 @@ import type {
 import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import useAlertStore from "@/stores/alertStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 const RELOAD_VALUE = "reload" as const;
 
@@ -153,9 +154,15 @@ const BundleHeaderActionsInner = ({
     [],
   );
 
+  // Defense-in-depth gate: parents already check both flags but a future
+  // caller that bypasses BundleItem / CategoryDisclosure must not surface
+  // the action against a backend that has reload disabled.
+  const enableReloadRuntime = useUtilityStore(
+    (state) => state.enableExtensionReload,
+  );
   const visible = useMemo(
-    () => ENABLE_EXTENSION_RELOAD && Boolean(extensionId),
-    [extensionId],
+    () => ENABLE_EXTENSION_RELOAD && enableReloadRuntime && Boolean(extensionId),
+    [enableReloadRuntime, extensionId],
   );
 
   if (!visible) {

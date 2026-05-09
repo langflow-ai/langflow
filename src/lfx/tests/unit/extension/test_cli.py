@@ -264,11 +264,12 @@ def test_dev_refuses_non_directory(
 def test_dev_launch_env_enables_reload_and_eager_loading() -> None:
     """The launched langflow inherits flags that make 'edit -> Reload' work.
 
-    Without ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` the backend route is
-    not registered as a usable handler and the documented author loop
-    404s.  Without ``LANGFLOW_LAZY_LOAD_COMPONENTS=false`` dev components
-    miss the palette's 5-second budget.  Both must be set unconditionally
-    or via setdefault per the helper's contract.
+    Without ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` the backend reload
+    handler returns 404 (the runtime guard reads
+    ``settings.enable_extension_reload``) AND the ``/config`` payload
+    reports the flag as off, which keeps the packaged frontend from
+    showing the Reload button.  Without ``LANGFLOW_LAZY_LOAD_COMPONENTS=false``
+    dev components miss the palette's 5-second budget.
     """
     from lfx.cli._extension_commands import _build_dev_launch_env
 
@@ -276,7 +277,6 @@ def test_dev_launch_env_enables_reload_and_eager_loading() -> None:
 
     assert env["LANGFLOW_LAZY_LOAD_COMPONENTS"] == "false"
     assert env["LANGFLOW_ENABLE_EXTENSION_RELOAD"] == "true"
-    assert env["LANGFLOW_EXTENSION_RELOAD_ENABLED"] == "true"
 
 
 def test_dev_launch_env_overrides_author_lazy_loading() -> None:
@@ -295,19 +295,13 @@ def test_dev_launch_env_overrides_author_lazy_loading() -> None:
 def test_dev_launch_env_respects_author_reload_off_path() -> None:
     """An author testing the off path can pre-export the disable flag.
 
-    The reload flags use setdefault so an explicit ``=false`` exported
+    The reload flag uses setdefault so an explicit ``=false`` exported
     in the shell survives the helper's defaulting.
     """
     from lfx.cli._extension_commands import _build_dev_launch_env
 
-    env = _build_dev_launch_env(
-        {
-            "LANGFLOW_ENABLE_EXTENSION_RELOAD": "false",
-            "LANGFLOW_EXTENSION_RELOAD_ENABLED": "false",
-        }
-    )
+    env = _build_dev_launch_env({"LANGFLOW_ENABLE_EXTENSION_RELOAD": "false"})
     assert env["LANGFLOW_ENABLE_EXTENSION_RELOAD"] == "false"
-    assert env["LANGFLOW_EXTENSION_RELOAD_ENABLED"] == "false"
 
 
 # ---------------------------------------------------------------------------
