@@ -174,6 +174,54 @@ def test_build_method_missing_flagged(tmp_path: Path) -> None:
     assert "build-method-missing" in _codes(report)
 
 
+def test_output_method_satisfies_invocable_check(tmp_path: Path) -> None:
+    """A class with ``Output(method="X")`` + ``def X`` is invocable without literal ``build``.
+
+    Mirrors the production duckduckgo / arxiv bundles, which declare their
+    entry-point via ``outputs = [Output(method="...")]`` rather than a
+    literal ``build`` method.  The validator must accept this shape;
+    flagging it would force every modern Component to add a vestigial
+    ``build`` stub.
+    """
+    src = (
+        "class Component:\n"
+        "    pass\n\n"
+        "class Output:\n"
+        "    def __init__(self, **kwargs):\n"
+        "        pass\n\n"
+        "class OpenAIThing(Component):\n"
+        "    display_name = 'X'\n"
+        "    outputs = [Output(name='dataframe', method='fetch_content_dataframe')]\n\n"
+        "    def fetch_content_dataframe(self):\n"
+        "        return None\n"
+    )
+    _make_bundle(tmp_path, files={"text.py": src})
+    report = validate_extension(tmp_path)
+    assert "build-method-missing" not in _codes(report), report.errors.errors
+
+
+def test_output_method_without_matching_def_still_flagged(tmp_path: Path) -> None:
+    """``Output(method="X")`` without a ``def X`` does NOT satisfy the check.
+
+    Defense-in-depth: the static check passes only when the named method
+    actually exists on the class.  A typo'd method name would otherwise
+    sneak past the validator and crash at run-time.
+    """
+    src = (
+        "class Component:\n"
+        "    pass\n\n"
+        "class Output:\n"
+        "    def __init__(self, **kwargs):\n"
+        "        pass\n\n"
+        "class OpenAIThing(Component):\n"
+        "    display_name = 'X'\n"
+        "    outputs = [Output(name='dataframe', method='typo_doesnt_exist')]\n"
+    )
+    _make_bundle(tmp_path, files={"text.py": src})
+    report = validate_extension(tmp_path)
+    assert "build-method-missing" in _codes(report)
+
+
 def test_import_star_flagged(tmp_path: Path) -> None:
     src = "from os.path import *\n" + _component_source()
     _make_bundle(tmp_path, files={"text.py": src})

@@ -376,8 +376,60 @@ def _is_component_class(node: ast.ClassDef) -> bool:
 
 
 def _has_build_method(node: ast.ClassDef) -> bool:
-    """Return True if the class body declares a ``build`` callable."""
-    return any(isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == "build" for item in node.body)
+    """Return True if the class body declares an invocable entry-point.
+
+    Langflow Components reach the runtime in two shapes:
+
+    1. A literal ``build`` method on the class (the original convention).
+    2. A method named in an ``Output(method="...")`` declaration in the
+       class-level ``outputs = [...]`` assignment.  This is the more
+       common modern shape: a component can declare multiple outputs that
+       each call a different method.  Neither DuckDuckGo nor arXiv ships a
+       literal ``build``; both are valid.
+
+    The validator accepts either form.  If a class declares
+    ``Output(method="X")`` but no ``def X(...)`` in the class body,
+    that's still flagged -- it would crash at run-time anyway.
+    """
+    method_names = {item.name for item in node.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    if "build" in method_names:
+        return True
+    return any(invocable in method_names for invocable in _output_method_names(node))
+
+
+def _output_method_names(node: ast.ClassDef) -> set[str]:
+    """Collect method names referenced by ``Output(method="...")`` calls in the class body.
+
+    Walks the class-level assignment ``outputs = [...]`` and pulls the
+    string value of every ``method=`` keyword argument on a call whose
+    callee is the name ``Output`` (or anything ending in ``Output``).
+    Static analysis only -- if the list is built dynamically, we miss
+    those names and the literal-``build`` fallback still applies.
+    """
+    names: set[str] = set()
+    for item in node.body:
+        if not isinstance(item, ast.Assign):
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "outputs" for t in item.targets):
+            continue
+        for sub in ast.walk(item.value):
+            if not isinstance(sub, ast.Call):
+                continue
+            callee = sub.func
+            if isinstance(callee, ast.Name):
+                callee_name = callee.id
+            elif isinstance(callee, ast.Attribute):
+                callee_name = callee.attr
+            else:
+                continue
+            if callee_name != "Output" and not callee_name.endswith("Output"):
+                continue
+            for kw in sub.keywords:
+                if kw.arg != "method":
+                    continue
+                if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                    names.add(kw.value.value)
+    return names
 
 
 def _find_top_level_io(tree: ast.AST) -> list[tuple[int, str]]:

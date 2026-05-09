@@ -250,13 +250,15 @@ The pre-built component index drives lazy loading; the moved component's
 old entry must be removed.
 
 ```bash
-cd src/lfx
-LFX_DEV=1 uv run python -m lfx._dev.build_component_index
+LFX_DEV=1 uv run python scripts/build_component_index.py
 ```
 
-(Or whichever one-shot is in your tree — see `scripts/`. The diff should
-only delete the `<bundle>` block; if it touches anything else, your local
-checkout has unrelated drift.)
+`LFX_DEV=1` forces dynamic discovery via `pkgutil.walk_packages`; without
+it the script reads the existing index and reproduces the stale entry
+even when the source module is gone.
+
+The diff should only delete the `<bundle>` block; if it touches anything
+else, your local checkout has unrelated drift.
 
 ---
 
@@ -286,8 +288,11 @@ Run, in order, the smallest commands that will fail loudly when a step is
 wrong:
 
 ```bash
-# 1. The bundle's manifest is structurally valid.
-uv run lfx extension validate src/bundles/<bundle>
+# 1. The bundle's manifest is structurally valid.  Point ``validate`` at
+#    the package directory (where extension.json lives), not the bundle
+#    root -- the manifest is nested inside ``src/lfx_<bundle>/`` so the
+#    wheel ships it.
+uv run lfx extension validate src/bundles/<bundle>/src/lfx_<bundle>
 
 # 2. Workspace resolves and the bundle is importable.
 uv sync
@@ -307,8 +312,10 @@ print('discovered:', roots['lfx-<bundle>'])
 # 5. The integration test passes.
 uv run pytest src/lfx/tests/integration/extension/test_pilot_<bundle>_upgrade.py -q
 
-# 6. Ruff is clean across the touched files.
-uv run ruff check src/bundles/<bundle> src/lfx/src/lfx/components/__init__.py src/lfx/src/lfx/extension/migration/migration_table.json
+# 6. Ruff is clean across the touched Python files.  (Don't pass the
+#    JSON migration table to ruff -- it lints it as Python and complains
+#    about the top-level expression.)
+uv run ruff check src/bundles/<bundle> src/lfx/src/lfx/components/__init__.py src/lfx/tests/integration/extension/test_pilot_<bundle>_upgrade.py
 ```
 
 **End-to-end smoke test** (optional but cheap): start a dev server with
