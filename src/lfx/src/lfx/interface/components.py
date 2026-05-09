@@ -14,11 +14,13 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.extension import (
+    ExtensionError,
     LoadResult,
     discover_inline_bundles,
     format_extension_error,
     load_dev_extensions,
     load_installed_extensions,
+    load_seed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
@@ -729,6 +731,16 @@ async def import_extension_components(
     with a logged warning -- one bad bundle must not abort the cache build.
     """
     extension_results = load_installed_extensions()
+    # Seed-directory bundles are the second @official-slot production-install
+    # source documented in deployment-extensions-production.mdx: a Docker
+    # image (or any operator-controlled host) can stage bundles under
+    # ``$LANGFLOW_SEED_DIR`` (or the default ``/opt/langflow/bundles``)
+    # without going through pip.  Load them through the same pathway as
+    # pip-installed Extensions so they enter the BundleRegistry, get
+    # registered at @official, and are reloadable when reload is enabled.
+    # When neither $LANGFLOW_SEED_DIR is set nor /opt/langflow/bundles
+    # exists this is a no-op, so it costs nothing in Mode A.
+    seed_results = load_seed_extensions()
     # Dev extensions registered via ``lfx extension dev`` ship the same v0
     # manifest contract as installed extensions; load them through the
     # @official-slot pathway so they enter the BundleRegistry, expose the
@@ -739,7 +751,40 @@ async def import_extension_components(
     # extension metadata.
     dev_results = load_dev_extensions()
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
-    _emit_extension_diagnostics([*extension_results, *dev_results, *inline_results])
+
+    # Installed pip distributions take precedence over seed-directory bundles
+    # of the same name: an operator who pip-installs ``lfx-foo`` AND copies
+    # an ``foo/`` subdirectory into ``/opt/langflow/bundles/`` has shadowed
+    # the install, and the safe behaviour is "installed wins, surface a
+    # typed warning so the operator notices".  Compute the shadowing here
+    # rather than after registry population so the diagnostics emit before
+    # the install_bundle calls and the operator sees one well-formed event
+    # per shadow rather than a silent overwrite.
+    installed_bundles = {r.bundle for r in extension_results if r.bundle}
+    deduped_seed_results: list[LoadResult] = []
+    for seed in seed_results:
+        if seed.bundle and seed.bundle in installed_bundles:
+            seed.errors.append(
+                ExtensionError(
+                    code="seed-bundle-shadowed",
+                    message=(
+                        f"Seed bundle {seed.bundle!r} at {seed.source_path} is shadowed by an "
+                        "installed Extension of the same name; the seed copy is being skipped."
+                    ),
+                    location=str(seed.source_path) if seed.source_path else seed.bundle,
+                    content=seed.bundle,
+                    hint=(
+                        "Remove the seed-directory subdirectory or uninstall the conflicting "
+                        "pip distribution so each @official-slot bundle name has exactly one source."
+                    ),
+                )
+            )
+            # Drop the components so the registry population loop skips it,
+            # but keep the result in the diagnostics list so the warning surfaces.
+            seed.components = []
+        deduped_seed_results.append(seed)
+
+    _emit_extension_diagnostics([*extension_results, *deduped_seed_results, *dev_results, *inline_results])
 
     # Populate the process-default BundleRegistry so the reload endpoint
     # (POST /api/v1/extensions/{id}/bundles/{name}/reload) can find a
@@ -750,7 +795,7 @@ async def import_extension_components(
     # :func:`refresh_extension_components_cache` keeps ``component_cache``
     # in sync after a swap.
     registry = get_default_registry()
-    all_results = [*extension_results, *dev_results, *inline_results]
+    all_results = [*extension_results, *deduped_seed_results, *dev_results, *inline_results]
     for result in all_results:
         if not result.bundle or not result.components or result.slot is None:
             continue

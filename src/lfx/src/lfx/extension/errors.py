@@ -81,6 +81,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "installed-extension-immutable",
         "seed-directory-immutable",
         "seed-directory-not-found",
+        "seed-bundle-shadowed",
         "duplicate-extension-id",
         # Reload-specific codes (LE-1018)
         "reload-in-progress",
@@ -250,6 +251,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "installed-extension-immutable": ("Extension {content!r} is installed via pip and cannot be mutated at runtime."),
     "seed-directory-immutable": ("Extension {content!r} comes from a seed directory and cannot be mutated at runtime."),
     "seed-directory-not-found": ("Configured seed directory {location} does not exist or is not a directory."),
+    "seed-bundle-shadowed": (
+        "Seed-directory bundle {content!r} at {location} is shadowed by an installed Extension "
+        "of the same name; the seed copy is being skipped."
+    ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
         "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."

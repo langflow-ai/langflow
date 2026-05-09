@@ -58,6 +58,7 @@ from lfx.extension.loader._orchestrator import (
     load_extension,
     load_inline_bundle,
     load_installed_extensions,
+    load_seed_extensions,
 )
 from lfx.extension.loader._plugins import (
     filter_component_entry_points,
@@ -87,5 +88,6 @@ __all__ = [
     "load_extension",
     "load_inline_bundle",
     "load_installed_extensions",
+    "load_seed_extensions",
     "manifest_owning_distributions",
 ]

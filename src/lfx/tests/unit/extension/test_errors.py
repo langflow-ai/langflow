@@ -95,6 +95,7 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
     "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501
+    "seed-bundle-shadowed": "error[seed-bundle-shadowed]: Seed-directory bundle 'content' at loc is shadowed by an installed Extension of the same name; the seed copy is being skipped.",  # noqa: E501
     "duplicate-extension-id": "error[duplicate-extension-id]: Extension id 'content' is registered more than once (already at loc).",  # noqa: E501
     "reload-in-progress": "error[reload-in-progress]: Reload already in progress for bundle 'content'; refuse to start a second concurrent reload.",  # noqa: E501
     "reload-bundle-not-installed": "error[reload-bundle-not-installed]: Cannot reload bundle 'content': it is not registered. Install the extension first or pass an explicit source path.",  # noqa: E501

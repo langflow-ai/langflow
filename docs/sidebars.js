@@ -185,6 +185,27 @@ module.exports = {
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
+        {
+          type: "category",
+          label: "Build extensions",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/extensions-quickstart",
+              label: "Build your first extension",
+            },
+            {
+              type: "doc",
+              id: "Develop/extensions-manifest",
+              label: "Manifest reference",
+            },
+            {
+              type: "doc",
+              id: "Develop/extensions-author-guide",
+              label: "Author guide",
+            },
+          ],
+        },
       ],
     },
     {

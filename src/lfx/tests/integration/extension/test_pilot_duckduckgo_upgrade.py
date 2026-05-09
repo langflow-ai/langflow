@@ -149,6 +149,82 @@ def test_lfx_duckduckgo_distribution_is_importable() -> None:
     assert DuckDuckGoSearchComponent.__name__ == "DuckDuckGoSearchComponent"
 
 
+@pytest.mark.integration
+def test_pilot_loads_and_resolves_to_runtime_class() -> None:
+    """The loader resolves the migration-table target to a usable Component class.
+
+    This is the deserialize-side complement of the manual dogfood gate:
+    the migration-table tests above prove the rewrite happens, and this
+    test proves the rewritten target ``ext:duckduckgo:DuckDuckGoSearchComponent@official``
+    resolves to a Component class that:
+
+        1. Imports without side-effects under :func:`load_extension`.
+        2. Is the same ``DuckDuckGoSearchComponent`` symbol the bundle's
+           Python package exports (so a saved flow that points at the
+           rewritten ID cannot end up bound to a different class than a
+           ``from lfx_duckduckgo import ...`` import would resolve).
+        3. Declares the user-visible inputs / outputs the pre-extraction
+           component shipped, so a saved flow's input wiring stays valid
+           after the upgrade.
+
+    Network execution of the actual DuckDuckGo search is **not** covered
+    here; that lives in the manual dogfood checklist because it requires
+    a real environment swap and live network. This test closes the gap
+    between "the rewrite happens" and "the rewritten target is usable",
+    which is the strongest invariant we can lock in without a network.
+    """
+    try:
+        import lfx_duckduckgo
+    except ImportError:
+        pytest.skip("lfx-duckduckgo not installed in this test environment")
+
+    from lfx.extension import SLOT_OFFICIAL, load_extension
+    from lfx_duckduckgo import DuckDuckGoSearchComponent as ExpectedClass
+
+    # Locate the bundle root that ships in the wheel: the directory that
+    # contains the inner extension.json and the components/ tree.
+    package_dir = Path(lfx_duckduckgo.__file__).parent
+    bundle_root = package_dir
+
+    result = load_extension(bundle_root, slot=SLOT_OFFICIAL, distribution="lfx-duckduckgo")
+    assert result.ok, [e.code for e in result.errors]
+
+    by_class = {comp.class_name: comp for comp in result.components}
+    assert "DuckDuckGoSearchComponent" in by_class, (
+        f"loader did not register DuckDuckGoSearchComponent; got: {sorted(by_class)}"
+    )
+    loaded = by_class["DuckDuckGoSearchComponent"]
+
+    # Migration-table target shape: every legacy reference rewrites to this ID.
+    assert loaded.bundle == "duckduckgo"
+    assert loaded.slot == SLOT_OFFICIAL
+    expected_namespaced_id = f"ext:{loaded.bundle}:{loaded.class_name}@{loaded.slot}"
+    assert expected_namespaced_id == EXPECTED_TARGET
+
+    # The class the loader registered must be the same symbol the bundle
+    # exports.  If these diverge, a saved flow could bind to a stale or
+    # shadow copy after migration, which is exactly what dogfood is
+    # supposed to catch -- here we lock it in for CI.
+    assert loaded.klass is ExpectedClass
+
+    # Spot-check the input shape so a saved flow's wiring keeps resolving:
+    # ``input_value`` is the field every pre-migration flow targets.
+    input_names = {getattr(inp, "name", None) for inp in loaded.klass.inputs}
+    assert "input_value" in input_names, (
+        f"DuckDuckGoSearchComponent dropped its canonical 'input_value' input; "
+        f"got: {sorted(n for n in input_names if n)}"
+    )
+
+    # Output method names anchor the runtime contract -- the migration
+    # would silently break flows wired to ``dataframe`` if the bundle
+    # renamed it.
+    output_names = {getattr(out, "name", None) for out in loaded.klass.outputs}
+    assert "dataframe" in output_names, (
+        f"DuckDuckGoSearchComponent dropped its canonical 'dataframe' output; "
+        f"got: {sorted(n for n in output_names if n)}"
+    )
+
+
 def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
     """Detect an editable install (``pip install -e``).
 

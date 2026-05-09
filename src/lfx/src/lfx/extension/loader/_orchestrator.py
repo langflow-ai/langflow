@@ -643,6 +643,10 @@ def load_installed_extensions(
     field names every involved manifest path so the operator can fix the
     conflict.
 
+    See :func:`load_seed_extensions` for the parallel filesystem-resident
+    @official-slot source (Docker images that bake bundles in via
+    ``COPY ... /opt/langflow/bundles/`` instead of pip-installing them).
+
     Args:
         distributions: Override the distribution iterator (test seam).
             Defaults to ``importlib.metadata.distributions()``.
@@ -674,4 +678,85 @@ def load_installed_extensions(
                 )
             )
         results.append(result)
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Public entry point: load_seed_extensions (server-startup filesystem source)
+# ---------------------------------------------------------------------------
+
+
+def load_seed_extensions(
+    *,
+    seed_dir_env: str | None = None,
+    default_seed_dir: Path | None = None,
+) -> list[LoadResult]:
+    """Discover seed-directory Extensions and load them at the @official slot.
+
+    The "seed directory" is the second production-install source documented
+    in the deployment guide: a filesystem location where an operator stages
+    bundles that should be loaded at startup without going through pip.
+    The default location is ``/opt/langflow/bundles`` and the override is
+    ``$LANGFLOW_SEED_DIR`` (pathsep-separated for multiple roots).  Each
+    immediate subdirectory that ships a v0 manifest becomes one Extension
+    at the @official slot; subdirectories without a manifest are silently
+    skipped so operators can stage non-extension content alongside.
+
+    Discovery delegates to :func:`lfx.extension.discovery.discover_seed_extensions`,
+    which already enforces the "configured but missing" vs "default and
+    absent" semantics and surfaces typed errors for misconfigured roots.
+    This loader wraps each discovered record in a :class:`LoadResult` so
+    callers can treat seed and installed-pkg sources uniformly.
+
+    Args:
+        seed_dir_env: Test seam.  ``None`` reads ``$LANGFLOW_SEED_DIR``
+            from the live environment; pass an explicit string to bypass
+            ``os.environ``.
+        default_seed_dir: Test seam.  ``None`` uses the discovery layer's
+            default (``/opt/langflow/bundles``); pass an explicit ``Path``
+            to override or ``Path("/dev/null")`` to disable the default.
+
+    Returns:
+        One :class:`LoadResult` per seed-resident Extension, plus one
+        sentinel :class:`LoadResult` per discovery-time error
+        (``seed-directory-not-found``, ``manifest-invalid``, ...) so the
+        existing diagnostics emitter surfaces the failure without dropping
+        the typed payload.  Order is sorted by seed-subdirectory path for
+        determinism.
+    """
+    # Local import: discovery depends on manifest, which depends on errors,
+    # which is fine; but the loader package historically does not import
+    # from discovery to keep startup-time module graphs tight.  Import
+    # inside the function so the dependency is paid only when seed loading
+    # is requested.
+    from lfx.extension.discovery import DEFAULT_SEED_DIR, discover_seed_extensions
+
+    if default_seed_dir is None:
+        default_seed_dir = DEFAULT_SEED_DIR
+
+    discovered, errors = discover_seed_extensions(
+        seed_dir_env=seed_dir_env,
+        default=default_seed_dir,
+    )
+
+    results: list[LoadResult] = []
+
+    # Surface discovery-time errors as sentinel LoadResults so the existing
+    # _emit_extension_diagnostics helper renders them through the same
+    # logger path as load failures.  These results carry no components and
+    # have ``slot=None`` so the registry-population loop in components.py
+    # skips them naturally.
+    for err in errors:
+        sentinel = LoadResult(slot=None, source_path=None, distribution=None)
+        sentinel.errors.append(err)
+        results.append(sentinel)
+
+    for record in sorted(discovered, key=lambda r: str(r.extension_root)):
+        result = load_extension(
+            record.extension_root,
+            slot=SLOT_OFFICIAL,
+            distribution=None,
+        )
+        results.append(result)
+
     return results
