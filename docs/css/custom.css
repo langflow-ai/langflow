@@ -1645,3 +1645,14 @@ html[data-theme="light"] .menu__link--active:not(.menu__link--sublist) {
   background: #161618 !important;
   border: 1px solid #303038;
 }
+
+/* Center columns whose header matches "Format" or "Default" (class set by rehype plugin) */
+.markdown table td.col-center,
+.markdown table th.col-center {
+  text-align: center;
+}
+
+/* Left-align text in the Description column (always last, unless it's a centered column) */
+.markdown table td:last-child:not(.col-center) {
+  text-align: left;
+}
