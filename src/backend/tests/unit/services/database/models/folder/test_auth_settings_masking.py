@@ -20,8 +20,8 @@ from langflow.services.database.models.folder.model import (
 )
 
 _FOLDER_ID = UUID("00000000-0000-0000-0000-000000000001")
-_CIPHER_OAUTH = "gAAAAABoauth-ciphertext-blob-XXXX"  # noqa: S105  # pragma: allowlist secret
-_CIPHER_APIKEY = "gAAAAABapikey-ciphertext-blob-XXXX"  # noqa: S105  # pragma: allowlist secret
+_CIPHER_OAUTH = "gAAAAABoauth-ciphertext-blob-XXXX"  # pragma: allowlist secret
+_CIPHER_APIKEY = "gAAAAABapikey-ciphertext-blob-XXXX"  # pragma: allowlist secret
 _MASK = "*******"
 
 
