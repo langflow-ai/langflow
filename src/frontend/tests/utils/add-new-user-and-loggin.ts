@@ -42,13 +42,16 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.getByRole("button", { name: "Sign In" }).click();
 
-  await page.waitForSelector('[data-testid="mainpage_title"]', {
-    timeout: 30000,
-  });
-
-  // Wait for any loading text to disappear
+  // Wait for any loading text to disappear before checking the homepage:
+  // mainpage_title only renders after the homepage data finishes loading,
+  // and on slower runners (Windows CI) the Loading state can outlast a
+  // 30s mainpage_title wait.
   await page.waitForSelector('text="Loading"', {
     state: "hidden",
+    timeout: 60000,
+  });
+
+  await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });
 

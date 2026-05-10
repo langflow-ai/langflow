@@ -8,7 +8,7 @@ This module uses request/execution-context memoization for provider clients:
   `WxOClient` instance and skip repeated DB/decryption work.
 
 Important behavior notes:
-- Memoization is execution-context scoped (not cross-request/global state).
+- ContextVar state is execution-context scoped (not cross-request/global state).
 - The context stores a single `(key, client)` entry because deployment routing enforces one
   provider context per request path.
 - If a different `(provider_id, user_id)` is requested in the same context, resolution fails.
@@ -16,14 +16,17 @@ Important behavior notes:
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
+from urllib.parse import urlparse
 
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, MCSPAuthenticator
 from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
+from lfx.utils.secrets import secret_value_to_str
 
 from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WxOAuthURL
@@ -33,6 +36,7 @@ from langflow.services.database.models.deployment_provider_account.crud import g
 from langflow.services.deps import get_variable_service
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from contextvars import Token
     from uuid import UUID
 
@@ -68,6 +72,15 @@ class WxOProviderClientsRequestContext:
     def clear_current(cls) -> None:
         cls._current.set(None)
 
+    @classmethod
+    def push_null_boundary(cls) -> Token[WxOProviderClientsContext | None]:
+        """Push a fresh ``None`` slot and return a Token for ``reset_current``.
+
+        Used by ``wxo_scope`` to bound the ownership
+        assertion to one ``deployment_provider_scope`` entry.
+        """
+        return cls._current.set(None)
+
 
 def _provider_client_context_key(*, provider_id: UUID, user_id: UUID | str) -> tuple[str, str]:
     return (str(provider_id), str(user_id))
@@ -79,6 +92,23 @@ def clear_provider_clients_request_context() -> None:
     This is mainly useful in tests and explicit context lifecycle control.
     """
     WxOProviderClientsRequestContext.clear_current()
+
+
+@contextmanager
+def wxo_scope() -> Iterator[None]:
+    """Bind the WxO client ownership assertion lifetime to the enclosing provider scope.
+
+    Pushes a fresh ``None`` slot on entry and restores the prior value on exit
+    via Token/reset, so sequential/nested ``deployment_provider_scope(...)`` blocks
+    (e.g. the per-provider retry loop in ``_sync_deployments_and_attachments_by_provider``)
+    cannot poison each other. The ``(provider_id, user_id)`` ownership check in
+    ``_validate_request_context_provider_key`` remains in force *within* a single scope.
+    """
+    token = WxOProviderClientsRequestContext.push_null_boundary()
+    try:
+        yield
+    finally:
+        WxOProviderClientsRequestContext.reset_current(token)
 
 
 def get_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | str) -> WxOClient | None:
@@ -126,10 +156,16 @@ def set_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | s
 
 
 def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCSPAuthenticator:
-    """Return the appropriate authenticator for the Watsonx Orchestrate API."""
-    if ".cloud.ibm.com" in instance_url:
+    """Return the appropriate authenticator for the Watsonx Orchestrate API.
+
+    Scheme selection is driven by the *hostname* of ``instance_url`` — never by a
+    raw substring match against the full URL string, which would let a URL like
+    ``https://evil.example.com/.cloud.ibm.com`` bypass the branching intent.
+    """
+    hostname = (urlparse(instance_url).hostname or "").lower()
+    if hostname == "cloud.ibm.com" or hostname.endswith(".cloud.ibm.com"):
         authenticator = IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
-    elif ".ibm.com" in instance_url:
+    elif hostname == "ibm.com" or hostname.endswith(".ibm.com"):
         authenticator = MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
     else:
         msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
@@ -262,6 +298,7 @@ async def resolve_variable_value(
             field="value",
             session=db,
         )
+        value = secret_value_to_str(value)
         if value is not None:
             return value
     except CredentialResolutionError:

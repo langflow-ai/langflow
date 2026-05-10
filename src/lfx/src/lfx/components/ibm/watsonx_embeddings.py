@@ -2,7 +2,6 @@ from typing import Any
 
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
-from pydantic.v1 import SecretStr
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_watsonx_embedding_models
@@ -10,6 +9,7 @@ from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
+from lfx.utils.secrets import secret_value_to_str
 
 
 class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
@@ -121,9 +121,7 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             EmbedTextParamsMetaNames.RETURN_OPTIONS: {"input_text": self.input_text},
         }
 
-        api_key_value = self.api_key
-        if isinstance(api_key_value, SecretStr):
-            api_key_value = api_key_value.get_secret_value()
+        api_key_value = secret_value_to_str(self.api_key)
 
         if bool(self.space_id) == bool(self.project_id):
             msg = "Exactly one of Project_ID or Space_ID must be selected"

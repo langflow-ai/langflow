@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
+import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetGlobalVariables } from "@/controllers/API/queries/variables";
 import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-post-detect-env-vars";
@@ -9,7 +10,12 @@ import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import { useConnectionPanelState } from "../hooks/use-connection-panel-state";
-import type { ConnectionItem } from "../types";
+import {
+  type ConnectionItem,
+  DEFAULT_FLOW_NAME,
+  getDefaultDeploymentToolName,
+  getSelectedFlowVersionKey,
+} from "../types";
 import { ConnectionPanel } from "./step-attach-flows-connection-panel";
 import { FlowListPanel } from "./step-attach-flows-flow-list-panel";
 import { VersionPanel } from "./step-attach-flows-version-panel";
@@ -25,8 +31,8 @@ export default function StepAttachFlows() {
     setConnections,
     selectedVersionByFlow,
     handleSelectVersion: onSelectVersion,
-    toolNameByFlow,
     setToolNameByFlow,
+    defaultToolNameScopeId,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
     removedFlowIds,
@@ -56,8 +62,16 @@ export default function StepAttachFlows() {
     // In edit mode, sort already-attached flows to the top.
     if (selectedVersionByFlow.size > 0) {
       filtered.sort((a, b) => {
-        const aAttached = selectedVersionByFlow.has(a.id) ? 0 : 1;
-        const bAttached = selectedVersionByFlow.has(b.id) ? 0 : 1;
+        const aAttached = Array.from(selectedVersionByFlow.values()).some(
+          (entry) => entry.flowId === a.id,
+        )
+          ? 0
+          : 1;
+        const bAttached = Array.from(selectedVersionByFlow.values()).some(
+          (entry) => entry.flowId === b.id,
+        )
+          ? 0
+          : 1;
         return aAttached - bAttached;
       });
     }
@@ -78,16 +92,17 @@ export default function StepAttachFlows() {
       return;
     seededExistingConnections.current = true;
 
-    const existingConnections: ConnectionItem[] = configsData.configs.map(
-      (cfg) => ({
+    const existingConnections: ConnectionItem[] = configsData.configs
+      .filter((cfg) => cfg.environment !== "live")
+      .map((cfg) => ({
         id: cfg.app_id,
         connectionId: cfg.connection_id,
         name: cfg.app_id,
+        environment: cfg.environment,
         variableCount: 0,
         isNew: false,
         environmentVariables: {},
-      }),
-    );
+      }));
 
     setConnections((prev) => {
       // Avoid duplicates if user already created connections with the same id
@@ -102,7 +117,9 @@ export default function StepAttachFlows() {
   );
   // Track the version the user clicked but hasn't finished the connection step for yet.
   const [pendingAttachment, setPendingAttachment] = useState<{
+    key: string;
     flowId: string;
+    flowName: string;
     versionId: string;
     versionTag: string;
   } | null>(null);
@@ -110,14 +127,35 @@ export default function StepAttachFlows() {
 
   const commitPendingAttachment = useCallback(() => {
     if (pendingAttachment) {
-      onSelectVersion(
-        pendingAttachment.flowId,
-        pendingAttachment.versionId,
-        pendingAttachment.versionTag,
-      );
+      onSelectVersion({
+        flowId: pendingAttachment.flowId,
+        flowName: pendingAttachment.flowName,
+        versionId: pendingAttachment.versionId,
+        versionTag: pendingAttachment.versionTag,
+      });
+      setToolNameByFlow((prev) => {
+        if (prev.has(pendingAttachment.key)) {
+          return prev;
+        }
+        const next = new Map(prev);
+        next.set(
+          pendingAttachment.key,
+          getDefaultDeploymentToolName(
+            pendingAttachment.flowName,
+            pendingAttachment.versionId,
+            defaultToolNameScopeId,
+          ),
+        );
+        return next;
+      });
       setPendingAttachment(null);
     }
-  }, [pendingAttachment, onSelectVersion]);
+  }, [
+    defaultToolNameScopeId,
+    pendingAttachment,
+    onSelectVersion,
+    setToolNameByFlow,
+  ]);
 
   const resetPendingAttachment = useCallback(() => {
     setPendingAttachment(null);
@@ -147,7 +185,7 @@ export default function StepAttachFlows() {
   } = useConnectionPanelState({
     connections,
     setConnections,
-    effectiveFlowId,
+    effectiveAttachmentKey: pendingAttachment?.key ?? null,
     attachedConnectionByFlow,
     onAttachConnection,
     commitPendingAttachment,
@@ -156,18 +194,42 @@ export default function StepAttachFlows() {
   });
 
   const { mutateAsync: detectEnvVars } = usePostDetectEnvVars();
+  const { mutateAsync: createSnapshot, isPending: isCreatingDraftVersion } =
+    usePostCreateSnapshot();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
+  const handledPreselectedAttachmentRef = useRef<string | null>(null);
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run only on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const preSelected = initialFlowId
-      ? selectedVersionByFlow.get(initialFlowId)
+      ? Array.from(selectedVersionByFlow.values()).find(
+          (entry) => entry.flowId === initialFlowId,
+        )
       : undefined;
     if (!preSelected) return;
+    if (handledPreselectedAttachmentRef.current === preSelected.key) return;
+    handledPreselectedAttachmentRef.current = preSelected.key;
+
+    setToolNameByFlow((prev) => {
+      if (prev.has(preSelected.key)) {
+        return prev;
+      }
+      const flowName =
+        flows.find((flow) => flow.id === preSelected.flowId)?.name ??
+        DEFAULT_FLOW_NAME;
+      const next = new Map(prev);
+      next.set(
+        preSelected.key,
+        getDefaultDeploymentToolName(
+          flowName,
+          preSelected.versionId,
+          defaultToolNameScopeId,
+        ),
+      );
+      return next;
+    });
 
     setRightPanel("connections");
 
@@ -185,7 +247,16 @@ export default function StepAttachFlows() {
       }
     };
     detect();
-  }, []);
+  }, [
+    flows,
+    initialFlowId,
+    selectedVersionByFlow,
+    detectEnvVars,
+    defaultToolNameScopeId,
+    setErrorData,
+    setToolNameByFlow,
+    updateDetectedEnvVars,
+  ]);
 
   const { data: versionResponse, isLoading: isLoadingVersions } =
     useGetFlowVersions(
@@ -196,18 +267,24 @@ export default function StepAttachFlows() {
 
   const selectedFlow = flows.find((f) => f.id === effectiveFlowId);
 
-  const handleAttachFlow = useCallback(
-    async (versionId: string) => {
-      if (!effectiveFlowId) return;
-      const version = versions.find((v) => v.id === versionId);
+  const openConnectionPanelForVersion = useCallback(
+    async (
+      flowId: string,
+      flowName: string,
+      versionId: string,
+      versionTag: string,
+    ) => {
+      const attachmentKey = getSelectedFlowVersionKey(flowId, versionId);
       // Don't commit to context yet — wait for connection step to complete.
       setPendingAttachment({
-        flowId: effectiveFlowId,
+        key: attachmentKey,
+        flowId,
+        flowName,
         versionId,
-        versionTag: version?.version_tag ?? "",
+        versionTag,
       });
       setRightPanel("connections");
-      initConnectionsForFlow(effectiveFlowId);
+      initConnectionsForFlow(attachmentKey);
 
       // Auto-detect global variable references via the backend detection endpoint
       try {
@@ -224,27 +301,60 @@ export default function StepAttachFlows() {
       }
     },
     [
-      effectiveFlowId,
-      versions,
       detectEnvVars,
-      setErrorData,
       initConnectionsForFlow,
+      setErrorData,
       updateDetectedEnvVars,
     ],
   );
 
-  const handleDetachFlow = useCallback(
-    (flowId: string) => {
-      handleRemoveAttachedFlow(flowId);
-      setToolNameByFlow((prev) => {
-        const next = new Map(prev);
-        next.delete(flowId);
-        return next;
+  const handleAttachFlow = useCallback(
+    async (versionId: string) => {
+      if (!effectiveFlowId) return;
+      const version = versions.find((v) => v.id === versionId);
+      await openConnectionPanelForVersion(
+        effectiveFlowId,
+        selectedFlow?.name ?? DEFAULT_FLOW_NAME,
+        versionId,
+        version?.version_tag ?? "",
+      );
+    },
+    [effectiveFlowId, openConnectionPanelForVersion, selectedFlow, versions],
+  );
+
+  const handleCreateVersionFromDraft = useCallback(async () => {
+    if (!effectiveFlowId) return;
+
+    try {
+      const snapshot = await createSnapshot({ flowId: effectiveFlowId });
+      await openConnectionPanelForVersion(
+        effectiveFlowId,
+        selectedFlow?.name ?? DEFAULT_FLOW_NAME,
+        snapshot.id,
+        snapshot.version_tag,
+      );
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })
+        ?.response?.data?.detail;
+      setErrorData({
+        title: "Failed to create version from draft",
+        ...(detail ? { list: [detail] } : {}),
       });
-      // Reset right panel to versions if we're currently viewing the detached flow
+    }
+  }, [
+    createSnapshot,
+    effectiveFlowId,
+    openConnectionPanelForVersion,
+    selectedFlow,
+    setErrorData,
+  ]);
+
+  const handleDetachFlow = useCallback(
+    (attachmentKey: string) => {
+      handleRemoveAttachedFlow(attachmentKey);
       setRightPanel("versions");
     },
-    [handleRemoveAttachedFlow, setToolNameByFlow],
+    [handleRemoveAttachedFlow],
   );
 
   const handleSelectFlow = useCallback(
@@ -258,7 +368,7 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Attach Flows</h2>
+      <h2 className="text-lg font-semibold">Flows</h2>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel
@@ -269,8 +379,6 @@ export default function StepAttachFlows() {
           connections={connections}
           removedFlowIds={isEditMode ? removedFlowIds : undefined}
           onSelectFlow={handleSelectFlow}
-          onRemoveFlow={handleDetachFlow}
-          onUndoRemoveFlow={isEditMode ? handleUndoRemoveFlow : undefined}
         />
 
         {/* Right panel */}
@@ -280,8 +388,15 @@ export default function StepAttachFlows() {
               selectedFlow={selectedFlow}
               versions={versions}
               isLoadingVersions={isLoadingVersions}
+              isCreatingDraftVersion={isCreatingDraftVersion}
               selectedVersionByFlow={selectedVersionByFlow}
               onAttach={handleAttachFlow}
+              onCreateFromDraft={handleCreateVersionFromDraft}
+              onDetach={handleDetachFlow}
+              onUndoRemove={isEditMode ? handleUndoRemoveFlow : undefined}
+              removedFlowIds={isEditMode ? removedFlowIds : undefined}
+              attachedConnectionByFlow={attachedConnectionByFlow}
+              connections={connections}
             />
           ) : (
             <ConnectionPanel

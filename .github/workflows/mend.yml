@@ -1,0 +1,56 @@
+name: "Mend"
+
+on:
+  push:
+    branches: ["release-*", "main"]
+  pull_request:
+    branches: ["release-*", "main"]
+
+concurrency:
+  group: mend-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  mend-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: ./src/frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./src/frontend
+        run: npm ci
+
+      - name: Set up Java (Semeru)
+        uses: actions/setup-java@v5
+        with:
+          distribution: "semeru"
+          java-version: "21"
+
+      - name: Download Mend Unified Agent
+        run: |
+          curl --fail --show-error --retry 3 --location -o wss-unified-agent.jar https://unified-agent.s3.amazonaws.com/wss-unified-agent.jar
+
+      - name: Run Mend Scan
+        #prevent forks from running mend scans
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          WS_APIKEY: ${{ secrets.WS_APIKEY }}
+          WS_WSS_URL: ${{ secrets.WS_WSS_URL }}
+          WS_USERKEY: ${{ secrets.WS_USERKEY }}
+          WS_PRODUCTNAME: ${{ secrets.WS_PRODUCTNAME }}
+          WS_PROJECTNAME: ${{ secrets.WS_PROJECTNAME }}
+        run: |
+          java -jar wss-unified-agent.jar -d src -logLevel info

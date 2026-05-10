@@ -266,6 +266,10 @@ class DeploymentListItem(_DeploymentResponseCommon):
             "flow_version_ids filter. Omitted when no such filter is active."
         ),
     )
+    provider_data: dict[str, Any] | None = Field(
+        default=None,
+        description="Provider-owned opaque payload for this list item.",
+    )
 
 
 class _PaginatedResponse(BaseModel):

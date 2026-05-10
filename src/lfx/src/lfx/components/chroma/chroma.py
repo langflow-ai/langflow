@@ -1,7 +1,6 @@
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
-from chromadb.config import Settings
 from langchain_chroma import Chroma
 from typing_extensions import override
 
@@ -92,23 +91,22 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> Chroma:
         """Builds the Chroma object."""
         try:
-            from chromadb import Client
             from langchain_chroma import Chroma
         except ImportError as e:
             msg = "Could not import Chroma integration package. Please install it with `pip install langchain-chroma`."
             raise ImportError(msg) from e
-        # Chroma settings
-        chroma_settings = None
         client = None
         if self.chroma_server_host:
-            chroma_settings = Settings(
-                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],
-                chroma_server_host=self.chroma_server_host,
-                chroma_server_http_port=self.chroma_server_http_port or None,
-                chroma_server_grpc_port=self.chroma_server_grpc_port or None,
-                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,
+            try:
+                from chromadb import HttpClient
+            except ImportError as e:
+                msg = "Could not import chromadb. Please install it with `pip install chromadb`."
+                raise ImportError(msg) from e
+            client = HttpClient(
+                host=self.chroma_server_host,
+                port=self.chroma_server_http_port or 8000,
+                ssl=bool(self.chroma_server_ssl_enabled),
             )
-            client = Client(settings=chroma_settings)
 
         # Check persist_directory and expand it if it is a relative path
         persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None

@@ -1,6 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
+import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
   option,
@@ -73,17 +74,24 @@ const CommandItemContent = ({
   optionButton,
   nodeStyle,
   commandWidth,
+  disabledReason,
 }: {
   option: string;
   isSelected: boolean;
   optionButton: (option: string) => ReactNode;
   nodeStyle?: string;
   commandWidth?: string;
+  disabledReason?: string;
 }) => (
-  <div className="group flex w-full items-center justify-between">
+  <div
+    className={cn(
+      "group flex w-full items-center justify-between",
+      disabledReason && "cursor-not-allowed opacity-50",
+    )}
+  >
     <div className="flex items-center justify-between">
       <SelectionIndicator isSelected={isSelected} />
-      <ShadTooltip content={option} side="left">
+      <ShadTooltip content={disabledReason || option} side="left">
         <div
           className={cn("w-full truncate pr-2", nodeStyle && "max-w-52")}
           style={{
@@ -175,6 +183,7 @@ const CustomInputPopover = ({
   onChange,
   blurOnEnter,
   options,
+  disabledOptions,
   optionsPlaceholder,
   optionsButton,
   handleKeyDown,
@@ -189,18 +198,20 @@ const CustomInputPopover = ({
   inspectionPanel,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
-  const [cursor, setCursor] = useState<number | null>(null);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
 
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+  } = useIMEInputForOnChange<HTMLInputElement>({
+    value,
+    onChange,
+    inputRef: refInput,
+  });
 
   const handleRemoveOption = (
     optionToRemove: string,
@@ -217,6 +228,9 @@ const CustomInputPopover = ({
   };
 
   const handleOptionSelect = (currentValue: string) => {
+    if (disabledOptions?.[currentValue]) {
+      return;
+    }
     if (setSelectedOption) {
       setSelectedOption(currentValue === selectedOption ? "" : currentValue);
     }
@@ -293,11 +307,13 @@ const CustomInputPopover = ({
               id={id}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
+              {...imeInputProps}
               onBlur={() => {
+                flushPendingComposition();
                 onInputLostFocus?.();
                 setIsFocused(false);
               }}
-              value={disabled ? "" : value || ""}
+              value={disabled ? "" : displayValue}
               disabled={disabled}
               required={required}
               className={getInputClassName(
@@ -312,10 +328,6 @@ const CustomInputPopover = ({
                   ? ""
                   : placeholder
               }
-              onChange={(e) => {
-                setCursor(e.target.selectionStart);
-                onChange?.(e.target.value);
-              }}
               onKeyDown={(e) => {
                 handleKeyDown?.(e);
                 if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
@@ -349,25 +361,34 @@ const CustomInputPopover = ({
           <CommandInput placeholder={optionsPlaceholder} />
           <CommandList>
             <CommandGroup>
-              {Array.from(memoizedOptions).map((option, id) => (
-                <CommandItem
-                  key={option + id}
-                  value={option}
-                  onSelect={handleOptionSelect}
-                  className="group"
-                >
-                  <CommandItemContent
-                    option={option}
-                    isSelected={
-                      selectedOption === option ||
-                      selectedOptions?.includes(option)
+              {Array.from(memoizedOptions).map((option, id) => {
+                const disabledReason = disabledOptions?.[option];
+                return (
+                  <CommandItem
+                    key={option + id}
+                    value={option}
+                    onSelect={handleOptionSelect}
+                    className="group"
+                    data-testid={
+                      disabledReason
+                        ? `disabled-option-${option}`
+                        : `option-${option}`
                     }
-                    optionButton={optionButton}
-                    nodeStyle={nodeStyle}
-                    commandWidth={commandWidth}
-                  />
-                </CommandItem>
-              ))}
+                  >
+                    <CommandItemContent
+                      option={option}
+                      isSelected={
+                        selectedOption === option ||
+                        selectedOptions?.includes(option)
+                      }
+                      optionButton={optionButton}
+                      nodeStyle={nodeStyle}
+                      commandWidth={commandWidth}
+                      disabledReason={disabledReason}
+                    />
+                  </CommandItem>
+                );
+              })}
               {optionsButton}
             </CommandGroup>
           </CommandList>

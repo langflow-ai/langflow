@@ -294,3 +294,6 @@ AGENTS.md
 CLAUDE.local.md
 langflow.log.*
 tmp_toolguard/
+
+#whitesource
+whitesource/

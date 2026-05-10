@@ -3,7 +3,7 @@ import { useCallback, useRef } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
-import useFlowStore from "@/stores/flowStore";
+import useFlowStore, { syncNodeTranslations } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type {
@@ -120,6 +120,9 @@ export async function refreshAllModelInputs(
       refreshSingleNode(node, flowId, folderId, setNode),
     );
     await Promise.all(refreshTasks);
+
+    // Re-apply translations after refresh overwrites output display_names
+    syncNodeTranslations();
 
     if (showNotifications) {
       const count = nodesWithModelFields.length;

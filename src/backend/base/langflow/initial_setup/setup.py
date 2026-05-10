@@ -1234,6 +1234,12 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
 
 
 async def initialize_auto_login_default_superuser() -> None:
+    """Initialize the default superuser for AUTO_LOGIN mode.
+
+    Note: In production, this is called indirectly via setup_superuser() during
+    initialize_services(), which includes file lock protection for multi-worker
+    environments. This standalone function is kept for testing and CLI usage.
+    """
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
@@ -1243,9 +1249,6 @@ async def initialize_auto_login_default_superuser() -> None:
 
     username = DEFAULT_SUPERUSER
     password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    if not username or not password:
-        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
-        raise ValueError(msg)
 
     async with session_scope() as async_session:
         super_user = await get_auth_service().create_super_user(username, password, db=async_session)
@@ -1268,6 +1271,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     will check for legacy folder names and migrate them to avoid duplicates.
 
     This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
+
+    The function only creates a new default folder on first initialization (when the user has no
+    folders at all). If the user has already been through initial setup and has at least one folder
+    — even if they renamed the default or only kept other folders — the existing folder is returned
+    instead of creating a new "Starter Project". This prevents a phantom default folder from being
+    forced back into the UI every time the user logs in or the server restarts.
 
     Args:
         session (AsyncSession): The active database session.
@@ -1310,7 +1319,18 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     await session.rollback()
                     break
 
-    # If no existing folder found, create a new one
+    # Respect prior user intent: if the user already has folders (e.g. they renamed the
+    # default folder to something like "My Flows"), do not force a new "Starter Project" back
+    # into their UI on every login/server restart. Return any existing folder instead.
+    any_folder_stmt = (
+        select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)  # type: ignore[arg-type]
+    )
+    any_folder = (await session.exec(any_folder_stmt)).first()
+    if any_folder:
+        return FolderRead.model_validate(any_folder, from_attributes=True)
+
+    # No existing folder found for this user — this is the first-time setup path.
+    # Create the default folder.
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)

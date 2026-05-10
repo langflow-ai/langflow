@@ -1,6 +1,7 @@
 import abc
 from uuid import UUID
 
+from pydantic import SecretStr
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.base import Service
@@ -22,7 +23,7 @@ class VariableService(Service):
         """
 
     @abc.abstractmethod
-    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
+    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str | SecretStr:
         """Async get a variable value.
 
         Args:

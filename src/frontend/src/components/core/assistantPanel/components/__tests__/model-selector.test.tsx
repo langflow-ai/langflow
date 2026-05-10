@@ -11,6 +11,24 @@ jest.mock("@/components/common/genericIconComponent", () => {
   };
 });
 
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: "3rdParty", init: jest.fn() },
+}));
+
+jest.mock("@/hooks/use-refresh-model-inputs", () => ({
+  useRefreshModelInputs: () => ({
+    refresh: jest.fn(),
+    refreshAllModelInputs: jest.fn(),
+  }),
+}));
+
+jest.mock("@/modals/modelProviderModal", () => {
+  return function MockModelProviderModal({ open }: { open: boolean }) {
+    return open ? <div data-testid="mock-model-provider-modal" /> : null;
+  };
+});
+
 let mockFilteredProviders = [
   {
     provider: "Anthropic",

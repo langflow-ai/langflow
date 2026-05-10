@@ -7,7 +7,6 @@ import io
 import zipfile
 from datetime import datetime, timezone
 from typing import Annotated
-from urllib.parse import quote
 from uuid import UUID
 
 import orjson
@@ -19,6 +18,7 @@ from sqlmodel import select
 from langflow.api.utils import (
     CurrentActiveUser,
     DbSession,
+    build_content_disposition,
     normalize_code_for_import,
     normalize_flow_for_export,
     remove_api_keys,
@@ -78,13 +78,10 @@ async def download_project_flows(
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_{project.name}_flows.zip"
 
-        # URL encode filename handle non-ASCII (ex. Cyrillic)
-        encoded_filename = quote(filename)
-
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"},
+            headers={"Content-Disposition": build_content_disposition(filename)},
         )
 
     except HTTPException:
