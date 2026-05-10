@@ -496,11 +496,14 @@ def _patch_root_pyproject(plan: PortPlan, *, apply: bool) -> list[str]:
 def _render_migration_entries(plan: PortPlan) -> str:
     """Render JSON migration entries for paste-in to ``migration_table.json``.
 
-    Emits four entries per discovered class:
-        * ``bare`` -- bare class name -> namespaced ID
-        * ``import_path`` -- ``lfx.components.<bundle>.<module>.<Class>``
-        * ``package_path`` -- ``lfx.components.<bundle>.<Class>``
-        * ``legacy_slot`` -- the in-tree slot string that saved flows use
+    Emits four entries per discovered class, matching the keys
+    ``lfx.extension.migration.loader`` reads:
+        * ``bare_class_name`` -- the bare class name a saved flow may have used.
+        * ``import_path`` -- ``lfx.components.<bundle>.<module>.<Class>``.
+        * ``import_path`` -- ``lfx.components.<bundle>.<Class>`` (package re-export).
+        * ``legacy_slot`` -- ``ext:<bundle>:<Class>@official-pre-a`` (the
+          pre-Phase-A canonical slot, in case any in-flight saved flow
+          serialized that form before this bundle landed).
 
     Bare-name uniqueness is enforced by ``scripts/migrate/check_bare_names.py``
     in CI, so the porter just pastes the block and lets CI catch collisions.
@@ -512,28 +515,28 @@ def _render_migration_entries(plan: PortPlan) -> str:
             continue
         module_stem = cf.path.stem
         for cls in cf.classes:
-            ns_id = f"ext:{plan.bundle}:{cls}@official"
+            target = f"ext:{plan.bundle}:{cls}@official"
             entries.append(
-                "  {\n"
-                f'    "from": "bare:{cls}",\n'
-                f'    "to": "{ns_id}",\n'
-                f'    "release": "{release}"\n'
-                "  },\n"
-                "  {\n"
-                f'    "from": "import_path:lfx.components.{plan.bundle}.{module_stem}.{cls}",\n'
-                f'    "to": "{ns_id}",\n'
-                f'    "release": "{release}"\n'
-                "  },\n"
-                "  {\n"
-                f'    "from": "import_path:lfx.components.{plan.bundle}.{cls}",\n'
-                f'    "to": "{ns_id}",\n'
-                f'    "release": "{release}"\n'
-                "  },\n"
-                "  {\n"
-                f'    "from": "legacy_slot:{plan.bundle}/{module_stem}",\n'
-                f'    "to": "{ns_id}",\n'
-                f'    "release": "{release}"\n'
-                "  }"
+                "    {\n"
+                f'      "bare_class_name": "{cls}",\n'
+                f'      "target": "{target}",\n'
+                f'      "added_in": "{release}"\n'
+                "    },\n"
+                "    {\n"
+                f'      "import_path": "lfx.components.{plan.bundle}.{module_stem}.{cls}",\n'
+                f'      "target": "{target}",\n'
+                f'      "added_in": "{release}"\n'
+                "    },\n"
+                "    {\n"
+                f'      "import_path": "lfx.components.{plan.bundle}.{cls}",\n'
+                f'      "target": "{target}",\n'
+                f'      "added_in": "{release}"\n'
+                "    },\n"
+                "    {\n"
+                f'      "legacy_slot": "ext:{plan.bundle}:{cls}@official-pre-a",\n'
+                f'      "target": "{target}",\n'
+                f'      "added_in": "{release}"\n'
+                "    }"
             )
     return ",\n".join(entries)
 
@@ -541,56 +544,151 @@ def _render_migration_entries(plan: PortPlan) -> str:
 def _render_test_scaffold(plan: PortPlan) -> str:
     """Render an integration-test scaffold for ``test_pilot_<bundle>_upgrade.py``.
 
-    Structurally mirrors ``test_pilot_duckduckgo_upgrade.py``: the four
-    saved-flow contract cases plus the editable-install discovery check.
-    The porter still owns the actual assertions, but the boilerplate
-    (imports, fixtures, parametrize block) is no longer hand-written.
+    Structurally mirrors ``test_pilot_duckduckgo_upgrade.py``: a
+    ``migration_table`` fixture, three saved-flow rewrite tests (bare,
+    full import path, short import path), the bundle-importable check,
+    and the manifest-shipped check.  The porter still owns the
+    component-specific runtime assertions (build pipeline, output schema)
+    -- those are too domain-specific to template.
     """
     bundle = plan.bundle
     first_class = next(
         (cls for cf in plan.component_files for cls in cf.classes if cf.path.name != "__init__.py"),
         f"{bundle.title()}Component",
     )
-    ns_id = f"ext:{bundle}:{first_class}@official"
-    legacy_slot = next(
+    target = f"ext:{bundle}:{first_class}@official"
+    module_stem = next(
         (cf.path.stem for cf in plan.component_files if cf.classes),
         bundle,
     )
-    return f'''"""Integration tests for the ``lfx-{bundle}`` extension bundle pilot port.
+    full_path = f"lfx.components.{bundle}.{module_stem}.{first_class}"
+    short_path = f"lfx.components.{bundle}.{first_class}"
+    return f'''"""Integration test: legacy {bundle} flows upgrade cleanly.
 
-Mirrors ``test_pilot_duckduckgo_upgrade.py``: every assertion here is the
-saved-flow contract a pre-port user expects when their flow JSON references
-the legacy class name or import path.
+Mirrors ``test_pilot_duckduckgo_upgrade.py`` for ``{first_class}``.
 """
+
 from __future__ import annotations
 
-import importlib.metadata
+import json
+from importlib import metadata as importlib_metadata
+from pathlib import Path
 
 import pytest
+from lfx.extension.migration.loader import load_migration_table
 
-from lfx.extension.migration import resolve_legacy_id
-
-
-_CASES = [
-    pytest.param("bare:{first_class}", id="bare-class-name"),
-    pytest.param("import_path:lfx.components.{bundle}.{legacy_slot}.{first_class}", id="full-import-path"),
-    pytest.param("import_path:lfx.components.{bundle}.{first_class}", id="package-import-path"),
-    pytest.param("legacy_slot:{bundle}/{legacy_slot}", id="legacy-slot"),
-]
+REPO_ROOT = Path(__file__).resolve().parents[5]
+TABLE_PATH = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "extension" / "migration" / "migration_table.json"
+EXPECTED_TARGET = "{target}"
 
 
-@pytest.mark.parametrize("legacy_id", _CASES)
-def test_legacy_ids_resolve_to_namespaced_id(legacy_id: str) -> None:
-    """Each pre-port identifier shape rewrites to the canonical bundle ID."""
-    assert resolve_legacy_id(legacy_id) == "{ns_id}"
+@pytest.fixture(scope="module")
+def migration_table():
+    table, error = load_migration_table(TABLE_PATH)
+    assert error is None, f"failed to load migration table: {{error}}"
+    assert table is not None
+    return table
 
 
-def test_distribution_ships_extension_manifest() -> None:
-    """``lfx-{bundle}`` ships ``extension.json`` and is importable."""
-    files = importlib.metadata.files("lfx-{bundle}") or []
-    assert any(f.name == "extension.json" for f in files), [str(f) for f in files]
+def _saved_flow_node(node_id: str, type_value: str) -> dict:
+    """Build a minimal saved-flow node skeleton for testing."""
+    return {{
+        "id": node_id,
+        "type": "genericNode",
+        "data": {{"id": node_id, "type": type_value, "node": {{"template": {{}}}}}},
+    }}
 
-    import lfx_{bundle}  # noqa: F401
+
+def _saved_flow(*nodes: dict) -> dict:
+    return {{"data": {{"nodes": list(nodes), "edges": []}}}}
+
+
+@pytest.mark.integration
+def test_legacy_bare_name_flow_upgrades(migration_table) -> None:
+    """Pre-Phase-A flow with the bare class name upgrades to the canonical ID."""
+    from lfx.extension.migration.rewrite import migrate_flow_payload
+
+    flow = _saved_flow(_saved_flow_node("{bundle}-1", "{first_class}"))
+    report = migrate_flow_payload(flow, table=migration_table)
+
+    assert report.rewritten_count == 1
+    assert flow["data"]["nodes"][0]["data"]["type"] == EXPECTED_TARGET
+    [record] = report.records
+    assert record.legacy_form_kind == "bare_class_name"
+    assert record.new_value == EXPECTED_TARGET
+
+
+@pytest.mark.integration
+def test_legacy_import_path_flow_upgrades(migration_table) -> None:
+    """Dotted import-path form upgrades to the canonical ID."""
+    from lfx.extension.migration.rewrite import migrate_flow_payload
+
+    flow = _saved_flow(_saved_flow_node("{bundle}-2", "{full_path}"))
+    report = migrate_flow_payload(flow, table=migration_table)
+
+    assert report.rewritten_count == 1
+    assert flow["data"]["nodes"][0]["data"]["type"] == EXPECTED_TARGET
+    assert report.records[0].legacy_form_kind == "import_path"
+
+
+@pytest.mark.integration
+def test_short_import_path_flow_upgrades(migration_table) -> None:
+    """Package-level import-path form (via ``__init__.py`` re-export) upgrades."""
+    from lfx.extension.migration.rewrite import migrate_flow_payload
+
+    flow = _saved_flow(_saved_flow_node("{bundle}-3", "{short_path}"))
+    report = migrate_flow_payload(flow, table=migration_table)
+
+    assert report.rewritten_count == 1
+    assert flow["data"]["nodes"][0]["data"]["type"] == EXPECTED_TARGET
+
+
+@pytest.mark.integration
+def test_lfx_{bundle}_distribution_is_importable() -> None:
+    """The bundle's package is importable in the development workspace."""
+    try:
+        from lfx_{bundle} import {first_class}
+    except ImportError:
+        pytest.skip("lfx-{bundle} not installed in this test environment")
+
+    assert {first_class}.__name__ == "{first_class}"
+
+
+def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
+    direct_url = dist.read_text("direct_url.json")
+    if not direct_url:
+        return False
+    try:
+        payload = json.loads(direct_url)
+    except json.JSONDecodeError:
+        return False
+    return bool(payload.get("dir_info", {{}}).get("editable"))
+
+
+@pytest.mark.integration
+def test_lfx_{bundle}_ships_manifest() -> None:
+    """``importlib.metadata`` can find ``extension.json`` for the installed dist."""
+    try:
+        dist = importlib_metadata.distribution("lfx-{bundle}")
+    except importlib_metadata.PackageNotFoundError:
+        pytest.skip("lfx-{bundle} not installed in this test environment")
+
+    if _is_editable_install(dist):
+        import lfx_{bundle}
+
+        package_dir = Path(lfx_{bundle}.__file__).parent
+        manifest_path = package_dir / "extension.json"
+        assert manifest_path.is_file()
+    else:
+        files = dist.files or []
+        manifests = [f for f in files if f.parts and f.parts[-1] == "extension.json"]
+        assert manifests
+        manifest_path = Path(dist.locate_file(manifests[0]))
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["id"] == "lfx-{bundle}"
+    assert manifest["lfx"]["compat"] == ["1"]
+    assert any(b["name"] == "{bundle}" for b in manifest["bundles"])
 '''
 
 
