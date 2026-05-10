@@ -464,7 +464,7 @@
                   },
                   {
                     "name": "OpenDsStar",
-                    "version": "1.0.25"
+                    "version": "1.0.26"
                   }
                 ],
                 "total_dependencies": 4
@@ -1097,7 +1097,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.4"
                   },
                   {
                     "name": "googleapiclient",
@@ -2371,10 +2371,10 @@
             "description": "# Ingestion Pipeline",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b",
             "template": {
               "backgroundColor": "lime"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b"
+            }
           },
           "type": "note"
         },
@@ -2401,10 +2401,10 @@
             "description": "# Agent Inference",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3"
+            }
           },
           "type": "note"
         },
@@ -2431,10 +2431,10 @@
             "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b"
+            }
           },
           "type": "note"
         },
@@ -2461,10 +2461,10 @@
             "description": "# Models",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8",
             "template": {
               "backgroundColor": "rose"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8"
+            }
           },
           "type": "note"
         },
@@ -2491,10 +2491,10 @@
             "description": "# Data",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d",
             "template": {
               "backgroundColor": "amber"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d"
+            }
           },
           "type": "note"
         },
@@ -2551,13 +2551,9 @@
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "8be6f2e17eb2",
+              "code_hash": "50bb902aa828",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "chromadb",
-                    "version": "1.5.7"
-                  },
                   {
                     "name": "langchain_chroma",
                     "version": "0.2.6"
@@ -2569,6 +2565,10 @@
                   {
                     "name": "lfx",
                     "version": null
+                  },
+                  {
+                    "name": "chromadb",
+                    "version": "1.5.7"
                   },
                   {
                     "name": "langchain_community",
@@ -2752,7 +2752,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom chromadb.config import Settings\nfrom langchain_chroma import Chroma\nfrom typing_extensions import override\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from chromadb import Client\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        # Chroma settings\n        chroma_settings = None\n        client = None\n        if self.chroma_server_host:\n            chroma_settings = Settings(\n                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],\n                chroma_server_host=self.chroma_server_host,\n                chroma_server_http_port=self.chroma_server_http_port or None,\n                chroma_server_grpc_port=self.chroma_server_grpc_port or None,\n                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,\n            )\n            client = Client(settings=chroma_settings)\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
+                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom typing_extensions import override\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
               },
               "collection_name": {
                 "_input_type": "StrInput",
@@ -3012,13 +3012,9 @@
             "legacy": false,
             "lf_version": "1.8.1",
             "metadata": {
-              "code_hash": "8be6f2e17eb2",
+              "code_hash": "50bb902aa828",
               "dependencies": {
                 "dependencies": [
-                  {
-                    "name": "chromadb",
-                    "version": "1.5.7"
-                  },
                   {
                     "name": "langchain_chroma",
                     "version": "0.2.6"
@@ -3030,6 +3026,10 @@
                   {
                     "name": "lfx",
                     "version": null
+                  },
+                  {
+                    "name": "chromadb",
+                    "version": "1.5.7"
                   },
                   {
                     "name": "langchain_community",
@@ -3203,7 +3203,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom chromadb.config import Settings\nfrom langchain_chroma import Chroma\nfrom typing_extensions import override\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from chromadb import Client\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        # Chroma settings\n        chroma_settings = None\n        client = None\n        if self.chroma_server_host:\n            chroma_settings = Settings(\n                chroma_server_cors_allow_origins=self.chroma_server_cors_allow_origins or [],\n                chroma_server_host=self.chroma_server_host,\n                chroma_server_http_port=self.chroma_server_http_port or None,\n                chroma_server_grpc_port=self.chroma_server_grpc_port or None,\n                chroma_server_ssl_enabled=self.chroma_server_ssl_enabled,\n            )\n            client = Client(settings=chroma_settings)\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
+                "value": "from copy import deepcopy\nfrom typing import TYPE_CHECKING\n\nfrom langchain_chroma import Chroma\nfrom typing_extensions import override\n\nfrom lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store\nfrom lfx.base.vectorstores.utils import chroma_collection_to_data\nfrom lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput\nfrom lfx.schema.data import Data\n\nif TYPE_CHECKING:\n    from lfx.schema.dataframe import DataFrame\n\n\nclass ChromaVectorStoreComponent(LCVectorStoreComponent):\n    \"\"\"Chroma Vector Store with search capabilities.\"\"\"\n\n    display_name: str = \"Chroma DB\"\n    description: str = \"Chroma Vector Store with search capabilities\"\n    name = \"Chroma\"\n    icon = \"Chroma\"\n\n    inputs = [\n        StrInput(\n            name=\"collection_name\",\n            display_name=\"Collection Name\",\n            value=\"langflow\",\n        ),\n        StrInput(\n            name=\"persist_directory\",\n            display_name=\"Persist Directory\",\n        ),\n        *LCVectorStoreComponent.inputs,\n        HandleInput(name=\"embedding\", display_name=\"Embedding\", input_types=[\"Embeddings\"]),\n        StrInput(\n            name=\"chroma_server_cors_allow_origins\",\n            display_name=\"Server CORS Allow Origins\",\n            advanced=True,\n        ),\n        StrInput(\n            name=\"chroma_server_host\",\n            display_name=\"Server Host\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_http_port\",\n            display_name=\"Server HTTP Port\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"chroma_server_grpc_port\",\n            display_name=\"Server gRPC Port\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"chroma_server_ssl_enabled\",\n            display_name=\"Server SSL Enabled\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"allow_duplicates\",\n            display_name=\"Allow Duplicates\",\n            advanced=True,\n            info=\"If false, will not add documents that are already in the Vector Store.\",\n        ),\n        DropdownInput(\n            name=\"search_type\",\n            display_name=\"Search Type\",\n            options=[\"Similarity\", \"MMR\"],\n            value=\"Similarity\",\n            advanced=True,\n        ),\n        IntInput(\n            name=\"number_of_results\",\n            display_name=\"Number of Results\",\n            info=\"Number of results to return.\",\n            advanced=True,\n            value=10,\n        ),\n        IntInput(\n            name=\"limit\",\n            display_name=\"Limit\",\n            advanced=True,\n            info=\"Limit the number of records to compare when Allow Duplicates is False.\",\n        ),\n    ]\n\n    @override\n    @check_cached_vector_store\n    def build_vector_store(self) -> Chroma:\n        \"\"\"Builds the Chroma object.\"\"\"\n        try:\n            from langchain_chroma import Chroma\n        except ImportError as e:\n            msg = \"Could not import Chroma integration package. Please install it with `pip install langchain-chroma`.\"\n            raise ImportError(msg) from e\n        client = None\n        if self.chroma_server_host:\n            try:\n                from chromadb import HttpClient\n            except ImportError as e:\n                msg = \"Could not import chromadb. Please install it with `pip install chromadb`.\"\n                raise ImportError(msg) from e\n            client = HttpClient(\n                host=self.chroma_server_host,\n                port=self.chroma_server_http_port or 8000,\n                ssl=bool(self.chroma_server_ssl_enabled),\n            )\n\n        # Check persist_directory and expand it if it is a relative path\n        persist_directory = self.resolve_path(self.persist_directory) if self.persist_directory is not None else None\n\n        from chromadb.errors import ChromaError\n\n        try:\n            chroma = Chroma(\n                persist_directory=persist_directory,\n                client=client,\n                embedding_function=self.embedding,\n                collection_name=self.collection_name,\n            )\n        except Exception as e:\n            if isinstance(e, ChromaError):\n                if not persist_directory and client is None:\n                    msg = \"Chroma DB failed to initialize. Please set a 'Persist Directory' path (e.g., './chroma_db').\"\n                elif not persist_directory:\n                    msg = f\"Chroma DB failed to initialize in server mode: {e}.\"\n                else:\n                    msg = (\n                        f\"Chroma DB failed at '{persist_directory}': {e}. \"\n                        \"If you deleted the database, restart the server and re-run ingestion.\"\n                    )\n                raise RuntimeError(msg) from e  # noqa: TRY004\n            raise\n\n        self._add_documents_to_vector_store(chroma)\n        limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n        self.status = chroma_collection_to_data(chroma.get(limit=limit))\n        return chroma\n\n    def _add_documents_to_vector_store(self, vector_store: \"Chroma\") -> None:\n        \"\"\"Adds documents to the Vector Store.\"\"\"\n        ingest_data: list | Data | DataFrame = self.ingest_data\n        if not ingest_data:\n            self.status = \"\"\n            return\n\n        # Convert DataFrame to Data if needed using parent's method\n        ingest_data = self._prepare_ingest_data()\n\n        stored_documents_without_id = []\n        if self.allow_duplicates:\n            stored_data = []\n        else:\n            limit = int(self.limit) if self.limit is not None and str(self.limit).strip() else None\n            stored_data = chroma_collection_to_data(vector_store.get(limit=limit))\n            for value in deepcopy(stored_data):\n                del value.id\n                stored_documents_without_id.append(value)\n\n        documents = []\n        for _input in ingest_data or []:\n            if isinstance(_input, Data):\n                if _input not in stored_documents_without_id:\n                    documents.append(_input.to_lc_document())\n            else:\n                msg = \"Vector Store Inputs must be Data objects.\"\n                raise TypeError(msg)\n\n        if documents and self.embedding is not None:\n            self.log(f\"Adding {len(documents)} documents to the Vector Store.\")\n            # Filter complex metadata to prevent ChromaDB errors\n            try:\n                from langchain_community.vectorstores.utils import filter_complex_metadata\n\n                filtered_documents = filter_complex_metadata(documents)\n                vector_store.add_documents(filtered_documents)\n            except ImportError:\n                self.log(\"Warning: Could not import filter_complex_metadata. Adding documents without filtering.\")\n                vector_store.add_documents(documents)\n        else:\n            self.log(\"No documents to add to the Vector Store.\")\n"
               },
               "collection_name": {
                 "_input_type": "StrInput",
@@ -5069,10 +5069,10 @@
             "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef"
+            }
           },
           "type": "note"
         },
@@ -5099,10 +5099,10 @@
             "description": "## Setup\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d"
+            }
           },
           "type": "note"
         },
@@ -5129,10 +5129,10 @@
             "description": "## How to run it\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b"
+            }
           },
           "type": "note"
         },
@@ -5159,10 +5159,10 @@
             "description": "## Notes\n\n- The **Write File** tool is also included, allowing the agent to create structured output files such as **CSV, Excel, or JSON** with analysis results.  \n  (e.g. *Create a CSV with all Airbnb listings in NYC that cost less than 300 USD per night.*)\n- Using the **Write File** tool, code agents can also save plots as **HTML** files when requested.  \n  (e.g. *Create a plot of house price vs. review score for all Airbnb listings in the Upper East Side, and save it as an HTML file.*)",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972"
+            }
           },
           "type": "note"
         },
