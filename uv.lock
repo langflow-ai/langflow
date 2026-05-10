@@ -2957,6 +2957,24 @@ wheels = [
 ]
 
 [[package]]
+name = "exa-py"
+version = "2.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/71/e4/11bbbc076ae420b9e00537945d48a03cb42cc6da63edc65bf50d23e4778e/exa_py-2.12.1.tar.gz", hash = "sha256:9ff1924fbfbcae822b20c0ddef0650fabc04ac75906b9153623eadc18135b7ce", size = 55792, upload-time = "2026-04-22T20:00:38.528Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/19/0a504b6ce7c468595cd0551f65e5c464832a1d3af8dc8acd681e21696a5f/exa_py-2.12.1-py3-none-any.whl", hash = "sha256:9e735802161482a7d5b231376257883cb4e34dbd6f75ded04ab1a5a171b69d9f", size = 74512, upload-time = "2026-04-22T20:00:34.326Z" },
+]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3730,10 +3748,10 @@ name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform != 'darwin'" },
-    { name = "flask", marker = "sys_platform != 'darwin'" },
-    { name = "flask-cors", marker = "sys_platform != 'darwin'" },
-    { name = "tqdm", marker = "sys_platform != 'darwin'" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "flask", marker = "sys_platform == 'win32'" },
+    { name = "flask-cors", marker = "sys_platform == 'win32'" },
+    { name = "tqdm", marker = "sys_platform == 'win32'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/2e/f79632d7300874f7f0e60b61a6ab22455a245e1556116a1729542a77b0da/gassist-0.0.1-py3-none-any.whl", hash = "sha256:bb0fac74b453153a6c74b2db40a14fdde7879cbc10ec692ed170e576c8e2b6aa", size = 23819, upload-time = "2025-05-09T18:22:23.609Z" },
@@ -6492,6 +6510,7 @@ all = [
     { name = "dspy-ai" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
+    { name = "exa-py" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -6543,7 +6562,6 @@ all = [
     { name = "mcp" },
     { name = "mem0ai" },
     { name = "metal-sdk" },
-    { name = "metaphor-python" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "needle-python" },
@@ -6658,6 +6676,7 @@ complete = [
     { name = "dspy-ai" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
+    { name = "exa-py" },
     { name = "faiss-cpu" },
     { name = "fake-useragent" },
     { name = "fastavro", version = "1.9.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
@@ -6709,7 +6728,6 @@ complete = [
     { name = "mcp" },
     { name = "mem0ai" },
     { name = "metal-sdk" },
-    { name = "metaphor-python" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "needle-python" },
@@ -6783,6 +6801,9 @@ easyocr = [
 elasticsearch = [
     { name = "elasticsearch" },
     { name = "langchain-elasticsearch" },
+]
+exa = [
+    { name = "exa-py" },
 ]
 faiss = [
     { name = "faiss-cpu" },
@@ -6888,7 +6909,7 @@ metal = [
     { name = "metal-sdk" },
 ]
 metaphor = [
-    { name = "metaphor-python" },
+    { name = "exa-py" },
 ]
 milvus = [
     { name = "langchain-milvus" },
@@ -7103,6 +7124,8 @@ requires-dist = [
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
     { name = "email-validator", specifier = ">=2.0.0" },
     { name = "emoji", specifier = ">=2.12.0,<3.0.0" },
+    { name = "exa-py", marker = "extra == 'exa'", specifier = ">=1.14,<3" },
+    { name = "exa-py", marker = "extra == 'metaphor'", specifier = ">=1.14,<3" },
     { name = "faiss-cpu", marker = "extra == 'faiss'", specifier = "==1.9.0.post1" },
     { name = "fake-useragent", marker = "extra == 'fake-useragent'", specifier = ">=2.0.0" },
     { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
@@ -7193,6 +7216,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["duckduckgo"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["exa"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["faiss"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["fake-useragent"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["fastavro"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -7222,7 +7246,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["mcp"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mistral"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mlx"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -7281,7 +7304,6 @@ requires-dist = [
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.17.0,<2.0.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.34" },
     { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
-    { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.29.0" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = "~=0.3.9" },
     { name = "multiprocess", specifier = ">=0.70.14,<1.0.0" },
@@ -7364,7 +7386,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "llama-cpp", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "dspy", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "exa", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8400,23 +8422,11 @@ wheels = [
 ]
 
 [[package]]
-name = "metaphor-python"
-version = "0.1.23"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/39/f4/458fbd9c8624aab58deca73468df107201cadc5ca8ea449511d318140de3/metaphor-python-0.1.23.tar.gz", hash = "sha256:ce3a8f9d81b2ee7201dac225095cdf2da34b003fe889c5b4629a8b480e8de7ba", size = 5563, upload-time = "2023-11-30T16:49:45.831Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ff/ef/44b06a7269a596fb23ce0a318c1b2e6e67012624c9122d5a73883c23f9f9/metaphor_python-0.1.23-py3-none-any.whl", hash = "sha256:993b594373efdd5223631f8997dfd68801241db112a214d7c56aeac03fc74b4f", size = 6138, upload-time = "2023-11-30T16:49:43.946Z" },
-]
-
-[[package]]
 name = "milvus-lite"
 version = "2.5.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tqdm", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "tqdm", marker = "(platform_machine == 'arm64' and sys_platform == 'darwin') or (sys_platform != 'darwin' and sys_platform != 'win32')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9b/2e/746f5bb1d6facd1e73eb4af6dd5efda11125b0f29d7908a097485ca6cad9/milvus_lite-2.5.1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:a2e031088bf308afe5f8567850412d618cfb05a65238ed1a6117f60decccc95a", size = 24421451, upload-time = "2025-06-30T04:23:51.747Z" },
@@ -9164,9 +9174,9 @@ name = "ocrmac"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "pillow" },
-    { name = "pyobjc-framework-vision" },
+    { name = "click", marker = "sys_platform == 'darwin'" },
+    { name = "pillow", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-vision", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/07/3e15ab404f75875c5e48c47163300eb90b7409044d8711fc3aaf52503f2e/ocrmac-1.0.1.tar.gz", hash = "sha256:507fe5e4cbd67b2d03f6729a52bbc11f9d0b58241134eb958a5daafd4b9d93d9", size = 1454317, upload-time = "2026-01-08T16:44:26.412Z" }
 wheels = [
@@ -10478,7 +10488,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess" },
+    { name = "ptyprocess", marker = "sys_platform != 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -11761,7 +11771,7 @@ name = "pyobjc-framework-cocoa"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/a3/16ca9a15e77c061a9250afbae2eae26f2e1579eb8ca9462ae2d2c71e1169/pyobjc_framework_cocoa-12.1.tar.gz", hash = "sha256:5556c87db95711b985d5efdaaf01c917ddd41d148b1e52a0c66b1a2e2c5c1640", size = 2772191, upload-time = "2025-11-14T10:13:02.069Z" }
 wheels = [
@@ -11777,8 +11787,8 @@ name = "pyobjc-framework-coreml"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/30/2d/baa9ea02cbb1c200683cb7273b69b4bee5070e86f2060b77e6a27c2a9d7e/pyobjc_framework_coreml-12.1.tar.gz", hash = "sha256:0d1a4216891a18775c9e0170d908714c18e4f53f9dc79fb0f5263b2aa81609ba", size = 40465, upload-time = "2025-11-14T10:14:02.265Z" }
 wheels = [
@@ -11794,8 +11804,8 @@ name = "pyobjc-framework-quartz"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/18/cc59f3d4355c9456fc945eae7fe8797003c4da99212dd531ad1b0de8a0c6/pyobjc_framework_quartz-12.1.tar.gz", hash = "sha256:27f782f3513ac88ec9b6c82d9767eef95a5cf4175ce88a1e5a65875fee799608", size = 3159099, upload-time = "2025-11-14T10:21:24.31Z" }
 wheels = [
@@ -11811,10 +11821,10 @@ name = "pyobjc-framework-vision"
 version = "12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pyobjc-core" },
-    { name = "pyobjc-framework-cocoa" },
-    { name = "pyobjc-framework-coreml" },
-    { name = "pyobjc-framework-quartz" },
+    { name = "pyobjc-core", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-cocoa", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-coreml", marker = "sys_platform == 'darwin'" },
+    { name = "pyobjc-framework-quartz", marker = "sys_platform == 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c2/5a/08bb3e278f870443d226c141af14205ff41c0274da1e053b72b11dfc9fb2/pyobjc_framework_vision-12.1.tar.gz", hash = "sha256:a30959100e85dcede3a786c544e621ad6eb65ff6abf85721f805822b8c5fe9b0", size = 59538, upload-time = "2025-11-14T10:23:21.979Z" }
 wheels = [
