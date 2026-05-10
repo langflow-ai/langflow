@@ -1,7 +1,7 @@
 """Add knowledge_base + ingestion_run schema and job.job_metadata.
 
 Revision ID: kb1a2b3c4d5e
-Revises: mb00a1b2c3d4
+Revises: b4c2f8e9a1d3
 Create Date: 2026-05-01 08:30:00.000000
 
 Phase: EXPAND
@@ -43,7 +43,7 @@ RUN_STATUS_VALUES = ("pending", "running", "succeeded", "partial", "failed", "ca
 
 # revision identifiers, used by Alembic.
 revision: str = "kb1a2b3c4d5e"  # pragma: allowlist secret
-down_revision: str | None = "mb00a1b2c3d4"  # pragma: allowlist secret
+down_revision: str | None = "b4c2f8e9a1d3"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
