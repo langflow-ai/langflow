@@ -125,7 +125,9 @@ class TestFolderReadWithFlowsSerializer:
 
 
 class TestFolderOrmModelUnaffected:
-    """The encrypt/decrypt code paths read `Folder.auth_settings` as a dict via
+    """ORM model must keep raw ciphertext, only response schemas mask.
+
+    The encrypt/decrypt code paths read `Folder.auth_settings` as a dict via
     attribute access. We must not mask values when the table model is dumped,
     or those code paths break. Only the response schemas should mask.
     """
