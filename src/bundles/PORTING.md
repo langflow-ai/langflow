@@ -280,6 +280,23 @@ The four test cases that matter:
 The integration test is the only place the saved-flow contract is
 exercised end-to-end; do **not** skip it.
 
+### Coverage that moves with the port
+
+The in-tree `test_<bundle>_component.py` under
+`src/backend/tests/unit/components/<bundle>/` typically includes a
+`test_component_versions` case that walks a `file_names_mapping` fixture
+to verify saved fixtures from older schema versions still instantiate.
+That fixture imports from `tests.base`, which is not importable inside a
+bundle. The new bundle-local test (`src/bundles/<bundle>/tests/`) drops
+it, and `test_pilot_<bundle>_upgrade.py` covers namespace migration but
+not intra-class schema evolution.
+
+If the legacy fixture had non-empty entries, replicate the version check
+in some bundle-friendly form (parametrise the bundle test over the same
+mapping, no `tests.base` import). If it was empty, call out the
+regression in the PR description so reviewers can weigh in on whether
+the case should be replicated before merge.
+
 ---
 
 ## 7. Verify

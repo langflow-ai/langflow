@@ -17,16 +17,21 @@ What this script does:
     5. Strips the three references in
        ``src/lfx/src/lfx/components/__init__.py``.
     6. Adds the dep, the workspace source, and the workspace member entry
-       to the root ``pyproject.toml``.
+       to the root ``pyproject.toml`` (uses the
+       ``# langflow-extensions:bundle-{deps,sources,members}-end`` marker
+       pairs so the anchors survive dep reordering / pin bumps).
 
 What this script does NOT do (humans-only):
-    * Edit the migration table (release version + bare-name uniqueness
-      check require human judgement).
-    * Write the integration test
-      (``src/lfx/tests/integration/extension/test_pilot_<bundle>_upgrade.py``).
     * Run ``uv lock``, ``LFX_DEV=1 scripts/build_component_index.py``,
       ``ruff``, or any other verification step.  See ``src/bundles/PORTING.md``
       § 7 for the manual block.
+
+What this script does on a best-effort basis (review before commit):
+    * Discovers ``class <Name>(...)`` declarations in each moved file and
+      wires the corresponding re-exports into both ``__init__.py`` files.
+    * Renders migration-table JSON entries and an integration-test scaffold
+      to stdout when ``--migration-release`` is given, so the human edits
+      become "paste-in" rather than "hand-write".
 
 Run mode:
     Default is dry-run (prints the planned changes).  Pass ``--apply`` to
@@ -43,6 +48,9 @@ in any CI checkout.
 Usage:
     python scripts/migrate/port_bundle.py --bundle arxiv               # dry-run
     python scripts/migrate/port_bundle.py --bundle arxiv --apply       # write
+    python scripts/migrate/port_bundle.py --bundle arxiv \
+        --display-name "arXiv Search" \
+        --migration-release 1.10.0 --apply
 """
 
 from __future__ import annotations
@@ -140,16 +148,24 @@ PACKAGE_INIT_TEMPLATE = '''\
 
 Distribution unit ``lfx-{bundle}``.  At runtime Langflow's loader
 discovers ``extension.json`` shipped alongside this ``__init__.py`` and
-registers the bundle's components under the namespaced ID
+registers the bundle's components under the namespaced IDs
 ``ext:{bundle}:<Class>@official``.
 """
+
+{package_reexports}
 '''
 
 
-COMPONENTS_INIT_PLACEHOLDER = """\
-# Re-export the moved Component class(es) here so saved-flow migration
-# entries that target ``lfx.components.<bundle>.<Class>`` keep working.
+COMPONENTS_INIT_TEMPLATE = '''\
+"""Component re-exports for the ``{bundle}`` bundle.
+
+Saved-flow migration entries that target ``lfx.components.{bundle}.<Class>``
+resolve through this package, so the moved Component class(es) must be
+importable from here by name.
 """
+
+{component_reexports}
+'''
 
 
 README_TEMPLATE = """\
@@ -190,15 +206,37 @@ IDs by the migration table in
 
 
 @dataclass(frozen=True)
+class ComponentFile:
+    """A ported .py file plus the Component class names it declares."""
+
+    path: Path
+    classes: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class PortPlan:
     bundle: str
     display_name: str
     in_tree_dir: Path
     bundle_dir: Path
-    component_files: tuple[Path, ...]
+    component_files: tuple[ComponentFile, ...]
+    migration_release: str | None
 
 
-def _validate_candidate(bundle: str) -> PortPlan:
+_CLASS_DECL_RE = re.compile(r"^class\s+(\w+)\s*\(", re.MULTILINE)
+
+
+def _discover_classes(source: str) -> tuple[str, ...]:
+    """Return top-level ``class Name(...):`` names in ``source``.
+
+    Indented classes (nested inside functions or other classes) are
+    skipped -- only the top-level Component subclasses participate in the
+    re-export wiring.
+    """
+    return tuple(_CLASS_DECL_RE.findall(source))
+
+
+def _validate_candidate(bundle: str, *, display_name: str | None, migration_release: str | None) -> PortPlan:
     """Refuse early if the candidate is not eligible for the mechanical port."""
     if not re.fullmatch(r"[a-z][a-z0-9_]{1,63}", bundle):
         msg = (
@@ -227,7 +265,7 @@ def _validate_candidate(bundle: str) -> PortPlan:
         )
         raise SystemExit(msg)
 
-    component_files: list[Path] = []
+    component_files: list[ComponentFile] = []
     for src in sorted(in_tree.iterdir()):
         if not src.is_file() or src.suffix != ".py":
             continue
@@ -240,25 +278,67 @@ def _validate_candidate(bundle: str) -> PortPlan:
                 "in-tree.  See src/bundles/PORTING.md § 0."
             )
             raise SystemExit(msg)
-        component_files.append(src)
+        classes = () if src.name == "__init__.py" else _discover_classes(text)
+        component_files.append(ComponentFile(path=src, classes=classes))
 
     if not component_files:
         msg = f"No ``*.py`` files under {in_tree}; nothing to port."
         raise SystemExit(msg)
 
-    display_name = bundle.replace("_", " ").title()
+    if migration_release is not None and not re.fullmatch(r"\d+\.\d+\.\d+", migration_release):
+        msg = f"--migration-release {migration_release!r} must be a three-segment SemVer (e.g. 1.10.0)."
+        raise SystemExit(msg)
+
+    resolved_display = display_name if display_name is not None else bundle.replace("_", " ").title()
     return PortPlan(
         bundle=bundle,
-        display_name=display_name,
+        display_name=resolved_display,
         in_tree_dir=in_tree,
         bundle_dir=bundle_dir,
         component_files=tuple(component_files),
+        migration_release=migration_release,
     )
 
 
 # ---------------------------------------------------------------------------
 # Apply
 # ---------------------------------------------------------------------------
+
+
+def _render_reexports(plan: PortPlan) -> tuple[str, str]:
+    """Render the two ``__init__.py`` re-export blocks from discovered classes.
+
+    Returns ``(package_init_body, components_init_body)``.  If no Component
+    classes were discovered, both bodies fall back to a TODO comment that
+    instructs the porter to wire the re-exports by hand.
+    """
+    all_classes: list[tuple[str, str]] = []  # (module_stem, ClassName)
+    for cf in plan.component_files:
+        if cf.path.name == "__init__.py":
+            continue
+        module_stem = cf.path.stem
+        all_classes.extend((module_stem, cls) for cls in cf.classes)
+
+    if not all_classes:
+        todo = (
+            "# TODO(port_bundle): no top-level ``class <Name>(...):`` declarations were\n"
+            "# discovered.  Add the Component class re-exports manually so saved-flow\n"
+            "# migration entries that target ``lfx.components.<bundle>.<Class>`` resolve."
+        )
+        return todo, todo
+
+    # Package-level: ``from lfx_<bundle>.components.<bundle>.<module> import <Class>``.
+    package_lines = [
+        f"from lfx_{plan.bundle}.components.{plan.bundle}.{module} import {cls}" for module, cls in all_classes
+    ]
+    package_all = ", ".join(repr(cls) for _, cls in all_classes)
+    package_body = "\n".join(package_lines) + f"\n\n__all__ = [{package_all}]"
+
+    # Component-package level: relative ``from .<module> import <Class>``.
+    component_lines = [f"from .{module} import {cls}" for module, cls in all_classes]
+    component_body = "\n".join(component_lines) + f"\n\n__all__ = [{package_all}]"
+
+    return package_body, component_body
 
 
 def _layout_bundle(plan: PortPlan, *, apply: bool) -> list[str]:
@@ -271,23 +351,32 @@ def _layout_bundle(plan: PortPlan, *, apply: bool) -> list[str]:
     if apply:
         components_dir.mkdir(parents=True, exist_ok=False)
 
+    package_reexports, component_reexports = _render_reexports(plan)
     files = {
         plan.bundle_dir / "pyproject.toml": PYPROJECT_TEMPLATE.format(
             bundle=plan.bundle, display_name=plan.display_name
         ),
         plan.bundle_dir / "README.md": README_TEMPLATE.format(bundle=plan.bundle, display_name=plan.display_name),
-        package_dir / "__init__.py": PACKAGE_INIT_TEMPLATE.format(bundle=plan.bundle, display_name=plan.display_name),
+        package_dir / "__init__.py": PACKAGE_INIT_TEMPLATE.format(
+            bundle=plan.bundle,
+            display_name=plan.display_name,
+            package_reexports=package_reexports,
+        ),
         package_dir / "extension.json": EXTENSION_JSON_TEMPLATE.format(
             bundle=plan.bundle, display_name=plan.display_name
         ),
-        components_dir / "__init__.py": COMPONENTS_INIT_PLACEHOLDER,
+        components_dir / "__init__.py": COMPONENTS_INIT_TEMPLATE.format(
+            bundle=plan.bundle,
+            component_reexports=component_reexports,
+        ),
     }
     for path, content in files.items():
         actions.append(f"write {path.relative_to(REPO_ROOT)}")
         if apply:
             path.write_text(content, encoding="utf-8")
 
-    for src in plan.component_files:
+    for cf in plan.component_files:
+        src = cf.path
         if src.name == "__init__.py":
             # The package-level __init__.py is rewritten as the placeholder
             # above; preserve its prior re-exports manually after porting.
@@ -336,6 +425,29 @@ def _patch_components_init(plan: PortPlan, *, apply: bool) -> list[str]:
     return actions
 
 
+def _insert_before_marker(text: str, end_marker: str, payload: str, *, what: str) -> str:
+    """Insert ``payload`` immediately before the line containing ``end_marker``.
+
+    ``end_marker`` is a literal substring expected on its own comment line
+    (e.g. ``# langflow-extensions:bundle-deps-end``).  Raises SystemExit
+    if the marker is absent so the porter notices that the maintenance-
+    friendly anchors have drifted out of pyproject.toml.
+    """
+    needle = end_marker
+    idx = text.find(needle)
+    if idx == -1:
+        msg = (
+            f"Could not locate the {what} end marker ({needle!r}) in "
+            "pyproject.toml.  Re-add the ``langflow-extensions:bundle-*`` "
+            "marker pair before re-running -- see src/bundles/PORTING.md."
+        )
+        raise SystemExit(msg)
+    # Rewind to the start of the line so the payload lands above the marker
+    # with matching indentation.
+    line_start = text.rfind("\n", 0, idx) + 1
+    return text[:line_start] + payload + text[line_start:]
+
+
 def _patch_root_pyproject(plan: PortPlan, *, apply: bool) -> list[str]:
     """Add the dep, the workspace source, and the workspace member entry."""
     target = REPO_ROOT / "pyproject.toml"
@@ -349,32 +461,137 @@ def _patch_root_pyproject(plan: PortPlan, *, apply: bool) -> list[str]:
         msg = f"lfx-{bundle} already referenced in {target.relative_to(REPO_ROOT)}; not patching."
         raise SystemExit(msg)
 
-    # 1. Append the dep line at the end of the [project] dependencies list.
-    dep_marker = '"lfx-duckduckgo>=0.1.0",\n'
-    dep_replacement = dep_marker + f'    "lfx-{bundle}>=0.1.0",  # second-pilot port -- see src/bundles/PORTING.md\n'
-    new_text, count = re.subn(re.escape(dep_marker), dep_replacement, text, count=1)
-    if count == 0:
-        msg = "Could not locate the duckduckgo dep line in pyproject.toml."
-        raise SystemExit(msg)
+    dep_line = f'    "lfx-{bundle}>=0.1.0",\n'
+    source_line = f"lfx-{bundle} = {{ workspace = true }}\n"
+    member_line = f'    "src/bundles/{bundle}",\n'
 
-    # 2. tool.uv.sources entry.
-    src_marker = "lfx-duckduckgo = { workspace = true }\n"
-    src_replacement = src_marker + f"lfx-{bundle} = {{ workspace = true }}\n"
-    new_text, count = re.subn(re.escape(src_marker), src_replacement, new_text, count=1)
-    if count == 0:
-        msg = "Could not locate the duckduckgo workspace-source entry in pyproject.toml."
-        raise SystemExit(msg)
-
-    # 3. tool.uv.workspace members list.
-    members_marker = '    "src/bundles/duckduckgo",\n'
-    members_replacement = members_marker + f'    "src/bundles/{bundle}",\n'
-    new_text, count = re.subn(re.escape(members_marker), members_replacement, new_text, count=1)
-    if count == 0:
-        msg = "Could not locate the duckduckgo workspace-member entry in pyproject.toml."
-        raise SystemExit(msg)
+    new_text = _insert_before_marker(
+        text,
+        "# langflow-extensions:bundle-deps-end",
+        dep_line,
+        what="bundle-deps",
+    )
+    new_text = _insert_before_marker(
+        new_text,
+        "# langflow-extensions:bundle-sources-end",
+        source_line,
+        what="bundle-sources",
+    )
+    new_text = _insert_before_marker(
+        new_text,
+        "# langflow-extensions:bundle-members-end",
+        member_line,
+        what="bundle-members",
+    )
 
     target.write_text(new_text, encoding="utf-8")
     return actions
+
+
+# ---------------------------------------------------------------------------
+# Paste-in scaffolds
+# ---------------------------------------------------------------------------
+
+
+def _render_migration_entries(plan: PortPlan) -> str:
+    """Render JSON migration entries for paste-in to ``migration_table.json``.
+
+    Emits four entries per discovered class:
+        * ``bare`` -- bare class name -> namespaced ID
+        * ``import_path`` -- ``lfx.components.<bundle>.<module>.<Class>``
+        * ``package_path`` -- ``lfx.components.<bundle>.<Class>``
+        * ``legacy_slot`` -- the in-tree slot string that saved flows use
+
+    Bare-name uniqueness is enforced by ``scripts/migrate/check_bare_names.py``
+    in CI, so the porter just pastes the block and lets CI catch collisions.
+    """
+    release = plan.migration_release or "X.Y.Z"
+    entries: list[str] = []
+    for cf in plan.component_files:
+        if cf.path.name == "__init__.py":
+            continue
+        module_stem = cf.path.stem
+        for cls in cf.classes:
+            ns_id = f"ext:{plan.bundle}:{cls}@official"
+            entries.append(
+                "  {\n"
+                f'    "from": "bare:{cls}",\n'
+                f'    "to": "{ns_id}",\n'
+                f'    "release": "{release}"\n'
+                "  },\n"
+                "  {\n"
+                f'    "from": "import_path:lfx.components.{plan.bundle}.{module_stem}.{cls}",\n'
+                f'    "to": "{ns_id}",\n'
+                f'    "release": "{release}"\n'
+                "  },\n"
+                "  {\n"
+                f'    "from": "import_path:lfx.components.{plan.bundle}.{cls}",\n'
+                f'    "to": "{ns_id}",\n'
+                f'    "release": "{release}"\n'
+                "  },\n"
+                "  {\n"
+                f'    "from": "legacy_slot:{plan.bundle}/{module_stem}",\n'
+                f'    "to": "{ns_id}",\n'
+                f'    "release": "{release}"\n'
+                "  }"
+            )
+    return ",\n".join(entries)
+
+
+def _render_test_scaffold(plan: PortPlan) -> str:
+    """Render an integration-test scaffold for ``test_pilot_<bundle>_upgrade.py``.
+
+    Structurally mirrors ``test_pilot_duckduckgo_upgrade.py``: the four
+    saved-flow contract cases plus the editable-install discovery check.
+    The porter still owns the actual assertions, but the boilerplate
+    (imports, fixtures, parametrize block) is no longer hand-written.
+    """
+    bundle = plan.bundle
+    first_class = next(
+        (cls for cf in plan.component_files for cls in cf.classes if cf.path.name != "__init__.py"),
+        f"{bundle.title()}Component",
+    )
+    ns_id = f"ext:{bundle}:{first_class}@official"
+    legacy_slot = next(
+        (cf.path.stem for cf in plan.component_files if cf.classes),
+        bundle,
+    )
+    return f'''"""Integration tests for the ``lfx-{bundle}`` extension bundle pilot port.
+
+Mirrors ``test_pilot_duckduckgo_upgrade.py``: every assertion here is the
+saved-flow contract a pre-port user expects when their flow JSON references
+the legacy class name or import path.
+"""
+from __future__ import annotations
+
+import importlib.metadata
+
+import pytest
+
+from lfx.extension.migration import resolve_legacy_id
+
+
+_CASES = [
+    pytest.param("bare:{first_class}", id="bare-class-name"),
+    pytest.param("import_path:lfx.components.{bundle}.{legacy_slot}.{first_class}", id="full-import-path"),
+    pytest.param("import_path:lfx.components.{bundle}.{first_class}", id="package-import-path"),
+    pytest.param("legacy_slot:{bundle}/{legacy_slot}", id="legacy-slot"),
+]
+
+
+@pytest.mark.parametrize("legacy_id", _CASES)
+def test_legacy_ids_resolve_to_namespaced_id(legacy_id: str) -> None:
+    """Each pre-port identifier shape rewrites to the canonical bundle ID."""
+    assert resolve_legacy_id(legacy_id) == "{ns_id}"
+
+
+def test_distribution_ships_extension_manifest() -> None:
+    """``lfx-{bundle}`` ships ``extension.json`` and is importable."""
+    files = importlib.metadata.files("lfx-{bundle}") or []
+    assert any(f.name == "extension.json" for f in files), [str(f) for f in files]
+
+    import lfx_{bundle}  # noqa: F401
+'''
 
 
 # ---------------------------------------------------------------------------
@@ -397,13 +614,36 @@ def main() -> int:
         help="Snake-case provider name (matches src/lfx/src/lfx/components/<bundle>/).",
     )
     parser.add_argument(
+        "--display-name",
+        default=None,
+        help=(
+            "Human-readable name used in extension.json and README.md "
+            "(e.g. ``arXiv Search``).  Defaults to ``<bundle>.replace('_', ' ').title()``, "
+            "which is wrong for most providers -- pass this for any bundle "
+            "whose canonical casing isn't auto-titlecase."
+        ),
+    )
+    parser.add_argument(
+        "--migration-release",
+        default=None,
+        help=(
+            "SemVer release that introduces the bundle (e.g. ``1.10.0``).  "
+            "When given, the script prints paste-in JSON migration entries "
+            "and an integration-test scaffold alongside the action log."
+        ),
+    )
+    parser.add_argument(
         "--apply",
         action="store_true",
         help="Actually mutate the tree.  Default: dry-run (print actions only).",
     )
     args = parser.parse_args()
 
-    plan = _validate_candidate(args.bundle)
+    plan = _validate_candidate(
+        args.bundle,
+        display_name=args.display_name,
+        migration_release=args.migration_release,
+    )
 
     actions: list[str] = []
     actions += _layout_bundle(plan, apply=args.apply)
@@ -419,15 +659,22 @@ def main() -> int:
     if args.apply:
         b = plan.bundle
         print()
-        print("Done.  Manual follow-ups required (see src/bundles/PORTING.md § 4-7):")
-        print(f"  * Edit src/bundles/{b}/src/lfx_{b}/__init__.py to re-export the moved class(es).")
-        print(f"  * Edit src/bundles/{b}/src/lfx_{b}/components/{b}/__init__.py to re-export the class(es).")
-        print("  * Append migration entries (bare/import_path/legacy_slot) to migration_table.json.")
-        print(f"  * Add tests/integration/extension/test_pilot_{b}_upgrade.py.")
+        print("Done.  Manual follow-ups (see src/bundles/PORTING.md § 4-7):")
+        if plan.migration_release is None:
+            print("  * Append migration entries (bare/import_path/legacy_slot) to migration_table.json.")
+            print(f"  * Add tests/integration/extension/test_pilot_{b}_upgrade.py.")
+            print("    Re-run with ``--migration-release X.Y.Z`` to print paste-in scaffolds for both.")
         print("  * Run uv lock + LFX_DEV=1 scripts/build_component_index.py + ruff + tests.")
     else:
         print()
         print("Dry-run.  Re-invoke with --apply to mutate the tree.")
+
+    if plan.migration_release is not None:
+        print()
+        print("---- paste into src/lfx/src/lfx/extension/migration/migration_table.json ----")
+        print(_render_migration_entries(plan))
+        print(f"---- paste into src/lfx/tests/integration/extension/test_pilot_{plan.bundle}_upgrade.py ----")
+        print(_render_test_scaffold(plan))
     return 0
 
 
