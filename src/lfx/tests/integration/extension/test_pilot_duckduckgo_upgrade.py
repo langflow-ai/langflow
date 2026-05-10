@@ -16,11 +16,11 @@ Verifies the save/upgrade/load contract for flows referencing
 This covers the *deserialize-side* half of the M1 proof gate plus the
 build-pipeline runtime contract: a saved flow from pre-migration Langflow
 loads without intervention, the bundle distribution is wired correctly,
-the migration target resolves to the same class symbol the bundle
-exports, and that class's build method runs end-to-end against a stubbed
-network wrapper to produce the canonical output schema (``content`` /
-``snippet`` columns, ``max_results`` slicing, ``max_snippet_length``
-truncation, canonical query template).
+the migration target resolves to a class built from the same source as
+the bundle export, and that loader-registered class's build method runs
+end-to-end against a stubbed network wrapper to produce the canonical
+output schema (``content`` / ``snippet`` columns, ``max_results``
+slicing, ``max_snippet_length`` truncation, canonical query template).
 
 Not covered here -- the part that genuinely requires a real environment
 swap: standing up a pre-migration Langflow release, saving a flow,
@@ -261,9 +261,10 @@ def test_pilot_loads_and_resolves_to_runtime_class() -> None:
 def test_pilot_build_pipeline_runs_against_stub_wrapper() -> None:
     """Instantiate the loaded class and run its build method against a stub.
 
-    The previous test proved the migration target resolves to the same
-    class symbol the bundle exports.  This one goes one step further: it
-    instantiates the loaded class, patches its single network seam
+    The previous test proved the migration target resolves to a class
+    built from the same source file as the bundle export.  This one goes
+    one step further: it instantiates the loaded class, patches its single
+    network seam
     (``_build_wrapper``) to return a stub whose ``.run()`` produces a
     canned newline-separated result string, and invokes
     :meth:`DuckDuckGoSearchComponent.fetch_content_dataframe` -- the
@@ -354,18 +355,23 @@ def test_pilot_build_pipeline_runs_against_stub_wrapper() -> None:
     rows = dataframe.to_dict(orient="records") if hasattr(dataframe, "to_dict") else list(dataframe)
     assert len(rows) == 3, f"max_results=3 slicing regressed; got {len(rows)} rows: {rows!r}"
 
+    for row in rows:
+        # The component stores both the full content and a snippet; downstream
+        # flows index into either, so both must be present on every row.
+        assert "content" in row, f"Data row missing 'content' key: {row!r}"
+        assert "snippet" in row, f"Data row missing 'snippet' key: {row!r}"
+        # Snippet truncation honours ``max_snippet_length=32``.
+        assert len(row["snippet"]) <= 32, f"snippet exceeds max_snippet_length=32: {row['snippet']!r}"
+        # And the snippet is a strict prefix of the full content so flows
+        # comparing the two see the same canonical shape they did before.
+        assert row["content"].startswith(row["snippet"]), (
+            f"snippet is not a prefix of content: snippet={row['snippet']!r} content={row['content']!r}"
+        )
+
     first = rows[0]
-    # The component stores both the full content and a snippet; downstream
-    # flows index into either, so both must be present.
-    assert "content" in first, f"Data row missing 'content' key: {first!r}"
-    assert "snippet" in first, f"Data row missing 'snippet' key: {first!r}"
-    # Snippet truncation honours ``max_snippet_length=32``.
-    assert len(first["snippet"]) <= 32, f"snippet exceeds max_snippet_length=32: {first['snippet']!r}"
-    # And the snippet is a strict prefix of the full content so flows
-    # comparing the two see the same canonical shape they did before.
-    assert first["content"].startswith(first["snippet"]), (
-        f"snippet is not a prefix of content: snippet={first['snippet']!r} content={first['content']!r}"
-    )
+    assert first["content"] == "First result about Claude Shannon's information theory work"
+    assert first["snippet"] == first["content"][:32]
+    assert "Fourth result" not in {row["content"] for row in rows}
 
 
 def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:

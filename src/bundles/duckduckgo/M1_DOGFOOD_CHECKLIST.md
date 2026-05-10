@@ -16,10 +16,10 @@ gate has two halves:
      `ext:duckduckgo:DuckDuckGoSearchComponent@official`.
    - The `lfx-duckduckgo` distribution is importable and ships its
      manifest where `importlib.metadata.files()` can discover it.
-   - The loader resolves the migration target to the same
-     `DuckDuckGoSearchComponent` symbol the bundle's package exports —
-     with the canonical `input_value` input and `dataframe` output
-     preserved so existing flows' wiring stays valid.
+   - The loader resolves the migration target to a
+     `DuckDuckGoSearchComponent` class built from the same source file as
+     the bundle export — with the canonical `input_value` input and
+     `dataframe` output preserved so existing flows' wiring stays valid.
    - **The loaded class's build pipeline runs end-to-end against a
      stubbed network wrapper** to the canonical output schema:
      `content` / `snippet` columns are present, `max_results` slicing
