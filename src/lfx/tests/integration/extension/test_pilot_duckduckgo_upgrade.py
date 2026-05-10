@@ -352,9 +352,7 @@ def test_pilot_build_pipeline_runs_against_stub_wrapper() -> None:
     # produces rows with ``content`` and ``snippet`` columns; ``text``
     # is the Data.text field and is exposed via the DataFrame index.
     rows = dataframe.to_dict(orient="records") if hasattr(dataframe, "to_dict") else list(dataframe)
-    assert len(rows) == 3, (
-        f"max_results=3 slicing regressed; got {len(rows)} rows: {rows!r}"
-    )
+    assert len(rows) == 3, f"max_results=3 slicing regressed; got {len(rows)} rows: {rows!r}"
 
     first = rows[0]
     # The component stores both the full content and a snippet; downstream
@@ -362,9 +360,7 @@ def test_pilot_build_pipeline_runs_against_stub_wrapper() -> None:
     assert "content" in first, f"Data row missing 'content' key: {first!r}"
     assert "snippet" in first, f"Data row missing 'snippet' key: {first!r}"
     # Snippet truncation honours ``max_snippet_length=32``.
-    assert len(first["snippet"]) <= 32, (
-        f"snippet exceeds max_snippet_length=32: {first['snippet']!r}"
-    )
+    assert len(first["snippet"]) <= 32, f"snippet exceeds max_snippet_length=32: {first['snippet']!r}"
     # And the snippet is a strict prefix of the full content so flows
     # comparing the two see the same canonical shape they did before.
     assert first["content"].startswith(first["snippet"]), (
