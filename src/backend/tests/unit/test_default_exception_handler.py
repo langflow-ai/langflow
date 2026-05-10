@@ -17,7 +17,7 @@ from fastapi import HTTPException
 from langflow.main import default_exception_handler
 
 _HEX32 = re.compile(r"^[0-9a-f]{32}$")
-_SECRET_PATH = "/var/lib/langflow/secret/flows.db"
+_LEAKY_PATH = "/var/lib/langflow/internal/flows.db"
 
 
 @pytest.fixture(autouse=True)
@@ -39,7 +39,7 @@ def _body(response) -> dict:
 
 @pytest.mark.asyncio
 async def test_unhandled_exception_returns_generic_message_with_error_id():
-    exc = RuntimeError(f"connection refused to {_SECRET_PATH}")
+    exc = RuntimeError(f"connection refused to {_LEAKY_PATH}")
     response = await default_exception_handler(None, exc)
 
     assert response.status_code == 500
@@ -51,13 +51,13 @@ async def test_unhandled_exception_returns_generic_message_with_error_id():
 @pytest.mark.asyncio
 async def test_unhandled_exception_does_not_leak_str_exc():
     """Regression guard: the previous handler returned ``str(exc)`` directly."""
-    exc = RuntimeError(f"sqlalchemy: column users.foo missing at {_SECRET_PATH}")
+    exc = RuntimeError(f"sqlalchemy: column users.foo missing at {_LEAKY_PATH}")
     response = await default_exception_handler(None, exc)
 
     body = _body(response)
     raw = json.dumps(body)
     # Neither the path, the SQL-ish fragment, nor the library hint may appear.
-    assert _SECRET_PATH not in raw
+    assert _LEAKY_PATH not in raw
     assert "sqlalchemy" not in raw
     assert "column users.foo" not in raw
 
@@ -101,13 +101,14 @@ async def test_long_exception_chain_does_not_leak():
     """Chained exceptions can stash the original message in __context__."""
     try:
         try:
-            msg = f"opening {_SECRET_PATH}"
+            msg = f"opening {_LEAKY_PATH}"
             raise FileNotFoundError(msg)
         except FileNotFoundError as inner:
-            raise RuntimeError("wrapper") from inner
+            wrap_msg = "wrapper"
+            raise RuntimeError(wrap_msg) from inner
     except RuntimeError as exc:
         response = await default_exception_handler(None, exc)
 
     raw = json.dumps(_body(response))
-    assert _SECRET_PATH not in raw
+    assert _LEAKY_PATH not in raw
     assert "FileNotFoundError" not in raw
