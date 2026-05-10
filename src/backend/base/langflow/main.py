@@ -69,6 +69,27 @@ _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
 
+# Strict per-segment shape: URL-safe unreserved characters only. Combined with
+# the segment-level "." / ".." rejection in `is_safe_forwarded_prefix`, this
+# blocks backslashes, whitespace, control characters, percent-encoded sequences,
+# consecutive/trailing slashes, and traversal segments — any of which can
+# poison URLs that downstream code (FastAPI's `request.url_for`, OpenAPI
+# `servers`, MCP SSE post-back URLs) builds from `root_path`.
+_FORWARDED_PREFIX_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
+
+
+def is_safe_forwarded_prefix(prefix: str) -> bool:
+    """Return True if ``prefix`` is safe to copy into ``request.scope['root_path']``.
+
+    Accepts a leading slash followed by one or more URL-unreserved segments;
+    rejects empty segments, ``.`` / ``..``, and anything that contains
+    backslashes, whitespace, control characters, or percent-encoded sequences.
+    """
+    if not prefix.startswith("/"):
+        return False
+    segments = prefix[1:].split("/")
+    return all(seg not in {"", ".", ".."} and _FORWARDED_PREFIX_SEGMENT_RE.match(seg) for seg in segments)
+
 
 async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
     """Helper to safely log exceptions to telemetry without raising."""
@@ -501,20 +522,6 @@ def create_app():
 
         return await call_next(request)
 
-    # Strict per-segment shape: URL-safe unreserved characters only. Combined with
-    # the segment-level "." / ".." rejection in `_is_safe_forwarded_prefix`, this
-    # blocks backslashes, whitespace, control characters, percent-encoded sequences,
-    # consecutive/trailing slashes, and traversal segments — any of which can
-    # poison URLs that downstream code (FastAPI's `request.url_for`, OpenAPI
-    # `servers`, MCP SSE post-back URLs) builds from `root_path`.
-    _FORWARDED_PREFIX_SEGMENT_RE = re.compile(r"^[A-Za-z0-9._~-]+$")
-
-    def _is_safe_forwarded_prefix(prefix: str) -> bool:
-        if not prefix.startswith("/"):
-            return False
-        segments = prefix[1:].split("/")
-        return all(seg not in {"", ".", ".."} and _FORWARDED_PREFIX_SEGMENT_RE.match(seg) for seg in segments)
-
     @app.middleware("http")
     async def forwarded_prefix_middleware(request: Request, call_next):
         """Honour X-Forwarded-Prefix set by a reverse proxy.
@@ -539,7 +546,7 @@ def create_app():
             return await call_next(request)
 
         prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        if prefix and _is_safe_forwarded_prefix(prefix):
+        if prefix and is_safe_forwarded_prefix(prefix):
             request.scope["root_path"] = prefix
         return await call_next(request)
 
