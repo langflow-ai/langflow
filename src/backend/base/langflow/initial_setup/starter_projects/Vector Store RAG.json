@@ -1643,7 +1643,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.195.0"
                   }
                 ],
                 "total_dependencies": 4

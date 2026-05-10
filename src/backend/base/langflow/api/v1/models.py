@@ -33,6 +33,11 @@ DEFAULT_EMBEDDING_MODEL_VAR = "__default_embedding_model__"
 MAX_STRING_LENGTH = 200  # Maximum length for model IDs and provider names
 MAX_BATCH_UPDATE_SIZE = 100  # Maximum number of models that can be updated at once
 
+# Module-level set of in-flight HuggingFace background downloads. Holding
+# strong refs prevents the event loop from garbage-collecting the tasks
+# mid-flight (RUF006); entries auto-discard on completion.
+_HF_INFLIGHT_DOWNLOADS: set = set()
+
 
 def get_provider_from_variable_name(variable_name: str) -> str | None:
     """Get provider name from a model provider variable name.
@@ -675,11 +680,62 @@ async def update_enabled_models(
         variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
     )
 
+    # Side effect: when the user enables a HuggingFace model, eagerly pull
+    # the weights into the local Hub cache in the background so the first
+    # flow invocation doesn't pay the download latency.
+    await _maybe_schedule_huggingface_downloads(updates, session=session, current_user=current_user)
+
     # Return the updated model status
     return {
         "disabled_models": list(disabled_models),
         "enabled_models": list(explicitly_enabled_models),
     }
+
+
+async def _maybe_schedule_huggingface_downloads(
+    updates: list[ModelStatusUpdate],
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> None:
+    """Kick off background ``snapshot_download`` for newly-enabled HF models.
+
+    No-op for non-HuggingFace providers and for toggle-off updates. Failures
+    here are logged but never bubble up — a download problem must not block
+    the toggle from being saved.
+    """
+    import asyncio
+
+    hf_targets = [u.model_id for u in updates if u.enabled and u.provider == "HuggingFace"]
+    if not hf_targets:
+        return
+
+    api_key: str | None = None
+    variable_service = get_variable_service()
+    if isinstance(variable_service, DatabaseVariableService):
+        try:
+            api_key = await variable_service.get_variable(
+                user_id=current_user.id,
+                name="HUGGINGFACEHUB_API_TOKEN",
+                field=GENERIC_TYPE,
+                session=session,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("HUGGINGFACEHUB_API_TOKEN not set for user %s: %s", current_user.id, e)
+
+    from lfx.base.models.huggingface_chat_model import download_model
+
+    async def _download(model_id: str) -> None:
+        try:
+            await asyncio.to_thread(download_model, model_id, api_key=api_key)
+            logger.info("HuggingFace model %s downloaded for user %s", model_id, current_user.id)
+        except Exception:  # noqa: BLE001
+            logger.exception("Background download of HuggingFace model %s failed", model_id)
+
+    for model_id in hf_targets:
+        task = asyncio.create_task(_download(model_id))
+        _HF_INFLIGHT_DOWNLOADS.add(task)
+        task.add_done_callback(_HF_INFLIGHT_DOWNLOADS.discard)
 
 
 class DefaultModelRequest(BaseModel):
@@ -868,3 +924,73 @@ async def clear_default_model(
         ) from e
 
     return {"default_model": None}
+
+
+# ---------------------------------------------------------------------------
+# HuggingFace local model management
+# ---------------------------------------------------------------------------
+
+
+class HuggingFaceDownloadRequest(BaseModel):
+    """Body for ``POST /huggingface/download``."""
+
+    model_id: str
+
+    @field_validator("model_id")
+    @classmethod
+    def _validate_model_id(cls, v: str) -> str:
+        if not v or not v.strip():
+            msg = "model_id cannot be empty"
+            raise ValueError(msg)
+        if len(v) > MAX_STRING_LENGTH:
+            msg = f"model_id exceeds maximum length of {MAX_STRING_LENGTH}"
+            raise ValueError(msg)
+        return v.strip()
+
+
+@router.get("/huggingface/installed", status_code=200)
+async def list_huggingface_installed(current_user: CurrentActiveUser) -> dict[str, list[str]]:  # noqa: ARG001
+    """List HuggingFace models present in the local Hub cache."""
+    from lfx.base.models.huggingface_chat_model import list_installed_models
+
+    return {"installed": list_installed_models()}
+
+
+@router.post("/huggingface/download", status_code=200)
+async def download_huggingface_model(
+    request: HuggingFaceDownloadRequest,
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> dict[str, str]:
+    """Download a HuggingFace model into the local Hub cache.
+
+    Reuses the user's saved ``HUGGINGFACEHUB_API_TOKEN`` (if any) to authorize
+    pulls of gated/private repos. Public repos download without a token.
+    """
+    import asyncio
+
+    from lfx.base.models.huggingface_chat_model import download_model
+
+    api_key: str | None = None
+    variable_service = get_variable_service()
+    if isinstance(variable_service, DatabaseVariableService):
+        try:
+            api_key = await variable_service.get_variable(
+                user_id=current_user.id,
+                name="HUGGINGFACEHUB_API_TOKEN",
+                field=GENERIC_TYPE,
+                session=session,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.debug("HUGGINGFACEHUB_API_TOKEN not configured for user %s: %s", current_user.id, e)
+
+    try:
+        path = await asyncio.to_thread(download_model, request.model_id, api_key=api_key)
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    except Exception as e:
+        logger.exception("Failed to download HuggingFace model %s", request.model_id)
+        raise HTTPException(status_code=400, detail=f"Failed to download model: {e}") from e
+
+    return {"model_id": request.model_id, "path": str(path)}

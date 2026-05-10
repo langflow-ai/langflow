@@ -30,7 +30,6 @@ const ModelProvidersContent = ({
     isFetchingAfterDisconnect,
     handleVariableChange,
     handleSaveAllVariables,
-    handleActivateProvider,
     handleDisconnect,
     isVariableConfigured,
     getConfiguredValue,
@@ -42,6 +41,8 @@ const ModelProvidersContent = ({
     handleModelToggle,
     flushPendingChanges,
     requiresConfiguration,
+    handleDeactivateAllModels,
+    handleActivateDefaultModels,
   } = useProviderConfiguration({
     selectedProvider,
   });
@@ -96,8 +97,9 @@ const ModelProvidersContent = ({
           getConfiguredValue={getConfiguredValue}
           onVariableChange={handleVariableChange}
           onSave={handleSaveAllVariables}
-          onActivate={handleActivateProvider}
           onDisconnect={handleDisconnect}
+          onDeactivateAllModels={handleDeactivateAllModels}
+          onActivateDefaultModels={handleActivateDefaultModels}
           isSaving={isSaving}
           isPending={isPending}
           isDeleting={isDeleting}
@@ -117,11 +119,22 @@ const ModelProvidersContent = ({
               availableModels={syncedSelectedProvider?.models || []}
               onModelToggle={handleModelToggle}
               providerName={syncedSelectedProvider?.provider}
+              // Credentialed providers (OpenAI, Anthropic, ...) gate per-model
+              // switches on ``is_configured`` — once the API key is saved the
+              // user can freely toggle any model on/off, including from a
+              // state where everything is currently disabled.
+              // Credentialless providers (HuggingFace local) have no
+              // credential to satisfy so ``is_configured`` is always true;
+              // gating on ``is_enabled`` (= has_active_model) instead means
+              // toggling individual models can't silently re-activate the
+              // provider after the user explicitly clicked Deactivate.
               isEnabledModel={
-                !!(
-                  syncedSelectedProvider?.is_enabled ||
-                  syncedSelectedProvider?.is_configured
-                )
+                requiresConfiguration
+                  ? !!(
+                      syncedSelectedProvider?.is_enabled ||
+                      syncedSelectedProvider?.is_configured
+                    )
+                  : !!syncedSelectedProvider?.is_enabled
               }
             />
           </div>

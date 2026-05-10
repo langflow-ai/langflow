@@ -11,16 +11,56 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 
-from .provider_queries import _get_all_provider_specific_field_names
+from .provider_queries import _get_all_provider_specific_field_names, is_credentialless_provider
 
 # TTL for the per-user model-options cache inside update_model_options_in_build_config.
 # Short enough to pick up global-variable changes quickly.
 _MODEL_OPTIONS_CACHE_TTL_SECONDS = 30
 
 
+def _is_optional_var_configured(user_id: UUID | str | None, var_key: str) -> bool:
+    """Best-effort check whether an optional provider variable is configured.
+
+    Returns True if the variable is set in the user's DB-backed globals or in
+    the process environment. We use this to decide whether to auto-install
+    ``load_from_db=True`` for *optional* provider variables so the runtime
+    doesn't raise ``"<VAR> variable not found."`` when the user genuinely
+    didn't configure them (e.g. local HuggingFace inference).
+    """
+    import os
+
+    if os.environ.get(var_key):
+        return True
+    if not user_id or (isinstance(user_id, str) and user_id == "None"):
+        return False
+
+    async def _lookup() -> bool:
+        async with session_scope() as session:
+            variable_service = get_variable_service()
+            if variable_service is None:
+                return False
+            try:
+                value = await variable_service.get_variable(
+                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    name=var_key,
+                    field="",
+                    session=session,
+                )
+            except ValueError:
+                return False
+            return bool(value)
+
+    try:
+        return bool(run_until_complete(_lookup()))
+    except Exception as e:  # noqa: BLE001
+        logger.debug("Could not look up optional provider var %s: %s", var_key, e)
+        return False
+
+
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
+    user_id: UUID | str | None = None,
 ) -> dict:
     """Apply provider variable metadata to component build config fields."""
     # Resolve helpers via package namespace so tests patching
@@ -73,8 +113,19 @@ def apply_provider_variable_config_to_build_config(
         # Pre-populate with the variable name (never the raw secret) when a
         # credential is available in the database or environment.  Setting
         # load_from_db=True tells the runtime to resolve the actual value.
+        #
+        # For *optional* provider variables (top-level ``required=False``)
+        # we only auto-install ``load_from_db=True`` when the variable is
+        # actually configured in DB/env — otherwise the runtime raises
+        # "<VAR> variable not found." even when the user legitimately didn't
+        # configure it (e.g. local HuggingFace inference, where the token is
+        # only needed for gated downloads).
         var_key = var_info.get("variable_key")
-        if var_key:
+        is_var_required = bool(var_info.get("required", False))
+        skip_optional = (
+            var_key is not None and not is_var_required and not _is_optional_var_configured(user_id, var_key)
+        )
+        if var_key and not skip_optional:
             # DropdownInput fields don't support load_from_db because the
             # variable key name (e.g. "WATSONX_URL") isn't a valid dropdown
             # option.  These fields are resolved separately by
@@ -119,6 +170,29 @@ def apply_provider_variable_config_to_build_config(
                         "Skipping auto-set for field %s - user has already supplied a value",
                         field_name,
                     )
+        elif skip_optional:
+            # Optional variable that the user hasn't configured. Clear any stale
+            # cross-provider state (e.g. ``OPENAI_API_KEY`` carried over after
+            # switching to a credentialless provider) so the runtime doesn't
+            # try to resolve a key the new provider doesn't actually need.
+            current_value = field_config.get("value")
+            current_load_from_db = field_config.get("load_from_db", False)
+            is_stale_cross_provider_var = current_load_from_db and current_value != var_key
+            # Also clear when the previous resolver pointed at *this* provider's
+            # var_key — because skip_optional fires precisely when the user
+            # hasn't configured it, so attempting to load it would raise
+            # "<VAR> variable not found." at runtime.
+            points_at_unconfigured_var = current_load_from_db and current_value == var_key
+            if is_stale_cross_provider_var or points_at_unconfigured_var:
+                field_config["value"] = ""
+                field_config["load_from_db"] = False
+                logger.debug(
+                    "Cleared optional field %s for provider %s (was %r/load_from_db=%s)",
+                    field_name,
+                    provider,
+                    current_value,
+                    current_load_from_db,
+                )
 
     return build_config
 
@@ -302,9 +376,19 @@ def update_model_options_in_build_config(
                         default_model = opt
                         break
 
-            # If user's default not found, fallback to first option
+            # If user's default not found, fallback to the first option that
+            # comes from a provider the user actually configured. Credentialless
+            # providers (HuggingFace local inference, etc.) are always-enabled,
+            # so a naive ``options[0]`` would let them silently outrank a
+            # configured provider's first model and overwrite the saved
+            # selection on import / re-render. Falls back to the very first
+            # option only when *every* available provider is credentialless.
             if not default_model and options:
-                default_model = options[0]
+                credentialed = next(
+                    (opt for opt in options if not is_credentialless_provider(opt.get("provider"))),
+                    None,
+                )
+                default_model = credentialed or options[0]
 
             # Set the value
             if default_model:
@@ -407,13 +491,16 @@ def handle_model_input_update(
     if isinstance(current_model_value, list) and len(current_model_value) > 0:
         provider = current_model_value[0].get("provider", "")
         if provider:
-            build_config = unified_models_module.apply_provider_variable_config_to_build_config(build_config, provider)
+            user_id = component.user_id if hasattr(component, "user_id") else None
+            build_config = unified_models_module.apply_provider_variable_config_to_build_config(
+                build_config, provider, user_id=user_id
+            )
 
             # Resolve DropdownInput field values from the provider's configured
             # variables.  load_from_db doesn't work for dropdowns because the
             # variable key name isn't a valid dropdown option.
-            if hasattr(component, "user_id") and component.user_id:
-                _resolve_dropdown_provider_values(component.user_id, build_config, provider)
+            if user_id:
+                _resolve_dropdown_provider_values(user_id, build_config, provider)
 
         # Also handle WatsonX-specific embedding fields that are not in provider metadata
         if cache_key_prefix == "embedding_model_options":

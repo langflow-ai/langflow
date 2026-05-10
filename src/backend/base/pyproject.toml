@@ -366,6 +366,7 @@ ibm-watsonx-clients = [
 ]
 
 complete = [
+    "langflow-base[local]",
     "langflow-base[couchbase]",
     "langflow-base[cassandra]",
     "langflow-base[clickhouse]",

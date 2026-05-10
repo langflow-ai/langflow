@@ -3,6 +3,7 @@ import { Switch } from "@/components/ui/switch";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
+import { readModelDisplayName } from "@/utils/modelDisplay";
 import { cn } from "@/utils/utils";
 
 export interface ModelProviderSelectionProps {
@@ -28,30 +29,35 @@ const ModelRow = ({
   enabled,
   testIdPrefix,
   isEnabledModel,
-}: ModelRowProps) => (
-  <div className="flex flex-row items-center justify-between h-[24px]">
-    <div className="flex flex-row items-center gap-2">
-      <ForwardedIconComponent
-        name={model.metadata?.icon || "Bot"}
-        className={cn("w-5 h-5", { grayscale: !isEnabledModel })}
-      />
-      <span
-        className={cn("text-sm", { "text-muted-foreground": !isEnabledModel })}
-      >
-        {model.model_name}
-      </span>
-    </div>
-    {isEnabledModel && (
+}: ModelRowProps) => {
+  const displayName = readModelDisplayName(model.metadata) ?? model.model_name;
+  return (
+    <div className="flex flex-row items-center justify-between h-[24px]">
+      <div className="flex flex-row items-center gap-2 min-w-0">
+        <ForwardedIconComponent
+          name={model.metadata?.icon || "Bot"}
+          className={cn("w-5 h-5 shrink-0", { grayscale: !isEnabledModel })}
+        />
+        <span
+          className={cn("text-sm truncate", {
+            "text-muted-foreground": !isEnabledModel,
+          })}
+          title={model.model_name}
+        >
+          {displayName}
+        </span>
+      </div>
       <Switch
         checked={enabled}
+        disabled={!isEnabledModel}
         onCheckedChange={(checked) => onToggle(model.model_name, checked)}
         data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
+        aria-label={`${enabled ? "Disable" : "Enable"} ${displayName}`}
         stopPropagation
       />
-    )}
-  </div>
-);
+    </div>
+  );
+};
 
 /**
  * Displays lists of LLM and embedding models with toggle switches.

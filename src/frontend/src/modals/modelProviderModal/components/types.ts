@@ -5,6 +5,17 @@ export type Model = {
   metadata: Record<string, any>;
 };
 
+/** A provider variable as exposed in the ``/api/v1/models`` payload. The
+ * shape mirrors ``MODEL_PROVIDER_METADATA[<provider>].variables`` on the
+ * backend; only the fields the frontend actually reads are listed.
+ */
+export type ProviderVariableInfo = {
+  variable_name?: string;
+  variable_key?: string;
+  required?: boolean;
+  is_secret?: boolean;
+};
+
 /** Represents a model provider (e.g., OpenAI, Anthropic) */
 export type Provider = {
   provider: string;
@@ -14,6 +25,7 @@ export type Provider = {
   model_count?: number;
   models?: Model[];
   api_docs_url?: string;
+  variables?: ProviderVariableInfo[];
 };
 
 /** Map of provider -> model_name -> enabled status */

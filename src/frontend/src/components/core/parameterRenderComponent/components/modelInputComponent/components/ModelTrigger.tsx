@@ -100,7 +100,9 @@ const ModelTrigger = ({
                     !selectedModel?.name && "text-muted-foreground",
                   )}
                 >
-                  {selectedModel?.name || "Select a model"}
+                  {selectedModel?.display_name ||
+                    selectedModel?.name ||
+                    "Select a model"}
                 </div>
               )}
             </span>

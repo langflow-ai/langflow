@@ -1,5 +1,6 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { isCredentiallessProvider } from "@/utils/providerCategories";
 import { cn } from "@/utils/utils";
 import { Provider } from "./types";
 
@@ -19,7 +20,16 @@ const ProviderListItem = ({
   const hasModels = provider.model_count && provider.model_count > 0;
   const isEnabled = provider.is_enabled;
   const isConfigured = provider.is_configured;
-  const isActive = isEnabled || isConfigured;
+  // Credentialless providers (e.g. HuggingFace local) have ``is_configured``
+  // True for free because they declare no required variables — the usual
+  // ``is_enabled || is_configured`` fallback would render them as
+  // permanently active in the list, even after the user clicks Deactivate.
+  // Drop the configured fallback for those so deactivated credentialless
+  // providers visually match deactivated credentialed ones (no badge,
+  // grayscale icon, plus indicator).
+  const isActive = isCredentiallessProvider(provider)
+    ? isEnabled
+    : isEnabled || isConfigured;
 
   return (
     <div

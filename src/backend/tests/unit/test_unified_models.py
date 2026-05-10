@@ -213,6 +213,75 @@ def test_update_model_options_default_field_name():
     assert result["model"]["options"][0]["name"] == "gpt-4"
 
 
+def test_update_model_options_default_prefers_credentialed_provider_over_credentialless():
+    """When no saved value exists, the default fallback must prefer a credentialed provider.
+
+    HuggingFace declares no required variables, so it lands in ``enabled_providers``
+    even when the user hasn't configured anything. Without this guard a naive
+    ``options[0]`` would let HF outrank a credentialed provider's first model and
+    silently overwrite what the user actually configured.
+    """
+    mock_component = MagicMock()
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    build_config = {
+        "model": {
+            "options": [],
+            "value": "",
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    # HuggingFace listed first to make the test fail under the old ``options[0]``
+    # behavior. The fallback should still pick the OpenAI entry.
+    def mock_get_options(user_id=None):  # noqa: ARG001
+        return [
+            {"name": "smollm2-1.7b-q4", "provider": "HuggingFace"},
+            {"name": "gpt-4o-mini", "provider": "OpenAI"},
+        ]
+
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_credentialed_default",
+        get_options_func=mock_get_options,
+        field_name=None,
+        field_value="",
+    )
+
+    assert result["model"]["value"] == [{"name": "gpt-4o-mini", "provider": "OpenAI"}]
+
+
+def test_update_model_options_default_falls_back_to_first_when_only_credentialless():
+    """If every available provider is credentialless, ``options[0]`` is still acceptable."""
+    mock_component = MagicMock()
+    mock_component.cache = {}
+    mock_component.log = MagicMock()
+
+    build_config = {
+        "model": {
+            "options": [],
+            "value": "",
+            "input_types": ["LanguageModel"],
+        }
+    }
+
+    def mock_get_options(user_id=None):  # noqa: ARG001
+        return [{"name": "smollm2-1.7b-q4", "provider": "HuggingFace"}]
+
+    result = update_model_options_in_build_config(
+        component=mock_component,
+        build_config=build_config,
+        cache_key_prefix="test_credentialless_only",
+        get_options_func=mock_get_options,
+        field_name=None,
+        field_value="",
+    )
+
+    assert result["model"]["value"] == [{"name": "smollm2-1.7b-q4", "provider": "HuggingFace"}]
+
+
 def test_update_model_options_injects_saved_value_when_missing_from_options():
     """Saved model selections missing from refreshed options should be re-injected with a marker."""
     component = _make_mock_component()

@@ -46,7 +46,8 @@ interface UseProviderConfigurationReturn {
   handleVariableChange: (key: string, value: string) => void;
   handleSaveAllVariables: () => Promise<void>;
   handleDisconnect: () => Promise<void>;
-  handleActivateProvider: () => void;
+  handleDeactivateAllModels: () => Promise<void>;
+  handleActivateDefaultModels: () => Promise<void>;
   validateCredentials: () => Promise<boolean>;
   handleModelToggle: (modelName: string, enabled: boolean) => void;
   flushPendingChanges: () => Promise<void>;
@@ -444,69 +445,66 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  // Activate providers that don't need API keys (e.g., Ollama)
-  const handleActivateProvider = useCallback(async () => {
-    if (!syncedSelectedProvider) return;
+  // Toggle every model the provider ships. Used by the credentialless
+  // branch (e.g. HuggingFace local) where the provider's ``is_enabled``
+  // flag is computed from ``has_active_model`` — there's no API key to
+  // create or delete, so flipping the models is what flips the provider.
+  // ``activate`` re-enables only catalog default models; the user can
+  // manually re-toggle others in the model list. ``deactivate`` turns
+  // every model off (default ones land in ``__disabled_models__``).
+  const toggleAllProviderModels = useCallback(
+    async (action: "activate" | "deactivate") => {
+      if (!syncedSelectedProvider?.provider) return;
+      const providerName = syncedSelectedProvider.provider;
+      const models = syncedSelectedProvider.models ?? [];
+      const updates = models
+        .filter((model) =>
+          action === "activate" ? model.metadata?.default === true : true,
+        )
+        .map((model) => ({
+          provider: providerName,
+          model_id: model.model_name,
+          enabled: action === "activate",
+        }));
+      if (updates.length === 0) return;
 
-    // Get the first variable (usually the base URL for providers like Ollama)
-    const firstVariable = providerVariables[0];
-    const variableName =
-      firstVariable?.variable_key ||
-      PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
-
-    if (!variableName) {
-      setErrorData({
-        title: "Invalid Provider",
-        list: [
-          `Provider "${syncedSelectedProvider.provider}" is not supported.`,
-        ],
-      });
-      return;
-    }
-
-    const existingVariable = globalVariables.find(
-      (v) => v.name === variableName,
-    );
-    const placeholderValue =
-      firstVariable?.options?.[0] || "http://localhost:11434";
-
-    try {
-      if (existingVariable) {
-        await updateGlobalVariable({
-          id: existingVariable.id,
-          value: placeholderValue,
+      const isDeactivating = action === "deactivate";
+      if (isDeactivating) setIsFetchingAfterDisconnect(true);
+      try {
+        await updateEnabledModelsAsync({ updates });
+        setSuccessData({
+          title: `${providerName} ${isDeactivating ? "Deactivated" : "Activated"}`,
         });
-      } else {
-        await createGlobalVariable({
-          name: variableName,
-          value: placeholderValue,
-          type: VARIABLE_CATEGORY.CREDENTIAL,
-          category: VARIABLE_CATEGORY.GLOBAL,
-          default_fields: [],
+        invalidateProviderQueries();
+      } catch (error: any) {
+        if (isDeactivating) setIsFetchingAfterDisconnect(false);
+        setErrorData({
+          title: `Error ${isDeactivating ? "Deactivating" : "Activating"} Provider`,
+          list: [
+            error?.response?.data?.detail ||
+              "An unexpected error occurred. Please try again.",
+          ],
         });
       }
+    },
+    [
+      syncedSelectedProvider,
+      updateEnabledModelsAsync,
+      setSuccessData,
+      setErrorData,
+      invalidateProviderQueries,
+    ],
+  );
 
-      setSuccessData({ title: `${syncedSelectedProvider.provider} Activated` });
-      invalidateProviderQueries();
-    } catch (error: any) {
-      setErrorData({
-        title: "Error Activating Provider",
-        list: [
-          error?.response?.data?.detail ||
-            "An unexpected error occurred. Please try again.",
-        ],
-      });
-    }
-  }, [
-    syncedSelectedProvider,
-    providerVariables,
-    globalVariables,
-    createGlobalVariable,
-    updateGlobalVariable,
-    setSuccessData,
-    setErrorData,
-    invalidateProviderQueries,
-  ]);
+  const handleDeactivateAllModels = useCallback(
+    () => toggleAllProviderModels("deactivate"),
+    [toggleAllProviderModels],
+  );
+
+  const handleActivateDefaultModels = useCallback(
+    () => toggleAllProviderModels("activate"),
+    [toggleAllProviderModels],
+  );
 
   // Disconnect / Deactivate provider
   const handleDisconnect = useCallback(async () => {
@@ -701,7 +699,8 @@ export const useProviderConfiguration = ({
     handleVariableChange,
     handleSaveAllVariables,
     handleDisconnect,
-    handleActivateProvider,
+    handleDeactivateAllModels,
+    handleActivateDefaultModels,
     validateCredentials,
     handleModelToggle,
     flushPendingChanges,

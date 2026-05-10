@@ -5,7 +5,8 @@ class ModelMetadata(TypedDict, total=False):
     """Simple model metadata structure."""
 
     provider: str  # Provider name (e.g., "anthropic", "groq", "openai")
-    name: str  # Model name/ID
+    name: str  # Canonical model identifier (e.g. HF repo id, OpenAI model name).
+    display_name: str  # Optional short label shown in UI dropdowns when ``name`` is too long.
     icon: str  # Icon name for UI
     tool_calling: bool  # Whether model supports tool calling (defaults to False)
     reasoning: bool  # Reasoning models (defaults to False)
@@ -22,6 +23,7 @@ def create_model_metadata(
     name: str,
     icon: str,
     *,
+    display_name: str | None = None,
     tool_calling: bool = False,
     reasoning: bool = False,
     search: bool = False,
@@ -32,7 +34,7 @@ def create_model_metadata(
     model_type: str = "llm",
 ) -> ModelMetadata:
     """Helper function to create ModelMetadata with explicit defaults."""
-    return ModelMetadata(
+    md = ModelMetadata(
         provider=provider,
         name=name,
         icon=icon,
@@ -45,6 +47,9 @@ def create_model_metadata(
         default=default,
         model_type=model_type,
     )
+    if display_name:
+        md["display_name"] = display_name
+    return md
 
 
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
@@ -222,6 +227,37 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "api_docs_url": "https://learn.microsoft.com/en-us/azure/ai-services/openai/",
         "mapping": {
             "model_class": "AzureChatOpenAI",
+            "model_param": "model",
+        },
+    },
+    "HuggingFace": {
+        "icon": "HuggingFace",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "HuggingFace Hub API Token",
+                "variable_key": "HUGGINGFACEHUB_API_TOKEN",
+                # Local inference does not require a token; one is only needed
+                # to download gated/private repos (e.g. Llama, Gemma).
+                "required": False,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": (
+                        "Optional. Required only to download gated models from the Hub. "
+                        "Falls back to HUGGINGFACEHUB_API_TOKEN environment variable."
+                    ),
+                },
+            }
+        ],
+        "api_docs_url": "https://huggingface.co/docs/transformers",
+        "mapping": {
+            "model_class": "ChatHuggingFace",
             "model_param": "model",
         },
     },

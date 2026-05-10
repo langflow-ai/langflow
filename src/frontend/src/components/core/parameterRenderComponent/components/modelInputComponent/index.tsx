@@ -10,6 +10,8 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { readModelDisplayName } from "@/utils/modelDisplay";
+import { isCredentiallessProvider } from "@/utils/providerCategories";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -144,6 +146,17 @@ export default function ModelInputComponent({
       // selection stays visible and selectable in the dropdown.
       const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
 
+      // The sticky flag gets baked into a flow's saved options when an
+      // earlier update_build_config call ran while the model wasn't in the
+      // enabled list. If the model is enabled *now* (e.g. the user enabled
+      // its provider after saving) the flag is stale and would falsely
+      // render the "Configure" wrench next to a perfectly valid selection.
+      // Detect that case and treat the option as a normal enabled entry.
+      const providerModelsForOption =
+        enabledModelsData?.enabled_models?.[provider];
+      const stickyFlagIsStale =
+        isStickyNotEnabled && providerModelsForOption?.[option.name] === true;
+
       // Filter against client-side enabled models data. This is the source of
       // truth for what the current user has enabled — stale `options` saved in
       // an imported flow may include models from providers the current user
@@ -160,7 +173,22 @@ export default function ModelInputComponent({
       if (!grouped[provider]) {
         grouped[provider] = [];
       }
-      grouped[provider].push(option);
+      // Lift display_name out of metadata so ModelTrigger and ModelList
+      // can render the short slug without each having to peek at metadata
+      // themselves. Saved options round-tripped through build_config carry
+      // it inside metadata; older saved options simply won't have it.
+      const optionMetadata = (option.metadata ?? {}) as Record<string, unknown>;
+      const { not_enabled_locally: _drop, ...metadataMinusStickyFlag } =
+        optionMetadata;
+      const cleanedMetadata = stickyFlagIsStale
+        ? metadataMinusStickyFlag
+        : optionMetadata;
+      grouped[provider].push({
+        ...option,
+        display_name:
+          option.display_name ?? readModelDisplayName(cleanedMetadata),
+        metadata: cleanedMetadata,
+      });
       seen.add(`${provider}::${option.name}`);
     }
 
@@ -206,11 +234,16 @@ export default function ModelInputComponent({
           if (!grouped[providerName]) {
             grouped[providerName] = [];
           }
+          const augmentedMetadata = (model.metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
           grouped[providerName].push({
             name: modelName,
+            display_name: readModelDisplayName(augmentedMetadata),
             icon: providerInfo.icon || "Bot",
             provider: providerName,
-            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+            metadata: augmentedMetadata,
           });
         }
       }
@@ -227,14 +260,21 @@ export default function ModelInputComponent({
     const savedValue = value?.[0];
     if (!hasAnyGrouped && savedValue?.name) {
       const providerName = savedValue.provider || "Unknown";
+      const savedMetadata = (savedValue.metadata ?? {}) as Record<
+        string,
+        unknown
+      >;
       grouped[providerName] = [
         {
           ...(savedValue.id && { id: savedValue.id }),
           name: savedValue.name,
+          display_name:
+            (savedValue as Partial<ModelOption>).display_name ??
+            readModelDisplayName(savedMetadata),
           icon: savedValue.icon || "Bot",
           provider: providerName,
           metadata: {
-            ...(savedValue.metadata ?? {}),
+            ...savedMetadata,
             not_enabled_locally: true,
           },
         } as ModelOption,
@@ -248,6 +288,35 @@ export default function ModelInputComponent({
   const flatOptions = useMemo(
     () => Object.values(groupedOptions).flat(),
     [groupedOptions],
+  );
+
+  // Names of providers whose backend metadata declares no required
+  // variables — they're always-enabled (credentialless), and we don't
+  // want them to silently outrank a credentialed provider's first model
+  // when picking a default.
+  const credentiallessProviderNames = useMemo(() => {
+    const names = new Set<string>();
+    for (const provider of providersData ?? []) {
+      if (isCredentiallessProvider(provider)) {
+        names.add(provider.provider);
+      }
+    }
+    return names;
+  }, [providersData]);
+
+  // Pick the first option from a credentialed provider, falling back to
+  // the very first option only when *every* available provider is
+  // credentialless. Mirrors the backend's ``options[0]`` fallback in
+  // ``update_model_options_in_build_config``.
+  const pickDefaultOption = useCallback(
+    (opts: ModelOption[]): ModelOption | null => {
+      if (opts.length === 0) return null;
+      const credentialed = opts.find(
+        (option) => !credentiallessProviderNames.has(option.provider || ""),
+      );
+      return credentialed ?? opts[0];
+    },
+    [credentiallessProviderNames],
   );
 
   // Derive the currently selected model from the value prop
@@ -268,8 +337,9 @@ export default function ModelInputComponent({
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
       if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
-        // If we haven't processed empty state yet, we render the first one
-        return flatOptions[0];
+        // Prefer a credentialed provider so credentialless ones (HuggingFace
+        // local inference, etc.) don't outrank what the user configured.
+        return pickDefaultOption(flatOptions);
       }
       return null;
     }
@@ -285,20 +355,30 @@ export default function ModelInputComponent({
     // model. The wrench affordance in the dropdown handles configuration.
     const saved = value?.[0];
     if (saved) {
+      const savedMetadata = (saved.metadata ?? {}) as Record<string, unknown>;
       return {
         ...(saved.id && { id: saved.id }),
         name: saved.name,
+        display_name:
+          (saved as Partial<SelectedModel>).display_name ??
+          readModelDisplayName(savedMetadata),
         icon: saved.icon || "Bot",
         provider: saved.provider || "Unknown",
         metadata: {
-          ...(saved.metadata ?? {}),
+          ...savedMetadata,
           not_enabled_locally: true,
         },
       } as SelectedModel;
     }
 
-    return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions]);
+    return pickDefaultOption(flatOptions);
+  }, [
+    value,
+    flatOptions,
+    isConnectionMode,
+    externalOptions,
+    pickDefaultOption,
+  ]);
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
@@ -312,7 +392,14 @@ export default function ModelInputComponent({
     // when there's no saved value at all.
     if (!isEmpty) return;
 
-    const firstOption = flatOptions[0];
+    // Prefer a credentialed provider's first model. Credentialless
+    // providers (HuggingFace local inference, etc.) are always-enabled
+    // regardless of what the user configured — without this guard
+    // they'd silently win the initial value-write and overwrite what
+    // the backend would have sent back from
+    // ``__default_language_model__``.
+    const firstOption = pickDefaultOption(flatOptions);
+    if (!firstOption) return;
     // Construct the new value object
     const newValue = [
       {
@@ -325,7 +412,13 @@ export default function ModelInputComponent({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
+  }, [
+    flatOptions,
+    value,
+    handleOnNewValue,
+    isConnectionMode,
+    pickDefaultOption,
+  ]);
 
   /**
    * Handles model selection from the dropdown.

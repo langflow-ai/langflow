@@ -221,7 +221,13 @@ def _validate_and_get_enabled_providers(
             elif is_required:
                 all_required_present = False
 
-        if not provider_vars:
+        has_required_vars = any(v.get("required", False) for v in provider_vars)
+
+        if not provider_vars or (all_required_present and not has_required_vars and not collected_values):
+            # Provider has no variables at all, or none of its variables are
+            # required and the user hasn't configured any: enable it so users
+            # can pick it without first setting credentials (e.g. local
+            # HuggingFace inference).
             enabled.add(provider)
         elif all_required_present and collected_values:
             if skip_validation:
@@ -400,6 +406,25 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
+
+        elif provider == "HuggingFace":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("HUGGINGFACEHUB_API_TOKEN")
+            if not api_key:
+                return
+            response = requests.get(
+                "https://huggingface.co/api/whoami-v2",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=5,
+            )
+            if response.status_code == HTTPStatus.UNAUTHORIZED:
+                msg = "Invalid API key for HuggingFace"
+                logger.error(msg)
+                raise ValueError(msg)
+            response.raise_for_status()
 
         elif provider == "Ollama":
             import requests

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import { isCredentiallessProvider } from "@/utils/providerCategories";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
@@ -25,7 +26,7 @@ const ProviderList = ({
   } = useGetModelProviders({});
 
   const filteredProviders: Provider[] = useMemo(() => {
-    return rawProviders.map((provider) => {
+    const items: Provider[] = rawProviders.map((provider) => {
       const matchingModels =
         provider?.models?.filter((model) =>
           modelType === "all"
@@ -41,7 +42,28 @@ const ProviderList = ({
         model_count: matchingModels.length,
         models: matchingModels,
         api_docs_url: provider.api_docs_url,
+        // Forward variables so downstream components can derive
+        // credentialless/credentialed classification without a hardcoded list.
+        variables: provider.variables,
       };
+    });
+
+    // Backend sorts by ``is_configured`` then alphabetical, which puts
+    // credentialless providers (always configured for free) up with the
+    // configured cloud providers even when the user has deactivated them.
+    // Re-sort here using the credentialless-aware notion of "active" so
+    // deactivated HuggingFace sorts alphabetically with the other
+    // not-yet-set-up providers, matching the visual gating in
+    // ``ProviderListItem``.
+    const isActive = (p: Provider): boolean =>
+      isCredentiallessProvider(p)
+        ? !!p.is_enabled
+        : !!(p.is_enabled || p.is_configured);
+
+    return [...items].sort((a, b) => {
+      const activeDiff = Number(isActive(b)) - Number(isActive(a));
+      if (activeDiff !== 0) return activeDiff;
+      return a.provider.localeCompare(b.provider);
     });
   }, [rawProviders, modelType]);
 

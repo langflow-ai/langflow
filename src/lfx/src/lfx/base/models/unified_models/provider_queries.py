@@ -9,6 +9,7 @@ from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
+from lfx.base.models.huggingface_constants import HUGGINGFACE_MODELS_DETAILED
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
 from lfx.base.models.ollama_constants import (
     OLLAMA_EMBEDDING_MODELS_DETAILED,
@@ -42,6 +43,7 @@ def get_models_detailed() -> list[list[dict]]:
         OLLAMA_MODELS_DETAILED,
         OLLAMA_EMBEDDING_MODELS_DETAILED,
         WATSONX_MODELS_DETAILED,
+        HUGGINGFACE_MODELS_DETAILED,
     ]
 
 
@@ -77,6 +79,27 @@ def get_provider_required_variable_keys(provider: str) -> list[str]:
     """Get all required variable keys for a provider."""
     variables = get_provider_all_variables(provider)
     return [v["variable_key"] for v in variables if v.get("required")]
+
+
+def is_credentialless_provider(provider: str | None) -> bool:
+    """Return True when the provider declares no required variables.
+
+    Mirrors the frontend's ``isCredentiallessProvider`` helper. A
+    credentialless provider (e.g. local HuggingFace inference) is always
+    listed as enabled even when the user hasn't configured anything, so
+    callers that pick a "default" model out of the merged options list
+    must avoid letting credentialless entries silently outrank the
+    providers the user actually configured.
+
+    Treats unknown / empty-variables providers as credentialed so we err
+    on the side of the legacy behavior.
+    """
+    if not provider:
+        return False
+    variables = get_provider_all_variables(provider)
+    if not variables:
+        return False
+    return all(not v.get("required", False) for v in variables)
 
 
 @lru_cache(maxsize=1)

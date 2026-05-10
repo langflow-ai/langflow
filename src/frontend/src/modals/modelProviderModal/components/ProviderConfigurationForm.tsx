@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import type { ProviderVariable } from "@/constants/providerConstants";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import useAlertStore from "@/stores/alertStore";
+import { cn } from "@/utils/utils";
 import DisconnectWarning from "./DisconnectWarning";
 import type { Provider } from "./types";
 
@@ -37,8 +38,15 @@ export interface ProviderConfigurationFormProps {
   getConfiguredValue: (key: string) => string | null;
   onVariableChange: (key: string, value: string) => void;
   onSave: () => void;
-  onActivate: () => void;
   onDisconnect: () => void;
+  /** Toggle every model the provider ships off. Used by the credentialless
+   * branch where there's no API key to delete — flipping all models off is
+   * what makes the provider's ``is_enabled`` flag flip back to false. */
+  onDeactivateAllModels: () => void;
+  /** Re-enable the catalog's default models for the provider. Mirrors the
+   * credentialless deactivate path: there's no credential to (re)create,
+   * so flipping defaults back on is what re-flips ``is_enabled``. */
+  onActivateDefaultModels: () => void;
   isSaving: boolean;
   isPending: boolean;
   isDeleting: boolean;
@@ -81,8 +89,9 @@ const ProviderConfigurationForm = ({
   getConfiguredValue,
   onVariableChange,
   onSave,
-  onActivate,
   onDisconnect,
+  onDeactivateAllModels,
+  onActivateDefaultModels,
   isSaving,
   isPending,
   isDeleting,
@@ -123,10 +132,20 @@ const ProviderConfigurationForm = ({
   if (!selectedProvider) return null;
 
   return (
-    <div className="flex flex-col gap-1 px-4 pt-4">
+    // While the DisconnectWarning overlay is open we reserve enough height
+    // on the form (~165px overlay + 32px of inset margins ≈ 200px) so the
+    // ModelSelection list rendered as the next flex sibling slides down
+    // and isn't covered by the overlay. Credentialed forms are already
+    // taller than this so the min-h is a no-op there.
+    <div
+      className={cn(
+        "flex flex-col gap-1 px-4 pt-4",
+        showDisconnectWarning && "min-h-[200px]",
+      )}
+    >
       <div className="flex flex-row gap-1 min-w-[300px]">
         <span className="text-[13px] font-semibold mr-auto">
-          {isSingleVariableProvider ? (
+          {isSingleVariableProvider && requiresConfiguration ? (
             <>
               {providerVariables[0].variable_name}
               {providerVariables[0].required && (
@@ -134,7 +153,7 @@ const ProviderConfigurationForm = ({
               )}
             </>
           ) : (
-            `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`
+            `${selectedProvider.provider || "Unknown Provider"}${requiresConfiguration ? " Configuration" : ""}`
           )}
         </span>
       </div>
@@ -155,7 +174,7 @@ const ProviderConfigurationForm = ({
             to enable these models
           </>
         ) : (
-          <>Activate {selectedProvider.provider} to enable these models</>
+          <>Runs locally — no credentials needed.</>
         )}
       </span>
       {requiresConfiguration ? (
@@ -340,25 +359,30 @@ const ProviderConfigurationForm = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-row items-center justify-end gap-2 pt-1">
           <Button
-            onClick={onActivate}
-            loading={isPending}
-            disabled={selectedProvider.is_enabled}
+            variant={selectedProvider.is_enabled ? "outline" : "primary"}
+            size="sm"
+            onClick={
+              selectedProvider.is_enabled
+                ? () => setShowDisconnectWarning(true)
+                : onActivateDefaultModels
+            }
+            loading={isPending || isDeleting}
+            disabled={isDeleting || isPending}
+            data-testid={
+              selectedProvider.is_enabled
+                ? `deactivate-${selectedProvider.provider.toLowerCase()}`
+                : `activate-${selectedProvider.provider.toLowerCase()}`
+            }
+            className={
+              selectedProvider.is_enabled
+                ? "text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive"
+                : ""
+            }
           >
-            {selectedProvider.is_enabled
-              ? `${selectedProvider.provider} Activated`
-              : `Activate ${selectedProvider.provider}`}
+            {selectedProvider.is_enabled ? "Deactivate" : "Activate"}
           </Button>
-          {selectedProvider.is_enabled && (
-            <Button
-              variant="destructive"
-              onClick={() => setShowDisconnectWarning(true)}
-              disabled={isDeleting || isPending}
-            >
-              Deactivate {selectedProvider.provider}
-            </Button>
-          )}
         </div>
       )}
 
@@ -371,7 +395,11 @@ const ProviderConfigurationForm = ({
         }
         onCancel={() => setShowDisconnectWarning(false)}
         onConfirm={() => {
-          onDisconnect();
+          if (requiresConfiguration) {
+            onDisconnect();
+          } else {
+            onDeactivateAllModels();
+          }
           setShowDisconnectWarning(false);
         }}
         isLoading={isDeleting}
