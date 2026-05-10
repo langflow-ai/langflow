@@ -13,20 +13,26 @@ Verifies the save/upgrade/load contract for flows referencing
     4. The lfx-duckduckgo distribution is importable and ships the manifest
        in a location ``importlib.metadata.files`` can discover.
 
-This covers the *deserialize-side* half of the M1 proof gate: a saved flow
-from pre-migration Langflow loads without intervention and the bundle
-distribution is wired correctly.
+This covers the *deserialize-side* half of the M1 proof gate plus the
+build-pipeline runtime contract: a saved flow from pre-migration Langflow
+loads without intervention, the bundle distribution is wired correctly,
+the migration target resolves to a class built from the same source as
+the bundle export, and that loader-registered class's build method runs
+end-to-end against a stubbed network wrapper to produce the canonical
+output schema (``content`` / ``snippet`` columns, ``max_results``
+slicing, ``max_snippet_length`` truncation, canonical query template).
 
-Not covered here -- explicitly out of scope for a unit-test-style
-integration: the *runtime* half of the M1 dogfood gate ("save a flow on
-pre-migration Langflow, upgrade, confirm it loads AND RUNS identically").
-That requires standing up a real Langflow server, executing the flow
-end-to-end, and comparing the search-result payload to a baseline.  It
-lives in the manual dogfood checklist at
-``src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`` and runs against an
-actual upgrade in a clean environment, not the test suite.  A completed
-checklist must be linked in the PR description under "M1 dogfood
-evidence" before merge.
+Not covered here -- the part that genuinely requires a real environment
+swap: standing up a pre-migration Langflow release, saving a flow,
+upgrading to the post-migration release, loading that same flow JSON,
+and confirming real DuckDuckGo search results haven't drifted between
+versions.  That's the M1 manual dogfood gate; checklist lives at
+``src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`` and must be filled
+in by a non-Extension-team engineer and linked in the PR description
+under "M1 dogfood evidence" before merge.  The automated tests below
+mean the dogfood is now answering one specific question -- "did real
+search results change?" -- rather than re-verifying the full
+load-and-run pipeline.
 """
 
 from __future__ import annotations
@@ -159,19 +165,31 @@ def test_pilot_loads_and_resolves_to_runtime_class() -> None:
     resolves to a Component class that:
 
         1. Imports without side-effects under :func:`load_extension`.
-        2. Is the same ``DuckDuckGoSearchComponent`` symbol the bundle's
-           Python package exports (so a saved flow that points at the
-           rewritten ID cannot end up bound to a different class than a
-           ``from lfx_duckduckgo import ...`` import would resolve).
+        2. Comes from the bundle's own source file (not a shadow copy
+           elsewhere on sys.path) so a saved flow that points at the
+           rewritten ID cannot end up bound to a stale or wrong class.
+           Object identity vs. ``from lfx_duckduckgo import ...`` does
+           NOT hold -- the loader stages bundle modules under
+           ``_lfx_ext.<slot>.<bundle>`` so the registered class is a
+           distinct ``type`` instance with identical source; the
+           invariant we lock in is "same source file, same qualified
+           name", which is what saved flows actually depend on.
         3. Declares the user-visible inputs / outputs the pre-extraction
            component shipped, so a saved flow's input wiring stays valid
            after the upgrade.
 
-    Network execution of the actual DuckDuckGo search is **not** covered
-    here; that lives in the manual dogfood checklist because it requires
-    a real environment swap and live network. This test closes the gap
-    between "the rewrite happens" and "the rewritten target is usable",
-    which is the strongest invariant we can lock in without a network.
+    The companion :func:`test_pilot_build_pipeline_runs_against_stub_wrapper`
+    test below extends this further by actually invoking the loaded
+    class's build method against a stubbed network wrapper, proving the
+    loaded class is not just symbolically identical but also runnable to
+    the canonical output schema.
+
+    Network execution of the *real* DuckDuckGo backend is not covered in
+    automated tests; that lives in the manual dogfood checklist because
+    it requires a real environment swap and live network. What remains
+    for the dogfood is therefore the pre/post version-swap step and
+    confirmation that real search results haven't drifted -- not the
+    "does the rewritten class run" question, which is locked in here.
     """
     try:
         import lfx_duckduckgo
@@ -201,11 +219,25 @@ def test_pilot_loads_and_resolves_to_runtime_class() -> None:
     expected_namespaced_id = f"ext:{loaded.bundle}:{loaded.class_name}@{loaded.slot}"
     assert expected_namespaced_id == EXPECTED_TARGET
 
-    # The class the loader registered must be the same symbol the bundle
-    # exports.  If these diverge, a saved flow could bind to a stale or
-    # shadow copy after migration, which is exactly what dogfood is
-    # supposed to catch -- here we lock it in for CI.
-    assert loaded.klass is ExpectedClass
+    # The class the loader registered must come from the same source file
+    # as the bundle's exported symbol.  We can't assert object identity
+    # (``loaded.klass is ExpectedClass``) because the loader stages bundle
+    # modules under its own ``_lfx_ext.<slot>.<bundle>`` namespace, so the
+    # class object the registry holds is a different ``type`` instance
+    # than ``from lfx_duckduckgo import ...`` resolves to -- even though
+    # they have identical source.  The invariant a saved flow actually
+    # depends on is "the loaded class is built from the bundle's own
+    # source file, not a shadow copy elsewhere on sys.path", which we
+    # express via the source file and the qualified class name.
+    import inspect
+
+    assert inspect.getsourcefile(loaded.klass) == inspect.getsourcefile(ExpectedClass), (
+        f"loaded class came from a different source file: "
+        f"loaded={inspect.getsourcefile(loaded.klass)!r} "
+        f"expected={inspect.getsourcefile(ExpectedClass)!r}"
+    )
+    assert loaded.klass.__name__ == ExpectedClass.__name__
+    assert loaded.klass.__qualname__ == ExpectedClass.__qualname__
 
     # Spot-check the input shape so a saved flow's wiring keeps resolving:
     # ``input_value`` is the field every pre-migration flow targets.
@@ -223,6 +255,123 @@ def test_pilot_loads_and_resolves_to_runtime_class() -> None:
         f"DuckDuckGoSearchComponent dropped its canonical 'dataframe' output; "
         f"got: {sorted(n for n in output_names if n)}"
     )
+
+
+@pytest.mark.integration
+def test_pilot_build_pipeline_runs_against_stub_wrapper() -> None:
+    """Instantiate the loaded class and run its build method against a stub.
+
+    The previous test proved the migration target resolves to a class
+    built from the same source file as the bundle export.  This one goes
+    one step further: it instantiates the loaded class, patches its single
+    network seam
+    (``_build_wrapper``) to return a stub whose ``.run()`` produces a
+    canned newline-separated result string, and invokes
+    :meth:`DuckDuckGoSearchComponent.fetch_content_dataframe` -- the
+    method the canonical ``dataframe`` output is wired to.
+
+    Passing this assertion means a flow that referenced any legacy form
+    of the component (bare class name, full import path, package import
+    path, pre-Phase-A slot ID) will, after the migration table rewrites
+    it, both deserialize to the right class **and** execute that class's
+    build pipeline to the canonical output schema.  The only thing left
+    for the manual M1 dogfood gate is to confirm real search results
+    against the live DuckDuckGo backend haven't drifted between the
+    pre- and post-migration releases -- the runtime contract itself is
+    locked in here.
+
+    Network is never touched: the stub is the entire wrapper surface
+    ``fetch_content`` uses.  Failure modes this guards against:
+        - The post-migration class drops or renames the ``_build_wrapper``
+          seam, breaking flows that wire output ``dataframe`` through.
+        - The output ``DataFrame`` no longer carries the ``content`` /
+          ``snippet`` columns flows downstream depend on.
+        - ``max_results`` slicing logic regresses (e.g. silently returns
+          the unsliced result list, leaking memory on large queries).
+    """
+    try:
+        import lfx_duckduckgo
+    except ImportError:
+        pytest.skip("lfx-duckduckgo not installed in this test environment")
+
+    from lfx.extension import SLOT_OFFICIAL, load_extension
+
+    package_dir = Path(lfx_duckduckgo.__file__).parent
+    result = load_extension(package_dir, slot=SLOT_OFFICIAL, distribution="lfx-duckduckgo")
+    assert result.ok, [e.code for e in result.errors]
+    loaded = next(c for c in result.components if c.class_name == "DuckDuckGoSearchComponent")
+
+    # Instantiate the *loaded* class -- not the bundle's exported one --
+    # because the loaded class (built under ``_lfx_ext.<slot>.<bundle>``)
+    # is what saved flows actually resolve to after the migration table
+    # rewrites their references.  The sibling test asserts the loaded
+    # class comes from the same source file as the bundle export; this
+    # test exercises that loaded class's runtime behaviour.
+    component = loaded.klass()
+
+    # The build pipeline reads three attributes off ``self``; the
+    # Component base populates them at runtime from declared inputs, but
+    # for an isolation test we set them directly so we are not exercising
+    # the full input-binding machinery here.
+    component.input_value = "claude shannon"
+    component.max_results = 3
+    component.max_snippet_length = 32
+
+    # The single network seam: ``_build_wrapper`` returns an object whose
+    # ``.run(query)`` returns newline-separated result strings.  The stub
+    # mimics that shape so ``fetch_content`` exercises every branch of
+    # its parser (split, slice, snippet truncation, dict construction).
+    canned_results = (
+        "First result about Claude Shannon's information theory work\n"
+        "Second result on the 1948 paper, A Mathematical Theory of Communication\n"
+        "Third result on Bell Labs and switching circuits\n"
+        # max_results=3 should cause the parser to drop this entry.
+        "Fourth result that must not appear in the DataFrame"
+    )
+
+    class _StubWrapper:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def run(self, query: str) -> str:
+            self.calls.append(query)
+            return canned_results
+
+    stub = _StubWrapper()
+    component._build_wrapper = lambda: stub  # type: ignore[method-assign]
+
+    dataframe = component.fetch_content_dataframe()
+
+    # The wrapper was invoked with the canonical query shape so a future
+    # regression that changes the query template surfaces immediately.
+    assert stub.calls == ["claude shannon (site:*)"], (
+        f"DuckDuckGoSearchComponent changed its query template: {stub.calls!r}"
+    )
+
+    # The DataFrame output schema is the runtime contract every saved
+    # flow downstream of this component expects.  The build pipeline
+    # produces rows with ``content`` and ``snippet`` columns; ``text``
+    # is the Data.text field and is exposed via the DataFrame index.
+    rows = dataframe.to_dict(orient="records") if hasattr(dataframe, "to_dict") else list(dataframe)
+    assert len(rows) == 3, f"max_results=3 slicing regressed; got {len(rows)} rows: {rows!r}"
+
+    for row in rows:
+        # The component stores both the full content and a snippet; downstream
+        # flows index into either, so both must be present on every row.
+        assert "content" in row, f"Data row missing 'content' key: {row!r}"
+        assert "snippet" in row, f"Data row missing 'snippet' key: {row!r}"
+        # Snippet truncation honours ``max_snippet_length=32``.
+        assert len(row["snippet"]) <= 32, f"snippet exceeds max_snippet_length=32: {row['snippet']!r}"
+        # And the snippet is a strict prefix of the full content so flows
+        # comparing the two see the same canonical shape they did before.
+        assert row["content"].startswith(row["snippet"]), (
+            f"snippet is not a prefix of content: snippet={row['snippet']!r} content={row['content']!r}"
+        )
+
+    first = rows[0]
+    assert first["content"] == "First result about Claude Shannon's information theory work"
+    assert first["snippet"] == first["content"][:32]
+    assert "Fourth result" not in {row["content"] for row in rows}
 
 
 def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
