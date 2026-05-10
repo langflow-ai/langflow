@@ -661,10 +661,10 @@
             "description": "# 📖 README\n  Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector store with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector\n  store.\n  For example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\n\n  ## Quick start\n  1. Configure your **Model Provider** with your API credentials.\n  2. Select a database or create a new one using the **[Knowledge Ingestion](http://localhost:7860/assets/knowledge-bases)** feature. \n  3. Open the **Playground** to start a chat with the 🐕 **Retriever** flow.\n\n\n\n  ## Next steps\n  Experiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.4df99c9e",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.vector_store_rag.4df99c9e"
+            }
           },
           "type": "note"
         },
@@ -732,7 +732,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -979,10 +979,10 @@
             "description": "### 💡 Configure your language model here👇",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.vector_store_rag.d089e3e8",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.vector_store_rag.d089e3e8"
+            }
           },
           "type": "note"
         },
