@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -57,6 +58,8 @@ if TYPE_CHECKING:
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
 
+
+logger = logging.getLogger(__name__)
 
 _ComponentToolkit = None
 
@@ -434,13 +437,26 @@ class Component(CustomComponent):
                 # Attempt to deepcopy the entire input object
                 new_inputs[k] = deepcopy(v, memo)
             except Exception:  # noqa: BLE001
-                # If deepcopy fails (e.g. due to RLock), handle the value carefully
-                # Pydantic's model_copy(deep=False) creates a shallow copy
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully.
+                # Pydantic's model_copy(deep=False) creates a shallow copy.
+                logger.warning(
+                    "deepcopy failed for input '%s' on %s — falling back to shallow copy",
+                    k,
+                    type(self).__name__,
+                    exc_info=True,
+                )
                 input_copy = v.model_copy()
                 try:
                     input_copy.value = deepcopy(v.value, memo)
                 except Exception:  # noqa: BLE001
-                    # Keep the original value (shallow copy) if it can't be deepcopied
+                    # Keep the original value (shallow copy) if it can't be deepcopied.
+                    # WARNING: this shares a mutable reference between original and copy.
+                    logger.warning(
+                        "deepcopy failed for input '%s'.value on %s — sharing mutable reference",
+                        k,
+                        type(self).__name__,
+                        exc_info=True,
+                    )
                     input_copy.value = v.value
                 new_inputs[k] = input_copy
 
@@ -1606,11 +1622,27 @@ class Component(CustomComponent):
                         item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
-                # Preserve existing status values
-                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                # Merge: preserve user-editable fields from old metadata,
+                # update code-derived fields (args) from new tool data.
+                # For description: only preserve if the user actually edited it
+                # (detected by comparing description to display_description).
+                old_by_tag = {}
+                for item in self.tools_metadata:
+                    tags = item.get("tags", [])
+                    if tags:
+                        old_by_tag[tags[0]] = item
                 for item in tool_data:
-                    item["status"] = existing_status.get(item["name"], True)
-                tool_data = self.tools_metadata
+                    tags = item.get("tags", [])
+                    old = old_by_tag.get(tags[0]) if tags else None
+                    if old:
+                        item["status"] = old.get("status", True)
+                        item["name"] = old.get("name", item["name"])
+                        # Preserve description only if user customized it
+                        old_desc = old.get("description", "")
+                        old_display = old.get("display_description", "")
+                        if old_desc and old_desc != old_display:
+                            item["description"] = old_desc
+                self.tools_metadata = tool_data
         else:
             # If enabled tools are set, update status based on them
             enabled = self.enabled_tools
@@ -1645,7 +1677,17 @@ class Component(CustomComponent):
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            try:
+                self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            except RuntimeError as e:
+                # No component context available (e.g., when called as a tool outside normal execution)
+                # Logs are still stored in self._logs for later retrieval
+                from lfx.log.logger import logger
+
+                logger.warning(
+                    f"Component '{self.display_name}' logging outside execution context: {e}. "
+                    "Log stored locally but not sent to tracing service."
+                )
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output
