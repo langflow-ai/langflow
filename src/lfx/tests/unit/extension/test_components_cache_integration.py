@@ -153,6 +153,173 @@ async def test_components_path_empty_string_does_not_crash(monkeypatch) -> None:
 
 
 @pytest.mark.asyncio
+async def test_seed_directory_bundle_loads_at_official_slot(tmp_path: Path, monkeypatch) -> None:
+    """A subdirectory under ``$LANGFLOW_SEED_DIR`` registers at @official.
+
+    This is the second production-install source documented in the
+    deployment guide.  Without the startup wiring, an operator who copies
+    bundles into ``/opt/langflow/bundles/`` (the Mode B/C alternative to
+    ``pip install``) sees the docs say it works while no components actually
+    appear in the palette.
+    """
+    import json
+
+    from lfx.extension.bundle_registry import BundleRegistry
+
+    seed_root = tmp_path / "seed-bundles"
+    extension_root = seed_root / "lfx-pilot"
+    bundle_dir = extension_root / "components"
+    bundle_dir.mkdir(parents=True)
+
+    manifest = {
+        "id": "lfx-pilot",
+        "version": "1.0.0",
+        "name": "Pilot",
+        "lfx": {"compat": ["1"]},
+        "bundles": [{"name": "pilot", "path": "components"}],
+    }
+    (extension_root / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\n"
+        "class PilotThing(Component):\n"
+        "    display_name = 'Pilot'\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("LANGFLOW_SEED_DIR", str(seed_root))
+
+    fresh_registry = BundleRegistry()
+    settings_service = _FakeSettingsService(components_path=[])
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+        patch("lfx.interface.components.get_default_registry", return_value=fresh_registry),
+    ):
+        result = await import_extension_components(settings_service)
+
+    # Bundle is visible in /api/v1/all
+    assert "pilot" in result, f"seed bundle missing from cache; got {list(result)}"
+    expected_id = "ext:pilot:PilotThing@official"
+    assert expected_id in result["pilot"]
+    template = result["pilot"][expected_id]
+    assert template["bundle"] == "pilot"
+    assert template["extension"] == "lfx-pilot"
+
+    # Bundle is in the BundleRegistry so reload + the events pipeline can find it.
+    record = fresh_registry.get_bundle("pilot")
+    assert record is not None
+    assert record.slot == "official"
+    assert record.extension_id == "lfx-pilot"
+    assert "PilotThing" in record.class_names
+
+
+@pytest.mark.asyncio
+async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: Path, monkeypatch) -> None:
+    """When an installed pip dist shadows a same-named seed bundle, installed wins.
+
+    Per the deployment doc, installed pip distributions take precedence; the
+    seed copy is dropped and a typed ``seed-bundle-shadowed`` ExtensionError
+    is appended to the seed result so the diagnostics emitter surfaces the
+    misconfiguration.  This test asserts both halves: installed wins in the
+    BundleRegistry, AND the typed error is attached to the seed result that
+    flows through ``_emit_extension_diagnostics``.
+    """
+    import json
+
+    from lfx.extension.bundle_registry import BundleRegistry
+
+    # Build a seed-directory bundle of the same name as the (faked) install.
+    seed_root = tmp_path / "seed-bundles"
+    extension_root = seed_root / "lfx-pilot"
+    bundle_dir = extension_root / "components"
+    bundle_dir.mkdir(parents=True)
+    manifest = {
+        "id": "lfx-pilot",
+        "version": "0.0.1-seed",
+        "name": "Pilot (seed)",
+        "lfx": {"compat": ["1"]},
+        "bundles": [{"name": "pilot", "path": "components"}],
+    }
+    (extension_root / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\n"
+        "class PilotThing(Component):\n"
+        "    display_name = 'Seed Pilot'\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LANGFLOW_SEED_DIR", str(seed_root))
+
+    # Build an installed-pkg LoadResult by hand (test seam: stub
+    # load_installed_extensions to return a result for bundle "pilot").
+    from lfx.extension.loader._types import LoadedComponent, LoadResult
+
+    class _Component:
+        pass
+
+    class _InstalledPilotThing(_Component):
+        display_name = "Installed Pilot"
+
+        def build(self) -> None:
+            return None
+
+    installed_loaded = LoadedComponent(
+        extension_id="lfx-pilot",
+        extension_version="2.0.0",
+        bundle="pilot",
+        class_name="PilotThing",
+        slot="official",
+        klass=_InstalledPilotThing,
+        module_name="_lfx_ext.official.pilot.thing",
+        file_path=tmp_path / "installed_thing.py",
+        distribution="lfx-pilot",
+    )
+    installed_result = LoadResult(
+        slot="official",
+        source_path=tmp_path / "installed-extension",
+        distribution="lfx-pilot",
+    )
+    installed_result.extension_id = "lfx-pilot"
+    installed_result.extension_version = "2.0.0"
+    installed_result.bundle = "pilot"
+    installed_result.components = [installed_loaded]
+
+    fresh_registry = BundleRegistry()
+    settings_service = _FakeSettingsService(components_path=[])
+
+    captured_diagnostics: list[list] = []
+
+    def _capture_diagnostics(results) -> None:
+        captured_diagnostics.append(list(results))
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+        patch("lfx.interface.components.get_default_registry", return_value=fresh_registry),
+        patch("lfx.interface.components.load_installed_extensions", return_value=[installed_result]),
+        patch("lfx.interface.components._emit_extension_diagnostics", side_effect=_capture_diagnostics),
+    ):
+        await import_extension_components(settings_service)
+
+    # The installed copy is what registered.
+    record = fresh_registry.get_bundle("pilot")
+    assert record is not None
+    assert record.extension_version == "2.0.0", (
+        "installed bundle (v2.0.0) must win over seed-directory shadow (v0.0.1-seed)"
+    )
+    assert record.distribution == "lfx-pilot"
+
+    # The seed result that ran through the diagnostics emitter carries the
+    # typed shadowing error so operators can see the misconfiguration.
+    assert captured_diagnostics, "diagnostics emitter was never called"
+    all_results = captured_diagnostics[0]
+    shadow_codes = {err.code for r in all_results for err in r.errors}
+    assert "seed-bundle-shadowed" in shadow_codes, (
+        f"expected seed-bundle-shadowed in emitted diagnostics; got codes: {sorted(shadow_codes)}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_import_extension_components_populates_bundle_registry(tmp_path: Path) -> None:
     """Startup wiring: discovered bundles must be installed in the BundleRegistry.
 

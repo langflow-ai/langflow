@@ -58,6 +58,7 @@ from lfx.extension.loader import (
     installed_extension_roots,
     load_extension,
     load_installed_extensions,
+    load_seed_extensions,
     manifest_owning_distributions,
 )
 from lfx.extension.manifest import (
@@ -144,6 +145,7 @@ __all__ = [
     "load_installed_extensions",
     "load_manifest",
     "load_migration_table",
+    "load_seed_extensions",
     "manifest_owning_distributions",
     "migrate_flow_payload",
     "register_dev_extension",

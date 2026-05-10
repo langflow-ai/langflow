@@ -1,5 +1,10 @@
 # M1 dogfood checklist — `lfx-duckduckgo` pilot bundle
 
+> **Status:** :hourglass: **OPEN** — the runtime half of LE-1023 has not been signed off.
+> A non-Extension-team engineer must complete the steps below and paste the
+> filled-in checklist into the PR before merge. Until that happens, the M1
+> proof-of-delivery gate is incomplete even if every automated check is green.
+
 Per the [Bundle Separation Developer Guide §6 LE-1023], the M1 proof-of-delivery
 gate has two halves:
 
@@ -8,9 +13,12 @@ gate has two halves:
    The migration table rewrites every legacy reference form
    (bare class name, full import path, package-level import path,
    pre-Phase-A slot ID) to
-   `ext:duckduckgo:DuckDuckGoSearchComponent@official`, and the
+   `ext:duckduckgo:DuckDuckGoSearchComponent@official`, the
    `lfx-duckduckgo` distribution is importable + ships its manifest in a
-   location `importlib.metadata.files` can discover.
+   location `importlib.metadata.files` can discover, and the loader resolves
+   the migration target to the same `DuckDuckGoSearchComponent` symbol the
+   bundle's package exports — with the canonical `input_value` input and
+   `dataframe` output preserved so existing flows' wiring stays valid.
 
 2. **Runtime-side** — manual.  The pre-merge dogfood gate.  This file is
    the checklist for that half.
@@ -20,6 +28,9 @@ loads AND RUNS identically."  A unit-style integration test cannot prove
 this because it would have to span a Python environment swap.  A real
 dogfood run by an engineer who is *not* on the Extension team is what
 actually closes LE-1023.
+
+The checklist below is intentionally a template — fill it in, do not edit it
+in advance. A pre-checked checklist is not evidence.
 
 ---
 
