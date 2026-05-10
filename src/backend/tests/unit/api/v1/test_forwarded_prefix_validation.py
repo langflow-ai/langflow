@@ -90,7 +90,7 @@ def test_dotdot_inside_segment_is_allowed_but_dotdot_segment_is_not():
 
 
 @pytest.mark.asyncio
-async def test_middleware_ignores_invalid_header(monkeypatch):
+async def test_middleware_ignores_invalid_header():
     """End-to-end: a malicious X-Forwarded-Prefix must not mutate root_path.
 
     The middleware is registered on the FastAPI app inside `create_app`.
