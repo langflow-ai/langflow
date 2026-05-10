@@ -1,12 +1,29 @@
-from typing import Optional
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
+from pydantic import field_serializer
 from sqlalchemy import Text, UniqueConstraint
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import User
+
+# Keep in sync with SENSITIVE_FIELDS in
+# langflow.services.auth.mcp_encryption — these field names are encrypted at
+# rest and must never leave the server, even as ciphertext, in API responses.
+_AUTH_SECRET_FIELDS = ("oauth_client_secret", "api_key")
+_MASK = "*******"  # noqa: S105  # placeholder; matches frontend round-trip in auth_helpers.py
+
+
+def _mask_auth_settings(value: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not value:
+        return value
+    masked = dict(value)
+    for field in _AUTH_SECRET_FIELDS:
+        if masked.get(field):
+            masked[field] = _MASK
+    return masked
 
 
 class FolderBase(SQLModel):
@@ -49,11 +66,19 @@ class FolderRead(FolderBase):
     id: UUID
     parent_id: UUID | None = Field()
 
+    @field_serializer("auth_settings")
+    def _serialize_auth_settings(self, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        return _mask_auth_settings(value)
+
 
 class FolderReadWithFlows(FolderBase):
     id: UUID
     parent_id: UUID | None = Field()
     flows: list[FlowRead] = Field(default=[])
+
+    @field_serializer("auth_settings")
+    def _serialize_auth_settings(self, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        return _mask_auth_settings(value)
 
 
 class FolderUpdate(SQLModel):
