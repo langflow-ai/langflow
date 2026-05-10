@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import tempfile
+import uuid
 import warnings
 from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
@@ -576,13 +577,18 @@ def create_app():
                 status_code=exc.status_code,
                 content={"message": str(exc.detail)},
             )
-        await logger.aerror(f"unhandled error: {exc}", exc_info=exc)
+        # Generate a correlation id so operators can match the client-facing
+        # response to the full traceback in server logs without exposing the
+        # raw exception (which often contains file paths, SQL, or other
+        # internal details).
+        error_id = uuid.uuid4().hex
+        await logger.aerror(f"unhandled error [{error_id}]: {exc}", exc_info=exc)
 
         await log_exception_to_telemetry(exc, "handler")
 
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            content={"message": str(exc)},
+            content={"message": "Internal server error", "error_id": error_id},
         )
 
     FastAPIInstrumentor.instrument_app(app)
