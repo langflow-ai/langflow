@@ -80,6 +80,30 @@ async def log_exception_to_telemetry(exc: Exception, context: str) -> None:
         await logger.awarning(f"Failed to log {context} exception to telemetry")
 
 
+async def default_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Catch-all exception handler.
+
+    For ``HTTPException`` we propagate ``exc.detail`` since callers raise it
+    intentionally as user-facing copy. For everything else we return a
+    generic message and a correlation id; the raw exception (which may
+    contain file paths, SQL fragments, internal hostnames, etc.) is only
+    written to server logs, not to the response body.
+    """
+    if isinstance(exc, HTTPException):
+        await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"message": str(exc.detail)},
+        )
+    error_id = uuid.uuid4().hex
+    await logger.aerror(f"unhandled error [{error_id}]: {exc}", exc_info=exc)
+    await log_exception_to_telemetry(exc, "handler")
+    return JSONResponse(
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        content={"message": "Internal server error", "error_id": error_id},
+    )
+
+
 class RequestCancelledMiddleware(BaseHTTPMiddleware):
     def __init__(self, app) -> None:
         super().__init__(app)
@@ -569,27 +593,7 @@ def create_app():
             content={"detail": exc.detail},
         )
 
-    @app.exception_handler(Exception)
-    async def exception_handler(_request: Request, exc: Exception):
-        if isinstance(exc, HTTPException):
-            await logger.aerror(f"HTTPException: {exc}", exc_info=exc)
-            return JSONResponse(
-                status_code=exc.status_code,
-                content={"message": str(exc.detail)},
-            )
-        # Generate a correlation id so operators can match the client-facing
-        # response to the full traceback in server logs without exposing the
-        # raw exception (which often contains file paths, SQL, or other
-        # internal details).
-        error_id = uuid.uuid4().hex
-        await logger.aerror(f"unhandled error [{error_id}]: {exc}", exc_info=exc)
-
-        await log_exception_to_telemetry(exc, "handler")
-
-        return JSONResponse(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            content={"message": "Internal server error", "error_id": error_id},
-        )
+    app.add_exception_handler(Exception, default_exception_handler)
 
     FastAPIInstrumentor.instrument_app(app)
 
