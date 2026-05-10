@@ -3,7 +3,7 @@ title: Author guide for Langflow Extensions
 slug: /extensions-author-guide
 ---
 
-This guide covers how to design, build, and ship a Langflow Extension Bundle from scratch, plus the conventions that make the result safe to maintain alongside the rest of Langflow. If you just want to get something running, start with [Build your first Langflow Extension](/extensions-quickstart) — that's the three-minute path. Read this when you're ready to publish, port a component out of `lfx.components.<provider>`, or evaluate whether your extension idea fits the v0 contract.
+This guide covers how to design, build, and ship a Langflow Extension Bundle from scratch, plus the conventions that make the result safe to maintain alongside the rest of Langflow. If you just want to get something running, start with [Build your first Langflow Extension](./extensions-quickstart.mdx) — that's the three-minute path. Read this when you're ready to publish, port a component out of `lfx.components.<provider>`, or evaluate whether your extension idea fits the v0 contract.
 
 :::info First-delivery scope
 This page documents the first-delivery slice of the Bundle Separation epic (LE-905). It covers the foundation (manifest, single-Bundle loader, atomic-swap reload) plus the pilot migration pattern. The wider Extension System vision — services, routes, registries, partner handover — is described in the project's internal design docs and ships in later epics.
@@ -62,7 +62,7 @@ my-extension/
 
 Why two `extension.json` files? The outer one is for the developer running `lfx extension validate` against the source tree. The inner one is the copy that ships **inside the wheel**, so `importlib.metadata.files()` can find it after `pip install`. The two should stay byte-identical; the porting script keeps them in sync.
 
-The component path declared in `extension.json` (`bundles[].path`) is the inner `components/<bundle_name>/` directory. Keeping that name aligned with the bundle name lets saved flows that reference the legacy import path migrate cleanly via a single migration-table entry. See [Manifest reference](/extensions-manifest) for the full set of fields.
+The component path declared in `extension.json` (`bundles[].path`) is the inner `components/<bundle_name>/` directory. Keeping that name aligned with the bundle name lets saved flows that reference the legacy import path migrate cleanly via a single migration-table entry. See [Manifest reference](./extensions-manifest.mdx) for the full set of fields.
 
 ## Authoring rules
 
@@ -109,7 +109,7 @@ Atomic-swap reload (Mode A only) is what makes the dev loop tolerable. The five 
 4. **Stage 4 — clean up** the staging namespace.
 5. **Stage 5 — notify**. Today this is a logger emission of the added/removed component lists plus a registered post-swap hook that refreshes the component cache; the typed `bundle_reloaded` events pipeline (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook) is deferred to LE-1017. The reload route's HTTP response body already carries the typed result, so the palette's reload action gets immediate feedback through the existing mutation hook ([`use-reload-bundle.ts`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/controllers/API/queries/extensions/use-reload-bundle.ts)) until the events stream lands.
 
-Reload is **not** a trust boundary. Bundle code was trusted at install time; the reload pipeline only handles the swap mechanics. Mode B/C deployments rebuild the Docker image rather than reload — see [Production install pattern for Extensions](/deployment-extensions-production).
+Reload is **not** a trust boundary. Bundle code was trusted at install time; the reload pipeline only handles the swap mechanics. Mode B/C deployments rebuild the Docker image rather than reload — see [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx).
 
 ## Porting an in-tree component
 
@@ -138,8 +138,8 @@ If any step fails, the extraction is not done. The dogfood gate especially is no
 
 ## See also
 
-* [Build your first Langflow Extension](/extensions-quickstart) — three-minute scaffold-and-run path.
-* [Manifest reference](/extensions-manifest) — every field accepted by `extension.json`.
-* [Production install pattern for Extensions](/deployment-extensions-production) — Mode B/C Docker image patterns and the seed-directory alternative.
+* [Build your first Langflow Extension](./extensions-quickstart.mdx) — three-minute scaffold-and-run path.
+* [Manifest reference](./extensions-manifest.mdx) — every field accepted by `extension.json`.
+* [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx) — Mode B/C Docker image patterns and the seed-directory alternative.
 * [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md) — the stable surface bundle code may consume.
 * [`src/bundles/PORTING.md`](https://github.com/langflow-ai/langflow/blob/main/src/bundles/PORTING.md) — the step-by-step porting recipe.

@@ -6,7 +6,7 @@ slug: /extensions-quickstart
 This guide walks through building, validating, and running your first Langflow Extension Bundle in roughly three minutes. The result is a single-component extension you can pip-install or load via `lfx extension dev` and reload from the palette.
 
 :::info First-delivery scope
-This page documents the first-delivery slice of the Bundle Separation epic (LE-905). Multi-bundle extensions, services and routes, remote install, and the curated registry are deferred to later milestones — see [Author guide for Langflow Extensions](/extensions-author-guide) for the full scope picture.
+This page documents the first-delivery slice of the Bundle Separation epic (LE-905). Multi-bundle extensions, services and routes, remote install, and the curated registry are deferred to later milestones — see [Author guide for Langflow Extensions](./extensions-author-guide.mdx) for the full scope picture.
 :::
 
 ## Prerequisites
@@ -38,7 +38,7 @@ my-extension/
                 └── my_component.py
 ```
 
-The generated `extension.json` already declares `lfx.compat: ["1"]`, so it satisfies the runtime version-constraint check. See [Manifest reference](/extensions-manifest) for every field the schema accepts.
+The generated `extension.json` already declares `lfx.compat: ["1"]`, so it satisfies the runtime version-constraint check. See [Manifest reference](./extensions-manifest.mdx) for every field the schema accepts.
 
 ## 2. Edit the component
 
@@ -91,7 +91,7 @@ lfx extension list --format json
 
 Edit the component, save, then click the **Reload** action in the palette's bundle header (or run `lfx extension reload --bundle my_bundle`). The atomic-swap reload pipeline replaces the component in place; in-flight flows keep the pre-swap class so a running execution is never interrupted.
 
-Reload only works in Mode A (local dev). Production deployments rebuild the Docker image — see [Production install pattern for Extensions](/deployment-extensions-production).
+Reload only works in Mode A (local dev). Production deployments rebuild the Docker image — see [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx).
 
 ## 6. Ship the extension
 
@@ -113,7 +113,7 @@ Discovery happens at server startup; the bundle appears in the palette without f
 
 ## Where to read next
 
-* [Manifest reference](/extensions-manifest) — every field accepted by `extension.json`.
-* [Author guide for Langflow Extensions](/extensions-author-guide) — long-form guidance for porting an in-tree component or building one from scratch.
-* [Production install pattern for Extensions](/deployment-extensions-production) — Mode B/C Docker image patterns and the seed-directory alternative.
+* [Manifest reference](./extensions-manifest.mdx) — every field accepted by `extension.json`.
+* [Author guide for Langflow Extensions](./extensions-author-guide.mdx) — long-form guidance for porting an in-tree component or building one from scratch.
+* [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx) — Mode B/C Docker image patterns and the seed-directory alternative.
 * [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md) — the stable surface bundle code may consume.
