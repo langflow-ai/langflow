@@ -13,7 +13,7 @@ from langflow.services.database.models.user.model import User
 # langflow.services.auth.mcp_encryption — these field names are encrypted at
 # rest and must never leave the server, even as ciphertext, in API responses.
 _AUTH_SECRET_FIELDS = ("oauth_client_secret", "api_key")
-_MASK = "*******"  # noqa: S105  # placeholder; matches frontend round-trip in auth_helpers.py
+_MASK = "*******"  # placeholder; matches frontend round-trip in auth_helpers.py
 
 
 def _mask_auth_settings(value: dict[str, Any] | None) -> dict[str, Any] | None:
