@@ -333,6 +333,8 @@ export const lazyIconsMapping = {
     import("@/icons/Mem0Composio").then((mod) => ({
       default: mod.Mem0IconComposio,
     })),
+  Mengram: () =>
+    import("@/icons/Mengram").then((mod) => ({ default: mod.MengramIcon })),
   Meta: () => import("@/icons/Meta").then((mod) => ({ default: mod.MetaIcon })),
   Midjourney: () =>
     import("@/icons/Midjorney").then((mod) => ({
