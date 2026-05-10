@@ -80,6 +80,7 @@ members = [
     ".",
     "src/lfx",
     "src/sdk",
+    "src/langflow-stepflow",
 ]
 
 [tool.hatch.build.targets.wheel]
