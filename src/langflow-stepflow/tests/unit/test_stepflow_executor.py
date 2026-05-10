@@ -1,19 +1,12 @@
-"""MVP smoke test for the StepflowExecutor adapter.
+"""Unit smoke tests for the StepflowExecutor adapter.
 
-Verifies that the adapter:
-- conforms to the lfx Executor ABC,
-- registers under the expected ``kind``,
-- routes through ``Coordinator`` when selected,
-- translates a Langflow JSON workflow into a Stepflow Flow,
-- raises a clear error when no orchestrator endpoint is configured (so we never silently no-op).
-
-Submission against a live orchestrator is out of scope for the MVP; that path is
-exercised by integration tests against a running stepflow stack.
+Covers wiring against the lfx execution seam: ABC conformance, registration, default
+config shape, and translation. The actual orchestrator run is exercised by the
+integration test in ``tests/integration/test_stepflow_executor_runs_passthrough.py``.
 """
 
 from __future__ import annotations
 
-import pytest
 from lfx.execution.coordinator import Coordinator
 from lfx.execution.registry import ExecutorRegistry
 from lfx.execution.types import RunComplete, StepResult, Unit
@@ -61,7 +54,7 @@ def test_kind_is_stepflow():
 
 
 def test_translate_produces_a_flow():
-    executor = StepflowExecutor(endpoint="unused-for-translation")
+    executor = StepflowExecutor()
     unit = Unit(graph=None, runtime_options={"langflow_json": _minimal_chat_passthrough()})
     flow = executor.translate(unit)
     assert flow is not None
@@ -69,36 +62,27 @@ def test_translate_produces_a_flow():
 
 def test_executor_registers_and_routes_through_coordinator():
     registry = ExecutorRegistry()
-    registry.register(StepflowExecutor(endpoint="unused-for-this-test"))
+    registry.register(StepflowExecutor())
     coordinator = Coordinator(registry=registry, executor_kind="stepflow")
     assert registry.has("stepflow")
-    # We don't actually run anything here: we only confirm the seam picked up our
-    # executor under the configured kind. The async path is verified separately.
     assert coordinator._registry.get("stepflow").kind == "stepflow"  # noqa: SLF001
 
 
-@pytest.mark.asyncio
-async def test_execute_without_endpoint_raises_clearly(monkeypatch):
-    monkeypatch.delenv("STEPFLOW_ENDPOINT", raising=False)
+def test_default_config_registers_langflow_worker():
+    # Verifies the default StepflowConfig is the one we'd need to actually route
+    # /langflow/* steps to a worker -- the routing miss I hit during the first manual
+    # run attempt should now be impossible with the defaults.
     executor = StepflowExecutor()
-    unit = Unit(graph=None, runtime_options={"langflow_json": _minimal_chat_passthrough()})
-    with pytest.raises(RuntimeError, match="no orchestrator endpoint"):
-        async for _ in executor.execute(unit):
-            pass
-
-
-@pytest.mark.asyncio
-async def test_coordinator_run_propagates_executor_error(monkeypatch):
-    monkeypatch.delenv("STEPFLOW_ENDPOINT", raising=False)
-    registry = ExecutorRegistry()
-    registry.register(StepflowExecutor())
-    coordinator = Coordinator(registry=registry, executor_kind="stepflow")
-    with pytest.raises(RuntimeError, match="no orchestrator endpoint"):
-        async for _ in coordinator.run(graph=None, inputs=[], langflow_json=_minimal_chat_passthrough()):
-            pass
+    config = executor._default_config()  # noqa: SLF001
+    assert "langflow" in config.plugins
+    assert "/langflow" in config.routes
+    plugin_for_langflow = config.routes["/langflow"][0].plugin
+    assert plugin_for_langflow == "langflow"
+    # Default worker command should be invokable as a python module path.
+    cmd, args = executor._worker_invocation()  # noqa: SLF001
+    assert "langflow_stepflow.worker" in " ".join([cmd, *args])
 
 
 def test_value_types_are_lfx_seam_types():
-    # Sanity: the adapter speaks the seam's value-object vocabulary, not its own.
     assert StepResult.__module__.startswith("lfx.execution")
     assert RunComplete.__module__.startswith("lfx.execution")
