@@ -6,62 +6,25 @@ and `/api/v1/projects/{id}`. They must not leak the encrypted
 because the listing endpoint returns globally-shared folders to every
 authenticated user, and shipping secret material off the server is a
 defense-in-depth failure on its own.
+
+Helper-level coverage of `mask_auth_settings` lives in
+`tests/unit/services/auth/test_mcp_encryption_mask.py`.
 """
 
 from __future__ import annotations
 
 from uuid import UUID
 
+from langflow.services.auth.mcp_encryption import SENSITIVE_FIELD_MASK
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderRead,
     FolderReadWithFlows,
-    _mask_auth_settings,
 )
 
 _FOLDER_ID = UUID("00000000-0000-0000-0000-000000000001")
 _CIPHER_OAUTH = "gAAAAABoauth-ciphertext-blob-XXXX"  # pragma: allowlist secret
 _CIPHER_APIKEY = "gAAAAABapikey-ciphertext-blob-XXXX"  # pragma: allowlist secret
-_MASK = "*******"
-
-
-class TestMaskAuthSettingsHelper:
-    def test_none_passthrough(self):
-        assert _mask_auth_settings(None) is None
-
-    def test_empty_dict_passthrough(self):
-        assert _mask_auth_settings({}) == {}
-
-    def test_masks_oauth_client_secret(self):
-        result = _mask_auth_settings({"auth_type": "oauth", "oauth_client_secret": _CIPHER_OAUTH})
-        assert result == {"auth_type": "oauth", "oauth_client_secret": _MASK}
-
-    def test_masks_api_key(self):
-        result = _mask_auth_settings({"auth_type": "apikey", "api_key": _CIPHER_APIKEY})
-        assert result == {"auth_type": "apikey", "api_key": _MASK}
-
-    def test_preserves_non_secret_fields(self):
-        result = _mask_auth_settings(
-            {
-                "auth_type": "oauth",
-                "oauth_client_id": "public-client-id",
-                "oauth_client_secret": _CIPHER_OAUTH,
-                "oauth_server_url": "https://oauth.example.com",
-            }
-        )
-        assert result["oauth_client_id"] == "public-client-id"
-        assert result["oauth_server_url"] == "https://oauth.example.com"
-        assert result["oauth_client_secret"] == _MASK
-
-    def test_does_not_mutate_input(self):
-        original = {"auth_type": "apikey", "api_key": _CIPHER_APIKEY}
-        _mask_auth_settings(original)
-        assert original == {"auth_type": "apikey", "api_key": _CIPHER_APIKEY}
-
-    def test_empty_secret_value_is_left_alone(self):
-        # Empty string is falsy, so we don't replace it with a mask.
-        result = _mask_auth_settings({"auth_type": "apikey", "api_key": ""})
-        assert result == {"auth_type": "apikey", "api_key": ""}
 
 
 class TestFolderReadSerializer:
@@ -85,8 +48,8 @@ class TestFolderReadSerializer:
             }
         )
         dumped = folder.model_dump()
-        assert dumped["auth_settings"]["oauth_client_secret"] == _MASK
-        assert dumped["auth_settings"]["api_key"] == _MASK
+        assert dumped["auth_settings"]["oauth_client_secret"] == SENSITIVE_FIELD_MASK
+        assert dumped["auth_settings"]["api_key"] == SENSITIVE_FIELD_MASK
         assert dumped["auth_settings"]["oauth_client_id"] == "id-public"
 
     def test_none_auth_settings_serializes_as_none(self):
@@ -103,7 +66,7 @@ class TestFolderReadSerializer:
         # `model_dump_json` is the path FastAPI takes for response bodies.
         payload = folder.model_dump_json()
         assert _CIPHER_APIKEY not in payload
-        assert _MASK in payload
+        assert SENSITIVE_FIELD_MASK in payload
 
 
 class TestFolderReadWithFlowsSerializer:
@@ -120,7 +83,7 @@ class TestFolderReadWithFlowsSerializer:
             flows=[],
         )
         dumped = folder.model_dump()
-        assert dumped["auth_settings"]["oauth_client_secret"] == _MASK
+        assert dumped["auth_settings"]["oauth_client_secret"] == SENSITIVE_FIELD_MASK
         assert dumped["flows"] == []
 
 

@@ -63,7 +63,7 @@ from langflow.api.v1.schemas import (
     MCPSettings,
 )
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
-from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings, mask_auth_settings
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.crud import check_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
@@ -273,16 +273,11 @@ async def _build_project_tools_response(
             # Get project-level auth settings but mask sensitive fields for security
             auth_settings = None
             if project.auth_settings:
-                # Decrypt to get the settings structure
+                # Decrypt to get the settings structure, then mask sensitive fields
+                # before constructing the response model.
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
                 if decrypted_settings:
-                    # Mask sensitive fields before sending to frontend
-                    masked_settings = decrypted_settings.copy()
-                    if masked_settings.get("oauth_client_secret"):
-                        masked_settings["oauth_client_secret"] = "*******"  # noqa: S105
-                    if masked_settings.get("api_key"):
-                        masked_settings["api_key"] = "*******"
-                    auth_settings = AuthSettings(**masked_settings)
+                    auth_settings = AuthSettings(**mask_auth_settings(decrypted_settings))
 
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"

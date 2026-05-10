@@ -2,7 +2,12 @@ from typing import Any
 
 from pydantic import SecretStr
 
-from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.mcp_encryption import (
+    SENSITIVE_FIELD_MASK,
+    SENSITIVE_FIELDS,
+    decrypt_auth_settings,
+    encrypt_auth_settings,
+)
 from langflow.services.database.models.folder.model import Folder
 
 
@@ -52,12 +57,13 @@ def handle_auth_settings_update(
 
     new_auth_type = auth_dict.get("auth_type")
 
-    # Handle masked secret fields from frontend
-    # If frontend sends back "*******" for a secret field, preserve the existing value
+    # Handle masked secret fields from frontend.
+    # If the frontend sends back the SENSITIVE_FIELD_MASK sentinel for a secret
+    # field, preserve the previously stored (decrypted) value instead of writing
+    # the placeholder to disk.
     if decrypted_current:
-        secret_fields = ["oauth_client_secret", "api_key"]
-        for field in secret_fields:
-            if field in auth_dict and auth_dict[field] == "*******" and field in decrypted_current:
+        for field in SENSITIVE_FIELDS:
+            if field in auth_dict and auth_dict[field] == SENSITIVE_FIELD_MASK and field in decrypted_current:
                 auth_dict[field] = decrypted_current[field]
 
     # Encrypt and store the auth settings

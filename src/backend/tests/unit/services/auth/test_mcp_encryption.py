@@ -6,9 +6,12 @@ from unittest.mock import patch
 import pytest
 from cryptography.fernet import Fernet
 from langflow.services.auth.mcp_encryption import (
+    SENSITIVE_FIELD_MASK,
+    SENSITIVE_FIELDS,
     decrypt_auth_settings,
     encrypt_auth_settings,
     is_encrypted,
+    mask_auth_settings,
 )
 from langflow.services.auth.service import AuthService
 from lfx.services.settings.auth import AuthSettings
@@ -164,3 +167,64 @@ class TestMCPEncryption:
         # Test with encrypted value
         encrypted_value = mock_auth_service.encrypt_api_key("secret-value")
         assert is_encrypted(encrypted_value)
+
+
+class TestMaskAuthSettings:
+    """Coverage for the shared masker used in folder + MCP project responses.
+
+    The masker is consumed by ``FolderRead`` / ``FolderReadWithFlows``
+    serializers and by ``_build_project_tools_response`` in
+    ``api/v1/mcp_projects.py``. The mask string ``SENSITIVE_FIELD_MASK`` is
+    also a sentinel that the frontend round-trips on PATCH;
+    ``handle_auth_settings_update`` swaps it back to the stored ciphertext
+    before re-encrypting. Keep that contract pinned so changing the
+    constant fails loudly here.
+    """
+
+    def test_mask_constant_is_seven_asterisks(self):
+        # Pinned to the value the frontend already sends back on PATCH.
+        assert SENSITIVE_FIELD_MASK == "*******"
+
+    def test_sensitive_fields_pinned(self):
+        # Any addition here MUST be reflected in mask_auth_settings, the
+        # SENSITIVE_FIELDS list, and the frontend round-trip in
+        # api/v1/auth_helpers.py — pin it here so additions surface in review.
+        assert SENSITIVE_FIELDS == ["oauth_client_secret", "api_key"]
+
+    def test_none_passthrough(self):
+        assert mask_auth_settings(None) is None
+
+    def test_empty_dict_passthrough(self):
+        assert mask_auth_settings({}) == {}
+
+    def test_masks_oauth_client_secret(self):
+        result = mask_auth_settings({"auth_type": "oauth", "oauth_client_secret": "ciphertext-blob"})
+        assert result == {"auth_type": "oauth", "oauth_client_secret": SENSITIVE_FIELD_MASK}
+
+    def test_masks_api_key(self):
+        result = mask_auth_settings({"auth_type": "apikey", "api_key": "ciphertext-blob"})
+        assert result == {"auth_type": "apikey", "api_key": SENSITIVE_FIELD_MASK}
+
+    def test_preserves_non_secret_fields(self):
+        result = mask_auth_settings(
+            {
+                "auth_type": "oauth",
+                "oauth_client_id": "public-client-id",
+                "oauth_client_secret": "ciphertext-blob",
+                "oauth_server_url": "https://oauth.example.com",
+            }
+        )
+        assert result["oauth_client_id"] == "public-client-id"
+        assert result["oauth_server_url"] == "https://oauth.example.com"
+        assert result["oauth_client_secret"] == SENSITIVE_FIELD_MASK
+
+    def test_does_not_mutate_input(self):
+        original = {"auth_type": "apikey", "api_key": "ciphertext-blob"}
+        mask_auth_settings(original)
+        assert original == {"auth_type": "apikey", "api_key": "ciphertext-blob"}
+
+    def test_empty_secret_value_is_left_alone(self):
+        # Empty string is falsy, so we don't replace it with a mask — this lets
+        # the frontend still distinguish "never set" from "currently set but masked".
+        result = mask_auth_settings({"auth_type": "apikey", "api_key": ""})
+        assert result == {"auth_type": "apikey", "api_key": ""}

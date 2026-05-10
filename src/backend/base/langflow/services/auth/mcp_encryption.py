@@ -13,6 +13,29 @@ SENSITIVE_FIELDS = [
     "api_key",
 ]
 
+# Placeholder shown to clients in place of stored ciphertext for any field in
+# SENSITIVE_FIELDS. The frontend round-trips this exact value back on PATCH and
+# `langflow.api.v1.auth_helpers.handle_auth_settings_update` treats it as a
+# sentinel meaning "keep the previously stored value", so changing this string
+# silently breaks the round-trip — keep all three call sites in sync.
+SENSITIVE_FIELD_MASK = "*******"
+
+
+def mask_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return a copy of ``auth_settings`` with SENSITIVE_FIELDS replaced by SENSITIVE_FIELD_MASK.
+
+    ``None`` and empty dicts pass through unchanged. Empty-string values are
+    left alone so the frontend can still distinguish "never set" from
+    "currently set but masked".
+    """
+    if not auth_settings:
+        return auth_settings
+    masked = dict(auth_settings)
+    for field in SENSITIVE_FIELDS:
+        if masked.get(field):
+            masked[field] = SENSITIVE_FIELD_MASK
+    return masked
+
 
 def encrypt_auth_settings(auth_settings: dict[str, Any] | None) -> dict[str, Any] | None:
     """Encrypt sensitive fields in auth_settings dictionary.
