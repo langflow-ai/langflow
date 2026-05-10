@@ -8,26 +8,35 @@
 Per the [Bundle Separation Developer Guide §6 LE-1023], the M1 proof-of-delivery
 gate has two halves:
 
-1. **Deserialize-side** — automated, lives in
-   [`src/lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py`](../../lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py).
-   The migration table rewrites every legacy reference form
-   (bare class name, full import path, package-level import path,
-   pre-Phase-A slot ID) to
-   `ext:duckduckgo:DuckDuckGoSearchComponent@official`, the
-   `lfx-duckduckgo` distribution is importable + ships its manifest in a
-   location `importlib.metadata.files` can discover, and the loader resolves
-   the migration target to the same `DuckDuckGoSearchComponent` symbol the
-   bundle's package exports — with the canonical `input_value` input and
-   `dataframe` output preserved so existing flows' wiring stays valid.
+1. **Deserialize + build pipeline (automated)** — lives in
+   [`src/lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py`](../../lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py)
+   and covers:
+   - Every legacy reference form (bare class name, full import path,
+     package-level import path, pre-Phase-A slot ID) rewrites to
+     `ext:duckduckgo:DuckDuckGoSearchComponent@official`.
+   - The `lfx-duckduckgo` distribution is importable and ships its
+     manifest where `importlib.metadata.files()` can discover it.
+   - The loader resolves the migration target to the same
+     `DuckDuckGoSearchComponent` symbol the bundle's package exports —
+     with the canonical `input_value` input and `dataframe` output
+     preserved so existing flows' wiring stays valid.
+   - **The loaded class's build pipeline runs end-to-end against a
+     stubbed network wrapper** to the canonical output schema:
+     `content` / `snippet` columns are present, `max_results` slicing
+     and `max_snippet_length` truncation behave correctly, and the
+     wrapper is called with the canonical `"<query> (site:*)"` template.
 
-2. **Runtime-side** — manual.  The pre-merge dogfood gate.  This file is
-   the checklist for that half.
+2. **Real cross-version swap (manual)** — the pre-merge dogfood gate.
+   This file is the checklist for that half.
 
-The gate is "save a flow on pre-migration Langflow, upgrade, confirm it
-loads AND RUNS identically."  A unit-style integration test cannot prove
-this because it would have to span a Python environment swap.  A real
-dogfood run by an engineer who is *not* on the Extension team is what
-actually closes LE-1023.
+The remaining question for the dogfood is therefore narrow: with the
+load-and-run pipeline now locked in by automated tests against a stub,
+the human gate only needs to answer "do real DuckDuckGo search results
+look materially the same between the pre- and post-migration releases?"
+A unit-style integration test cannot answer that because it would have
+to span a Python environment swap and touch the live DuckDuckGo
+backend.  A real dogfood run by an engineer who is *not* on the
+Extension team is what actually closes LE-1023.
 
 The checklist below is intentionally a template — fill it in, do not edit it
 in advance. A pre-checked checklist is not evidence.
