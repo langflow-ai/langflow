@@ -286,10 +286,7 @@ def _validate_candidate(bundle: str, *, display_name: str | None, migration_rele
         raise SystemExit(msg)
 
     if migration_release is not None and not re.fullmatch(r"\d+\.\d+\.\d+", migration_release):
-        msg = (
-            f"--migration-release {migration_release!r} must be a three-segment "
-            "SemVer (e.g. 1.10.0)."
-        )
+        msg = f"--migration-release {migration_release!r} must be a three-segment SemVer (e.g. 1.10.0)."
         raise SystemExit(msg)
 
     resolved_display = display_name if display_name is not None else bundle.replace("_", " ").title()
@@ -332,8 +329,7 @@ def _render_reexports(plan: PortPlan) -> tuple[str, str]:
 
     # Package-level: ``from lfx_<bundle>.components.<bundle>.<module> import <Class>``.
     package_lines = [
-        f"from lfx_{plan.bundle}.components.{plan.bundle}.{module} import {cls}"
-        for module, cls in all_classes
+        f"from lfx_{plan.bundle}.components.{plan.bundle}.{module} import {cls}" for module, cls in all_classes
     ]
     package_all = ", ".join(repr(cls) for _, cls in all_classes)
     package_body = "\n".join(package_lines) + f"\n\n__all__ = [{package_all}]"
@@ -677,10 +673,7 @@ def main() -> int:
         print()
         print("---- paste into src/lfx/src/lfx/extension/migration/migration_table.json ----")
         print(_render_migration_entries(plan))
-        print(
-            "---- paste into src/lfx/tests/integration/extension/"
-            f"test_pilot_{plan.bundle}_upgrade.py ----"
-        )
+        print(f"---- paste into src/lfx/tests/integration/extension/test_pilot_{plan.bundle}_upgrade.py ----")
         print(_render_test_scaffold(plan))
     return 0
 
