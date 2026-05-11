@@ -211,6 +211,21 @@ async def create_flow_response(
         logger.debug("Client disconnected, closing tasks")
         if event_task is not None:
             event_task.cancel()
+        else:
+            # Known limitation: cross-worker passive disconnect cannot be propagated.
+            # When this worker does not own the build task (event_task is None), there
+            # is no in-process handle to cancel the producer.  The producer worker will
+            # continue emitting events into the queue until the build completes naturally.
+            # Proper cross-worker cancellation would require a Redis side-channel
+            # (e.g. pubsub or a langflow:cancel:<job_id> key) that the build loop polls
+            # periodically.  Until that is implemented, log a warning so the silent
+            # no-op is at least observable in logs.
+            logger.warning(
+                "Client disconnected but no local event_task found — "
+                "this worker does not own the build task. "
+                "The producer will keep running until the build finishes naturally. "
+                "Cross-worker passive-disconnect cancellation is not yet implemented."
+            )
         queue_cancel = getattr(queue, "cancel", None)
         if queue_cancel is not None:
             maybe_coro = queue_cancel()
