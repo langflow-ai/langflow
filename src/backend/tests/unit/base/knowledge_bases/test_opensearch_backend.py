@@ -11,7 +11,7 @@ manual ``Vector Field Name`` override.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.knowledge_bases.backends import OpenSearchBackend
@@ -118,3 +118,73 @@ def test_vector_field_resolution_table(tmp_path: Path, config_value: str | None,
         _ = backend.vector_store
 
     assert fake_wrapper.call_args.kwargs["vector_field"] == expected
+
+
+class TestOpenSearchSimilaritySearchFilterHandling:
+    """Pin the ``filter`` kwarg behaviour of ``similarity_search``.
+
+    LangChain's ``OpenSearchVectorSearch`` forwards ``filter`` straight into
+    the k-NN query body. Sending ``"filter": null`` makes OpenSearch reject
+    the request with ``x_content_parse_exception: [knn] filter doesn't
+    support values of type: VALUE_NULL``. If the override regresses and
+    forwards ``filter=None`` (or an empty dict), every KB retrieval against
+    OpenSearch would fail — silently looking like 'no results' to any
+    component that swallows the error downstream. These tests guard the
+    canonical case Langflow itself relies on at
+    ``components/files_and_knowledge/retrieval.py``, which never passes a
+    filter at all.
+    """
+
+    @pytest.mark.asyncio
+    async def test_filter_none_is_dropped_from_call(self, tmp_path: Path) -> None:
+        backend = _make_backend(tmp_path)
+        fake_vs = MagicMock()
+        fake_vs.asimilarity_search = AsyncMock(return_value=[])
+        backend._vector_store = fake_vs
+
+        await backend.similarity_search(query="hi", k=3)
+
+        kwargs = fake_vs.asimilarity_search.call_args.kwargs
+        assert kwargs == {"query": "hi", "k": 3}
+        assert "filter" not in kwargs
+
+    @pytest.mark.asyncio
+    async def test_filter_empty_dict_is_dropped_from_call(self, tmp_path: Path) -> None:
+        # An empty dict is "no filter requested" — must not reach OpenSearch
+        # either, since the k-NN parser also rejects empty objects.
+        backend = _make_backend(tmp_path)
+        fake_vs = MagicMock()
+        fake_vs.asimilarity_search = AsyncMock(return_value=[])
+        backend._vector_store = fake_vs
+
+        await backend.similarity_search(query="hi", k=3, filter={})
+
+        assert "filter" not in fake_vs.asimilarity_search.call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_filter_truthy_is_forwarded(self, tmp_path: Path) -> None:
+        backend = _make_backend(tmp_path)
+        fake_vs = MagicMock()
+        fake_vs.asimilarity_search = AsyncMock(return_value=[])
+        backend._vector_store = fake_vs
+
+        clause = {"bool": {"must": [{"term": {"metadata.session_id": "s1"}}]}}
+        await backend.similarity_search(query="hi", k=3, filter=clause)
+
+        kwargs = fake_vs.asimilarity_search.call_args.kwargs
+        assert kwargs["filter"] == clause
+
+    @pytest.mark.asyncio
+    async def test_with_scores_routes_to_score_method_and_drops_none_filter(self, tmp_path: Path) -> None:
+        # When the caller asks for scores we use ``asimilarity_search_with_score``;
+        # the filter handling must apply identically on that branch.
+        backend = _make_backend(tmp_path)
+        fake_vs = MagicMock()
+        fake_vs.asimilarity_search_with_score = AsyncMock(return_value=[])
+        backend._vector_store = fake_vs
+
+        await backend.similarity_search(query="hi", k=2, with_scores=True)
+
+        kwargs = fake_vs.asimilarity_search_with_score.call_args.kwargs
+        assert kwargs == {"query": "hi", "k": 2}
+        assert "filter" not in kwargs
