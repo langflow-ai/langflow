@@ -405,6 +405,10 @@ class RedisQueueWrapper:
     _XREAD_BLOCK_MS = 1000  # how long XREAD blocks waiting for new entries
     _XREAD_BATCH_COUNT = 100  # max entries fetched per XREAD call
     _READ_ERROR_BACKOFF_S = 0.5  # backoff after a transient XREAD failure
+    # How long to keep polling before giving up on a stream that has never appeared.
+    # Protects against the early-poll race where the consumer wrapper is created
+    # before the producer worker has issued its first XADD.
+    _STARTUP_GRACE_S = 30.0
 
     def __init__(self, job_id: str, client: Any, ttl: int) -> None:
         self._job_id = job_id
@@ -412,6 +416,11 @@ class RedisQueueWrapper:
         self._ttl = ttl
         self._buffer: asyncio.Queue = asyncio.Queue()
         self._last_id = "0-0"  # read from the beginning of the stream
+        # Flips to True the first time XREAD returns messages for this stream.
+        # Until then, "stream key does not exist" is NOT treated as end-of-stream
+        # — it just means the producer hasn't written its first event yet.
+        self._observed_stream: bool = False
+        self._created_at: float = time.monotonic()
         self._fill_task: asyncio.Task = asyncio.create_task(self._fill_from_redis())
 
     @property
@@ -434,6 +443,7 @@ class RedisQueueWrapper:
                     continue
 
                 if results:
+                    self._observed_stream = True
                     for _, messages in results:
                         for msg_id, fields in messages:
                             self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
@@ -444,8 +454,23 @@ class RedisQueueWrapper:
                                 return
                             event_id = (fields.get(b"event_id") or b"").decode()
                             await self._buffer.put((event_id, data, ts))
-                # No results within the block timeout — check if the stream was deleted.
+                # No results within the block timeout.
+                elif not self._observed_stream:
+                    # Stream hasn't appeared yet — the producer may not have issued its
+                    # first XADD (early-poll race between workers).  Keep blocking until
+                    # the startup grace period expires to avoid a false end-of-stream.
+                    elapsed = time.monotonic() - self._created_at
+                    if elapsed > self._STARTUP_GRACE_S:
+                        await logger.awarning(
+                            f"RedisQueueWrapper: stream for {self._job_id} never appeared "
+                            f"after {elapsed:.1f}s; treating as end-of-stream."
+                        )
+                        await self._buffer.put((None, None, time.time()))
+                        return
+                    # Otherwise keep looping — next XREAD will block again.
                 elif not await self._client.exists(self._stream_key):
+                    # Stream was observed before and the key is now gone — the job
+                    # was cleaned up on the producer side; signal end-of-stream.
                     await self._buffer.put((None, None, time.time()))
                     return
         except asyncio.CancelledError:
