@@ -135,6 +135,11 @@ export function ContentBlockDisplay({
                     typeof rawTitle === "string"
                       ? formatToolTitle(rawTitle)
                       : rawTitle;
+                  const isAgentStep =
+                    content.header?.icon === "GitBranch" ||
+                    (typeof content.name === "string" &&
+                      content.name.startsWith("Node "));
+                  const toolLabel = isAgentStep ? "Node" : "Called tool";
                   const toolDuration =
                     toolElapsedTimes[toolKey] ?? content.duration ?? 0;
 
@@ -148,7 +153,7 @@ export function ContentBlockDisplay({
                         <div className="flex items-center justify-between w-full pr-2">
                           <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
                             <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
-                              Called tool{" "}
+                              {toolLabel}{" "}
                             </div>
                             <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
                               <p className="truncate font-normal font-mono">

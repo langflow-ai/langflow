@@ -67,7 +67,10 @@ For more information, see [Configure an external PostgreSQL database](/configura
         environment:
           - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
       postgres:
-        image: postgres:16
+        # Pinned to a specific Debian base (trixie) so the postgres:16 tag does
+        # not silently roll its OS, which triggers a glibc collation mismatch
+        # warning on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-trixie
         ports:
           - "5432:5432"
         environment:

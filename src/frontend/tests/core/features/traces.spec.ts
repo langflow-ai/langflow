@@ -20,7 +20,19 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
+    // Tie the wait to the actual flow-creation network response. On Windows
+    // CI the click → canvas mount can outlast a 100s wait when the backend
+    // is under load, but if the POST /flows succeeds we know the page will
+    // navigate; we then wait for the canvas with a generous budget.
+    const flowCreatePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/v1\/flows\/?(?:\?|$)/.test(response.url()) &&
+        response.request().method() === "POST" &&
+        response.status() === 201,
+      { timeout: 120000 },
+    );
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
@@ -76,7 +88,19 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
+    // Tie the wait to the actual flow-creation network response. On Windows
+    // CI the click → canvas mount can outlast a 100s wait when the backend
+    // is under load, but if the POST /flows succeeds we know the page will
+    // navigate; we then wait for the canvas with a generous budget.
+    const flowCreatePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/v1\/flows\/?(?:\?|$)/.test(response.url()) &&
+        response.request().method() === "POST" &&
+        response.status() === 201,
+      { timeout: 120000 },
+    );
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });

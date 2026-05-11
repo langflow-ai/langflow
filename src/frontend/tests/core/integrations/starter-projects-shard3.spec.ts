@@ -42,21 +42,28 @@ test(
       templatesData.map((t) => `${t.index}: ${t.name}`).join(", "),
     );
 
-    for (const template of templatesData) {
+    for (let idx = 0; idx < templatesData.length; idx++) {
+      const template = templatesData[idx];
       console.log(`Testing template ${template.index}: ${template.name}`);
 
-      await page.goto("/", { waitUntil: "domcontentloaded", timeout: 30000 });
-      await expect(page.getByTestId("mainpage_title")).toBeVisible({
-        timeout: 30000,
-      });
-
-      await page.getByTestId("new-project-btn").click();
-      await page.waitForLoadState("domcontentloaded");
-
-      await page.getByTestId("side_nav_options_all-templates").click();
-      await expect(page.getByTestId("text_card_container").first()).toBeVisible(
-        { timeout: 20000 },
-      );
+      // First iteration: the templates modal is already open from the
+      // data-collection step above, so skip the homepage round-trip.
+      // Subsequent iterations: navigate back from the previous flow via
+      // chevron-left instead of page.goto("/"). page.goto forces a full SPA
+      // bundle re-execution which was the dominant per-iteration cost on
+      // Linux CI and pushed shard 38 past its 12-minute attempt budget.
+      if (idx > 0) {
+        await page.getByTestId("icon-ChevronLeft").first().click();
+        await expect(page.getByTestId("mainpage_title")).toBeVisible({
+          timeout: 30000,
+        });
+        await page.getByTestId("new-project-btn").click();
+        await page.waitForLoadState("domcontentloaded");
+        await page.getByTestId("side_nav_options_all-templates").click();
+        await expect(
+          page.getByTestId("text_card_container").first(),
+        ).toBeVisible({ timeout: 20000 });
+      }
 
       const targetTemplate = page
         .getByTestId("text_card_container")
