@@ -232,7 +232,10 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
         volumes:
           - ./langflow-data:/app/langflow
       postgres:
-        image: postgres:16
+        # Pinned to a specific Debian base (trixie) so the postgres:16 tag does
+        # not silently roll its OS, which triggers a glibc collation mismatch
+        # warning on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-trixie
         volumes:
           - langflow-postgres:/var/lib/postgresql/data
 

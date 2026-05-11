@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 
@@ -94,6 +95,26 @@ _WINDOWS_RESERVED_NAMES = frozenset(
 # basename will be caught by the OS at write time anyway.
 _WINDOWS_FORBIDDEN_CHARS = frozenset('<>"|?*')
 
+# Deny-list: even when a path lies inside `root_path`, refuse access to
+# basenames or path components that match well-known credential / secret
+# patterns. This is the "default-deny inside an allowed root" pattern from
+# Claude Code Sandboxing — it limits the blast radius of a flow author who
+# misconfigures `root_path` to cover $HOME or the project root. Pure-string
+# checks; runs before any I/O so the agent never observes the file's
+# existence, contents, or absence-vs-denied distinction beyond the error
+# string itself.
+#
+# Match semantics (all case-insensitive):
+#   * literals — exact basename match (e.g. `.env`, `.netrc`)
+#   * prefixes — basename startswith (e.g. `id_rsa`, `id_rsa.pub`, `id_ed25519`)
+#   * suffixes — basename endswith (e.g. `cert.pem`, `private.key`)
+#   * fragments — any DIRECTORY component equals the fragment (e.g. `.ssh/`,
+#     `.aws/config`); the basename itself is not matched against fragments.
+_DENY_BASENAME_LITERALS = frozenset({".env", ".netrc", ".pgpass", ".htpasswd", "authorized_keys"})
+_DENY_BASENAME_PREFIXES = ("id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "credentials")
+_DENY_BASENAME_SUFFIXES = (".pem", ".key", ".pfx", ".p12")
+_DENY_PATH_FRAGMENTS = frozenset({".ssh", ".aws", ".gnupg", ".docker", ".kube", ".git"})
+
 
 def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
@@ -120,6 +141,92 @@ def _allowed_roots() -> list[Path] | None:
         except OSError:
             continue
     return paths
+
+
+# O_NOFOLLOW closes the TOCTOU window between Path.resolve() in
+# `_validate_path` and the actual open() syscall. If the resolved file is
+# replaced by a symlink in that window (whether by an external process or a
+# concurrent agent) the kernel returns ELOOP rather than silently following
+# the symlink to an out-of-sandbox target. On Windows the constant does not
+# exist; we fall back to 0 (no-op) — Windows has different mechanics for
+# symlinks (developer-mode-only, separate flag) and the component-level
+# `Path.resolve()` check still applies.
+_NOFOLLOW_FLAG = getattr(os, "O_NOFOLLOW", 0)
+
+
+def _read_head_no_follow(path: Path, n: int) -> bytes:
+    """Read first `n` bytes of `path` with O_NOFOLLOW. Raises OSError on failure."""
+    fd = os.open(path, os.O_RDONLY | _NOFOLLOW_FLAG)
+    with os.fdopen(fd, "rb") as fh:
+        return fh.read(n)
+
+
+def _read_bytes_no_follow(path: Path) -> bytes:
+    """Read all bytes of `path` with O_NOFOLLOW. Raises OSError on failure."""
+    fd = os.open(path, os.O_RDONLY | _NOFOLLOW_FLAG)
+    with os.fdopen(fd, "rb") as fh:
+        return fh.read()
+
+
+def _write_bytes_no_follow(path: Path, data: bytes) -> None:
+    """Write `data` to `path` with O_NOFOLLOW.
+
+    Refuses if the target already exists as a symlink. Raises OSError on failure.
+    """
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | _NOFOLLOW_FLAG
+    fd = os.open(path, flags, 0o644)
+    with os.fdopen(fd, "wb") as fh:
+        fh.write(data)
+
+
+def _check_hardlink(resolved: Path) -> str | None:
+    """Return an error if `resolved` is a regular file with multiple hardlinks.
+
+    Path.resolve() + is_relative_to() do NOT detect hardlinks: a hardlink
+    inside the sandbox can share an inode with /etc/shadow, and the path
+    string stays inside the sandbox. The fix is fail-closed: refuse any
+    file whose link count is > 1. Non-existent paths return None (write
+    operations creating brand-new files are still allowed). See
+    GHSA-34x7-hfp2-rc4v for the canonical writeup of this class of escape.
+    """
+    try:
+        stat_result = os.lstat(resolved)
+    except OSError:
+        return None
+    if stat.S_ISREG(stat_result.st_mode) and stat_result.st_nlink > 1:
+        return f"Path target has multiple hardlinks (st_nlink={stat_result.st_nlink}); refusing access"
+    return None
+
+
+def _check_denied_path(path: str) -> str | None:
+    """Return a human-readable error if `path` references a credential pattern.
+
+    Pure-string check — runs against the agent-supplied path before any
+    resolution or I/O. Matches are case-insensitive. See module-level
+    `_DENY_*` constants for the rule set.
+    """
+    parts = PureWindowsPath(path).parts
+    if not parts:
+        return None
+    # Directory components — match against `_DENY_PATH_FRAGMENTS` exactly
+    # (case-folded). Skip the last component (it is the basename, checked
+    # separately so a deny-suffix like `.key` does not match a directory
+    # whose name happens to end in that suffix).
+    for component in parts[:-1]:
+        if component.endswith(("\\", "/")) or component in (".", ".."):
+            continue
+        if component.lower() in _DENY_PATH_FRAGMENTS:
+            return f"Path component {component!r} is on the sandbox deny-list (sensitive directory)"
+    basename = parts[-1].lower()
+    if basename in _DENY_BASENAME_LITERALS:
+        return f"Basename {parts[-1]!r} is on the sandbox deny-list (sensitive file)"
+    for prefix in _DENY_BASENAME_PREFIXES:
+        if basename.startswith(prefix):
+            return f"Basename {parts[-1]!r} matches sensitive prefix {prefix!r} (denied)"
+    for suffix in _DENY_BASENAME_SUFFIXES:
+        if basename.endswith(suffix):
+            return f"Basename {parts[-1]!r} matches sensitive suffix {suffix!r} (denied)"
+    return None
 
 
 def _check_windows_portability(path: str) -> str | None:
@@ -412,11 +519,15 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         if portability_error := _check_windows_portability(path):
             raise PermissionError(portability_error)
+        if denied_error := _check_denied_path(path):
+            raise PermissionError(denied_error)
         root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
             msg = f"Path escapes workspace boundary: {path}"
             raise PermissionError(msg)
+        if hardlink_error := _check_hardlink(candidate):
+            raise PermissionError(hardlink_error)
         return candidate
 
     def _read_file(self, path: str, offset: int | None = None, limit: int | None = None) -> dict:
@@ -441,15 +552,14 @@ class FileSystemToolComponent(Component):
             }
 
         try:
-            with resolved.open("rb") as fh:
-                head = fh.read(BINARY_SNIFF_BYTES)
+            head = _read_head_no_follow(resolved, BINARY_SNIFF_BYTES)
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
         if _looks_binary(head):
             return {"error": f"Refusing to read binary file: {path}", "path": path}
 
         try:
-            text = resolved.read_text(encoding="utf-8", errors="replace")
+            text = _read_bytes_no_follow(resolved).decode("utf-8", errors="replace")
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
 
@@ -488,7 +598,7 @@ class FileSystemToolComponent(Component):
 
         existed = resolved.exists()
         try:
-            resolved.write_bytes(encoded)
+            _write_bytes_no_follow(resolved, encoded)
         except OSError as exc:
             return {"error": f"Cannot write file: {exc.strerror or exc}", "path": path}
 
@@ -526,7 +636,7 @@ class FileSystemToolComponent(Component):
             return {"error": "old_string must not be empty", "path": path}
 
         try:
-            current = resolved.read_text(encoding="utf-8", errors="replace")
+            current = _read_bytes_no_follow(resolved).decode("utf-8", errors="replace")
         except OSError as exc:
             return {"error": f"Cannot read file: {exc.strerror or exc}", "path": path}
 
@@ -572,7 +682,7 @@ class FileSystemToolComponent(Component):
             }
 
         try:
-            resolved.write_bytes(encoded)
+            _write_bytes_no_follow(resolved, encoded)
         except OSError as exc:
             return {"error": f"Cannot write file: {exc.strerror or exc}", "path": path}
 
