@@ -24,6 +24,10 @@ dependencies = [
     # ``pip install langflow`` still pulls the component in -- the AC for B1
     # is "no user-visible change at install time".
     "lfx-duckduckgo>=0.1.0",
+    # Second pilot port (validates src/bundles/PORTING.md): lfx-arxiv ships
+    # ArXivComponent as a standalone Bundle.  Same regular-dep rationale --
+    # ``pip install langflow`` keeps shipping the arxiv component as before.
+    "lfx-arxiv>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -80,6 +84,7 @@ lfx = { workspace = true }
 langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
+lfx-arxiv = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -92,6 +97,7 @@ members = [
     "src/sdk",
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
+    "src/bundles/arxiv",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -424,6 +430,16 @@ external = ["RUF027"]
     "BLE001",  # allow broad-exception catching in tests
     "S104",    # Binding to all interfaces (test servers)
     "S108",    # Insecure temp file usage (safe in tests)
+]
+"src/bundles/*/tests/*" = [
+    "D1",
+    "PLR2004",
+    "S101",
+    "SLF001",
+    "BLE001",  # allow broad-exception catching in tests
+    "S104",    # Binding to all interfaces (test servers)
+    "S108",    # Insecure temp file usage (safe in tests)
+    "INP001",  # Bundle test dirs are not import packages
 ]
 "src/backend/tests/locust/*" = [
     "D1",      # Missing docstrings (CLI tools don't need full docstrings)

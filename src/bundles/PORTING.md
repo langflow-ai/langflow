@@ -308,7 +308,10 @@ wrong:
 # 1. The bundle's manifest is structurally valid.  Point ``validate`` at
 #    the package directory (where extension.json lives), not the bundle
 #    root -- the manifest is nested inside ``src/lfx_<bundle>/`` so the
-#    wheel ships it.
+#    wheel ships it.  The validator accepts both ``def build(self): ...``
+#    and ``outputs = [Output(method="...")]`` shapes; a component that
+#    uses neither will fail with ``build-method-missing`` -- add an
+#    ``outputs`` declaration in that case.
 uv run lfx extension validate src/bundles/<bundle>/src/lfx_<bundle>
 
 # 2. Workspace resolves and the bundle is importable.

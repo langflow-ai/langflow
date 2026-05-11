@@ -26,6 +26,7 @@ members = [
     "langflow-base",
     "langflow-sdk",
     "lfx",
+    "lfx-arxiv",
     "lfx-duckduckgo",
 ]
 overrides = [
@@ -6386,6 +6387,7 @@ version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
+    { name = "lfx-arxiv" },
     { name = "lfx-duckduckgo" },
 ]
 
@@ -6473,6 +6475,7 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
@@ -7877,6 +7880,21 @@ integration = [
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-openai", specifier = ">=1.1.12,<2.0.0" },
     { name = "lxml", specifier = ">=5.0.0" },
+]
+
+[[package]]
+name = "lfx-arxiv"
+version = "0.1.0"
+source = { editable = "src/bundles/arxiv" }
+dependencies = [
+    { name = "defusedxml" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]

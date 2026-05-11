@@ -20,6 +20,26 @@
       "legacy_slot": "ext:duckduckgo:DuckDuckGoSearchComponent@official-pre-a",
       "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.arxiv.arxiv.ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.arxiv.ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:arxiv:ArXivComponent@official-pre-a",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [
