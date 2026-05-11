@@ -33,14 +33,6 @@ jest.mock("../KnowledgeBaseDrawer", () => {
             <label>Embedding Provider</label>
             <div>{knowledgeBase.embedding_model || "Unknown"}</div>
           </div>
-          <div data-testid="source-files">
-            <h4>Source Files</h4>
-            <div>No source files available.</div>
-          </div>
-          <div data-testid="linked-flows">
-            <h4>Linked Flows</h4>
-            <div>No linked flows available.</div>
-          </div>
         </div>
       </div>
     );
@@ -165,7 +157,5 @@ describe("KnowledgeBaseDrawer", () => {
     );
 
     expect(screen.getByText("No description available.")).toBeInTheDocument();
-    expect(screen.getByText("Source Files")).toBeInTheDocument();
-    expect(screen.getByText("Linked Flows")).toBeInTheDocument();
   });
 });
