@@ -4602,11 +4602,7 @@
   "components.memorybase.inputs.top_k.display_name.9bfd228f": "Top K Results",
   "components.memorybase.inputs.top_k.info.be18489f": "Number of top results to return.",
   "components.memorybase.outputs.retrieve_data.display_name.219c4a6c": "Results",
-<<<<<<< HEAD
   "components.memorybase.outputs.retrieve_data.info.79c8e312": "Returns matching memory chunks. Scoped to the current session by default; turn 'Filter by Session' off to retrieve across sessions.",
-=======
-  "components.memorybase.outputs.retrieve_data.info.5388f56f": "Returns matching memory chunks scoped to the current session.",
->>>>>>> release-1.10.0
   "components.mergedatacomponent.description.060578fe": "Combines data using different operations",
   "components.mergedatacomponent.display_name.9723ac83": "Combine Data",
   "components.mergedatacomponent.inputs.data_inputs.display_name.cbf37dd2": "Data Inputs",
