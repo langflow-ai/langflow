@@ -135,13 +135,20 @@ async def test_redis_queue_wrapper_self_terminates_on_key_deletion():
 
 @pytest.mark.asyncio
 async def test_redis_queue_wrapper_empty_reflects_buffer():
-    """empty() reports the state of the local buffer, not Redis directly."""
+    """empty() reports the local buffer state after the first XREAD completes.
+
+    Before the first XREAD returns, empty() always returns False so that the
+    while-not-empty drain loop in build.py suspends on get() and yields to the
+    event loop, giving the fill task a chance to populate the buffer.
+    """
     fake_client = fakeredis_aio.FakeRedis()
     job_id = str(uuid.uuid4())
     stream_key = f"langflow:queue:{job_id}"
 
     wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
-    assert wrapper.empty()
+    # Before the first XREAD completes, empty() returns False regardless of
+    # the actual buffer state (warm-up guard for the build.py drain loop).
+    assert not wrapper.empty()
 
     await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"})
     await fake_client.xadd(
@@ -159,13 +166,20 @@ async def test_redis_queue_wrapper_empty_reflects_buffer():
 
 @pytest.mark.asyncio
 async def test_redis_queue_wrapper_put_nowait_is_noop():
-    """put_nowait on the consumer-side wrapper is a no-op (does not raise)."""
+    """put_nowait on the consumer-side wrapper is a no-op (does not raise).
+
+    The wrapper is consumer-only; producers write via the bridge task.  Calling
+    put_nowait must not add anything to the internal buffer.  We check the
+    underlying _buffer directly so the test is independent of the _first_read_done
+    warm-up guard that empty() applies.
+    """
     fake_client = fakeredis_aio.FakeRedis()
     job_id = str(uuid.uuid4())
     wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
 
     wrapper.put_nowait(("e1", b"data", 1.0))
-    assert wrapper.empty()
+    # Check the raw buffer — put_nowait must not have added any item to it.
+    assert wrapper._buffer.empty()
 
     await wrapper.cancel()
     await fake_client.aclose()
