@@ -429,7 +429,7 @@ class AuthService(BaseAuthService):
             raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
         try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
+            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id, user_id=authenticated_user.id)
             if flow_owner is None:
                 raise HTTPException(status_code=404, detail="Flow not found")
         except HTTPException:

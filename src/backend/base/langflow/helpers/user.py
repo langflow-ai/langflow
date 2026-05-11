@@ -8,13 +8,18 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User, UserRead
 
 
-async def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str) -> UserRead | None:
+async def get_user_by_flow_id_or_endpoint_name(
+    flow_id_or_name: str, user_id: str | UUID | None = None
+) -> UserRead | None:
     async with session_scope_readonly() as session:
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
         except ValueError:
             stmt = select(Flow).where(Flow.endpoint_name == flow_id_or_name)
+            if user_id:
+                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+                stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
 
         if flow is None:

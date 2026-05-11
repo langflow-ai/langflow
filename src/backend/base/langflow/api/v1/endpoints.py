@@ -764,8 +764,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
-    flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    flow_id_or_name: str,
     user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
     request: Request,
 ):
@@ -778,11 +777,7 @@ async def webhook_events_stream(
     The user must own the flow to subscribe to its events.
     """
     # Verify user owns the flow
-    if str(flow.user_id) != str(user.id):
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Access denied: You can only subscribe to events for flows you own",
-        )
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -824,7 +819,6 @@ async def webhook_events_stream(
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
     flow_id_or_name: str,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
     request: Request,
 ):
     """Run a flow using a webhook request.
@@ -847,6 +841,7 @@ async def webhook_run_flow(
 
     # Get the appropriate user for webhook execution based on auth settings
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id)
 
     try:
         data = await request.body()
