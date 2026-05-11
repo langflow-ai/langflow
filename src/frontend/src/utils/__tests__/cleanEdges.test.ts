@@ -17,8 +17,25 @@ const scapeJSONParse = (str: string) => {
   }
 };
 
+const customStringify = (obj: any): string => {
+  if (typeof obj === "undefined") return "null";
+  if (obj === null || typeof obj !== "object") {
+    if (obj instanceof Date) return `"${obj.toISOString()}"`;
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    const arrayItems = obj.map((item) => customStringify(item)).join(",");
+    return `[${arrayItems}]`;
+  }
+  const keys = Object.keys(obj).sort();
+  const keyValuePairs = keys.map(
+    (key) => `"${key}":${customStringify(obj[key])}`,
+  );
+  return `{${keyValuePairs.join(",")}}`;
+};
+
 const scapedJSONStringfy = (obj: unknown) => {
-  return JSON.stringify(obj).replace(/"/g, "œ");
+  return customStringify(obj).replace(/"/g, "œ");
 };
 
 // Define minimal types needed for testing
@@ -229,18 +246,24 @@ function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type === "genericNode") {
-        const output =
-          sourceNode.data.node.outputs?.find(
-            (o) => o.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node.outputs?.find(
-            (o) =>
-              (o.selected ||
-                (sourceNode.data.node.outputs?.filter(
-                  (out) => !out.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              o.name === name,
-          );
+        // For components with group_outputs, each output has its own handle,
+        // so we must NOT use selected_output (which would match the wrong output).
+        const hasGroupOutputs = sourceNode.data.node.outputs?.some(
+          (o) => o.group_outputs,
+        );
+        const outputBySelectedOutput = hasGroupOutputs
+          ? undefined
+          : sourceNode.data.node.outputs?.find(
+              (o) => o.name === sourceNode.data.selected_output,
+            );
+        const outputByFallback = sourceNode.data.node.outputs?.find(
+          (o) =>
+            (o.selected ||
+              (sourceNode.data.node.outputs?.filter((out) => !out.group_outputs)
+                ?.length ?? 0) <= 1) &&
+            o.name === name,
+        );
+        const output = outputBySelectedOutput ?? outputByFallback;
 
         if (output) {
           const outputTypes =
@@ -562,6 +585,91 @@ describe("cleanEdges", () => {
       const result = cleanEdges([sourceNode, targetNode], [edge]);
 
       // Edge should be preserved because cleanEdges now defaults to ["Embeddings"] for embedding model_type
+      expect(result.edges.length).toBe(1);
+      expect(result.brokenEdges.length).toBe(0);
+    });
+  });
+
+  describe("group_outputs edge preservation", () => {
+    it("should preserve edge from non-selected output when component has group_outputs", () => {
+      // Bug: When a component has group_outputs: true and selected_output is set to one output,
+      // cleanEdges incorrectly uses selected_output to look up ALL edges, causing edges
+      // from non-selected outputs to be removed (name mismatch).
+      const sourceNode: AllNodeType = {
+        id: "AgentSplit-1",
+        type: "genericNode",
+        data: {
+          id: "AgentSplit-1",
+          type: "AgentWithSplitOutputs",
+          selected_output: "progress_output",
+          node: {
+            display_name: "Agent with Split Outputs",
+            template: {},
+            outputs: [
+              {
+                name: "progress_output",
+                types: ["Message"],
+                selected: "Message",
+                group_outputs: true,
+              },
+              {
+                name: "result_output",
+                types: ["Message"],
+                selected: "Message",
+                group_outputs: true,
+              },
+            ],
+          },
+        },
+      };
+
+      const targetNode: AllNodeType = {
+        id: "TypeConvert-1",
+        type: "genericNode",
+        data: {
+          id: "TypeConvert-1",
+          type: "TypeConverterComponent",
+          node: {
+            display_name: "Type Convert",
+            template: {
+              input_value: {
+                type: "other",
+                input_types: ["Message"],
+              },
+            },
+            outputs: [],
+          },
+        },
+      };
+
+      // Edge connects result_output (NOT the selected_output) to Type Convert
+      const sourceHandleStr = scapedJSONStringfy({
+        dataType: "AgentWithSplitOutputs",
+        id: "AgentSplit-1",
+        name: "result_output",
+        output_types: ["Message"],
+      });
+
+      const targetHandleStr = scapedJSONStringfy({
+        fieldName: "input_value",
+        id: "TypeConvert-1",
+        inputTypes: ["Message"],
+        type: "other",
+      });
+
+      const edge: EdgeType = {
+        id: "edge-result-to-convert",
+        source: "AgentSplit-1",
+        target: "TypeConvert-1",
+        sourceHandle: sourceHandleStr,
+        targetHandle: targetHandleStr,
+      };
+
+      const result = cleanEdges([sourceNode, targetNode], [edge]);
+
+      // Edge MUST be preserved — the bug was that selected_output: "progress_output"
+      // caused cleanEdges to look up "progress_output" instead of "result_output",
+      // resulting in a name mismatch and edge removal
       expect(result.edges.length).toBe(1);
       expect(result.brokenEdges.length).toBe(0);
     });

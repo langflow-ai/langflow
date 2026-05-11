@@ -1,8 +1,64 @@
 import tempfile
 import uuid
+from uuid import UUID
 
 from fastapi import status
 from httpx import AsyncClient
+
+
+async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
+    from langflow.services.database.models.deployment.model import Deployment
+    from langflow.services.database.models.deployment_provider_account.model import (
+        DeploymentProviderAccount,
+        DeploymentProviderKey,
+    )
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from langflow.services.database.models.flow_version_deployment_attachment.model import (
+        FlowVersionDeploymentAttachment,
+    )
+    from langflow.services.deps import session_scope
+    from lfx.services.adapters.deployment.schema import DeploymentType
+
+    async with session_scope() as session:
+        provider = DeploymentProviderAccount(
+            user_id=user_id,
+            name=f"provider-{flow_id.hex[:8]}",
+            provider_tenant_id="tenant-1",
+            provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+            provider_url=f"https://provider-{flow_id.hex[:8]}.example.com",
+            api_key="encrypted-value",  # pragma: allowlist secret
+        )
+        session.add(provider)
+        await session.flush()
+
+        deployment = Deployment(
+            user_id=user_id,
+            project_id=project_id,
+            deployment_provider_account_id=provider.id,
+            resource_key=f"rk-{flow_id.hex[:8]}",
+            name=f"deployment-{flow_id.hex[:8]}",
+            deployment_type=DeploymentType.AGENT,
+        )
+        session.add(deployment)
+        await session.flush()
+
+        flow_version = FlowVersion(
+            flow_id=flow_id,
+            user_id=user_id,
+            version_number=1,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow_version)
+        await session.flush()
+
+        attachment = FlowVersionDeploymentAttachment(
+            user_id=user_id,
+            flow_version_id=flow_version.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id=f"snapshot-{flow_id.hex[:8]}",
+        )
+        session.add(attachment)
+        await session.commit()
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
@@ -151,6 +207,75 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     assert result["name"] == updated_name, "The name must be updated"
 
 
+async def test_patch_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
+    """Test that PATCH preserves endpoint_name when the field is omitted."""
+    initial_flow = {
+        "name": "patch_endpoint_flow",
+        "endpoint_name": "keep_patch_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "patch_endpoint_flow_updated"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] == "keep_patch_endpoint"
+
+
+async def test_patch_flow_allows_clearing_endpoint_with_null(client: AsyncClient, logged_in_headers):
+    """Test that PATCH clears endpoint_name when it is explicitly set to null."""
+    initial_flow = {
+        "name": "patch_clear_endpoint_flow",
+        "endpoint_name": "clear_patch_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"endpoint_name": None},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] is None
+
+
+async def test_patch_flow_updates_access_and_action_fields(client: AsyncClient, logged_in_headers):
+    """PATCH should persist public-sharing and MCP action metadata fields."""
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "patch_access_type_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "access_type": "PUBLIC",
+            "action_name": "shared_action",
+            "action_description": "Shared flow action",
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["access_type"] == "PUBLIC"
+    assert result["action_name"] == "shared_action"
+    assert result["action_description"] == "Shared flow action"
+
+
 async def test_create_flows(client: AsyncClient, logged_in_headers):
     amount_flows = 10
     basic_case = {
@@ -162,7 +287,6 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
         "is_component": False,
         "webhook": False,
         "tags": ["string"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     cases = []
     for i in range(amount_flows):
@@ -177,6 +301,43 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_201_CREATED
     assert isinstance(result, list), "The result must be a list"
     assert len(result) == amount_flows, "The result must have the same amount of flows"
+
+
+async def test_create_flows_with_explicit_folder(client: AsyncClient, logged_in_headers):
+    project_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "batch-folder-target", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_response.status_code == status.HTTP_201_CREATED
+    project_id = project_response.json()["id"]
+
+    amount_flows = 3
+    basic_case = {
+        "description": "string",
+        "icon": "string",
+        "icon_bg_color": "#ff00ff",
+        "gradient": "string",
+        "data": {},
+        "is_component": False,
+        "webhook": False,
+        "tags": ["string"],
+        "folder_id": project_id,
+    }
+    cases = []
+    for i in range(amount_flows):
+        case = basic_case.copy()
+        case["name"] = f"string_folder_{i}"
+        case["endpoint_name"] = f"string_folder_{i}"
+        cases.append(case)
+
+    response = await client.post("api/v1/flows/batch/", json={"flows": cases}, headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert isinstance(result, list), "The result must be a list"
+    assert len(result) == amount_flows, "The result must have the same amount of flows"
+    assert all(item["folder_id"] == project_id for item in result), "All flows must be created in the target folder"
 
 
 async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
@@ -718,6 +879,48 @@ async def test_upsert_flow_keeps_existing_folder_on_update_when_not_provided(cli
     assert result["folder_id"] == original_folder_id  # Folder unchanged
 
 
+async def test_upsert_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
+    """Test that PUT preserves endpoint_name when it is omitted during update."""
+    initial_flow = {
+        "name": "upsert_endpoint_flow",
+        "endpoint_name": "keep_upsert_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "upsert_endpoint_flow_updated", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] == "keep_upsert_endpoint"
+
+
+async def test_upsert_flow_allows_clearing_endpoint_with_null(client: AsyncClient, logged_in_headers):
+    """Test that PUT clears endpoint_name when it is explicitly set to null."""
+    initial_flow = {
+        "name": "upsert_clear_endpoint_flow",
+        "endpoint_name": "clear_upsert_endpoint",
+        "data": {},
+    }
+    create_response = await client.post("api/v1/flows/", json=initial_flow, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "upsert_clear_endpoint_flow", "endpoint_name": None, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["endpoint_name"] is None
+
+
 async def test_upsert_flow_ignores_user_id_from_body(client: AsyncClient, logged_in_headers, active_user):
     """Test that PUT ignores user_id from body and uses current user."""
     specified_id = str(uuid.uuid4())
@@ -752,3 +955,136 @@ async def test_upsert_flow_allows_updating_own_flow_name(client: AsyncClient, lo
     result = response.json()
     assert result["name"] == "self_update_flow"
     assert result["description"] == "updated"
+
+
+async def test_delete_flow_with_deployed_versions_returns_409(client: AsyncClient, logged_in_headers, active_user):
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-delete-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_payload = flow_resp.json()
+    flow_id = UUID(flow_payload["id"])
+    source_project_id = UUID(flow_payload["folder_id"])
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=flow_id,
+        project_id=source_project_id,
+    )
+
+    delete_resp = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert delete_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be deleted because it has deployed versions" in delete_resp.json()["detail"].lower()
+
+
+async def test_bulk_delete_with_deployed_flow_returns_409(client: AsyncClient, logged_in_headers, active_user):
+    deployed_flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-bulk-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert deployed_flow_resp.status_code == status.HTTP_201_CREATED
+    deployed_payload = deployed_flow_resp.json()
+    deployed_flow_id = UUID(deployed_payload["id"])
+    source_project_id = UUID(deployed_payload["folder_id"])
+
+    undeployed_flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "undeployed-bulk-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert undeployed_flow_resp.status_code == status.HTTP_201_CREATED
+    undeployed_flow_id = undeployed_flow_resp.json()["id"]
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=deployed_flow_id,
+        project_id=source_project_id,
+    )
+
+    delete_resp = await client.request(
+        "DELETE",
+        "api/v1/flows/",
+        json=[str(deployed_flow_id), undeployed_flow_id],
+        headers=logged_in_headers,
+    )
+    assert delete_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be deleted because it has deployed versions" in delete_resp.json()["detail"].lower()
+
+
+async def test_patch_flow_folder_move_with_deployed_versions_returns_409(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-patch-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_payload = flow_resp.json()
+    flow_id = flow_payload["id"]
+    source_project_id = UUID(flow_payload["folder_id"])
+
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "patch-target-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    target_project_id = project_resp.json()["id"]
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=UUID(flow_id),
+        project_id=source_project_id,
+    )
+
+    patch_resp = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"folder_id": target_project_id},
+        headers=logged_in_headers,
+    )
+    assert patch_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in patch_resp.json()["detail"].lower()
+
+
+async def test_upsert_flow_folder_move_with_deployed_versions_returns_409(
+    client: AsyncClient, logged_in_headers, active_user
+):
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "deployed-put-flow", "data": {"nodes": [], "edges": []}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_payload = flow_resp.json()
+    flow_id = flow_payload["id"]
+    source_project_id = UUID(flow_payload["folder_id"])
+
+    project_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "put-target-project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_resp.status_code == status.HTTP_201_CREATED
+    target_project_id = project_resp.json()["id"]
+
+    await _attach_deployment_to_flow(
+        user_id=active_user.id,
+        flow_id=UUID(flow_id),
+        project_id=source_project_id,
+    )
+
+    put_resp = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": "deployed-put-flow-updated",
+            "data": {"nodes": [], "edges": []},
+            "folder_id": target_project_id,
+        },
+        headers=logged_in_headers,
+    )
+    assert put_resp.status_code == status.HTTP_409_CONFLICT
+    assert "cannot be moved to another project" in put_resp.json()["detail"].lower()

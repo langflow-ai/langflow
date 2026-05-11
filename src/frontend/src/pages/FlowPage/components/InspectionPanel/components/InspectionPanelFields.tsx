@@ -14,6 +14,7 @@ import type { NodeDataType, targetHandleType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
+import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -50,6 +51,15 @@ export default function InspectionPanelFields({
       .filter((templateField) => {
         const template = data.node?.template[templateField];
         if (isInternalField(templateField)) return false;
+        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
+        if (INSPECTION_PANEL_ONLY_FIELDS[data.type]?.includes(templateField))
+          return false;
+        if (
+          data.type === "APIRequest" &&
+          templateField === "body" &&
+          data.node?.template?.method?.value === "GET"
+        )
+          return false;
         if (!template?.show) return false;
         if (isCodeField(templateField, template)) return false;
         if (isToolModeEnabled(template) && isToolMode) return false;
@@ -77,6 +87,13 @@ export default function InspectionPanelFields({
     return Object.keys(data.node?.template || {})
       .filter((templateField) => {
         const template = data.node?.template[templateField];
+        if (HIDDEN_FIELDS[data.type]?.includes(templateField)) return false;
+        if (
+          data.type === "APIRequest" &&
+          templateField === "body" &&
+          data.node?.template?.method?.value === "GET"
+        )
+          return false;
         return shouldRenderInspectionPanelField(
           templateField,
           template,

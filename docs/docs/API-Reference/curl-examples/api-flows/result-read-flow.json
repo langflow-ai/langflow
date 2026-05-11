@@ -1,0 +1,12 @@
+{
+  "name": "Basic Prompting",
+  "description": "Perform basic prompting with an OpenAI model.",
+  "icon": "Braces",
+  "icon_bg_color": null,
+  "gradient": "2",
+  "data": {
+    "nodes": [
+     ...
+    ]
+  }
+}

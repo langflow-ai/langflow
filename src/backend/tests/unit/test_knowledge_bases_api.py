@@ -110,6 +110,48 @@ class TestGetKBMetaData:
         assert result["chunks"] == 10
         assert result["embedding_provider"] == "OpenAI"
 
+    @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
+    @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper.update_text_metrics")
+    def test_get_metadata_fast_recounts_stale_zero_chunk_metadata(
+        self, mock_update_metrics, mock_get_directory_size, mock_kb_path
+    ):
+        metadata_file = mock_kb_path / "embedding_metadata.json"
+        sample_meta = {
+            "chunks": 0,
+            "words": 0,
+            "characters": 0,
+            "avg_chunk_size": 0.0,
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+            "id": "test-uuid",
+            "size": 128,
+            "source_types": [],
+            "chunk_size": None,
+            "chunk_overlap": None,
+            "separator": None,
+        }
+        metadata_file.write_text(json.dumps(sample_meta))
+        (mock_kb_path / "chroma.sqlite3").write_text("")
+        mock_get_directory_size.return_value = 4096
+
+        def populate_metrics(_kb_path, metadata):
+            metadata.update({"chunks": 2, "words": 3, "characters": 14, "avg_chunk_size": 7.0})
+
+        mock_update_metrics.side_effect = populate_metrics
+
+        result = KBAnalysisHelper.get_metadata(mock_kb_path, fast=True)
+        stored_metadata = json.loads(metadata_file.read_text())
+
+        assert result["chunks"] == 2
+        assert result["words"] == 3
+        assert result["characters"] == 14
+        assert result["avg_chunk_size"] == 7.0
+        assert result["size"] == 4096
+        assert stored_metadata["chunks"] == 2
+        assert stored_metadata["size"] == 4096
+        mock_update_metrics.assert_called_once()
+        mock_get_directory_size.assert_called_once_with(mock_kb_path)
+
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper._detect_embedding_provider")
     @patch("langflow.api.utils.kb_helpers.KBAnalysisHelper._detect_embedding_model")
     @patch("langflow.api.utils.kb_helpers.KBStorageHelper.get_directory_size")
@@ -169,6 +211,128 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_kb_path_traversal_single_level(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Single-level traversal '../victim_user/evil_kb' in POST must be blocked with 400/403.
+
+        VULNERABILITY: the create endpoint builds kb_path = kb_root_path / kb_user / kb_name
+        without resolve() or is_relative_to(), so '../victim_user/evil_kb' escapes the user dir.
+        """
+        mock_root.return_value = tmp_path
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_dir = tmp_path / "victim_user" / "evil_kb"
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "../victim_user/evil_kb",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code in (400, 403), (
+            f"VULNERABILITY CONFIRMED: create endpoint accepted traversal payload with status {response.status_code}"
+        )
+        assert not victim_dir.exists(), (
+            "VULNERABILITY CONFIRMED: path traversal created a directory outside the user's KB root"
+        )
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_kb_path_traversal_absolute_path(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Absolute path in kb_name must be blocked — e.g. '/tmp/evil'.
+
+        VULNERABILITY: kb_root_path / kb_user / '/tmp/evil' resolves to '/tmp/evil' in Python
+        because Path drops all previous components when a segment starts with '/'.
+        """
+        mock_root.return_value = tmp_path
+        (tmp_path / "activeuser").mkdir(parents=True)
+        evil_dir = tmp_path / "evil_absolute"
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": str(evil_dir),
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code in (400, 403), (
+            f"VULNERABILITY CONFIRMED: create endpoint accepted absolute path payload "
+            f"with status {response.status_code}"
+        )
+        assert not evil_dir.exists(), (
+            "VULNERABILITY CONFIRMED: absolute path in kb_name created a directory outside the KB root"
+        )
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_kb_path_traversal_prefix_ambiguity(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Prefix-ambiguity attack on create: user='activeuser', target dir='activeuser_evil'.
+
+        With startswith('/root/activeuser'), the path '/root/activeuser_evil/secret_kb'
+        incorrectly passes because the string starts with '/root/activeuser'.
+        is_relative_to() closes this gap and must block the request with 400/403.
+        """
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "activeuser_evil" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "../activeuser_evil/secret_kb",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code in (400, 403), (
+            "VULNERABILITY CONFIRMED: prefix-ambiguity bypass succeeded on create endpoint — "
+            "startswith() may still be in use instead of is_relative_to()"
+        )
+        assert not (tmp_path / "activeuser_evil" / "secret_kb_new").exists(), (
+            "VULNERABILITY CONFIRMED: prefix-ambiguity attack created a directory outside the user's KB root"
+        )
+
+    @patch("langflow.api.v1.knowledge_bases.logger.warning")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_kb_path_traversal_logs_warning(
+        self, mock_root, mock_warning, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """A traversal attempt on create must emit a warning log with user= and kb_name= context."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        (tmp_path / "victim_user" / "secret_kb").mkdir(parents=True)
+
+        await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": "../victim_user/secret_kb",
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        mock_warning.assert_called_once()
+        warning_args = mock_warning.call_args[0]
+        all_args_str = str(warning_args)
+        assert "user=" in all_args_str, "Warning log must contain 'user=' in the format string"
+        assert "kb_name=" in all_args_str, "Warning log must contain 'kb_name=' in the format string"
 
     async def test_create_kb_name_too_short(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
@@ -295,6 +459,127 @@ class TestKnowledgeBaseAPI:
         assert mock_delete.called
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_single_level(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Single-level traversal '../victim_user/secret_kb' must be blocked with 403."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "victim_user" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../victim_user/secret_kb"]},
+        )
+
+        assert response.status_code == 403, (
+            f"VULNERABILITY CONFIRMED: server accepted traversal payload with status {response.status_code}"
+        )
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: path traversal deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_multi_level(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Multi-level traversal '../../other_path' must also be blocked."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "other_root" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../../other_root/secret_kb"]},
+        )
+
+        assert response.status_code == 403
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: multi-level traversal deleted data outside user dir"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_prefix_ambiguity(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """Prefix-ambiguity attack: user='activeuser', target dir='activeuser_evil'.
+
+        With startswith('/root/activeuser'), the path '/root/activeuser_evil/kb' incorrectly
+        passes because the string starts with '/root/activeuser'. is_relative_to() closes this gap.
+        """
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "activeuser_evil" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../activeuser_evil/secret_kb"]},
+        )
+
+        assert response.status_code == 403, (
+            "VULNERABILITY CONFIRMED: prefix-ambiguity bypass succeeded — "
+            "startswith() may still be in use instead of is_relative_to()"
+        )
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: prefix-ambiguity attack deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_encoded_sequences(
+        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """URL-encoded traversal sequences in the JSON body must not bypass path validation.
+
+        '%2e%2e%2f' in a JSON body is NOT decoded by Python's Path — it is treated as a
+        literal directory name, so Path.resolve() keeps it inside the user directory.
+        The endpoint must return 404 (no such literal dir) rather than 200.
+        """
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        victim_kb = tmp_path / "victim_user" / "secret_kb"
+        victim_kb.mkdir(parents=True)
+
+        response = await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["%2e%2e%2fvictim_user%2fsecret_kb"]},
+        )
+
+        # The encoded string is not a real directory — expect 404, not 200
+        assert response.status_code == 404
+        assert victim_kb.exists(), "VULNERABILITY CONFIRMED: encoded traversal deleted another user's KB"
+
+    @patch("langflow.api.v1.knowledge_bases.logger")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_bulk_delete_path_traversal_logs_warning(
+        self, mock_root, mock_logger, client: AsyncClient, logged_in_headers, tmp_path
+    ):
+        """A traversal attempt must emit a warning log with user context."""
+        mock_root.return_value = tmp_path
+
+        (tmp_path / "activeuser").mkdir(parents=True)
+        (tmp_path / "victim_user" / "secret_kb").mkdir(parents=True)
+
+        await client.request(
+            "DELETE",
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={"kb_names": ["../victim_user/secret_kb"]},
+        )
+
+        mock_logger.warning.assert_called_once()
+        warning_args = mock_logger.warning.call_args[0]
+        assert "activeuser" in str(warning_args), "Warning log must include the requesting user"
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
     @patch("langflow.api.v1.knowledge_bases.get_job_service")
     @patch("langflow.api.v1.knowledge_bases.get_task_service")
@@ -408,6 +693,20 @@ class TestKnowledgeBaseAPI:
         data = response.json()
         assert data["page"] == 2
         mock_collection.get.assert_called_with(include=["documents", "metadatas"], limit=10, offset=10)
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_get_chunks_non_existent_kb_returns_404(
+        self,
+        mock_root,
+        client: AsyncClient,
+        logged_in_headers,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+
+        response = await client.get("api/v1/knowledge_bases/MissingKB/chunks", headers=logged_in_headers)
+
+        assert response.status_code == 404
 
 
 class TestPerformIngestionTask:

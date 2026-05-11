@@ -1,5 +1,6 @@
 import type { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toCamelCase } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../components/common/genericIconComponent";
 import TableComponent from "../../../../components/core/parameterRenderComponent/components/tableComponent";
@@ -10,6 +11,7 @@ import CellRenderShortcuts from "./CellRenderWrapper";
 import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
+  const { t } = useTranslation();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
@@ -17,14 +19,14 @@ export default function ShortcutsPage() {
   // Column Definitions: Defines the columns to be displayed.
   const colDefs: ColDef[] = [
     {
-      headerName: "Functionality",
+      headerName: t("shortcuts.columnFunctionality"),
       field: "display_name",
       flex: 1,
       editable: false,
       resizable: false,
     }, //This column will be twice as wide as the others
     {
-      headerName: "Keyboard Shortcut",
+      headerName: t("shortcuts.columnKeyboardShortcut"),
       field: "shortcut",
       flex: 2,
       editable: false,
@@ -63,14 +65,14 @@ export default function ShortcutsPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Shortcuts
+            {t("shortcuts.title")}
             <ForwardedIconComponent
               name="Keyboard"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage Shortcuts for quick access to frequently used actions.
+            {t("shortcuts.description")}
           </p>
         </div>
         <div>
@@ -95,7 +97,7 @@ export default function ShortcutsPage() {
                 onClick={handleRestore}
               >
                 <ForwardedIconComponent name="RotateCcw" className="w-4" />
-                Restore
+                {t("shortcuts.restoreButton")}
               </Button>
             </div>
           </div>

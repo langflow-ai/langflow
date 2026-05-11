@@ -1,0 +1,107 @@
+name: GP Download Translations
+
+on:
+  schedule:
+    - cron: "0 23 * * *" # 11 PM UTC — 1h before nightly build at midnight
+  workflow_dispatch:
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    name: Download translations from Globalization Pipeline
+    environment: GP-test
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Resolve latest release branch
+        id: resolve-branch
+        run: |
+          BRANCH=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+            | awk '{print $2}' \
+            | sed 's|refs/heads/||' \
+            | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n 1)
+          if [ -z "$BRANCH" ]; then
+            echo "No release-* branch found in ${{ github.repository }}"
+            exit 1
+          fi
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          echo "Using release branch: $BRANCH"
+
+      - name: Checkout release branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.resolve-branch.outputs.branch }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Download translations from GP
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BUNDLE: ${{ vars.GP_BUNDLE }}
+        run: python download_translations.py --output ../../src/frontend/src/locales/
+
+      - name: Close stale translation PRs
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            for (const pull of pulls) {
+              if (pull.title === "chore: update translations from Globalization Pipeline") {
+                await github.rest.pulls.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pull.number,
+                  state: 'closed'
+                });
+              }
+            }
+
+      - name: Create Pull Request
+        id: create-pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch-token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ steps.resolve-branch.outputs.branch }}
+          commit-message: "chore: update translations from Globalization Pipeline [skip ci]"
+          title: "chore: update translations from Globalization Pipeline"
+          body: |
+            Automated PR to update locale files from IBM Globalization Pipeline.
+
+            This PR was automatically created by the `gp-download` workflow.
+            If no files changed, this PR will be empty and can be closed.
+          branch: translations/update-gp
+          branch-suffix: timestamp
+          delete-branch: true
+          maintainer-can-modify: true
+          add-paths: src/frontend/src/locales/*.json
+
+      - name: Enable auto-merge
+        if: steps.create-pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} --auto --squash \
+            --repo ${{ github.repository }}
+
+      - name: Report GP download failure
+        if: failure()
+        run: echo "::warning::GP translation download failed — translations may be out of date. Check the 'Download translations from GP' step above for details."

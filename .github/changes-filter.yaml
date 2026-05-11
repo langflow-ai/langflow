@@ -110,3 +110,7 @@ database:
 
 mainpage:
   - "src/frontend/src/pages/MainPage/**"
+
+design-md:
+  - "DESIGN.md"
+  - ".github/workflows/ci.yml"

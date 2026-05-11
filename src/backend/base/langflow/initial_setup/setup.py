@@ -13,11 +13,11 @@ from tempfile import TemporaryDirectory
 from typing import AnyStr
 from uuid import UUID
 
+import aiofiles
 import anyio
 import httpx
 import orjson
 import sqlalchemy as sa
-from aiofile import async_open
 from emoji import demojize, purely_emoji
 from lfx.base.constants import (
     FIELD_FORMAT_ATTRIBUTES,
@@ -28,6 +28,7 @@ from lfx.base.constants import (
 )
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
+from lfx.utils.component_aliases import flatten_components_with_aliases
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
@@ -61,10 +62,7 @@ from langflow.services.deps import (
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
-    # Flatten the all_types_dict for easy access
-    all_types_dict_flat = {
-        key: component for category in all_types_dict.values() for key, component in category.items()
-    }
+    all_types_dict_flat = flatten_components_with_aliases(all_types_dict)
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -76,7 +74,13 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
-            node_data["template"]["code"] = latest_template["code"]
+            node_data["template"]["code"] = deepcopy(latest_template["code"])
+
+            # Sync field_order so the UI renders fields in the correct order
+            latest_field_order = latest_node.get("field_order")
+            if latest_field_order is not None:
+                node_data["field_order"] = latest_field_order
+
             # skip components that are having dynamic values that need to be persisted for templates
 
             if node_type in SKIPPED_COMPONENTS:
@@ -113,7 +117,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":
-                    node_data["template"] = latest_template
+                    node_data["template"] = deepcopy(latest_template)
                 else:
                     for key, value in latest_template.items():
                         if key not in node_data["template"]:
@@ -124,7 +128,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": value,
                                 }
                             )
-                            node_data["template"][key] = value
+                            node_data["template"][key] = deepcopy(value)
                         elif isinstance(value, dict) and value.get("value"):
                             node_changes_log[node_type].append(
                                 {
@@ -146,23 +150,26 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 )
             else:
                 for attr in NODE_FORMAT_ATTRIBUTES:
+                    latest_attr_value = latest_node.get(attr)
+                    current_attr_value = node_data.get(attr)
+
                     if (
                         attr in latest_node
                         # Check if it needs to be updated
-                        and latest_node[attr] != node_data.get(attr)
+                        and latest_attr_value != current_attr_value
                     ):
                         node_changes_log[node_type].append(
                             {
                                 "attr": attr,
-                                "old_value": node_data.get(attr),
-                                "new_value": latest_node[attr],
+                                "old_value": current_attr_value,
+                                "new_value": latest_attr_value,
                             }
                         )
-                        node_data[attr] = latest_node[attr]
+                        node_data[attr] = deepcopy(latest_attr_value)
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
-                        node_data["template"][field_name] = field_dict
+                        node_data["template"][field_name] = deepcopy(field_dict)
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
@@ -189,7 +196,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": field_dict[attr],
                                 }
                             )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                            node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -341,11 +348,11 @@ def update_edges_with_latest_component_versions(project_data):
 
         # Find the corresponding source and target nodes
         source_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("source")),
             None,
         )
         target_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("target")),
             None,
         )
 
@@ -365,7 +372,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                 # Find the new source node
                 source_node = next(
-                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                     None,
                 )
 
@@ -394,7 +401,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                     # Find the new target node
                     target_node = next(
-                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                        (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                         None,
                     )
 
@@ -668,10 +675,30 @@ def get_project_data(project):
 
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
+    """Update starter project JSON file with new data.
+
+    This function attempts to write updated project data back to the source file.
+    In containerized environments with read-only filesystems (e.g., Kubernetes with
+    readOnlyRootFilesystem: true), the write will fail gracefully since the database
+    is the source of truth for project data.
+
+    Args:
+        project_path: Path to the project JSON file
+        project: Project dictionary to update
+        updated_project_data: New project data to write
+    """
     project["data"] = updated_project_data
-    async with async_open(str(project_path), "w", encoding="utf-8") as f:
-        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    await logger.adebug(f"Updated starter project {project['name']} file")
+    try:
+        async with aiofiles.open(str(project_path), "w", encoding="utf-8") as f:
+            await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+        await logger.adebug(f"Updated starter project {project['name']} file")
+    except OSError as e:
+        # Handle read-only filesystem (common in containerized environments)
+        # The database update is the important part - file updates are optional
+        await logger.adebug(
+            f"Could not update starter project file {project['name']} (read-only filesystem): {e}. "
+            "This is expected in containerized environments with read-only root filesystem."
+        )
 
 
 def update_existing_project(
@@ -719,7 +746,7 @@ def create_new_project(
         gradient=project_gradient,
         tags=project_tags,
     )
-    db_flow = Flow.model_validate(new_project, from_attributes=True)
+    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
     session.add(db_flow)
 
 
@@ -796,7 +823,7 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     await logger.adebug("Loading agentic flows")
     async for file in folder.glob("*.json"):
         try:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file), encoding="utf-8") as f:
                 content = await f.read()
             flow = orjson.loads(content)
             agentic_flows.append((file, flow))
@@ -895,7 +922,7 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                         tags=flow_tags,
                         endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
                     )
-                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+                    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
 
                     # Set the ID from JSON if provided
                     if flow_id:
@@ -954,7 +981,7 @@ async def load_flows_from_directory() -> None:
             if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             await logger.ainfo(f"Loading flow from file: {file_path.name}")
-            async with async_open(str(file_path), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file_path), encoding="utf-8") as f:
                 content = await f.read()
             await upsert_flow_from_file(content, file_path.stem, session, user.id)
 

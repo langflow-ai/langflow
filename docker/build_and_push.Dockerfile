@@ -9,7 +9,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -48,6 +48,8 @@ COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+COPY ./src/sdk/README.md /app/src/sdk/README.md
+COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
@@ -73,7 +75,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.12-slim-trixie AS runtime
 
 
 RUN apt-get update \
@@ -97,8 +99,6 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-RUN /app/.venv/bin/pip install --upgrade playwright \
-    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

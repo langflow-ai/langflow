@@ -614,7 +614,7 @@ export default function AccordionPromptComponent({
             {!disabled && (
               <div
                 className={cn(
-                  "absolute top-1 z-10 flex items-center gap-1",
+                  "absolute top-2 z-10 flex items-center gap-1",
                   isScrollable ? "right-3" : "right-1",
                 )}
               >

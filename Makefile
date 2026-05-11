@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -171,7 +171,7 @@ unit_tests_looponfail:
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \
-	uv sync && \
+	uv sync --dev && \
 	uv run pytest tests/unit -v --cov=src/lfx --cov-report=xml --cov-report=html --cov-report=term-missing $(args)
 
 integration_tests:
@@ -229,7 +229,7 @@ unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
 
 lint: install_backend ## run linters
-	@uv run mypy --namespace-packages -p "langflow"
+	@echo "No type checker configured. See PR #12448 for context."
 
 
 
@@ -874,7 +874,7 @@ help_backend: ## show backend-specific commands
 	@echo "$(GREEN)Code Quality:$(NC)"
 	@echo "  $(GREEN)make format_backend$(NC)      - Format backend code (ruff)"
 	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
-	@echo "  $(GREEN)make lint$(NC)                - Run backend linters (mypy)"
+	@echo "  $(GREEN)make lint$(NC)                - Run backend linters"
 	@echo "  $(GREEN)make codespell$(NC)           - Check spelling errors"
 	@echo "  $(GREEN)make fix_codespell$(NC)       - Fix spelling errors automatically"
 	@echo "  $(GREEN)make unsafe_fix$(NC)          - Run ruff with unsafe fixes"
@@ -942,6 +942,7 @@ help_test: ## show testing commands
 	@echo "$(GREEN)Combined Tests:$(NC)"
 	@echo "  $(GREEN)make tests$(NC)               - Run all tests (unit + integration + coverage)"
 	@echo "  $(GREEN)make coverage$(NC)            - Run tests and generate coverage report"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC)            - Run tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Frontend Tests:$(NC)"
 	@echo "  $(GREEN)make tests_frontend$(NC)      - Run Playwright e2e tests"
@@ -958,6 +959,9 @@ help_test: ## show testing commands
 	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
 	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
 	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Combined Frontend Test Coverage:$(NC)"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC) - Run frontend tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Load Testing:$(NC)"
 	@echo "  $(GREEN)make locust$(NC)              - Run locust load tests"
@@ -1067,6 +1071,18 @@ docs_build: docs_install ## build documentation for production
 docs_serve: docs_build ## build and serve documentation locally
 	@echo "$(GREEN)Serving built documentation...$(NC)"
 	@cd docs && npm run serve -- --port $(docs_port)
+
+# Comma-separated list; override e.g. suites=curl,javascript,python
+# Note: $(or $(suites),a,b,c) is wrong here — GNU make's `or` returns only the first non-empty token.
+suites ?= curl,python,javascript
+
+api_examples_local: ## run docs API sample files against a local Langflow server
+	@echo "$(GREEN)Running docs API examples locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=true ./scripts/test-api-examples-local.sh
+
+api_examples_local_syntax: ## syntax-check docs API sample files locally without execution
+	@echo "$(GREEN)Running docs API example syntax checks locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=false ./scripts/test-api-examples-local.sh
 
 ######################
 # INCLUDE FRONTEND MAKEFILE

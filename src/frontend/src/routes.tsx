@@ -9,6 +9,7 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { PlaygroundAuthGate } from "./components/authorization/playgroundAuthGate";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -35,6 +36,7 @@ import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
+import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
 import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
@@ -55,7 +57,9 @@ const router = createBrowserRouter(
         path=""
         element={
           <ContextWrapper key={1}>
-            <PlaygroundPage />
+            <PlaygroundAuthGate>
+              <PlaygroundPage />
+            </PlaygroundAuthGate>
           </ContextWrapper>
         }
       />
@@ -152,6 +156,7 @@ const router = createBrowserRouter(
                     element={<ModelProvidersPage />}
                   />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+                  <Route path="mcp-client" element={<McpClientPage />} />
 
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route

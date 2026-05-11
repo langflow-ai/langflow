@@ -12,12 +12,12 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from langchain.callbacks.base import BaseCallbackHandler
+from langchain_classic.callbacks.base import BaseCallbackHandler
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.schema import AgentAction, AgentFinish, LLMResult
+    from langchain_classic.schema import AgentAction, AgentFinish, LLMResult
     from langchain_core.documents import Document
     from langchain_core.messages import BaseMessage
 
@@ -249,68 +249,22 @@ class NativeCallbackHandler(BaseCallbackHandler):
         )
         self._cleanup_run(run_id)
 
-    def _extract_token_usage(self, response: LLMResult):
-        """Parse token counts from an LLMResult, trying multiple locations for cross-provider compatibility."""
-        llm_output = getattr(response, "llm_output", None) or {}
-        token_usage = llm_output.get("token_usage", {}) if isinstance(llm_output, dict) else {}
-        prompt_tokens = token_usage.get("prompt_tokens")
-        completion_tokens = token_usage.get("completion_tokens")
-        total_tokens = token_usage.get("total_tokens")
+    def _extract_token_usage(self, response: LLMResult) -> tuple[int | None, int | None, int | None]:
+        """Parse token counts from an LLMResult.
 
-        # llm_output is the legacy location; newer LangChain versions moved usage into generations.
-        if not total_tokens:
-            generations = getattr(response, "generations", []) or []
-            for gen_list in generations:
-                for gen in gen_list:
-                    # langchain-core standardized location — preferred when available.
-                    message = getattr(gen, "message", None)
-                    if message is not None:
-                        usage = getattr(message, "usage_metadata", None)
-                        if usage:
-                            _get = usage.get if isinstance(usage, dict) else lambda k, d=None, u=usage: getattr(u, k, d)
-                            prompt_tokens = _get("input_tokens") or prompt_tokens
-                            completion_tokens = _get("output_tokens") or completion_tokens
-                            total_tokens = _get("total_tokens") or total_tokens
+        Delegates to the shared extract_usage_from_llm_result() which handles all
+        extraction strategies (llm_output, usage_metadata, response_metadata, generation_info).
 
-                        # Provider-specific fallback (e.g. OpenAI puts usage in response_metadata).
-                        if not total_tokens:
-                            resp_meta = getattr(message, "response_metadata", None) or {}
-                            if isinstance(resp_meta, dict):
-                                usage_dict = resp_meta.get("token_usage") or resp_meta.get("usage", {})
-                                if isinstance(usage_dict, dict):
-                                    prompt_tokens = (
-                                        usage_dict.get("prompt_tokens")
-                                        or usage_dict.get("input_tokens")
-                                        or prompt_tokens
-                                    )
-                                    completion_tokens = (
-                                        usage_dict.get("completion_tokens")
-                                        or usage_dict.get("output_tokens")
-                                        or completion_tokens
-                                    )
-                                    total_tokens = usage_dict.get("total_tokens") or total_tokens
+        Returns a (prompt_tokens, completion_tokens, total_tokens) tuple to preserve
+        the existing interface with end_langchain_span().
+        """
+        # Deferred import: avoids circular imports at module level.
+        from lfx.schema.token_usage import extract_usage_from_llm_result
 
-                    # Some providers (e.g. Anthropic via older adapters) put usage in generation_info.
-                    if not total_tokens:
-                        gen_info = getattr(gen, "generation_info", None) or {}
-                        if isinstance(gen_info, dict):
-                            usage_dict = gen_info.get("token_usage") or gen_info.get("usage", {})
-                            if isinstance(usage_dict, dict):
-                                prompt_tokens = (
-                                    usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or prompt_tokens
-                                )
-                                completion_tokens = (
-                                    usage_dict.get("completion_tokens")
-                                    or usage_dict.get("output_tokens")
-                                    or completion_tokens
-                                )
-                                total_tokens = usage_dict.get("total_tokens") or total_tokens
-
-                    if total_tokens:
-                        break
-                if total_tokens:
-                    break
-        return prompt_tokens, completion_tokens, total_tokens
+        usage = extract_usage_from_llm_result(response)
+        if usage is None:
+            return None, None, None
+        return usage.input_tokens, usage.output_tokens, usage.total_tokens
 
     def _extract_generations(self, response: LLMResult):
         """Serialize LLMResult generations to a JSON-safe dict for storage in the span outputs field."""

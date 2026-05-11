@@ -99,7 +99,13 @@ class TestSerializationHypothesis:
             assert len(result) == MAX_ITEMS_LENGTH + 1
             assert f"... [truncated {len(lst) - MAX_ITEMS_LENGTH} items]" in result
         else:
-            assert result == lst
+            # NaN/Inf floats are sanitized to None, so compare element-wise
+            assert len(result) == len(lst)
+            for r, v in zip(result, lst, strict=False):
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    assert r is None
+                else:
+                    assert r == v
 
     @settings(max_examples=100)
     @given(dct=dict_strategy)
@@ -137,8 +143,8 @@ class TestSerializationHypothesis:
     @given(data=st.one_of(st.integers(), st.floats(allow_nan=True), st.booleans(), st.none()))
     def test_primitive_types(self, data: float | bool | None) -> None:  # noqa: FBT001
         result: int | float | bool | None = serialize(data)
-        if isinstance(data, float) and math.isnan(data) and isinstance(result, float):
-            assert math.isnan(result)
+        if isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
+            assert result is None
         else:
             assert result == data
 
@@ -158,7 +164,13 @@ class TestSerializationHypothesis:
     @given(lst=list_strategy)
     def test_max_items_none(self, lst: list) -> None:
         result: list = serialize(lst, max_items=None)
-        assert result == lst
+        # NaN/Inf floats are sanitized to None, so compare element-wise
+        assert len(result) == len(lst)
+        for r, v in zip(result, lst, strict=False):
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                assert r is None
+            else:
+                assert r == v
 
     @settings(max_examples=100)
     @given(obj=st.builds(object))
@@ -344,3 +356,20 @@ class TestSerializationHypothesis:
         assert isinstance(result, dict)
         assert len(result) == MAX_ITEMS_LENGTH
         assert all(isinstance(v, int) for v in result.values())
+
+    def test_nan_float_serialized_to_none(self) -> None:
+        """NaN floats must not pass through because they are not JSON-compliant."""
+        assert serialize(float("nan")) is None
+
+    def test_inf_float_serialized_to_none(self) -> None:
+        """Inf floats must not pass through because they are not JSON-compliant."""
+        assert serialize(float("inf")) is None
+        assert serialize(float("-inf")) is None
+
+    def test_nan_inside_dict_serialized_to_none(self) -> None:
+        """NaN values nested in dicts should also be sanitized."""
+        data = {"score": float("nan"), "name": "test", "value": 1.5}
+        result = serialize(data)
+        assert result["score"] is None
+        assert result["name"] == "test"
+        assert result["value"] == 1.5

@@ -290,7 +290,7 @@ class CugaComponent(ToolCallingAgentComponent):
                             data_dict = json.loads(last_event.data)
                         except json.JSONDecodeError:
                             data_dict = last_event.data
-                        if last_event.name == "CodeAgent":
+                        if last_event.name == "CodeAgent" and "code" in data_dict:
                             data_dict = data_dict["code"]
                         yield {
                             "event": "on_tool_end",
@@ -368,7 +368,7 @@ class CugaComponent(ToolCallingAgentComponent):
                 sender_name="Cuga",
                 properties={"icon": "Bot", "state": "partial"},
                 content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
-                session_id=self.graph.session_id,
+                session_id=self.graph.session_id or str(uuid.uuid4()),
             )
 
             # Pre-assign an ID for event processing, following the base agent pattern

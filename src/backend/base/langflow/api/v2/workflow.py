@@ -378,7 +378,7 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
-    await job_service.create_job(job_id=job_id, flow_id=flow_id_str)
+    await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=api_key_user.id)
     try:
         task_result, execution_session_id = await job_service.execute_with_status(
             job_id=job_id,
@@ -467,6 +467,7 @@ async def execute_workflow_background(
         await job_service.create_job(
             job_id=job_id,
             flow_id=flow_id_str,
+            user_id=api_key_user.id,
         )
 
         await task_service.fire_and_forget_task(
@@ -486,6 +487,8 @@ async def execute_workflow_background(
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint
         raise
+    except ValueError as exc:
+        raise WorkflowValidationError(str(exc)) from exc
     except MemoryError as exc:
         raise WorkflowResourceError from exc
 
@@ -533,7 +536,7 @@ async def get_workflow_status(
 
     job_service = get_job_service()
     try:
-        job = await job_service.get_job_by_job_id(job_id=job_id)
+        job = await job_service.get_job_by_job_id(job_id=job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -646,7 +649,7 @@ async def get_workflow_status(
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
-    api_key_user: Annotated[UserRead, Depends(api_key_security)],  # noqa: ARG001
+    api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowStopResponse:
     """Stop a running workflow execution by job_id.
 
@@ -671,7 +674,7 @@ async def stop_workflow(
 
     try:
         # 1. Fetch Job
-        job = await job_service.get_job_by_job_id(job_id)
+        job = await job_service.get_job_by_job_id(job_id, user_id=api_key_user.id)
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -689,6 +692,18 @@ async def stop_workflow(
                 "error": "Job not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} not found",
+                "job_id": str(job_id),
+            },
+        )
+
+    # Verify this is a workflow job
+    if job.type != JobType.WORKFLOW:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "error": "Job not found",
+                "code": "JOB_NOT_FOUND",
+                "message": f"Job {job_id} is not a workflow job (type: {job.type})",
                 "job_id": str(job_id),
             },
         )

@@ -66,9 +66,19 @@ class TestWatsonxAIComponent:
         """Test that API URLs are defined."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
+        expected_urls = [
+            "https://us-south.ml.cloud.ibm.com",
+            "https://eu-de.ml.cloud.ibm.com",
+            "https://eu-gb.ml.cloud.ibm.com",
+            "https://au-syd.ml.cloud.ibm.com",
+            "https://jp-tok.ml.cloud.ibm.com",
+            "https://ca-tor.ml.cloud.ibm.com",
+            "https://ap-south-1.aws.wxai.ibm.com",
+        ]
         assert len(WatsonxAIComponent._urls) > 0
-        assert "https://us-south.ml.cloud.ibm.com" in WatsonxAIComponent._urls
-        assert "https://eu-de.ml.cloud.ibm.com" in WatsonxAIComponent._urls
+
+        for url in expected_urls:
+            assert url in WatsonxAIComponent._urls, f"Expected URL {url} not found in WatsonxAIComponent._urls"
 
     def test_inputs_defined(self, wx_component):
         """Test that all required inputs are defined."""

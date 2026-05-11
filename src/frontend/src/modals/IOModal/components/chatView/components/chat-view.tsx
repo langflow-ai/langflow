@@ -4,7 +4,6 @@ import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
-import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
@@ -85,12 +84,13 @@ export default function ChatView({
             files = [];
           }
         }
+
         return {
           isSend: message.sender === "User",
           message: message.text,
           sender_name: message.sender_name,
           files: files,
-          id: message.id,
+          id: message.id || "",
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
@@ -134,7 +134,10 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
+  const { files, setFiles, handleFiles } = useCustomUseFileHandler(
+    realFlowId,
+    !!playgroundPage,
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
@@ -143,10 +146,6 @@ export default function ChatView({
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
-      e.stopPropagation();
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {

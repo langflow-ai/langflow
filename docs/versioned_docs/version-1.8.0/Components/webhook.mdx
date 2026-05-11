@@ -1,0 +1,35 @@
+---
+title: Webhook
+slug: /component-webhook
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **Webhook** component defines a webhook trigger that runs a flow when it receives an HTTP POST request.
+
+## Trigger the webhook
+
+When you add a **Webhook** component to your flow, a **Webhook curl** tab is added to the flow's [**API Access** pane](/concepts-publish#api-access).
+This tab automatically generates an HTTP POST request code snippet that you can use to trigger your flow through the **Webhook** component.
+For example:
+
+```bash
+curl -X POST \
+  "http://$LANGFLOW_SERVER_ADDRESS/api/v1/webhook/$FLOW_ID" \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: $LANGFLOW_API_KEY' \
+  -d '{"any": "data"}'
+```
+
+For more information, see [Trigger flows with webhooks](/webhook).
+
+## Webhook parameters
+
+| Name | Display Name | Description |
+|------|--------------|-------------|
+| data | Payload | Input parameter. Receives a payload from external systems through HTTP POST requests. |
+| curl | curl | Input parameter. The curl command template for making requests to this webhook. |
+| endpoint | Endpoint | Input parameter. The endpoint URL where this webhook receives requests. |
+| output_data | Data | Output parameter. The processed data from the webhook input. Returns an empty [`Data`](/data-types#data) object if no input is provided. If the input isn't valid JSON, the **Webhook** component wraps it in a `payload` object so that it can be accepted as input to trigger the flow. |
+

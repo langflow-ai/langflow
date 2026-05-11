@@ -622,6 +622,112 @@ class TestUpdateToolsStdioHeaders:
         assert original_args == ["mcp-proxy", "--headers", "x-api-key", "sk-orig", "http://localhost/s"]
 
 
+class TestUpdateToolsPerToolResilience:
+    """update_tools must isolate per-tool schema-parsing failures (#11229)."""
+
+    @staticmethod
+    def _make_tool(name: str, schema: dict) -> MagicMock:
+        tool = MagicMock()
+        tool.name = name
+        tool.description = f"{name} description"
+        tool.inputSchema = schema
+        tool.outputSchema = None
+        return tool
+
+    @pytest.mark.asyncio
+    async def test_one_bad_tool_does_not_drop_the_other_tools_issue_11229(self):
+        """One bad schema must not abort the listing; the bad tool must be logged by name."""
+        good_tool_a = self._make_tool(
+            "good_a",
+            {"type": "object", "properties": {"q": {"type": "string"}}, "required": ["q"]},
+        )
+        bad_tool = self._make_tool(
+            "bad_linear_like",
+            {"type": "object", "properties": {"x": {"type": "string"}}},
+        )
+        good_tool_b = self._make_tool(
+            "good_b",
+            {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]},
+        )
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_tool_a, bad_tool, good_tool_b]
+        mock_stdio._connected = True
+
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        def selective_converter(schema):
+            if schema is bad_tool.inputSchema:
+                msg = "unhashable type: 'list'"
+                raise TypeError(msg)
+            return real_converter(schema)
+
+        with (
+            patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter),
+            patch("lfx.base.mcp.util.logger") as mock_logger,
+        ):
+            mode, tool_list, tool_cache = await update_tools(
+                server_name="linear-like",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
+        assert "bad_linear_like" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+        assert mode == "Stdio"
+
+        all_log_calls = (
+            mock_logger.error.call_args_list + mock_logger.warning.call_args_list + mock_logger.exception.call_args_list
+        )
+        joined = " | ".join(str(call) for call in all_log_calls)
+        assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
+
+    @pytest.mark.asyncio
+    async def test_resilience_under_many_mixed_tools(self):
+        """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
+        from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
+
+        error_types = [TypeError, AttributeError, KeyError, NameError, RecursionError]
+        tools = []
+        bad_schemas: dict[int, type[Exception]] = {}
+        for i in range(20):
+            schema = {
+                "type": "object",
+                "properties": {"k": {"type": "string"}},
+                "required": ["k"],
+            }
+            tool = self._make_tool(f"tool_{i:02d}", schema)
+            tools.append(tool)
+            if i % 2 == 1:  # 10 odd indices fail with rotated error types
+                bad_schemas[id(schema)] = error_types[(i // 2) % len(error_types)]
+
+        def selective_converter(schema):
+            err_cls = bad_schemas.get(id(schema))
+            if err_cls is not None:
+                msg = f"simulated {err_cls.__name__}"
+                raise err_cls(msg)
+            return real_converter(schema)
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = tools
+        mock_stdio._connected = True
+
+        with patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=selective_converter):
+            _, tool_list, tool_cache = await update_tools(
+                server_name="stress",
+                server_config={"command": "fake-cmd", "args": []},
+                mcp_stdio_client=mock_stdio,
+            )
+
+        loaded = {t.name for t in tool_list}
+        expected_good = {f"tool_{i:02d}" for i in range(20) if i % 2 == 0}
+        assert loaded == expected_good, f"expected exactly the 10 healthy tools, got {loaded}"
+        assert set(tool_cache.keys()) == expected_good
+
+
 class TestFieldNameConversion:
     """Test camelCase to snake_case field name conversion functionality."""
 
@@ -1107,6 +1213,309 @@ class TestMCPUtilityFunctions:
 
         with pytest.raises(Exception):  # noqa: B017, PT011
             model_class(bar=1)  # missing required field
+
+    def test_create_input_schema_type_array_string_null(self):
+        """Test schema with type array ['string', 'null'] produces optional string field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_str": {"type": ["string", "null"], "description": "Optional string"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Optional: None and string both valid
+        instance_none = model_class(optional_str=None)
+        assert instance_none.optional_str is None
+        instance_str = model_class(optional_str="hello")
+        assert instance_str.optional_str == "hello"
+
+    def test_create_input_schema_type_array_integer_null(self):
+        """Test schema with type array ['integer', 'null'] produces optional int field."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "optional_int": {"type": ["integer", "null"], "description": "Optional integer"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance_none = model_class(optional_int=None)
+        assert instance_none.optional_int is None
+        instance_int = model_class(optional_int=42)
+        assert instance_int.optional_int == 42
+
+    def test_create_input_schema_required_filters_non_strings(self):
+        """Test schema with required containing non-strings does not raise unhashable."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "valid": {"type": "string", "description": "Valid field"},
+            },
+            "required": [["bad"], "valid"],
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Only "valid" is required (non-strings filtered out)
+        instance = model_class(valid="ok")
+        assert instance.valid == "ok"
+
+    def test_create_input_schema_empty_properties_no_params(self):
+        """Test schema with empty properties (tool with no params) accepts empty dict."""
+        schema = {"type": "object", "properties": {}}
+        model_class = util.create_input_schema_from_json_schema(schema)
+        instance = model_class()
+        assert instance.model_dump() == {}
+        # Also validate with explicit empty dict
+        instance2 = model_class.model_validate({})
+        assert instance2.model_dump() == {}
+
+    def test_create_input_schema_generic_object_maps_to_dict(self):
+        """Test schema with type object and no properties maps to dict for free-form params."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "params": {"type": "object", "description": "Free-form parameters"},
+            },
+        }
+        model_class = util.create_input_schema_from_json_schema(schema)
+        # Should accept arbitrary key-value dict (not just empty)
+        instance = model_class(params={"search": "test", "per_page": 20})
+        assert instance.params == {"search": "test", "per_page": 20}
+        # Empty dict also valid
+        instance_empty = model_class(params={})
+        assert instance_empty.params == {}
+        # None valid for optional field
+        instance_none = model_class(params=None)
+        assert instance_none.params is None
+
+    def test_nested_dict_preservation_issue_9881(self):
+        """Test that nested dictionaries are preserved when object has no explicit properties.
+
+        Regression test for issue #9881 where nested dictionaries in MCP tool parameters
+        were being lost during Pydantic validation.
+        """
+        # ROS2 example from the bug report
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",  # No "properties" defined - free-form object
+                    "description": "Message data with nested structure",
+                },
+                "msg_type": {"type": "string"},
+                "topic": {"type": "string"},
+            },
+            "required": ["msg", "msg_type", "topic"],
+        }
+
+        model_class = util.create_input_schema_from_json_schema(schema)
+
+        # Input with nested dictionary (like the bug report)
+        input_data = {
+            "msg": {"linear": {"x": 1}},
+            "msg_type": "geometry_msgs/msg/Twist",
+            "topic": "/turtle1/cmd_vel",
+        }
+
+        # Validate and dump (this is what happens in create_tool_coroutine)
+        validated = model_class.model_validate(input_data)
+        result = validated.model_dump()
+
+        # Nested dictionary should be preserved
+        assert result["msg"] == {"linear": {"x": 1}}
+        assert result["msg_type"] == "geometry_msgs/msg/Twist"
+        assert result["topic"] == "/turtle1/cmd_vel"
+
+        # Test with deeply nested structure
+        deep_input = {"msg": {"level1": {"level2": {"level3": "value"}}}, "msg_type": "test", "topic": "/test"}
+        deep_validated = model_class.model_validate(deep_input)
+        deep_result = deep_validated.model_dump()
+        assert deep_result["msg"] == {"level1": {"level2": {"level3": "value"}}}
+
+    def test_nested_dict_preservation_with_declared_properties_issue_10975(self):
+        """Nested dicts must survive when the object also declares properties (#9881, #10975)."""
+        # FHIR-MCP shape from #10975: searchParam declared as object with one property,
+        # additionalProperties not explicitly forbidden.
+        fhir_schema = {
+            "type": "object",
+            "required": ["type", "searchParam"],
+            "properties": {
+                "type": {"type": "string"},
+                "searchParam": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        fhir_model = util.create_input_schema_from_json_schema(fhir_schema)
+        fhir_input = {
+            "type": "Observation",
+            "searchParam": {
+                "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+            },
+        }
+        fhir_dump = fhir_model.model_validate(fhir_input).model_dump(exclude_none=True)
+        assert fhir_dump["searchParam"] == {
+            "component-reference-gene.component-code-value-concept": "48018-6$BRCA2",
+        }, "FHIR-MCP nested searchParam dict was stripped (issue #10975)"
+
+        # ROS-MCP shape from #9881: msg declared as object with a placeholder property.
+        ros_schema = {
+            "type": "object",
+            "required": ["msg", "msg_type", "topic"],
+            "properties": {
+                "topic": {"type": "string"},
+                "msg_type": {"type": "string"},
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        ros_model = util.create_input_schema_from_json_schema(ros_schema)
+        ros_input = {
+            "topic": "/turtle1/cmd_vel",
+            "msg_type": "geometry_msgs/msg/Twist",
+            "msg": {
+                "linear": {"x": 1, "y": 0, "z": 0},
+                "angular": {"x": 0, "y": 0, "z": 0},
+            },
+        }
+        ros_dump = ros_model.model_validate(ros_input).model_dump(exclude_none=True)
+        assert ros_dump["msg"] == {
+            "linear": {"x": 1, "y": 0, "z": 0},
+            "angular": {"x": 0, "y": 0, "z": 0},
+        }, "ROS-MCP nested msg dict was stripped (issue #9881)"
+        # Sibling primitive fields must continue to round-trip unchanged.
+        assert ros_dump["topic"] == "/turtle1/cmd_vel"
+        assert ros_dump["msg_type"] == "geometry_msgs/msg/Twist"
+
+    def test_object_with_additional_properties_false_still_drops_extras(self):
+        """additionalProperties:false must keep stripping extras after the #9881/#10975 fix."""
+        strict_schema = {
+            "type": "object",
+            "properties": {
+                "filter": {
+                    "type": "object",
+                    "properties": {"id": {"type": "string"}},
+                    "additionalProperties": False,
+                },
+            },
+        }
+        strict_model = util.create_input_schema_from_json_schema(strict_schema)
+        dumped = strict_model.model_validate({"filter": {"id": "abc", "rogue": "x"}}).model_dump(
+            exclude_none=True,
+        )
+        assert dumped["filter"].get("id") == "abc"
+        assert "rogue" not in dumped["filter"]
+
+    def test_top_level_extras_preserved_when_root_does_not_forbid(self):
+        """Root schema with no additionalProperties must pass top-level extras through (PR #12601 review)."""
+        # JSON Schema spec: additionalProperties defaults to true at any depth, including root.
+        # The fix in _build_model handles nested objects; this test guards the symmetric behaviour
+        # for the top-level create_model("InputSchema", ...).
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "extra": "preserved"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok", "extra": "preserved"}
+
+    def test_top_level_strict_mode_when_root_forbids_additional_properties(self):
+        """Root schema with additionalProperties:false must still strip top-level extras."""
+        schema = {
+            "type": "object",
+            "properties": {"declared": {"type": "string"}},
+            "additionalProperties": False,
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        dumped = model.model_validate({"declared": "ok", "rogue": "x"}).model_dump(exclude_none=True)
+        assert dumped == {"declared": "ok"}
+        assert "rogue" not in dumped
+
+    def test_deeply_nested_dict_round_trip_preserves_all_levels(self):
+        """4-level nested dict under a permissive object must round-trip intact."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "envelope": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+            "required": ["envelope"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        deep = {
+            "envelope": {
+                "level1": {"level2": {"level3": {"level4": {"leaf": "value", "n": 42}}}},
+            },
+        }
+        out = model.model_validate(deep).model_dump(exclude_none=True)
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["leaf"] == "value"
+        assert out["envelope"]["level1"]["level2"]["level3"]["level4"]["n"] == 42
+
+    def test_array_of_objects_extras_are_preserved(self):
+        """Extras inside objects nested in arrays must also survive validation."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"role": {"type": "string"}},
+                    },
+                },
+            },
+            "required": ["messages"],
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        payload = {
+            "messages": [
+                {"role": "user", "content": "hi", "metadata": {"lang": "pt-BR"}},
+                {"role": "assistant", "content": "olá", "tool_calls": [{"id": "x"}]},
+            ],
+        }
+        out = model.model_validate(payload).model_dump(exclude_none=True)
+        assert out["messages"][0]["content"] == "hi"
+        assert out["messages"][0]["metadata"] == {"lang": "pt-BR"}
+        assert out["messages"][1]["tool_calls"] == [{"id": "x"}]
+
+    def test_additional_properties_typed_schema_still_preserves_extras(self):
+        """additionalProperties:{type:...} is permissive — extras must survive."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "headers": {
+                    "type": "object",
+                    "properties": {"known": {"type": "string"}},
+                    "additionalProperties": {"type": "string"},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out = model.model_validate(
+            {"headers": {"x-custom-1": "a", "x-custom-2": "b"}},
+        ).model_dump(exclude_none=True)
+        assert out["headers"]["x-custom-1"] == "a"
+        assert out["headers"]["x-custom-2"] == "b"
+
+    def test_nested_object_with_none_or_empty_does_not_crash(self):
+        """None and {} for permissive nested object must round-trip cleanly."""
+        schema = {
+            "type": "object",
+            "properties": {
+                "msg": {
+                    "type": "object",
+                    "properties": {"placeholder": {"type": "string"}},
+                },
+            },
+        }
+        model = util.create_input_schema_from_json_schema(schema)
+        out_none = model.model_validate({"msg": None}).model_dump(exclude_none=True)
+        assert "msg" not in out_none
+        out_empty = model.model_validate({"msg": {}}).model_dump(exclude_none=True)
+        assert out_empty == {"msg": {}}
 
     @pytest.mark.asyncio
     async def test_validate_connection_params(self):
@@ -1615,13 +2024,15 @@ class TestMCPStructuredTool:
 
         # Import the MCPStructuredTool class from the actual code
         # We need to recreate it here since it's defined inline in the update_tools function
+        from langchain_core.runnables import RunnableConfig
         from langchain_core.tools import StructuredTool
         from lfx.base.mcp.util import create_tool_coroutine, create_tool_func
 
         class MCPStructuredTool(StructuredTool):
-            def run(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main run method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
+            _tool_call_id_key = "_lf_tool_call_id"
+
+            def _to_args_and_kwargs(self, tool_input: str | dict, tool_call_id: str | None):
+                """Normalize MCP tool input before LangChain validates it."""
                 if isinstance(tool_input, str):
                     try:
                         parsed_input = json.loads(tool_input)
@@ -1630,33 +2041,33 @@ class TestMCPStructuredTool:
                 else:
                     parsed_input = tool_input or {}
 
-                # Convert camelCase parameters to snake_case
                 converted_input = self._convert_parameters(parsed_input)
+                tool_args, tool_kwargs = super()._to_args_and_kwargs(converted_input, tool_call_id)
+                if tool_call_id is not None:
+                    tool_kwargs[self._tool_call_id_key] = tool_call_id
+                return tool_args, tool_kwargs
 
-                # Call the parent run method with converted parameters
-                return super().run(converted_input, config=config, **kwargs)
+            def _run(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-            async def arun(self, tool_input: str | dict, config=None, **kwargs):
-                """Override the main arun method to handle parameter conversion before validation."""
-                # Parse tool_input if it's a string
-                if isinstance(tool_input, str):
-                    try:
-                        parsed_input = json.loads(tool_input)
-                    except json.JSONDecodeError:
-                        parsed_input = {"input": tool_input}
-                else:
-                    parsed_input = tool_input or {}
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
-                # Convert camelCase parameters to snake_case
-                converted_input = self._convert_parameters(parsed_input)
+            async def _arun(self, *args, config: RunnableConfig, run_manager=None, **kwargs):
+                from lfx.base.mcp.util import _convert_mcp_result
 
-                # Call the parent arun method with converted parameters
-                return await super().arun(converted_input, config=config, **kwargs)
+                tool_call_id = kwargs.pop(self._tool_call_id_key, None)
+                raw = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+                converted = _convert_mcp_result(raw) if tool_call_id and hasattr(raw, "content") else raw
+                return converted, raw
 
             def _convert_parameters(self, input_dict):
                 if not input_dict or not isinstance(input_dict, dict):
                     return input_dict
 
+                from lfx.base.agents.utils import maybe_unflatten_dict
                 from lfx.base.mcp.util import _camel_to_snake
 
                 converted_dict = {}
@@ -1675,7 +2086,7 @@ class TestMCPStructuredTool:
                             # Keep original key
                             converted_dict[key] = value
 
-                return converted_dict
+                return maybe_unflatten_dict(converted_dict)
 
         return MCPStructuredTool(
             name="test_tool",
@@ -1683,6 +2094,7 @@ class TestMCPStructuredTool:
             args_schema=test_schema,
             func=create_tool_func("test_tool", test_schema, mock_client),
             coroutine=create_tool_coroutine("test_tool", test_schema, mock_client),
+            response_format="content_and_artifact",
         )
 
     def test_convert_parameters_exact_match(self, mcp_tool):
@@ -1729,6 +2141,48 @@ class TestMCPStructuredTool:
         assert mcp_tool._convert_parameters({}) == {}
         assert mcp_tool._convert_parameters(None) is None
         assert mcp_tool._convert_parameters("not_a_dict") == "not_a_dict"
+
+    def test_convert_parameters_flattened_input_produces_nested(self):
+        """Test flattened keys (params.search, params.per_page) become nested structure."""
+        from lfx.base.agents.utils import maybe_unflatten_dict
+        from lfx.base.mcp.util import _camel_to_snake
+        from pydantic import Field, create_model
+
+        schema = create_model(
+            "ForemanSchema",
+            resource=(str, Field(..., description="Resource")),
+            action=(str, Field(..., description="Action")),
+            params=(dict, Field(default_factory=dict, description="Params")),
+        )
+
+        def _convert_parameters(input_dict, args_schema):
+            if not input_dict or not isinstance(input_dict, dict):
+                return input_dict
+            converted_dict = {}
+            original_fields = set(args_schema.model_fields.keys())
+            for key, value in input_dict.items():
+                if key in original_fields:
+                    converted_dict[key] = value
+                else:
+                    snake_key = _camel_to_snake(key)
+                    if snake_key in original_fields:
+                        converted_dict[snake_key] = value
+                    else:
+                        converted_dict[key] = value
+            return maybe_unflatten_dict(converted_dict)
+
+        input_dict = {
+            "resource": "hosts",
+            "action": "index",
+            "params.search": "name ~ test",
+            "params.per_page": 20,
+        }
+        result = _convert_parameters(input_dict, schema)
+        assert result == {
+            "resource": "hosts",
+            "action": "index",
+            "params": {"search": "name ~ test", "per_page": 20},
+        }
 
     def test_convert_parameters_preserves_value_types(self, mcp_tool):
         """Test _convert_parameters preserves all value types correctly."""
@@ -1876,6 +2330,421 @@ class TestMCPStructuredTool:
             await mcp_tool.arun(input_data)
 
 
+class TestNormalizeArgumentsForMcp:
+    """Test _normalize_arguments_for_mcp try-convert on type mismatch."""
+
+    def test_str_to_int_when_int_expected(self):
+        """Test str '42' when int expected -> 42."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        result = util._normalize_arguments_for_mcp({"count": "42"}, Schema, "test_tool")
+        assert result == {"count": 42}
+        assert isinstance(result["count"], int)
+
+    def test_float_to_int_when_int_expected(self):
+        """Test float 3.0 when int expected -> 3."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        result = util._normalize_arguments_for_mcp({"id": 3.0}, Schema, "test_tool")
+        assert result == {"id": 3}
+        assert isinstance(result["id"], int)
+
+    def test_str_to_dict_when_dict_expected(self):
+        r"""Test str '{"x":1}' when dict expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_str_to_bool_when_bool_expected(self):
+        """Test str 'true' when bool expected -> True."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        result = util._normalize_arguments_for_mcp({"flag": "true"}, Schema, "test_tool")
+        assert result == {"flag": True}
+
+    def test_already_correct_types_unchanged(self):
+        """Test value type matches schema -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"count": 42, "params": {"search": "x"}}, Schema, "test_tool")
+        assert result == {"count": 42, "params": {"search": "x"}}
+
+    def test_conversion_failure_propagates_error(self):
+        """Test str 'abc' when int expected -> clear error propagated."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            id: int = Field(..., description="ID")
+
+        with pytest.raises(ValueError, match="expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"id": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'id'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_optional_field_none_unchanged(self):
+        """Test optional field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+            optional: int | None = Field(default=None, description="Optional")
+
+        result = util._normalize_arguments_for_mcp({"count": 1, "optional": None}, Schema, "test_tool")
+        assert result == {"count": 1, "optional": None}
+
+    def test_required_list_none_maps_to_empty(self):
+        """Test required list field with None -> maps to []."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": []}
+        assert isinstance(result["items"], list)
+
+    def test_required_dict_none_maps_to_empty(self):
+        """Test required dict field with None -> maps to {}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": {}}
+        assert isinstance(result["params"], dict)
+
+    def test_required_str_none_maps_to_empty(self):
+        """Test required str field with None -> maps to ""."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str = Field(..., description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": ""}
+        assert result["name"] == ""
+
+    def test_optional_list_none_unchanged(self):
+        """Test optional list field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": None}, Schema, "test_tool")
+        assert result == {"items": None}
+
+    def test_optional_dict_none_unchanged(self):
+        """Test optional dict field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": None}, Schema, "test_tool")
+        assert result == {"params": None}
+
+    def test_optional_str_none_unchanged(self):
+        """Test optional str field with None -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            name: str | None = Field(default=None, description="Name")
+
+        result = util._normalize_arguments_for_mcp({"name": None}, Schema, "test_tool")
+        assert result == {"name": None}
+
+    def test_str_to_list_when_optional_list_expected(self):
+        r"""Test str '["a"]' when list[str] | None expected -> ["a"]."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list[str] | None = Field(default=None, description="Items")
+
+        result = util._normalize_arguments_for_mcp({"items": '["a", "b"]'}, Schema, "test_tool")
+        assert result == {"items": ["a", "b"]}
+        assert isinstance(result["items"], list)
+
+    def test_str_to_dict_when_optional_dict_expected(self):
+        r"""Test str '{"x":1}' when dict | None expected -> {"x":1}."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict | None = Field(default=None, description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": '{"x": 1}'}, Schema, "test_tool")
+        assert result == {"params": {"x": 1}}
+        assert isinstance(result["params"], dict)
+
+    def test_bool_rejected_when_int_expected(self):
+        """Test bool True/False when int expected -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": True}, Schema, "test_tool")
+
+        with pytest.raises(ValueError, match=r"expects integer.*bool"):
+            util._normalize_arguments_for_mcp({"count": False}, Schema, "test_tool")
+
+    def test_extra_keys_preserved_for_pydantic_validation(self):
+        """Test extra keys not in schema are preserved so Pydantic can report them."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            valid_field: int = Field(..., description="Valid")
+
+        result = util._normalize_arguments_for_mcp({"valid_field": 1, "typo_field": 2}, Schema, "test_tool")
+        assert result["valid_field"] == 1
+        assert result["typo_field"] == 2
+
+    def test_str_to_float_when_float_expected(self):
+        """Test str '3.14' when float expected -> 3.14."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        result = util._normalize_arguments_for_mcp({"value": "3.14"}, Schema, "test_tool")
+        assert result == {"value": 3.14}
+        assert isinstance(result["value"], float)
+
+    def test_invalid_json_for_dict_raises_clear_error(self):
+        """Test invalid JSON string when dict expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": "not valid json"}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_invalid_json_for_list_raises_clear_error(self):
+        """Test invalid JSON string when list expected raises ValueError with tool and param name."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": "{invalid"}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "invalid JSON" in str(exc_info.value)
+
+    def test_str_to_dict_when_nested_model_expected(self):
+        """Test str JSON when nested Pydantic model expected -> parsed dict (foreman-mcp params case)."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+            per_page: int | None = None
+            page: int | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        json_str = '{"search":"installed_packages","per_page":50}'
+        result = util._normalize_arguments_for_mcp({"params": json_str}, Schema, "test_tool")
+        assert result["params"] == {"search": "installed_packages", "per_page": 50}
+        assert isinstance(result["params"], dict)
+
+    def test_nested_model_already_dict_unchanged(self):
+        """Test nested model field with dict value -> unchanged."""
+        from pydantic import BaseModel, Field
+
+        class ParamsModel(BaseModel):
+            search: str | None = None
+
+        class Schema(BaseModel):
+            params: ParamsModel = Field(..., description="Params")
+
+        result = util._normalize_arguments_for_mcp({"params": {"search": "test"}}, Schema, "test_tool")
+        assert result == {"params": {"search": "test"}}
+
+    def test_str_to_bool_false_variants(self):
+        """Test str 'false'/'0'/'no' when bool expected -> False."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        for val in ("false", "0", "no"):
+            result = util._normalize_arguments_for_mcp({"flag": val}, Schema, "test_tool")
+            assert result == {"flag": False}
+            assert result["flag"] is False
+
+    def test_dict_expected_json_parses_to_list_raises(self):
+        """Test dict expected but JSON string parses to list -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": '["a", "b"]'}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "JSON parsed to list" in str(exc_info.value)
+
+    def test_list_expected_json_parses_to_dict_raises(self):
+        """Test list expected but JSON string parses to dict -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": '{"x": 1}'}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "JSON parsed to dict" in str(exc_info.value)
+
+    def test_int_expected_non_integer_float_raises(self):
+        """Test int expected but float 3.14 (non-integer) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        with pytest.raises(ValueError, match=r"expects integer") as exc_info:
+            util._normalize_arguments_for_mcp({"count": 3.14}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_int_expected_list_or_dict_raises(self):
+        """Test int expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            count: int = Field(..., description="Count")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects integer"):
+                util._normalize_arguments_for_mcp({"count": val}, Schema, "test_tool")
+
+    def test_float_expected_invalid_str_raises(self):
+        """Test float expected but str 'abc' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        with pytest.raises(ValueError, match=r"expects number") as exc_info:
+            util._normalize_arguments_for_mcp({"value": "abc"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'value'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_float_expected_list_or_dict_raises(self):
+        """Test float expected but list/dict value -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            value: float = Field(..., description="Value")
+
+        for val in ([], {}):
+            with pytest.raises(ValueError, match=r"expects number"):
+                util._normalize_arguments_for_mcp({"value": val}, Schema, "test_tool")
+
+    def test_bool_expected_invalid_str_raises(self):
+        """Test bool expected but str 'maybe' -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": "maybe"}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_bool_expected_int_raises(self):
+        """Test bool expected but int 1 -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            flag: bool = Field(..., description="Flag")
+
+        with pytest.raises(ValueError, match=r"expects.*bool") as exc_info:
+            util._normalize_arguments_for_mcp({"flag": 1}, Schema, "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'flag'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_dict_expected_non_str_value_raises(self):
+        """Test dict expected but list value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            params: dict = Field(..., description="Params")
+
+        with pytest.raises(ValueError, match=r"expects object \(dict\)") as exc_info:
+            util._normalize_arguments_for_mcp({"params": ["a", "b"]}, Schema, "my_tool")
+
+        assert "my_tool" in str(exc_info.value)
+        assert "Parameter 'params'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_list_expected_non_str_value_raises(self):
+        """Test list expected but dict value (not str) -> raises ValueError."""
+        from pydantic import BaseModel, Field
+
+        class Schema(BaseModel):
+            items: list = Field(..., description="Items")
+
+        with pytest.raises(ValueError, match=r"expects array \(list\)") as exc_info:
+            util._normalize_arguments_for_mcp({"items": {"x": 1}}, Schema, "list_tool")
+
+        assert "list_tool" in str(exc_info.value)
+        assert "Parameter 'items'" in str(exc_info.value)
+        assert "could not convert" in str(exc_info.value)
+
+    def test_try_convert_value_none_raises(self):
+        """Test _try_convert_value with None when scalar type expected -> raises ValueError (direct caller)."""
+        with pytest.raises(ValueError, match=r"expects.*but received None") as exc_info:
+            util._try_convert_value(None, int, "count", "test_tool")
+
+        assert "test_tool" in str(exc_info.value)
+        assert "Parameter 'count'" in str(exc_info.value)
+
+
 class TestSnakeToCamelConversion:
     """Test the _snake_to_camel function from json_schema module."""
 
@@ -1983,3 +2852,483 @@ class TestSnakeToCamelConversion:
         # Metadata fields
         assert _snake_to_camel("_meta_data") == "_metaData"
         assert _snake_to_camel("_created_at") == "_createdAt"
+
+
+class TestStripNoneRecursive:
+    """Tests for _strip_none_recursive.
+
+    Ensures null values are removed from nested dicts and arrays before
+    sending arguments to MCP servers.
+
+    Bug: antvis/mcp-server-chart returns "Expected string, received null"
+    because LLMs send explicit null for optional fields inside arrays of objects.
+    """
+
+    def test_should_remove_none_from_flat_dict(self):
+        """Top-level None values must be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {"name": "chart", "style": None, "title": "My Chart"}
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"name": "chart", "title": "My Chart"}
+        assert "style" not in result
+
+    def test_should_remove_none_from_nested_objects_in_arrays(self):
+        """The exact bug scenario: data[N].group = null inside an array."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — reproduces the exact payload from the bug report
+        data = {
+            "data": [
+                {"name": "Revenue", "value": 100, "group": None},
+                {"name": "Costs", "value": 50, "group": None},
+                {"name": "Profit", "value": 50, "group": None},
+            ],
+            "style": None,
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — group and style must be absent
+        assert result == {
+            "data": [
+                {"name": "Revenue", "value": 100},
+                {"name": "Costs", "value": 50},
+                {"name": "Profit", "value": 50},
+            ],
+        }
+        assert "style" not in result
+        for item in result["data"]:
+            assert "group" not in item
+
+    def test_should_handle_deeply_nested_none(self):
+        """None values several levels deep must also be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "config": {
+                "axis": {"label": None, "color": "red"},
+                "legend": None,
+            }
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert
+        assert result == {"config": {"axis": {"color": "red"}}}
+
+    def test_should_preserve_falsy_non_none_values(self):
+        """Zero, empty string, False, empty list, empty dict must NOT be stripped."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange
+        data = {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — all falsy-but-not-None values preserved
+        assert result == {
+            "count": 0,
+            "label": "",
+            "enabled": False,
+            "items": [],
+            "meta": {},
+        }
+
+    def test_should_return_primitives_unchanged(self):
+        """Non-dict, non-list values pass through unchanged."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive("hello") == "hello"
+        assert _strip_none_recursive(42) == 42
+        assert _strip_none_recursive(True) is True  # noqa: FBT003
+
+    def test_should_handle_empty_structures(self):
+        """Empty dict and empty list return empty."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        assert _strip_none_recursive({}) == {}
+        assert _strip_none_recursive([]) == []
+
+    def test_should_handle_list_of_primitives_with_none(self):
+        """None items inside a plain list are NOT removed (only dict keys)."""
+        from lfx.base.mcp.util import _strip_none_recursive
+
+        # Arrange — list items that are None stay (we only strip dict keys)
+        data = [1, None, "hello", None]
+
+        # Act
+        result = _strip_none_recursive(data)
+
+        # Assert — None items in list preserved (stripping applies to dict keys only)
+        assert result == [1, None, "hello", None]
+
+
+class TestConvertMcpResult:
+    """Tests for _convert_mcp_result.
+
+    Ensures MCP CallToolResult objects are properly converted into formats
+    that LangChain agents can consume, including multimodal image support.
+
+    Bug: MCP tools returning image content were passing the raw
+    CallToolResult Python object as a string to the LLM instead of
+    converting it to the image_url format required for vision models.
+    Fixes issue #11812.
+    """
+
+    def _make_text_block(self, text: str):
+        block = MagicMock()
+        block.type = "text"
+        block.text = text
+        return block
+
+    def _make_image_block(self, data: str = "abc123", mime: str = "image/png"):
+        block = MagicMock()
+        block.type = "image"
+        block.data = data
+        block.mimeType = mime
+        return block
+
+    def _make_result(self, content):
+        result = MagicMock()
+        result.content = content
+        return result
+
+    def test_should_return_empty_string_for_none_result(self):
+        """None result must return empty string without raising."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        assert _convert_mcp_result(None) == ""
+
+    def test_should_return_empty_string_for_empty_content(self):
+        """Result with empty content list must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([])
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_empty_string_for_missing_content_attr(self):
+        """Result without a content attribute must return empty string."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = MagicMock(spec=[])  # no attributes
+        assert _convert_mcp_result(result) == ""
+
+    def test_should_return_plain_string_for_single_text_block(self):
+        """Single text block must return a plain string (backward compatible)."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result([self._make_text_block("hello world")])
+        assert _convert_mcp_result(result) == "hello world"
+
+    def test_should_join_multiple_text_blocks_with_newline(self):
+        """Multiple text blocks must be joined with newline."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_text_block("first"),
+                self._make_text_block("second"),
+            ]
+        )
+        assert _convert_mcp_result(result) == "first\nsecond"
+
+    def test_should_convert_image_block_to_image_url_format(self):
+        """Image content must be converted to LangChain image_url format."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        # Arrange — reproduces the exact scenario from issue #11812
+        b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwADhQGAWjR9awAAAABJRU5ErkJggg=="
+        result = self._make_result([self._make_image_block(data=b64, mime="image/png")])
+
+        # Act
+        converted = _convert_mcp_result(result)
+
+        # Assert — must be a list with a single image_url block
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    def test_should_handle_mixed_text_and_image_blocks(self):
+        """Mixed text + image content must return a list preserving order."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        result = self._make_result(
+            [
+                self._make_text_block("Here is the screenshot:"),
+                self._make_image_block(data=b64, mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+        assert converted[0] == {"type": "text", "text": "Here is the screenshot:"}
+        assert converted[1] == {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+        }
+
+    def test_should_default_mime_type_to_image_png_when_missing(self):
+        """Image block with no mimeType must default to image/png."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock()
+        block.type = "image"
+        block.data = "xyz=="
+        block.mimeType = None  # missing MIME
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert converted[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    def test_should_handle_multiple_image_blocks(self):
+        """Multiple image blocks must all be converted."""
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        result = self._make_result(
+            [
+                self._make_image_block(data="img1==", mime="image/png"),
+                self._make_image_block(data="img2==", mime="image/jpeg"),
+            ]
+        )
+
+        converted = _convert_mcp_result(result)
+
+        assert len(converted) == 2
+        assert converted[0]["image_url"]["url"] == "data:image/png;base64,img1=="
+        assert converted[1]["image_url"]["url"] == "data:image/jpeg;base64,img2=="
+
+    def _make_resource_block(self, uri: str = "file:///data.csv", mime: str = "text/csv"):
+        block = MagicMock()
+        block.type = "resource"
+        block.model_dump.return_value = {"type": "resource", "uri": uri, "mimeType": mime}
+        return block
+
+    def test_should_serialise_resource_only_result_as_text_block(self):
+        """A resource-only result must not be dropped — serialised as JSON text block."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        resource = self._make_resource_block()
+        result = self._make_result([resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 1
+        assert converted[0]["type"] == "text"
+        parsed = json.loads(converted[0]["text"])
+        assert parsed["type"] == "resource"
+        assert "uri" in parsed
+
+    def test_should_preserve_all_blocks_in_mixed_image_and_resource_result(self):
+        """Mixed image + resource must produce a list with both blocks, nothing dropped."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        b64 = "abc123=="
+        image = self._make_image_block(data=b64, mime="image/png")
+        resource = self._make_resource_block(uri="file:///chart.csv")
+        result = self._make_result([image, resource])
+
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert len(converted) == 2
+
+        # First block: image
+        assert converted[0]["type"] == "image_url"
+        assert converted[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+        # Second block: resource serialised as text
+        assert converted[1]["type"] == "text"
+        parsed = json.loads(converted[1]["text"])
+        assert parsed["type"] == "resource"
+        assert parsed["uri"] == "file:///chart.csv"
+
+    def test_should_handle_unknown_block_type_without_model_dump(self):
+        """Block without model_dump must still produce a text fallback, not raise."""
+        import json
+
+        from lfx.base.mcp.util import _convert_mcp_result
+
+        block = MagicMock(spec=[])  # no model_dump attribute
+        block.type = "audio"
+
+        result = self._make_result([block])
+        converted = _convert_mcp_result(result)
+
+        assert isinstance(converted, list)
+        assert converted[0]["type"] == "text"
+        # Must be valid JSON
+        json.loads(converted[0]["text"])
+
+
+class TestMCPStructuredToolToolCallId:
+    """Tests for the tool_call_id branching inside MCPStructuredTool.
+
+    Uses update_tools() with a mocked stdio client so the real MCPStructuredTool
+    class (defined inline in update_tools) is exercised instead of a local copy.
+
+    When tool_call_id is absent the tool must return the raw CallToolResult
+    (preserving backward compatibility for mcp_component and ToolInvoker).
+    When tool_call_id is present it must return a ToolMessage whose content
+    is multimodal-ready and whose artifact holds the original CallToolResult.
+    """
+
+    def _make_raw_result(self, text: str = "ok", image_data: str | None = None):
+        """Build a minimal CallToolResult-like mock."""
+        text_block = MagicMock()
+        text_block.type = "text"
+        text_block.text = text
+
+        content = [text_block]
+        if image_data:
+            img_block = MagicMock()
+            img_block.type = "image"
+            img_block.data = image_data
+            img_block.mimeType = "image/png"
+            content.append(img_block)
+
+        result = MagicMock()
+        result.content = content
+        result.structuredContent = None
+        return result
+
+    async def _build_tool_via_update_tools(self, raw_result):
+        """Get a real MCPStructuredTool from update_tools() with a mocked client."""
+        mock_tool = MagicMock()
+        mock_tool.name = "get_image"
+        mock_tool.description = "Returns content"
+        mock_tool.inputSchema = {"type": "object", "properties": {}, "required": []}
+        mock_tool.outputSchema = None
+
+        mock_client = AsyncMock(spec=MCPStdioClient)
+        mock_client.connect_to_server = AsyncMock(return_value=[mock_tool])
+        mock_client.run_tool = AsyncMock(return_value=raw_result)
+        mock_client._connected = True
+
+        server_config = {"command": "fake-server"}
+        _, tools, _ = await update_tools("test-server", server_config, mcp_stdio_client=mock_client)
+        assert tools, "update_tools() must return at least one tool"
+        return tools[0]
+
+    @pytest.mark.asyncio
+    async def test_no_tool_call_id_returns_raw_result(self):
+        """Without tool_call_id the raw CallToolResult must be returned (mcp_component compat)."""
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({})
+
+        assert result is raw
+
+    @pytest.mark.asyncio
+    async def test_with_tool_call_id_returns_tool_message(self):
+        """With tool_call_id the result must be a ToolMessage."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.name == "get_image"
+        assert result.tool_call_id == "call-abc-123"
+
+    @pytest.mark.asyncio
+    async def test_tool_message_artifact_holds_raw_call_tool_result(self):
+        """The artifact on the returned ToolMessage must be the original raw result."""
+        from langchain_core.messages import ToolMessage
+
+        raw = self._make_raw_result(text="hello")
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-abc-123")
+
+        assert isinstance(result, ToolMessage)
+        assert result.artifact is raw
+
+    @pytest.mark.asyncio
+    async def test_image_content_converted_in_tool_message(self):
+        """Image blocks must appear as image_url inside the ToolMessage content."""
+        from langchain_core.messages import ToolMessage
+
+        b64 = "abc123=="
+        raw = self._make_raw_result(image_data=b64)
+        tool = await self._build_tool_via_update_tools(raw)
+
+        result = await tool.arun({}, tool_call_id="call-img-001")
+
+        assert isinstance(result, ToolMessage)
+        content = result.content
+        assert isinstance(content, list)
+        image_blocks = [b for b in content if b.get("type") == "image_url"]
+        assert len(image_blocks) == 1
+        assert image_blocks[0]["image_url"]["url"] == f"data:image/png;base64,{b64}"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_id_is_preserved_for_callbacks(self):
+        """Callbacks must still see tool_call_id and the formatted ToolMessage output."""
+        from langchain_core.callbacks.base import AsyncCallbackHandler
+        from langchain_core.messages import ToolMessage
+
+        class RecordingHandler(AsyncCallbackHandler):
+            def __init__(self):
+                self.tool_call_ids = []
+                self.outputs = []
+
+            async def on_tool_start(
+                self,
+                serialized,
+                input_str,
+                *,
+                run_id,
+                parent_run_id=None,
+                tags=None,
+                metadata=None,
+                inputs=None,
+                **kwargs,
+            ):
+                _ = (serialized, input_str, run_id, parent_run_id, tags, metadata, inputs)
+                self.tool_call_ids.append(kwargs.get("tool_call_id"))
+
+            async def on_tool_end(self, output, *, run_id, parent_run_id=None, **kwargs):
+                _ = (run_id, parent_run_id, kwargs)
+                self.outputs.append(output)
+
+        raw = self._make_raw_result(image_data="abc123==")
+        tool = await self._build_tool_via_update_tools(raw)
+        handler = RecordingHandler()
+
+        result = await tool.arun({}, tool_call_id="call-img-001", callbacks=[handler])
+
+        assert handler.tool_call_ids == ["call-img-001"]
+        assert len(handler.outputs) == 1
+        assert isinstance(handler.outputs[0], ToolMessage)
+        assert handler.outputs[0].name == "get_image"
+        assert handler.outputs[0].artifact is raw
+        assert result.name == "get_image"

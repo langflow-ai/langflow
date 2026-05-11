@@ -6,9 +6,21 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
+from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
+
+
+def _enum_values(enum_cls: type[Enum]) -> list[str]:
+    """Return the enum's string values so SQLAlchemy serializes them instead of the enum NAMEs.
+
+    The trace/span PostgreSQL enums (``spanstatus``, ``spantype``, ``spankind``) are defined
+    in migration ``3478f0bd6ccb`` using the enum *values*. Without this callable, SQLAlchemy
+    sends the enum *names* (e.g. ``"OK"`` instead of ``"ok"``) on insert, which PostgreSQL
+    rejects with ``invalid input value for enum spanstatus: "OK"``.
+    """
+    return [member.value for member in enum_cls]
 
 
 class SpanKind(str, Enum):
@@ -60,7 +72,14 @@ class TraceBase(SQLModel):
     """Base model for traces."""
 
     name: str = Field(nullable=False, description="Name of the trace (usually flow name)")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Overall trace status")
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        sa_column=Column(
+            SQLEnum(SpanStatus, name="spanstatus", values_callable=_enum_values),
+            nullable=False,
+        ),
+        description="Overall trace status",
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the trace started",
@@ -203,8 +222,22 @@ class SpanBase(SQLModel):
     """Base model for spans (individual execution steps)."""
 
     name: str = Field(nullable=False, description="Name of the span following OTel convention: '{operation} {model}'")
-    span_type: SpanType = Field(default=SpanType.CHAIN, description="Type of operation")
-    status: SpanStatus = Field(default=SpanStatus.UNSET, description="Execution status")
+    span_type: SpanType = Field(
+        default=SpanType.CHAIN,
+        sa_column=Column(
+            SQLEnum(SpanType, name="spantype", values_callable=_enum_values),
+            nullable=False,
+        ),
+        description="Type of operation",
+    )
+    status: SpanStatus = Field(
+        default=SpanStatus.UNSET,
+        sa_column=Column(
+            SQLEnum(SpanStatus, name="spanstatus", values_callable=_enum_values),
+            nullable=False,
+        ),
+        description="Execution status",
+    )
     start_time: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="When the span started",
@@ -216,6 +249,10 @@ class SpanBase(SQLModel):
     error: str | None = Field(default=None, sa_column=Column(Text), description="Error message if failed")
     span_kind: SpanKind = Field(
         default=SpanKind.INTERNAL,
+        sa_column=Column(
+            SQLEnum(SpanKind, name="spankind", values_callable=_enum_values),
+            nullable=False,
+        ),
         description="OpenTelemetry SpanKind",
     )
     # OTel-compliant extensible attributes

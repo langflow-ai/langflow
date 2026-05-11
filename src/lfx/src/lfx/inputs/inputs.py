@@ -194,9 +194,10 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         - [{'name': 'gpt-4o'}] -> [{'name': 'gpt-4o'}] (unchanged)
         - 'connect_other_models' -> 'connect_other_models' (special value, keep as string)
         """
-        # Handle empty or None values
-        if v is None or v == "":
-            return v
+        # Handle empty or None values — normalize all to None so that
+        # ``self.<model_field>`` is None when nothing is selected.
+        if v is None or v in ("", []):
+            return None
 
         # Special case: keep "connect_other_models" as a string to enable connection mode
         if v == "connect_other_models":

@@ -40,6 +40,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
@@ -432,18 +433,20 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+
+    settings = get_settings_service().settings
+
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        root_path=settings.root_path,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
 
     setup_sentry(app)
-
-    settings = get_settings_service().settings
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -499,6 +502,28 @@ def create_app():
         return await call_next(request)
 
     @app.middleware("http")
+    async def forwarded_prefix_middleware(request: Request, call_next):
+        """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+        the request, it can advertise the original prefix via X-Forwarded-Prefix.
+        We propagate this into the ASGI ``root_path`` so that transports like
+        MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
+        """
+        if not settings.root_path:
+            return await call_next(request)
+
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            request.scope["root_path"] = prefix
+        return await call_next(request)
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -535,6 +560,13 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    @app.exception_handler(DeploymentGuardError)
+    async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        return JSONResponse(
+            status_code=HTTPStatus.CONFLICT,
+            content={"detail": exc.detail},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):

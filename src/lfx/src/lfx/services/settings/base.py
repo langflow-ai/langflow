@@ -6,9 +6,9 @@ from pathlib import Path
 from shutil import copy2
 from typing import Any, Literal
 
+import aiofiles
 import orjson
 import yaml
-from aiofile import async_open
 from pydantic import Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
@@ -92,6 +92,39 @@ class Settings(BaseSettings):
     If not provided, a hash of the database URL will be used. Useful when multiple Langflow
     instances share the same database and need coordinated migration locking."""
 
+    root_path: str = ""
+    """ASGI root_path for deployments behind a reverse proxy that strips a URL
+    prefix (e.g. '/langflow').  When set, the MCP SSE transport includes this
+    prefix in the POST-back URL so clients can reach the correct endpoint.
+    Can also be set via the LANGFLOW_ROOT_PATH environment variable."""
+
+    @field_validator("root_path", mode="before")
+    @classmethod
+    def validate_root_path(cls, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            msg = "root_path must be a string"
+            raise TypeError(msg)
+
+        value = value.strip()
+        if not value or value == "/":
+            return ""
+
+        if "://" in value or "?" in value or "#" in value:
+            msg = "root_path must be an ASGI path prefix only, without scheme, query string, or fragment"
+            raise ValueError(msg)
+
+        if not value.startswith("/"):
+            value = f"/{value}"
+
+        return value.rstrip("/")
+
+    mcp_base_url: str = ""
+    """External base URL used to build MCP server URLs in the UI configuration JSON
+    (e.g. 'https://langflow.example.com'). When empty, the frontend falls back to
+    the browser's window.location.origin."""
+
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
     database."""
@@ -162,6 +195,11 @@ class Settings(BaseSettings):
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
     components_path: list[str] = []
+    """List of paths to custom components.
+
+    Security: This setting defines an allow-list of custom components
+    permitted to execute, even when LANGFLOW_ALLOW_CUSTOM_COMPONENTS is False.
+    """
     components_index_path: str | None = None
     """Path or URL to a prebuilt component index JSON file.
 
@@ -343,6 +381,21 @@ class Settings(BaseSettings):
     this is intended to be used to skip all startup project logic."""
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
+
+    # Custom Component Security
+    allow_custom_components: bool = True
+    """If set to False, blocks execution of components whose code does not match a known
+    server template.
+
+    The server validates node code against its component template cache;
+    when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
+    as a safety measure.
+
+    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
+    that will be allowed to execute, even when allow_custom_components is False.
+
+    Note: this is a beta feature. For security in a multi-tenant environment,
+    use hardware-level isolation to restrict access."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False
@@ -680,7 +733,7 @@ async def load_settings_from_yaml(file_path: str) -> Settings:
     else:
         file_path_ = Path(file_path)
 
-    async with async_open(file_path_.name, encoding="utf-8") as f:
+    async with aiofiles.open(file_path_.name, encoding="utf-8") as f:
         content = await f.read()
         settings_dict = yaml.safe_load(content)
         settings_dict = {k.upper(): v for k, v in settings_dict.items()}

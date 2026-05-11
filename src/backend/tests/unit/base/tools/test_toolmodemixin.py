@@ -153,3 +153,24 @@ def test_component_inputs_toolkit():
         assert properties[input_name]["description"] == expected["description"], (
             f"Description mismatch for {input_name}."
         )
+
+
+def test_table_input_preserves_list_dict():
+    """Test that TableInput with tool_mode=True preserves all dicts in a list.
+
+    Regression test for: https://github.com/langflow-ai/langflow/issues/12062
+    """
+    component = AllInputsComponent()
+
+    # Simulate passing a list of dicts
+    test_data = [
+        {"field": "age", "value": "5"},
+        {"field": "status", "value": "active"},
+        {"field": "weight", "value": "500"},
+    ]
+
+    component.set(table_input=test_data)
+
+    # Verify all items are preserved (not just the last one)
+    assert component.table_input == test_data
+    assert len(component.table_input) == 3

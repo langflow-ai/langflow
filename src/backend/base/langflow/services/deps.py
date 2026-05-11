@@ -263,3 +263,9 @@ def get_job_service():
     from langflow.services.jobs.factory import JobServiceFactory
 
     return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+
+
+def get_flow_events_service():
+    from langflow.services.flow_events.factory import FlowEventsServiceFactory
+
+    return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())

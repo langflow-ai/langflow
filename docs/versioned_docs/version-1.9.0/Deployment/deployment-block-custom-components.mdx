@@ -1,0 +1,43 @@
+---
+title: Block custom components
+slug: /deployment-block-custom-components
+---
+
+Custom components and the component code editor allow Langflow users to create and execute Python code in the Langflow runtime.
+While this freedom is a feature of Langflow, in some deployments you might want to block the creation of custom Langflow components to prevent arbitrary code execution.
+
+To block custom component creation on a Langflow server, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false
+```
+
+When set to `false`, Langflow blocks creating custom components and changing code in the visual editor.
+
+When unset or `true`, Langflow allows custom code.
+Existing Langflow installations will keep the default `true` behavior until you opt in to this restriction.
+
+This environment variable is a beta feature, and should not be your only safeguard in production environments.
+
+In the event that Langflow could execute untrusted or LLM-generated code, run Langflow in an isolated and containerized execution environment.
+
+### Configure a custom component allow-list
+
+`LANGFLOW_ALLOW_CUSTOM_COMPONENTS` works together with optional paths that define which component templates the server loads, and which code hashes are trusted.
+
+Directories listed in the `LANGFLOW_COMPONENTS_PATH` environment variable are loaded as custom components and merged into the server’s template set.
+When `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` is set to `false`, the components in the `LANGFLOW_COMPONENTS_PATH` directory **remain allowed**.
+
+To allow some components while blocking others, include the allowed custom components directory in `LANGFLOW_COMPONENTS_PATH` and set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` to `false`.
+
+`LANGFLOW_COMPONENTS_INDEX_PATH` points to a prebuilt component index JSON file at a local path or `http://` / `https://` URL.
+This environment variable replaces the default index bundled with the `lfx` package.
+It does **not** import Python modules from a directory on disk.
+To allow-list custom components, use the `LANGFLOW_COMPONENTS_PATH` environment variable.
+
+If both environment variables are set, Langflow builds one combined set of components from the custom index _and_ from `LANGFLOW_COMPONENTS_PATH`. If the same component category name exists in both, `LANGFLOW_COMPONENTS_PATH` replaces that whole category from the custom index.
+
+For more information, see:
+
+* [Environment variables](/environment-variables#visual-editor-and-playground-behavior)
+* [Security](/security)

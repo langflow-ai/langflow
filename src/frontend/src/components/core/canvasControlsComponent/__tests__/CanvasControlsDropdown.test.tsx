@@ -105,14 +105,14 @@ describe("CanvasControlsDropdown", () => {
   });
 
   it("renders dropdown trigger with zoom percentage", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     expect(screen.getByTestId("canvas_controls_dropdown")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
   });
 
   it("renders chevron icon", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     // Should have one of the chevron icons (the actual logic depends on internal state)
     const chevronUp = screen.queryByTestId("icon-ChevronUp");
@@ -122,7 +122,7 @@ describe("CanvasControlsDropdown", () => {
   });
 
   it("renders all control buttons with correct props", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     expect(screen.getByTestId("zoom_in_dropdown")).toBeInTheDocument();
     expect(screen.getByTestId("zoom_out_dropdown")).toBeInTheDocument();
@@ -141,28 +141,28 @@ describe("CanvasControlsDropdown", () => {
   });
 
   it("handles zoom in button click", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     fireEvent.click(screen.getByTestId("zoom_in_dropdown"));
     expect(mockReactFlowFns.zoomIn).toHaveBeenCalledTimes(1);
   });
 
   it("handles zoom out button click", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     fireEvent.click(screen.getByTestId("zoom_out_dropdown"));
     expect(mockReactFlowFns.zoomOut).toHaveBeenCalledTimes(1);
   });
 
   it("handles fit view button click", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     fireEvent.click(screen.getByTestId("fit_view_dropdown"));
     expect(mockReactFlowFns.fitView).toHaveBeenCalledTimes(1);
   });
 
   it("handles reset zoom button click", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     fireEvent.click(screen.getByTestId("reset_zoom_dropdown"));
     expect(mockReactFlowFns.zoomTo).toHaveBeenCalledWith(1);
@@ -171,7 +171,7 @@ describe("CanvasControlsDropdown", () => {
   it("disables zoom in when maxZoomReached is true", () => {
     mockStoreValues.maxZoomReached = true;
 
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     expect(screen.getByTestId("zoom_in_dropdown")).toBeDisabled();
   });
@@ -179,14 +179,14 @@ describe("CanvasControlsDropdown", () => {
   it("disables zoom out when minZoomReached is true", () => {
     mockStoreValues.minZoomReached = true;
 
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     expect(screen.getByTestId("zoom_out_dropdown")).toBeDisabled();
   });
 
   describe("Keyboard shortcuts", () => {
     it("sets up keyboard event listeners on mount", () => {
-      render(<CanvasControlsDropdown />);
+      render(<CanvasControlsDropdown selectedNode={null} />);
 
       expect(document.addEventListener).toHaveBeenCalledWith(
         "keydown",
@@ -197,7 +197,9 @@ describe("CanvasControlsDropdown", () => {
 
   describe("Event listener management", () => {
     it("removes keydown event listener on unmount", () => {
-      const { unmount } = render(<CanvasControlsDropdown />);
+      const { unmount } = render(
+        <CanvasControlsDropdown selectedNode={null} />,
+      );
 
       unmount();
 
@@ -210,7 +212,7 @@ describe("CanvasControlsDropdown", () => {
 
   describe("Dynamic zoom display", () => {
     it("displays zoom percentage correctly", () => {
-      render(<CanvasControlsDropdown />);
+      render(<CanvasControlsDropdown selectedNode={null} />);
 
       expect(screen.getByText("100%")).toBeInTheDocument();
     });
@@ -218,7 +220,7 @@ describe("CanvasControlsDropdown", () => {
     it("handles fractional zoom values correctly", () => {
       mockStoreValues.zoom = 0.75;
 
-      render(<CanvasControlsDropdown />);
+      render(<CanvasControlsDropdown selectedNode={null} />);
 
       expect(screen.getByText("75%")).toBeInTheDocument();
     });

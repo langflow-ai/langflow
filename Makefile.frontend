@@ -167,6 +167,39 @@ test_frontend_coverage_open: test_frontend_coverage ## run tests with coverage a
 	fi
 
 ######################
+# FRONTEND TESTS COVERAGE (JEST + PLAYWRIGHT COMBINED )
+######################
+# Run full frontend tests (Jest + Playwright) with coverage and merge into HTML
+test_frontend_coverage_full: frontend_deps_check
+	@echo "=== Running Jest unit tests with coverage ==="
+	@(cd $(FRONTEND_DIR) && npx jest --coverage); echo $$? > /tmp/jest_exit
+
+	@echo "=== Running Playwright E2E tests ==="
+	@(cd $(FRONTEND_DIR) && CI=1 npx playwright test --project=chromium); echo $$? > /tmp/playwright_exit
+
+	@echo "=== Merging coverage reports ==="
+	@mkdir -p $(FRONTEND_DIR)/coverage/combined
+
+	# Merge Playwright raw coverage files
+	@cd $(FRONTEND_DIR) && npx nyc merge coverage/playwright/individual-test coverage/combined/playwright.json || echo "Failed to merge Playwright coverage"
+	# Generate Playwright HTML report
+	@cd $(FRONTEND_DIR) && npx nyc report --reporter=html --reporter=text --temp-dir coverage/playwright/individual-test --report-dir coverage/playwright/html-report || echo "Failed to generate Playwright HTML coverage"
+	# Migrate Jest coverage
+	@cp $(FRONTEND_DIR)/coverage/jest/coverage-final.json $(FRONTEND_DIR)/coverage/combined/jest.json || echo "Failed to migrate Jest coverage"
+	# Merge both into final
+	@cd $(FRONTEND_DIR) && npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
+
+	@echo "=== Generating HTML coverage report ==="
+	@cd $(FRONTEND_DIR) && npx nyc report --reporter=html --reporter=text --temp-dir coverage/combined --report-dir coverage/final-coverage-report || echo "Failed to generate Playwright + Jest coverage html report"
+
+
+	@echo "=== Checking test results ==="
+	@JEST=$$(cat /tmp/jest_exit); \
+	PLAY=$$(cat /tmp/playwright_exit); \
+	rm -f /tmp/jest_exit /tmp/playwright_exit; \
+	test $$JEST -eq 0 -a $$PLAY -eq 0
+
+######################
 # STORYBOOK
 ######################
 
