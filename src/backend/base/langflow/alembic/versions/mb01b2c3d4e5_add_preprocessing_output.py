@@ -9,7 +9,7 @@ Adds:
 Phase: EXPAND
 
 Revision ID: mb01b2c3d4e5
-Revises: b4c2f8e9a1d3
+Revises: kb1a2b3c4d5e
 Create Date: 2026-05-01 00:00:00.000000
 """
 
@@ -20,7 +20,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision: str = "mb01b2c3d4e5"  # pragma: allowlist secret
-down_revision: str | None = "b4c2f8e9a1d3"  # pragma: allowlist secret
+down_revision: str | None = "kb1a2b3c4d5e"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
