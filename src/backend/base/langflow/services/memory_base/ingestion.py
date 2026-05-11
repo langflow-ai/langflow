@@ -103,6 +103,10 @@ async def trigger_ingestion(
             cursor_id=cursor_id_snapshot,
             task_job_id=job_id,
             job_service=job_service,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+            preproc_instructions=mb.preproc_instructions,
+            preproc_kill_phrase=mb.preproc_kill_phrase,
         ),
     )
 
@@ -209,6 +213,10 @@ async def _maybe_trigger(
             cursor_id=cursor_id_snapshot,
             task_job_id=job_id,
             job_service=job_service,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+            preproc_instructions=mb.preproc_instructions,
+            preproc_kill_phrase=mb.preproc_kill_phrase,
         ),
     )
 
@@ -261,7 +269,10 @@ async def regenerate(
     """
     from sqlalchemy import delete as sa_delete
 
-    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
+    from langflow.services.database.models.memory_base.model import (
+        MemoryBasePreprocessingOutput,
+        MessageIngestionRecord,
+    )
 
     async with session_scope() as db:
         await get_mb_or_raise(db, memory_base_id, user_id)
@@ -277,6 +288,13 @@ async def regenerate(
         # Delete existing ingestion records so re-ingestion inserts fresh rows
         await db.exec(  # type: ignore[call-overload]
             sa_delete(MessageIngestionRecord).where(MessageIngestionRecord.memory_base_id == memory_base_id)
+        )
+        # Same for preprocessing outputs — without this, a stale "processed" row would
+        # cause Phase A on the very next job to skip the LLM and retry with the old text.
+        await db.exec(  # type: ignore[call-overload]
+            sa_delete(MemoryBasePreprocessingOutput).where(
+                MemoryBasePreprocessingOutput.memory_base_id == memory_base_id
+            )
         )
         await db.commit()
 
