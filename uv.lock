@@ -473,6 +473,18 @@ wheels = [
 ]
 
 [[package]]
+name = "apscheduler"
+version = "3.11.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzlocal" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/12/3e4389e5920b4c1763390c6d371162f3784f86f85cd6d6c1bfe68eef14e2/apscheduler-3.11.2.tar.gz", hash = "sha256:2a9966b052ec805f020c8c4c3ae6e6a06e24b1bf19f2e11d91d8cca0473eef41", size = 108683, upload-time = "2025-12-22T00:39:34.884Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9f/64/2e54428beba8d9992aa478bb8f6de9e4ecaa5f8f513bcfd567ed7fb0262d/apscheduler-3.11.2-py3-none-any.whl", hash = "sha256:ce005177f741409db4e4dd40a7431b76feb856b9dd69d57e0da49d6715bfd26d", size = 64439, upload-time = "2025-12-22T00:39:33.303Z" },
+]
+
+[[package]]
 name = "argcomplete"
 version = "3.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -6580,11 +6592,13 @@ dependencies = [
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "onnxruntime" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-exporter-prometheus" },
     { name = "opentelemetry-instrumentation-fastapi" },
+    { name = "opentelemetry-instrumentation-requests" },
+    { name = "opentelemetry-instrumentation-urllib3" },
     { name = "opentelemetry-sdk" },
     { name = "orjson" },
     { name = "pandas" },
@@ -6631,6 +6645,7 @@ all = [
     { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "aioboto3" },
     { name = "apify-client" },
+    { name = "apscheduler" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astrapy" },
@@ -6644,6 +6659,7 @@ all = [
     { name = "composio" },
     { name = "composio-langchain" },
     { name = "couchbase" },
+    { name = "cryptography" },
     { name = "cuga", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "datasets" },
     { name = "ddgs" },
@@ -6795,6 +6811,7 @@ complete = [
     { name = "agent-lifecycle-toolkit", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "aioboto3" },
     { name = "apify-client" },
+    { name = "apscheduler" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astrapy" },
@@ -6808,6 +6825,7 @@ complete = [
     { name = "composio" },
     { name = "composio-langchain" },
     { name = "couchbase" },
+    { name = "cryptography" },
     { name = "cuga", marker = "platform_machine == 'arm64' or sys_platform != 'darwin'" },
     { name = "datasets" },
     { name = "ddgs" },
@@ -7015,6 +7033,8 @@ lark = [
     { name = "lark" },
 ]
 litellm = [
+    { name = "apscheduler" },
+    { name = "cryptography" },
     { name = "litellm" },
 ]
 local = [
@@ -7213,6 +7233,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
     { name = "alembic", specifier = ">=1.13.0,<2.0.0" },
     { name = "apify-client", marker = "extra == 'apify'", specifier = ">=1.8.1" },
+    { name = "apscheduler", marker = "extra == 'litellm'", specifier = ">=3.10.4,<4.0.0" },
     { name = "arize-phoenix-otel", marker = "extra == 'arize'", specifier = ">=0.6.1" },
     { name = "assemblyai", specifier = ">=0.33.0,<1.0.0" },
     { name = "assemblyai", marker = "extra == 'assemblyai'", specifier = "==0.35.1" },
@@ -7233,6 +7254,7 @@ requires-dist = [
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=46.0.7" },
+    { name = "cryptography", marker = "extra == 'litellm'" },
     { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2" },
     { name = "cuga", marker = "platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=0.2.20,<0.3.0" },
@@ -7438,7 +7460,7 @@ requires-dist = [
     { name = "numexpr", marker = "extra == 'numexpr'", specifier = "==2.10.2" },
     { name = "onnxruntime", specifier = ">=1.20,<1.24" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.68.2,<3.0.0" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.26" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')", specifier = "==1.0.26" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
     { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
@@ -7446,6 +7468,8 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.30.0,<2.0.0" },
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.50b0,<1.0.0" },
+    { name = "opentelemetry-instrumentation-requests", specifier = ">=0.50b0,<1.0.0" },
+    { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
     { name = "opik", marker = "extra == 'opik'", specifier = ">=1.6.3,<2.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
@@ -7773,7 +7797,7 @@ dependencies = [
     { name = "nanoid" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
     { name = "orjson" },
     { name = "pandas" },
     { name = "passlib" },
@@ -7839,7 +7863,7 @@ requires-dist = [
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
     { name = "nanoid", specifier = ">=2.0.0,<3.0.0" },
     { name = "networkx", specifier = ">=3.4.2,<4.0.0" },
-    { name = "opendsstar", marker = "python_full_version >= '3.11'", specifier = "==1.0.26" },
+    { name = "opendsstar", marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.11' and sys_platform != 'darwin')", specifier = "==1.0.26" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.0.0,<3.0.0" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -15833,6 +15857,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/19/f5/cd531b2d15a671a40c0f66cf06bc3570a12cd56eef98960068ebbad1bf5a/tzdata-2026.1.tar.gz", hash = "sha256:67658a1903c75917309e753fdc349ac0efd8c27db7a0cb406a25be4840f87f98", size = 197639, upload-time = "2026-04-03T11:25:22.002Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b0/70/d460bd685a170790ec89317e9bd33047988e4bce507b831f5db771e142de/tzdata-2026.1-py2.py3-none-any.whl", hash = "sha256:4b1d2be7ac37ceafd7327b961aa3a54e467efbdb563a23655fbfe0d39cfc42a9", size = 348952, upload-time = "2026-04-03T11:25:20.313Z" },
+]
+
+[[package]]
+name = "tzlocal"
+version = "5.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "tzdata", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761, upload-time = "2025-03-05T21:17:41.549Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026, upload-time = "2025-03-05T21:17:39.857Z" },
 ]
 
 [[package]]
