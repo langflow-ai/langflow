@@ -7,13 +7,16 @@ The MemoryBaseService delegates to these functions for all ingestion-related wor
 from __future__ import annotations
 
 import asyncio
+import types
 import uuid
 from typing import TYPE_CHECKING
 
+import chromadb.errors
+from langchain_chroma import Chroma
 from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -311,6 +314,147 @@ async def regenerate(
                 hash_session_id(s.session_id),
             )
     return job_ids
+
+
+async def purge_session_data(
+    *,
+    user_id: uuid.UUID,
+    session_ids: list[str],
+) -> int:
+    """Purge Chroma chunks and tracking rows for the given sessions across the user's MBs.
+
+    Called from the message-session deletion endpoint so that wiping a session from
+    the UI also clears its embeddings from every Memory Base that ingested from it.
+    Without this, chunks tagged with the deleted session_id remain in Chroma and
+    leak into newly-created sessions whose retrieval doesn't restrict by session_id.
+
+    Returns the number of (memory_base, session) pairs that were processed.
+    Best-effort: chunk deletion failures are logged but do not abort DB cleanup
+    (we'd rather drop the bookkeeping rows than leave them dangling, since the
+    user's intent — "delete this session" — is unambiguous).
+    """
+    from sqlalchemy import delete as sa_delete
+
+    from langflow.services.database.models.memory_base.model import MessageIngestionRecord
+
+    if not session_ids:
+        return 0
+
+    async with session_scope() as db:
+        stmt = (
+            select(MemoryBase, MemoryBaseSession)
+            .join(MemoryBaseSession, MemoryBaseSession.memory_base_id == MemoryBase.id)
+            .where(MemoryBase.user_id == user_id)
+            .where(col(MemoryBaseSession.session_id).in_(session_ids))
+        )
+        result = await db.exec(stmt)
+        pairs: list[tuple[MemoryBase, MemoryBaseSession]] = list(result.all())
+
+        if not pairs:
+            return 0
+
+        kb_username = await resolve_kb_username(db, user_id)
+
+    # ---- 1. Delete Chroma chunks (best-effort, outside the DB session) ----
+    kb_root = KBStorageHelper.get_root_path()
+    if kb_root:
+        for mb, mbs in pairs:
+            try:
+                await _delete_chunks_for_session(
+                    kb_root=kb_root,
+                    kb_username=kb_username,
+                    kb_name=mb.kb_name,
+                    user_id=user_id,
+                    session_id=mbs.session_id,
+                )
+            except (OSError, ValueError, chromadb.errors.ChromaError):
+                await logger.aerror(
+                    "Failed to purge chunks for memory_base=%s session=%s",
+                    mb.id,
+                    hash_session_id(mbs.session_id),
+                    exc_info=True,
+                )
+
+    # ---- 2. Delete tracking rows in a single transaction ----
+    pair_keys = [(mb.id, mbs.session_id) for mb, mbs in pairs]
+    affected_mb_ids = {mb_id for mb_id, _ in pair_keys}
+    affected_session_ids = {sid for _, sid in pair_keys}
+
+    async with session_scope() as db:
+        # Scheduler state, not audit: count_pending_messages keys on (memory_base_id, session_id)
+        # string, so leaving these rows would carry pending counts into a future session that
+        # reuses the same session_id and trigger a phantom ingestion. Audit lives on Job.
+        await db.exec(  # type: ignore[call-overload]
+            sa_delete(MemoryBaseWorkflowRun)
+            .where(col(MemoryBaseWorkflowRun.memory_base_id).in_(affected_mb_ids))
+            .where(col(MemoryBaseWorkflowRun.session_id).in_(affected_session_ids))
+        )
+        # Defensive: callers normally delete the underlying messages first (which cascades
+        # MessageIngestionRecord via message.id FK), but if a caller invokes purge_session_data
+        # without that, the records would leak and block re-ingestion via the unique constraint.
+        await db.exec(  # type: ignore[call-overload]
+            sa_delete(MessageIngestionRecord)
+            .where(col(MessageIngestionRecord.memory_base_id).in_(affected_mb_ids))
+            .where(col(MessageIngestionRecord.session_id).in_(affected_session_ids))
+        )
+        await db.exec(  # type: ignore[call-overload]
+            sa_delete(MemoryBaseSession)
+            .where(col(MemoryBaseSession.memory_base_id).in_(affected_mb_ids))
+            .where(col(MemoryBaseSession.session_id).in_(affected_session_ids))
+        )
+        await db.commit()
+
+    return len(pairs)
+
+
+async def _delete_chunks_for_session(
+    *,
+    kb_root,
+    kb_username: str,
+    kb_name: str,
+    user_id: uuid.UUID,
+    session_id: str,
+) -> None:
+    """Open the KB's Chroma collection and delete every chunk tagged with ``session_id``.
+
+    Uses the canonical ``$eq`` operator (matching the retrieval filter) so the
+    delete and query paths agree on the metadata key shape.
+    """
+    kb_path = kb_root / kb_username / kb_name
+    validate_kb_path(kb_root, kb_path)
+    if not await asyncio.to_thread(kb_path.exists):
+        return
+
+    embedding_provider, embedding_model = resolve_embedding(kb_name, kb_username)
+    user_stub = types.SimpleNamespace(id=user_id)
+    embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
+
+    client = KBStorageHelper.get_fresh_chroma_client(kb_path)
+    try:
+        chroma = Chroma(client=client, embedding_function=embeddings, collection_name=kb_name)
+        await chroma.adelete(where={"session_id": {"$eq": session_id}})
+        # Refresh on-disk metrics so the UI reflects the post-purge state.
+        try:
+            await asyncio.to_thread(_sync_metrics_after_purge, kb_path, chroma)
+        except (OSError, ValueError):
+            await logger.awarning(
+                "Could not refresh KB metrics after session purge for %s/%s",
+                kb_username,
+                kb_name,
+                exc_info=True,
+            )
+    finally:
+        KBStorageHelper.release_chroma_resources(kb_path)
+
+
+def _sync_metrics_after_purge(kb_path, chroma: Chroma) -> None:
+    """Refresh chunk/word/character counts on the KB's embedding_metadata.json."""
+    import json
+
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=chroma)
+    metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
+    (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata, indent=2))
 
 
 async def cancel_active_jobs(*, memory_base_id: uuid.UUID, db: AsyncSession) -> None:

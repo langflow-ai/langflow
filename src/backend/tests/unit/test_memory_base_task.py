@@ -2031,3 +2031,180 @@ class TestPreprocessingHelpers:
         mock_db = MagicMock()
         await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=uuid.uuid4())
         assert row.updated_at > old_time
+
+
+# ------------------------------------------------------------------ #
+#  _fetch_pending_messages — error-message filtering                  #
+# ------------------------------------------------------------------ #
+
+
+class TestFetchPendingMessagesFiltersErrors:
+    """Regression: component error/exception messages must never be ingested.
+
+    See bug report: "[Memory Base] Error messages from components are indexed as
+    valid chunks in Chroma".  The fetch must skip messages where ``error=True``
+    or ``category='error'`` so failure output (e.g. an embedder API error) is
+    never embedded as legitimate conversation context.
+    """
+
+    @staticmethod
+    def _engine():
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlmodel.pool import StaticPool
+
+        return create_async_engine(
+            "sqlite+aiosqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+
+    @pytest.mark.asyncio
+    async def test_excludes_messages_with_error_flag_or_error_category(self):
+        from langflow.services.database.models.message.model import MessageTable
+        from langflow.services.memory_base.task import _fetch_pending_messages
+        from sqlmodel import SQLModel
+        from sqlmodel.ext.asyncio.session import AsyncSession
+
+        engine = self._engine()
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+
+            flow_id = uuid.uuid4()
+            session_id = "sess-error-filter"
+            base_ts = datetime.now(timezone.utc)
+
+            good_user = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="What is the weather?",
+                flow_id=flow_id,
+                timestamp=base_ts,
+                error=False,
+                category="message",
+            )
+            error_flag_only = MessageTable(
+                id=uuid.uuid4(),
+                sender="Knowledge Base",
+                sender_name="Knowledge Base",
+                session_id=session_id,
+                text="[Knowledge Base] Error embedding content (INVALID_ARGUMENT): 400.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 1),
+                error=True,
+                category="message",  # category may not always be "error"
+            )
+            error_category = MessageTable(
+                id=uuid.uuid4(),
+                sender="Knowledge Base",
+                sender_name="Knowledge Base",
+                session_id=session_id,
+                text="EmbedContentRequest.content contains an empty Part.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 2),
+                error=False,  # legacy rows may have error=False but category="error"
+                category="error",
+            )
+            good_ai = MessageTable(
+                id=uuid.uuid4(),
+                sender="Machine",
+                sender_name="AI",
+                session_id=session_id,
+                text="The weather is sunny.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 3),
+                error=False,
+                category="message",
+            )
+
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                db.add_all([good_user, error_flag_only, error_category, good_ai])
+                await db.commit()
+
+                fetched = await _fetch_pending_messages(
+                    db,
+                    flow_id=flow_id,
+                    session_id=session_id,
+                    cursor_id=None,
+                )
+
+            fetched_ids = {m.id for m in fetched}
+            assert good_user.id in fetched_ids
+            assert good_ai.id in fetched_ids
+            assert error_flag_only.id not in fetched_ids, "error=True message must be filtered"
+            assert error_category.id not in fetched_ids, "category='error' message must be filtered"
+        finally:
+            await engine.dispose()
+
+    @pytest.mark.asyncio
+    async def test_other_session_or_flow_messages_still_excluded_even_when_error(self):
+        """Sanity check: error filter does not accidentally pull in cross-session rows."""
+        from langflow.services.database.models.message.model import MessageTable
+        from langflow.services.memory_base.task import _fetch_pending_messages
+        from sqlmodel import SQLModel
+        from sqlmodel.ext.asyncio.session import AsyncSession
+
+        engine = self._engine()
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+
+            flow_id = uuid.uuid4()
+            other_flow_id = uuid.uuid4()
+            session_id = "sess-A"
+            other_session_id = "sess-B"
+            ts = datetime.now(timezone.utc)
+
+            # Good message in *another* session — must not be returned.
+            other_session_msg = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=other_session_id,
+                text="cross-session leak attempt",
+                flow_id=flow_id,
+                timestamp=ts,
+                error=False,
+                category="message",
+            )
+            # Good message in another flow — must not be returned either.
+            other_flow_msg = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="cross-flow leak attempt",
+                flow_id=other_flow_id,
+                timestamp=ts,
+                error=False,
+                category="message",
+            )
+            good = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="kept",
+                flow_id=flow_id,
+                timestamp=ts.replace(microsecond=ts.microsecond + 1),
+                error=False,
+                category="message",
+            )
+
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                db.add_all([other_session_msg, other_flow_msg, good])
+                await db.commit()
+
+                fetched = await _fetch_pending_messages(
+                    db,
+                    flow_id=flow_id,
+                    session_id=session_id,
+                    cursor_id=None,
+                )
+
+            fetched_ids = {m.id for m in fetched}
+            assert fetched_ids == {good.id}
+        finally:
+            await engine.dispose()

@@ -9,7 +9,7 @@ from lfx.base.models.model_metadata import get_provider_param_mapping
 from lfx.base.models.model_utils import replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
-from .class_registry import EMBEDDING_PROVIDER_CLASS_MAPPING
+from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status
 from .provider_queries import MODELS_DETAILED, model_provider_metadata
 
@@ -274,42 +274,10 @@ def get_embedding_model_options(
 
     options = []
 
-    # Provider-specific param mappings
-    param_mappings = {
-        "OpenAI": {
-            "model": "model",
-            "api_key": "api_key",
-            "api_base": "base_url",
-            "dimensions": "dimensions",
-            "chunk_size": "chunk_size",
-            "request_timeout": "timeout",
-            "max_retries": "max_retries",
-            "show_progress_bar": "show_progress_bar",
-            "model_kwargs": "model_kwargs",
-        },
-        "Google Generative AI": {
-            "model": "model",
-            "api_key": "google_api_key",
-            "dimensions": "output_dimensionality",
-            "request_timeout": "request_options",
-            "model_kwargs": "client_options",
-        },
-        "Ollama": {
-            "model": "model",
-            "base_url": "base_url",
-            "num_ctx": "num_ctx",
-            "request_timeout": "request_timeout",
-            "model_kwargs": "model_kwargs",
-        },
-        "IBM WatsonX": {
-            "model_id": "model_id",
-            "url": "url",
-            "api_key": "apikey",
-            "project_id": "project_id",
-            "space_id": "space_id",
-            "request_timeout": "request_timeout",
-        },
-    }
+    # Provider-specific param mappings live in class_registry alongside
+    # the embedding-class mapping so the instantiation fallback in
+    # ``_instantiate_embeddings`` shares one source of truth.
+    param_mappings = EMBEDDING_PARAM_MAPPINGS
 
     # Track which providers have models
     providers_with_models = set()
