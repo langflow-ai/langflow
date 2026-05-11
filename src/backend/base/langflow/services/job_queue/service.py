@@ -472,6 +472,11 @@ class RedisQueueWrapper:
         # — it just means the producer hasn't written its first event yet.
         self._observed_stream: bool = False
         self._created_at: float = time.monotonic()
+        # Flips to True after the very first XREAD call returns (regardless of
+        # whether it had results).  empty() returns False until this flag is set
+        # so that the while-not-empty drain loop in build.py suspends on get()
+        # and lets the fill task populate the buffer before the loop exits.
+        self._first_read_done: bool = False
         self._fill_task: asyncio.Task = asyncio.create_task(self._fill_from_redis())
 
     @property
@@ -493,6 +498,7 @@ class RedisQueueWrapper:
                     await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                     continue
 
+                self._first_read_done = True
                 if results:
                     self._observed_stream = True
                     for _, messages in results:
@@ -532,7 +538,13 @@ class RedisQueueWrapper:
     # ------------------------------------------------------------------
 
     def empty(self) -> bool:
-        return self._buffer.empty()
+        # Before the first XREAD completes the local buffer is empty even if
+        # Redis already has events queued.  Returning False here causes the
+        # while-not-empty drain loop in build.py to suspend on await get(),
+        # which yields to the event loop so the fill task can run its first
+        # XREAD and populate the buffer.  After warm-up, delegate to the
+        # actual buffer state.
+        return self._first_read_done and self._buffer.empty()
 
     async def get(self):
         return await self._buffer.get()
