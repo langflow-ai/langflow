@@ -36,8 +36,8 @@ def instantiate_class(
         msg = "No base type provided for vertex"
         raise ValueError(msg)
 
+    code = vertex.params.get("code")
     custom_params = get_params(vertex.params)
-    code = custom_params.pop("code")
     class_object: type[CustomComponent | Component] = eval_custom_component_code(code)
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
@@ -79,7 +79,9 @@ def get_params(vertex_params):
     params = vertex_params
     params = convert_params_to_sets(params)
     params = convert_kwargs(params)
-    return params.copy()
+    params = params.copy()
+    params.pop("code", None)
+    return params
 
 
 def convert_params_to_sets(params):

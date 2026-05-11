@@ -3,9 +3,33 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.interface.initialize.loading import (
+    get_params,
     update_params_with_load_from_db_fields,
     update_table_params_with_load_from_db_fields,
 )
+
+
+def test_get_params_strips_code_field():
+    """Regression: get_params must drop the synthetic 'code' field.
+
+    The 'code' template field stores the component source for class evaluation
+    and is not a build/runtime parameter. If it leaks through, legacy
+    CustomComponent.build(...) signatures fail with
+    'got an unexpected keyword argument 'code''.
+    """
+    vertex_params = {"code": "class Foo: ...", "api_key": "x", "user_request": "hi"}
+    result = get_params(vertex_params)
+    assert "code" not in result
+    assert result["api_key"] == "x"
+    assert result["user_request"] == "hi"
+    # Input dict must not be mutated.
+    assert "code" in vertex_params
+
+
+def test_get_params_without_code_field_is_unchanged():
+    vertex_params = {"api_key": "x"}
+    result = get_params(vertex_params)
+    assert result == {"api_key": "x"}
 
 
 @pytest.mark.asyncio
