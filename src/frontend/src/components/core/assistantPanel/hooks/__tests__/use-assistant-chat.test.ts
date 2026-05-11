@@ -37,6 +37,24 @@ jest.mock("@/stores/flowsManagerStore", () => {
   return { __esModule: true, default: fn };
 });
 
+// useFlowStore is invoked via getState() inside applyFlowUpdate. The hook
+// calls setNodes/setEdges as the side effect we assert against — we expose
+// jest.fn() spies so tests can verify whether the canvas was mutated.
+const mockSetNodes = jest.fn();
+const mockSetEdges = jest.fn();
+const mockPaste = jest.fn();
+jest.mock("@/stores/flowStore", () => {
+  const state = {
+    setNodes: (...args: unknown[]) => mockSetNodes(...args),
+    setEdges: (...args: unknown[]) => mockSetEdges(...args),
+    paste: (...args: unknown[]) => mockPaste(...args),
+  };
+  const fn = (selector?: (s: typeof state) => unknown) =>
+    selector ? selector(state) : state;
+  fn.getState = () => state;
+  return { __esModule: true, default: fn };
+});
+
 jest.mock("short-unique-id", () => {
   let counter = 0;
   return class ShortUniqueId {
@@ -617,6 +635,278 @@ describe("useAssistantChat", () => {
 
       const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
       expect(sessionId).toMatch(/^agentic_/);
+    });
+  });
+
+  describe("flow proposal gating (set_flow only)", () => {
+    const SAMPLE_FLOW = {
+      name: "Test Flow",
+      data: {
+        nodes: [{ id: "n1" }, { id: "n2" }, { id: "n3" }],
+        edges: [{ id: "e1", source: "n1", target: "n2" }],
+      },
+    };
+
+    it("should_buffer_set_flow_into_pendingFlowProposal_when_event_arrives", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build me a chatbot", TEST_MODEL);
+      });
+
+      const msg = result.current.messages[1];
+      expect(msg.pendingFlowProposal).toBeDefined();
+      expect(msg.pendingFlowProposal?.nodeCount).toBe(3);
+      expect(msg.pendingFlowProposal?.edgeCount).toBe(1);
+      expect(msg.flowProposalStatus).toBe("pending");
+    });
+
+    it("should_NOT_mutate_canvas_when_set_flow_event_arrives", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+
+      expect(mockSetNodes).not.toHaveBeenCalled();
+      expect(mockSetEdges).not.toHaveBeenCalled();
+    });
+
+    it("should_apply_add_component_live_to_canvas_without_buffering", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "add_component",
+            node: { id: "new-node" },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("add chatinput", TEST_MODEL);
+      });
+
+      // Live apply: setNodes was called for the incremental edit
+      expect(mockSetNodes).toHaveBeenCalled();
+      // No proposal buffered for incremental edits
+      const msg = result.current.messages[1];
+      expect(msg.pendingFlowProposal).toBeUndefined();
+      expect(msg.flowProposalStatus).toBeUndefined();
+    });
+
+    it("should_apply_configure_live_to_canvas_without_buffering", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "configure",
+            component_id: "Agent-x",
+            params: { temperature: 0.5 },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("set temperature", TEST_MODEL);
+      });
+
+      expect(mockSetNodes).toHaveBeenCalled();
+      const msg = result.current.messages[1];
+      expect(msg.pendingFlowProposal).toBeUndefined();
+    });
+
+    it("should_route_edit_field_to_flowActions_carousel_not_proposal", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "edit_field",
+            id: "edit-1",
+            component_id: "OpenAIModel-y",
+            component_type: "OpenAIModel",
+            field: "model_name",
+            old_value: "gpt-3.5",
+            new_value: "gpt-4o",
+            description: "Switch model",
+            patch: [],
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("change model", TEST_MODEL);
+      });
+
+      const msg = result.current.messages[1];
+      expect(msg.flowActions).toHaveLength(1);
+      expect(msg.flowActions?.[0].type).toBe("edit_field");
+      // Edit field is NOT a flow proposal
+      expect(msg.pendingFlowProposal).toBeUndefined();
+      // And does NOT touch canvas directly (FlowEditCarousel applies on accept)
+      expect(mockSetNodes).not.toHaveBeenCalled();
+    });
+
+    it("should_apply_pendingFlowProposal_to_canvas_when_handleApplyFlowProposal_called", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "Flow built", validated: true, has_flow: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build chatbot", TEST_MODEL);
+      });
+
+      const messageId = result.current.messages[1].id;
+      expect(mockSetNodes).not.toHaveBeenCalled();
+
+      await act(async () => {
+        result.current.handleApplyFlowProposal(messageId);
+      });
+
+      expect(mockSetNodes).toHaveBeenCalled();
+      expect(mockSetEdges).toHaveBeenCalled();
+      const msg = result.current.messages.find((m) => m.id === messageId);
+      expect(msg?.flowProposalStatus).toBe("applied");
+      expect(msg?.pendingFlowProposal).toBeUndefined();
+    });
+
+    it("should_clear_pendingFlowProposal_without_touching_canvas_when_dismissed", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "Flow built", validated: true, has_flow: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build chatbot", TEST_MODEL);
+      });
+
+      const messageId = result.current.messages[1].id;
+
+      act(() => {
+        result.current.handleDismissFlowProposal(messageId);
+      });
+
+      expect(mockSetNodes).not.toHaveBeenCalled();
+      expect(mockSetEdges).not.toHaveBeenCalled();
+      const msg = result.current.messages.find((m) => m.id === messageId);
+      expect(msg?.flowProposalStatus).toBe("dismissed");
+      expect(msg?.pendingFlowProposal).toBeUndefined();
+    });
+
+    it("should_buffer_tail_edits_after_set_flow_into_proposal", async () => {
+      // Defensive: agent prompt forbids this case, but if it happens we
+      // don't want half the changes on canvas and half in a proposal.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+          });
+          // Tail edit AFTER set_flow — must also defer
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "configure",
+            component_id: "Agent-x",
+            params: { temperature: 0.7 },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build with config", TEST_MODEL);
+      });
+
+      // No live writes — the tail configure was buffered too
+      expect(mockSetNodes).not.toHaveBeenCalled();
+      const msg = result.current.messages[1];
+      expect(msg.flowProposalStatus).toBe("pending");
+    });
+
+    it("should_not_emit_proposal_when_only_incremental_edits_arrive", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "add_component",
+            node: { id: "n1" },
+          });
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "connect",
+            edge: { id: "e1", source: "a", target: "b" },
+          });
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "configure",
+            component_id: "n1",
+            params: { x: 1 },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("edit flow", TEST_MODEL);
+      });
+
+      expect(mockSetNodes).toHaveBeenCalled();
+      expect(mockSetEdges).toHaveBeenCalled();
+      const msg = result.current.messages[1];
+      expect(msg.pendingFlowProposal).toBeUndefined();
+      expect(msg.flowProposalStatus).toBeUndefined();
     });
   });
 });

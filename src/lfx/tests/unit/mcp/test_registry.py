@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from lfx.mcp.registry import load_registry, search_registry
+from lfx.mcp.registry import describe_component, load_registry, search_registry
 
 
 class _StubClient:
@@ -71,3 +71,114 @@ class TestSearchRegistryCategoryFilter:
         results = search_registry(registry, category="models")
 
         assert {r["type"] for r in results} == {"OpenAIModel"}
+
+
+class TestDescribeComponentToolMode:
+    """Tests for describe_component's component_as_tool detection.
+
+    A component supports tool-mode whenever any INPUT field has
+    ``tool_mode=True`` — this matches the canonical heuristic in
+    ``Component._handle_tool_mode`` which serves as the runtime authority.
+    Regression: previously the registry checked OUTPUTS for ``tool_mode``,
+    which silently excluded most tool-capable components (FirecrawlScrapeApi,
+    every component that follows the ``MessageTextInput(tool_mode=True)``
+    pattern) from the flow builder's tool wiring.
+    """
+
+    def test_should_expose_component_as_tool_when_any_input_has_tool_mode(self) -> None:
+        # Mirrors FirecrawlScrapeApi: tool_mode=True on an INPUT field, plain output.
+        registry = {
+            "FirecrawlScrapeApi": {
+                "display_name": "Firecrawl Scrape API",
+                "description": "Scrapes a URL.",
+                "category": "firecrawl",
+                "outputs": [{"name": "data", "types": ["Data"]}],
+                "template": {
+                    "url": {"type": "str", "tool_mode": True, "required": True, "show": True},
+                    "api_key": {"type": "SecretStr", "required": True, "show": True},
+                },
+            }
+        }
+
+        result = describe_component(registry, "FirecrawlScrapeApi")
+
+        output_names = [o["name"] for o in result["outputs"]]
+        assert "component_as_tool" in output_names, (
+            "FirecrawlScrapeApi has tool_mode=True on its url input, so the "
+            "flow builder must advertise component_as_tool as a Tool output."
+        )
+
+    def test_should_not_expose_component_as_tool_when_no_input_has_tool_mode(self) -> None:
+        registry = {
+            "PlainComponent": {
+                "outputs": [{"name": "data", "types": ["Data"]}],
+                "template": {
+                    "url": {"type": "str", "required": True, "show": True},
+                },
+            }
+        }
+
+        result = describe_component(registry, "PlainComponent")
+
+        output_names = [o["name"] for o in result["outputs"]]
+        assert "component_as_tool" not in output_names
+
+    def test_should_expose_component_as_tool_for_message_text_input_pattern(self) -> None:
+        """Recognize MessageTextInput(name=..., tool_mode=True) — the most common pattern.
+
+        The registry must detect this pattern (used across the codebase) and
+        advertise the component_as_tool output.
+        """
+        registry = {
+            "WebSearchTool": {
+                "outputs": [{"name": "result", "types": ["Message"]}],
+                "template": {
+                    "query": {
+                        "type": "str",
+                        "input_types": ["Message"],
+                        "tool_mode": True,
+                        "show": True,
+                    },
+                },
+            }
+        }
+
+        result = describe_component(registry, "WebSearchTool")
+
+        assert any(o["name"] == "component_as_tool" for o in result["outputs"])
+
+    def test_should_still_expose_component_as_tool_when_output_carries_tool_mode_flag(self) -> None:
+        """Backward compat: if some component sets tool_mode on an output, keep working."""
+        registry = {
+            "LegacyTool": {
+                "outputs": [{"name": "result", "types": ["Tool"], "tool_mode": True}],
+                "template": {},
+            }
+        }
+
+        result = describe_component(registry, "LegacyTool")
+
+        assert any(o["name"] == "component_as_tool" for o in result["outputs"])
+
+    def test_should_include_input_names_in_component_as_tool_description(self) -> None:
+        """Include tool-mode input names in the component_as_tool description.
+
+        The agent uses this description to discover which parameters it can
+        pass when invoking the tool.
+        """
+        registry = {
+            "MyTool": {
+                "outputs": [{"name": "result", "types": ["Data"]}],
+                "template": {
+                    "query": {"type": "str", "tool_mode": True, "show": True},
+                    "limit": {"type": "int", "tool_mode": True, "show": True},
+                    "api_key": {"type": "SecretStr", "show": True},
+                },
+            }
+        }
+
+        result = describe_component(registry, "MyTool")
+
+        tool_output = next(o for o in result["outputs"] if o["name"] == "component_as_tool")
+        assert "query" in tool_output["description"]
+        assert "limit" in tool_output["description"]

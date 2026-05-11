@@ -5,9 +5,10 @@ import {
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
-import { Check, GitBranch } from "lucide-react";
+import { ArrowRight, Check, GitBranch, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
+import type { FlowProposalStatus } from "../assistant-panel.types";
 
 const APPROVED_DISPLAY_DURATION_MS = 3000;
 
@@ -21,6 +22,18 @@ interface FlowPreviewData {
 
 interface AssistantFlowPreviewProps {
   flowPreview: FlowPreviewData;
+  /**
+   * When provided, switches the card into gated mode:
+   *  - "pending"   → Continue + Dismiss buttons, canvas untouched
+   *  - "applied"   → muted preview with "Added to canvas" label
+   *  - "dismissed" → muted preview with "Dismissed" label
+   *
+   * When omitted, falls back to the legacy "Add to Flow" path which
+   * pastes the flow into the existing canvas via `paste()`.
+   */
+  status?: FlowProposalStatus;
+  onApply?: () => void;
+  onDismiss?: () => void;
 }
 
 const defaultNodeStyle = {
@@ -86,6 +99,9 @@ function extractReactFlowData(flow: Record<string, unknown>): {
 
 export function AssistantFlowPreview({
   flowPreview,
+  status,
+  onApply,
+  onDismiss,
 }: AssistantFlowPreviewProps) {
   const [showApproved, setShowApproved] = useState(false);
   const paste = useFlowStore((state) => state.paste);
@@ -156,22 +172,67 @@ export function AssistantFlowPreview({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
-        {showApproved ? (
-          <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
-            <Check className="h-4 w-4" />
-            <span>Added to flow</span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
-            onClick={handleAddToFlow}
-          >
-            Add to Flow
-          </button>
-        )}
-      </div>
+      <div className="flex items-center gap-2">{renderActions()}</div>
     </div>
   );
+
+  function renderActions() {
+    if (status === "pending") {
+      return (
+        <>
+          <button
+            type="button"
+            data-testid="assistant-flow-continue-button"
+            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-accent-emerald-foreground/10 px-3 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
+            onClick={() => onApply?.()}
+          >
+            <span>Continue</span>
+            <ArrowRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            data-testid="assistant-flow-dismiss-button"
+            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+            onClick={() => onDismiss?.()}
+          >
+            <X className="h-4 w-4" />
+            <span>Dismiss</span>
+          </button>
+        </>
+      );
+    }
+    if (status === "applied") {
+      return (
+        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
+          <Check className="h-4 w-4" />
+          <span>Added to canvas</span>
+        </div>
+      );
+    }
+    if (status === "dismissed") {
+      return (
+        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-muted-foreground line-through">
+          <span>Dismissed</span>
+        </div>
+      );
+    }
+    // Legacy "Add to Flow" path — no status prop provided
+    if (showApproved) {
+      return (
+        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
+          <Check className="h-4 w-4" />
+          <span>Added to flow</span>
+        </div>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+        onClick={handleAddToFlow}
+      >
+        Add to Flow
+      </button>
+    );
+  }
 }

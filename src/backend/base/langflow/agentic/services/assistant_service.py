@@ -32,8 +32,8 @@ from langflow.agentic.services.flow_executor import (
     extract_response_text,
 )
 from langflow.agentic.services.flow_types import (
-    FLOW_BUILDER_ASSISTANT_FLOW,
     EXECUTION_RETRY_TEMPLATE,
+    FLOW_BUILDER_ASSISTANT_FLOW,
     MAX_VALIDATION_RETRIES,
     OFF_TOPIC_REFUSAL_MESSAGE,
     VALIDATION_RETRY_TEMPLATE,
@@ -304,6 +304,11 @@ async def execute_flow_with_validation_streaming(
             cancelled = False
             execution_error: str | None = None
             has_flow_updates = False
+            # Track whether a destructive `set_flow` action was emitted by the
+            # agent — only that case triggers the frontend's Continue gate.
+            # Incremental edits (add/remove/connect/configure/edit_field)
+            # apply live and must not be gated.
+            saw_set_flow = False
             # aclosing guarantees the async generator is closed on every exit path
             # (normal completion, exception, or cancellation) — not relying on GC.
             async with aclosing(
@@ -327,6 +332,8 @@ async def execute_flow_with_validation_streaming(
                             # reflects the agent's incremental edits in real time.
                             for update in drain_flow_events():
                                 has_flow_updates = True
+                                if update.get("action") == "set_flow":
+                                    saw_set_flow = True
                                 yield format_flow_update_event(update)
                             yield format_token_event(event_data)
                         elif event_type == "flow_preview":
@@ -403,9 +410,22 @@ async def execute_flow_with_validation_streaming(
             # Drain any remaining flow events
             for update in drain_flow_events():
                 has_flow_updates = True
+                if update.get("action") == "set_flow":
+                    saw_set_flow = True
                 yield format_flow_update_event(update)
 
             if has_flow_updates:
+                # Build-from-scratch path only: signal the frontend to gate
+                # the destructive canvas replacement behind an explicit
+                # Continue/Dismiss step. Incremental-edit runs (no set_flow)
+                # skip this — they apply live as the events stream.
+                if is_flow_request and saw_set_flow:
+                    yield format_progress_event(
+                        "flow_proposal_ready",
+                        attempt + 1,
+                        total_attempts,
+                        message="Flow ready — review and continue",
+                    )
                 yield format_complete_event({**result, "has_flow": True})
                 reset_working_flow()
                 return

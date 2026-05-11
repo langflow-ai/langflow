@@ -19,6 +19,7 @@ StepType = Literal[
     "building_flow",  # Agent is building a flow from spec
     "flow_built",  # Flow built successfully
     "flow_build_failed",  # Flow build failed
+    "flow_proposal_ready",  # Build-from-scratch flow ready, gated on user Continue/Dismiss
 ]
 
 

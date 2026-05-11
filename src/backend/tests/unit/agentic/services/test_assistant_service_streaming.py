@@ -511,3 +511,159 @@ class TestErrorHandling:
 
             error_events = [e for e in events if "error" in e.lower() or "no result" in e.lower()]
             assert len(error_events) >= 1
+
+
+class TestFlowProposalReady:
+    """Tests for the flow_proposal_ready signal.
+
+    Emitted only when a build-from-scratch set_flow action was produced by the
+    agent during a build_flow intent. The signal lets the frontend gate the
+    destructive canvas replacement behind an explicit user Continue/Dismiss
+    step. Incremental edits (add_component, connect, configure, edit_field)
+    MUST NOT trigger this signal — they keep applying live to the canvas.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_emit_flow_proposal_ready_when_build_flow_intent_with_set_flow_event(self):
+        """When agent emits a set_flow action during build_flow intent, emit flow_proposal_ready."""
+        flow_gen = _make_flow_events([("end", {"result": "Flow built"})])
+        # First drain returns set_flow (build_flow tool fired); subsequent drains return [].
+        drain_calls = [[{"action": "set_flow", "flow": {"data": {"nodes": [], "edges": []}}}], []]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build me a chatbot",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            proposal_events = [e for e in events if "flow_proposal_ready" in e]
+            assert proposal_events, f"Expected flow_proposal_ready step in SSE stream. Events: {events}"
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_when_build_flow_intent_with_only_incremental_edits(self):
+        """Incremental edits (add_component / configure) must not trigger the proposal gate."""
+        flow_gen = _make_flow_events([("end", {"result": "Edits applied"})])
+        drain_calls = [
+            [
+                {"action": "add_component", "node": {"id": "n1"}},
+                {"action": "configure", "component_id": "n1", "params": {"x": 1}},
+            ],
+            [],
+        ]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="add a chatinput",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events), (
+                f"Did NOT expect flow_proposal_ready for incremental-edits-only run. Events: {events}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_for_generate_component_intent(self):
+        """Component generation path never emits the flow proposal signal."""
+        flow_gen = _make_flow_events([("end", {"result": "class Foo(Component): pass"})])
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("generate_component"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="create a component",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events)
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_for_question_intent(self):
+        """Q&A path never emits the flow proposal signal."""
+        flow_gen = _make_flow_events([("token", "Langflow is..."), ("end", {"result": "Langflow is..."})])
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("question"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="what is langflow",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events)
+
+    @pytest.mark.asyncio
+    async def test_should_emit_flow_proposal_ready_before_complete_event(self):
+        """The flow_proposal_ready step must precede the complete event.
+
+        The frontend uses this ordering to render the Continue gate before
+        finalizing the message — if `complete` arrived first the message
+        would transition to its terminal state and the gate would never render.
+        """
+        flow_gen = _make_flow_events([("end", {"result": "ok"})])
+        drain_calls = [[{"action": "set_flow", "flow": {"data": {"nodes": [], "edges": []}}}], []]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            proposal_idx = next(
+                (i for i, e in enumerate(events) if "flow_proposal_ready" in e),
+                -1,
+            )
+            complete_idx = next(
+                (i for i, e in enumerate(events) if '"event": "complete"' in e),
+                -1,
+            )
+            assert proposal_idx >= 0, "flow_proposal_ready missing"
+            assert complete_idx >= 0, "complete event missing"
+            assert proposal_idx < complete_idx, (
+                f"flow_proposal_ready (idx {proposal_idx}) must come before complete (idx {complete_idx})"
+            )

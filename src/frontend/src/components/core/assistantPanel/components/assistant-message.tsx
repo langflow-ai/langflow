@@ -22,6 +22,8 @@ interface AssistantMessageItemProps {
     actionId: string,
     status: "applied" | "dismissed",
   ) => void;
+  onApplyFlowProposal?: (messageId: string) => void;
+  onDismissFlowProposal?: (messageId: string) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -47,6 +49,8 @@ export function AssistantMessageItem({
   message,
   onApprove,
   onUpdateFlowAction,
+  onApplyFlowProposal,
+  onDismissFlowProposal,
 }: AssistantMessageItemProps) {
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
@@ -187,7 +191,46 @@ export function AssistantMessageItem({
       );
     }
 
-    // Show flow preview when a flow was built
+    // Gated flow proposal: agent built a new flow from scratch via set_flow.
+    // Show the preview behind a Continue/Dismiss gate so the user can refuse
+    // a destructive canvas replacement.
+    if (message.flowProposalStatus && message.pendingFlowProposal) {
+      const proposalPreview = {
+        flow: message.pendingFlowProposal.flow,
+        name: message.pendingFlowProposal.name ?? "",
+        nodeCount: message.pendingFlowProposal.nodeCount,
+        edgeCount: message.pendingFlowProposal.edgeCount,
+        graph: "",
+      };
+      const cleanContent = message.content
+        ?.replace(/```flow_json[\s\S]*?```/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      return (
+        <div className="flex flex-col gap-3">
+          {cleanContent && (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm max-w-full text-muted-foreground dark:prose-invert prose-p:leading-relaxed prose-p:my-1"
+            >
+              {cleanContent}
+            </Markdown>
+          )}
+          <AssistantFlowPreview
+            flowPreview={proposalPreview}
+            status={message.flowProposalStatus}
+            onApply={() => onApplyFlowProposal?.(message.id)}
+            onDismiss={() => onDismissFlowProposal?.(message.id)}
+          />
+        </div>
+      );
+    }
+
+    // Once applied, pendingFlowProposal is cleared and only flowProposalStatus
+    // remains. Render the muted applied-state card from message.flowPreview
+    // (legacy field carried for serialized sessions) if present.
+
+    // Show flow preview when a flow was built (legacy path)
     if (message.flowPreview) {
       // Strip the flow_json code block from the visible content
       const cleanContent = message.content

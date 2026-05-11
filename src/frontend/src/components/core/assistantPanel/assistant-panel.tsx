@@ -122,6 +122,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleSend,
     handleApprove,
     handleUpdateFlowAction,
+    handleApplyFlowProposal,
+    handleDismissFlowProposal,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,
@@ -285,7 +287,8 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   message={msg}
                   onApprove={handleApproveAndClose}
                   onUpdateFlowAction={handleUpdateFlowAction}
-                  onRetry={hasEnabledModels ? handleRetry : undefined}
+                  onApplyFlowProposal={handleApplyFlowProposal}
+                  onDismissFlowProposal={handleDismissFlowProposal}
                 />
               ))}
             </StickToBottom.Content>

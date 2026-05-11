@@ -31,6 +31,8 @@ interface UseAssistantChatReturn {
     actionId: string,
     status: "applied" | "dismissed",
   ) => void;
+  handleApplyFlowProposal: (messageId: string) => void;
+  handleDismissFlowProposal: (messageId: string) => void;
   handleRetry: (messageId: string) => void;
   handleStopGeneration: () => void;
   handleClearHistory: () => void;
@@ -43,6 +45,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastModelRef = useRef<AssistantModel | null>(null);
+  // Per-send flag: once a `set_flow` event arrives, subsequent non-`edit_field`
+  // events must be buffered too (defensive against mixed runs). Reset at the
+  // start of every handleSend to avoid leaking state across requests.
+  const proposalPendingRef = useRef<boolean>(false);
   const sessionIdRef = useRef<string>(
     `${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`,
   );
@@ -263,6 +269,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsProcessing(true);
+      proposalPendingRef.current = false;
 
       abortControllerRef.current = new AbortController();
 
@@ -347,9 +354,51 @@ export function useAssistantChat(): UseAssistantChatReturn {
                     },
                   ],
                 }));
-              } else {
-                applyFlowUpdate(event);
+                return;
               }
+              if (event.action === "set_flow") {
+                // Build-from-scratch path: buffer the entire flow into a
+                // proposal the user must Accept/Dismiss. Canvas stays
+                // untouched until handleApplyFlowProposal replays it.
+                proposalPendingRef.current = true;
+                const flow = (event.flow ?? {}) as Record<string, unknown>;
+                const data = (flow.data ?? {}) as {
+                  nodes?: unknown[];
+                  edges?: unknown[];
+                };
+                updateMessage(assistantMessageId, () => ({
+                  pendingFlowProposal: {
+                    flow,
+                    name: (flow.name as string | undefined) ?? undefined,
+                    nodeCount: (data.nodes ?? []).length,
+                    edgeCount: (data.edges ?? []).length,
+                    tailUpdates: [],
+                  },
+                  flowProposalStatus: "pending" as const,
+                }));
+                return;
+              }
+              // Incremental edits — once a proposal is pending in this send,
+              // buffer subsequent events into tailUpdates (defensive: the
+              // agent prompt forbids mixed runs, but we don't want partial
+              // canvas state if it happens). Otherwise apply live.
+              if (proposalPendingRef.current) {
+                updateMessage(assistantMessageId, (msg) =>
+                  msg.pendingFlowProposal
+                    ? {
+                        pendingFlowProposal: {
+                          ...msg.pendingFlowProposal,
+                          tailUpdates: [
+                            ...(msg.pendingFlowProposal.tailUpdates ?? []),
+                            event,
+                          ],
+                        },
+                      }
+                    : {},
+                );
+                return;
+              }
+              applyFlowUpdate(event);
             },
             onComplete: (event) => {
               updateMessage(assistantMessageId, () => ({
@@ -465,6 +514,40 @@ export function useAssistantChat(): UseAssistantChatReturn {
     [updateMessage],
   );
 
+  const handleApplyFlowProposal = useCallback(
+    (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      const proposal = message?.pendingFlowProposal;
+      if (!proposal) return;
+
+      // Replay the gating set_flow first, then any tail edits in order.
+      applyFlowUpdate({
+        event: "flow_update",
+        action: "set_flow",
+        flow: proposal.flow,
+      });
+      for (const tail of proposal.tailUpdates ?? []) {
+        applyFlowUpdate(tail);
+      }
+
+      updateMessage(messageId, () => ({
+        flowProposalStatus: "applied" as const,
+        pendingFlowProposal: undefined,
+      }));
+    },
+    [messages, applyFlowUpdate, updateMessage],
+  );
+
+  const handleDismissFlowProposal = useCallback(
+    (messageId: string) => {
+      updateMessage(messageId, () => ({
+        flowProposalStatus: "dismissed" as const,
+        pendingFlowProposal: undefined,
+      }));
+    },
+    [updateMessage],
+  );
+
   const handleStopGeneration = useCallback(() => {
     abortControllerRef.current?.abort();
 
@@ -510,6 +593,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
     handleSend,
     handleApprove,
     handleUpdateFlowAction,
+    handleApplyFlowProposal,
+    handleDismissFlowProposal,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,

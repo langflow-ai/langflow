@@ -11,7 +11,8 @@ export type AgenticStepType =
   | "searching_components"
   | "building_flow"
   | "flow_built"
-  | "flow_build_failed";
+  | "flow_build_failed"
+  | "flow_proposal_ready";
 
 export interface AgenticProgressEvent {
   event: "progress";

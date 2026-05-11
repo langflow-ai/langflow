@@ -1,4 +1,5 @@
 import type {
+  AgenticFlowUpdateEvent,
   AgenticProgressState,
   AgenticResult,
   AgenticStepType,
@@ -30,6 +31,23 @@ export interface AssistantMessage {
     graph: string;
   };
   flowActions?: FlowAction[];
+  pendingFlowProposal?: PendingFlowProposal;
+  flowProposalStatus?: FlowProposalStatus;
+}
+
+export type FlowProposalStatus = "pending" | "applied" | "dismissed";
+
+export interface PendingFlowProposal {
+  flow: Record<string, unknown>;
+  name?: string;
+  nodeCount: number;
+  edgeCount: number;
+  /**
+   * Events that arrived AFTER the gating set_flow. Per the agent prompt
+   * this should never happen, but if it does the tail events are buffered
+   * here so they replay in order when the user clicks Continue.
+   */
+  tailUpdates?: AgenticFlowUpdateEvent[];
 }
 
 export interface AssistantModel {
