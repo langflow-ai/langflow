@@ -26,26 +26,28 @@
 
 ### Summary
 
-The MCP Flow Builder extends the Langflow Assistant from a single-component generator into a full flow-construction agent. Users describe what they want ("build me a chatbot that answers questions over a PDF", "change the model to gpt-4o", "add a memory component"), and an Agent equipped with a toolkit of Model-Context-Protocol (MCP) tools either **builds** a new flow from scratch (destructive, gated behind an explicit **Continue** review step) or **edits** the existing canvas live, component by component, as the LLM reasons.
+The MCP Flow Builder extends the Langflow Assistant from a single-component generator into a full flow-construction **and** documentation agent. Users describe what they want ("build me a chatbot that answers questions over a PDF", "change the model to gpt-4o", "add a memory component", "crie um .md com a documentação desse flow"), and an Agent equipped with a toolkit of Model-Context-Protocol (MCP) tools either **builds** a new flow from scratch (destructive, gated behind an explicit **Continue** review step), **edits** the existing canvas live, or **writes/reads files** inside a sandboxed workspace (e.g. documentation, reports).
 
 ### Business Context
 
-The base Assistant (`langflow-assistant.md`) generates one custom Python `Component` at a time. That covers writing leaf nodes but not the act of wiring them into a working flow — historically the user's job in the canvas. The MCP integration closes that gap: the Assistant can now **discover** components from the registry, **add**/**remove**/**connect**/**configure** them on the user's canvas, **propose** field edits with diff cards the user approves one-by-one, and **build entire flows** from a spec when starting from an empty canvas.
+The base Assistant (`langflow-assistant.md`) generates one custom Python `Component` at a time. That covers writing leaf nodes but not the act of wiring them into a working flow — historically the user's job in the canvas. The MCP integration closes that gap: the Assistant can now **discover** components from the registry, **add**/**remove**/**connect**/**configure** them on the user's canvas, **propose** field edits with diff cards the user approves one-by-one, **build entire flows** from a spec when starting from an empty canvas, and **author files** (documentation `.md`, reports `.txt`, etc.) inside a per-user sandboxed workspace.
 
-Two new user behaviors emerge from this:
+Three user behaviors emerge from this:
 
 1. **Live edit mode** — incremental tool calls (`add_component`, `connect_components`, `configure_component`) take effect on the canvas *as the SSE stream arrives*, so users see the agent's work materialize in real time. There is no review step for these — the canvas is the working surface.
-2. **Build mode (gated)** — when the agent calls `build_flow` (which emits a destructive `set_flow` action that would replace the entire canvas), the frontend intercepts the payload into a `pendingFlowProposal`, renders a mini-canvas preview, and waits for the user's explicit **Continue** or **Dismiss** click before any canvas state changes. This was added in the `flow_builder_continue_step` plan to prevent silent destruction of in-progress work.
+2. **Build mode (gated)** — when the agent calls `build_flow` (which emits a destructive `set_flow` action that would replace the entire canvas), the frontend intercepts the payload into a `pendingFlowProposal`, renders a mini-canvas preview, and waits for the user's explicit **Continue** or **Dismiss** click before any canvas state changes. After Continue the badge reverts to "pending" after 3s so the user can re-apply if they edited the canvas.
+3. **Manage files (ungated)** — when the agent uses `write_file` / `edit_file` inside its sandbox, the frontend renders a per-file card with **Open** / **Download** buttons. The action is non-destructive (the file lives inside the user's isolated workspace) so there is no Continue gate — the card materializes directly when the agent completes its run.
 
 ### Bounded Context
 
 **Context**: `Agentic` — AI-assisted flow construction inside Langflow.
 
 This context owns:
-- MCP tool registration and per-request flow state (`ContextVar`-isolated `_working_flow_var`, `_flow_events_var`).
-- Flow Builder intent routing (TranslationFlow emits `"build_flow"` alongside existing intents).
-- SSE `flow_update` / `flow_preview` event channels.
-- Frontend gating for destructive `set_flow` events (Continue/Dismiss) and per-edit-field review carousel.
+- MCP tool registration and per-request flow state (`ContextVar`-isolated `_working_flow_var`, `_flow_events_var`, `_file_events_var`).
+- Flow Builder intent routing (TranslationFlow emits `"build_flow"` and `"manage_files"` alongside existing intents).
+- SSE `flow_update` / `flow_preview` / `file_written` event channels.
+- Frontend gating for destructive `set_flow` events (Continue/Dismiss with 3s auto-revert) and per-edit-field review carousel.
+- Sandboxed filesystem toolkit wrapping (`FileSystemToolComponent` → `wrap_file_tool_with_event`) that emits `file_written` events with the file content inline so the UI renders without a second HTTP fetch.
 
 ### Related Contexts
 
@@ -88,6 +90,14 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 | **MCP Server (agentic)** | A second FastMCP server in `langflow/agentic/mcp/server.py` exposing template/component search and flow visualization tools directly against the database. | `langflow/agentic/mcp/server.py` |
 | **MCPToolPayload** | Telemetry event logged for every MCP tool invocation (tool name, success, duration, error type). | `_tracked` decorator in `lfx/mcp/server.py` |
 | **batch action** | An MCP tool that executes multiple actions sequentially, with `$N.field` reference resolution for chaining outputs to inputs. | `batch()` in `lfx/mcp/server.py` |
+| **manage_files intent** | TranslationFlow output that routes a request through the same `FlowBuilderAssistant` flow but signals the frontend to render the "Generating document..." thinking label instead of "Generating flow...". | `TRANSLATION_PROMPT` examples, `IntentResult.intent == "manage_files"` |
+| **FileSystemTool** | The sandboxed filesystem toolkit (`read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`) added to the FlowBuilderAssistant's toolkit. Every path is RELATIVE to the user's per-user sandbox root (`<BASE_DIR>/users/<hash(user_id)>/` or `<BASE_DIR>/shared/` under AUTO_LOGIN). | `FileSystemToolComponent` in `lfx/components/tools/filesystem.py` |
+| **FileEvent Queue** | A second `ContextVar`-scoped `deque` parallel to the FlowEvent queue. Tools wrapped by `wrap_file_tool_with_event` push `file_written` entries; the streaming service drains between LLM tokens. Allocates the deque on the parent context so child asyncio tasks inherit the same instance by reference (matches the proven `flow_builder_tools` pattern). | `_file_events_var`, `emit_file_event()`, `drain_file_events()`, `reset_file_events()` |
+| **wrap_file_tool_with_event** | Wraps a `FileSystemToolComponent` `StructuredTool` so its successful response triggers an `emit_file_event` with the file's `path`, `size`, and (for `write_file`) the inline `content`. Errors and unparseable responses are passed through unchanged and emit nothing. | `wrap_file_tool_with_event()` in `agentic/services/file_events.py` |
+| **WrittenFile** | Frontend representation of a file the agent persisted. Stored on the `AssistantMessage` in arrival order. Carries the inline content so the modal/Download work without a second HTTP fetch. | `WrittenFile` (TS interface), `AssistantMessage.writtenFiles` |
+| **file_written event** | SSE event the frontend's `onFileWritten` handler appends to `message.writtenFiles[]`. Payload: `{action, path, size, content?}`. Distinct from `flow_update`. | `format_file_written_event()`, `AgenticFileWrittenEvent` |
+| **AssistantFileCard** | Per-file card rendered on the message after a successful write. Shows basename + size + Open/Download buttons. **No fetch** — Open renders the inline `content` via `SanitizedMarkdown`; Download builds a Blob from the same `content`. | `assistant-file-card.tsx`, `file-content-modal.tsx` |
+| **generating_document step** | Progress step emitted by the backend when intent is `manage_files`. The frontend uses it to label the simple thinking dots ("Generating document..." instead of a random rotating placeholder). Intentionally NOT in `RICH_LOADING_STEPS` — a rich card morphing into the file card looked like a glitch. | `StepType` Literal, `RICH_LOADING_STEPS` |
 
 ---
 
@@ -156,7 +166,10 @@ The base Assistant event table still applies. The MCP integration adds:
 | `flow_preview` | After a successful `set_flow` (or fallback JSON extraction) | `{flow, name, node_count, edge_count, graph}` | Frontend renders mini-canvas preview |
 | `progress` step `generating_flow` | `is_flow_request` becomes true at the start of an attempt | standard progress payload | Frontend swaps the loading label to "Generating flow..." |
 | `progress` step `flow_proposal_ready` | Streaming finished AND `is_flow_request` AND `saw_set_flow` | standard progress payload | Frontend renders the Continue/Dismiss card |
-| `progress` step `searching_components` / `building_flow` / `flow_built` / `flow_build_failed` | Reserved step types declared in `StepType` | standard progress payload | Future progress granularity (declared, not all emitted today) |
+| `progress` step `generating_document` | `is_document_request` becomes true at the start of an attempt | standard progress payload | Frontend labels the thinking dots "Generating document..." — NO rich loading card (intentional, to avoid the card→card transition glitch) |
+| `file_written` (action=`write_file`) | `write_file` tool succeeds inside the wrapper | `{action: "write_file", path, size, content?}` — relative path only, content inline | Frontend appends to `message.writtenFiles[]`; renders `AssistantFileCard` |
+| `file_written` (action=`edit_file`) | `edit_file` tool succeeds inside the wrapper | `{action: "edit_file", path, size}` — no content (post-edit body not captured at wrapper time) | Frontend appends to `message.writtenFiles[]`; Open shows "Preview not available" |
+| `progress` step `searching_components` / `building_flow` / `flow_built` / `flow_build_failed` / `document_ready` | Reserved step types declared in `StepType` | standard progress payload | Future progress granularity (declared, not all emitted today; `document_ready` was prototyped then dropped in favor of jumping straight to the file card) |
 
 ---
 
@@ -322,6 +335,85 @@ The base Assistant event table still applies. The MCP integration adds:
 - **And** the backend does NOT emit `flow_proposal_ready`.
 - **And** the frontend does NOT show a Continue/Dismiss card.
 - **And** the edits remain on the canvas (already applied live).
+
+### Scenario: Continue badge auto-reverts after 3 seconds
+
+- **Given** a `pendingFlowProposal` was applied via Continue.
+- **When** 3 seconds pass with `flowProposalStatus === "applied"`.
+- **Then** the status reverts to `"pending"` so the user can re-apply.
+- **And** if the user dismissed or sent a new message in the meantime, the revert is a no-op.
+
+### Scenario: Create a documentation file (manage_files intent)
+
+- **Given** the assistant panel is open.
+- **When** I send "crie um arquivo .md com a documentação do flow".
+- **Then** the TranslationFlow classifies intent as `"manage_files"`.
+- **And** the request routes to the same `FlowBuilderAssistant` (toolkit includes `read_file`/`write_file`/`edit_file`/`glob_search`/`grep_search`).
+- **And** the frontend renders the thinking dots labelled "Generating document...".
+- **When** the agent calls `write_file(path="FLOW_DOCS.md", content="...")`.
+- **Then** the wrapper emits `file_written` with `{action: "write_file", path: "FLOW_DOCS.md", size, content}`.
+- **And** the message gets a `WrittenFile` entry.
+- **When** the `complete` event arrives.
+- **Then** the file card renders directly — no Continue gate — with **Open** and **Download** buttons.
+
+### Scenario: Open a written file renders inline content
+
+- **Given** a `WrittenFile` with `content` set.
+- **When** I click **Open**.
+- **Then** the `FileContentModal` reads `content` from local message state.
+- **And** renders it as sanitized markdown via `SanitizedMarkdown` (`rehype-sanitize`).
+- **And** there is **no HTTP fetch** — no second auth round-trip, no path-resolution mismatch.
+
+### Scenario: Download a written file builds a Blob locally
+
+- **Given** a `WrittenFile` with `content` set.
+- **When** I click **Download**.
+- **Then** the card builds a `Blob([content], "text/plain;charset=utf-8")` from in-memory state.
+- **And** triggers an `<a download>` click.
+- **And** revokes the object URL.
+- **And** the user's browser saves the file.
+
+### Scenario: Read a sandboxed file (read-only path)
+
+- **Given** the user previously wrote `NOTES.md` to the sandbox.
+- **When** I send "leia o arquivo NOTES.md".
+- **Then** TranslationFlow classifies as `"manage_files"`.
+- **And** the agent calls `read_file(path="NOTES.md")`.
+- **And** the tool returns the content (with line numbers) to the LLM.
+- **And** NO `file_written` event is emitted (read paths don't emit).
+- **And** the agent's textual response includes the relevant content or summary.
+
+### Scenario: Search across sandbox files
+
+- **Given** the user has multiple `.md` files in the workspace.
+- **When** I send "ache 'API key' nos meus docs".
+- **Then** the agent calls `grep_search(pattern="API key")`.
+- **And** the result feeds the LLM's text response.
+- **And** no `file_written` events are emitted.
+
+### Scenario: Failed write does not emit a stale event
+
+- **Given** the agent calls `write_file(path="../escape.md", content=...)`.
+- **When** `FileSystemToolComponent._write_file` refuses with PermissionError.
+- **Then** the response carries an `"error"` key.
+- **And** the wrapper sees the error and DOES NOT emit `file_written`.
+- **And** the frontend has no stale card for a write that never happened.
+
+### Scenario: Backend embeds content inline, frontend has no fetch endpoint
+
+- **Given** a successful `write_file`.
+- **When** the SSE pipeline drains file events.
+- **Then** the `file_written` payload carries `content` directly.
+- **And** the frontend does NOT call a separate endpoint to read the file.
+- **And** the only HTTP surface is the existing `/api/v1/agentic/assist/stream`.
+
+### Scenario: No Continue gate for sandboxed file actions
+
+- **Given** the agent wrote a file.
+- **When** the `complete` event arrives.
+- **Then** the frontend renders the `AssistantFileCard` directly.
+- **And** there is no "Document ready" intermediate state.
+- **And** there is no Continue button — the action is non-destructive (the file is already inside the user's per-user sandbox).
 
 ---
 
@@ -613,6 +705,163 @@ The `_tracked` decorator in `lfx/mcp/server.py` wraps every public MCP tool. On 
 
 **Key Files:**
 - `src/lfx/src/lfx/mcp/server.py` — `_tracked` decorator and `MCPToolPayload`.
+
+---
+
+### ADR-MCP-010: Single Flow + Dynamic Intent Routing (over a separate `document_assistant.py`)
+
+**Status**: Accepted (supersedes initial plan in `PLAN_document_assistant.md`)
+
+#### Context
+
+The original `PLAN_document_assistant.md` proposed a brand-new flow (`document_assistant.py`) routed from a fifth intent `"manage_files"`. The rationale was strict scope: a documentation-writing agent should not also mutate the canvas.
+
+In practice the FlowBuilderAssistant's prompt already gives the agent strong guidance, and adding ~250 lines of duplicate orchestration (graph construction, model config, ChatInput→Agent→ChatOutput wiring) just to swap one toolkit was not worth the cost. The SECURITY guarantees for filesystem operations live in `FileSystemToolComponent` itself, not in any orchestration layer — a separate flow would not have added safety.
+
+#### Decision
+
+Extend `flow_builder_assistant.py`'s toolkit with the 5 `FileSystemToolComponent` tools (wrapped for write/edit so they emit `file_written`). Route both `"build_flow"` and `"manage_files"` intents to the **same** flow. The intent only affects the **step label** ("Generating flow..." vs "Generating document...") and any downstream UX decisions.
+
+#### Consequences
+
+**Benefits:**
+- ~250 lines saved (one flow file instead of two).
+- Single source of truth for the agent's behavior across both intents.
+- Users can legitimately mix flow edits + file authoring in one turn ("configure this model and save the change log to `CHANGELOG.md`").
+
+**Trade-offs:**
+- The agent has access to write_file even when the user only said "build a flow". The prompt addresses this; abuse risk is low because the FS is sandboxed.
+- Prompt grew by ~30 lines (filesystem section).
+
+**Key Files:**
+- `src/backend/base/langflow/agentic/flows/flow_builder_assistant.py` — `build_toolkit()` appends wrapped FS tools.
+- `src/backend/base/langflow/agentic/services/assistant_service.py` — `is_document_request` flag drives the step label only; same `flow_filename = FLOW_BUILDER_ASSISTANT_FLOW`.
+
+---
+
+### ADR-MCP-011: Inline File Content in `file_written` (no separate HTTP fetch endpoint)
+
+**Status**: Accepted (supersedes the initial endpoint-based design)
+
+#### Context
+
+The first design for "Open" / "Download" on a file card was to expose a `GET /api/v1/agentic/files?path=...` endpoint protected by `CurrentActiveUser`. The frontend would `fetch` it on click, decode the body, and render. We even wrote the endpoint with proper sandbox delegation (`FileSystemToolComponent._validate_path` + `_read_bytes_no_follow`).
+
+In production the fetch path failed with "Couldn't load this file" — the frontend `fetch` was not riding the cookie/auth chain the rest of the app uses. Debugging revealed a deeper architectural issue: there were now **two** sandbox-resolution code paths (the agent's tool at write time, the endpoint at read time). When AUTO_LOGIN flips between modes or the user_id binding differs, the two paths can resolve to different absolute paths even with identical inputs.
+
+#### Decision
+
+Skip the endpoint entirely. The agent's `write_file` already receives the file content as a tool argument. The wrapper captures that content (`kwargs["content"]` for `write_file`) and the `emit_file_event` payload carries it inline. The SSE `file_written` event ships `{action, path, size, content?}` to the frontend, which stores it in `WrittenFile.content` on the message. Open/Download read from local state.
+
+#### Consequences
+
+**Benefits:**
+- Zero new HTTP surface — one less authenticated endpoint to maintain and threat-model.
+- No path-resolution mismatch possible: there is only ONE place that resolves the path (the agent's tool at write time).
+- No auth concerns for Open/Download — no network call.
+- No fetch latency on click.
+
+**Trade-offs:**
+- The file content travels over the SSE wire once. For typical docs (≤ a few KB) the overhead is negligible. Files larger than `MAX_FILE_SIZE_BYTES` (10 MB) are refused at the FS-tool layer anyway.
+- `edit_file` does not carry post-edit content (the wrapper has only `old_string`/`new_string`, not the final body). The Open modal shows "Preview not available" for edit events; the action card still allows the user to confirm the edit happened.
+
+**Key Files:**
+- `src/backend/base/langflow/agentic/services/file_events.py` — `wrap_file_tool_with_event` captures `kwargs["content"]` for `write_file`.
+- `src/backend/base/langflow/agentic/helpers/sse.py` — `format_file_written_event` ships `content` when present.
+- `src/frontend/.../components/assistant-file-card.tsx` — builds Blob from `file.content`.
+- `src/frontend/.../components/file-content-modal.tsx` — renders via `SanitizedMarkdown(chatMessage=content)`.
+
+---
+
+### ADR-MCP-012: ContextVar Sharing Within Request, Isolation Across Requests
+
+**Status**: Accepted
+
+#### Context
+
+The first `file_events.py` design made `reset_file_events()` set the ContextVar to `None`, hoping that lazy allocation would give each child task its own deque. The intent was tight isolation across concurrent asyncio tasks. In practice this **broke production**: the agent's tool (running in a child task spawned by `execute_flow_file_streaming`) emitted into a freshly-allocated deque visible only inside that child's context. The parent task (`assistant_service`) drained from a different ContextVar binding and got an empty list. `file_written` events never reached the SSE stream.
+
+The proven `lfx.mcp.flow_builder_tools._flow_events_var` does the opposite: `reset_working_flow()` allocates a deque **in the parent context** before spawning child tasks. Children inherit the same deque object by reference; emits in children are immediately visible in the parent.
+
+#### Decision
+
+`reset_file_events()` now does `_file_events_var.set(deque())` in the parent (request handler) context, before any child task is spawned. Child tasks created by `asyncio.gather` inherit the reference. Cross-request isolation is provided by the FastAPI task-per-request boundary (each new HTTP request gets its own root context).
+
+#### Consequences
+
+**Benefits:**
+- The pattern is now identical to the existing, battle-tested `_flow_events_var`.
+- Production works: `file_written` events flow from the agent through the SSE stream to the frontend.
+
+**Trade-offs:**
+- Inside a single request, `asyncio.gather`-spawned tasks SHARE the deque. This is the desired behavior here, but a future change that needs per-task isolation would have to allocate its own ContextVar.
+
+**Key Files:**
+- `src/backend/base/langflow/agentic/services/file_events.py` — `reset_file_events()` allocates `deque()` in the parent.
+- `src/backend/tests/unit/agentic/services/test_file_events.py` — `test_file_events_should_be_shared_across_asyncio_tasks_within_same_request` pins this behavior.
+
+---
+
+### ADR-MCP-013: No Continue Gate, No Rich Loading Card for Documents
+
+**Status**: Accepted
+
+#### Context
+
+After landing the basic `manage_files` flow, three iterations of UX feedback narrowed the design:
+
+1. **First**: a Continue gate after `document_ready` (mirroring `flow_proposal_ready`). User feedback: "não precisa desse document ready. pode ir pra tela final."
+2. **Second**: jump straight to file card but keep a rich loading card during streaming. Feedback: "ele está aparecendo como se fosse um streaming e depois virando" — the card→card transition looked like a glitch.
+3. **Third (current)**: only the simple thinking dots during the wait, labelled "Generating document..." to match the input placeholder. File card materializes on `complete`.
+
+#### Decision
+
+- **No** `document_ready` progress step is emitted by the backend.
+- **No** Continue gate on the frontend for written files.
+- `generating_document` is intentionally **NOT** in `RICH_LOADING_STEPS` — falls through to the simple `ThinkingIndicator`.
+- The thinking-message label is overridden when `progress.step === "generating_document"` to show `progress.message` (which the backend sets to "Generating document...").
+- File cards render via the `hasWrittenFiles` branch in `assistant-message.tsx` directly on the next render after the `file_written` event arrives.
+
+#### Consequences
+
+**Benefits:**
+- No visual transition between loading card and final card.
+- The action is non-destructive (sandboxed), so the Continue gate would have added friction without value.
+- Reduced state machine: one path from streaming → file card.
+
+**Trade-offs:**
+- Less ceremony for a successful file write; user might miss the "ta-da" moment. Acceptable — the agent's text response gives context.
+
+**Key Files:**
+- `src/frontend/.../assistant-message.tsx` — `RICH_LOADING_STEPS` excludes `generating_document`; `thinkingMessage` override; `writtenFiles` render branch.
+- `src/backend/.../assistant_service.py` — `is_document_request` only drives the initial step label; no `document_ready` emit.
+
+---
+
+### ADR-MCP-014: Continue Badge Auto-Reverts After 3s
+
+**Status**: Accepted
+
+#### Context
+
+Once `flowProposalStatus === "applied"` the preview card showed "Added to canvas" indefinitely. Users couldn't re-apply the same proposal — e.g., after they edited the canvas and wanted to overwrite it again. They had to send a new request to get a fresh proposal.
+
+#### Decision
+
+After `handleApplyFlowProposal` flips status to `"applied"`, schedule a `setTimeout(3000)` that flips it back to `"pending"` — **only if** the status is still `"applied"` at that moment (a dismiss or a new send in the meantime is a no-op). 3000ms matches the existing `APPROVED_DISPLAY_DURATION_MS` used by the legacy "Add to Flow" path.
+
+#### Consequences
+
+**Benefits:**
+- Users can re-apply without a fresh agent run.
+- Consistent with the legacy "Add to Flow" 3s pattern.
+- Preserves the visual record of what was accepted (the proposal data stays on the message).
+
+**Trade-offs:**
+- The badge is transient — a user looking back at chat history won't see "Added to canvas" forever, just the Continue button (with the proposal mini-canvas still visible).
+
+**Key Files:**
+- `src/frontend/.../hooks/use-assistant-chat.ts` — `handleApplyFlowProposal` schedules the revert.
 
 ---
 
