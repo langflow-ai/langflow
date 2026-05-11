@@ -407,6 +407,7 @@ class Vertex:
             if hasattr(self.custom_component, "set_event_manager"):
                 self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
+            custom_params.pop("code", None)
 
         await self._build_results(
             custom_component=custom_component,

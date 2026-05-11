@@ -329,7 +329,19 @@ test(
         return data;
       }, newTxtFile);
 
-      // Trigger drag events
+      // Trigger drag events. We wait for the POST /files response so that
+      // the optimistic "temp" cache entry has been replaced with the real
+      // server path before we close the modal. On slower runners (Windows
+      // CI), closing the modal before the cache settles causes the new
+      // file's server path to be missing from useGetFilesV2 when the
+      // parent node re-renders, so the file never appears in the node.
+      const uploadResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v2/files") &&
+          response.request().method() === "POST" &&
+          response.status() === 201,
+        { timeout: 30000 },
+      );
       await page.dispatchEvent(
         '[data-testid="drag-files-component"]',
         "dragover",
@@ -340,6 +352,7 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
+      await uploadResponsePromise;
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
         timeout: 10000,
       });
@@ -347,6 +360,10 @@ test(
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
+
+      // Wait for any in-flight files refetch triggered by the upload's
+      // onSettled invalidate before closing the modal.
+      await page.waitForLoadState("networkidle");
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
