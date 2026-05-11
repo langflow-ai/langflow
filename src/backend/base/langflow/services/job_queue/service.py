@@ -492,6 +492,10 @@ class RedisQueueWrapper:
     def put_nowait(self, item) -> None:
         """No-op: this wrapper is consumer-only; producers write via the bridge."""
 
+    def fill_done(self) -> bool:
+        """Return True if the background fill task has finished."""
+        return self._fill_task.done()
+
     async def cancel(self) -> None:
         """Cancel the background fill task."""
         if not self._fill_task.done():
@@ -732,6 +736,29 @@ class RedisJobQueueService(JobQueueService):
             None,
             None,
         )
+
+    async def _cleanup_old_queues(self) -> None:
+        """Run base queue cleanup then sweep done cross-worker consumer wrappers.
+
+        Cross-worker jobs are never inserted into ``self._queues``, so the base
+        sweep never sees them.  Their ``RedisQueueWrapper._fill_task`` exits on
+        its own (sentinel or ``exists()=False``), but the dict entry in
+        ``_consumer_wrappers`` stays forever unless we explicitly prune it here.
+        """
+        await super()._cleanup_old_queues()
+
+        # Only prune wrappers that are NOT owned by this worker (i.e. absent from
+        # self._queues).  Same-worker wrappers are removed by cleanup_job(); touching
+        # them here would race with the grace-period logic in the base class.
+        done_cross_worker = [
+            job_id
+            for job_id, wrapper in self._consumer_wrappers.items()
+            if job_id not in self._queues and wrapper.fill_done()
+        ]
+        for job_id in done_cross_worker:
+            wrapper = self._consumer_wrappers.pop(job_id, None)
+            if wrapper is not None:
+                await logger.adebug(f"Swept done cross-worker consumer wrapper for job_id {job_id}")
 
     async def cleanup_job(self, job_id: str) -> None:
         """Cancel local task and bridge, then delete the Redis Stream and owner keys."""
