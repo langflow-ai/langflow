@@ -799,8 +799,24 @@ class RedisJobQueueService(JobQueueService):
             self._consumer_wrappers[job_id] = wrapper
         return wrapper
 
+    # Persistent marker that signal_cancel sets in addition to publishing.  Catches
+    # the race where the signal is sent before the producer's subscriber has
+    # completed SUBSCRIBE — the subscriber polls this key on startup and treats it
+    # as an immediate cancel if present.
+    _CANCEL_MARKER_PREFIX = "langflow:cancel-marker:"
+    _CANCEL_MARKER_TTL = 60  # seconds — short window covering startup race only
+
+    def _cancel_marker_key(self, job_id: str) -> str:
+        return f"{self._CANCEL_MARKER_PREFIX}{job_id}"
+
     def start_job(self, job_id: str, task_coro) -> None:  # type: ignore[override]
         """Start the build task and subscribe to the cross-worker cancel channel."""
+        # If a previous subscriber for this job_id exists (e.g. start_job called
+        # twice), cancel it so we don't orphan a pubsub connection.
+        previous_sub = self._cancel_subscribers.pop(job_id, None)
+        if previous_sub is not None and not previous_sub.done():
+            previous_sub.cancel()
+
         super().start_job(job_id, task_coro)
         if not self._cancel_channel_enabled or self._client is None:
             return
@@ -812,17 +828,28 @@ class RedisJobQueueService(JobQueueService):
         self._cancel_subscribers[job_id] = sub
 
     async def _run_cancel_subscriber(self, job_id: str, task: asyncio.Task) -> None:
-        """Listen on the per-job cancel channel; cancel the local task when signaled."""
+        """Listen on the per-job cancel channel; cancel the local task when signaled.
+
+        Closes the race where a cancel signal arrives before SUBSCRIBE completes by
+        checking a persistent marker key (set by signal_cancel) immediately after
+        subscribing.
+        """
         channel = self._cancel_channel(job_id)
+        marker_key = self._cancel_marker_key(job_id)
         pubsub = self._client.pubsub()
         try:
             await pubsub.subscribe(channel)
+
+            # Race-safety: did a cancel signal arrive while we were subscribing?
+            if await self._client.exists(marker_key):
+                await self._client.delete(marker_key)
+                await self._fire_cancel(job_id, task)
+                return
+
             async for message in pubsub.listen():
                 if message.get("type") != "message":
                     continue
-                await logger.ainfo(f"Cross-worker cancel signal received for {job_id}")
-                if not task.done():
-                    task.cancel()
+                await self._fire_cancel(job_id, task)
                 return
         except asyncio.CancelledError:
             return
@@ -834,16 +861,36 @@ class RedisJobQueueService(JobQueueService):
             with contextlib.suppress(Exception):
                 await pubsub.aclose()
 
+    async def _fire_cancel(self, job_id: str, task: asyncio.Task) -> None:
+        """Apply a received cancel signal: cancel the task and flush a sentinel.
+
+        Putting a sentinel on the local queue lets the bridge publish the Redis
+        end-of-stream marker so cross-worker consumers exit immediately instead of
+        waiting up to CLEANUP_GRACE_PERIOD for periodic cleanup to delete the
+        stream key.
+        """
+        await logger.ainfo(f"Cross-worker cancel signal received for {job_id}")
+        if not task.done():
+            task.cancel()
+        entry = self._queues.get(job_id)
+        if entry is not None:
+            main_queue = entry[0]
+            with contextlib.suppress(Exception):
+                main_queue.put_nowait((None, None, time.time()))
+
     async def signal_cancel(self, job_id: str) -> int:
         """Publish a cancel signal for *job_id* across all subscribed workers.
 
-        Returns the number of subscribers that received the message (0 means the
-        producer is on a worker whose subscription has dropped, or the job is not
-        running anywhere).  Safe to call from any worker.
+        Returns the number of subscribers that received the publish.  A return of
+        0 does not necessarily mean failure — the persistent marker key is also
+        set, so a producer that hasn't finished subscribing yet will still pick
+        up the cancel during its startup race-check.  Safe to call from any worker.
         """
         if not self._cancel_channel_enabled or self._client is None:
             return 0
         try:
+            # Set the marker first so a subscriber racing SUBSCRIBE still sees it.
+            await self._client.set(self._cancel_marker_key(job_id), "1", ex=self._CANCEL_MARKER_TTL)
             return int(await self._client.publish(self._cancel_channel(job_id), "1"))
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(f"signal_cancel publish failed for {job_id}: {exc}")

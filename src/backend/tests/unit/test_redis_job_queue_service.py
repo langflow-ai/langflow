@@ -627,3 +627,121 @@ async def test_redis_queue_wrapper_respects_custom_startup_grace_s():
     finally:
         await wrapper.cancel()
         await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race():
+    """Cancel signal sent before SUBSCRIBE still cancels the task.
+
+    The persistent marker key surfaces the cancel during the subscriber's startup
+    race check even though the publish itself reached zero subscribers.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+
+    async def _make_with(client):
+        svc = RedisJobQueueService(ttl=60)
+        svc._client = client
+        svc._closed = False
+        svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+        svc.ready = True
+        return svc
+
+    publisher = await _make_with(shared_client)
+    producer = await _make_with(shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        # Set the marker *before* a subscriber exists — simulates the publish
+        # arriving while SUBSCRIBE is still in flight.
+        await publisher.signal_cancel(job_id)
+
+        producer.create_queue(job_id)
+        cancelled = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        producer.start_job(job_id, _long_running())
+        await asyncio.wait_for(cancelled.wait(), timeout=2)
+        assert cancelled.is_set()
+    finally:
+        await _stop_service(publisher)
+        await _stop_service(producer)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_restart_same_job_cancels_previous_subscriber():
+    """start_job for an existing job_id cancels the previous subscriber.
+
+    Prevents orphaning the first subscriber task when the dict entry is overwritten.
+    """
+    service, _ = await _make_service()
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        async def _first():
+            await asyncio.Event().wait()
+
+        service.start_job(job_id, _first())
+        first_sub = service._cancel_subscribers.get(job_id)
+        assert first_sub is not None
+        await asyncio.sleep(0.05)
+
+        async def _second():
+            await asyncio.Event().wait()
+
+        service.start_job(job_id, _second())
+        second_sub = service._cancel_subscribers.get(job_id)
+
+        await asyncio.sleep(0.05)
+        assert first_sub is not second_sub
+        assert first_sub.done(), "previous subscriber should have been cancelled"
+        assert not second_sub.done()
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
+    """signal_cancel triggers a prompt end-of-stream sentinel for consumers.
+
+    The producer-side subscriber puts a sentinel on the local queue so the bridge
+    publishes the Redis end-of-stream marker without waiting for periodic cleanup.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+
+    async def _make_with(client):
+        svc = RedisJobQueueService(ttl=60)
+        svc._client = client
+        svc._closed = False
+        svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+        svc.ready = True
+        return svc
+
+    producer = await _make_with(shared_client)
+    publisher = await _make_with(shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        producer.create_queue(job_id)
+
+        async def _long_running():
+            await asyncio.Event().wait()
+
+        producer.start_job(job_id, _long_running())
+        await asyncio.sleep(0.1)
+        await publisher.signal_cancel(job_id)
+        await asyncio.sleep(0.3)
+
+        # Bridge should have flushed the sentinel to the Redis Stream.
+        stream_key = f"langflow:queue:{job_id}"
+        messages = await shared_client.xrange(stream_key)
+        assert messages, "expected at least one message in the stream after cancel"
+        last_fields = messages[-1][1]
+        assert last_fields.get(b"data") == _STREAM_SENTINEL_DATA
+    finally:
+        await _stop_service(producer)
+        await _stop_service(publisher)
