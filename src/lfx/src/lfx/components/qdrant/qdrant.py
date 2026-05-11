@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from langchain_community.vectorstores import Qdrant
@@ -12,7 +13,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import Data, custom_serializer
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -88,7 +89,12 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         if documents:
             ids = [
-                str(uuid.uuid5(uuid.NAMESPACE_X500, f"{doc.page_content}{sorted(doc.metadata.items())}"))
+                str(
+                    uuid.uuid5(
+                        uuid.NAMESPACE_X500,
+                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True, default=custom_serializer)}",
+                    )
+                )
                 for doc in documents
             ]
             qdrant = Qdrant.from_documents(
