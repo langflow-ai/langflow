@@ -106,8 +106,7 @@ export function AssistantMessageItem({
   // True when the rich loading state (component or flow build) should render
   // instead of the simple thinking indicator.
   const showsRichLoadingState =
-    (message.progress &&
-      RICH_LOADING_STEPS.includes(message.progress.step)) ||
+    (message.progress && RICH_LOADING_STEPS.includes(message.progress.step)) ||
     contentLooksLikeComponentCode;
 
   // Show loading state during component generation or flow build.
