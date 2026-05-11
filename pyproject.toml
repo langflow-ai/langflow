@@ -48,7 +48,7 @@ dev = [
     "types-aiofiles>=24.1.0.20240626",
     "codeflash>=0.8.4",
     "hypothesis>=6.123.17",
-    "locust>=2.9.0",
+    "locust~=2.43.4",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     'elevenlabs==1.58.1; python_version == "3.12"',
