@@ -27,16 +27,32 @@ class InProcessExecutor(Executor):
             yield RunComplete(outputs=list(outputs))
             return
 
-        async for result in graph.async_start(
+        # Hold a reference to the inner async iterator so we can guarantee
+        # finalization on consumer cancellation. ``async for`` does NOT call
+        # ``aclose()`` on its iterator when the loop is interrupted by an exception
+        # (e.g. ``GeneratorExit`` from this generator being closed). Without the
+        # explicit try/finally below, the inner generator's ``finally:`` block --
+        # which is where event managers, connections, or vertex finalizers run --
+        # would only execute on GC, leaking resources for an unpredictable window.
+        inner = graph.async_start(
             inputs=opts.get("initial_inputs"),
             max_iterations=opts.get("max_iterations"),
             config=opts.get("config"),
             event_manager=opts.get("event_manager"),
             reset_output_values=opts.get("reset_output_values", True),
             fallback_to_env_vars=opts.get("fallback_to_env_vars", False),
-        ):
-            yield StepResult(payload=result)
-            if isinstance(result, Finish):
-                break
+        )
+        try:
+            async for result in inner:
+                yield StepResult(payload=result)
+                if isinstance(result, Finish):
+                    break
 
-        yield RunComplete(outputs=[])
+            yield RunComplete(outputs=[])
+        finally:
+            # ``aclose`` is a no-op if the generator already completed. Async
+            # iterables that aren't generators (test stubs, custom iterators) may
+            # not implement aclose, so guard with hasattr.
+            aclose = getattr(inner, "aclose", None)
+            if aclose is not None:
+                await aclose()
