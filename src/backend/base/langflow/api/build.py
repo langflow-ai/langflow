@@ -654,6 +654,19 @@ async def cancel_flow_build(
     _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
+        # Cross-worker cancel: this worker doesn't own the build task.  If the
+        # queue service supports a cancel side-channel (RedisJobQueueService with
+        # cancel_channel_enabled=True), publish there so the owning worker can
+        # cancel locally.  Falls back to a no-op for the in-memory queue.
+        signal = getattr(queue_service, "signal_cancel", None)
+        if signal is not None:
+            try:
+                receivers = await signal(job_id)
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"signal_cancel for {job_id} failed: {exc}")
+                receivers = 0
+            await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} ({receivers} subscriber(s))")
+            return receivers > 0
         await logger.awarning(f"No event task found for job_id {job_id}")
         return True  # Nothing to cancel is still a success
 

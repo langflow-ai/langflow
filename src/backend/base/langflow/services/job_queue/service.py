@@ -23,6 +23,9 @@ _STREAM_SENTINEL_DATA = b"__sentinel__"
 # consumer (RedisQueueWrapper) MUST agree on this — keep a single source of truth.
 _STREAM_PREFIX = "langflow:queue:"
 _OWNER_PREFIX = "langflow:owner:"
+# Pub/Sub channel for cross-worker cancel signals.  Any worker can publish here;
+# the producer worker subscribes when the job starts and cancels the local task.
+_CANCEL_CHANNEL_PREFIX = "langflow:cancel:"
 
 
 class JobQueueNotFoundError(Exception):
@@ -456,15 +459,19 @@ class RedisQueueWrapper:
     _XREAD_BLOCK_MS = 1000  # how long XREAD blocks waiting for new entries
     _XREAD_BATCH_COUNT = 100  # max entries fetched per XREAD call
     _READ_ERROR_BACKOFF_S = 0.5  # backoff after a transient XREAD failure
-    # How long to keep polling before giving up on a stream that has never appeared.
+    # Default grace period. Overridable per-instance via the constructor so the
+    # value can be driven from settings (LANGFLOW_REDIS_QUEUE_STARTUP_GRACE_S).
     # Protects against the early-poll race where the consumer wrapper is created
     # before the producer worker has issued its first XADD.
     _STARTUP_GRACE_S = 30.0
 
-    def __init__(self, job_id: str, client: Any, ttl: int) -> None:
+    def __init__(self, job_id: str, client: Any, ttl: int, startup_grace_s: float | None = None) -> None:
         self._job_id = job_id
         self._client = client
         self._ttl = ttl
+        # Allow callers to override the class-level grace period (driven by settings).
+        if startup_grace_s is not None:
+            self._STARTUP_GRACE_S = startup_grace_s
         self._buffer: asyncio.Queue = asyncio.Queue()
         self._last_id = "0-0"  # read from the beginning of the stream
         # Flips to True the first time XREAD returns messages for this stream.
@@ -593,15 +600,25 @@ class RedisJobQueueService(JobQueueService):
     * ``LANGFLOW_REDIS_QUEUE_URL`` (full URL, overrides host/port/db)
     * ``LANGFLOW_REDIS_QUEUE_HOST`` / ``LANGFLOW_REDIS_QUEUE_PORT``
 
+    Cross-worker cancel
+    -------------------
+    When ``cancel_channel_enabled=True`` (the default), the service publishes and
+    subscribes a per-job Redis pub/sub channel ``langflow:cancel:<job_id>``.  The
+    producer worker subscribes when the job starts; any worker can publish a
+    cancel signal via :meth:`signal_cancel`.  When the signal arrives, the
+    subscriber cancels the local build task.
+
     Known limitations
     -----------------
-    * Cross-worker *cancel*: cancelling a build running on Worker A from Worker B
-      silently no-ops (returns success).  True cross-worker cancel would require an
-      additional Redis signal channel checked inside the build loop.
+    * Cross-worker *passive* disconnect (client closes the connection) is still a
+      best-effort no-op — there is no automatic publish on disconnect.  Add a
+      ``signal_cancel`` call to the disconnect path if this matters for your
+      deployment.
     """
 
     STREAM_PREFIX = _STREAM_PREFIX
     OWNER_PREFIX = _OWNER_PREFIX
+    CANCEL_CHANNEL_PREFIX = _CANCEL_CHANNEL_PREFIX
 
     def __init__(
         self,
@@ -610,6 +627,9 @@ class RedisJobQueueService(JobQueueService):
         db: int = 1,
         url: str | None = None,
         ttl: int = 3600,
+        startup_grace_s: float = 30.0,
+        *,
+        cancel_channel_enabled: bool = True,
     ) -> None:
         super().__init__()
         self._redis_host = host
@@ -617,16 +637,23 @@ class RedisJobQueueService(JobQueueService):
         self._redis_db = db
         self._redis_url = url
         self._ttl = ttl
+        self._startup_grace_s = startup_grace_s
+        self._cancel_channel_enabled = cancel_channel_enabled
         self._client: Any = None
         self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
         self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
+        # Per-job cancel-channel subscriber tasks (producer side only).
+        self._cancel_subscribers: dict[str, asyncio.Task] = {}
 
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
 
     def _owner_key(self, job_id: str) -> str:
         return f"{self.OWNER_PREFIX}{job_id}"
+
+    def _cancel_channel(self, job_id: str) -> str:
+        return f"{self.CANCEL_CHANNEL_PREFIX}{job_id}"
 
     def start(self) -> None:
         """Create the Redis client and start the periodic cleanup routine."""
@@ -668,6 +695,12 @@ class RedisJobQueueService(JobQueueService):
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
         self._bridge_tasks.clear()
+        for sub in list(self._cancel_subscribers.values()):
+            if not sub.done():
+                sub.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await sub
+        self._cancel_subscribers.clear()
         for wrapper in list(self._consumer_wrappers.values()):
             await wrapper.cancel()
         self._consumer_wrappers.clear()
@@ -757,9 +790,64 @@ class RedisJobQueueService(JobQueueService):
         """Return the cached Redis stream consumer for a job, creating it if needed."""
         wrapper = self._consumer_wrappers.get(job_id)
         if wrapper is None:
-            wrapper = RedisQueueWrapper(job_id, self._client, self._ttl)
+            wrapper = RedisQueueWrapper(
+                job_id,
+                self._client,
+                self._ttl,
+                startup_grace_s=self._startup_grace_s,
+            )
             self._consumer_wrappers[job_id] = wrapper
         return wrapper
+
+    def start_job(self, job_id: str, task_coro) -> None:  # type: ignore[override]
+        """Start the build task and subscribe to the cross-worker cancel channel."""
+        super().start_job(job_id, task_coro)
+        if not self._cancel_channel_enabled or self._client is None:
+            return
+        # Hand the subscriber the task we just registered so it can cancel it on signal.
+        _, _, task, _ = self._queues[job_id]
+        if task is None:
+            return
+        sub = asyncio.create_task(self._run_cancel_subscriber(job_id, task))
+        self._cancel_subscribers[job_id] = sub
+
+    async def _run_cancel_subscriber(self, job_id: str, task: asyncio.Task) -> None:
+        """Listen on the per-job cancel channel; cancel the local task when signaled."""
+        channel = self._cancel_channel(job_id)
+        pubsub = self._client.pubsub()
+        try:
+            await pubsub.subscribe(channel)
+            async for message in pubsub.listen():
+                if message.get("type") != "message":
+                    continue
+                await logger.ainfo(f"Cross-worker cancel signal received for {job_id}")
+                if not task.done():
+                    task.cancel()
+                return
+        except asyncio.CancelledError:
+            return
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Cancel subscriber error for {job_id}: {exc}")
+        finally:
+            with contextlib.suppress(Exception):
+                await pubsub.unsubscribe(channel)
+            with contextlib.suppress(Exception):
+                await pubsub.aclose()
+
+    async def signal_cancel(self, job_id: str) -> int:
+        """Publish a cancel signal for *job_id* across all subscribed workers.
+
+        Returns the number of subscribers that received the message (0 means the
+        producer is on a worker whose subscription has dropped, or the job is not
+        running anywhere).  Safe to call from any worker.
+        """
+        if not self._cancel_channel_enabled or self._client is None:
+            return 0
+        try:
+            return int(await self._client.publish(self._cancel_channel(job_id), "1"))
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"signal_cancel publish failed for {job_id}: {exc}")
+            return 0
 
     def get_queue_data(self, job_id: str) -> tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:  # type: ignore[override]
         """Return queue data for a job, always backed by a Redis Stream consumer.
@@ -841,6 +929,12 @@ class RedisJobQueueService(JobQueueService):
             bridge.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await bridge
+
+        sub = self._cancel_subscribers.pop(job_id, None)
+        if sub and not sub.done():
+            sub.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await sub
 
         try:
             await super().cleanup_job(job_id)

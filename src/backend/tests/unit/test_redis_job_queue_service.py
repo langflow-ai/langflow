@@ -543,3 +543,87 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
     await response.on_disconnect()
 
     assert queue.cancelled
+
+
+# ---------------------------------------------------------------------------
+# Cross-worker cancel via Redis pub/sub
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_redis_service_cross_worker_cancel_signals_subscriber():
+    """signal_cancel cancels the local task via the producer-side subscriber.
+
+    The subscriber consumes the published message and calls task.cancel().
+    """
+    # Shared FakeRedis backing both "workers" so pub/sub can route between them.
+    shared_client = fakeredis_aio.FakeRedis()
+
+    async def _make_with(client):
+        svc = RedisJobQueueService(ttl=60)
+        svc._client = client
+        svc._closed = False
+        svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+        svc.ready = True
+        return svc
+
+    svc_producer = await _make_with(shared_client)
+    svc_other = await _make_with(shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        svc_producer.create_queue(job_id)
+
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc_producer.start_job(job_id, _long_running())
+        # Give the subscriber task a moment to subscribe to the channel.
+        await asyncio.sleep(0.1)
+
+        receivers = await svc_other.signal_cancel(job_id)
+        assert receivers >= 1, f"expected at least one subscriber, got {receivers}"
+
+        await asyncio.wait_for(cancelled_event.wait(), timeout=2)
+        assert cancelled_event.is_set()
+    finally:
+        await _stop_service(svc_producer)
+        await _stop_service(svc_other)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_signal_cancel_returns_zero_when_disabled():
+    """signal_cancel is a no-op (returns 0) when the cancel channel is disabled."""
+    fake_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(ttl=60, cancel_channel_enabled=False)
+    svc._client = fake_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc.ready = True
+    try:
+        receivers = await svc.signal_cancel("nonexistent")
+        assert receivers == 0
+    finally:
+        await _stop_service(svc)
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_respects_custom_startup_grace_s():
+    """Passing startup_grace_s to RedisQueueWrapper overrides the class default."""
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60, startup_grace_s=0.05)
+    try:
+        # Stream never appears; after the very short grace period the wrapper
+        # delivers the end-of-stream sentinel rather than blocking forever.
+        evt = await asyncio.wait_for(wrapper.get(), timeout=3)
+        assert evt[0] is None
+        assert evt[1] is None
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()

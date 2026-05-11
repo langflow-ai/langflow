@@ -233,6 +233,15 @@ class Settings(BaseSettings):
     """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
     redis_queue_ttl: int = 3600
     """TTL in seconds for job stream keys in Redis."""
+    redis_queue_startup_grace_s: float = 30.0
+    """Seconds a cross-worker consumer waits for the producer's first XADD before
+    treating a missing stream key as end-of-stream. Bump this if cold-start build
+    latency on the producer worker can exceed the default (e.g. large graph
+    instantiation, slow container image pulls)."""
+    redis_queue_cancel_channel_enabled: bool = True
+    """If True, RedisJobQueueService publishes/subscribes a per-job cancel channel so
+    that POST /build/{job_id}/cancel works cross-worker. The producer worker
+    subscribes when the job starts; any worker can publish a cancel signal."""
 
     # Sentry
     sentry_dsn: str | None = None

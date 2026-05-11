@@ -27,5 +27,7 @@ class JobQueueServiceFactory(ServiceFactory):
                 db=settings.redis_queue_db,
                 url=settings.redis_queue_url,
                 ttl=settings.redis_queue_ttl,
+                startup_grace_s=settings.redis_queue_startup_grace_s,
+                cancel_channel_enabled=settings.redis_queue_cancel_channel_enabled,
             )
         return JobQueueService()
