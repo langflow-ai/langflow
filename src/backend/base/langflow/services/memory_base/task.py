@@ -334,13 +334,21 @@ async def _fetch_pending_messages(
     session_id: str,
     cursor_id: uuid.UUID | None,
 ) -> list[MessageTable]:
-    """Fetch all messages for this session that come after cursor_id using shared session."""
+    """Fetch all messages for this session that come after cursor_id using shared session.
+
+    Excludes component error/exception messages (``error=True`` or ``category='error'``)
+    so error text emitted by failing components is never indexed as legitimate
+    conversation content. The cursor still advances past any newer non-error messages,
+    so skipped error rows will not be reconsidered on subsequent runs.
+    """
     from sqlalchemy import and_, or_
 
     stmt = (
         select(MessageTable)
         .where(MessageTable.flow_id == flow_id)
         .where(MessageTable.session_id == session_id)
+        .where(MessageTable.error == False)  # noqa: E712
+        .where(MessageTable.category != "error")
         .order_by(col(MessageTable.timestamp).asc(), col(MessageTable.id).asc())
     )
     if cursor_id is not None:

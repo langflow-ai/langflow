@@ -95,6 +95,143 @@ def _make_message(
 # ------------------------------------------------------------------ #
 
 
+class TestInferEmbeddingProvider:
+    """Provider inference regression tests.
+
+    The returned provider name must be a canonical key registered in
+    ``EMBEDDING_PROVIDER_CLASS_MAPPING`` so the result can be round-tripped
+    through ``KBIngestionHelper.build_embeddings`` without translation.
+    """
+
+    @pytest.mark.parametrize(
+        ("model", "expected"),
+        [
+            # Google Generative AI — the original bug: gemini-embedding was
+            # being misclassified as OpenAI because no Google pattern matched.
+            ("models/gemini-embedding-001", "Google Generative AI"),
+            ("models/text-embedding-004", "Google Generative AI"),
+            ("models/embedding-001", "Google Generative AI"),
+            # OpenAI — must NOT be caught by the Google "models/text-embedding"
+            # pattern, since OpenAI names don't carry the "models/" prefix.
+            ("text-embedding-3-small", "OpenAI"),
+            ("text-embedding-3-large", "OpenAI"),
+            ("text-embedding-ada-002", "OpenAI"),
+            # Other providers
+            ("nomic-embed-text", "Ollama"),
+            ("embed-english-v3.0", "Cohere"),
+            # Unknown / empty fall back to the safe default.
+            ("unknown-model", "OpenAI"),
+            ("", "OpenAI"),
+        ],
+    )
+    def test_provider_inferred_correctly(self, model, expected):
+        from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+        assert infer_embedding_provider(model) == expected
+
+    def test_inferred_provider_is_in_class_mapping(self):
+        """Inferred provider must be a registered embedding-class mapping key.
+
+        Otherwise the downstream ``KBIngestionHelper.build_embeddings`` call
+        will reject it.
+        """
+        from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+        from lfx.base.models.unified_models.class_registry import EMBEDDING_PROVIDER_CLASS_MAPPING
+
+        for model in (
+            "models/gemini-embedding-001",
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "nomic-embed-text",
+            "unknown-model",
+        ):
+            assert infer_embedding_provider(model) in EMBEDDING_PROVIDER_CLASS_MAPPING
+
+
+class TestKBIngestionHelperBuildEmbeddings:
+    """Regression tests for the Memory Base retrieval bug.
+
+    ``build_embeddings`` must not depend on the user-filtered catalog
+    returned by ``get_embedding_model_options``: that catalog is empty
+    whenever the per-user credential lookup fails (which can happen
+    transparently when the helper runs in a thread bridged from an async
+    event loop). The KB's ``embedding_metadata.json`` is the source of
+    truth — we resolve the embedding class from the static registry.
+    """
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_openai_default_model(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        sentinel = object()
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            instance = mock_component_cls.return_value
+            instance.build_embeddings.return_value = sentinel
+            user = MagicMock(id=uuid.uuid4())
+
+            result = await KBIngestionHelper.build_embeddings("OpenAI", "text-embedding-3-small", user)
+
+        assert result is sentinel
+        kwargs = mock_component_cls.call_args.kwargs
+        selected = kwargs["model"][0]
+        assert selected["provider"] == "OpenAI"
+        assert selected["name"] == "text-embedding-3-small"
+        assert selected["metadata"]["embedding_class"] == "OpenAIEmbeddings"
+        assert selected["metadata"]["model_type"] == "embeddings"
+        assert "param_mapping" in selected["metadata"]
+
+    @pytest.mark.asyncio
+    async def test_builds_embeddings_for_google_gemini_model(self):
+        """Google-side regression coverage.
+
+        ``gemini-embedding-001`` must resolve to
+        ``GoogleGenerativeAIEmbeddings`` rather than blowing up.
+        """
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("Google Generative AI", "models/gemini-embedding-001", user)
+
+        selected = mock_component_cls.call_args.kwargs["model"][0]
+        assert selected["provider"] == "Google Generative AI"
+        assert selected["metadata"]["embedding_class"] == "GoogleGenerativeAIEmbeddings"
+
+    @pytest.mark.asyncio
+    async def test_unregistered_provider_raises_with_helpful_message(self):
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        user = MagicMock(id=uuid.uuid4())
+        with pytest.raises(ValueError, match="not registered"):
+            await KBIngestionHelper.build_embeddings("MadeUpProvider", "some-model", user)
+
+    @pytest.mark.asyncio
+    async def test_does_not_consult_user_filtered_catalog(self):
+        """Helper must resolve from the static registry, not the user catalog.
+
+        Even if ``get_embedding_model_options`` would return an empty list
+        (e.g. the per-user credential lookup silently failed), the helper
+        must still resolve the model from the static registry.
+        """
+        from langflow.api.utils import kb_helpers as kb_helpers_module
+        from langflow.api.utils.kb_helpers import KBIngestionHelper
+
+        # The helper used to call ``get_embedding_model_options`` and raise
+        # when the result was empty. Make sure that name is no longer wired
+        # into the helper's module — otherwise the bug can silently regress.
+        assert not hasattr(kb_helpers_module, "get_embedding_model_options")
+
+        with patch("langflow.api.utils.kb_helpers.EmbeddingModelComponent") as mock_component_cls:
+            mock_component_cls.return_value.build_embeddings.return_value = MagicMock()
+            user = MagicMock(id=uuid.uuid4())
+
+            await KBIngestionHelper.build_embeddings("OpenAI", "text-embedding-3-large", user)
+
+        assert mock_component_cls.called
+
+
 class TestMemoryBaseModel:
     def test_defaults(self):
         mb = MemoryBase(
@@ -487,6 +624,157 @@ class TestMemoryBaseServiceMismatch:
             result = await service.check_mismatch(mb.id, mb.user_id)
 
         assert result is False
+
+
+class TestMemoryBaseServicePurgeSessionData:
+    @pytest.fixture
+    def service(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        return MemoryBaseService()
+
+    @pytest.mark.asyncio
+    async def test_purge_no_sessions_returns_zero(self, service):
+        result = await service.purge_session_data(uuid.uuid4(), [])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_no_matching_pairs_returns_zero(self, service):
+        # No (mb, session) pairs found in DB → nothing to do, no chunk wipes attempted.
+        with patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope:
+            mock_db = AsyncMock()
+            empty_result = MagicMock()
+            empty_result.all = MagicMock(return_value=[])
+            mock_db.exec = AsyncMock(return_value=empty_result)
+
+            class FakeCtx:
+                async def __aenter__(self):
+                    return mock_db
+
+                async def __aexit__(self, *a):
+                    pass
+
+            mock_scope.return_value = FakeCtx()
+
+            result = await service.purge_session_data(uuid.uuid4(), ["s1"])
+        assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_purge_deletes_chroma_chunks_and_tracking_rows(self, service, tmp_path):
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        # First scope: lookup pairs + resolve username. Second scope: delete tracking rows.
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        adelete_mock = AsyncMock()
+        fake_chroma = MagicMock()
+        fake_chroma.adelete = adelete_mock
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.ingestion.KBStorageHelper.release_chroma_resources"),
+            patch(
+                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding",
+                return_value=("OpenAI", "text-embedding-3-small"),
+            ),
+            patch("langflow.services.memory_base.ingestion.Chroma", return_value=fake_chroma),
+            patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge"),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        # Chroma was asked to drop chunks for the deleted session using $eq form.
+        adelete_mock.assert_awaited_once_with(where={"session_id": {"$eq": "sess-x"}})
+        # Tracking-row deletes were committed.
+        assert second_db.commit.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_purge_continues_when_chunk_delete_fails(self, service, tmp_path):
+        # Chunk delete failure must not block tracking-row cleanup — the user
+        # already pressed "delete session" and expects bookkeeping to clear.
+        mb = _make_mb()
+        mbs = _make_session(memory_base_id=mb.id, session_id="sess-x")
+
+        first_db = AsyncMock()
+        pair_result = MagicMock()
+        pair_result.all = MagicMock(return_value=[(mb, mbs)])
+        username_result = MagicMock()
+        username_result.first = MagicMock(return_value="alice")
+        first_db.exec = AsyncMock(side_effect=[pair_result, username_result])
+        first_db.commit = AsyncMock()
+
+        second_db = AsyncMock()
+        second_db.exec = AsyncMock(return_value=MagicMock())
+        second_db.commit = AsyncMock()
+
+        scopes_iter = iter([first_db, second_db])
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return next(scopes_iter)
+
+            async def __aexit__(self, *a):
+                pass
+
+        kb_root = tmp_path / "kb"
+        (kb_root / "alice" / mb.kb_name).mkdir(parents=True)
+
+        with (
+            patch(
+                "langflow.services.memory_base.ingestion.session_scope",
+                side_effect=lambda: FakeCtx(),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.KBStorageHelper.get_root_path",
+                return_value=kb_root,
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion._delete_chunks_for_session",
+                AsyncMock(side_effect=OSError("boom")),
+            ),
+        ):
+            result = await service.purge_session_data(mb.user_id, ["sess-x"])
+
+        assert result == 1
+        assert second_db.commit.await_count == 1
 
 
 class TestMemoryBaseServiceRegenerate:
