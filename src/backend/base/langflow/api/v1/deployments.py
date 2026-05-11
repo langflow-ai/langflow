@@ -576,7 +576,7 @@ async def create_deployment(
             project_id=project_id,
             deployment_provider_account_id=provider_id,
             resource_key=str(provider_create_result.id),
-            display_name=payload.name,
+            display_name=payload.display_name,
             deployment_type=payload.type,
             description=payload.description or None,
         )
@@ -682,10 +682,10 @@ async def list_deployments(
         DeploymentNamesQuery,
         Query(
             description=(
-                "Optional deployment names (pass as repeated query params, "
-                "e.g. ?names=A&names=B). Filters deployments by name match. "
-                "When load_from_provider is false (default), filters Langflow-tracked deployments in the DB. "
-                "Otherwise, filters provider deployments directly, including deployments not tracked by Langflow."
+                "Optional provider deployment names (pass as repeated query params, "
+                "e.g. ?names=A&names=B). Only supported with load_from_provider=true, "
+                "where it filters against the provider directly, which may include deployments "
+                "not tracked/persisted by Langflow."
             )
         ),
     ] = None,
@@ -1544,7 +1544,7 @@ async def get_deployment(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
         provider_key=provider_key,
-        name=deployment_row.display_name,
+        display_name=deployment_row.display_name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
         # Timestamps are local DB audit fields, not provider payload fields.
@@ -1645,8 +1645,8 @@ async def update_deployment(
         )
 
         update_kwargs: dict = {}
-        if payload.name is not None and payload.name != deployment_row.display_name:
-            update_kwargs["display_name"] = payload.name
+        if payload.display_name is not None and payload.display_name != deployment_row.display_name:
+            update_kwargs["display_name"] = payload.display_name
         if _field_was_explicitly_set(payload, "description"):
             if payload.description != deployment_row.description:
                 update_kwargs["description"] = payload.description
@@ -1778,7 +1778,7 @@ async def get_deployment_status(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,
         provider_key=provider_key,
-        name=deployment_row.display_name,
+        display_name=deployment_row.display_name,
         description=deployment_row.description,
         type=deployment_row.deployment_type,
         created_at=deployment_row.created_at,

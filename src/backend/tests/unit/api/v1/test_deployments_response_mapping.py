@@ -61,7 +61,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     assert response.id == deployment_row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "test-provider"
-    assert response.name == deployment_row.display_name
+    assert response.display_name == deployment_row.display_name
     assert response.description == "db-description"
     assert response.created_at == now
     assert response.updated_at == now
@@ -114,7 +114,7 @@ def test_shape_deployment_update_result_maps_db_identity_and_provider_result() -
     assert response.id == row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "my-provider"
-    assert response.name == row.display_name
+    assert response.display_name == row.display_name
     assert response.description == row.description
     assert response.type == DeploymentType.AGENT
     assert response.created_at == now
@@ -254,7 +254,7 @@ def test_shape_deployment_list_items_basic() -> None:
     assert item.id == dep_id
     assert item.provider_id == prov_id
     assert item.provider_key == "test-provider"
-    assert item.name == "My Dep"
+    assert item.display_name == "My Dep"
     assert item.attached_count == 3
     assert item.flow_version_ids is None
     assert item.provider_data is None

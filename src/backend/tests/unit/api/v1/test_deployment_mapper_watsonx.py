@@ -1348,7 +1348,7 @@ def test_watsonx_mapper_resolve_verify_credentials_for_update_rejects_tenant_id_
 @pytest.mark.asyncio
 async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
-    payload = DeploymentUpdateRequest(name="n")
+    payload = DeploymentUpdateRequest(display_name="n")
 
     resolved = await mapper.resolve_deployment_update(
         user_id=uuid4(),
@@ -1369,7 +1369,7 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     project_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -1418,7 +1418,7 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -
     project_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -1464,7 +1464,7 @@ async def test_watsonx_mapper_translates_existing_create_bind_into_update_payloa
     project_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="existing-create",
+        display_name="existing-create",
         description="desc",
         type="agent",
         provider_data={
@@ -1511,7 +1511,7 @@ async def test_watsonx_mapper_existing_create_bind_with_tool_name_override() -> 
     project_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="existing-create",
+        display_name="existing-create",
         description="desc",
         type="agent",
         provider_data={
@@ -1558,7 +1558,7 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
     flow_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -1606,7 +1606,7 @@ async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -1637,7 +1637,7 @@ async def test_watsonx_mapper_create_reports_unknown_field_name() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -1683,7 +1683,7 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
     )
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={
@@ -2369,7 +2369,7 @@ async def test_watsonx_mapper_create_preserves_env_var_source_in_connection_payl
     project_id = uuid4()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="deploy-with-vars",
+        display_name="deploy-with-vars",
         description="",
         type="agent",
         provider_data={
@@ -2734,7 +2734,7 @@ async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operat
     ]
 
     payload = DeploymentUpdateRequest(
-        name="updated-name",
+        display_name="updated-name",
         description="updated-description",
         provider_data={
             "llm": TEST_WXO_LLM,

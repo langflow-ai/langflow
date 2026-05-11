@@ -222,7 +222,7 @@ class _DeploymentResponseCommon(BaseModel):
     id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     provider_key: str = Field(description="Provider identifier (e.g. 'watsonx-orchestrate').")
-    name: str
+    display_name: str = Field(description="Deployment name synced from the provider.")
     description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
@@ -386,7 +386,7 @@ class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    name: NonEmptyStr = Field(description="Deployment display name.")
+    display_name: NonEmptyStr = Field(description="Requested deployment name.")
     description: str = Field(
         default="",
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -406,7 +406,7 @@ class DeploymentCreateRequest(BaseModel):
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
+    display_name: NonEmptyStr | None = Field(default=None, description="Updated deployment name.")
     description: str | None = Field(
         default=None,
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -420,10 +420,10 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
+            msg = "At least one of 'display_name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
-        if self.name is None and self.description is None and self.provider_data is None:
-            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
+        if self.display_name is None and self.description is None and self.provider_data is None:
+            msg = "At least one of 'display_name', 'description', or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

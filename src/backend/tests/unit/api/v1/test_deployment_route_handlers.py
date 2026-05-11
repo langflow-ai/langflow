@@ -194,7 +194,7 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "test"
+        payload.display_name = "test"
         payload.type = "agent"
         payload.description = None
 
@@ -252,7 +252,7 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "test"
+        payload.display_name = "test"
         payload.type = "agent"
         payload.description = None
 
@@ -313,7 +313,7 @@ class TestCreateDeploymentRollback:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "existing"
+        payload.display_name = "existing"
         payload.type = "agent"
         payload.description = "desc"
 
@@ -374,7 +374,7 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "existing"
+        payload.display_name = "existing"
         payload.type = "agent"
         payload.description = None
 
@@ -435,7 +435,7 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "existing"
+        payload.display_name = "existing"
         payload.type = "agent"
         payload.description = "desc"
 
@@ -499,7 +499,7 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "existing"
+        payload.display_name = "existing"
         payload.type = "agent"
         payload.description = "desc"
 
@@ -550,7 +550,7 @@ class TestCreateDeploymentExistingAgent:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "existing"
+        payload.display_name = "existing"
         payload.type = "agent"
         payload.description = None
 
@@ -2143,7 +2143,7 @@ class TestUpdateDeploymentRollback:
         session.commit.side_effect = RuntimeError("DB commit failed")
 
         payload = MagicMock()
-        payload.name = None
+        payload.display_name = None
         payload.description = None
 
         with pytest.raises(RuntimeError, match="DB commit failed"):
@@ -2196,7 +2196,7 @@ class TestUpdateDeploymentRollback:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.name = None
+        payload.display_name = None
         payload.description = None
 
         await update_deployment(
@@ -2261,7 +2261,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.name = None
+        payload.display_name = None
         payload.description = None
 
         await update_deployment(
@@ -2321,7 +2321,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.name = None
+        payload.display_name = None
         payload.description = None
 
         await update_deployment(
@@ -2373,7 +2373,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         session.commit.return_value = None
 
         payload = MagicMock()
-        payload.name = None
+        payload.display_name = None
         payload.description = None
 
         await update_deployment(
@@ -2431,7 +2431,7 @@ class TestUpdateDeploymentMetadataPersistence:
 
         payload = DeploymentUpdateRequest.model_validate(
             {
-                "name": "renamed",
+                "display_name": "renamed",
                 "description": None,
             }
         )
@@ -2588,7 +2588,7 @@ class TestGetDeploymentSync:
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.resource_key == "provider-rk-1"
-        assert result.name == "db-owned-name"
+        assert result.display_name == "db-owned-name"
         assert result.description == "db-owned-description"
         assert result.type == "agent"
         assert result.created_at == created_at
@@ -3021,7 +3021,7 @@ class TestCreateDeploymentProjectValidation:
 
         payload = MagicMock()
         payload.provider_id = pa.id
-        payload.name = "test"
+        payload.display_name = "test"
         payload.type = "agent"
         payload.description = None
 

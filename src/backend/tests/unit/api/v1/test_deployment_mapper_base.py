@@ -164,7 +164,7 @@ async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_ve
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={"some_key": "some_value"},
@@ -187,7 +187,7 @@ async def test_base_mapper_resolve_deployment_create_validates_provider_data_whe
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={"label": "some_value"},
@@ -208,7 +208,7 @@ async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_da
     mapper = _TypedMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="create-deploy",
+        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={"invalid": "value"},
@@ -442,7 +442,7 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
     result = DeploymentCreateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
         id=deployment_id,
-        name="Deployment 1",
+        display_name="Deployment 1",
         description="desc",
         deployment_type=DeploymentType.AGENT,
         resource_key="provider-id",
@@ -456,7 +456,7 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
     assert shaped.id == deployment_id
     assert shaped.provider_id == provider_account_id
     assert shaped.provider_key == "test-provider"
-    assert shaped.name == "Deployment 1"
+    assert shaped.display_name == "Deployment 1"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
 
@@ -572,7 +572,7 @@ def test_shape_deployment_list_items_without_filter() -> None:
         id=uuid4(),
         resource_key="rk-1",
         deployment_type=DeploymentType.AGENT,
-        name="Dep",
+        display_name="Dep",
         description=None,
         created_at=None,
         updated_at=None,
@@ -599,7 +599,7 @@ def test_shape_deployment_list_items_with_filter() -> None:
         id=uuid4(),
         resource_key="rk-1",
         deployment_type=DeploymentType.AGENT,
-        name="Dep",
+        display_name="Dep",
         description=None,
         created_at=None,
         updated_at=None,
@@ -625,7 +625,7 @@ def test_shape_deployment_list_items_with_filter_empty_matches() -> None:
         id=uuid4(),
         resource_key="rk-1",
         deployment_type=DeploymentType.AGENT,
-        name="Dep",
+        display_name="Dep",
         description=None,
         created_at=None,
         updated_at=None,
@@ -670,7 +670,7 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
     deployment_row = SimpleNamespace(
         id=deployment_id,
-        name="Deployment Name",
+        display_name="Deployment Name",
         description="desc",
         deployment_type=DeploymentType.AGENT,
         resource_key="provider-id",
@@ -688,7 +688,7 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     assert shaped.id == deployment_id
     assert shaped.provider_id == provider_account_id
     assert shaped.provider_key == "test-provider"
-    assert shaped.name == "Deployment Name"
+    assert shaped.display_name == "Deployment Name"
     assert shaped.description == "desc"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
@@ -880,7 +880,7 @@ def test_base_mapper_util_existing_deployment_resource_key_for_create_raises_not
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="deploy",
+        display_name="deploy",
         description="",
         type="agent",
         provider_data={},
@@ -893,7 +893,7 @@ def test_base_mapper_util_should_mutate_provider_for_existing_deployment_create_
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        name="deploy",
+        display_name="deploy",
         description="",
         type="agent",
         provider_data={},

@@ -161,7 +161,7 @@ class BaseDeploymentMapper:
         provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
-                name=payload.name,
+                name=payload.display_name,
                 description=payload.description,
                 type=payload.type,
             ),
@@ -185,7 +185,7 @@ class BaseDeploymentMapper:
         )
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=payload.name,
+                name=payload.display_name,
                 description=payload.description,
             ),
             provider_data=create_payload.provider_data,
@@ -202,10 +202,10 @@ class BaseDeploymentMapper:
         _ = (user_id, deployment_db_id)
         adapter_spec = (
             BaseDeploymentDataUpdate(
-                name=payload.name,
+                name=payload.display_name,
                 description=payload.description,
             )
-            if payload.name is not None or payload.description is not None
+            if payload.display_name is not None or payload.description is not None
             else None
         )
         provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
@@ -334,7 +334,7 @@ class BaseDeploymentMapper:
                 provider_key=provider_key,
                 resource_key=row.resource_key,
                 type=row.deployment_type,
-                name=row.display_name,
+                display_name=row.display_name,
                 description=row.description,
                 attached_count=attached_count,
                 created_at=row.created_at,
@@ -385,7 +385,7 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.display_name,
+            display_name=deployment_row.display_name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -406,7 +406,7 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.display_name,
+            display_name=deployment_row.display_name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
