@@ -5,6 +5,9 @@ import contextlib
 import time
 from typing import TYPE_CHECKING, Any
 
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
 from lfx.log.logger import logger
 
 from langflow.events.event_manager import EventManager
@@ -165,7 +168,7 @@ class JobQueueService(Service):
         logger.debug(f"Queue and event manager successfully created for job_id {job_id}")
         return main_queue, event_manager
 
-    def start_job(self, job_id: str, task_coro) -> None:
+    def start_job(self, job_id: str, task_coro: Coroutine) -> None:
         """Start an asynchronous task for a given job, replacing any existing active task.
 
         The method performs the following:
@@ -173,6 +176,13 @@ class JobQueueService(Service):
           - Cancels any currently running task associated with the job.
           - Launches a new asynchronous task using the provided coroutine.
           - Updates the internal registry with the new task.
+
+        The coroutine is wrapped with :meth:`_guarded_task` so that any unhandled
+        exception causes an ``on_error`` event to be emitted and the end-of-stream
+        sentinel to be written before the task exits.  This guarantees that
+        cross-worker consumers can always distinguish a clean end from a crash —
+        both paths terminate with the sentinel in the Redis Stream, but a crash
+        will be preceded by an ``error`` event.
 
         Args:
             job_id (str): Unique identifier for the job.
@@ -193,10 +203,51 @@ class JobQueueService(Service):
             logger.debug(f"Existing task for job_id {job_id} detected; cancelling it.")
             existing_task.cancel()
 
-        # Initiate the new asynchronous task.
-        task = asyncio.create_task(task_coro)
+        # Wrap the coroutine so that any crash emits on_error + sentinel before exit.
+        task = asyncio.create_task(self._guarded_task(job_id, task_coro, event_manager, main_queue))
         self._queues[job_id] = (main_queue, event_manager, task, None)
         logger.debug(f"New task started for job_id {job_id}")
+
+    @staticmethod
+    async def _guarded_task(
+        job_id: str,
+        task_coro: Coroutine,
+        event_manager: EventManager,
+        main_queue: asyncio.Queue,
+    ) -> None:
+        """Run *task_coro* and guarantee the end-of-stream sentinel is written on crash.
+
+        A well-behaved build coroutine (``generate_flow_events``) writes the sentinel
+        itself after emitting ``on_end``.  If the coroutine raises an unexpected
+        exception before doing so, this wrapper:
+
+        1. Emits an ``on_error`` event so consumers can distinguish a crash from a
+           clean end — both cases deliver ``(None, None, ts)`` as the terminal item,
+           but a crash is always preceded by an error event in the stream.
+        2. Puts the raw ``(None, None, ts)`` sentinel so the bridge flushes and
+           writes ``_STREAM_SENTINEL_DATA`` to the Redis Stream before cleanup
+           deletes the key, preventing consumers from hanging indefinitely.
+
+        ``asyncio.CancelledError`` is not caught here; the caller (``cleanup_job`` /
+        ``cancel_flow_build``) is responsible for those paths and already handles
+        sentinel delivery via bridge cancellation + stream-key deletion.
+        """
+        try:
+            await task_coro
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            await logger.aerror(
+                f"Unhandled exception in build task for job_id {job_id}: {exc}",
+                exc_info=True,
+            )
+            # 1. Emit an error event so the stream carries the failure record.
+            with contextlib.suppress(Exception):
+                event_manager.on_error(data={"error": str(exc)})
+            # 2. Write the sentinel so the bridge terminates and flushes to Redis.
+            with contextlib.suppress(Exception):
+                main_queue.put_nowait((None, None, time.time()))
+            raise
 
     def get_queue_data(self, job_id: str) -> tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:
         """Retrieve the complete data structure associated with a job's queue.
