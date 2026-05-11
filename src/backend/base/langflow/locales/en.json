@@ -3657,8 +3657,8 @@
   "components.filesystemtool.display_name.e17e42b9": "File System",
   "components.filesystemtool.inputs.read_only.display_name.ca104850": "Read Only",
   "components.filesystemtool.inputs.read_only.info.8c062295": "If true, write and edit operations are disabled.",
-  "components.filesystemtool.inputs.root_path.display_name.0d51be43": "Root Path",
-  "components.filesystemtool.inputs.root_path.info.8c9af3f8": "Base directory. All operations are sandboxed to this path.",
+  "components.filesystemtool.inputs.root_path.display_name.5e039c5b": "Workspace Sub-path",
+  "components.filesystemtool.inputs.root_path.info.65cdeb10": "Sub-folder inside your sandboxed workspace. Leave empty to use the root of the workspace.\n\nResolves under <BASE_DIR>/shared/<sub_path>/ when AUTO_LOGIN=True (single-user / desktop) or under <BASE_DIR>/users/<your-namespace>/<sub_path>/ when AUTO_LOGIN=False (multi-user, per-user isolation). BASE_DIR is operator-controlled via LANGFLOW_FS_TOOL_BASE_DIR.",
   "components.filesystemtool.outputs.metadata.display_name.db1a21a0": "JSON",
   "components.filterdata.description.715856ce": "Filters a Data object based on a list of keys.",
   "components.filterdata.display_name.32edb06d": "Filter Data",
@@ -4602,7 +4602,11 @@
   "components.memorybase.inputs.top_k.display_name.9bfd228f": "Top K Results",
   "components.memorybase.inputs.top_k.info.be18489f": "Number of top results to return.",
   "components.memorybase.outputs.retrieve_data.display_name.219c4a6c": "Results",
+<<<<<<< HEAD
   "components.memorybase.outputs.retrieve_data.info.79c8e312": "Returns matching memory chunks. Scoped to the current session by default; turn 'Filter by Session' off to retrieve across sessions.",
+=======
+  "components.memorybase.outputs.retrieve_data.info.5388f56f": "Returns matching memory chunks scoped to the current session.",
+>>>>>>> release-1.10.0
   "components.mergedatacomponent.description.060578fe": "Combines data using different operations",
   "components.mergedatacomponent.display_name.9723ac83": "Combine Data",
   "components.mergedatacomponent.inputs.data_inputs.display_name.cbf37dd2": "Data Inputs",
