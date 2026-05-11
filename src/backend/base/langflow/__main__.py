@@ -1069,8 +1069,10 @@ def api_key_banner(unmasked_api_key) -> None:
         clipboard_msg = (
             f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
         )
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as exc:  # noqa: BLE001
+        # Clipboard access is best-effort: pyperclip raises in headless/Docker/SSH environments
+        # where no clipboard mechanism is available. Log and continue so the key is still displayed.
+        logger.debug(f"Could not copy API key to clipboard: {exc}")
     panel = Panel(
         f"[bold]API Key Created Successfully:[/bold]\n\n"
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
