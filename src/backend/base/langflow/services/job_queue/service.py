@@ -689,6 +689,13 @@ class RedisJobQueueService(JobQueueService):
 
     async def cleanup_job(self, job_id: str) -> None:
         """Cancel local task and bridge, then delete the Redis Stream and owner keys."""
+        # Capture ownership before super() pops the entry from self._queues so that
+        # the Redis-key deletion below is scoped to the owning worker only.  A
+        # cross-worker poll populates _consumer_wrappers but not _queues; deleting
+        # the stream/owner keys from that worker would corrupt an in-flight build on
+        # the true owner.
+        is_owner = job_id in self._queues
+
         wrapper = self._consumer_wrappers.pop(job_id, None)
         if wrapper is not None:
             await wrapper.cancel()
@@ -702,7 +709,7 @@ class RedisJobQueueService(JobQueueService):
         try:
             await super().cleanup_job(job_id)
         finally:
-            if self._client:
+            if is_owner and self._client:
                 await self._client.delete(self._stream_key(job_id), self._owner_key(job_id))
                 await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
