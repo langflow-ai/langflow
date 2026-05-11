@@ -713,14 +713,23 @@ class RedisJobQueueService(JobQueueService):
             await self._client.set(self._owner_key(job_id), str(user_id), ex=self._ttl)
 
     async def get_job_owner(self, job_id: str) -> UUID | None:
-        """Retrieve the job owner, checking Redis when not found locally."""
+        """Retrieve the job owner, checking Redis when not found locally.
+
+        The Redis key TTL is refreshed on every successful cross-worker lookup so
+        that long-running builds (agent loops, large RAG ingests, etc.) do not lose
+        their ownership anchor mid-flight.  The in-memory path is not TTL-bound.
+        """
         local = self._job_owners.get(job_id)
         if local is not None:
             return local
         if self._client:
-            value = await self._client.get(self._owner_key(job_id))
+            owner_key = self._owner_key(job_id)
+            value = await self._client.get(owner_key)
             if value:
                 from uuid import UUID as _UUID
 
+                # Slide the TTL forward so builds longer than the initial TTL
+                # continue to pass ownership checks as long as they are polled.
+                await self._client.expire(owner_key, self._ttl)
                 return _UUID(value.decode())
         return None
