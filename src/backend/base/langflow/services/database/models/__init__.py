@@ -1,5 +1,5 @@
 from .api_key import ApiKey
-from .auth import SSOConfig, SSOUserProfile
+from .auth import AuditLog, ResourcePermission, Role, SSOConfig, SSOUserProfile, UserRole
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -17,6 +17,7 @@ from .variable import Variable
 
 __all__ = [
     "ApiKey",
+    "AuditLog",
     "Deployment",
     "DeploymentProviderAccount",
     "File",
@@ -30,11 +31,14 @@ __all__ = [
     "MemoryBaseWorkflowRun",
     "MessageIngestionRecord",
     "MessageTable",
+    "ResourcePermission",
+    "Role",
     "SSOConfig",
     "SSOUserProfile",
     "SpanTable",
     "TraceTable",
     "TransactionTable",
     "User",
+    "UserRole",
     "Variable",
 ]
