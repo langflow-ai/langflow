@@ -2373,7 +2373,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "lime"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b"
           },
           "type": "note"
         },
@@ -2402,7 +2403,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3"
           },
           "type": "note"
         },
@@ -2431,7 +2433,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b"
           },
           "type": "note"
         },
@@ -2460,7 +2463,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "rose"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8"
           },
           "type": "note"
         },
@@ -2489,7 +2493,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "amber"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d"
           },
           "type": "note"
         },
@@ -5066,7 +5071,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef"
           },
           "type": "note"
         },
@@ -5095,7 +5101,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d"
           },
           "type": "note"
         },
@@ -5124,7 +5131,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b"
           },
           "type": "note"
         },
@@ -5153,7 +5161,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972"
           },
           "type": "note"
         },
