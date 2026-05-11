@@ -216,6 +216,11 @@ class ArizePhoenixTracer(BaseTracer):
             )
             return False
 
+        # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().enable(self.tracer_provider)
+
         return True
 
     @override
@@ -330,6 +335,10 @@ class ArizePhoenixTracer(BaseTracer):
                 "[Arize/Phoenix] Could not import LangChainInstrumentor."
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
+
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""
