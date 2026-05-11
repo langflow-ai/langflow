@@ -55,7 +55,11 @@ def _distance_to_similarity(distance: float) -> float:
 
 class MemoryBaseComponent(Component):
     display_name = "Memory Base"
-    description = "Retrieve session-scoped chat memory from a Memory Base attached to this flow."
+    description = (
+        "Retrieve chat memory from a Memory Base attached to this flow. "
+        "Defaults to scoping by the current session; disable 'Filter by Session' "
+        "to retrieve across every session ingested into this Memory Base."
+    )
     icon = "brain"
     name = "MemoryBase"
 
@@ -95,7 +99,8 @@ class MemoryBaseComponent(Component):
             display_name="Filter by Session",
             info=(
                 "If enabled, only memories from the current session will be retrieved. "
-                "Enable this if you want per-session chat history data separation."
+                "Disable to allow retrieval across every session ingested into this "
+                "Memory Base (useful for cross-conversation recall)."
             ),
             value=True,
             advanced=True,
@@ -107,7 +112,10 @@ class MemoryBaseComponent(Component):
             name="retrieve_data",
             display_name="Results",
             method="retrieve_data",
-            info="Returns matching memory chunks scoped to the current session.",
+            info=(
+                "Returns matching memory chunks. Scoped to the current session by "
+                "default; turn 'Filter by Session' off to retrieve across sessions."
+            ),
         ),
     ]
 
@@ -226,10 +234,19 @@ class MemoryBaseComponent(Component):
         return DataFrame(data=data_list)
 
     async def retrieve_data(self) -> DataFrame:
-        """Retrieve session-scoped chunks from the selected Memory Base."""
+        """Retrieve chunks from the selected Memory Base.
+
+        Scoped to the current ``session_id`` when ``filter_by_session`` is true; when
+        false, every chunk in the Memory Base is queryable so the agent can recall
+        context from prior conversations.
+        """
         session_id = getattr(self.graph, "session_id", None)
-        if not session_id:
-            msg = "A session_id is required on the flow request to enforce data separation for Memory Base retrieval."
+        if bool(self.filter_by_session) and not session_id:
+            # Only required when filtering is on, since the value gates the where clause.
+            msg = (
+                "A session_id is required on the flow request when 'Filter by Session' "
+                "is enabled — disable the toggle to allow cross-session retrieval."
+            )
             raise ValueError(msg)
 
         flow_id = _coerce_uuid(getattr(self.graph, "flow_id", None))
@@ -259,7 +276,7 @@ class MemoryBaseComponent(Component):
         logger.debug(
             "MemoryBase retrieval mb=%s session_hash=%s where=%s top_k=%s",
             selected,
-            hash_session_id(session_id),
+            hash_session_id(session_id) if session_id else "<none>",
             where,
             self.top_k,
         )

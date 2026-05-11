@@ -127,6 +127,28 @@ class TestDistanceToSimilarity:
         assert _distance_to_similarity(-0.1) == 0.1
 
 
+class TestToolSurface:
+    """The component description and output info are surfaced to LLM agents as the
+    tool description; they must mention the cross-session capability so the agent
+    knows to call the tool from a fresh session when 'Filter by Session' is off.
+
+    Regression guard for: agents ignoring this tool because the description said
+    'session-scoped' only, defeating ``filter_by_session=False``.
+    """
+
+    def test_description_mentions_cross_session(self):
+        assert "session" in MemoryBaseComponent.description.lower()
+        assert "across" in MemoryBaseComponent.description.lower()
+
+    def test_filter_by_session_input_info_documents_off_state(self):
+        bool_input = next(i for i in MemoryBaseComponent.inputs if i.name == "filter_by_session")
+        assert "disable" in bool_input.info.lower()
+
+    def test_output_info_advertises_cross_session(self):
+        output = next(o for o in MemoryBaseComponent.outputs if o.name == "retrieve_data")
+        assert "across" in (output.info or "").lower()
+
+
 class TestBuildWhereClause:
     def test_session_filter_on_returns_session_predicate(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=True)
@@ -266,10 +288,39 @@ class TestUpdateBuildConfig:
 
 
 class TestMemoryBaseRetrievalInvariants:
-    async def test_missing_session_id_raises(self):
-        component = _make_component(flow_id=uuid.uuid4(), session_id=None)
+    async def test_missing_session_id_raises_when_filter_enabled(self):
+        component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         with pytest.raises(ValueError, match="session_id is required"):
             await component.retrieve_data()
+
+    async def test_missing_session_id_allowed_when_filter_disabled(self):
+        """Cross-session retrieval should not require a session_id on the graph."""
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id=None,
+            filter_by_session=False,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        owner = SimpleNamespace(id=owner_id, username="alice")
+
+        fake_chroma = MagicMock()
+        fake_chroma.similarity_search_with_score.return_value = []
+
+        with contextlib.ExitStack() as stack:
+            TestMemoryBaseRetrievalBehavior._enter_full_chain(
+                stack,
+                db=_exec_returning(mb_row),
+                fake_chroma=fake_chroma,
+                owner=owner,
+                metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
+            )
+            result = await component.retrieve_data()
+
+        assert len(result) == 0
+        kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
+        assert kwargs["filter"] is None
 
     async def test_missing_flow_id_raises(self):
         component = _make_component(flow_id=None, session_id="s1")
