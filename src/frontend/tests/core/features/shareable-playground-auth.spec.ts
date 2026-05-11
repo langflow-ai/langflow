@@ -41,6 +41,12 @@ async function setupShareablePlayground(page: any, context: any): Promise<any> {
  * Uses the same pattern as publish-flow.spec.ts (Stop button lifecycle).
  */
 async function sendAndWaitForResponse(playgroundPage: any, message: string) {
+  // Wait for the chat input to be present. The default actionTimeout (20s)
+  // was not enough on Windows CI for the shareable-playground page to mount
+  // the message input.
+  await playgroundPage
+    .getByPlaceholder("Send a message...")
+    .waitFor({ state: "visible", timeout: 60000 });
   await playgroundPage.getByPlaceholder("Send a message...").fill(message);
   await playgroundPage.getByTestId("button-send").last().click();
 
@@ -93,6 +99,10 @@ test(
 
     const playgroundPage = await setupShareablePlayground(page, context);
 
+    // Wait for the chat input to be present (Windows CI is slow to mount it).
+    await playgroundPage
+      .getByPlaceholder("Send a message...")
+      .waitFor({ state: "visible", timeout: 60000 });
     await playgroundPage
       .getByPlaceholder("Send a message...")
       .fill("Tell me a short joke");
