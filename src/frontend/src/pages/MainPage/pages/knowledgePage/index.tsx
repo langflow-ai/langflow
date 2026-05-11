@@ -53,8 +53,14 @@ export const KnowledgePage = () => {
       ) {
         const clickedElement = event.target as HTMLElement;
         const isTableRowClick = clickedElement.closest(".ag-row");
+        // Radix renders dropdowns/menus/popovers/tooltips/dialogs into a portal
+        // on document.body. Without this guard, clicking a menu item dismisses
+        // the drawer (and reflow tears the menu down before the click lands).
+        const isPortalClick = clickedElement.closest(
+          '[data-radix-popper-content-wrapper],[role="menu"],[role="menuitem"],[role="dialog"],[role="tooltip"]',
+        );
 
-        if (!isTableRowClick) {
+        if (!isTableRowClick && !isPortalClick) {
           closeDrawer();
         }
       }
