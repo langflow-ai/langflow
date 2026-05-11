@@ -235,7 +235,7 @@ class TestGetFlowByIdOrName:
 
 
 class TestGetFlowByIdOrEndpointName:
-    """Regression tests for the IDOR fix in get_flow_by_id_or_endpoint_name (LE-639).
+    """Regression tests for the IDOR fix in get_flow_by_id_or_endpoint_name.
 
     The UUID branch previously called ``session.get(Flow, flow_id)`` without
     applying any ownership check, so any authenticated caller could resolve
