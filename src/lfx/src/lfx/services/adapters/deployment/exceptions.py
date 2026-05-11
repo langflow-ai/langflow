@@ -307,7 +307,7 @@ def raise_as_deployment_error(
         raise InvalidDeploymentOperationError(message=message, cause=cause) from cause
     if status_code == status.HTTP_405_METHOD_NOT_ALLOWED:
         raise InvalidDeploymentOperationError(message=message, cause=cause) from cause
-    if status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE:
+    if status_code == status.HTTP_413_CONTENT_TOO_LARGE:
         raise InvalidContentError(message=message, cause=cause) from cause
     if status_code == status.HTTP_415_UNSUPPORTED_MEDIA_TYPE:
         raise InvalidContentError(message=message, cause=cause) from cause
