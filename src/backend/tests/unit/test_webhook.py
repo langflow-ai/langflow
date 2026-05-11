@@ -837,7 +837,7 @@ class TestSimpleRunFlowTask:
 
 
 class TestWebhookEventsStreamAuth:
-    """Unit tests for webhook_events_stream authentication."""
+    """Tests for webhook_events_stream authentication."""
 
     async def test_raises_404_when_user_does_not_own_flow(self):
         """Should raise 404 when authenticated user doesn't own the flow."""
@@ -864,3 +864,23 @@ class TestWebhookEventsStreamAuth:
 
         assert exc_info.value.status_code == 404
         assert "Flow identifier test-flow-id not found" in exc_info.value.detail
+
+    async def test_webhook_events_stream_cross_user_access_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to /webhook-events/{id} returns 404, not 403.
+
+        This ensures no existence oracle (LE-639 compliance).
+        """
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook-events/{flow_id}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
