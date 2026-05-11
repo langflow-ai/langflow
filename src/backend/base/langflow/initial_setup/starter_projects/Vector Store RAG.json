@@ -663,7 +663,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.4df99c9e"
           },
           "type": "note"
         },
@@ -980,7 +981,8 @@
             "documentation": "",
             "template": {
               "backgroundColor": "transparent"
-            }
+            },
+            "i18n_key": "template_notes.vector_store_rag.d089e3e8"
           },
           "type": "note"
         },
