@@ -90,7 +90,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ needs.resolve-release-branch.outputs.branch }}
           persist-credentials: true
       - name: Confirm branch
         run: git branch --show-current
@@ -226,7 +226,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: ubuntu-latest
-      ref: ${{ github.ref_name }}
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -245,7 +245,7 @@ jobs:
       tests_folder: "tests"
       release: true
       runs-on: windows-latest
-      ref: ${{ github.ref_name }}
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       STORE_API_KEY: ${{ secrets.STORE_API_KEY }}
@@ -260,7 +260,7 @@ jobs:
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
-      ref: ${{ github.ref_name }}
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
