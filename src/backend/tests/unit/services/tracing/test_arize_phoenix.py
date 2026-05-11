@@ -1,13 +1,6 @@
-import os
-
-os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
-
 import pytest
+from langflow.services.tracing.arize_phoenix import ArizePhoenixTracer
 from lfx.schema.data import Data
-
-from src.backend.base.langflow.services.tracing.arize_phoenix import (
-    ArizePhoenixTracer,
-)
 
 
 @pytest.fixture
@@ -24,27 +17,27 @@ def test_data_dict_conversion(tracer):
 
 
 def test_data_list_conversion(tracer):
-    value = Data(data=[1, 2, 3])
+    value = Data.model_construct(data=[1, Data(data={"x": 2})], text_key="text", default_value="")
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
-    assert result == [1, 2, 3]
+    assert result == [1, {"x": 2}]
 
 
-def test_data_text_fallback(tracer):
-    value = Data(data="hello")
+def test_data_text_payload_preserved(tracer):
+    value = Data(data={"text": "hello"})
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
-    assert result == value.get_text()
+    assert result == {"text": "hello"}
 
 
 def test_data_nested_structure(tracer):
-    value = Data(data={"nested": [1, {"x": 2}]})
+    value = Data(data={"nested": [1, Data(data={"x": float("inf")})]})
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
-    assert result == {"nested": [1, {"x": 2}]}
+    assert result == {"nested": [1, {"x": "NaN"}]}
 
 
 def test_data_none(tracer):
@@ -52,32 +45,32 @@ def test_data_none(tracer):
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
-    assert result == value.get_text()
+    assert result == {}
 
 
 def test_dict_recursive_conversion(tracer):
     value = {
         "a": Data(data={"b": 1}),
-        "c": [Data(data="text"), 2],
+        "c": [Data(data={"text": "text"}), 2],
     }
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
     assert result == {
         "a": {"b": 1},
-        "c": ["text", 2],
+        "c": [{"text": "text"}, 2],
     }
 
 
 def test_list_recursive_conversion(tracer):
     value = [
         Data(data={"x": 1}),
-        Data(data="y"),
+        Data(data={"text": "y"}),
     ]
 
     result = tracer._convert_to_arize_phoenix_type(value)
 
-    assert result == [{"x": 1}, "y"]
+    assert result == [{"x": 1}, {"text": "y"}]
 
 
 def test_float_nan_conversion(tracer):

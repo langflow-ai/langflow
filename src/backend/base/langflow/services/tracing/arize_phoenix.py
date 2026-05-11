@@ -358,7 +358,8 @@ class ArizePhoenixTracer(BaseTracer):
             value = value.text
 
         elif isinstance(value, Data):
-            value = value.data if isinstance(value.data, (dict, list)) else value.get_text()
+            data = value.data
+            value = self._convert_to_arize_phoenix_type(data) if isinstance(data, (dict, list)) else value.get_text()
 
         elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
             value = value.content
