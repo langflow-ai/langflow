@@ -13,6 +13,9 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
+from langflow.api.build import create_flow_response, get_flow_events_response
+from langflow.api.utils import EventDeliveryType
+from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
     _STREAM_SENTINEL_DATA,
     RedisJobQueueService,
@@ -473,3 +476,56 @@ async def test_redis_service_bridge_requeues_sentinel_when_cancelled_during_xadd
         assert local_queue.get_nowait() == sentinel
     finally:
         await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_redis_cross_worker_streaming_response_allows_missing_event_task():
+    """Streaming cross-worker reads from Redis even when no local build task exists."""
+    service, fake_client = await _make_service()
+    try:
+        job_id = str(uuid.uuid4())
+        stream_key = f"langflow:queue:{job_id}"
+        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"payload\n", "ts": "1.0"})
+        await fake_client.xadd(
+            stream_key,
+            {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": "2.0"},
+        )
+
+        response = await get_flow_events_response(
+            job_id=job_id,
+            queue_service=service,
+            event_delivery=EventDeliveryType.STREAMING,
+        )
+
+        chunks = [
+            chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk async for chunk in response.body_iterator
+        ]
+
+        assert response.status_code == 200
+        assert chunks == ["payload\n"]
+    finally:
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
+async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
+    """Streaming disconnect cleanup uses the Redis wrapper when no local task exists."""
+
+    class _CancelableQueue(asyncio.Queue):
+        def __init__(self) -> None:
+            super().__init__()
+            self.cancelled = False
+
+        async def cancel(self) -> None:
+            self.cancelled = True
+
+    queue = _CancelableQueue()
+    response = await create_flow_response(
+        queue=queue,
+        event_manager=EventManager(None),
+        event_task=None,
+    )
+
+    await response.on_disconnect()
+
+    assert queue.cancelled

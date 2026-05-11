@@ -134,9 +134,6 @@ async def get_flow_events_response(
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
         if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
-            if event_task is None:
-                await logger.aerror(f"No event task found for job {job_id}")
-                raise HTTPException(status_code=404, detail="No event task found for job")
             return await create_flow_response(
                 queue=main_queue,
                 event_manager=event_manager,
@@ -193,7 +190,7 @@ async def get_flow_events_response(
 async def create_flow_response(
     queue: asyncio.Queue,
     event_manager: EventManager,
-    event_task: asyncio.Task,
+    event_task: asyncio.Task | None,
 ) -> DisconnectHandlerStreamingResponse:
     """Create a streaming response for the flow build process."""
 
@@ -210,10 +207,15 @@ async def create_flow_response(
                 await logger.aexception(f"Error consuming event: {exc}")
                 break
 
-    def on_disconnect() -> None:
+    async def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
         if event_task is not None:
             event_task.cancel()
+        queue_cancel = getattr(queue, "cancel", None)
+        if queue_cancel is not None:
+            maybe_coro = queue_cancel()
+            if asyncio.iscoroutine(maybe_coro):
+                await maybe_coro
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(
