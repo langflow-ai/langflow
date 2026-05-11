@@ -11,7 +11,7 @@ import type { ConnectionItem, EnvVarEntry } from "../types";
 interface UseConnectionPanelStateParams {
   connections: ConnectionItem[];
   setConnections: Dispatch<SetStateAction<ConnectionItem[]>>;
-  effectiveFlowId: string | null;
+  effectiveAttachmentKey: string | null;
   attachedConnectionByFlow: Map<string, string[]>;
   onAttachConnection: Dispatch<SetStateAction<Map<string, string[]>>>;
   commitPendingAttachment: () => void;
@@ -22,7 +22,7 @@ interface UseConnectionPanelStateParams {
 export function useConnectionPanelState({
   connections,
   setConnections,
-  effectiveFlowId,
+  effectiveAttachmentKey,
   attachedConnectionByFlow,
   onAttachConnection,
   commitPendingAttachment,
@@ -47,19 +47,19 @@ export function useConnectionPanelState({
   }, [newConnectionName, connections]);
 
   const handleAttachConnection = useCallback(() => {
-    if (!effectiveFlowId) return;
+    if (!effectiveAttachmentKey) return;
     if (connectionTab === "available" && selectedConnections.size > 0) {
       commitPendingAttachment();
       onAttachConnection((prev) => {
         const next = new Map(prev);
-        next.set(effectiveFlowId, Array.from(selectedConnections));
+        next.set(effectiveAttachmentKey, Array.from(selectedConnections));
         return next;
       });
       setRightPanel("versions");
       setSelectedConnections(new Set());
     }
   }, [
-    effectiveFlowId,
+    effectiveAttachmentKey,
     connectionTab,
     selectedConnections,
     onAttachConnection,
@@ -103,17 +103,17 @@ export function useConnectionPanelState({
 
   const handleSkipConnection = useCallback(() => {
     commitPendingAttachment();
-    if (effectiveFlowId) {
+    if (effectiveAttachmentKey) {
       onAttachConnection((prev) => {
         const next = new Map(prev);
-        next.delete(effectiveFlowId);
+        next.delete(effectiveAttachmentKey);
         return next;
       });
     }
     setRightPanel("versions");
     setSelectedConnections(new Set());
   }, [
-    effectiveFlowId,
+    effectiveAttachmentKey,
     onAttachConnection,
     commitPendingAttachment,
     setRightPanel,
@@ -169,9 +169,9 @@ export function useConnectionPanelState({
   );
 
   const initConnectionsForFlow = useCallback(
-    (flowId: string) => {
+    (attachmentKey: string) => {
       setSelectedConnections(
-        new Set(attachedConnectionByFlow.get(flowId) ?? []),
+        new Set(attachedConnectionByFlow.get(attachmentKey) ?? []),
       );
       if (connections.length === 0) {
         setConnectionTab("create");
