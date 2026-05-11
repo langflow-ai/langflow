@@ -16,6 +16,7 @@ const GENERATING_STEPS: AgenticStepType[] = [
   "generating",
   "generating_component",
   "generating_flow",
+  "generating_document",
 ];
 
 // Static placeholder shown in the textarea during generating steps. The
@@ -25,6 +26,7 @@ const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
   generating: "Generating response...",
   generating_component: "Generating component...",
   generating_flow: "Generating flow...",
+  generating_document: "Generating document...",
 };
 
 // Hook for rotating placeholder messages during post-generation processing

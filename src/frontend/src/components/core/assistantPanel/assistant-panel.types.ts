@@ -33,6 +33,25 @@ export interface AssistantMessage {
   flowActions?: FlowAction[];
   pendingFlowProposal?: PendingFlowProposal;
   flowProposalStatus?: FlowProposalStatus;
+  writtenFiles?: WrittenFile[];
+}
+
+/** A file the agent persisted via write_file or edit_file. */
+export interface WrittenFile {
+  /** ``"write_file"`` (new/overwrite) or ``"edit_file"`` (in-place substring replace). */
+  action: "write_file" | "edit_file";
+  /** Path relative to the user's sandbox root. */
+  path: string;
+  /** File size in bytes after the operation. */
+  size: number;
+  /** Local timestamp the SSE event was received — for ordering inside the message. */
+  receivedAt: number;
+  /**
+   * Final text content of the file shipped inline with the SSE event so the
+   * UI can render it without a second HTTP fetch. Absent for ``edit_file``
+   * events (the wrapper doesn't have the post-edit content on hand).
+   */
+  content?: string;
 }
 
 export type FlowProposalStatus = "pending" | "applied" | "dismissed";

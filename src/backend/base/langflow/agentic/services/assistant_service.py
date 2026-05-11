@@ -19,6 +19,7 @@ from langflow.agentic.helpers.sse import (
     format_cancelled_event,
     format_complete_event,
     format_error_event,
+    format_file_written_event,
     format_flow_preview_event,
     format_flow_update_event,
     format_progress_event,
@@ -26,6 +27,7 @@ from langflow.agentic.helpers.sse import (
 )
 from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
 from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
+from langflow.agentic.services.file_events import drain_file_events, reset_file_events
 from langflow.agentic.services.flow_executor import (
     execute_flow_file,
     execute_flow_file_streaming,
@@ -241,10 +243,12 @@ async def execute_flow_with_validation_streaming(
     # Route based on intent classification
     is_component_request = intent_result.intent == "generate_component"
     is_flow_request = intent_result.intent == "build_flow"
+    is_document_request = intent_result.intent == "manage_files"
     logger.info(f"Intent classification: {intent_result.intent}")
 
-    # Reset flow builder state for each request
+    # Reset per-request state for each request
     reset_working_flow()
+    reset_file_events()
 
     # Inject current flow context for all intents so the agent
     # can answer questions about or modify the user's canvas
@@ -252,8 +256,10 @@ async def execute_flow_with_validation_streaming(
     if current_flow_summary:
         current_input = f"[Current flow on canvas:\n{current_flow_summary}\n]\n\n{current_input}"
 
-    # Use the flow builder assistant for flow building requests
-    if is_flow_request:
+    # Build-flow and manage_files both route to the FlowBuilderAssistant —
+    # they share the same toolkit (canvas tools + filesystem). The step label
+    # and the SSE drain semantics differ but the underlying agent does not.
+    if is_flow_request or is_document_request:
         flow_filename = FLOW_BUILDER_ASSISTANT_FLOW
 
     # Create cancel event for propagating cancellation to flow executor
@@ -287,6 +293,9 @@ async def execute_flow_with_validation_streaming(
             if is_component_request:
                 step_name: StepType = "generating_component"
                 step_message = "Generating component..."
+            elif is_document_request:
+                step_name = "generating_document"
+                step_message = "Generating document..."
             elif is_flow_request:
                 step_name = "generating_flow"
                 step_message = "Generating flow..."
@@ -335,6 +344,15 @@ async def execute_flow_with_validation_streaming(
                                 if update.get("action") == "set_flow":
                                     saw_set_flow = True
                                 yield format_flow_update_event(update)
+                            # Drain file_written events the same way — each one
+                            # becomes a card on the frontend message.
+                            for file_event in drain_file_events():
+                                yield format_file_written_event(
+                                    action=file_event["action"],
+                                    path=file_event["path"],
+                                    size=file_event["size"],
+                                    content=file_event.get("content"),
+                                )
                             yield format_token_event(event_data)
                         elif event_type == "flow_preview":
                             has_flow_updates = True
@@ -413,6 +431,18 @@ async def execute_flow_with_validation_streaming(
                 if update.get("action") == "set_flow":
                     saw_set_flow = True
                 yield format_flow_update_event(update)
+            # Drain any remaining file_written events emitted after the last token.
+            for file_event in drain_file_events():
+                yield format_file_written_event(
+                    action=file_event["action"],
+                    path=file_event["path"],
+                    size=file_event["size"],
+                    content=file_event.get("content"),
+                )
+
+            # NOTE: no `document_ready` step is emitted. The manage_files
+            # path renders its final card directly when ``complete`` arrives
+            # — no Continue gate, no intermediate "Document ready" line.
 
             if has_flow_updates:
                 # Build-from-scratch path only: signal the frontend to gate

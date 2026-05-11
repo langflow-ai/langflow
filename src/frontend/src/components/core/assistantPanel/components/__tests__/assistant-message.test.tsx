@@ -65,6 +65,15 @@ jest.mock("../assistant-loading-state", () => ({
   default: () => <div data-testid="loading-state" />,
 }));
 
+// FileContentModal pulls SanitizedMarkdown → rehype-mathjax/raw/sanitize, all
+// ESM-only. We mock it to a minimal stand-in so the loading-state /
+// writtenFiles branches can be tested without dragging the ESM chain.
+jest.mock("../file-content-modal", () => ({
+  __esModule: true,
+  FileContentModal: ({ path, open }: { path: string; open: boolean }) =>
+    open ? <div data-testid={`file-content-modal-${path}`} /> : null,
+}));
+
 jest.mock("../assistant-validation-failed", () => ({
   AssistantValidationFailed: ({
     result,
@@ -215,6 +224,91 @@ describe("AssistantMessageItem", () => {
       render(<AssistantMessageItem message={message} />);
 
       expect(screen.getByTestId("loading-state")).toBeInTheDocument();
+    });
+
+    it("should NOT show rich loading state during 'generating_document' step (no streaming card for documents)", () => {
+      // Decision: the manage_files path shows only the simple thinking dots
+      // during the wait, then jumps directly to the file card. A rich
+      // loading card that morphs into the file card looked like a glitch
+      // ("ele esta aparecendo como se fosse um streaming e depois virando").
+      const message = createMessage({
+        role: "assistant",
+        content: "",
+        status: "streaming",
+        progress: {
+          step: "generating_document",
+          attempt: 0,
+          maxAttempts: 3,
+          message: "Generating document...",
+        },
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      // Rich loading card must NOT mount for generating_document.
+      expect(screen.queryByTestId("loading-state")).toBeNull();
+    });
+
+    it("should render the file card stack when no progress is present (fall-through after Continue)", () => {
+      // When `validationAnimationComplete` has flipped, the parent stops
+      // passing `progress` to drive the loading state. We model that exit
+      // condition by passing a message WITHOUT progress: writtenFiles must
+      // then render directly (the post-Continue branch). This pinpoints the
+      // render branch without juggling jest.doMock + dynamic imports.
+      const message = createMessage({
+        role: "assistant",
+        content: "",
+        status: "complete",
+        writtenFiles: [
+          {
+            action: "write_file",
+            path: "DOCS.md",
+            size: 100,
+            receivedAt: 1,
+          },
+        ],
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(
+        screen.getByTestId("assistant-file-card-DOCS.md"),
+      ).toBeInTheDocument();
+    });
+
+    it("should render the file card immediately when writtenFiles arrive (no Continue gate for documents)", () => {
+      // The manage_files path is intentionally gateless — the action is
+      // non-destructive (the file is already on disk in the user's sandbox)
+      // and the agent's text response gives enough context. The card jumps
+      // straight to its final state.
+      const message = createMessage({
+        role: "assistant",
+        content: "Criei o arquivo DOCS.md.",
+        status: "complete",
+        progress: {
+          step: "generating_document",
+          attempt: 0,
+          maxAttempts: 3,
+          message: "Generating document...",
+        },
+        writtenFiles: [
+          {
+            action: "write_file",
+            path: "DOCS.md",
+            size: 100,
+            receivedAt: 1,
+            content: "# hi",
+          },
+        ],
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(
+        screen.getByTestId("assistant-file-card-DOCS.md"),
+      ).toBeInTheDocument();
+      // The loading state must NOT be mounted once we're at the final state.
+      expect(screen.queryByTestId("loading-state")).toBeNull();
     });
 
     it("should detect component code in streaming content with progress", () => {

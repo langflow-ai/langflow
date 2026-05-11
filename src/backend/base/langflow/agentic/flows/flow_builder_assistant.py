@@ -6,6 +6,7 @@ flow building tools so it can create complete flows from user requests.
 
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import AgentComponent
+from lfx.components.tools.filesystem import FileSystemToolComponent
 from lfx.graph import Graph
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
@@ -20,6 +21,7 @@ from lfx.mcp.flow_builder_tools import (
 )
 
 from langflow.agentic.flows.model_config import build_model_config
+from langflow.agentic.services.file_events import wrap_file_tool_with_event
 
 FLOW_BUILDER_PROMPT = """\
 You are a Langflow Flow Builder assistant. You build and modify flows directly \
@@ -43,6 +45,22 @@ on the user's canvas. Components appear in real time as you add them.
 
 **Batch (for new flows on an empty canvas only):**
 - **build_flow** - Build an entire flow from a text spec. WARNING: this replaces the entire canvas.
+
+**Filesystem (sandboxed workspace — every path is RELATIVE to the sandbox root, never absolute):**
+- **read_file** - Read a text file from the sandboxed workspace.
+- **write_file** - Create or overwrite a text file in the workspace. Use this when the user asks for
+  a `.md` documentation file, a report, a configuration export, etc. After a successful write,
+  the user sees a file card with Open/Download buttons — do NOT paste the full file contents
+  into the chat reply, just give a one-sentence summary mentioning the filename.
+- **edit_file** - Replace an exact substring inside an existing file in the workspace.
+- **glob_search** - List files in the workspace matching a glob pattern (e.g. `**/*.md`).
+- **grep_search** - Search file contents inside the workspace.
+
+When the user asks you to document the flow ("crie um arquivo .md com a documentação...",
+"save this as report.md", "write the flow docs to FLOW_DOCS.md"), use `describe_component`
+and `get_field_value` first to ground the document in real configuration, then `write_file`
+to persist it. Do NOT modify the canvas as part of a documentation request — the user wants
+a file, not a flow change.
 
 ## Current Flow
 
@@ -205,6 +223,47 @@ Reply: "Switched the Agent's model to OpenAI gpt-4o."
 """
 
 
+async def build_toolkit() -> list:
+    """Assemble the full toolkit the flow_builder Agent receives.
+
+    Returns the canvas tools (read + write + propose-edit) PLUS the sandboxed
+    filesystem tools (``read_file``, ``write_file``, ``edit_file``,
+    ``glob_search``, ``grep_search``). The two write-side filesystem tools are
+    wrapped so successful invocations emit a ``file_written`` event for the
+    SSE stream — read tools pass through unchanged.
+
+    All sandbox enforcement (path validation, O_NOFOLLOW, deny-list, hardlink
+    refusal, ReDoS detection, per-user binding) remains inside
+    ``FileSystemToolComponent``. This function only assembles and wraps.
+    """
+    canvas_components = [
+        SearchComponentTypes(),
+        DescribeComponentType(),
+        GetFieldValue(),
+        ProposeFieldEdit(),
+        AddComponent(),
+        RemoveComponent(),
+        ConnectComponents(),
+        ConfigureComponent(),
+        BuildFlowFromSpec(),
+    ]
+    tools: list = []
+    for component in canvas_components:
+        tools.extend(await component.to_toolkit())
+
+    # Sandboxed filesystem tools. We instantiate a fresh component per build so
+    # each request gets its own ``bound_user_id`` capture inside ``_get_tools``.
+    fs = FileSystemToolComponent()
+    fs_tools = await fs._get_tools()  # noqa: SLF001 — public toolkit entry by design
+    for tool in fs_tools:
+        if tool.name in {"write_file", "edit_file"}:
+            tools.append(wrap_file_tool_with_event(tool, action=tool.name))
+        else:
+            tools.append(tool)
+
+    return tools
+
+
 async def get_graph(
     provider: str | None = None,
     model_name: str | None = None,
@@ -226,21 +285,7 @@ async def get_graph(
     chat_input = ChatInput()
     chat_input.set(sender="User", sender_name="User")
 
-    # Build tool objects from components
-    tool_components = [
-        SearchComponentTypes(),
-        DescribeComponentType(),
-        GetFieldValue(),
-        ProposeFieldEdit(),
-        AddComponent(),
-        RemoveComponent(),
-        ConnectComponents(),
-        ConfigureComponent(),
-        BuildFlowFromSpec(),
-    ]
-    tools = []
-    for tc in tool_components:
-        tools.extend(await tc.to_toolkit())
+    tools = await build_toolkit()
 
     import copy
 

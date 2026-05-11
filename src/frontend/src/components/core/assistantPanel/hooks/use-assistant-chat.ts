@@ -400,6 +400,22 @@ export function useAssistantChat(): UseAssistantChatReturn {
               }
               applyFlowUpdate(event);
             },
+            onFileWritten: (event) => {
+              // Append a WrittenFile entry for each successful write/edit so
+              // the message can render one card per file in arrival order.
+              updateMessage(assistantMessageId, (msg) => ({
+                writtenFiles: [
+                  ...(msg.writtenFiles ?? []),
+                  {
+                    action: event.action,
+                    path: event.path,
+                    size: event.size,
+                    receivedAt: Date.now(),
+                    content: event.content,
+                  },
+                ],
+              }));
+            },
             onComplete: (event) => {
               updateMessage(assistantMessageId, () => ({
                 status: "complete" as const,
@@ -530,19 +546,38 @@ export function useAssistantChat(): UseAssistantChatReturn {
         applyFlowUpdate(tail);
       }
 
+      // Keep ``pendingFlowProposal`` on the message — the preview card
+      // continues to render in the muted "applied" state, mirroring the
+      // component-generation flow where the result card stays after Add to
+      // Canvas. Clearing the proposal here would erase the visual record of
+      // what the user accepted.
       updateMessage(messageId, () => ({
         flowProposalStatus: "applied" as const,
-        pendingFlowProposal: undefined,
       }));
+
+      // Revert to ``pending`` after the success badge has been on screen
+      // long enough to register — lets the user re-apply the same proposal
+      // (e.g., they edited the canvas and want to overwrite it again).
+      // Matches the 3s pattern used by the legacy "Add to Flow" path.
+      setTimeout(() => {
+        updateMessage(messageId, (msg) =>
+          // Only revert if the message is still in "applied" state. If the
+          // user already dismissed or sent a new request, leave it alone.
+          msg.flowProposalStatus === "applied"
+            ? { flowProposalStatus: "pending" }
+            : {},
+        );
+      }, 3000);
     },
     [messages, applyFlowUpdate, updateMessage],
   );
 
   const handleDismissFlowProposal = useCallback(
     (messageId: string) => {
+      // Same rationale as apply: keep the proposal data so the card can
+      // render its muted "Dismissed" state instead of disappearing.
       updateMessage(messageId, () => ({
         flowProposalStatus: "dismissed" as const,
-        pendingFlowProposal: undefined,
       }));
     },
     [updateMessage],

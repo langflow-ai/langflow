@@ -805,10 +805,13 @@ describe("useAssistantChat", () => {
       expect(mockSetEdges).toHaveBeenCalled();
       const msg = result.current.messages.find((m) => m.id === messageId);
       expect(msg?.flowProposalStatus).toBe("applied");
-      expect(msg?.pendingFlowProposal).toBeUndefined();
+      // Spec: keep ``pendingFlowProposal`` on the message so the preview
+      // card can render the muted "applied" state — matches the component
+      // result card that stays visible after Add to Canvas.
+      expect(msg?.pendingFlowProposal).toBeDefined();
     });
 
-    it("should_clear_pendingFlowProposal_without_touching_canvas_when_dismissed", async () => {
+    it("should_keep_pendingFlowProposal_without_touching_canvas_when_dismissed", async () => {
       mockPostAssistStream.mockImplementation(
         async (_request: unknown, callbacks: Record<string, Function>) => {
           callbacks.onFlowUpdate({
@@ -839,7 +842,10 @@ describe("useAssistantChat", () => {
       expect(mockSetEdges).not.toHaveBeenCalled();
       const msg = result.current.messages.find((m) => m.id === messageId);
       expect(msg?.flowProposalStatus).toBe("dismissed");
-      expect(msg?.pendingFlowProposal).toBeUndefined();
+      // Spec: keep ``pendingFlowProposal`` so the muted "Dismissed" card
+      // continues to render — disappearing the card erases the visual
+      // record of what the user refused.
+      expect(msg?.pendingFlowProposal).toBeDefined();
     });
 
     it("should_buffer_tail_edits_after_set_flow_into_proposal", async () => {

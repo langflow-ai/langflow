@@ -111,6 +111,24 @@ describe("AssistantInput", () => {
       ).toBeInTheDocument();
     });
 
+    it("should show 'Generating document...' during 'generating_document' step", () => {
+      // Regression guard: the manage_files intent must render a STATIC
+      // intent-specific placeholder instead of falling back to the rotating
+      // animated placeholder ("Confirming component structure...", etc.) —
+      // mirrors the generating_flow / generating_component behavior.
+      render(
+        <AssistantInput
+          {...defaultProps}
+          isProcessing={true}
+          currentStep="generating_document"
+        />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Generating document..."),
+      ).toBeInTheDocument();
+    });
+
     it("should show empty placeholder during post-generation steps", () => {
       render(
         <AssistantInput

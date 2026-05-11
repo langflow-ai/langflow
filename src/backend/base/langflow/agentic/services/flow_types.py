@@ -57,7 +57,7 @@ class IntentResult:
     """Result from intent classification flow."""
 
     translation: str
-    intent: str  # "generate_component", "build_flow", "question", or "off_topic"
+    intent: str  # "generate_component", "build_flow", "manage_files", "question", or "off_topic"
 
 
 @dataclass

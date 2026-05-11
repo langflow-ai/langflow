@@ -194,6 +194,154 @@ class TestGetGraph:
             assert graph is not None, f"Failed on iteration {i}"
 
 
+class TestFilesystemToolsInToolkit:
+    """B3 — the agent gets the FileSystemTool's 5 tools, wrapped to emit events.
+
+    These tests exercise the wrapped tools directly (bypassing the LLM): given
+    the user's `manage_files` intent, the same agent must be able to write
+    files. The wrapper emits ``file_written`` only on successful writes.
+    """
+
+    async def test_toolkit_should_include_filesystem_tools(self):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+
+        tools = await build_toolkit()
+        names = {getattr(t, "name", None) for t in tools}
+
+        assert {"read_file", "write_file", "edit_file", "glob_search", "grep_search"}.issubset(names), (
+            f"FileSystem tools must be present in the toolkit, got: {names}"
+        )
+
+    async def test_toolkit_should_keep_existing_canvas_tools(self):
+        """Regression — adding filesystem tools must not drop the existing toolkit."""
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+
+        tools = await build_toolkit()
+        names = {getattr(t, "name", None) for t in tools}
+
+        assert {
+            "search_components",
+            "describe_component",
+            "get_field_value",
+            "add_component",
+            "build_flow",
+        }.issubset(names)
+
+    async def test_write_file_through_toolkit_should_emit_file_written_event(self, tmp_path, monkeypatch):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+        from langflow.agentic.services.file_events import drain_file_events, reset_file_events
+
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+        reset_file_events()
+
+        tools = await build_toolkit()
+        write_tool = next(t for t in tools if t.name == "write_file")
+
+        result_json = write_tool.func(path="DOCS.md", content="# Hello")
+        import json
+        result = json.loads(result_json)
+        assert result.get("status") in {"created", "updated"}, result
+
+        events = drain_file_events()
+        assert len(events) == 1
+        assert events[0]["action"] == "write_file"
+        assert events[0]["path"] == "DOCS.md"
+        assert events[0]["size"] == len(b"# Hello")
+
+    async def test_edit_file_through_toolkit_should_emit_file_written_event(self, tmp_path, monkeypatch):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+        from langflow.agentic.services.file_events import drain_file_events, reset_file_events
+
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+        reset_file_events()
+
+        tools = await build_toolkit()
+        write_tool = next(t for t in tools if t.name == "write_file")
+        edit_tool = next(t for t in tools if t.name == "edit_file")
+
+        # Arrange — write then drain the write event so only the edit event is observed.
+        write_tool.func(path="DOCS.md", content="hello world")
+        drain_file_events()
+
+        # Act
+        edit_tool.func(path="DOCS.md", old_string="hello", new_string="hi")
+
+        # Assert
+        events = drain_file_events()
+        assert len(events) == 1
+        assert events[0]["action"] == "edit_file"
+
+    async def test_write_file_event_path_should_not_leak_base_dir(self, tmp_path, monkeypatch):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+        from langflow.agentic.services.file_events import drain_file_events, reset_file_events
+
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+        reset_file_events()
+
+        tools = await build_toolkit()
+        write_tool = next(t for t in tools if t.name == "write_file")
+        write_tool.func(path="DOCS.md", content="x")
+
+        [event] = drain_file_events()
+        path = event["path"]
+        assert not path.startswith("/"), f"BASE_DIR leak: {path!r}"
+        assert not path.startswith("\\"), f"BASE_DIR leak (Windows): {path!r}"
+        assert not (len(path) >= 2 and path[1] == ":"), f"Drive-letter leak: {path!r}"
+        assert str(tmp_path) not in path, f"Full sandbox path leak: {path!r}"
+
+    async def test_failed_write_should_not_emit_event(self, tmp_path, monkeypatch):
+        """Path traversal is refused by FileSystemTool — no event must follow."""
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+        from langflow.agentic.services.file_events import drain_file_events, reset_file_events
+
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+        reset_file_events()
+
+        tools = await build_toolkit()
+        write_tool = next(t for t in tools if t.name == "write_file")
+        import json
+        result = json.loads(write_tool.func(path="../escape.md", content="x"))
+        assert "error" in result
+
+        assert drain_file_events() == []
+
+    async def test_read_file_should_not_emit_event(self, tmp_path, monkeypatch):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+        from langflow.agentic.services.file_events import drain_file_events, reset_file_events
+
+        monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
+        reset_file_events()
+
+        tools = await build_toolkit()
+        write_tool = next(t for t in tools if t.name == "write_file")
+        read_tool = next(t for t in tools if t.name == "read_file")
+
+        write_tool.func(path="DOCS.md", content="content")
+        drain_file_events()  # discard write event
+
+        read_tool.func(path="DOCS.md")
+        assert drain_file_events() == []
+
+
+class TestFlowBuilderPromptFilesystem:
+    """B3 — the prompt mentions the filesystem tools so the agent uses them."""
+
+    def test_prompt_should_mention_write_file(self):
+        from langflow.agentic.flows.flow_builder_assistant import FLOW_BUILDER_PROMPT
+
+        assert "write_file" in FLOW_BUILDER_PROMPT, (
+            "Prompt must describe write_file so the LLM knows it can persist documentation files"
+        )
+
+    def test_prompt_should_mention_sandbox(self):
+        from langflow.agentic.flows.flow_builder_assistant import FLOW_BUILDER_PROMPT
+
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "sandbox" in prompt_lower or "workspace" in prompt_lower, (
+            "Prompt should clarify that paths are sandbox-relative so the LLM doesn't use absolute paths"
+        )
+
+
 @pytest.mark.skipif(
     not has_api_key("OPENAI_API_KEY"),
     reason="OPENAI_API_KEY required for intent classification test",

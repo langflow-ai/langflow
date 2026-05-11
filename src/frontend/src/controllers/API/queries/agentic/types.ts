@@ -12,7 +12,9 @@ export type AgenticStepType =
   | "building_flow"
   | "flow_built"
   | "flow_build_failed"
-  | "flow_proposal_ready";
+  | "flow_proposal_ready"
+  | "generating_document"
+  | "document_ready";
 
 export interface AgenticProgressEvent {
   event: "progress";
@@ -63,6 +65,22 @@ export interface AgenticFlowUpdateEvent {
   [key: string]: unknown;
 }
 
+/** Emitted by the agent's sandboxed write_file / edit_file tools. */
+export interface AgenticFileWrittenEvent {
+  event: "file_written";
+  action: "write_file" | "edit_file";
+  /** Path relative to the user's sandbox root — never absolute. */
+  path: string;
+  /** File size in bytes after the operation. */
+  size: number;
+  /**
+   * Final text content of the file (when the wrapper had it on hand —
+   * always for write_file, currently absent for edit_file). Lets the
+   * frontend render the body inline without a second HTTP fetch.
+   */
+  content?: string;
+}
+
 export interface FlowAction {
   id: string;
   type: "edit_field";
@@ -97,6 +115,7 @@ export type AgenticSSEEvent =
   | AgenticCompleteEvent
   | AgenticFlowPreviewEvent
   | AgenticFlowUpdateEvent
+  | AgenticFileWrittenEvent
   | AgenticErrorEvent
   | AgenticCancelledEvent;
 

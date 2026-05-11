@@ -36,6 +36,13 @@ Intent Classification:
   "change the model to X", "set the temperature to Y", "update the system prompt",
   "what does this flow do", "what's in my flow", "check my flow",
   "find the value in", "what's configured", "diagnose my flow"
+- "manage_files": User wants to CREATE/READ/WRITE/EDIT a FILE in their sandboxed workspace.
+  This covers documentation files (.md), reports, exports, configuration snapshots — anything
+  the user asks the assistant to materialize as a file (or read back from one).
+  Examples: "create a markdown file with the docs of my flow", "save this as report.md",
+  "write the flow documentation to FLOW_DOCS.md", "read the contents of NOTES.md",
+  "edit README.md and add a usage section", "crie um arquivo .md com a documentação do flow",
+  "salve esse resumo em resumo.txt", "leia o arquivo CONFIG.md".
 - "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, or wants \
 information about Langflow features, components, flows, or how to use Langflow.
   Examples: "How do I create a component?", "What is a component?", "Can you explain flows?", \
@@ -63,8 +70,16 @@ IMPORTANT rules:
 - General knowledge questions NOT related to Langflow = off_topic
 - If unsure whether it's about Langflow, classify as "question" (not off_topic)
 
+IMPORTANT disambiguation rules for manage_files:
+- "create a file X" / "save X as file" / "write to FILE.md" = manage_files (acting on files)
+- "how do I create a file?" / "how to save files in Langflow" = question (asking for guidance)
+- "read FILE.md" / "open report.md" / "edit DOCS.md" = manage_files (file I/O action)
+- "build me a flow that writes a file" = build_flow (the flow itself writes — that's a flow build)
+- A request that mentions both a file AND building a flow → prefer build_flow unless the user
+  explicitly says "save the documentation as ..." or "create a file with ..."
+
 Output format (JSON only, no markdown):
-{{"translation": "<english text>", "intent": "<generate_component|build_flow|question|off_topic>"}}
+{{"translation": "<english text>", "intent": "<generate_component|build_flow|manage_files|question|off_topic>"}}
 
 Examples:
 Input: "como criar um componente no langflow"
@@ -108,6 +123,24 @@ Output: {{"translation": "add a retry mechanism with exponential backoff", "inte
 
 Input: "what does the output format look like?"
 Output: {{"translation": "what does the output format look like?", "intent": "question"}}
+
+Input: "create a markdown file with the documentation of my flow"
+Output: {{"translation": "create a markdown file with the documentation of my flow", "intent": "manage_files"}}
+
+Input: "save this as report.md"
+Output: {{"translation": "save this as report.md", "intent": "manage_files"}}
+
+Input: "crie um arquivo .md com a documentação do flow"
+Output: {{"translation": "create a markdown file with the documentation of the flow", "intent": "manage_files"}}
+
+Input: "leia o conteúdo do arquivo NOTES.md"
+Output: {{"translation": "read the contents of NOTES.md", "intent": "manage_files"}}
+
+Input: "edit README.md and add a usage section"
+Output: {{"translation": "edit README.md and add a usage section", "intent": "manage_files"}}
+
+Input: "how do I save a file in Langflow?"
+Output: {{"translation": "how do I save a file in Langflow?", "intent": "question"}}
 
 Input: "como funciona o n8n?"
 Output: {{"translation": "how does n8n work?", "intent": "off_topic"}}

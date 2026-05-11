@@ -9,10 +9,12 @@ import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantComponentResult } from "./assistant-component-result";
+import { AssistantFileCard } from "./assistant-file-card";
 import { FlowEditCarousel } from "./assistant-flow-edit-card";
 import { AssistantFlowPreview } from "./assistant-flow-preview";
 import { AssistantLoadingState } from "./assistant-loading-state";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
+import { FileContentModal } from "./file-content-modal";
 
 interface AssistantMessageItemProps {
   message: AssistantMessage;
@@ -58,11 +60,17 @@ export function AssistantMessageItem({
     message.result?.validated && message.result?.componentCode;
   const hasValidationError =
     message.result?.validated === false && message.result?.validationError;
+  const hasWrittenFiles = (message.writtenFiles?.length ?? 0) > 0;
   const [validationAnimationComplete, setValidationAnimationComplete] =
     useState(false);
+  // Modal state for "Open" on a file card. Single-modal-at-a-time per message
+  // so the user always has clear focus on which file they're inspecting.
+  const [openFilePath, setOpenFilePath] = useState<string | null>(null);
 
   // Timeout fallback: if message is complete but user hasn't clicked Continue,
-  // force transition after 30s to prevent indefinitely stuck loading states
+  // force transition after 30s to prevent indefinitely stuck loading states.
+  // Only applies to the component-generation path — documents render their
+  // final state directly without a Continue gate.
   useEffect(() => {
     if (
       message.status === "complete" &&
@@ -81,11 +89,22 @@ export function AssistantMessageItem({
     validationAnimationComplete,
   ]);
 
-  // Generate randomized messages once per message
-  const thinkingMessage = useMemo(() => getRandomThinkingMessage(), []);
+  // Generate randomized messages once per message. For manage_files we
+  // override the random label with the static "Generating document..." so
+  // the thinking dots match the input placeholder (no rotating noise).
+  const randomThinking = useMemo(() => getRandomThinkingMessage(), []);
+  const thinkingMessage =
+    message.progress?.step === "generating_document"
+      ? message.progress.message || "Generating document..."
+      : randomThinking;
 
   // Steps where the dedicated AssistantLoadingState replaces the simple
-  // "thinking" indicator. Covers both component generation and flow building.
+  // "thinking" indicator. Covers component generation and flow building.
+  //
+  // ``generating_document`` is intentionally OUT — the manage_files path
+  // shows only the simple thinking dots during the wait, then jumps
+  // directly to the file card. A rich loading card that then morphs into
+  // the file card looked like a glitch.
   const RICH_LOADING_STEPS = [
     "generating_component",
     "generating_flow",
@@ -117,8 +136,13 @@ export function AssistantMessageItem({
   const isGeneratingCode = isStreaming && showsRichLoadingState;
 
   const renderContent = () => {
-    // Show detailed loading state during component generation
-    // Keep showing it until validation animation completes
+    // Show detailed loading state during component generation.
+    // Keep showing it until validation animation completes.
+    //
+    // manage_files path: NO Continue gate. The card jumps straight to its
+    // final state when the file is ready — the agent's text response gives
+    // the user enough context, and a Continue button just adds friction for
+    // a non-destructive action.
     const showLoadingState =
       (isGeneratingCode && message.progress) ||
       ((hasValidatedResult || hasValidationError) &&
@@ -165,6 +189,35 @@ export function AssistantMessageItem({
           result={message.result}
           onApprove={() => onApprove?.(message.id)}
         />
+      );
+    }
+
+    // manage_files path: render one card per file the agent persisted.
+    // No gate — non-destructive action, the user sees the agent's text
+    // alongside the cards and can Open/Download directly.
+    if (hasWrittenFiles && message.writtenFiles) {
+      const cleanContent = message.content
+        ?.replace(/```\w*\s*[\s\S]*?```/g, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      return (
+        <div className="flex flex-col gap-3">
+          {cleanContent && (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm max-w-full text-muted-foreground dark:prose-invert prose-p:leading-relaxed prose-p:my-1"
+            >
+              {cleanContent}
+            </Markdown>
+          )}
+          {message.writtenFiles.map((file) => (
+            <AssistantFileCard
+              key={`${file.action}-${file.path}-${file.receivedAt}`}
+              file={file}
+              onOpen={(f) => setOpenFilePath(f.path)}
+            />
+          ))}
+        </div>
       );
     }
 
@@ -336,6 +389,16 @@ export function AssistantMessageItem({
           <div className="mt-3 overflow-hidden">{renderContent()}</div>
         </div>
       </div>
+      {openFilePath && (
+        <FileContentModal
+          path={openFilePath}
+          content={
+            message.writtenFiles?.find((f) => f.path === openFilePath)?.content
+          }
+          open={openFilePath !== null}
+          onClose={() => setOpenFilePath(null)}
+        />
+      )}
     </div>
   );
 }
