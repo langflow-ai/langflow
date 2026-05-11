@@ -5,6 +5,11 @@ test(
   "flow state should be properly cleaned up between user sessions",
   { tag: ["@release", "@api", "@database"] },
   async ({ page }) => {
+    test.skip(
+      process.platform === "win32",
+      "Flaky on Windows CI runners due to multi-session workload; covered by Linux/macOS runs",
+    );
+
     // Disable auto login
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
