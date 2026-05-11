@@ -2,24 +2,66 @@
 
 from __future__ import annotations
 
+import contextvars
 import json
 import os
 import re
-import stat
 from pathlib import Path, PureWindowsPath
 from typing import TYPE_CHECKING
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
+from lfx.components.tools._filesystem_isolation import (
+    IsolationConfig,
+    load_isolation_config,
+)
+from lfx.components.tools._filesystem_namespace import (
+    compute_user_namespace,
+    load_or_create_pepper,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, StrInput
 from lfx.io import Output
 from lfx.schema.data import Data
-from lfx.utils.validate_cloud import is_astra_cloud_environment
+from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from lfx.field_typing import Tool
+
+# Sub-directory under <BASE> used when AUTO_LOGIN=True. Stays parallel to
+# users/<hash>/ so flipping AUTO_LOGIN at deploy-time does not mix file trees.
+SHARED_NAMESPACE = "shared"
+
+
+# L2 binding atomicity: the binding check captures `user_id` once at the
+# start of every tool invocation; subsequent reads of `_resolve_user_id`
+# during the same call (in _validate_root, _validate_path, etc.) read this
+# pinned value instead of re-resolving. Without this pin, a concurrent
+# mutation of `self._user_id` between the binding check and the path
+# resolution would let an attacker write into a foreign user's namespace
+# while the check still passed for the original user.
+_pinned_user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "_filesystem_pinned_user_id",
+    default=None,
+)
+
+
+# Reserved on-disk segment for future HMAC sidecar trees (L3 in the plan).
+# We block it now so first-mover writes don't poison a namespace we will rely
+# on later — agents must never see or touch this directory.
+RESERVED_SEGMENT = ".lfsig"
+
+
+def _default_config_dir() -> Path:
+    """Pick a sensible config dir when no env var is set.
+
+    Operators set ``LANGFLOW_FS_TOOL_BASE_DIR`` / ``LANGFLOW_FS_TOOL_PEPPER_PATH``
+    explicitly in any real deployment; this fallback exists so the OSS desktop
+    install just works without any setup.
+    """
+    return Path.home() / ".langflow" / "fs_tool"
+
 
 MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
 BINARY_SNIFF_BYTES = 8 * 1024
@@ -42,7 +84,6 @@ GREP_REGEX_LINE_MAX_LEN = 4096
 # Cap on total lines scanned per file in regex mode, regardless of matches.
 # Bounds the work even for benign-looking patterns on large files.
 GREP_REGEX_LINES_PER_FILE = 50_000
-ALLOWED_ROOTS_ENV = "LANGFLOW_FS_TOOL_ALLOWED_ROOTS"
 
 # Heuristic ReDoS detector.
 #
@@ -120,113 +161,106 @@ def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
 
 
-def _allowed_roots() -> list[Path] | None:
-    """Parse `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` into a list of resolved paths.
+def _check_hardlink(candidate: Path) -> str | None:
+    """Return an error string when ``candidate`` is a multi-hardlink file.
 
-    Returns None if the env var is unset (no allowlist enforced — local OSS /
-    desktop installs default to free-form root_path). Returns an empty list if
-    the env var is set but contains no usable paths — that is treated as
-    "deny everything" so a misconfigured operator fails closed.
-    """
-    raw = os.environ.get(ALLOWED_ROOTS_ENV)
-    if raw is None:
-        return None
-    paths: list[Path] = []
-    for raw_entry in raw.split(os.pathsep):
-        entry = raw_entry.strip()
-        if not entry:
-            continue
-        try:
-            paths.append(Path(entry).resolve())
-        except OSError:
-            continue
-    return paths
+    Why we refuse multi-hardlink files: an attacker with write access to a
+    location outside the sandbox can pre-create an extra hardlink pointing
+    at a sandbox path. Subsequent writes through the sandbox name then
+    also clobber the external name, defeating the boundary. There is no
+    legitimate flow that depends on a multi-link inode inside the
+    sandbox, so refusing fails closed.
 
-
-# O_NOFOLLOW closes the TOCTOU window between Path.resolve() in
-# `_validate_path` and the actual open() syscall. If the resolved file is
-# replaced by a symlink in that window (whether by an external process or a
-# concurrent agent) the kernel returns ELOOP rather than silently following
-# the symlink to an out-of-sandbox target. On Windows the constant does not
-# exist; we fall back to 0 (no-op) — Windows has different mechanics for
-# symlinks (developer-mode-only, separate flag) and the component-level
-# `Path.resolve()` check still applies.
-_NOFOLLOW_FLAG = getattr(os, "O_NOFOLLOW", 0)
-
-
-def _read_head_no_follow(path: Path, n: int) -> bytes:
-    """Read first `n` bytes of `path` with O_NOFOLLOW. Raises OSError on failure."""
-    fd = os.open(path, os.O_RDONLY | _NOFOLLOW_FLAG)
-    with os.fdopen(fd, "rb") as fh:
-        return fh.read(n)
-
-
-def _read_bytes_no_follow(path: Path) -> bytes:
-    """Read all bytes of `path` with O_NOFOLLOW. Raises OSError on failure."""
-    fd = os.open(path, os.O_RDONLY | _NOFOLLOW_FLAG)
-    with os.fdopen(fd, "rb") as fh:
-        return fh.read()
-
-
-def _write_bytes_no_follow(path: Path, data: bytes) -> None:
-    """Write `data` to `path` with O_NOFOLLOW.
-
-    Refuses if the target already exists as a symlink. Raises OSError on failure.
-    """
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | _NOFOLLOW_FLAG
-    fd = os.open(path, flags, 0o644)
-    with os.fdopen(fd, "wb") as fh:
-        fh.write(data)
-
-
-def _check_hardlink(resolved: Path) -> str | None:
-    """Return an error if `resolved` is a regular file with multiple hardlinks.
-
-    Path.resolve() + is_relative_to() do NOT detect hardlinks: a hardlink
-    inside the sandbox can share an inode with /etc/shadow, and the path
-    string stays inside the sandbox. The fix is fail-closed: refuse any
-    file whose link count is > 1. Non-existent paths return None (write
-    operations creating brand-new files are still allowed). See
-    GHSA-34x7-hfp2-rc4v for the canonical writeup of this class of escape.
+    Restricted to **regular files**: directories on POSIX always have
+    ``st_nlink >= 2`` (`.`, plus one per subdirectory entry), so checking
+    them would refuse every nested path. Symlinks fall through to the
+    boundary check and the no-follow helpers. Non-existent paths return
+    ``None`` — creation is handled by the O_NOFOLLOW write helper.
     """
     try:
-        stat_result = os.lstat(resolved)
-    except OSError:
+        st = os.lstat(candidate)
+    except FileNotFoundError:
         return None
-    if stat.S_ISREG(stat_result.st_mode) and stat_result.st_nlink > 1:
-        return f"Path target has multiple hardlinks (st_nlink={stat_result.st_nlink}); refusing access"
+    except OSError as exc:
+        return f"Cannot stat path: {exc.strerror or exc}"
+    import stat as _stat_module
+
+    if _stat_module.S_ISREG(st.st_mode) and st.st_nlink > 1:
+        return f"Refusing to operate on multi-hardlink file (nlink={st.st_nlink})"
     return None
 
 
-def _check_denied_path(path: str) -> str | None:
-    """Return a human-readable error if `path` references a credential pattern.
+def _write_bytes_no_follow(target: Path, data: bytes) -> None:
+    """Write ``data`` to ``target`` without following symlinks.
 
-    Pure-string check — runs against the agent-supplied path before any
-    resolution or I/O. Matches are case-insensitive. See module-level
-    `_DENY_*` constants for the rule set.
+    Uses ``O_NOFOLLOW`` on POSIX so that any symlink at ``target`` —
+    including one created by a concurrent process between path
+    validation and this open — raises ``ELOOP`` and fails the write
+    closed. On Windows the flag is unavailable; we lstat and refuse if
+    the target is already a symlink (best-effort against the non-racy
+    attacker).
+
+    The file is created with mode 0600 so that, even on shared hosts,
+    other users cannot read it without explicit operator action.
     """
-    parts = PureWindowsPath(path).parts
-    if not parts:
-        return None
-    # Directory components — match against `_DENY_PATH_FRAGMENTS` exactly
-    # (case-folded). Skip the last component (it is the basename, checked
-    # separately so a deny-suffix like `.key` does not match a directory
-    # whose name happens to end in that suffix).
-    for component in parts[:-1]:
-        if component.endswith(("\\", "/")) or component in (".", ".."):
-            continue
-        if component.lower() in _DENY_PATH_FRAGMENTS:
-            return f"Path component {component!r} is on the sandbox deny-list (sensitive directory)"
-    basename = parts[-1].lower()
-    if basename in _DENY_BASENAME_LITERALS:
-        return f"Basename {parts[-1]!r} is on the sandbox deny-list (sensitive file)"
-    for prefix in _DENY_BASENAME_PREFIXES:
-        if basename.startswith(prefix):
-            return f"Basename {parts[-1]!r} matches sensitive prefix {prefix!r} (denied)"
-    for suffix in _DENY_BASENAME_SUFFIXES:
-        if basename.endswith(suffix):
-            return f"Basename {parts[-1]!r} matches sensitive suffix {suffix!r} (denied)"
-    return None
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    elif target.is_symlink():  # pragma: no cover — Windows-only branch
+        msg = f"Refusing to write through symlink: {target}"
+        raise PermissionError(msg)
+    fd = os.open(str(target), flags, 0o600)
+    try:
+        os.write(fd, data)
+    finally:
+        os.close(fd)
+
+
+def _read_bytes_no_follow(target: Path) -> bytes:
+    """Read the entire file at ``target`` without following symlinks.
+
+    Same TOCTOU rationale as ``_write_bytes_no_follow``: with
+    ``O_NOFOLLOW`` the open fails if a symlink was substituted between
+    path validation and this read. Reads up to ``MAX_FILE_SIZE_BYTES``
+    in a single syscall — the caller has already enforced the cap via
+    ``stat().st_size`` checks.
+    """
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    elif target.is_symlink():  # pragma: no cover — Windows-only branch
+        msg = f"Refusing to read through symlink: {target}"
+        raise PermissionError(msg)
+    fd = os.open(str(target), flags)
+    try:
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(fd, 1 << 20)  # 1 MiB per syscall
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks)
+    finally:
+        os.close(fd)
+
+
+def _read_head_no_follow(target: Path, n: int) -> bytes:
+    """Read the first ``n`` bytes of ``target`` without following symlinks.
+
+    Used for the binary-content sniff before deciding whether a file is
+    safe to surface as text — the same TOCTOU defence applies.
+    """
+    flags = os.O_RDONLY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    elif target.is_symlink():  # pragma: no cover — Windows-only branch
+        msg = f"Refusing to read through symlink: {target}"
+        raise PermissionError(msg)
+    fd = os.open(str(target), flags)
+    try:
+        return os.read(fd, n)
+    finally:
+        os.close(fd)
 
 
 def _check_windows_portability(path: str) -> str | None:
@@ -313,9 +347,17 @@ class FileSystemToolComponent(Component):
     inputs = [
         StrInput(
             name="root_path",
-            display_name="Root Path",
-            required=True,
-            info="Base directory. All operations are sandboxed to this path.",
+            display_name="Workspace Sub-path",
+            required=False,
+            value="",
+            info=(
+                "Sub-folder inside your sandboxed workspace. Leave empty to use the "
+                "root of the workspace.\n\n"
+                "Resolves under <BASE_DIR>/shared/<sub_path>/ when AUTO_LOGIN=True "
+                "(single-user / desktop) or under <BASE_DIR>/users/<your-namespace>/<sub_path>/ "
+                "when AUTO_LOGIN=False (multi-user, per-user isolation). "
+                "BASE_DIR is operator-controlled via LANGFLOW_FS_TOOL_BASE_DIR."
+            ),
         ),
         BoolInput(
             name="read_only",
@@ -353,33 +395,107 @@ class FileSystemToolComponent(Component):
     ]
 
     def build_metadata(self) -> Data:
-        """Return introspective metadata about the sandbox. No file I/O."""
+        """Return introspective metadata about the sandbox. No file I/O.
+
+        Surfaces the live AUTO_LOGIN-driven layout so flow authors can see
+        whether per-user scoping is active and where their files actually land
+        without needing to grep env vars.
+        """
         registered = ["read_file", "glob_search", "grep_search"]
         if not self.read_only:
             registered.extend(["write_file", "edit_file"])
+
+        auto_login = self._resolve_auto_login()
+        user_id = self._resolve_user_id()
+        if auto_login:
+            mode = "shared"
+        elif user_id:
+            mode = "isolated"
+        else:
+            mode = "refused"
+
+        # Best-effort effective_root resolution. We never raise from metadata —
+        # if the policy refuses the call (AUTO_LOGIN=False without user_id,
+        # unwritable BASE_DIR, etc.) we surface the reason instead of crashing
+        # the node preview / Agent build pipeline.
+        effective_root: str | None
+        resolution_error: str | None = None
+        try:
+            effective_root = str(self._validate_root())
+        except Exception as exc:  # noqa: BLE001 — metadata must never raise
+            effective_root = None
+            resolution_error = str(exc) or exc.__class__.__name__
+
         return Data(
             data={
                 "root_path": self.root_path,
                 "read_only": bool(self.read_only),
                 "tools_registered": registered,
+                "auto_login": auto_login,
+                "mode": mode,
+                "effective_root": effective_root,
+                "resolution_error": resolution_error,
             }
         )
 
     async def _get_tools(self) -> list[Tool]:
         """Tool Mode entrypoint. Called by Component.to_toolkit()."""
+        # Capture the bound user_id ONCE per build. Each StructuredTool closure
+        # below re-checks the live ``self._user_id`` against this value at call
+        # time, so a tool issued for user A cannot be invoked after the
+        # component has been reused for user B (defense for L2 in the plan).
+        bound_user_id = self._resolve_user_id()
         tools: list[Tool] = [
-            self._make_read_tool(),
-            self._make_glob_tool(),
-            self._make_grep_tool(),
+            self._make_read_tool(bound_user_id=bound_user_id),
+            self._make_glob_tool(bound_user_id=bound_user_id),
+            self._make_grep_tool(bound_user_id=bound_user_id),
         ]
         if not self.read_only:
-            tools.append(self._make_write_tool())
-            tools.append(self._make_edit_tool())
+            tools.append(self._make_write_tool(bound_user_id=bound_user_id))
+            tools.append(self._make_edit_tool(bound_user_id=bound_user_id))
         return tools
 
-    def _make_read_tool(self) -> StructuredTool:
+    def _user_binding_error(self, bound_user_id: str | None) -> dict | None:
+        """Return a structured error dict if the live user_id has shifted.
+
+        In shared mode (AUTO_LOGIN=True) user_id is not part of the security
+        boundary, so the binding check is a no-op. In isolated mode we compare
+        the captured user_id to the live one and refuse if they diverge —
+        defends against a worker pool reusing one component instance across
+        sessions for different users.
+        """
+        _, err = self._user_binding_check(bound_user_id)
+        return err
+
+    def _user_binding_check(self, bound_user_id: str | None) -> tuple[str | None, dict | None]:
+        """Atomic capture of the user_id for the current invocation.
+
+        Returns ``(captured_user_id, error_or_none)``. The captured value is
+        the SINGLE read of ``_resolve_user_id`` for this call; downstream
+        path-resolution code MUST reuse it (via the ContextVar pin) instead
+        of reading again — otherwise a mid-call mutation of ``self._user_id``
+        would let a write land in a different user's namespace while this
+        check still passed for the original user.
+        """
+        if self._resolve_auto_login():
+            return bound_user_id, None
+        current = self._resolve_user_id()
+        if current == bound_user_id:
+            return current, None
+        return None, {
+            "error": ("tool/user-id mismatch: this tool was bound to a different user session and cannot be reused"),
+        }
+
+    def _make_read_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, offset: int | None = None, limit: int | None = None) -> str:
-            return json.dumps(self._read_file(path, offset=offset, limit=limit))
+            captured, err = self._user_binding_check(bound_user_id)
+            if err is not None:
+                return json.dumps(err)
+            token = _pinned_user_id_var.set(captured)
+            try:
+                return json.dumps(self._read_file(path, offset=offset, limit=limit))
+            finally:
+                _pinned_user_id_var.reset(token)
 
         return StructuredTool.from_function(
             name="read_file",
@@ -393,9 +509,16 @@ class FileSystemToolComponent(Component):
             tags=["read_file"],
         )
 
-    def _make_write_tool(self) -> StructuredTool:
+    def _make_write_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, content: str) -> str:
-            return json.dumps(self._write_file(path, content))
+            captured, err = self._user_binding_check(bound_user_id)
+            if err is not None:
+                return json.dumps(err)
+            token = _pinned_user_id_var.set(captured)
+            try:
+                return json.dumps(self._write_file(path, content))
+            finally:
+                _pinned_user_id_var.reset(token)
 
         return StructuredTool.from_function(
             name="write_file",
@@ -405,11 +528,18 @@ class FileSystemToolComponent(Component):
             tags=["write_file"],
         )
 
-    def _make_edit_tool(self) -> StructuredTool:
+    def _make_edit_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(path: str, old_string: str, new_string: str, *, replace_all: bool = False) -> str:
-            return json.dumps(
-                self._edit_file(path, old_string=old_string, new_string=new_string, replace_all=replace_all)
-            )
+            captured, err = self._user_binding_check(bound_user_id)
+            if err is not None:
+                return json.dumps(err)
+            token = _pinned_user_id_var.set(captured)
+            try:
+                return json.dumps(
+                    self._edit_file(path, old_string=old_string, new_string=new_string, replace_all=replace_all)
+                )
+            finally:
+                _pinned_user_id_var.reset(token)
 
         return StructuredTool.from_function(
             name="edit_file",
@@ -422,9 +552,16 @@ class FileSystemToolComponent(Component):
             tags=["edit_file"],
         )
 
-    def _make_glob_tool(self) -> StructuredTool:
+    def _make_glob_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(pattern: str, path: str | None = None) -> str:
-            return json.dumps(self._glob_search(pattern, path=path))
+            captured, err = self._user_binding_check(bound_user_id)
+            if err is not None:
+                return json.dumps(err)
+            token = _pinned_user_id_var.set(captured)
+            try:
+                return json.dumps(self._glob_search(pattern, path=path))
+            finally:
+                _pinned_user_id_var.reset(token)
 
         return StructuredTool.from_function(
             name="glob_search",
@@ -437,7 +574,7 @@ class FileSystemToolComponent(Component):
             tags=["glob_search"],
         )
 
-    def _make_grep_tool(self) -> StructuredTool:
+    def _make_grep_tool(self, *, bound_user_id: str | None) -> StructuredTool:
         def _run(
             pattern: str,
             path: str | None = None,
@@ -447,16 +584,23 @@ class FileSystemToolComponent(Component):
             output_mode: str = "files_with_matches",
             is_regex: bool = False,
         ) -> str:
-            return json.dumps(
-                self._grep_search(
-                    pattern,
-                    path=path,
-                    glob=glob,
-                    case_insensitive=case_insensitive,
-                    output_mode=output_mode,
-                    is_regex=is_regex,
+            captured, err = self._user_binding_check(bound_user_id)
+            if err is not None:
+                return json.dumps(err)
+            token = _pinned_user_id_var.set(captured)
+            try:
+                return json.dumps(
+                    self._grep_search(
+                        pattern,
+                        path=path,
+                        glob=glob,
+                        case_insensitive=case_insensitive,
+                        output_mode=output_mode,
+                        is_regex=is_regex,
+                    )
                 )
-            )
+            finally:
+                _pinned_user_id_var.reset(token)
 
         return StructuredTool.from_function(
             name="grep_search",
@@ -472,41 +616,159 @@ class FileSystemToolComponent(Component):
             tags=["grep_search"],
         )
 
-    def _validate_root(self) -> Path:
-        """Resolve and authorize `self.root_path`.
+    def _resolve_user_id(self) -> str | None:
+        """Best-effort lookup of the calling user's id.
 
-        Two server-controlled gates run before the path is usable:
+        The Component base class populates ``_user_id`` during instantiation,
+        and the property cascades to ``self.graph.user_id``. In tests there is
+        no graph; in scheduled/anonymous runs there is no user_id at all. We
+        treat all of those as "anonymous" — the isolation mode decides what to
+        do with that information.
 
-        1. Cloud gate. In a hosted/multi-user deployment a flow author must not
-           be able to point root_path at `/` or any other server-sensitive
-           location. When `ASTRA_CLOUD_DISABLE_COMPONENT=true` we refuse the
-           component outright (defense in depth — the registration filter in
-           `validate_cloud.py` is the primary control, this catches the case
-           where it has been bypassed).
-        2. Allowlist gate. When `LANGFLOW_FS_TOOL_ALLOWED_ROOTS` is set, the
-           resolved root_path MUST be the same as, or nested under, one of the
-           allowlisted directories. Operators who care about scoping enable
-           this; OSS/desktop users leave it unset and get the prior behavior.
+        Why we filter ``"none"`` / ``"null"``: Langflow's ``PlaceholderGraph``
+        stringifies a missing user as ``"None"`` rather than the Python
+        ``None`` value, so a naive truthiness check would mistake "no user" for
+        a real user named "None" and create a spurious shared namespace.
+
+        L2 binding atomicity: when a tool invocation is in progress, the
+        pinned ContextVar value takes precedence so every read inside the
+        same call sees the user_id captured at the binding check — even if
+        ``self._user_id`` is mutated mid-call by a reused component instance.
         """
-        if is_astra_cloud_environment():
-            msg = "FileSystemTool is disabled in cloud/hosted deployments"
+        pinned = _pinned_user_id_var.get()
+        if pinned is not None:
+            return pinned
+        candidates: list[object | None] = [getattr(self, "_user_id", None)]
+        graph = getattr(self, "graph", None)
+        if graph is not None:
+            candidates.append(getattr(graph, "user_id", None))
+
+        for value in candidates:
+            if value is None:
+                continue
+            cleaned = str(value).strip()
+            if not cleaned or cleaned.lower() in {"none", "null"}:
+                continue
+            return cleaned
+        return None
+
+    def _isolation_config(self) -> IsolationConfig:
+        """Read the on-disk layout config from the environment on every call.
+
+        Re-read intentionally: tests and live operators tweak env vars between
+        runs; caching would create stale-config bugs that are painful to
+        diagnose. The cost is a handful of dict lookups per tool call.
+        """
+        return load_isolation_config(env=os.environ, default_config_dir=_default_config_dir())
+
+    def _resolve_auto_login(self) -> bool:
+        """Return AUTO_LOGIN from the live settings service.
+
+        Defaults to True when the settings service is unavailable (tests, very
+        early bootstrap) — mirrors the platform-wide default and keeps the
+        component usable in lightweight contexts. Tests can override this
+        method per-instance to pin the desired mode.
+        """
+        try:
+            settings_service = get_settings_service()
+        except Exception:  # noqa: BLE001 — service registry may not be ready
+            return True
+        if settings_service is None:
+            return True
+        try:
+            return bool(settings_service.auth_settings.AUTO_LOGIN)
+        except AttributeError:
+            return True
+
+    def _validate_root(self) -> Path:
+        """Resolve and authorize the effective sandbox root.
+
+        Dispatch:
+          - AUTO_LOGIN=True             → <BASE>/shared/<sub_path>
+          - AUTO_LOGIN=False + user_id  → <BASE>/users/<hash(user_id)>/<sub_path>
+          - AUTO_LOGIN=False + no user  → PermissionError (caught by callers)
+        """
+        config = self._isolation_config()
+
+        if self._resolve_auto_login():
+            return self._shared_root(config=config)
+
+        user_id = self._resolve_user_id()
+        if not user_id:
+            msg = "FileSystemTool requires an authenticated user when AUTO_LOGIN=False"
             raise PermissionError(msg)
-        # Reject empty/None/whitespace root_path before any path resolution.
-        # `Path("").resolve()` silently returns the process CWD (e.g. `/app/`
-        # in a container), which would let a flow author or agent escape the
-        # sandbox by leaving root_path blank — the UI's required=True is
-        # bypassed in Tool Mode because each StructuredTool has its own
-        # per-operation args schema, and `root_path` is component-level config.
-        # See BUG-03 / UI-022.
-        if self.root_path is None or not str(self.root_path).strip():
-            msg = "root_path is required and must be a non-empty path"
+        return self._isolated_user_root(config=config, user_id=user_id)
+
+    def _shared_root(self, *, config: IsolationConfig) -> Path:
+        """Materialize ``<base>/shared/<sub_path>`` and verify the boundary.
+
+        Why a fixed ``shared/`` prefix (and not just ``base_dir`` directly):
+        keeps the on-disk layout symmetric with isolated mode (``users/<hash>/``)
+        so flipping AUTO_LOGIN at deploy time never mixes the two trees.
+        """
+        shared_root = (config.base_dir / SHARED_NAMESPACE).resolve()
+        try:
+            shared_root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = (
+                f"Cannot create shared workspace at {shared_root}: "
+                f"{exc.strerror or exc}. "
+                f"Check that LANGFLOW_FS_TOOL_BASE_DIR ({config.base_dir}) is writable "
+                f"by the Langflow process user."
+            )
+            raise PermissionError(msg) from exc
+
+        sub_raw = (self.root_path or "").strip()
+        sub = sub_raw.lstrip("/\\")
+        candidate = (shared_root / sub).resolve() if sub else shared_root
+        if not candidate.is_relative_to(shared_root):
+            msg = f"sub_path {self.root_path!r} escapes shared workspace"
             raise PermissionError(msg)
-        root_resolved = Path(self.root_path).resolve()
-        allowed = _allowed_roots()
-        if allowed is not None and not any(root_resolved == a or root_resolved.is_relative_to(a) for a in allowed):
-            msg = f"root_path {self.root_path!r} is not in the server allowlist ({ALLOWED_ROOTS_ENV})"
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = f"Cannot create sub-path {candidate}: {exc.strerror or exc}"
+            raise PermissionError(msg) from exc
+        return candidate
+
+    def _isolated_user_root(self, *, config: IsolationConfig, user_id: str) -> Path:
+        """Materialize ``<base>/users/<hash(user_id)>/<sub_path>`` and verify the boundary."""
+        try:
+            pepper = load_or_create_pepper(config.pepper_path)
+        except OSError as exc:
+            msg = (
+                f"Cannot access pepper file at {config.pepper_path}: "
+                f"{exc.strerror or exc}. "
+                f"Check that LANGFLOW_FS_TOOL_PEPPER_PATH points to a writable location."
+            )
+            raise PermissionError(msg) from exc
+        namespace = compute_user_namespace(user_id, pepper=pepper)
+        user_root = (config.base_dir / namespace).resolve()
+        try:
+            user_root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = (
+                f"Cannot create user namespace at {user_root}: "
+                f"{exc.strerror or exc}. "
+                f"Check that LANGFLOW_FS_TOOL_BASE_DIR ({config.base_dir}) is writable "
+                f"by the Langflow process user."
+            )
+            raise PermissionError(msg) from exc
+
+        sub_raw = (self.root_path or "").strip()
+        # Strip leading separators so absolute-looking sub_paths are pinned
+        # under the user root rather than escaping to the host filesystem.
+        sub = sub_raw.lstrip("/\\")
+        candidate = (user_root / sub).resolve() if sub else user_root
+        if not candidate.is_relative_to(user_root):
+            msg = f"sub_path {self.root_path!r} escapes user namespace"
             raise PermissionError(msg)
-        return root_resolved
+        try:
+            candidate.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            msg = f"Cannot create sub-path {candidate}: {exc.strerror or exc}"
+            raise PermissionError(msg) from exc
+        return candidate
 
     def _validate_path(self, path: str) -> Path:
         """Resolve `path` relative to the sandbox root and reject any escape.
@@ -519,8 +781,19 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         if portability_error := _check_windows_portability(path):
             raise PermissionError(portability_error)
-        if denied_error := _check_denied_path(path):
-            raise PermissionError(denied_error)
+        # Block the reserved signing tree (L3 hook). We forbid traversal even
+        # by users with valid credentials — agents and humans both — because
+        # the integrity guarantee depends on this directory being unreachable
+        # from the public tool surface.
+        # Compare case-insensitively: APFS and NTFS resolve `.LFSIG` to the
+        # same directory as `.lfsig`, so a case-sensitive equality check
+        # lets uppercase variants slip past the reservation on those
+        # filesystems. `casefold` is the locale-aware lowercase used for
+        # caseless string comparison — broader than `.lower()`.
+        reserved_fold = RESERVED_SEGMENT.casefold()
+        if any(part.casefold() == reserved_fold for part in PureWindowsPath(path).parts):
+            msg = f"Path component {RESERVED_SEGMENT!r} is reserved"
+            raise PermissionError(msg)
         root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
