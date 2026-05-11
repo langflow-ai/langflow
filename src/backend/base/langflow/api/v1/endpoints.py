@@ -850,8 +850,7 @@ async def webhook_run_flow(
     """Run a flow using a webhook request.
 
     Args:
-        flow_id_or_name: The flow ID or endpoint name (used by dependency).
-        flow: The flow to be executed.
+        auth: Resolved webhook user and flow, scoped to the authenticated caller.
         request: The incoming HTTP request.
 
     Returns:
