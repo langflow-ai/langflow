@@ -167,14 +167,14 @@ describe("createKnowledgeBaseColumns", () => {
       );
     });
 
-    it("calls onAddSources when Update Knowledge is clicked for a ready KB", async () => {
+    it("calls onAddSources when Ingest Files is clicked for a ready KB", async () => {
       const onAddSources = jest.fn();
       const user = userEvent.setup();
       const CellRenderer = getActionsRenderer({ onAddSources });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
       await user.click(screen.getByTestId("kb-row-actions-trigger"));
-      await user.click(screen.getByText("Update Knowledge"));
+      await user.click(screen.getByText("Ingest Files"));
       expect(onAddSources).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
       );
@@ -216,33 +216,33 @@ describe("createKnowledgeBaseColumns", () => {
       );
     });
 
-    it("disables Update Knowledge for an ingesting KB", async () => {
+    it("disables Ingest Files for an ingesting KB", async () => {
       const user = userEvent.setup();
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
       await user.click(screen.getByTestId("kb-row-actions-trigger"));
       const updateItem = screen
-        .getByText("Update Knowledge")
+        .getByText("Ingest Files")
         .closest('[role="menuitem"]');
       expect(updateItem).toHaveAttribute("data-disabled");
     });
   });
 
-  describe("Row settings icon shortcut", () => {
+  describe("Row ingest files icon shortcut", () => {
     const getActionsRenderer = (callbacks = {}) => {
       const cols = createKnowledgeBaseColumns(callbacks);
       return cols.find((c) => c.headerName === "")!
         .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
-    it("renders the settings icon button on each row", () => {
+    it("renders the ingest files icon button on each row", () => {
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
       expect(screen.getByTestId("kb-row-update-button")).toBeInTheDocument();
     });
 
-    it("calls onAddSources directly when settings icon is clicked", async () => {
+    it("calls onAddSources directly when ingest files icon is clicked", async () => {
       const onAddSources = jest.fn();
       const user = userEvent.setup();
       const CellRenderer = getActionsRenderer({ onAddSources });
@@ -254,7 +254,7 @@ describe("createKnowledgeBaseColumns", () => {
       );
     });
 
-    it("disables the settings icon button while KB is ingesting", () => {
+    it("disables the ingest files icon button while KB is ingesting", () => {
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
       expect(screen.getByTestId("kb-row-update-button")).toBeDisabled();
