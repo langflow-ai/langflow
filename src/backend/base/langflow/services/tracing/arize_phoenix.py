@@ -79,8 +79,8 @@ class ArizePhoenixTracer(BaseTracer):
         self.project_name = project_name
         self.trace_id = trace_id
         self.session_id = session_id
-        self.flow_name = trace_name.split(" - ")[0]
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_name = trace_name.split(" - ", maxsplit=1)[0]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
 
@@ -262,7 +262,7 @@ class ArizePhoenixTracer(BaseTracer):
         if vertex and vertex.id is not None:
             child_span.set_attribute("vertex_id", vertex.id)
 
-        component_name = trace_id.split("-")[0]
+        component_name = trace_id.split("-", maxsplit=1)[0]
         if component_name == "ChatInput":
             self.chat_input_value = processed_inputs["input_value"]
         elif component_name == "ChatOutput":
@@ -358,7 +358,8 @@ class ArizePhoenixTracer(BaseTracer):
             value = value.text
 
         elif isinstance(value, Data):
-            value = value.get_text()
+            data = value.data
+            value = self._convert_to_arize_phoenix_type(data) if isinstance(data, (dict, list)) else value.get_text()
 
         elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
             value = value.content
@@ -366,7 +367,7 @@ class ArizePhoenixTracer(BaseTracer):
         elif isinstance(value, Document):
             value = value.page_content
 
-        elif isinstance(value, (types.GeneratorType | types.NoneType)):
+        elif isinstance(value, (types.GeneratorType, type(None))):
             value = str(value)
 
         elif isinstance(value, float) and not math.isfinite(value):
