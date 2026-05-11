@@ -71,11 +71,11 @@ export const createKnowledgeBaseColumns = (
         }
 
         return (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 pl-1">
             <div className="file-icon pointer-events-none relative">
               <ForwardedIconComponent
                 name={iconName}
-                className={cn("-mx-[3px] h-6 w-6 shrink-0", iconColor)}
+                className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
             <span>{params.value}</span>
