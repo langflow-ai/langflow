@@ -467,9 +467,20 @@ def run_hyperfine_local(scenario: Scenario, *, output_dir: Path, warmup: int, mi
     export_path = output_dir / f"{scenario.name}.json"
     export_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # In local mode /fixtures is not bind-mounted and /app is not the repo root.
+    # Remap both prefixes so lfx scenarios resolve their fixture and bootstrap paths.
+    local_fixtures = str(BENCHMARKS_DIR / "fixtures")
+    local_app = str(REPO_ROOT)
+
+    def _remap(s: str) -> str:
+        return s.replace("/fixtures/", f"{local_fixtures}/").replace("/app/", f"{local_app}/")
+
+    local_cmd = [_remap(tok) for tok in scenario.command]
+    local_env = {k: _remap(v) for k, v in scenario.env.items()}
+
     # Flatten env into a shell prefix string. --shell sh parses this cleanly.
-    env_prefix = " ".join(f"{k}={_quote(v)}" for k, v in scenario.env.items())
-    run_string = f"{env_prefix} {' '.join(_quote(tok) for tok in scenario.command)}"
+    env_prefix = " ".join(f"{k}={_quote(v)}" for k, v in local_env.items())
+    run_string = f"{env_prefix} {' '.join(_quote(tok) for tok in local_cmd)}"
 
     cmd = [
         "hyperfine",
@@ -483,6 +494,9 @@ def run_hyperfine_local(scenario: Scenario, *, output_dir: Path, warmup: int, mi
         str(export_path),
         "--shell",
         "sh",
+        # On macOS, PyTorch background threads crash during Python shutdown (exit 139 = SIGSEGV)
+        # after the flow completes correctly. Treat this as success for local smoke benchmarks.
+        "--ignore-failure=139",
         run_string,
     ]
     rc = subprocess.run(cmd, check=False)  # noqa: S603
@@ -669,7 +683,7 @@ def compute_meas_07(results: dict[str, dict]) -> dict[str, Any]:
     """
     lean = results.get("lfx_with_flow")
     prebaked = results.get("lfx_with_flow_prebaked")
-    if not lean or not prebaked:
+    if not lean or not prebaked or "mean_ms" not in lean or "mean_ms" not in prebaked:
         return {
             "status": "incomplete",
             "reason": "MEAS-07 requires both lfx_with_flow (lean) and lfx_with_flow_prebaked.",
