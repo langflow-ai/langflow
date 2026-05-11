@@ -592,6 +592,13 @@ class RedisJobQueueService(JobQueueService):
         self._bridge_tasks[job_id] = bridge
         return local_queue, event_manager
 
+    # Refresh the stream TTL on the first event, then every _TTL_REFRESH_EVENTS
+    # events *or* every _TTL_REFRESH_SECS seconds, whichever comes first.
+    # Calling expire() on every XADD doubles Redis round-trips and caps
+    # single-job throughput; periodic refresh preserves semantics at ~1/100 the cost.
+    _TTL_REFRESH_EVENTS = 100
+    _TTL_REFRESH_SECS = 30.0
+
     async def _bridge_to_redis(self, job_id: str, local_queue: asyncio.Queue) -> None:
         """Drain the local queue and publish each event to the Redis Stream.
 
@@ -605,23 +612,36 @@ class RedisJobQueueService(JobQueueService):
         _retry_delay = 0.1
         in_flight_item = None
         published = False
+        event_count = 0
+        last_ttl_refresh = time.monotonic()
         try:
             while True:
                 item = await local_queue.get()
                 in_flight_item = item
                 published = False
                 event_id, data, ts = item
+                is_sentinel = data is None
                 fields = (
                     {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": str(ts)}
-                    if data is None
+                    if is_sentinel
                     else {"event_id": event_id or "", "data": data, "ts": str(ts)}
+                )
+                # Refresh TTL on first event, every N events, every M seconds, or on sentinel.
+                now = time.monotonic()
+                needs_ttl_refresh = (
+                    event_count == 0
+                    or event_count % self._TTL_REFRESH_EVENTS == 0
+                    or (now - last_ttl_refresh) >= self._TTL_REFRESH_SECS
+                    or is_sentinel
                 )
                 while True:
                     try:
                         if not published:
                             await self._client.xadd(stream_key, fields, maxlen=10_000, approximate=True)
                             published = True
-                        await self._client.expire(stream_key, self._ttl)
+                        if needs_ttl_refresh:
+                            await self._client.expire(stream_key, self._ttl)
+                            last_ttl_refresh = time.monotonic()
                         in_flight_item = None
                         _retry_delay = 0.1
                         break
@@ -633,7 +653,8 @@ class RedisJobQueueService(JobQueueService):
                         )
                         await asyncio.sleep(_retry_delay)
                         _retry_delay = min(_retry_delay * 2, _max_retry_delay)
-                if data is None:
+                event_count += 1
+                if is_sentinel:
                     return
         except asyncio.CancelledError:
             if in_flight_item is not None and not published:
