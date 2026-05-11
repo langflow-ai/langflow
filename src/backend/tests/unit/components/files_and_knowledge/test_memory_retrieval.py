@@ -128,7 +128,9 @@ class TestDistanceToSimilarity:
 
 
 class TestToolSurface:
-    """The component description and output info are surfaced to LLM agents as the
+    """Pin the tool-description surface seen by LLM agents.
+
+    The component description and output info are surfaced to LLM agents as the
     tool description; they must mention the cross-session capability so the agent
     knows to call the tool from a fresh session when 'Filter by Session' is off.
 
