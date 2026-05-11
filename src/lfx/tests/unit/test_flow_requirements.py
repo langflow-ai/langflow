@@ -717,10 +717,14 @@ class TestStarterProjects:
         assert "langchain-anthropic" in result
 
     def test_simple_agent_has_community(self, simple_agent_flow):
-        """Simple Agent should require langchain-community for its tools."""
+        """Simple Agent's URLComponent imports langchain_community.
+
+        lfx now provides langchain-community transitively (via OpenDsStar),
+        so it is filtered out of generated requirements as already-provided.
+        """
         result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-community" in result
+        assert "langchain-community" not in result
 
     def test_basic_prompting_from_file(self):
         """Test the file-based API.

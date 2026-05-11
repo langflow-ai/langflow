@@ -215,9 +215,11 @@ class TestComponentDynamicImports:
         assert "SearchComponent" in searchapi_components.__all__
         assert "SearchComponent" in searchapi_components._dynamic_imports
 
-        # Accessing should trigger dynamic import - may fail due to missing dependencies
-        with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
-            _ = searchapi_components.SearchComponent
+        # langchain-community is now transitively provided by lfx (via OpenDsStar),
+        # so accessing SearchComponent triggers a successful dynamic import.
+        component = searchapi_components.SearchComponent
+        assert component is not None
+        assert hasattr(component, "__init__")
 
 
 class TestPerformanceCharacteristics:
