@@ -619,7 +619,7 @@ class RedisJobQueueService(JobQueueService):
                 while True:
                     try:
                         if not published:
-                            await self._client.xadd(stream_key, fields)
+                            await self._client.xadd(stream_key, fields, maxlen=10_000, approximate=True)
                             published = True
                         await self._client.expire(stream_key, self._ttl)
                         in_flight_item = None
