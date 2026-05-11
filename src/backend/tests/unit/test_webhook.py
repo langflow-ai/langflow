@@ -844,22 +844,19 @@ class TestWebhookEventsStreamAuth:
         from unittest.mock import Mock, patch
 
         from fastapi import HTTPException
-        from langflow.api.v1.endpoints import webhook_events_stream
+        from langflow.api.v1.endpoints import get_flow_for_sse_user
 
         mock_user = Mock()
         mock_user.id = "different-user-id"
-
-        request = Mock()
 
         # Mock get_flow_by_id_or_endpoint_name to raise 404 as it would if user doesn't own it
         with patch("langflow.api.v1.endpoints.get_flow_by_id_or_endpoint_name") as mock_get_flow:
             mock_get_flow.side_effect = HTTPException(status_code=404, detail="Flow identifier test-flow-id not found")
 
             with pytest.raises(HTTPException) as exc_info:
-                await webhook_events_stream(
+                await get_flow_for_sse_user(
                     flow_id_or_name="test-flow-id",
                     user=mock_user,
-                    request=request,
                 )
 
         assert exc_info.value.status_code == 404
