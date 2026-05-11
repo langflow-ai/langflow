@@ -442,9 +442,7 @@ def test_discover_all_emits_seed_bundle_shadowed_when_ids_collide(
     # The non-colliding seed bundle survives; the shadowed one does not.
     extension_ids = [ext.extension_id for ext in extensions]
     assert extension_ids.count("lfx-openai") == 1
-    assert any(
-        ext.extension_id == "lfx-openai" and ext.source_kind == "installed" for ext in extensions
-    )
+    assert any(ext.extension_id == "lfx-openai" and ext.source_kind == "installed" for ext in extensions)
     assert any(ext.extension_id == "lfx-only-seed" for ext in extensions)
 
     shadow_errors = [err for err in errors if err.code == "seed-bundle-shadowed"]
