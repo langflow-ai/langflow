@@ -14,7 +14,12 @@
  * URL.
  */
 
-import { FileText, FilePen, Download as DownloadIcon, ExternalLink } from "lucide-react";
+import {
+  FileText,
+  FilePen,
+  Download as DownloadIcon,
+  ExternalLink,
+} from "lucide-react";
 import { useCallback } from "react";
 
 import type { WrittenFile } from "../assistant-panel.types";
@@ -75,11 +80,15 @@ export function AssistantFileCard({ file, onOpen }: AssistantFileCardProps) {
         <IconForAction className="h-4 w-4 text-white" />
       </div>
       <div className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-semibold text-foreground" title={file.path}>
+        <span
+          className="truncate text-sm font-semibold text-foreground"
+          title={file.path}
+        >
           {basename(file.path)}
         </span>
         <span className="text-xs text-muted-foreground">
-          {file.action === "edit_file" ? "edited" : "created"} · {formatSize(file.size)}
+          {file.action === "edit_file" ? "edited" : "created"} ·{" "}
+          {formatSize(file.size)}
         </span>
       </div>
       <div className="flex items-center gap-1.5">
