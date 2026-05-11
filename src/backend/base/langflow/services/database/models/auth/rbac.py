@@ -55,9 +55,7 @@ class UserRole(SQLModel, table=True):  # type: ignore[call-arg]
 
 class ResourcePermission(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "resource_permission"
-    __table_args__ = (
-        Index("ix_resource_permission_user_resource", "user_id", "resource_type", "resource_id"),
-    )
+    __table_args__ = (Index("ix_resource_permission_user_resource", "user_id", "resource_type", "resource_id"),)
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     user_id: UUIDstr = Field(
