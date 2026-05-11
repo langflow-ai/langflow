@@ -116,23 +116,21 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
               key={run.id}
               type="button"
               onClick={() => setSelectedRunId(run.id)}
-              className="flex w-full flex-col gap-1 rounded-md border border-border bg-card p-2 text-left transition hover:border-primary/40 hover:bg-muted/30"
+              className="flex w-full flex-col gap-2 rounded-md border border-border bg-card p-3 text-left transition hover:border-primary/40 hover:bg-muted/30"
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 truncate">
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${statusClass}`}
-                  >
-                    {run.status}
-                  </span>
-                  <span className="truncate text-xs font-medium">
-                    {sourceLabel}
-                  </span>
-                </div>
+                <span
+                  className={`rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${statusClass}`}
+                >
+                  {run.status}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {formatRelativeTime(run.started_at)}
                 </span>
               </div>
+              <span className="truncate text-sm font-medium">
+                {sourceLabel}
+              </span>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <ForwardedIconComponent
