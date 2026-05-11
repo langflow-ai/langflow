@@ -40,7 +40,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
         )
     )
-    display_name: str = Field()
+    display_name: str = Field(description="Deployment name synced from the provider.")
     description: str | None = Field(
         default=None,
         sa_column=Column(sa.Text(), nullable=True),

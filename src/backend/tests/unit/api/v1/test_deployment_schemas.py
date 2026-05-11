@@ -215,7 +215,7 @@ class TestDeploymentSpecPayloadCompatibility:
         with pytest.raises(ValidationError, match="provider_spec"):
             DeploymentCreateRequest(
                 provider_id=uuid4(),
-                name="deployment",
+                display_name="deployment",
                 description="",
                 type="agent",
                 provider_spec={"region": "us-east-1", "size": "small"},
@@ -224,7 +224,7 @@ class TestDeploymentSpecPayloadCompatibility:
     def test_create_request_accepts_provider_data_payload(self):
         request = DeploymentCreateRequest(
             provider_id=uuid4(),
-            name="deployment",
+            display_name="deployment",
             description="",
             type="agent",
             provider_data={"operations": []},
@@ -235,7 +235,7 @@ class TestDeploymentSpecPayloadCompatibility:
         with pytest.raises(ValidationError, match="at most"):
             DeploymentCreateRequest(
                 provider_id=uuid4(),
-                name="deployment",
+                display_name="deployment",
                 description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
                 type="agent",
                 provider_data={"operations": []},
@@ -442,7 +442,7 @@ class TestDeploymentListItemFlowVersionIds:
             "id": uuid4(),
             "provider_id": uuid4(),
             "provider_key": DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            "name": "dep",
+            "display_name": "dep",
             "type": "agent",
             "resource_key": "rk-1",
         }
