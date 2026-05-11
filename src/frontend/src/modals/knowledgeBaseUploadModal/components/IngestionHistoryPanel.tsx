@@ -114,34 +114,34 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             return (
               <div
                 key={run.id}
-                className="flex flex-col gap-1 rounded-md border border-border bg-background p-2"
+                className="flex flex-col gap-2 rounded-md border border-border bg-background p-3"
                 data-testid="kb-ingestion-history-row"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 truncate">
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
-                        statusClass,
-                      )}
-                    >
-                      {run.status}
-                    </span>
-                    <span
-                      className="truncate text-xs font-medium"
-                      data-testid="kb-ingestion-history-source-name"
-                    >
-                      {primaryLabel}
-                    </span>
-                    {showTypeSubtitle && (
-                      <span className="truncate text-[10px] text-muted-foreground">
-                        · {typeLabel}
-                      </span>
+                  <span
+                    className={cn(
+                      "rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                      statusClass,
                     )}
-                  </div>
+                  >
+                    {run.status}
+                  </span>
                   <span className="text-xs text-muted-foreground">
                     {formatRelativeTime(run.started_at)}
                   </span>
+                </div>
+                <div className="flex flex-col gap-0.5 min-w-0">
+                  <span
+                    className="truncate text-sm font-medium"
+                    data-testid="kb-ingestion-history-source-name"
+                  >
+                    {primaryLabel}
+                  </span>
+                  {showTypeSubtitle && (
+                    <span className="truncate text-xs text-muted-foreground">
+                      {typeLabel}
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">

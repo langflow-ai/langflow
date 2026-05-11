@@ -85,20 +85,6 @@ const KnowledgeBaseDrawer = ({
             </div>
           </div>
 
-          <div className="space-y-3 px-4">
-            <h4 className="text-sm font-medium">Source Files</h4>
-            <div className="text-sm text-muted-foreground">
-              No source files available.
-            </div>
-          </div>
-
-          <div className="space-y-3 px-4">
-            <h4 className="text-sm font-medium">Linked Flows</h4>
-            <div className="text-sm text-muted-foreground">
-              No linked flows available.
-            </div>
-          </div>
-
           <Separator />
 
           <IngestionRunsSection kbName={knowledgeBase.dir_name} />

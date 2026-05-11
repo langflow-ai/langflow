@@ -71,11 +71,11 @@ export const createKnowledgeBaseColumns = (
         }
 
         return (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 pl-1">
             <div className="file-icon pointer-events-none relative">
               <ForwardedIconComponent
                 name={iconName}
-                className={cn("-mx-[3px] h-6 w-6 shrink-0", iconColor)}
+                className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
             <span>{params.value}</span>
@@ -208,19 +208,19 @@ export const createKnowledgeBaseColumns = (
                     size="icon"
                     disabled={isBusy}
                     data-testid="kb-row-update-button"
-                    aria-label="Update Knowledge"
+                    aria-label="Ingest Files"
                     onClick={(e) => {
                       e.stopPropagation();
                       callbacks?.onAddSources?.(params.data);
                     }}
                   >
                     <ForwardedIconComponent
-                      name="Settings"
+                      name="FileUp"
                       className="h-4 w-4 text-primary"
                     />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Update Knowledge</TooltipContent>
+                <TooltipContent>Ingest Files</TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <DropdownMenu>
@@ -246,10 +246,10 @@ export const createKnowledgeBaseColumns = (
                   }}
                 >
                   <ForwardedIconComponent
-                    name="RefreshCw"
+                    name="FileUp"
                     className="mr-2 h-4 w-4"
                   />
-                  Update Knowledge
+                  Ingest Files
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {

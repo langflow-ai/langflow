@@ -136,7 +136,7 @@ describe("IngestionHistoryPanel", () => {
     render(<IngestionHistoryPanel kbName="my_kb" />);
     const sourceLabel = screen.getByTestId("kb-ingestion-history-source-name");
     expect(sourceLabel).toHaveTextContent("Test6");
-    expect(screen.getByText("· File Upload")).toBeInTheDocument();
+    expect(screen.getAllByText("File Upload").length).toBeGreaterThan(0);
   });
 
   it("treats whitespace-only source_name as missing", () => {
@@ -160,7 +160,8 @@ describe("IngestionHistoryPanel", () => {
     render(<IngestionHistoryPanel kbName="my_kb" />);
     const sourceLabel = screen.getByTestId("kb-ingestion-history-source-name");
     expect(sourceLabel).toHaveTextContent("File Upload");
-    expect(screen.queryByText("· File Upload")).not.toBeInTheDocument();
+    // Whitespace-only source_name → no subtitle, only the primary label has it.
+    expect(screen.getAllByText("File Upload")).toHaveLength(1);
   });
 
   it("collapses and expands when header is toggled", async () => {
