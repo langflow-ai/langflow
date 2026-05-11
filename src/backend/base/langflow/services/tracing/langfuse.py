@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from collections import OrderedDict
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -15,14 +14,23 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
+    from langfuse._client.span import LangfuseSpan
+    from langfuse.types import TraceContext
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
 
 
 class LangFuseTracer(BaseTracer):
+    """LangFuse tracer implementation using langfuse v3 API.
+
+    The v3 API uses OpenTelemetry-based spans instead of the v2 trace/span pattern.
+    See: https://langfuse.com/docs/observability/sdk/upgrade-path
+    """
+
     flow_id: str
+    _trace_context: TraceContext
 
     def __init__(
         self,
@@ -40,29 +48,50 @@ class LangFuseTracer(BaseTracer):
         self.user_id = user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
-        self.spans: dict = OrderedDict()  # spans that are not ended
+        self.spans: dict[str, LangfuseSpan] = OrderedDict()
 
         config = self._get_config()
-        self._ready: bool = self.setup_langfuse(config) if config else False
+        self._ready: bool = self._setup_langfuse(config) if config else False
 
     @property
     def ready(self):
         return self._ready
 
-    def setup_langfuse(self, config) -> bool:
+    def _setup_langfuse(self, config: dict) -> bool:
+        """Initialize langfuse client and create root span for the flow.
+
+        Uses langfuse v3 API which requires creating spans with trace_context
+        instead of using the removed trace() method.
+        """
         try:
             from langfuse import Langfuse
+            from langfuse.types import TraceContext
 
             self._client = Langfuse(**config)
-            try:
-                from langfuse.api.core.request_options import RequestOptions
 
-                self._client.client.health.health(request_options=RequestOptions(timeout_in_seconds=1))
+            # Health check using public API
+            try:
+                if not self._client.auth_check():
+                    logger.debug("Langfuse authentication failed")
+                    return False
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"can not connect to Langfuse: {e}")
+                logger.debug(f"Cannot connect to Langfuse: {e}")
                 return False
-            self.trace = self._client.trace(
-                id=str(self.trace_id),
+
+            # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
+            langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
+            # parent_span_id is NotRequired but ty doesn't fully support this yet
+            self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
+
+            # Create root span for the flow - this also creates the trace implicitly
+            self._root_span = self._client.start_span(
+                name=self.flow_id,
+                trace_context=self._trace_context,
+                metadata={"flow_id": self.flow_id, "project_name": self.project_name},
+            )
+
+            # Set trace-level metadata (user_id, session_id)
+            self._root_span.update_trace(
                 name=self.flow_id,
                 user_id=self.user_id,
                 session_id=self.session_id,
@@ -73,7 +102,7 @@ class LangFuseTracer(BaseTracer):
             return False
 
         except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error setting up LangSmith tracer: {e}")
+            logger.debug(f"Error setting up LangFuse tracer: {e}")
             return False
 
         return True
@@ -81,14 +110,13 @@ class LangFuseTracer(BaseTracer):
     @override
     def add_trace(
         self,
-        trace_id: str,  # actualy component id
+        trace_id: str,  # actually component id
         trace_name: str,
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        start_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
@@ -97,19 +125,13 @@ class LangFuseTracer(BaseTracer):
         metadata_ |= metadata or {}
 
         name = trace_name.removesuffix(f" ({trace_id})")
-        content_span = {
-            "name": name,
-            "input": inputs,
-            "metadata": metadata_,
-            "start_time": start_time,
-        }
 
-        # if two component is built concurrently, will use wrong last span. just flatten now, maybe fix in future.
-        # if len(self.spans) > 0:
-        #     last_span = next(reversed(self.spans))
-        #     span = self.spans[last_span].span(**content_span)
-        # else:
-        span = self.trace.span(**serialize(content_span))
+        # Create child span under the root span
+        span = self._root_span.start_span(
+            name=name,
+            input=serialize(inputs),
+            metadata=serialize(metadata_),
+        )
 
         self.spans[trace_id] = span
 
@@ -122,7 +144,6 @@ class LangFuseTracer(BaseTracer):
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
     ) -> None:
-        end_time = datetime.now(tz=timezone.utc)
         if not self._ready:
             return
 
@@ -132,8 +153,10 @@ class LangFuseTracer(BaseTracer):
             output |= outputs or {}
             output |= {"error": str(error)} if error else {}
             output |= {"logs": list(logs)} if logs else {}
-            content = serialize({"output": output, "end_time": end_time})
-            span.update(**content)
+
+            # Update span with output and end it
+            span.update(output=serialize(output))
+            span.end()
 
     @override
     def end(
@@ -145,26 +168,61 @@ class LangFuseTracer(BaseTracer):
     ) -> None:
         if not self._ready:
             return
-        content_update = {
-            "input": inputs,
-            "output": outputs,
-            "metadata": metadata,
-        }
-        self.trace.update(**serialize(content_update))
+
+        # Serialize once and reuse to avoid duplicate work
+        inputs_ser = serialize(inputs)
+        outputs_ser = serialize(outputs)
+        metadata_ser = serialize(metadata) if metadata else None
+
+        # Update the root span with final input/output
+        self._root_span.update(
+            input=inputs_ser,
+            output=outputs_ser,
+            metadata=metadata_ser,
+        )
+
+        # Update trace-level data
+        self._root_span.update_trace(
+            input=inputs_ser,
+            output=outputs_ser,
+            metadata=metadata_ser,
+        )
+
+        # End the root span
+        self._root_span.end()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
             return None
 
-        # get callback from parent span
-        stateful_client = self.spans[next(reversed(self.spans))] if len(self.spans) > 0 else self.trace
-        return stateful_client.get_langchain_handler()
+        try:
+            from langfuse.langchain import CallbackHandler
+
+            # Get the current span's context for proper nesting
+            if self.spans:
+                # Use the most recent span as parent
+                current_span = next(reversed(self.spans.values()))
+                # Create callback with parent context
+                trace_ctx: TraceContext = {
+                    "trace_id": self._trace_context["trace_id"],
+                    "parent_span_id": current_span.id,
+                }
+                handler = CallbackHandler(trace_context=trace_ctx)
+            else:
+                # Fall back to root trace context
+                handler = CallbackHandler(trace_context=self._trace_context)
+
+        except (ImportError, ValueError, TypeError) as e:
+            logger.debug(f"Error creating LangChain callback handler: {e}")
+            return None
+        else:
+            return handler
 
     @staticmethod
     def _get_config() -> dict:
         secret_key = os.getenv("LANGFUSE_SECRET_KEY", None)
         public_key = os.getenv("LANGFUSE_PUBLIC_KEY", None)
-        host = os.getenv("LANGFUSE_HOST", None)
+        host = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
         if secret_key and public_key and host:
             return {"secret_key": secret_key, "public_key": public_key, "host": host}
         return {}

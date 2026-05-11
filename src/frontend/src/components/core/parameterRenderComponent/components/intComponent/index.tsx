@@ -21,7 +21,8 @@ export default function IntComponent({
   editNode = false,
   id = "",
   readonly,
-}: InputProps<number, IntComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<number, IntComponentType>): JSX.Element | null {
   const min = -Infinity;
   // Clear component state when disabled
   useEffect(() => {
@@ -123,7 +124,9 @@ export default function IntComponent({
   };
 
   const handleInputChange = (event: React.FormEvent<HTMLInputElement>) => {
-    const inputValue = Number((event.target as HTMLInputElement).value);
+    const raw = (event.target as HTMLInputElement).value;
+    if (raw === "") return; // Allow clearing the field (empty = no limit)
+    const inputValue = Number(raw);
     if (Number.isFinite(inputValue) && inputValue < getMinValue()) {
       (event.target as HTMLInputElement).value = getMinValue().toString();
     }
@@ -137,6 +140,10 @@ export default function IntComponent({
   const decrementStepperClassName =
     " hover:rounded-br-[5px] hover:bg-muted group-decrement";
   const inputRef = useRef(null);
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className="w-full">
@@ -176,17 +183,17 @@ export default function IntComponent({
             />
           </NumberIncrementStepper>
           <NumberDecrementStepper
-            className={decrementStepperClassName}
-            _disabled={{ cursor: "default" }}
-            isDisabled={isAtOrBelowMin}
-            onClickCapture={
-              isAtOrBelowMin
-                ? (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                : undefined
-            }
+            className={cn(
+              decrementStepperClassName,
+              isAtOrBelowMin && "pointer-events-none opacity-50",
+            )}
+            aria-disabled={isAtOrBelowMin || undefined}
+            data-disabled={isAtOrBelowMin ? "" : undefined}
+            onClickCapture={(e: React.MouseEvent) => {
+              if (!isAtOrBelowMin) return;
+              e.preventDefault();
+              e.stopPropagation();
+            }}
           >
             <MinusIcon
               className={iconClassName}

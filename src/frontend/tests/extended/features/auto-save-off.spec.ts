@@ -11,6 +11,7 @@ test(
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          type: "full",
           auto_saving: false,
           frontend_timeout: 0,
         }),

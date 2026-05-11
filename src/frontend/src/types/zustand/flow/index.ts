@@ -8,7 +8,7 @@ import type {
 } from "@xyflow/react";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
-import type { VertexBuildTypeAPI } from "../../api";
+import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
 import type { FlowState } from "../../tabs";
 
@@ -57,6 +57,7 @@ export type ComponentsToUpdateType = {
   icon?: string;
   display_name: string;
   outdated: boolean;
+  blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
 };
@@ -105,10 +106,22 @@ export type FlowStoreType = {
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
+  buildStartTime: number | null;
+  buildDuration: number | null;
+  buildingFlowId: string | null;
+  buildingSessionId: string | null;
   isPending: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setBuildStartTime: (time: number) => void;
+  setBuildDuration: (duration: number) => void;
+  setBuildingSession: (flowId: string | null, sessionId: string | null) => void;
   setPending: (isPending: boolean) => void;
   resetFlow: (flow: FlowType | undefined) => void;
   resetFlowState: () => void;
@@ -290,9 +303,12 @@ export type FlowStoreType = {
   currentBuildingNodeId: string[] | undefined;
   setCurrentBuildingNodeId: (nodeIds: string[] | undefined) => void;
   clearEdgesRunningByNodes: () => Promise<void>;
+  clearAndSetEdgesRunning: (nextIds?: string[]) => void;
   updateToolMode: (nodeId: string, toolMode: boolean) => void;
   helperLineEnabled: boolean;
   setHelperLineEnabled: (helperLineEnabled: boolean) => void;
+  inspectionPanelVisible: boolean;
+  setInspectionPanelVisible: (visible: boolean) => void;
   newChatOnPlayground: boolean;
   setNewChatOnPlayground: (newChat: boolean) => void;
   stopNodeId: string | undefined;

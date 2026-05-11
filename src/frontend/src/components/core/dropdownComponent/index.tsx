@@ -1,10 +1,10 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import NodeDialog from "@/CustomNodes/GenericNode/components/NodeDialogComponent";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
-import { RECEIVING_INPUT_VALUE, SELECT_AN_OPTION } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -59,8 +59,10 @@ export default function Dropdown({
   externalOptions,
   handleOnNewValue,
   toggle,
+  inspectionPanel,
   ...baseInputProps
 }: BaseInputProps & DropDownComponent): JSX.Element {
+  const { t } = useTranslation();
   const validOptions = useMemo(
     () => filterNullOptions(options),
     [options, value],
@@ -82,16 +84,20 @@ export default function Dropdown({
   });
   const [filteredMetadata, setFilteredMetadata] = useState(optionsMetaData);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
   const refButton = useRef<HTMLButtonElement>(null);
 
-  value = useMemo(() => {
-    // We should only reset the value if it's not in options and not in filteredOptions
-    // and not a recently added custom value
-    if (!options.includes(value) && !filteredOptions.includes(value)) {
+  // Reset the value when options are loaded and the current value is not among them.
+  // This is in a useEffect (not useMemo) to avoid calling setState during render.
+  // When options is empty, it means options are still loading, so we preserve the saved value.
+  useEffect(() => {
+    if (
+      options.length > 0 &&
+      !options.includes(value) &&
+      !filteredOptions.includes(value)
+    ) {
       if (value) onSelect("", undefined, true);
-      return null;
     }
-    return value;
   }, [value, options, filteredOptions]);
 
   // Initialize utilities and constants
@@ -100,7 +106,9 @@ export default function Dropdown({
   const { firstWord } = formatName(name);
   const fuse = new Fuse(validOptions, { keys: ["name", "value"] });
   const PopoverContentDropdown =
-    children || editNode ? PopoverContent : PopoverContentWithoutPortal;
+    children || editNode || inspectionPanel
+      ? PopoverContent
+      : PopoverContentWithoutPortal;
   const { helperText, hasRefreshButton } = baseInputProps;
 
   // API and store hooks
@@ -202,69 +210,7 @@ export default function Dropdown({
       name,
     );
 
-    // TODO: this is a hack to make the connect other models option work
-    // we should find a better way to do this
-    try {
-      if (value === "connect_other_models") {
-        const store = useFlowStore.getState();
-        const node = store.getNode(nodeId!);
-        const templateField = node?.data?.node?.template?.[name!];
-        if (!templateField) return;
-
-        const inputTypes: string[] =
-          (Array.isArray(templateField.input_types)
-            ? templateField.input_types
-            : []) || [];
-        const effectiveInputTypes =
-          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
-        const tooltipTitle: string =
-          (inputTypes && inputTypes.length > 0
-            ? inputTypes.join("\n")
-            : templateField.type) || "";
-
-        const myId = scapedJSONStringfy({
-          inputTypes: effectiveInputTypes,
-          type: templateField.type,
-          id: nodeId,
-          fieldName: name,
-          proxy: templateField.proxy,
-        });
-
-        const typesData = useTypesStore.getState().data;
-        const grouped = groupByFamily(
-          typesData,
-          (effectiveInputTypes && effectiveInputTypes.length > 0
-            ? effectiveInputTypes.join("\n")
-            : tooltipTitle) || "",
-          true,
-          store.nodes,
-        );
-
-        // Build a pseudo source so compatible target handles (left side) glow
-        const pseudoSourceHandle = scapedJSONStringfy({
-          fieldName: name,
-          id: nodeId,
-          inputTypes: effectiveInputTypes,
-          type: "str",
-        });
-
-        const filterObj = {
-          source: undefined,
-          sourceHandle: undefined,
-          target: nodeId,
-          targetHandle: pseudoSourceHandle,
-          type: "LanguageModel",
-          // Use a generic color; exact tone is resolved when user hovers/clicks handles
-          color: "datatype-fuchsia",
-        } as any;
-
-        // Show compatible handles glow
-        store.setFilterEdge(grouped);
-        store.setFilterType(filterObj);
-      }
-    } finally {
-      setWaitingForResponse(false);
-    }
+    setWaitingForResponse(false);
   };
 
   const handleRefreshButtonPress = async () => {
@@ -314,6 +260,14 @@ export default function Dropdown({
       : option;
   };
 
+  // Auto-select a newly created option (e.g. knowledge base) once it appears in the options list
+  useEffect(() => {
+    if (pendingSelect && options.includes(pendingSelect)) {
+      onSelect(pendingSelect);
+      setPendingSelect(null);
+    }
+  }, [options, pendingSelect, onSelect]);
+
   // Effects
   useEffect(() => {
     if (disabled && value !== "") {
@@ -351,7 +305,12 @@ export default function Dropdown({
         setFilteredMetadata(optionsMetaData);
       }
     }
-    if (!combobox && value && !validOptions.includes(value)) {
+    if (
+      !combobox &&
+      value &&
+      validOptions.length > 0 &&
+      !validOptions.includes(value)
+    ) {
       onSelect("", undefined, true);
     }
   }, [open, validOptions]);
@@ -430,7 +389,7 @@ export default function Dropdown({
             {value && <>{renderSelectedIcon()}</>}
             <span className="truncate">
               {disabled ? (
-                RECEIVING_INPUT_VALUE
+                t("component.receivingInput")
               ) : (
                 <>
                   {
@@ -441,16 +400,16 @@ export default function Dropdown({
                       "connect_other_models" ? (
                       <span className="text-muted-foreground">
                         <LoadingTextComponent
-                          text={placeholder || SELECT_AN_OPTION}
+                          text={placeholder || t("component.selectOption")}
                         />
                       </span>
                     ) : (
-                      placeholder || SELECT_AN_OPTION
+                      placeholder || t("component.selectOption")
                     )
                     // ) : (
                     //   <span className="text-muted-foreground">
                     //     <LoadingTextComponent
-                    //       text={placeholder || SELECT_AN_OPTION}
+                    //       text={placeholder || t("component.selectOption")}
                     //     />
                     //   </span>
                     // )}
@@ -667,6 +626,9 @@ export default function Dropdown({
               setOpenDialog(false);
               setOpen(false);
             }}
+            onCreated={(createdValue) => {
+              setPendingSelect(createdValue);
+            }}
             nodeId={nodeId!}
             name={name!}
             nodeClass={nodeClass!}
@@ -679,7 +641,7 @@ export default function Dropdown({
   const renderPopoverContent = () => (
     <PopoverContentDropdown
       side="bottom"
-      avoidCollisions={!!children}
+      avoidCollisions={!!children || inspectionPanel}
       className="noflow nowheel nopan nodelete nodrag p-0"
       style={
         children ? {} : { minWidth: refButton?.current?.clientWidth ?? "200px" }

@@ -4,7 +4,6 @@ from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
-from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
 
@@ -12,21 +11,6 @@ class NVIDIAModelComponent(LCModelComponent):
     display_name = "NVIDIA"
     description = "Generates text using NVIDIA LLMs."
     icon = "NVIDIA"
-
-    try:
-        import warnings
-
-        # Suppresses repeated warnings about NIM key in langchain_nvidia_ai_endpoints==0.3.8
-        warnings.filterwarnings("ignore", category=UserWarning, module="langchain_nvidia_ai_endpoints._common")
-        from langchain_nvidia_ai_endpoints import ChatNVIDIA
-
-        all_models = ChatNVIDIA().get_available_models()
-    except ImportError as e:
-        msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
-        raise ImportError(msg) from e
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"Failed to fetch NVIDIA models during initialization: {e}. Model list will be unavailable.")
-        all_models = []
 
     inputs = [
         *LCModelComponent.get_base_inputs(),
@@ -42,7 +26,7 @@ class NVIDIAModelComponent(LCModelComponent):
             info="The name of the NVIDIA model to use.",
             advanced=False,
             value=None,
-            options=sorted(model.id for model in all_models),
+            options=[],
             combobox=True,
             refresh_button=True,
         ),

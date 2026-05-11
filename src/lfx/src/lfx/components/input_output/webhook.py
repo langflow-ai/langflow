@@ -35,7 +35,7 @@ class WebhookComponent(Component):
         ),
     ]
     outputs = [
-        Output(display_name="Data", name="output_data", method="build_data"),
+        Output(display_name="JSON", name="output_data", method="build_data"),
     ]
 
     def build_data(self) -> Data:

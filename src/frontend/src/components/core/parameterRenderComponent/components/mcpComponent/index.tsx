@@ -15,7 +15,8 @@ export default function McpComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
-}: InputProps<string, any>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, any>): JSX.Element | null {
   const [open, setOpen] = useState(false);
   const { data: mcpServers } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
@@ -130,6 +131,10 @@ export default function McpComponent({
       options !== null
     );
   }, [selectedOption, config]);
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <div className="flex w-full flex-col gap-2">

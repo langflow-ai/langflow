@@ -1,5 +1,6 @@
 // tests/fixtures.ts
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, Page } from "@playwright/test";
+import "./playwrightCoverage";
 
 // Extend test to log backend errors
 export const test = base.extend({
@@ -16,7 +17,7 @@ export const test = base.extend({
     let allowFlowErrors = false;
 
     // Add helper method to page context
-    (page as any).allowFlowErrors = () => {
+    (page as Page & { allowFlowErrors?: () => void }).allowFlowErrors = () => {
       allowFlowErrors = true;
     };
 

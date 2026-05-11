@@ -26,12 +26,12 @@ class LCCompressorComponent(Component):
 
     outputs = [
         Output(
-            display_name="Data",
+            display_name="JSON",
             name="compressed_documents",
             method="Compressed Documents",
         ),
         Output(
-            display_name="DataFrame",
+            display_name="Table",
             name="compressed_documents_as_dataframe",
             method="Compressed Documents as DataFrame",
         ),

@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest import mock
 from uuid import uuid4
 
@@ -163,12 +164,18 @@ async def test_read_variables__empty(client: AsyncClient, logged_in_headers):
 
 @pytest.mark.usefixtures("active_user")
 async def test_read_variables__(client: AsyncClient, logged_in_headers):
+    """When the variable service raises (e.g. DB error), the list endpoint returns 500."""
     generic_message = "Generic error message"
 
-    with mock.patch("sqlmodel.Session.exec") as m:
-        m.side_effect = Exception(generic_message)
-        with pytest.raises(Exception, match=generic_message):
-            await client.get("api/v1/variables/", headers=logged_in_headers)
+    with mock.patch(
+        "langflow.services.variable.service.DatabaseVariableService.get_all",
+        new_callable=mock.AsyncMock,
+        side_effect=Exception(generic_message),
+    ):
+        response = await client.get("api/v1/variables/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert generic_message in response.json().get("detail", "")
 
 
 @pytest.mark.usefixtures("active_user")
@@ -374,6 +381,7 @@ async def test_create_variable__ollama_base_url_validation_success(client: Async
     # Mock successful Ollama API call
     with mock.patch("requests.get") as mock_get:
         mock_get.return_value.status_code = 200
+        mock_get.return_value.json.return_value = {"models": []}
         response = await client.post("api/v1/variables/", json=ollama_variable, headers=logged_in_headers)
         result = response.json()
 
@@ -557,3 +565,65 @@ async def test_delete_non_provider_credential_does_not_cleanup_models(client: As
     # Delete the variable - should not trigger any cleanup
     delete_response = await client.delete(f"api/v1/variables/{created_var['id']}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_detect_env_vars_endpoint__returns_detected_names(client: AsyncClient, logged_in_headers):
+    flow_version_id = uuid4()
+    flow_version = SimpleNamespace(
+        data={
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {"load_from_db": True, "value": "  MY_OPENAI_KEY  "},
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    )
+    variable_service = SimpleNamespace(list_variables=mock.AsyncMock(return_value=["MY_OPENAI_KEY"]))
+
+    with (
+        mock.patch(
+            "langflow.api.v1.variable.get_flow_version_entries_by_ids",
+            new_callable=mock.AsyncMock,
+            return_value={flow_version_id: flow_version},
+        ),
+        mock.patch("langflow.api.v1.variable.get_variable_service", return_value=variable_service),
+    ):
+        response = await client.post(
+            "api/v1/variables/detections",
+            json={"flow_version_ids": [str(flow_version_id)]},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"variables": ["MY_OPENAI_KEY"]}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_detect_env_vars_endpoint__rejects_missing_nodes(client: AsyncClient, logged_in_headers):
+    flow_version_id = uuid4()
+    flow_version = SimpleNamespace(data={})
+    variable_service = SimpleNamespace(list_variables=mock.AsyncMock(return_value=["ANY_KEY"]))
+
+    with (
+        mock.patch(
+            "langflow.api.v1.variable.get_flow_version_entries_by_ids",
+            new_callable=mock.AsyncMock,
+            return_value={flow_version_id: flow_version},
+        ),
+        mock.patch("langflow.api.v1.variable.get_variable_service", return_value=variable_service),
+    ):
+        response = await client.post(
+            "api/v1/variables/detections",
+            json={"flow_version_ids": [str(flow_version_id)]},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "must be a JSON object with a 'nodes' list" in response.json()["detail"]

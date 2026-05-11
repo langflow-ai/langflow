@@ -19,14 +19,13 @@ from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.main import create_app
-from langflow.services.auth.utils import get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey, UnmaskedApiKeyRead
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
-from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id
-from langflow.services.deps import get_db_service, session_scope
+from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
+from langflow.services.deps import get_auth_service, get_db_service, session_scope
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
@@ -198,7 +197,7 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
                 await session.delete(job)
             await session.flush()
 
-            await delete_vertex_builds_by_flow_id(session, flow_id)
+            await delete_vertex_builds_by_flow_id_unchecked(session, flow_id)
         except Exception as e:
             logger.debug(f"Error deleting jobs/vertex builds for flow {flow_id}: {e}")
         try:
@@ -211,7 +210,7 @@ async def _delete_transactions_and_vertex_builds(session, flows: list[Flow]):
 async def async_client() -> AsyncGenerator:
     app = create_app()
     async with (
-        LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+        LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
         AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver", http2=True) as client,
     ):
         yield client
@@ -457,7 +456,7 @@ async def client_fixture(
         app, db_path = await asyncio.to_thread(init_app)
         # app.dependency_overrides[get_session] = get_session_override
         async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
             AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
         ):
             yield client
@@ -493,7 +492,7 @@ async def active_user(client):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=False,
         )
@@ -538,7 +537,7 @@ async def active_super_user(client):  # noqa: ARG001
     async with session_scope() as session:
         user = User(
             username="activeuser",
-            password=get_password_hash("testpassword"),
+            password=get_auth_service().get_password_hash("testpassword"),
             is_active=True,
             is_superuser=True,
         )
@@ -578,7 +577,7 @@ async def flow(
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=active_user.id)
 
-    flow = Flow.model_validate(flow_data)
+    flow = Flow.model_validate(flow_data.model_dump(exclude={"id"}))
     async with session_scope() as session:
         session.add(flow)
         await session.flush()
@@ -684,7 +683,7 @@ async def flow_component(client: AsyncClient, logged_in_headers):
 
 @pytest.fixture
 async def created_api_key(active_user):
-    hashed = get_password_hash("random_key")
+    hashed = get_auth_service().get_password_hash("random_key")
     api_key = ApiKey(
         name="test_api_key",
         user_id=active_user.id,
@@ -726,7 +725,7 @@ async def user_two(
         user = User(
             id=user_id,
             username=f"test_user_two_{user_id}",
-            password=get_password_hash("hashed_password"),
+            password=get_auth_service().get_password_hash("hashed_password"),
             is_active=True,
         )
         session.add(user)
@@ -752,7 +751,7 @@ async def user_two(
 async def created_user_two_api_key(user_two: User) -> AsyncGenerator[ApiKey, None]:
     """Creates and yields an API key for the second user."""
     raw_key = f"user-two-key-{uuid4()}"
-    hashed_key = get_password_hash(raw_key)
+    hashed_key = get_auth_service().get_password_hash(raw_key)
     api_key = ApiKey(
         user_id=user_two.id,
         name="Test API Key for User Two",

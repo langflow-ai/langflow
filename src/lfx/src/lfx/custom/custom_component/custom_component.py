@@ -29,7 +29,7 @@ from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
 
     from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.base import Vertex

@@ -1,0 +1,20 @@
+{
+  "feature_flags": {
+    "mvp_components": false
+  },
+  "serialization_max_items_length": 1000,
+  "serialization_max_text_length": 6000,
+  "frontend_timeout": 0,
+  "auto_saving": true,
+  "auto_saving_interval": 1000,
+  "health_check_max_retries": 5,
+  "max_file_size_upload": 1024,
+  "webhook_polling_interval": 5000,
+  "public_flow_cleanup_interval": 3600,
+  "public_flow_expiration": 86400,
+  "event_delivery": "streaming",
+  "webhook_auth_enable": false,
+  "voice_mode_available": false,
+  "default_folder_name": "Starter Project",
+  "hide_getting_started_progress": false
+}

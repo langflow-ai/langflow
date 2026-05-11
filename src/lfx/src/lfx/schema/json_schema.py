@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
 
 from lfx.log.logger import logger
 
@@ -50,16 +50,23 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
     model_cache: dict[str, type[BaseModel]] = {}
+    # Tracks $def names currently being built to detect self-referential schemas
+    building: set[str] = set()
 
     def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
         if s is None:
             return {}
+        visited: set[str] = set()
         while "$ref" in s:
             ref_name = s["$ref"].split("/")[-1]
+            if ref_name in visited:
+                logger.warning("Parsing input schema: Circular $ref detected for '%s', treating as string", ref_name)
+                return {"type": "string"}
+            visited.add(ref_name)
             s = defs.get(ref_name)
             if s is None:
-                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                logger.warning("Parsing input schema: Definition '%s' not found", ref_name)
                 return {"type": "string"}
         return s
 
@@ -97,13 +104,31 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return str
 
         t = s.get("type", "any")  # Use string "any" as default instead of Any type
+        if isinstance(t, list):
+            # JSON Schema: "type": ["string", "null"] for nullable
+            non_null = [x for x in t if x != "null" and isinstance(x, str)]
+            if non_null:
+                prim = {
+                    "string": str,
+                    "integer": int,
+                    "number": float,
+                    "boolean": bool,
+                    "object": dict,
+                    "array": list,
+                }.get(non_null[0], Any)
+                return prim | None if "null" in t else prim
+            return Any
         if t == "array":
             item_schema = s.get("items", {})
             schema_type: Any = parse_type(item_schema)
             return list[schema_type]
 
         if t == "object":
-            # inline object not in $defs ⇒ anonymous nested model
+            # Generic object (no properties) ⇒ dict[str, Any] for free-form key-value pairs
+            # This preserves nested dictionaries (fixes issue #9881)
+            if not s.get("properties"):
+                return dict[str, Any]
+            # Inline object with defined properties ⇒ nested model
             return _build_model(f"AnonModel{len(model_cache)}", s)
 
         # primitive fallback
@@ -123,47 +148,65 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             refname = subschema["$ref"].split("/")[-1]
             if refname in model_cache:
                 return model_cache[refname]
+            # Self-referential: this $ref is already being built — fall back to dict
+            if refname in building:
+                logger.warning("Parsing input schema: Self-referential $ref '%s' detected, treating as dict", refname)
+                return dict  # type: ignore[return-value]
             target = defs.get(refname)
             if not target:
                 msg = f"Definition '{refname}' not found"
                 raise ValueError(msg)
-            cls = _build_model(refname, target)
+            building.add(refname)
+            try:
+                cls = _build_model(refname, target)
+            finally:
+                building.discard(refname)
             model_cache[refname] = cls
             return cls
 
         # Named anonymous or inline: avoid clashes by name
         if name in model_cache:
             return model_cache[name]
+        # Self-referential: this model name is already being built — fall back to dict
+        if name in building:
+            logger.warning("Parsing input schema: Self-referential model '%s' detected, treating as dict", name)
+            return dict  # type: ignore[return-value]
 
-        props = subschema.get("properties", {})
-        reqs = set(subschema.get("required", []))
-        fields: dict[str, Any] = {}
+        building.add(name)
+        try:
+            props = subschema.get("properties", {})
+            reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
+            fields: dict[str, Any] = {}
 
-        for prop_name, prop_schema in props.items():
-            py_type = parse_type(prop_schema)
-            is_required = prop_name in reqs
-            if not is_required:
-                py_type = py_type | None
-                default = prop_schema.get("default", None)
-            else:
-                default = ...  # required by Pydantic
+            for prop_name, prop_schema in props.items():
+                py_type = parse_type(prop_schema)
+                is_required = prop_name in reqs
+                if not is_required:
+                    py_type = py_type | None
+                    default = prop_schema.get("default", None)
+                else:
+                    default = ...  # required by Pydantic
 
-            # Add alias for camelCase if field name is snake_case
-            field_kwargs = {"description": prop_schema.get("description")}
-            if "_" in prop_name:
-                camel_case_name = _snake_to_camel(prop_name)
-                if camel_case_name != prop_name:  # Only add alias if it's different
-                    field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
+                # Add alias for camelCase if field name is snake_case
+                field_kwargs = {"description": prop_schema.get("description")}
+                if "_" in prop_name:
+                    camel_case_name = _snake_to_camel(prop_name)
+                    if camel_case_name != prop_name:  # Only add alias if it's different
+                        field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
 
-            fields[prop_name] = (py_type, Field(default, **field_kwargs))
+                fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
-        model_cls = create_model(name, **fields)
+            # Preserve extras unless schema sets additionalProperties:false (#9881, #10975).
+            extra_mode = "ignore" if subschema.get("additionalProperties") is False else "allow"
+            model_cls = create_model(name, __config__=ConfigDict(extra=extra_mode), **fields)
+        finally:
+            building.discard(name)
         model_cache[name] = model_cls
         return model_cls
 
     # build the top - level "InputSchema" from the root properties
     top_props = schema.get("properties", {})
-    top_reqs = set(schema.get("required", []))
+    top_reqs = {r for r in (schema.get("required") or []) if isinstance(r, str)}
     top_fields: dict[str, Any] = {}
 
     for fname, fdef in top_props.items():
@@ -183,4 +226,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
-    return create_model("InputSchema", **top_fields)
+    # Same JSON Schema rule applies at the root: preserve extras unless explicitly forbidden.
+    top_extra_mode = "ignore" if schema.get("additionalProperties") is False else "allow"
+    return create_model("InputSchema", __config__=ConfigDict(extra=top_extra_mode), **top_fields)

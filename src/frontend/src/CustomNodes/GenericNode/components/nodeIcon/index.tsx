@@ -35,11 +35,11 @@ export function NodeIcon({
     }
 
     return (
-      <div className="flex h-4 w-4 items-center justify-center">
+      <div className="flex h-4.5 w-4.5 items-center justify-center">
         <IconComponent
           strokeWidth={isLucideIcon ? ICON_STROKE_WIDTH : undefined}
           name={iconName}
-          className="h-4 w-4"
+          className="h-4.5 w-4.5"
         />
       </div>
     );

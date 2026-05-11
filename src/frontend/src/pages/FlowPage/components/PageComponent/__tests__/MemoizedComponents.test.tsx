@@ -1,12 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoizedSidebarTrigger } from "../MemoizedComponents";
-
-// Mock problematic dependencies first
-jest.mock("@/components/core/logCanvasControlsComponent", () => ({
-  __esModule: true,
-  default: () => <div data-testid="log-canvas-controls">Log Controls</div>,
-}));
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
@@ -36,11 +30,6 @@ jest.mock("@/customization/feature-flags", () => ({
 // Mock the sidebar hooks with proper Jest functions
 const mockToggleSidebar = jest.fn();
 const mockSetActiveSection = jest.fn();
-const mockUseSidebar = jest.fn(() => ({
-  open: false,
-  toggleSidebar: mockToggleSidebar,
-  setActiveSection: mockSetActiveSection,
-}));
 
 // Mock the UI components
 jest.mock("@/components/ui/sidebar", () => ({

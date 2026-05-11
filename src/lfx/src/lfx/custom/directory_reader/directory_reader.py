@@ -3,8 +3,8 @@ import asyncio
 import zlib
 from pathlib import Path
 
+import aiofiles
 import anyio
-from aiofile import async_open
 
 from lfx.custom.custom_component.component import Component
 from lfx.log.logger import logger
@@ -117,14 +117,14 @@ class DirectoryReader:
         if not await file_path_.is_file():
             return None
         try:
-            async with async_open(str(file_path_), encoding="utf-8") as file:
+            async with aiofiles.open(str(file_path_), encoding="utf-8") as file:
                 # UnicodeDecodeError: 'charmap' codec can't decode byte 0x9d in position 3069:
                 # character maps to <undefined>
                 return await file.read()
         except UnicodeDecodeError:
             # This is happening in Windows, so we need to open the file in binary mode
             # The file is always just a python file, so we can safely read it as utf-8
-            async with async_open(str(file_path_), "rb") as f:
+            async with aiofiles.open(str(file_path_), "rb") as f:
                 return (await f.read()).decode("utf-8")
 
     def get_files(self):

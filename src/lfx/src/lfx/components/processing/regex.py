@@ -31,7 +31,7 @@ class RegexExtractorComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="extract_matches"),
+        Output(display_name="JSON", name="data", method="extract_matches"),
         Output(display_name="Message", name="text", method="get_matches_text"),
     ]
 

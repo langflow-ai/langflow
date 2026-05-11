@@ -592,7 +592,7 @@
         "data": {
           "id": "note-O8fhi",
           "node": {
-            "description": "### 💡 Add your OpenAI API key here",
+            "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
             "template": {

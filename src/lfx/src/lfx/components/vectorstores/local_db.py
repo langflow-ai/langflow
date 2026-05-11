@@ -81,7 +81,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "JSON", "DataFrame", "Table"],
             is_list=True,
             info="Data to store. It will be embedded and indexed for semantic search.",
             show=True,
@@ -108,7 +108,7 @@ class LocalDBComponent(LCVectorStoreComponent):
         ),
     ]
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="perform_search"),
+        Output(display_name="Table", name="dataframe", method="perform_search"),
     ]
 
     def get_vector_store_directory(self, base_dir: str | Path) -> Path:

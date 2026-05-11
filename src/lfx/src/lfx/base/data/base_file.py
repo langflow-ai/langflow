@@ -146,7 +146,7 @@ class BaseFileComponent(Component, ABC):
                 " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
             ),
             required=False,
-            input_types=["Data", "Message"],
+            input_types=["Data", "JSON", "Message"],
             is_list=True,
             advanced=True,
         ),
@@ -239,15 +239,31 @@ class BaseFileComponent(Component, ABC):
                         file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
-        """Load files and return as Data objects.
+        """Load files and return as Data objects, with per-instance caching.
+
+        Results are cached keyed by the ``markdown`` attribute so that multiple
+        output methods that share the same processing parameters (e.g.
+        ``load_files_message`` and ``load_files_dataframe`` when both run with
+        ``markdown=False``) do not trigger redundant file processing.
 
         Returns:
             list[Data]: List of Data objects from all files
         """
+        # Use the markdown flag (default False) as the cache key so that
+        # structured and markdown outputs are cached independently.
+        markdown_flag = getattr(self, "markdown", False)
+        cache_attr = f"_load_files_core_cache_{markdown_flag}"
+        cache_paths_attr = f"_load_files_core_paths_{markdown_flag}"
+
+        current_paths = tuple(getattr(self, "path", []) or [])
+        if hasattr(self, cache_attr) and getattr(self, cache_paths_attr, None) == current_paths:
+            return getattr(self, cache_attr)
+
         data_list = self.load_files_base()
-        if not data_list:
-            return [Data()]
-        return data_list
+        result = data_list if data_list else [Data()]
+        setattr(self, cache_attr, result)
+        setattr(self, cache_paths_attr, current_paths)
+        return result
 
     def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
@@ -686,7 +702,10 @@ class BaseFileComponent(Component, ABC):
             data = file.data
 
             if path.is_dir():
-                # Recurse into directories
+                # Recurse into directories. Skip symlinks defensively so that a
+                # link planted in a previously-extracted bundle (or a directory
+                # the user pointed at) cannot be dereferenced into an arbitrary
+                # host file (GHSA-ccv6-r384-xp75).
                 collected_files.extend(
                     [
                         BaseFileComponent.BaseFile(
@@ -695,7 +714,7 @@ class BaseFileComponent(Component, ABC):
                             delete_after_processing=delete_after_processing,
                         )
                         for sub_path in path.rglob("*")
-                        if sub_path.is_file()
+                        if sub_path.is_file() and not sub_path.is_symlink()
                     ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
@@ -704,7 +723,11 @@ class BaseFileComponent(Component, ABC):
                 self._temp_dirs.append(temp_dir)
                 temp_dir_path = Path(temp_dir.name)
                 self._unpack_bundle(path, temp_dir_path)
-                subpaths = list(temp_dir_path.iterdir())
+                # Drop any symlink that may have slipped through extraction.
+                # `_unpack_bundle` rejects link members for TAR archives, but
+                # this guard keeps the contract in place for any future bundle
+                # type added to SUPPORTED_BUNDLE_EXTENSIONS.
+                subpaths = [p for p in temp_dir_path.iterdir() if not p.is_symlink()]
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 collected_files.extend(
                     [
@@ -752,11 +775,24 @@ class BaseFileComponent(Component, ABC):
                 bundle.extract(member, path=output_dir)
 
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
-            """Safely extract TAR files."""
+            """Safely extract TAR files.
+
+            Only regular files and directories are extracted. Symlinks, hardlinks,
+            and device/FIFO members are rejected because they could be made to
+            point at arbitrary locations on the host filesystem and lead to
+            arbitrary file read once the extracted entries are subsequently
+            ingested by `process_files()` (GHSA-ccv6-r384-xp75).
+            """
             for member in bundle.getmembers():
                 # Filter out resource fork information for automatic production of mac
                 if Path(member.name).name.startswith("._"):
                     continue
+                if member.issym() or member.islnk():
+                    msg = f"Refusing to extract link member from TAR File: {member.name!r} -> {member.linkname!r}"
+                    raise ValueError(msg)
+                if not (member.isfile() or member.isdir()):
+                    msg = f"Refusing to extract non-regular TAR member: {member.name!r}"
+                    raise ValueError(msg)
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):

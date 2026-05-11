@@ -19,7 +19,6 @@ class PromptComponent(Component):
     icon = "prompts"
     trace_type = "prompt"
     name = "Prompt Template"
-    priority = 0  # Set priority to 0 to make it appear first
 
     inputs = [
         PromptInput(name="template", display_name="Template"),
@@ -36,6 +35,7 @@ class PromptComponent(Component):
             display_name="Tool Placeholder",
             tool_mode=True,
             advanced=True,
+            show=False,
             info="A placeholder input for tool mode.",
         ),
     ]

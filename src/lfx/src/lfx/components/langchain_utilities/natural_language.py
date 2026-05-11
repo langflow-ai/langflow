@@ -32,7 +32,7 @@ class NaturalLanguageTextSplitterComponent(LCTextSplitterComponent):
             name="data_input",
             display_name="Input",
             info="The text data to be split.",
-            input_types=["Document", "Data"],
+            input_types=["Document", "Data", "JSON"],
             required=True,
         ),
         MessageTextInput(

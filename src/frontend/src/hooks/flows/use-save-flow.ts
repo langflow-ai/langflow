@@ -70,54 +70,58 @@ const useSaveFlow = () => {
             endpoint_name,
             locked,
           } = flow;
-          if (!currentSavedFlow?.data?.nodes.length || data!.nodes.length > 0) {
-            mutate(
-              {
-                id,
-                name,
-                data: data!,
-                description,
-                folder_id,
-                endpoint_name,
-                locked,
-              },
-              {
-                onSuccess: (updatedFlow) => {
-                  const flows = useFlowsManagerStore.getState().flows;
-                  setSaveLoading(false);
-                  if (flows) {
-                    // updates flow in state
-                    setFlows(
-                      flows.map((flow) => {
-                        if (flow.id === updatedFlow.id) {
-                          return updatedFlow;
-                        }
-                        return flow;
-                      }),
-                    );
+          mutate(
+            {
+              id,
+              name,
+              data: data!,
+              description,
+              folder_id,
+              endpoint_name,
+              locked,
+            },
+            {
+              onSuccess: (updatedFlow) => {
+                const flows = useFlowsManagerStore.getState().flows;
+                setSaveLoading(false);
+                if (flows) {
+                  // updates flow in state
+                  setFlows(
+                    flows.map((flow) => {
+                      if (flow.id === updatedFlow.id) {
+                        return updatedFlow;
+                      }
+                      return flow;
+                    }),
+                  );
+                  // Only update useFlowStore.currentFlow when on the flow page.
+                  // When saving from the list page (e.g., renaming via settings modal),
+                  // setting this would leave stale unprocessed flow data in the store,
+                  // causing a crash when the user later navigates to the flow page.
+                  if (useFlowStore.getState().onFlowPage) {
                     setCurrentFlow(updatedFlow);
-                    resolve();
-                  } else {
-                    setErrorData({
-                      title: "Failed to save flow",
-                      list: ["Flows variable undefined"],
-                    });
-                    reject(new Error("Flows variable undefined"));
                   }
-                },
-                onError: (e) => {
+                  resolve();
+                } else {
                   setErrorData({
                     title: "Failed to save flow",
-                    list: [e.message],
+                    list: ["Flows variable undefined"],
                   });
-                  setSaveLoading(false);
-                  reject(e);
-                },
+                  reject(new Error("Flows variable undefined"));
+                }
               },
-            );
-          } else {
-            setSaveLoading(false);
-          }
+              onError: (e: any) => {
+                const detail =
+                  e.response?.data?.detail || e.message || "Unknown error";
+                setErrorData({
+                  title: "Failed to save flow",
+                  list: [detail],
+                });
+                setSaveLoading(false);
+                reject(e);
+              },
+            },
+          );
         } else {
           setErrorData({
             title: "Failed to save flow",

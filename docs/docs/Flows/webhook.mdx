@@ -57,7 +57,7 @@ To use the **Webhook** component in a flow, do the following:
 
     Alternatively, to get a complete `POST /v1/webhook/$FLOW_ID` code snippet, open the flow's [**API access** pane](/concepts-publish#api-access), and then click the **Webhook curl** tab.
     You can also modify the default curl command in the **Webhook** component's **curl** field.
-    If this field isn't visible by default, click the **Webhook** component, and then click <Icon name="SlidersHorizontal" aria-hidden="true"/> **Controls** in the [component's header menu](/concepts-components#component-menus).
+    If this field isn't visible by default, click the **Webhook** component to expose the [component inspection panel](/concepts-components#component-menus).
 
 7. Send a POST request with `data` to the flow's `webhook` endpoint to trigger the flow.
 
@@ -90,9 +90,9 @@ To learn about triggering flows with payloads from external applications, see th
 
 ## Require authentication for webhooks {#require-authentication-for-webhooks}
 
-By default, webhooks run as the flow owner without authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=False`).
+By default, webhooks require API key authentication (`LANGFLOW_WEBHOOK_AUTH_ENABLE=True`).
 
-To require API key authentication for webhooks, in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=True`.
+To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow `.env` file, set `LANGFLOW_WEBHOOK_AUTH_ENABLE=False`. When disabled, requests to the webhook endpoint are treated as being sent by the flow owner.
 
 When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.
 

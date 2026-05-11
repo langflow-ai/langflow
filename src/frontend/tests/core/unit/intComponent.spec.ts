@@ -1,7 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await awaitBootstrapTest(page);
@@ -23,12 +28,14 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .dragTo(page.locator('//*[@id="react-flow-id"]'));
   await adjustScreenView(page, { numberOfZoomOut: 2 });
 
+  await disableInspectPanel(page);
+
   await page.getByTestId("div-generic-node").click();
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await openAdvancedOptions(page);
   await page.getByTestId("showmax_tokens").click();
 
-  await page.getByText("Close").last().click();
+  await closeAdvancedOptions(page);
   await page.getByTestId("int_int_max_tokens").click();
   await page.getByTestId("int_int_max_tokens").fill("100000");
 
@@ -48,7 +55,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
   await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-  await page.getByTestId("edit-button-modal").last().click();
+  await openAdvancedOptions(page);
 
   value = await page.getByTestId("int_int_edit_max_tokens").inputValue();
 
@@ -118,14 +125,14 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     await page.locator('//*[@id="showtemperature"]').isChecked(),
   ).toBeFalsy();
 
-  await page.getByText("Close").last().click();
+  await closeAdvancedOptions(page);
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
   const elementCount = await plusButtonLocator?.count();
   if (elementCount === 0) {
     expect(true).toBeTruthy();
 
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     const valueEditNode = await page
       .getByTestId("int_int_max_tokens")
@@ -133,7 +140,7 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
 
     expect(valueEditNode).toBe("50000");
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
     await page.getByTestId("int_int_max_tokens").click();
     await page.getByTestId("int_int_max_tokens").fill("3");
 
@@ -150,4 +157,6 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
     expect(value).toBe("");
   }
+
+  await enableInspectPanel(page);
 });

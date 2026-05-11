@@ -32,7 +32,9 @@ from sqlmodel import select
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
-from langflow.services.auth.utils import check_key, get_current_user_by_jwt
+from langflow.services.auth.utils import get_current_user_from_access_token
+from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
 from langflow.services.utils import initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
@@ -41,8 +43,7 @@ from langflow.utils.version import is_pre_release as langflow_is_pre_release
 app = typer.Typer(no_args_is_help=True)
 console = Console()
 if platform.system() == "Windows":
-    console = Console(legacy_windows=True, emoji=False)  # Initialize console with Windows-safe settings
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
+    console = Console(legacy_windows=True, emoji=False)
 
 # Add LFX commands as a sub-app
 try:
@@ -168,6 +169,9 @@ def wait_for_server_ready(host, port, protocol) -> None:
 
     status_code = 0
     while status_code != httpx.codes.OK:
+        # If the server process died (e.g. database version check failed), stop waiting.
+        if process_manager.webapp_process and not process_manager.webapp_process.is_alive():
+            sys.exit(process_manager.webapp_process.exitcode or 1)
         try:
             status_code = httpx.get(
                 f"{protocol}://{health_check_host}:{port}/health",
@@ -315,7 +319,7 @@ def run(
                 settings_service.set(arg, values[arg])
             elif hasattr(settings_service.auth_settings, arg):
                 settings_service.auth_settings.set(arg, values[arg])
-            logger.debug(f"Loading config from cli parameter '{arg}': '{values[arg]}'")
+            logger.debug("Loading config from cli parameter '%s'", arg)
 
         # Get final values from settings
         host = settings_service.settings.host
@@ -339,6 +343,15 @@ def run(
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
+        # Pre-flight: fail fast if PostgreSQL version is too old, before
+        # spawning any server process (avoids messy lifespan / worker errors).
+        database_url = settings_service.settings.database_url
+        if database_url:
+            try:
+                check_postgresql_version_sync(database_url)
+            except UnsupportedPostgreSQLVersionError:
+                sys.exit(1)
+
         # check if port is being used
         if is_port_in_use(port, host):
             port = get_free_port(port)
@@ -368,7 +381,17 @@ def run(
             progress.print_summary()
             print_banner(str(host), int(port or 7860), protocol)
 
-        # Blocking call, so must be outside of the progress step
+        from langflow.helpers.windows_postgres_helper import LANGFLOW_DATABASE_URL, POSTGRESQL_PREFIXES
+
+        db_url = os.environ.get(LANGFLOW_DATABASE_URL, "")
+        loop_type = "asyncio"
+        if (
+            platform.system() == "Windows"
+            and db_url
+            and any(db_url.startswith(prefix) for prefix in POSTGRESQL_PREFIXES)
+        ):
+            loop_type = "none"  # Preserve pre-configured WindowsSelectorEventLoopPolicy
+
         uvicorn.run(
             app,
             host=host,
@@ -376,7 +399,7 @@ def run(
             log_level=log_level,
             reload=False,
             workers=get_number_of_workers(workers),
-            loop="asyncio",
+            loop=loop_type,
         )
     else:
         with progress.step(6):
@@ -390,6 +413,7 @@ def run(
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
                 "log_level": log_level.lower() if log_level is not None else "info",
+                "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
             }
             server = LangflowApplication(app, options)
 
@@ -735,7 +759,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
                 # Try JWT first
                 user = None
                 try:
-                    user = await get_current_user_by_jwt(auth_token, session)
+                    user = await get_current_user_from_access_token(auth_token, session)
                 except (InvalidTokenError, HTTPException):
                     # Try API key
                     api_key_result = await check_key(session, auth_token)
@@ -756,9 +780,10 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     # Auth complete, create the superuser
     async with session_scope() as session:
-        from langflow.services.auth.utils import create_super_user
+        from langflow.services.deps import get_auth_service
 
-        if await create_super_user(db=session, username=username, password=password):
+        auth = get_auth_service()
+        if await auth.create_super_user(username, password, db=session):
             # Verify that the superuser was created
             from langflow.services.database.models.user.model import User
 

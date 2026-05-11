@@ -5,13 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiofile import async_open
+import aiofiles
 
 from langflow.logging.logger import logger
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    import anyio
 
     from langflow.services.session.service import SessionService
     from langflow.services.settings.service import SettingsService
@@ -37,6 +39,48 @@ class LocalStorageService(StorageService):
         # Initialize base class with services
         super().__init__(session_service, settings_service)
         # Base class already sets self.data_dir as anyio.Path from settings_service.settings.config_dir
+
+    async def _validated_path(self, flow_id: str, file_name: str) -> anyio.Path:
+        """Return a path inside the flow directory or raise if traversal is attempted.
+
+        Centralizes the path-containment check used across every file operation so
+        a single bug cannot re-introduce the traversal issue on a subset of methods.
+        """
+        if not isinstance(file_name, str) or "/" in file_name or "\\" in file_name or ".." in file_name:
+            await logger.aerror(
+                f"Invalid file_name contains path separators or traversal sequences: flow_id='{flow_id}'"
+            )
+            msg = "Invalid file name: contains path separators"
+            raise ValueError(msg)
+
+        folder_path = self.data_dir / flow_id
+        file_path = folder_path / file_name
+
+        try:
+            resolved_folder = await folder_path.resolve()
+            resolved_file = await file_path.resolve()
+            if not resolved_file.is_relative_to(resolved_folder):
+                await logger.aerror(
+                    f"Path traversal attempt detected for flow_id='{flow_id}'. "
+                    "File path would escape flow directory boundary."
+                )
+                msg = "Invalid file path: path traversal detected"
+                raise ValueError(msg)
+        except ValueError:
+            raise
+        except AttributeError:
+            resolved_folder_str = str(await folder_path.resolve())
+            resolved_file_str = str(await file_path.resolve())
+            if not resolved_file_str.startswith(resolved_folder_str):
+                await logger.aerror(f"Path traversal attempt detected for flow_id='{flow_id}' (fallback check)")
+                msg = "Invalid file path: path traversal detected"
+                raise ValueError(msg) from None
+        except Exception as e:
+            await logger.aerror(f"Error validating file path for flow_id='{flow_id}': {type(e).__name__}")
+            msg = "Invalid file path"
+            raise ValueError(msg) from e
+
+        return file_path
 
     def resolve_component_path(self, logical_path: str) -> str:
         """Convert logical path to absolute filesystem path for local storage.
@@ -110,14 +154,18 @@ class LocalStorageService(StorageService):
             FileNotFoundError: If the specified flow does not exist.
             IsADirectoryError: If the file name is a directory.
             PermissionError: If there is no permission to write the file.
+            ValueError: If path traversal is detected (security violation).
         """
+        # SECURITY: Validate BEFORE creating any directories to prevent race conditions
+        # and path traversal. Shared with all other read/write/delete entry points so
+        # the storage boundary cannot be bypassed by any single call site.
+        file_path = await self._validated_path(flow_id, file_name)
         folder_path = self.data_dir / flow_id
         await folder_path.mkdir(parents=True, exist_ok=True)
-        file_path = folder_path / file_name
 
         try:
             mode = "ab" if append else "wb"
-            async with async_open(str(file_path), mode) as f:
+            async with aiofiles.open(str(file_path), mode) as f:
                 await f.write(data)
             action = "appended to" if append else "saved"
             await logger.ainfo(f"File {file_name} {action} successfully in flow {flow_id}.")
@@ -137,14 +185,15 @@ class LocalStorageService(StorageService):
 
         Raises:
             FileNotFoundError: If the file does not exist.
+            ValueError: If path traversal is detected (security violation).
         """
-        file_path = self.data_dir / flow_id / file_name
+        file_path = await self._validated_path(flow_id, file_name)
         if not await file_path.exists():
             await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             content = await f.read()
 
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
@@ -152,13 +201,13 @@ class LocalStorageService(StorageService):
 
     async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
-        file_path = self.data_dir / flow_id / file_name
+        file_path = await self._validated_path(flow_id, file_name)
         if not await file_path.exists():
             await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"
             raise FileNotFoundError(msg)
 
-        async with async_open(str(file_path), "rb") as f:
+        async with aiofiles.open(str(file_path), "rb") as f:
             while True:
                 chunk = await f.read(chunk_size)
                 if not chunk:
@@ -200,8 +249,9 @@ class LocalStorageService(StorageService):
 
         Raises:
             FileNotFoundError: If the file does not exist.
+            ValueError: If path traversal is detected (security violation).
         """
-        file_path = self.data_dir / flow_id / file_name
+        file_path = await self._validated_path(flow_id, file_name)
         if await file_path.exists():
             await file_path.unlink()
             await logger.ainfo(f"File {file_name} deleted successfully from flow {flow_id}.")
@@ -220,8 +270,9 @@ class LocalStorageService(StorageService):
 
         Raises:
             FileNotFoundError: If the file does not exist.
+            ValueError: If path traversal is detected (security violation).
         """
-        file_path = self.data_dir / flow_id / file_name
+        file_path = await self._validated_path(flow_id, file_name)
         if not await file_path.exists():
             await logger.awarning(f"File {file_name} not found in flow {flow_id}.")
             msg = f"File {file_name} not found in flow {flow_id}"

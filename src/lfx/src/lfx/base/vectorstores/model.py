@@ -60,7 +60,7 @@ class LCVectorStoreComponent(Component):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame"],
+            input_types=["Data", "DataFrame", "Table"],
             is_list=True,
         ),
         QueryInput(
@@ -86,7 +86,7 @@ class LCVectorStoreComponent(Component):
             name="search_results",
             method="search_documents",
         ),
-        Output(display_name="DataFrame", name="dataframe", method="as_dataframe"),
+        Output(display_name="Table", name="dataframe", method="as_dataframe"),
     ]
 
     def _validate_outputs(self) -> None:

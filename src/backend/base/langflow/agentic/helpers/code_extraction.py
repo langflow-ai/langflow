@@ -51,3 +51,7 @@ def _find_component_code(matches: list[str]) -> str | None:
         if "class " in match and "Component" in match:
             return match.strip()
     return None
+
+
+# Alias for backward compatibility
+extract_component_code = extract_python_code

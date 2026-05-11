@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
@@ -13,28 +14,35 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { FlowType } from "@/types/flow";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import type { FlowTabType } from "../../types";
+import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
+import { isFolderEmpty } from "./utils/isFolderEmpty";
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
+  const location = useLocation();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
+  const [isEmptyFolder, setIsEmptyFolder] = useState(true);
   const navigate = useCustomNavigate();
 
-  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
-    type,
+  const [flowType, setFlowType] = useState<FlowTabType>(
+    (location.state as Record<string, unknown>)?.flowType === "deployments"
+      ? "deployments"
+      : type,
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
@@ -93,12 +101,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setPageIndex(1);
   }, []);
 
-  const isEmptyFolder =
-    flows?.find(
-      (flow) =>
-        flow.folder_id === (folderId ?? myCollectionId) &&
-        (ENABLE_MCP ? flow.is_component === false : true),
-    ) === undefined;
+  useEffect(() => {
+    setIsEmptyFolder(
+      isFolderEmpty({
+        flows,
+        folderId: folderId ?? myCollectionId ?? "",
+        folderTotal: folderData?.flows?.total,
+        enableMcp: ENABLE_MCP,
+      }),
+    );
+  }, [flows, folderId, myCollectionId, folderData]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -244,7 +256,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   return (
     <CardsWrapComponent
       onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
-      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
+      dragMessage={
+        isEmptyFolder
+          ? t("home.dragFlowsOrComponents")
+          : t("home.dragFlowType", { flowType })
+      }
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
@@ -283,6 +299,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     )
                   ) : flowType === "mcp" ? (
                     <CustomMcpServerTab folderName={folderName} />
+                  ) : flowType === "deployments" ? (
+                    <DeploymentsPage />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
@@ -315,29 +333,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                         ))}
                       </div>
                     )
-                  ) : flowType === "flows" ? (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      No flows in this project.{" "}
-                      <a
-                        onClick={() => setNewProjectModal(true)}
-                        className="cursor-pointer underline"
-                      >
-                        Create a new flow
-                      </a>
-                      , or browse the store.
-                    </div>
                   ) : (
                     <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      No saved or custom components. Learn more about{" "}
-                      <a
-                        href="https://docs.langflow.org/components-custom-components"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline"
-                      >
-                        creating custom components
-                      </a>
-                      , or browse the store.
+                      {t("home.flowTypeNotSupported", { flowType })}
                     </div>
                   )}
                 </div>

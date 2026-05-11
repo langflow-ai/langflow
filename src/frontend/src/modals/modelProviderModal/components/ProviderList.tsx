@@ -25,25 +25,24 @@ const ProviderList = ({
   } = useGetModelProviders({});
 
   const filteredProviders: Provider[] = useMemo(() => {
-    return rawProviders
-      .map((provider) => {
-        const matchingModels =
-          provider?.models?.filter((model) =>
-            modelType === "all"
-              ? true
-              : model?.metadata?.model_type === modelType,
-          ) || [];
+    return rawProviders.map((provider) => {
+      const matchingModels =
+        provider?.models?.filter((model) =>
+          modelType === "all"
+            ? true
+            : model?.metadata?.model_type === modelType,
+        ) || [];
 
-        return {
-          provider: provider.provider,
-          icon: provider.icon,
-          is_enabled: provider.is_enabled,
-          model_count: matchingModels.length,
-          models: matchingModels,
-          api_docs_url: provider.api_docs_url,
-        };
-      })
-      .filter((provider) => provider.model_count > 0);
+      return {
+        provider: provider.provider,
+        icon: provider.icon,
+        is_enabled: provider.is_enabled,
+        is_configured: provider.is_configured,
+        model_count: matchingModels.length,
+        models: matchingModels,
+        api_docs_url: provider.api_docs_url,
+      };
+    });
   }, [rawProviders, modelType]);
 
   const handleProviderSelect = (provider: Provider) => {

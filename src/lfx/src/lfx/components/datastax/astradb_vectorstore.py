@@ -2,10 +2,26 @@ from astrapy import DataAPIClient
 from langchain_core.documents import Document
 
 from lfx.base.datastax.astradb_base import AstraDBBaseComponent
+from lfx.base.models.unified_models import (
+    apply_provider_variable_config_to_build_config,
+    get_embedding_model_options,
+    get_embeddings,
+    update_model_options_in_build_config,
+)
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
 from lfx.helpers.data import docs_to_data
-from lfx.io import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, NestedDictInput, QueryInput, StrInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    ModelInput,
+    NestedDictInput,
+    QueryInput,
+    SecretStrInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 from lfx.serialization import serialize
 from lfx.utils.version import get_version_info
@@ -22,13 +38,22 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
     inputs = [
         *AstraDBBaseComponent.inputs,
         *LCVectorStoreComponent.inputs,
-        HandleInput(
+        ModelInput(
             name="embedding_model",
             display_name="Embedding Model",
-            input_types=["Embeddings"],
             info="Specify the Embedding Model. Not required for Astra Vectorize collections.",
             required=False,
             show=True,
+            model_type="embedding",
+            input_types=["Embeddings"],
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            real_time_refresh=True,
+            advanced=True,
         ),
         StrInput(
             name="content_field",
@@ -124,6 +149,41 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         field_name: str | None = None,
     ) -> dict:
         """Update build configuration with proper handling of embedding and search options."""
+        # Update model options for ModelInput only when relevant.
+        # Only refresh when: initial load (None), embedding_model field changes, or api_key changes.
+        #
+        # Note: this intentionally uses update_model_options_in_build_config directly rather than
+        # handle_model_input_update because:
+        #   1. The model field is named "embedding_model" (not "model"), requiring model_field_name.
+        #   2. The refresh is conditional - we skip it for unrelated fields (e.g. database_name,
+        #      collection_name) to avoid unnecessary work.
+        #   3. AstraDB manages its own provider-field visibility (embedding_generation_provider
+        #      dialog), so the generic provider-field hide/show steps in handle_model_input_update
+        #      are not applicable here.
+        if field_name in (None, "embedding_model", "api_key"):
+            build_config = update_model_options_in_build_config(
+                component=self,
+                build_config=build_config,
+                cache_key_prefix="embedding_model_options",
+                get_options_func=get_embedding_model_options,
+                field_name=field_name,
+                field_value=field_value if field_name == "embedding_model" else None,
+                model_field_name="embedding_model",
+            )
+
+            # Auto-populate API key based on the selected embedding model's provider.
+            # Skip when user directly edits api_key to preserve their value.
+            if field_name != "api_key":
+                model_value = build_config.get("embedding_model", {}).get("value")
+                if isinstance(model_value, list) and model_value:
+                    provider = model_value[0].get("provider", "")
+                    if provider:
+                        build_config = apply_provider_variable_config_to_build_config(build_config, provider)
+
+            # Ensure the API key field is always visible
+            if "api_key" in build_config:
+                build_config["api_key"]["show"] = True
+
         # Handle base astra db build config updates
         build_config = await super().update_build_config(
             build_config,
@@ -268,8 +328,15 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             )
             raise ImportError(msg) from e
 
-        # Get the embedding model and additional params
-        embedding_params = {"embedding": self.embedding_model} if self.embedding_model else {}
+        # Resolve the embedding model from ModelInput selection to an Embeddings instance
+        embedding = None
+        if self.embedding_model:
+            embedding = get_embeddings(
+                model=self.embedding_model,
+                user_id=self.user_id,
+                api_key=getattr(self, "api_key", None),
+            )
+        embedding_params = {"embedding": embedding} if embedding else {}
 
         # Get the additional parameters
         additional_params = self.astradb_vectorstore_kwargs or {}

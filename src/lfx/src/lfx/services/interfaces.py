@@ -7,6 +7,75 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+    from uuid import UUID
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from lfx.services.adapters.deployment.schema import (
+        ConfigListParams,
+        ConfigListResult,
+        DeploymentCreate,
+        DeploymentCreateResult,
+        DeploymentDeleteResult,
+        DeploymentDuplicateResult,
+        DeploymentGetResult,
+        DeploymentListLlmsResult,
+        DeploymentListParams,
+        DeploymentListResult,
+        DeploymentListTypesResult,
+        DeploymentStatusResult,
+        DeploymentType,
+        DeploymentUpdate,
+        DeploymentUpdateResult,
+        ExecutionCreate,
+        ExecutionCreateResult,
+        ExecutionStatusResult,
+        IdLike,
+        RedeployResult,
+        SnapshotListParams,
+        SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
+    )
+    from lfx.services.settings.base import Settings
+
+
+class AuthUserProtocol(Protocol):
+    """Authenticated user object (id, username, is_active, is_superuser).
+
+    Implementations may use User or UserRead from the database layer; this protocol
+    describes the surface needed by consumers of the auth service.
+    """
+
+    id: UUID
+    username: str
+    is_active: bool
+    is_superuser: bool
+
+
+class AuthServiceProtocol(Protocol):
+    """Protocol for auth service (minimal surface for dependency injection)."""
+
+    @abstractmethod
+    async def get_current_user(
+        self,
+        token: str | None,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession,
+    ) -> AuthUserProtocol:
+        """Get the current authenticated user from token or API key."""
+        ...
+
+    @abstractmethod
+    async def api_key_security(
+        self,
+        query_param: str | None,
+        header_param: str | None,
+        db: AsyncSession | None = None,
+    ) -> AuthUserProtocol | None:
+        """Validate API key from query or header. Returns user or None."""
+        ...
 
 
 class DatabaseServiceProtocol(Protocol):
@@ -52,7 +121,7 @@ class SettingsServiceProtocol(Protocol):
 
     @property
     @abstractmethod
-    def settings(self) -> Any:
+    def settings(self) -> Settings:
         """Get settings object."""
         ...
 
@@ -160,4 +229,199 @@ class TransactionServiceProtocol(Protocol):
         Returns:
             True if transaction logging is enabled, False otherwise.
         """
+        ...
+
+
+@runtime_checkable
+class DeploymentServiceProtocol(Protocol):
+    """Protocol for deployment provider services.
+
+    This protocol exposes adapter-agnostic deployment contracts:
+    top-level fields are minimal generic metadata, while provider-specific
+    details are carried in ``provider_data``/``provider_result`` fields.
+
+    Keep this protocol intentionally narrow (consumer-facing CRUD + status).
+    Adapter-specific or advanced operations are defined on concrete deployment
+    service classes.
+
+    ``deployment_type`` is accepted as an optional routing hint by operations
+    that act on a specific deployment. For execution creation, it is provided
+    in the ``ExecutionCreate`` payload.
+    """
+
+    @abstractmethod
+    async def create(
+        self,
+        *,
+        user_id: IdLike,
+        payload: DeploymentCreate,
+        db: AsyncSession,
+    ) -> DeploymentCreateResult:
+        """Create a new deployment in the provider."""
+        ...
+
+    @abstractmethod
+    async def list_types(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListTypesResult:
+        """List deployment types supported by the provider."""
+        ...
+
+    @abstractmethod
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
+        ...
+
+    @abstractmethod
+    async def list(
+        self,
+        *,
+        user_id: IdLike,
+        params: DeploymentListParams | None = None,
+        db: AsyncSession,
+    ) -> DeploymentListResult:
+        """List deployments visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def get(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> DeploymentGetResult:
+        """Return deployment metadata by provider ID."""
+        ...
+
+    @abstractmethod
+    async def update(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        payload: DeploymentUpdate,
+        db: AsyncSession,
+    ) -> DeploymentUpdateResult:
+        """Update deployment inputs and apply changes in the provider."""
+        # TODO: Add a rollback-update interface contract for adapters so callers
+        # can compensate provider-side updates when downstream local sync fails.
+        ...
+
+    @abstractmethod
+    async def redeploy(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> RedeployResult:
+        """Re-apply current deployment inputs without changing them."""
+        ...
+
+    @abstractmethod
+    async def duplicate(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> DeploymentDuplicateResult:
+        """Create a new deployment using the same inputs as the source."""
+        ...
+
+    @abstractmethod
+    async def delete(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> DeploymentDeleteResult:
+        """Delete the deployment from the provider."""
+        ...
+
+    @abstractmethod
+    async def get_status(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> DeploymentStatusResult:
+        """Return provider-reported health/status for the deployment."""
+        ...
+
+    @abstractmethod
+    async def create_execution(
+        self,
+        *,
+        user_id: IdLike,
+        payload: ExecutionCreate,
+        db: AsyncSession,
+    ) -> ExecutionCreateResult:
+        """Run a provider-agnostic deployment execution."""
+        ...
+
+    @abstractmethod
+    async def get_execution(
+        self,
+        *,
+        user_id: IdLike,
+        execution_id: IdLike,
+        deployment_type: DeploymentType | None = None,
+        db: AsyncSession,
+    ) -> ExecutionStatusResult:
+        """Get provider-agnostic deployment execution state/output."""
+        ...
+
+    @abstractmethod
+    async def list_configs(
+        self,
+        *,
+        user_id: IdLike,
+        params: ConfigListParams | None = None,
+        db: AsyncSession,
+    ) -> ConfigListResult:
+        """List configs visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def list_snapshots(
+        self,
+        *,
+        user_id: IdLike,
+        params: SnapshotListParams | None = None,
+        db: AsyncSession,
+    ) -> SnapshotListResult:
+        """List snapshots visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
+        ...
+
+    @abstractmethod
+    async def teardown(self) -> None:
+        """Teardown the deployment service."""
         ...

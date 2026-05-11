@@ -32,9 +32,9 @@ test(
     });
 
     // Create random usernames, passwords and flow names for the test
-    const userAName = "user_a_" + Math.random().toString(36).substring(5);
-    const userAPassword = "pass_a_" + Math.random().toString(36).substring(5);
-    const userAFlowName = "flow_a_" + Math.random().toString(36).substring(5);
+    const userAName = "user_a_" + crypto.randomUUID().substring(0, 8);
+    const userAPassword = "pass_a_" + crypto.randomUUID().substring(0, 8);
+    const userAFlowName = "flow_a_" + crypto.randomUUID().substring(0, 8);
 
     // Log in as admin and create test user
     await page.goto("/");

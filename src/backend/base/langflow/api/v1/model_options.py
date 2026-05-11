@@ -3,7 +3,7 @@ from lfx.base.models.unified_models import get_embedding_model_options, get_lang
 
 from langflow.api.utils import CurrentActiveUser
 
-router = APIRouter(prefix="/model_options", tags=["Model Options"])
+router = APIRouter(prefix="/model_options", tags=["Model Options"], include_in_schema=False)
 
 
 @router.get("/language", status_code=200)

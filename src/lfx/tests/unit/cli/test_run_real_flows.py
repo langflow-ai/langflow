@@ -1,13 +1,48 @@
 """Integration tests for the run command with real flows."""
 
+import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.__main__ import app
+from lfx.interface.components import component_cache
 from typer.testing import CliRunner
 
 runner = CliRunner()
+
+
+def _hash(code: str) -> str:
+    return hashlib.sha256(code.encode("utf-8")).hexdigest()[:12]
+
+
+def _builtin_hashes_from_flow(flow: dict) -> dict[str, set[str]]:
+    type_to_hash: dict[str, set[str]] = {}
+
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        component_type = node_data.get("type")
+        if component_type == "CustomComponent":
+            continue
+
+        node_code_field = node_data.get("node", {}).get("template", {}).get("code", {})
+        node_code = node_code_field.get("value") if isinstance(node_code_field, dict) else None
+        if not node_code or not component_type:
+            continue
+
+        type_to_hash.setdefault(component_type, set()).add(_hash(node_code))
+
+    return type_to_hash
+
+
+@pytest.fixture(autouse=True)
+def allow_standard_cli_flow_execution(monkeypatch):
+    """Pin the documented default so real-flow tests don't depend on implicit settings state."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
 
 class TestExecuteRealFlows:
@@ -27,6 +62,11 @@ class TestExecuteRealFlows:
     def simple_chat_py(self, test_data_dir):
         """Path to the simple chat Python script."""
         return test_data_dir / "simple_chat_no_llm.py"
+
+    @pytest.fixture
+    def webhook_custom_json(self, test_data_dir):
+        """Path to a real flow fixture that includes custom components."""
+        return test_data_dir / "WebhookTest.json"
 
     def test_run_json_flow_basic(self, simple_chat_json):
         """Test executing a basic JSON flow."""
@@ -174,6 +214,36 @@ class TestExecuteRealFlows:
         assert output["success"] is True
         assert "result" in output
         assert "Hello from Python!" in output["result"]
+
+    def test_run_json_flow_blocks_real_custom_component_fixture(self, webhook_custom_json):
+        """Test that a real saved custom-component flow is blocked when custom components are disabled."""
+        flow = json.loads(webhook_custom_json.read_text())
+        settings_service = SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False))
+
+        with (
+            patch(
+                "lfx.services.deps.get_settings_service",
+                return_value=settings_service,
+            ),
+            patch(
+                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                new=AsyncMock(return_value=_builtin_hashes_from_flow(flow)),
+            ),
+            patch.object(component_cache, "type_to_current_hash", _builtin_hashes_from_flow(flow)),
+        ):
+            result = runner.invoke(
+                app,
+                ["run", "--no-check-variables", str(webhook_custom_json)],
+            )
+
+        assert result.exit_code == 1
+
+        error_output = json.loads(result.stdout)
+        assert error_output["success"] is False
+        assert error_output["exception_type"] == "CustomComponentValidationError"
+        assert "custom components are not allowed" in error_output["exception_message"]
+        assert "Async Component" in error_output["exception_message"]
+        assert "Custom Component" in error_output["exception_message"]
 
     def test_run_no_input_value(self, simple_chat_json):
         """Test executing without input value."""
@@ -427,6 +497,27 @@ class TestAsyncFunctionality:
         assert result.exit_code == 0
 
         # If async_start wasn't working, we'd get an error
-        output = json.loads(result.stdout)
+        json_output = result.stdout if result.stdout else result.output
+
+        json_lines = []
+        in_json = False
+        brace_count = 0
+
+        for line in json_output.split("\n"):
+            line_stripped = line.strip()
+            if not in_json and line_stripped.startswith("{"):
+                in_json = True
+                json_lines = [line]
+                brace_count = line.count("{") - line.count("}")
+            elif in_json:
+                json_lines.append(line)
+                brace_count += line.count("{") - line.count("}")
+                if brace_count == 0:
+                    break
+
+        if not json_lines:
+            pytest.fail(f"No valid JSON output found. Output was: {json_output[:500]}")
+
+        output = json.loads("\n".join(json_lines))
         assert output["success"] is True
         assert "result" in output

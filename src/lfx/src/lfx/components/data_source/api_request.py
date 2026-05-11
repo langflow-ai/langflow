@@ -109,7 +109,7 @@ class APIRequestComponent(Component):
                 },
             ],
             value=[],
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             advanced=True,
             real_time_refresh=True,
         ),
@@ -133,7 +133,7 @@ class APIRequestComponent(Component):
             ],
             value=[{"key": "User-Agent", "value": "Langflow/1.0"}],
             advanced=True,
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             real_time_refresh=True,
         ),
         IntInput(
@@ -321,10 +321,12 @@ class APIRequestComponent(Component):
                 "method": method,
                 "url": url,
                 "headers": headers,
-                "json": processed_body,
                 "timeout": timeout,
                 "follow_redirects": follow_redirects,
             }
+            # Only include body for methods that support it (GET must not have a body per HTTP spec)
+            if method in {"POST", "PATCH", "PUT", "DELETE"} and processed_body is not None:
+                request_params["json"] = processed_body
             response = await client.request(**request_params)
 
             redirection_history = [

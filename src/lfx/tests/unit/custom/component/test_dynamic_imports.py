@@ -270,11 +270,12 @@ class TestSpecialCases:
         """Test platform-specific component handling (like NVIDIA Windows components)."""
         import lfx.components.nvidia as nvidia_components
 
-        # NVIDIAModelComponent should raise AttributeError due to missing langchain-nvidia-ai-endpoints dependency
-        with pytest.raises(AttributeError, match=r"Could not import.*NVIDIAModelComponent"):
-            _ = nvidia_components.NVIDIAModelComponent
+        # NVIDIAModelComponent defers its heavy dependency (langchain-nvidia-ai-endpoints)
+        # to runtime methods, so the class itself should import successfully.
+        component = nvidia_components.NVIDIAModelComponent
+        assert component is not None
 
-        # Test that __all__ still works correctly despite import failures
+        # Test that __all__ still lists the component correctly
         assert "NVIDIAModelComponent" in nvidia_components.__all__
 
     def test_import_structure_integrity(self):

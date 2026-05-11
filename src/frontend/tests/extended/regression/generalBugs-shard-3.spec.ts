@@ -59,6 +59,20 @@ test(
     await initialGPTsetup(page);
     await adjustScreenView(page);
 
+    await page.getByText("OpenAI", { exact: true }).last().click();
+
+    await expect(
+      page.getByTestId("handle-chatinput-noshownode-chat message-source"),
+    ).toBeVisible();
+
+    if (await page.getByTestId("remove-icon-badge").isVisible()) {
+      await page.getByTestId("remove-icon-badge").click();
+    }
+
+    if (await page.getByTestId("remove-icon-badge").isVisible()) {
+      await page.getByTestId("remove-icon-badge").click();
+    }
+
     await page
       .getByTestId("popover-anchor-input-api_key")
       .fill(process.env.OPENAI_API_KEY || "");

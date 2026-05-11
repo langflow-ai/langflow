@@ -169,3 +169,24 @@ def test_remove_api_keys():
     empty_flow = {"data": {"nodes": []}}
     result = remove_api_keys(empty_flow)
     assert result == empty_flow
+
+    # Test case 6: Nodes without data.node.template structure (regression)
+    # remove_api_keys must not crash on nodes missing the full structure.
+    sparse_flow = {
+        "data": {
+            "nodes": [
+                {"id": "bare-node"},
+                {"id": "null-data", "data": None},
+                {"id": "no-node-key", "data": {"something": "else"}},
+                {"id": "null-node", "data": {"node": None}},
+                {"id": "no-template", "data": {"node": {"display_name": "Foo"}}},
+                {"id": "null-template", "data": {"node": {"template": None}}},
+            ],
+            "edges": [],
+        }
+    }
+    result = remove_api_keys(sparse_flow)
+    # All nodes survive untouched
+    assert len(result["data"]["nodes"]) == 6
+    assert result["data"]["nodes"][0]["id"] == "bare-node"
+    assert result["data"]["nodes"][1]["data"] is None

@@ -19,7 +19,7 @@ __all__: list[str] = list(_lfx_all)
 # Register redirected submodules in sys.modules for direct importlib.import_module() calls
 # This allows imports like: import langflow.components.knowledge_bases.ingestion
 _redirected_submodules = {
-    "langflow.components.knowledge_bases.ingestion": "lfx.components.files_and_knowledge.ingestion",
+    # "langflow.components.knowledge_bases.ingestion": "lfx.components.files_and_knowledge.ingestion",
     "langflow.components.knowledge_bases.retrieval": "lfx.components.files_and_knowledge.retrieval",
 }
 
@@ -52,12 +52,6 @@ for old_path, new_path in _redirected_submodules.items():
 def __getattr__(attr_name: str) -> Any:
     """Forward attribute access to lfx.components.files_and_knowledge."""
     # Handle submodule access for backwards compatibility
-    if attr_name == "ingestion":
-        from importlib import import_module
-
-        result = import_module("lfx.components.files_and_knowledge.ingestion")
-        globals()[attr_name] = result
-        return result
     if attr_name == "retrieval":
         from importlib import import_module
 

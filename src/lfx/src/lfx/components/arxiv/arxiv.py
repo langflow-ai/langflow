@@ -1,5 +1,4 @@
-import urllib.request
-from urllib.parse import urlparse
+import urllib
 from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import fromstring
@@ -38,7 +37,7 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="search_papers_dataframe"),
+        Output(display_name="Table", name="dataframe", method="search_papers_dataframe"),
     ]
 
     def build_query_url(self) -> str:
@@ -121,7 +120,7 @@ class ArXivComponent(Component):
             url = self.build_query_url()
 
             # Validate URL scheme and host
-            parsed_url = urlparse(url)
+            parsed_url = urllib.parse.urlparse(url)
             if parsed_url.scheme not in {"http", "https"}:
                 error_msg = f"Invalid URL scheme: {parsed_url.scheme}"
                 raise ValueError(error_msg)

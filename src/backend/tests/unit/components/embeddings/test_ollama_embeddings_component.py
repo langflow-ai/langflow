@@ -356,7 +356,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -367,7 +367,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         # First model has embedding capability, second doesn't, third does
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]},
@@ -405,7 +405,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -414,7 +414,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -436,7 +436,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component.api_key = "test-api-key"
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -445,7 +445,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -468,7 +468,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {component.JSON_MODELS_KEY: []}
         mock_get.return_value = mock_get_response
 
@@ -486,7 +486,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "model-without-caps"},
@@ -496,7 +496,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         # First model has no capabilities key, second has embedding capability
         mock_post_response.json.side_effect = [
             {},  # No capabilities key at all
@@ -520,7 +520,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component.api_key = None
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -529,7 +529,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -553,7 +553,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -562,7 +562,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -584,7 +584,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -593,7 +593,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.return_value = {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]}
         mock_post.return_value = mock_post_response
 
@@ -615,7 +615,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "llama3.1"},
@@ -625,7 +625,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         # All models have completion capability only, no embedding
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: ["completion"]},
@@ -650,7 +650,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -779,7 +779,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},
@@ -789,7 +789,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.return_value = mock_get_response
 
         mock_post_response = AsyncMock()
-        mock_post_response.raise_for_status.return_value = None
+        mock_post_response.raise_for_status = MagicMock(return_value=None)
         mock_post_response.json.side_effect = [
             {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]},
             {component.JSON_CAPABILITIES_KEY: [component.EMBEDDING_CAPABILITY]},
@@ -817,7 +817,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component = component_class()
 
         mock_get_response = AsyncMock()
-        mock_get_response.raise_for_status.return_value = None
+        mock_get_response.raise_for_status = MagicMock(return_value=None)
         mock_get_response.json.return_value = {
             component.JSON_MODELS_KEY: [
                 {component.JSON_NAME_KEY: "nomic-embed-text"},

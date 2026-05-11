@@ -81,9 +81,11 @@ class AuthSettings(BaseSettings):
     """If True, the application will skip authentication when AUTO_LOGIN is enabled.
     This will be removed in v2.0"""
 
-    WEBHOOK_AUTH_ENABLE: bool = False
+    WEBHOOK_AUTH_ENABLE: bool = True
     """If True, webhook endpoints will require API key authentication.
-    If False, webhooks run as flow owner without authentication."""
+    If False, webhooks run as flow owner without authentication.
+    Defaults to True for secure-by-default behavior; set to False only in
+    trusted environments where unauthenticated webhook execution is acceptable."""
 
     ENABLE_SUPERUSER_CLI: bool = Field(
         default=True,
@@ -111,6 +113,25 @@ class AuthSettings(BaseSettings):
 
     COOKIE_DOMAIN: str | None = None
     """The domain attribute of the cookies. If None, the domain is not set."""
+
+    # SSO Feature Flags
+    SSO_ENABLED: bool = Field(
+        default=False,
+        description="Enable SSO authentication. Disabled by default. Set to true to enable SSO.",
+    )
+    """If True, SSO authentication is enabled. Configuration must be provided via SSO_CONFIG_FILE."""
+
+    SSO_PROVIDER: str = Field(
+        default="jwt",
+        description="SSO provider type: jwt (default), oidc, saml, ldap",
+    )
+    """The authentication provider to use. Default is 'jwt' for standard authentication."""
+
+    SSO_CONFIG_FILE: str | None = Field(
+        default=None,
+        description="Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true.",
+    )
+    """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
