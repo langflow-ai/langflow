@@ -884,3 +884,51 @@ class TestWebhookEventsStreamAuth:
         # Should return 404 because the flow doesn't belong to User 2
         assert response.status_code == 404
         assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
+
+    async def test_webhook_events_stream_cross_user_endpoint_name_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to SSE via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook-events/{endpoint_name}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]
+
+    async def test_webhook_run_cross_user_uuid_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via UUID returns 404."""
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook/{flow_id}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        # If it returns 403, it's an existence oracle
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
+
+    async def test_webhook_run_cross_user_endpoint_name_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook/{endpoint_name}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]

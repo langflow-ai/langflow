@@ -17,10 +17,12 @@ async def get_user_by_flow_id_or_endpoint_name(
             flow = await session.get(Flow, flow_id)
         except ValueError:
             stmt = select(Flow).where(Flow.endpoint_name == flow_id_or_name)
-            if user_id:
-                uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
-                stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
+
+        if flow and user_id:
+            uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+            if flow.user_id != uuid_user_id:
+                flow = None
 
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")

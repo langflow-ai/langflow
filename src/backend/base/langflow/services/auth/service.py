@@ -428,20 +428,8 @@ class AuthService(BaseAuthService):
             logger.error(f"Webhook API key validation error: {exc}")
             raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
-        try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id, user_id=authenticated_user.id)
-            if flow_owner is None:
-                raise HTTPException(status_code=404, detail="Flow not found")
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=404, detail="Flow not found") from exc
-
-        if flow_owner.id != authenticated_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: You can only execute webhooks for flows you own",
-            )
+        # The helper already enforces ownership and raises 404 if not found or not owned
+        await get_user_by_flow_id_or_endpoint_name(flow_id, user_id=authenticated_user.id)
 
         return authenticated_user
 
