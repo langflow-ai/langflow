@@ -521,12 +521,38 @@ def discover_all_extensions(
     """Run both production-install discovery passes and merge their results.
 
     Equivalent to calling :func:`discover_installed_extensions` and
-    :func:`discover_seed_extensions` and concatenating the outputs.
-    Installed-package records appear first in the returned list so that a
-    seed directory shadowing an installed bundle is visible to whoever
-    consumes the list (the registry, by default, surfaces the duplicate
-    via ``duplicate-extension-id``).
+    :func:`discover_seed_extensions`, with one extra responsibility: when a
+    seed-directory bundle ships the same ``extension_id`` as an installed
+    one, the seed copy is dropped (installed wins by precedence) and a
+    ``seed-bundle-shadowed`` :class:`ExtensionError` is emitted so the
+    operator can see the shadow instead of silently losing one source.
+    Installed records still appear first in the returned list.
     """
     installed, installed_errors = discover_installed_extensions(distributions=distributions)
     seeded, seed_errors = discover_seed_extensions(seed_dir_env=seed_dir_env, default=default_seed_dir)
-    return installed + seeded, installed_errors + seed_errors
+
+    installed_ids = {ext.extension_id for ext in installed}
+    kept_seeded: list[DiscoveredExtension] = []
+    shadow_errors: list[ExtensionError] = []
+    for ext in seeded:
+        if ext.extension_id in installed_ids:
+            shadow_errors.append(
+                ExtensionError(
+                    code="seed-bundle-shadowed",
+                    message=(
+                        f"Seed-directory bundle {ext.extension_id!r} at {ext.extension_root} "
+                        "is shadowed by an installed Extension of the same name; "
+                        "the seed copy is being skipped."
+                    ),
+                    location=str(ext.extension_root),
+                    content=ext.extension_id,
+                    hint=(
+                        "Uninstall the conflicting distribution or remove the seed "
+                        "subdirectory so only one source ships this bundle."
+                    ),
+                )
+            )
+            continue
+        kept_seeded.append(ext)
+
+    return installed + kept_seeded, installed_errors + seed_errors + shadow_errors

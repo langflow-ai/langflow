@@ -289,7 +289,37 @@ def _run_pipeline(
 ) -> ReloadResult:
     """Run Stages 1-5 with the in-progress guard already held."""
     staging_namespace = f"__reload_staging__.{reload_id}"
+    try:
+        return _run_pipeline_body(
+            registry=registry,
+            bundle=bundle,
+            effective_source=effective_source,
+            effective_slot=effective_slot,
+            reload_id=reload_id,
+            previous=previous,
+            staging_namespace=staging_namespace,
+        )
+    finally:
+        # Belt-and-braces: every controlled return path already drops the
+        # staging namespace, but if anything raises (a loader bug, an OOM
+        # mid-import, KeyboardInterrupt) we still purge sys.modules so the
+        # next reload of this bundle starts from a clean slate instead of
+        # tripping over orphaned ``__reload_staging__.<id>.*`` entries.
+        # _drop_staging_modules is idempotent; calling it twice is cheap.
+        _drop_staging_modules(staging_namespace)
 
+
+def _run_pipeline_body(
+    *,
+    registry: BundleRegistry,
+    bundle: str,
+    effective_source: Path | None,
+    effective_slot: Literal["official", "extra"],
+    reload_id: str,
+    previous: BundleRecord | None,
+    staging_namespace: str,
+) -> ReloadResult:
+    """Pipeline body wrapped by :func:`_run_pipeline` for guaranteed cleanup."""
     # ---------- Stage 1: parallel load into staging namespace ----------
     if effective_source is None:
         # Should not happen: caller checked.  Defensive.
@@ -442,10 +472,23 @@ def _retag_component(
     Stage 1; Stage 3 swaps it back to the production namespace so the
     registry's class metadata matches where the module ultimately lives
     in ``sys.modules``.
+
+    Raises :class:`AssertionError` if the loader didn't honour the
+    ``module_namespace=staging_namespace`` contract for this component.
+    Silently returning the unmodified component (the prior behaviour)
+    would let :func:`_swap_sys_modules` succeed against the wrong
+    sys.modules entries, leaving the BundleRecord pointing at modules
+    under an unexpected prefix.
     """
     old_prefix = f"{staging_namespace}."
     if not component.module_name.startswith(old_prefix):
-        return component
+        msg = (
+            f"loader returned component {component.class_name!r} with "
+            f"module_name={component.module_name!r}, which does not start "
+            f"with the staging prefix {old_prefix!r}; the staging-namespace "
+            "contract is broken upstream of reload."
+        )
+        raise AssertionError(msg)
     new_module_name = f"{target_namespace}.{component.module_name[len(old_prefix) :]}"
     return replace(component, module_name=new_module_name)
 

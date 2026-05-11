@@ -136,6 +136,22 @@ def _load_bundle_directory(
     ``module_namespace`` controls the top-level package name used in
     ``sys.modules``; see :func:`lfx.extension.loader._discovery.module_name_for`.
     """
+    # Multi-file bundle partial-failure orphan policy:
+    # If a bundle has files {A, B, C} and importing C raises, the per-module
+    # rollback in ``_discovery.import_bundle_module`` (see lines 167-169
+    # there) pops C from sys.modules, but A and B stay registered under
+    # ``_lfx_ext.<slot>.<bundle>.{a,b}``.  This is deliberate: the reload
+    # pipeline (lfx.extension.reload) re-stages the whole bundle under
+    # ``__reload_staging__.<id>`` and is the layer that owns cleanup --
+    # orphans get overwritten on the next successful reload.
+    #
+    # At server startup, however, there is no reload pipeline running.  A
+    # bundle that fails partial import at boot leaves the earlier modules
+    # in sys.modules until process restart, and any module-level side
+    # effects they registered (hooks, sys.path patches) are durable.  The
+    # contract is "best effort: surface the per-module error, leave the
+    # process import-able"; operators are expected to fix the broken
+    # source file and restart, not to lean on a startup-side sweep.
     files = list(iter_bundle_python_files(bundle_root))
     if not files:
         result.errors.append(

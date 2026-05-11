@@ -415,6 +415,43 @@ def test_discover_all_merges_installed_and_seed(
     assert any(ext.extension_id == "lfx-seed-only" for ext in extensions)
 
 
+def test_discover_all_emits_seed_bundle_shadowed_when_ids_collide(
+    fake_installed_distributions: list[_FakeDistribution],
+    tmp_path: Path,
+) -> None:
+    """A seed bundle with the same id as an installed one is flagged, not silently dropped.
+
+    Installed wins by precedence (LE-1022's documented contract); the
+    operator still gets a typed ``seed-bundle-shadowed`` error so the
+    shadow is visible instead of disappearing into discovery debug logs.
+    """
+    # ``fake_installed_distributions`` ships ``lfx-openai``; the seed dir
+    # below carries the same id from a different on-disk source.
+    seed = tmp_path / "seed"
+    shadow_root = seed / "lfx_openai_shadow"
+    _write_extension_json(shadow_root, _manifest("lfx-openai", "openai", version="9.9.9"))
+    fresh_root = seed / "lfx_only_seed"
+    _write_extension_json(fresh_root, _manifest("lfx-only-seed", "only_seed"))
+
+    extensions, errors = discover_all_extensions(
+        distributions=fake_installed_distributions,
+        seed_dir_env=str(seed),
+        default_seed_dir=None,
+    )
+
+    # The non-colliding seed bundle survives; the shadowed one does not.
+    extension_ids = [ext.extension_id for ext in extensions]
+    assert extension_ids.count("lfx-openai") == 1
+    assert any(ext.extension_id == "lfx-openai" and ext.source_kind == "installed" for ext in extensions)
+    assert any(ext.extension_id == "lfx-only-seed" for ext in extensions)
+
+    shadow_errors = [err for err in errors if err.code == "seed-bundle-shadowed"]
+    assert len(shadow_errors) == 1
+    [err] = shadow_errors
+    assert err.content == "lfx-openai"
+    assert str(shadow_root.resolve(strict=False)) in err.location or str(shadow_root) in err.location
+
+
 def test_discover_all_handles_partial_failures(tmp_path: Path) -> None:
     """A broken installed dist plus a missing seed dir both surface errors.
 
