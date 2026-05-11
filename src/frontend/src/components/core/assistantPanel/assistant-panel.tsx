@@ -289,6 +289,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onUpdateFlowAction={handleUpdateFlowAction}
                   onApplyFlowProposal={handleApplyFlowProposal}
                   onDismissFlowProposal={handleDismissFlowProposal}
+                  onRetry={hasEnabledModels ? handleRetry : undefined}
                 />
               ))}
             </StickToBottom.Content>

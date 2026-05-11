@@ -26,6 +26,7 @@ interface AssistantMessageItemProps {
   ) => void;
   onApplyFlowProposal?: (messageId: string) => void;
   onDismissFlowProposal?: (messageId: string) => void;
+  onRetry?: (messageId: string) => void;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -53,6 +54,7 @@ export function AssistantMessageItem({
   onUpdateFlowAction,
   onApplyFlowProposal,
   onDismissFlowProposal,
+  onRetry,
 }: AssistantMessageItemProps) {
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";

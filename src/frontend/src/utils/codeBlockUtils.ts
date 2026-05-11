@@ -20,7 +20,25 @@ export function isCodeBlock(
   const hasLanguageClass = /language-\w+/.test(className ?? "");
   const hasDataLanguage = "data-language" in (props ?? {});
 
-  return hasLanguageClass || hasDataLanguage;
+  if (hasLanguageClass || hasDataLanguage) {
+    return true;
+  }
+
+  // Check if content looks like a code block
+  if (content) {
+    const hasMultipleLines = content.includes("\n");
+    const looksLikeCode =
+      /^(import |from |class |def |async def |const |let |var |function |export |interface |type )/.test(
+        content.trim(),
+      );
+
+    // Multi-line content that starts with code patterns is likely a code block
+    if (hasMultipleLines && looksLikeCode) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
