@@ -38,6 +38,9 @@ from langflow.services.memory_base.ingestion import (
     on_flow_output as _on_flow_output,
 )
 from langflow.services.memory_base.ingestion import (
+    purge_session_data as _purge_session_data,
+)
+from langflow.services.memory_base.ingestion import (
     regenerate as _regenerate,
 )
 from langflow.services.memory_base.ingestion import (
@@ -249,6 +252,15 @@ class MemoryBaseService(Service):
             get_mb_or_raise=self.get_memory_base_or_404,
             trigger_ingestion_fn=self.trigger_ingestion,
         )
+
+    async def purge_session_data(self, user_id: uuid.UUID, session_ids: list[str]) -> int:
+        """Remove Chroma chunks and tracking rows for the given sessions.
+
+        Called when the user deletes session messages from the UI so that the
+        ingested embeddings don't leak into newly-created sessions. Scoped to
+        the caller's Memory Bases — never touches another user's data.
+        """
+        return await _purge_session_data(user_id=user_id, session_ids=session_ids)
 
     # ------------------------------------------------------------------ #
     #  Public query helpers                                                #
