@@ -174,10 +174,25 @@ def _is_apirouter_call(node: ast.AST) -> bool:
     return bool(isinstance(func, ast.Attribute) and func.attr == "APIRouter")
 
 
+# Sentinel returned when ``_kwarg_string`` finds a kwarg that's present but
+# not a static string literal -- e.g. ``prefix=f"/extensions/{tenant}"`` or
+# ``prefix=PREFIX_VAR``.  Treated as "in scope by default" by
+# :func:`compute_in_scope` so a dynamic prefix cannot smuggle handlers past
+# the guard; the alternative (silently treating an unresolvable prefix as
+# absent) means an f-string-prefixed router falls through the analysis.
+_UNRESOLVABLE_PREFIX = "<router-trust:unresolvable-prefix>"
+
+
 def _kwarg_string(call: ast.Call, name: str) -> str | None:
     for kw in call.keywords:
-        if kw.arg == name and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+        if kw.arg != name:
+            continue
+        if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
             return kw.value.value
+        # Kwarg is present but not a literal string -- f-string, variable,
+        # or anything else we cannot resolve statically.  Surface the
+        # sentinel so the in-scope seeder treats it conservatively.
+        return _UNRESOLVABLE_PREFIX
     return None
 
 
@@ -485,13 +500,30 @@ def _resolve_chain(
     return None
 
 
+def _prefix_signals_in_scope(prefix: str | None) -> bool:
+    """Return True when *prefix* should pull the router into the trust scope.
+
+    Two paths to True: a literal that mentions ``/extensions`` (the
+    obvious case the guard targets), or :data:`_UNRESOLVABLE_PREFIX` --
+    the sentinel returned for dynamic prefixes
+    (``prefix=f"/extensions/{tenant}"``, ``prefix=PREFIX_VAR``) where we
+    cannot prove the prefix isn't extension-targeted.  Treating
+    unresolvable prefixes as in-scope keeps defense-in-depth honest.
+    """
+    if prefix is None:
+        return False
+    if prefix == _UNRESOLVABLE_PREFIX:
+        return True
+    return "/extensions" in prefix
+
+
 def compute_in_scope(file_info_map: dict[Path, FileInfo]) -> set[RouterId]:
     in_scope: set[RouterId] = set()
 
-    # Seed: APIRouter(prefix=".../extensions...")
+    # Seed: APIRouter(prefix=".../extensions...") or prefix=<unresolvable>
     for path, info in file_info_map.items():
         for var, prefix in info.local_routers.items():
-            if prefix and "/extensions" in prefix:
+            if _prefix_signals_in_scope(prefix):
                 in_scope.add((path, var))
 
     # Seed: explicit marker -> every local router in the file
@@ -510,7 +542,7 @@ def compute_in_scope(file_info_map: dict[Path, FileInfo]) -> set[RouterId]:
                 if child_id is None or child_id in in_scope:
                     continue
                 child_in_scope = False
-                if call.child_prefix and "/extensions" in call.child_prefix:
+                if _prefix_signals_in_scope(call.child_prefix):
                     child_in_scope = True
                 else:
                     parent_id = _resolve_chain(info, call.parent_chain, file_info_map)
