@@ -141,7 +141,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              No files selected. Go back to add files.
+              {t("knowledge.noFilesSelected")}
             </p>
           </div>
         ) : isGeneratingPreview ? (
@@ -151,7 +151,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 animate-spin text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              Generating preview...
+              {t("knowledge.generatingPreview")}
             </p>
           </div>
         ) : chunkPreviews.length > 0 ? (
@@ -167,7 +167,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              Could not generate preview. Try adjusting your settings.
+              {t("knowledge.couldNotGeneratePreview")}
             </p>
           </div>
         )}
@@ -179,30 +179,30 @@ export function StepReview({
           name="FileStack"
           className="h-4 w-4 text-muted-foreground"
         />
-        <span className="text-sm font-medium">Summary</span>
+        <span className="text-sm font-medium">{t("knowledge.summary")}</span>
       </div>
 
       <div className="shrink-0">
-        <SummaryItem icon="Type" label="Name" value={sourceName} />
+        <SummaryItem icon="Type" label={t("knowledge.labelName")} value={sourceName} />
         <SummaryItem
           icon="Files"
-          label="Files"
-          value={`${files.length} file${files.length !== 1 ? "s" : ""} (${totalFileSize})`}
+          label={t("knowledge.files")}
+          value={`${files.length} ${files.length !== 1 ? t("knowledge.files") : t("knowledge.file")} (${totalFileSize})`}
         />
         <SummaryItem
           icon="Ruler"
-          label="Chunk Size"
-          value={`${chunkSize} chars`}
+          label={t("knowledge.labelChunkSize")}
+          value={`${chunkSize} ${t("knowledge.charsSuffix")}`}
         />
         <SummaryItem
           icon="Layers"
-          label="Chunk Overlap"
-          value={`${chunkOverlap} chars`}
+          label={t("knowledge.labelChunkOverlap")}
+          value={`${chunkOverlap} ${t("knowledge.charsSuffix")}`}
         />
         <SummaryItem
           icon="SplitSquareHorizontal"
-          label="Separator"
-          value={separator || "None"}
+          label={t("knowledge.labelSeparator")}
+          value={separator || t("knowledge.labelNone")}
         />
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -217,7 +217,7 @@ export function StepReview({
               />
             )}
             <span className="text-sm font-medium">
-              {selectedEmbeddingModel[0]?.name || "Not selected"}
+              {selectedEmbeddingModel[0]?.name || t("knowledge.labelNotSelected")}
             </span>
           </div>
         </div>

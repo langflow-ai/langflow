@@ -112,6 +112,7 @@ export const MemoizedCanvasControls = memo(
 );
 
 export const MemoizedSidebarTrigger = memo(() => {
+  const { t } = useTranslation();
   const { open, toggleSidebar, setActiveSection } = useSidebar();
   const { focusSearch, isSearchFocused } = useSearchContext();
   if (ENABLE_NEW_SIDEBAR) {
@@ -157,7 +158,7 @@ export const MemoizedSidebarTrigger = memo(() => {
     >
       <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
         <ForwardedIconComponent name="PanelRightClose" className="h-4 w-4" />
-        <span className="text-foreground">Components</span>
+        <span className="text-foreground">{t("store.storeComponents")}</span>
       </SidebarTrigger>
     </Panel>
   );

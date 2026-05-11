@@ -29,30 +29,33 @@ const ModelRow = ({
   enabled,
   testIdPrefix,
   isEnabledModel,
-}: ModelRowProps) => (
-  <div className="flex flex-row items-center justify-between h-[24px]">
-    <div className="flex flex-row items-center gap-2">
-      <ForwardedIconComponent
-        name={model.metadata?.icon || "Bot"}
-        className={cn("w-5 h-5", { grayscale: !isEnabledModel })}
-      />
-      <span
-        className={cn("text-sm", { "text-muted-foreground": !isEnabledModel })}
-      >
-        {model.model_name}
-      </span>
+}: ModelRowProps) => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-row items-center justify-between h-[24px]">
+      <div className="flex flex-row items-center gap-2">
+        <ForwardedIconComponent
+          name={model.metadata?.icon || "Bot"}
+          className={cn("w-5 h-5", { grayscale: !isEnabledModel })}
+        />
+        <span
+          className={cn("text-sm", { "text-muted-foreground": !isEnabledModel })}
+        >
+          {model.model_name}
+        </span>
+      </div>
+      {isEnabledModel && (
+        <Switch
+          checked={enabled}
+          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+          data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
+          aria-label={enabled ? t("modelProvider.disableModel", { modelName: model.model_name }) : t("modelProvider.enableModel", { modelName: model.model_name })}
+          stopPropagation
+        />
+      )}
     </div>
-    {isEnabledModel && (
-      <Switch
-        checked={enabled}
-        onCheckedChange={(checked) => onToggle(model.model_name, checked)}
-        data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-        aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
-        stopPropagation
-      />
-    )}
-  </div>
-);
+  );
+};
 
 /**
  * Displays lists of LLM and embedding models with toggle switches.

@@ -63,7 +63,7 @@ export default function OutputModal({
       size="large"
       className="z-50"
     >
-      <BaseModal.Header description="Inspect the output of the component below.">
+      <BaseModal.Header description={t("output.inspectDescription")}>
         <div
           className="flex items-center"
           data-testid={`${nodeId}-${outputName}-output-modal`}
@@ -93,8 +93,8 @@ export default function OutputModal({
           }
         >
           <TabsList>
-            <TabsTrigger value="Outputs">Outputs</TabsTrigger>
-            <TabsTrigger value="Logs">Logs</TabsTrigger>
+            <TabsTrigger value="Outputs">{t("misc.outputsModalTitle")}</TabsTrigger>
+            <TabsTrigger value="Logs">{t("modal.logs")}</TabsTrigger>
           </TabsList>
         </Tabs>
 

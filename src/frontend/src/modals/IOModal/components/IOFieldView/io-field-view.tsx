@@ -68,7 +68,7 @@ export default function IOFieldView({
     : { handleOnNewValue: (value: any, options?: any) => {} };
 
   function handleOutputType() {
-    if (!node) return <>"No node found!"</>;
+    if (!node) return <>{t("io.noNodeFound")}</>;
     switch (type) {
       case InputOutput.INPUT:
         switch (fieldType) {
@@ -78,7 +78,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
@@ -158,7 +158,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;

@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import VersionLabel from "@/components/common/versionLabelComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
@@ -28,10 +29,11 @@ export const VersionPanel = memo(function VersionPanel({
   selectedVersionByFlow: Map<string, { versionId: string; versionTag: string }>;
   onAttach: (versionId: string) => void;
 }) {
+  const { t } = useTranslation();
   if (!selectedFlow) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-        Select a flow to see versions
+        {t("deployments.selectFlow")}
       </div>
     );
   }
@@ -41,20 +43,20 @@ export const VersionPanel = memo(function VersionPanel({
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Select a version to attach to this deployment
+        {t("deployments.selectVersion")}
       </div>
       <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
         <h3 className="py-2 text-lg font-semibold">{selectedFlow.name}</h3>
         <div className="flex-1 space-y-3 overflow-y-auto py-3">
           {isLoadingVersions && (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              Loading versions...
+              {t("deployments.loadingVersions")}
             </div>
           )}
 
           {!isLoadingVersions && versions.length === 0 && (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              No versions found
+              {t("deployments.noVersionsFound")}
             </div>
           )}
 
@@ -92,7 +94,7 @@ export const VersionPanel = memo(function VersionPanel({
                       )}
                     </span>
                     <span className="text-xxs leading-tight text-muted-foreground">
-                      Created: {formatDate(version.created_at)}
+                      {t("deployments.versionCreated", { date: formatDate(version.created_at) })}
                     </span>
                   </span>
                 </button>

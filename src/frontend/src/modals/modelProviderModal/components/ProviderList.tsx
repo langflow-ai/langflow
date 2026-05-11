@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import ProviderListItem from "./ProviderListItem";
@@ -18,6 +19,7 @@ const ProviderList = ({
   onProviderSelect,
   selectedProviderName,
 }: ProviderListProps) => {
+  const { t } = useTranslation();
   const {
     data: rawProviders = [],
     isLoading,
@@ -58,7 +60,7 @@ const ProviderList = ({
         className="text-muted-foreground px-4 py-2"
         data-testid="provider-list-loading"
       >
-        <LoadingTextComponent text="Loading providers" />
+        <LoadingTextComponent text={t("modelProviders.loadingProviders")} />
       </div>
     );
   }
