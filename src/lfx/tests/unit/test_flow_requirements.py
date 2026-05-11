@@ -719,12 +719,18 @@ class TestStarterProjects:
     def test_simple_agent_has_community(self, simple_agent_flow):
         """Simple Agent's URLComponent imports langchain_community.
 
-        lfx now provides langchain-community transitively (via OpenDsStar),
-        so it is filtered out of generated requirements as already-provided.
+        When lfx provides langchain-community transitively (e.g. via
+        OpenDsStar in some environments) it is filtered out of generated
+        requirements as already-provided; otherwise it should appear.
         """
+        from lfx.utils.flow_requirements import _get_lfx_provided_imports
+
         result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-community" not in result
+        if "langchain_community" in _get_lfx_provided_imports():
+            assert "langchain-community" not in result
+        else:
+            assert "langchain-community" in result
 
     def test_basic_prompting_from_file(self):
         """Test the file-based API.
