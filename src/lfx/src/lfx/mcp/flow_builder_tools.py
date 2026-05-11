@@ -552,8 +552,7 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
             continue
         options = field.get("options") or []
         if any(
-            isinstance(o, dict) and o.get("name") == new_name and o.get("provider") == new_provider
-            for o in options
+            isinstance(o, dict) and o.get("name") == new_name and o.get("provider") == new_provider for o in options
         ):
             continue
         options.append({"name": new_name, "provider": new_provider})

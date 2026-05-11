@@ -21,7 +21,7 @@ StepType = Literal[
     "flow_build_failed",  # Flow build failed
     "flow_proposal_ready",  # Build-from-scratch flow ready, gated on user Continue/Dismiss
     "generating_document",  # Agent is materializing a file in the sandboxed workspace
-    "document_ready",       # File write completed
+    "document_ready",  # File write completed
 ]
 
 

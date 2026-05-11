@@ -14,7 +14,6 @@ from __future__ import annotations
 import json
 
 import pytest
-
 from langflow.agentic.helpers.sse import (
     format_file_written_event,
 )
@@ -33,7 +32,7 @@ class TestFormatFileWrittenEvent:
         # Strip "data: " prefix and trailing newlines, then parse the JSON body.
         assert payload.startswith("data: ")
         assert payload.endswith("\n\n")
-        body = json.loads(payload[len("data: "): -2])
+        body = json.loads(payload[len("data: ") : -2])
         assert body == {
             "event": "file_written",
             "action": "write_file",
@@ -51,10 +50,10 @@ class TestStepTypeIncludesGeneratingDocument:
     """B4 — StepType Literal includes the new step values."""
 
     def test_step_type_should_include_generating_document(self):
-        from langflow.agentic.api.schemas import StepType  # noqa: PLC0415 — runtime check
-
         # Literal types are introspectable via typing.get_args.
         from typing import get_args
+
+        from langflow.agentic.api.schemas import StepType
 
         members = set(get_args(StepType))
         assert "generating_document" in members, members
@@ -65,9 +64,7 @@ class TestStreamingEmitsFileWrittenEvents:
     """B4 — SSE pipeline yields file_written events drained between tokens."""
 
     @pytest.mark.asyncio
-    async def test_stream_should_yield_file_written_when_file_events_pending(
-        self, monkeypatch
-    ):
+    async def test_stream_should_yield_file_written_when_file_events_pending(self, monkeypatch):
         """End-to-end-ish: with a stubbed flow generator emitting a 'token' event,
         a pending file_event in the queue must surface as a file_written SSE line
         before the token line in the output.
@@ -131,18 +128,17 @@ class TestStreamingEmitsFileWrittenEvents:
         # Assert — at least one SSE line is a file_written event with the right path.
         file_written = [line for line in sse_lines if '"event": "file_written"' in line]
         assert file_written, f"Expected a file_written SSE event, got: {sse_lines}"
-        body = json.loads(file_written[0][len("data: "): -2])
+        body = json.loads(file_written[0][len("data: ") : -2])
         assert body["path"] == "DOCS.md"
         assert body["action"] == "write_file"
         assert body["size"] == 10
 
     @pytest.mark.asyncio
-    async def test_stream_should_emit_generating_document_step_for_manage_files(
-        self, monkeypatch
-    ):
+    async def test_stream_should_emit_generating_document_step_for_manage_files(self, monkeypatch):
         """The first progress event for manage_files intent must use the
         generating_document step (so the frontend label says
-        "Generating document..." instead of "Generating flow...")."""
+        "Generating document..." instead of "Generating flow...").
+        """
         from langflow.agentic.services import assistant_service
         from langflow.agentic.services.file_events import reset_file_events
 
@@ -155,7 +151,6 @@ class TestStreamingEmitsFileWrittenEvents:
 
         async def fake_flow_streaming(*args, **kwargs):
             yield ("end", {"result": "ok"})
-            return
 
         monkeypatch.setattr(
             assistant_service,
@@ -190,10 +185,8 @@ class TestStreamingEmitsFileWrittenEvents:
             sse_lines.append(line)
 
         # First progress event should be generating_document.
-        first_progress = next(
-            line for line in sse_lines if '"event": "progress"' in line
-        )
-        body = json.loads(first_progress[len("data: "): -2])
+        first_progress = next(line for line in sse_lines if '"event": "progress"' in line)
+        body = json.loads(first_progress[len("data: ") : -2])
         assert body["step"] == "generating_document", body
         # And the user-facing message should say so.
         assert "document" in (body.get("message") or "").lower(), body

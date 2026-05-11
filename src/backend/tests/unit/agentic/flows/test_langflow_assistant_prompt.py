@@ -44,9 +44,7 @@ class TestParentAgentFileSystemCapability:
             "Parent prompt must reference the write_file operation so the agent knows it CAN create files"
         )
 
-    def test_should_clarify_code_safety_applies_to_generated_component_code(
-        self, parent_agent_prompt: str
-    ):
+    def test_should_clarify_code_safety_applies_to_generated_component_code(self, parent_agent_prompt: str):
         # The Code Safety rule must scope its file-operations ban to GENERATED
         # component source code — otherwise the agent over-generalizes and
         # refuses legitimate File System tool calls (write_file/edit_file).
@@ -57,9 +55,7 @@ class TestParentAgentFileSystemCapability:
             "File System tool calls."
         )
 
-    def test_should_state_file_system_use_is_allowed_for_user_files(
-        self, parent_agent_prompt: str
-    ):
+    def test_should_state_file_system_use_is_allowed_for_user_files(self, parent_agent_prompt: str):
         prompt_lower = parent_agent_prompt.lower()
         # Some phrasing that authorizes file writes via the tool when the user
         # asks for a file (README, instructions, etc).

@@ -6,7 +6,6 @@ from pathlib import Path
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
 
 import lfx
-
 from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_root
 
 # Relative path embedded in the bundled LangflowAssistant.json flow for the

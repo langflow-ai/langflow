@@ -27,9 +27,7 @@ class TestManageFilesIntentDeclared:
         output_format_match = re.search(r'"intent":\s*"<([^"]+)>"', prompt)
         assert output_format_match is not None, "Could not locate output format line"
         union = output_format_match.group(1)
-        assert "manage_files" in union.split("|"), (
-            f"manage_files must appear in the output format union, got: {union}"
-        )
+        assert "manage_files" in union.split("|"), f"manage_files must appear in the output format union, got: {union}"
 
     def test_translation_prompt_should_include_manage_files_example_in_english(self):
         prompt = TRANSLATION_PROMPT
@@ -41,12 +39,10 @@ class TestManageFilesIntentDeclared:
         )
         # At least one English example mentioning files / writing / saving.
         english_file_examples = [
-            ex for ex in examples
-            if re.search(r"\b(file|markdown|md|write|save|read|document)\b", ex, re.IGNORECASE)
+            ex for ex in examples if re.search(r"\b(file|markdown|md|write|save|read|document)\b", ex, re.IGNORECASE)
         ]
         assert english_file_examples, (
-            f"Expected at least one English manage_files example mentioning file/markdown/document, "
-            f"got: {examples}"
+            f"Expected at least one English manage_files example mentioning file/markdown/document, got: {examples}"
         )
 
     def test_translation_prompt_should_include_manage_files_example_in_portuguese(self):
@@ -58,12 +54,11 @@ class TestManageFilesIntentDeclared:
             prompt,
         )
         pt_examples = [
-            block for block in pt_blocks
+            block
+            for block in pt_blocks
             if re.search(r"\b(crie|criar|salve|salvar|arquivo|documenta|leia|ler)\b", block, re.IGNORECASE)
         ]
-        assert pt_examples, (
-            f"Expected at least one Portuguese manage_files example, got blocks: {pt_blocks}"
-        )
+        assert pt_examples, f"Expected at least one Portuguese manage_files example, got blocks: {pt_blocks}"
 
     def test_translation_prompt_should_not_classify_file_creation_examples_as_build_flow(self):
         """Disambiguation guard: no example pairs file-creation phrasing with build_flow intent."""
@@ -79,8 +74,7 @@ class TestManageFilesIntentDeclared:
             re.IGNORECASE,
         )
         offenders = [
-            (block[0], block[2]) for block in blocks
-            if block[2] == "build_flow" and file_phrases.search(block[0])
+            (block[0], block[2]) for block in blocks if block[2] == "build_flow" and file_phrases.search(block[0])
         ]
         assert not offenders, (
             f"File-creation phrasings must not be classified as build_flow. Offending examples: {offenders}"
@@ -93,7 +87,7 @@ class TestManageFilesIntentDeclared:
         rule_or_example = (
             "how do I save" in prompt.lower()
             or "how to save a file" in prompt.lower()
-            or 'how do i create a file' in prompt.lower()
+            or "how do i create a file" in prompt.lower()
         )
         assert rule_or_example, (
             "Prompt should disambiguate 'how do I save/create a file?' as question, not manage_files"
