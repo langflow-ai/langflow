@@ -839,29 +839,28 @@ class TestSimpleRunFlowTask:
 class TestWebhookEventsStreamAuth:
     """Unit tests for webhook_events_stream authentication."""
 
-    async def test_raises_403_when_user_does_not_own_flow(self):
-        """Should raise 403 when authenticated user doesn't own the flow."""
-        from unittest.mock import Mock
+    async def test_raises_404_when_user_does_not_own_flow(self):
+        """Should raise 404 when authenticated user doesn't own the flow."""
+        from unittest.mock import Mock, patch
 
         from fastapi import HTTPException
         from langflow.api.v1.endpoints import webhook_events_stream
 
-        flow = Mock()
-        flow.id = "test-flow-id"
-        flow.user_id = "owner-user-id"
-
         mock_user = Mock()
-        mock_user.id = "different-user-id"  # Different from flow owner
+        mock_user.id = "different-user-id"
 
         request = Mock()
 
-        with pytest.raises(HTTPException) as exc_info:
-            await webhook_events_stream(
-                flow_id_or_name="test-flow-id",
-                flow=flow,
-                user=mock_user,
-                request=request,
-            )
+        # Mock get_flow_by_id_or_endpoint_name to raise 404 as it would if user doesn't own it
+        with patch("langflow.api.v1.endpoints.get_flow_by_id_or_endpoint_name") as mock_get_flow:
+            mock_get_flow.side_effect = HTTPException(status_code=404, detail="Flow identifier test-flow-id not found")
 
-        assert exc_info.value.status_code == 403
-        assert "Access denied" in exc_info.value.detail
+            with pytest.raises(HTTPException) as exc_info:
+                await webhook_events_stream(
+                    flow_id_or_name="test-flow-id",
+                    user=mock_user,
+                    request=request,
+                )
+
+        assert exc_info.value.status_code == 404
+        assert "Flow identifier test-flow-id not found" in exc_info.value.detail
