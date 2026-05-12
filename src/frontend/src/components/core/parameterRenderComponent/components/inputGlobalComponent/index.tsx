@@ -170,7 +170,7 @@ export default function InputGlobalComponent({
       password={password ?? false}
       value={currentValue}
       options={variableOptions}
-      optionsPlaceholder="Global Variables"
+      optionsPlaceholder={t("globalVars.pageTitle")}
       optionsIcon="Globe"
       optionsButton={renderAddVariableButton()}
       optionButton={renderDeleteButton}

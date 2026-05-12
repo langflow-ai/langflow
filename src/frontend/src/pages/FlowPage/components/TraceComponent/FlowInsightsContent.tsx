@@ -299,7 +299,7 @@ export function FlowInsightsContent({
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px]">
+              <SelectTrigger className="h-8 w-[130px] [&>span]:truncate">
                 <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
