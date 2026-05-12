@@ -1,11 +1,8 @@
 import { useViewport } from "@xyflow/react";
-import { HelperLinesState } from "../helpers/helper-lines";
+import { useHelperLinesStore } from "@/stores/helperLinesStore";
 
-interface HelperLinesProps {
-  helperLines: HelperLinesState;
-}
-
-export default function HelperLines({ helperLines }: HelperLinesProps) {
+export default function HelperLines() {
+  const helperLines = useHelperLinesStore((state) => state.helperLines);
   const { x: viewportX, y: viewportY, zoom } = useViewport();
 
   if (!helperLines.horizontal && !helperLines.vertical) {
