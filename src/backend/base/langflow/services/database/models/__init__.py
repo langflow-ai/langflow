@@ -10,6 +10,7 @@ from .folder import Folder
 from .ingestion_run import IngestionRun, IngestionRunStatus
 from .jobs import Job
 from .knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from .mcp_job import MCPJob, MCPJobStatus
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
@@ -31,6 +32,8 @@ __all__ = [
     "Job",
     "KnowledgeBaseRecord",
     "KnowledgeBaseStatus",
+    "MCPJob",
+    "MCPJobStatus",
     "MemoryBase",
     "MemoryBaseSession",
     "MemoryBaseWorkflowRun",

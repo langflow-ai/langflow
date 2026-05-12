@@ -347,6 +347,16 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Starting MCP job executor service")
+            from langflow.services.deps import get_mcp_job_executor_service
+
+            mcp_job_executor_service = get_mcp_job_executor_service()
+            await mcp_job_executor_service.start()
+            await logger.adebug(
+                f"started MCP job executor service in {asyncio.get_event_loop().time() - current_time:.2f}s"
+            )
+
             # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
             if get_settings_service().settings.agentic_experience:
                 if is_step_complete(PreloadStep.AGENTIC_MCP):

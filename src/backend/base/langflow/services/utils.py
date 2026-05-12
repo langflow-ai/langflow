@@ -453,6 +453,7 @@ def register_all_service_factories() -> None:
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
     from langflow.services.job_queue import factory as job_queue_factory
+    from langflow.services.mcp_jobs import factory as mcp_jobs_factory
     from langflow.services.session import factory as session_factory
     from langflow.services.shared_component_cache import factory as shared_component_cache_factory
     from langflow.services.state import factory as state_factory
@@ -484,6 +485,7 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
+    service_manager.register_factory(mcp_jobs_factory.MCPJobExecutorServiceFactory())
     service_manager.set_factory_registered()
 
 

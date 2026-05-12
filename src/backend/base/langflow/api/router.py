@@ -13,6 +13,7 @@ from langflow.api.v1 import (
     folders_router,
     knowledge_bases_router,
     login_router,
+    mcp_jobs_router,
     mcp_projects_router,
     mcp_router,
     memories_router,
@@ -73,6 +74,7 @@ router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)
+router_v1.include_router(mcp_jobs_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)

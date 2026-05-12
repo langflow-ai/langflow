@@ -1,0 +1,160 @@
+---
+title: MCP catalog and long-running tools (spec)
+slug: /mcp-catalog-and-long-running
+---
+
+:::warning Specification — not yet implemented
+This page specifies the long-running tool substrate and the MCP catalog UX planned for Langflow. The capabilities described here do not exist yet.
+:::
+
+This spec covers the foundation that the [`MCPComposerComponent`](/mcp-composer-component) and [`FastMCPServerComponent`](/mcp-fastmcp-component) depend on:
+
+1. **Long-running tool support** — letting a flow exposed as an MCP tool return a job handle immediately rather than blocking the MCP request until the flow finishes.
+2. **Skills** — first-class resource type for read-only knowledge that distinguishes itself from callable tools.
+3. **Catalog UI** — a single page where users can find, filter, and manage all tools, skills, and events across the N products their org has connected. At 5 events × N products, this is the primary surface flow authors will live in.
+
+## Motivation
+
+The current MCP integration runs every tool call synchronously inside `handle_call_tool()` (see [`mcp_utils.py:256-384`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/mcp_utils.py)). Progress notifications go out on a 1s timer, but no job ID is ever returned, and the MCP request is held open until the flow completes. This is fine for sub-minute flows; it breaks for genuinely long-running work (multi-step agent runs, batch operations, IBM-software integrations that wait on external systems).
+
+Independently, the existing per-project MCP servers settings page (see [`MCPServersPage`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/pages/SettingsPage/pages/MCPServersPage/index.tsx)) does not scale past a handful of servers. At the target deployment of 5 events × N products, users need search, filtering, and grouping — by product (folder), by event type, by status.
+
+## Long-running tools
+
+### Data model
+
+New table `mcp_jobs`:
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID | Primary key. |
+| `project_id` | UUID | FK to `project`. Required for multi-tenancy filtering. |
+| `flow_id` | UUID | FK to `flow`. Identifies the tool being invoked. |
+| `tool_name` | String | Resolved MCP tool name at job creation time (immutable per job). |
+| `inputs` | JSON | Tool inputs (validated against the flow's input schema before insert). |
+| `status` | Enum | `pending`, `running`, `completed`, `failed`, `cancelled`. |
+| `progress` | Int | 0-100. Mirrors the existing progress-notification mechanism. |
+| `result` | JSON | Set on `completed`. Tool output as it would have been returned synchronously. |
+| `error` | Text | Set on `failed`. Truncated to 4 KB. |
+| `callback_url` | String | Optional. If set, the worker posts to this URL on terminal state. |
+| `created_by` | UUID | FK to `user`. The MCP client's authenticated user. |
+| `created_at` | Timestamp | |
+| `updated_at` | Timestamp | |
+| `completed_at` | Timestamp | Set on terminal state. |
+
+Add to existing `flow` table:
+
+| Column | Type | Notes |
+|---|---|---|
+| `long_running` | Boolean | Default `false`. When `true` and `mcp_enabled=true`, calls to this flow as an MCP tool return a job handle instead of blocking. |
+| `default_timeout_s` | Int | Default `3600`. The job worker aborts a running job after this many seconds. Validated to be between `60` and `86400`. |
+
+Migration: new Alembic revision adding both the `mcp_jobs` table and the two `flow` columns. Backfill is trivial — `long_running` defaults to `false` for existing rows.
+
+### Job worker
+
+New service `JobQueueService` (sibling to `MCPComposerService`) at `src/backend/base/langflow/services/job_queue/`:
+
+- Backed by the existing event loop — no Celery / external queue dependency. A bounded asyncio worker pool (`LANGFLOW_MCP_JOB_WORKERS`, default 4) picks up `pending` jobs.
+- On each job: load the flow, marshal inputs via the existing `simple_run_flow()` path, write progress every 1s, fire callback POST on terminal state (best effort, three retries with exponential backoff).
+- On Langflow restart: jobs in `running` state are reconciled to `failed` with error `langflow restarted before completion`. This is the simplest correct behavior; resumable jobs are explicitly out of scope for the first cut.
+
+### API surface
+
+New router at `src/backend/base/langflow/api/v1/mcp_jobs.py`:
+
+| Method & path | Body / params | Returns |
+|---|---|---|
+| `POST /api/v1/mcp/jobs` | `{ flow_id, inputs, callback_url? }` | `{ job_id, status, polling_url }` |
+| `GET /api/v1/mcp/jobs/{id}` | — | Full job row (subject to user's project access). |
+| `GET /api/v1/mcp/jobs` | `?project_id=&status=&flow_id=&limit=&offset=` | Paginated list. |
+| `DELETE /api/v1/mcp/jobs/{id}` | — | Transitions `pending`/`running` → `cancelled`. No-op for terminal states. |
+
+All endpoints require the same auth as today's `/api/v1/mcp/*` routes.
+
+### Fork in `handle_call_tool`
+
+[`mcp_utils.py:256-384`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/mcp_utils.py) gains an early branch:
+
+```python
+if flow.long_running:
+    job = await job_queue_service.enqueue(
+        project_id=flow.project_id,
+        flow_id=flow.id,
+        tool_name=tool_name,
+        inputs=validated_inputs,
+        created_by=current_user.id,
+        callback_url=callback_url_from_request_metadata,
+    )
+    return [
+        ResourceLink(
+            uri=f"langflow://jobs/{job.id}",
+            name=f"Job {job.id}",
+            mime_type="application/vnd.langflow.job+json",
+        )
+    ]
+```
+
+The existing sync path is untouched. Progress notifications on the sync path remain.
+
+### Job handles as MCP resource links
+
+MCP's `resource_link` content block is the right primitive: the client gets a typed pointer instead of a result, can fetch it lazily, and can subscribe to updates if the server advertises that capability.
+
+Resource URI scheme: `langflow://jobs/<id>`. The MCP resource reader resolves this to a JSON payload matching the `GET /api/v1/mcp/jobs/{id}` response. Clients that don't speak the custom scheme fall back to following `polling_url` over plain HTTP.
+
+## Skills
+
+A "skill" is an MCP resource whose `mime_type` is `application/vnd.langflow.skill+json` (or `text/markdown` with an `application/vnd.langflow.skill` profile parameter). Skills carry read-only knowledge — a prompt fragment, a domain ontology, a runbook — that an agent needs to do its job but should not be expressed as a callable tool.
+
+This is purely a convention layered on the existing MCP resources channel. No new MCP primitive, no new table — skills are rows in the existing flow/resource model, distinguished by mime type. The catalog UI groups them; the [`SkillComponent`](/mcp-fastmcp-component#skills-as-resources) is the authoring surface.
+
+Rationale: the alternative was to invent a `skills` table parallel to `tools`. That would force callers (Composer, FastMCP) to discover skills via a non-standard route. Riding on resources keeps MCP-protocol compatibility without compromise.
+
+## Catalog UI
+
+New page at `src/frontend/src/pages/MainPage/pages/CatalogPage/`:
+
+- Three tabs: **Tools**, **Skills**, **Events**.
+- Each tab is server-paginated, with filters: product (folder/project), name search, status (Events only), `long_running` (Tools only).
+- Tools tab rows: name, description, project, long-running badge, last-invoked-at, action menu (run / disable / edit).
+- Skills tab rows: name, mime type, project, source flow, action menu (preview / disable).
+- Events tab rows: job ID, tool name, status, progress bar, created/completed time, action menu (view / cancel).
+- Empty state: link to docs for `MCPComposerComponent`, `FastMCPServerComponent`, and `SkillComponent`.
+
+Server-side: three new query endpoints aggregating across projects the user can access. These are thin wrappers — Tools comes from `Flow` rows where `mcp_enabled=true`; Skills from MCP resources whose mime type matches; Events from `mcp_jobs`. No new materialized state.
+
+## Security and multi-tenancy
+
+- All three catalog queries filter by user-accessible projects. The same access checks used by [`/api/v1/projects/`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1) apply.
+- `mcp_jobs` rows inherit the project's access list. Users cannot list, fetch, or cancel jobs in projects they cannot read.
+- Job callbacks are sent over HTTPS only when the configured `callback_url` uses `https://`. HTTP callbacks log a warning and are allowed only when `LANGFLOW_MCP_JOB_ALLOW_HTTP_CALLBACK=true` (default `false`).
+- The `inputs` and `result` JSON columns can contain secrets the flow received or produced. They are stored encrypted using the existing secrets-store key. Users querying jobs they own see decrypted values; admins viewing jobs across tenants see redacted previews.
+
+## Migration path
+
+Backwards compatible end to end:
+
+- Existing flows continue to behave as today — `long_running` defaults to `false`, so the sync path is preserved.
+- The MCP catalog page is additive; the existing MCP server settings page stays in place. Future work can deprecate the old page once the catalog page covers all current use cases.
+- No breaking changes to MCP protocol contracts. Resource-link returns are valid MCP and degrade gracefully on clients that ignore unknown URI schemes (they receive a polling URL they can follow).
+
+## Verification
+
+End-to-end after Phase 2:
+
+1. Migration runs cleanly on a database with existing flows, jobs, and projects.
+2. Create a flow, mark `mcp_enabled=true` and `long_running=true` via the API.
+3. `POST /api/v1/mcp/jobs` with the flow's ID and inputs → returns `{ job_id, status: "pending", polling_url }`.
+4. Worker picks up the job within 1s; `GET /api/v1/mcp/jobs/{id}` shows `running` with progress.
+5. Wait for completion; confirm `status: completed` and `result` matches a synchronous run of the same flow.
+6. `DELETE /api/v1/mcp/jobs/{id}` on a pending job transitions to `cancelled`.
+7. Restart Langflow with a `running` job in the DB; confirm it transitions to `failed` with the documented error.
+8. Confirm Claude Desktop receives a `resource_link` when calling the tool over MCP, and that polling the link returns the same job state.
+
+Catalog UI after Phase 3:
+
+1. Catalog page loads with three tabs populated from existing data.
+2. Filter by project narrows all three tabs.
+3. Search returns relevant tools across 5N events without timing out.
+4. Cancelling an event from the catalog UI is reflected in `GET /api/v1/mcp/jobs/{id}`.

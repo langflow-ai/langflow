@@ -5,32 +5,44 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.models_and_agents.a2a_agent_component import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
+    from lfx.components.models_and_agents.fastmcp_server_component import FastMCPServerComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+    from lfx.components.models_and_agents.mcp_composer_component import MCPComposerComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
     from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
+    from lfx.components.models_and_agents.skill_component import SkillComponent
 
 _dynamic_imports = {
+    "A2AAgentComponent": "a2a_agent_component",
     "AgentComponent": "agent",
     "EmbeddingModelComponent": "embedding_model",
+    "FastMCPServerComponent": "fastmcp_server_component",
     "LanguageModelComponent": "language_model",
+    "MCPComposerComponent": "mcp_composer_component",
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
     "PromptComponent": "prompt",
     "PoliciesComponent": "policies_component",
+    "SkillComponent": "skill_component",
 }
 
 __all__ = [
+    "A2AAgentComponent",
     "AgentComponent",
     "EmbeddingModelComponent",
+    "FastMCPServerComponent",
     "LanguageModelComponent",
+    "MCPComposerComponent",
     "MCPToolsComponent",
     "MemoryComponent",
     "PoliciesComponent",
     "PromptComponent",
+    "SkillComponent",
 ]
 
 

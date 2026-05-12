@@ -1,0 +1,102 @@
+---
+title: FastMCP Server component (spec)
+slug: /mcp-fastmcp-component
+---
+
+:::warning Specification — not yet implemented
+This page specifies the `FastMCPServerComponent` planned for Langflow. The component does not exist yet. See [tracking note](#status) at the bottom.
+:::
+
+The **FastMCP Server** component lets flow authors assemble their own FastMCP server from inside a flow — picking which components are exposed as `@mcp.tool()` and which are exposed as resources, choosing the transport, and getting back a server URL that external MCP clients can connect to.
+
+Today, FastMCP is used internally by Langflow in two places ([`lfx/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/mcp/server.py) and [`agentic/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/agentic/mcp/server.py)). The set of tools each server exposes is hard-coded. Flow authors who want to publish a custom MCP server today must edit Python source. This component closes that gap.
+
+## Motivation
+
+Two needs from the parent rollout:
+
+1. **Bespoke MCP servers per flow.** A Solis-style deployment needs to publish a curated set of tools (some sync, some long-running) and skills (resources) over MCP without changing Langflow source.
+2. **Long-running tools, declaratively.** The `long_running` flag on a tool input needs to plumb through to `@mcp.tool()` so the returned tool result is a job handle (see [catalog and long-running spec](/mcp-catalog-and-long-running#long-running-tools)) rather than an inline result.
+
+## Component shape
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `server_name` | String | FastMCP server name (passed to `FastMCP(name)`). Defaults to `langflow-<flow_id>`. Must be unique per Langflow instance. |
+| `transport` | Enum | One of `stdio`, `streamable_http`, `sse`. Default `streamable_http`. |
+| `port` | Int | Required when `transport` ≠ `stdio`. Default: auto-allocate from a configurable port range. |
+| `host` | String | Required when `transport` ≠ `stdio`. Default `127.0.0.1`. |
+| `tools` | List[ToolInput] | List of components or flows to expose as `@mcp.tool()`. Each entry has a `name` (overrides the source's display name) and `description` (overrides). Optional `long_running` boolean per tool. |
+| `resources` | List[ResourceInput] | List of [`SkillComponent`](/mcp-catalog-and-long-running#skills) outputs or file references to expose as MCP resources. Each entry has a `uri`, `name`, `mime_type`, and content provider. |
+| `auth` | Dict | Optional. If set, the server requires auth on connection. Two modes: `{ "type": "bearer", "token": "..." }` or `{ "type": "oauth", ... }` (mirrors Composer's OAuth block). |
+| `enable_telemetry` | Boolean | Default `true`. If `true`, attaches the same lifespan telemetry hooks used by [`lfx/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/mcp/server.py). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `endpoint_url` | String | Full URL clients should connect to. For `stdio`, this is a command string (e.g. `python -m langflow.runtime.mcp_server <id>`). |
+| `server_handle` | ServerHandle | Opaque reference downstream components (e.g. `MCPComposerComponent`) can consume directly to talk to this server without going through HTTP. Enables in-process composition. |
+| `tool_descriptors` | List[Dict] | The list of `@mcp.tool()` registrations the server exposes (name, description, JSON schema). Useful for the catalog UI to render without re-discovering. |
+
+### Execution semantics
+
+On `build()`:
+
+1. Construct a `FastMCP(server_name)` instance.
+2. For each `tools` entry:
+   - Resolve the source to a callable (component method or flow runner).
+   - Generate a JSON schema from the source's input ports (reuse `json_schema_from_flow` from [`flow.py:463`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/flow.py)).
+   - Register `@mcp.tool(name=..., description=...)` whose body either awaits the source (sync) or enqueues a job and returns a [resource link](/mcp-catalog-and-long-running#job-handles-as-mcp-resource-links) (long-running).
+3. For each `resources` entry: register an MCP resource with the given URI and a reader that calls the content provider.
+4. Start the transport in a managed task. For `stdio`, the server runs in-process and `endpoint_url` is a CLI invocation string; for HTTP/SSE, bind to `host:port` and return the URL.
+5. Server lifetime: tied to the **flow deployment**, not to a single flow run. Re-running the flow re-registers tools but does not restart the listener (port conflict otherwise).
+
+## Long-running tool wiring
+
+When a tool entry has `long_running=true`:
+
+- The registered `@mcp.tool()` body enqueues a row in `mcp_jobs` (see [data model](/mcp-catalog-and-long-running#data-model)) and returns immediately with an MCP `resource_link` content block pointing at `/api/v1/mcp/jobs/<id>`.
+- The MCP client follows the resource link to poll status or subscribes to the resource for push updates if the client supports that capability.
+- Tools without `long_running` continue to run inline and return their result directly (preserving today's behavior).
+
+## Security and multi-tenancy
+
+- Each `FastMCPServerComponent` runs in the Langflow user's process. There is no escalation — the tools it exposes can only do what the flow author already has permission to do.
+- Bind defaults to `127.0.0.1`. Exposing on `0.0.0.0` requires explicit configuration and is gated by a settings flag (`LANGFLOW_FASTMCP_ALLOW_EXTERNAL_BIND`, default `false`).
+- When `auth` is set to bearer mode, tokens are stored in the encrypted secrets store, not in the flow definition.
+- Resource URIs are validated to prevent path traversal (no `..`, no absolute paths outside the configured resource root).
+
+## Port allocation
+
+To avoid collisions across multiple `FastMCPServerComponent` instances on the same Langflow installation:
+
+- A new service `FastMCPPortAllocator` (sibling to `MCPComposerService`) reserves ports from a configurable range (`LANGFLOW_FASTMCP_PORT_MIN`, `LANGFLOW_FASTMCP_PORT_MAX`, defaults 7100–7199).
+- The allocator persists port → flow_id mappings in memory only; on restart, ports are re-allocated as flows redeploy.
+- If a user-specified `port` is in use, the component fails fast with the conflicting flow ID.
+
+## Migration path
+
+Purely additive. The existing internal FastMCP servers (`lfx/mcp/server.py`, `agentic/mcp/server.py`) continue to run as before. The component does not replace them — it adds a third way to publish FastMCP servers (declaratively, from a flow).
+
+The shared `@mcp.tool()` registration helper extracted for this component should also be used to refactor those two internal servers down the line, but that is out of scope for the initial rollout.
+
+## Verification
+
+1. Create a flow that contains: two `SkillComponent` nodes (markdown content), one regular tool component, one long-running tool component, and a `FastMCPServerComponent` wired to all four.
+2. Deploy the flow. Confirm the component returns an `endpoint_url`.
+3. Connect MCP Inspector to `endpoint_url`. Confirm `list_tools()` returns both tools and `list_resources()` returns both skills.
+4. Call the sync tool — confirm inline result.
+5. Call the long-running tool — confirm an MCP `resource_link` is returned pointing at `/api/v1/mcp/jobs/<id>`; follow the link until status is `completed`.
+6. Re-run the flow; confirm the server is reused (no port conflict, no restart).
+
+## Status
+
+Spec only. Implementation is Phase 3b in the parent rollout plan. Critical files when implementing:
+
+- [`src/lfx/src/lfx/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/mcp/server.py) — reference for `FastMCP(...)` wiring with telemetry lifespan.
+- [`src/backend/base/langflow/agentic/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/agentic/mcp/server.py) — reference for `@mcp.tool()` decorator patterns.
+- [`src/backend/base/langflow/api/v1/mcp_utils.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/mcp_utils.py) — reference for sync vs long-running fork in tool execution.
+- [`src/backend/base/langflow/api/v1/flow.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/flow.py) `json_schema_from_flow()` — reuse for tool input schema generation.

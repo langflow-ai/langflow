@@ -26,6 +26,7 @@ import { AppInitPage } from "./pages/AppInitPage";
 import { AppWrapperPage } from "./pages/AppWrapperPage";
 import FlowPage from "./pages/FlowPage";
 import LoginPage from "./pages/LoginPage";
+import CatalogPage from "./pages/MainPage/pages/catalogPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
@@ -142,6 +143,7 @@ const router = createBrowserRouter(
                       element={<HomePage key="mcp" type="mcp" />}
                     />
                   </Route>
+                  <Route path="catalog/" element={<CatalogPage />} />
                 </Route>
                 <Route path="settings" element={<SettingsPage />}>
                   <Route

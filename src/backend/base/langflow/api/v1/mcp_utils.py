@@ -287,6 +287,31 @@ async def handle_call_tool(
             msg = f"Flow '{name}' not found in project {project_id}"
             raise ValueError(msg)
 
+        # Long-running fork: enqueue a job and return a resource_link instead of
+        # blocking on simple_run_flow. Clients follow the link to poll status via
+        # /api/v1/mcp/jobs/{id}. See docs/docs/Agents/mcp-catalog-and-long-running.mdx.
+        if flow.long_running and flow.folder_id is not None:
+            from langflow.services.deps import get_mcp_job_executor_service
+
+            executor = get_mcp_job_executor_service()
+            job = await executor.enqueue(
+                project_id=flow.folder_id,
+                flow_id=flow.id,
+                tool_name=name,
+                inputs=dict(arguments),
+                created_by=current_user.id,
+            )
+            link_uri = f"langflow://jobs/{job.id}"
+            return [
+                types.TextContent(
+                    type="text",
+                    text=(
+                        f"Job {job.id} enqueued (status=pending). "
+                        f"Poll {link_uri} or GET /api/v1/mcp/jobs/{job.id} for status."
+                    ),
+                )
+            ]
+
         # Process inputs
         processed_inputs = dict(arguments)
 

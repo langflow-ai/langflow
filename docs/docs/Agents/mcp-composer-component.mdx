@@ -1,0 +1,98 @@
+---
+title: MCP Composer component (spec)
+slug: /mcp-composer-component
+---
+
+:::warning Specification — not yet implemented
+This page specifies the `MCPComposerComponent` planned for Langflow. The component does not exist yet. See [tracking note](#status) at the bottom.
+:::
+
+The **MCP Composer** component wraps Langflow's existing [`MCPComposerService`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/mcp_composer/service.py) and surfaces a running MCP Composer instance as a draggable node in the visual builder.
+
+Without this component, MCP Composer runs as a background service tied to a Langflow project. Its OAuth-aware app surface — the bundle of tools, skills, and long-running events Composer exposes standalone — is invisible to flow authors and cannot be wired into other nodes. This component fixes that by giving flow authors first-class access to Composer's outputs.
+
+## Motivation
+
+The Solis use case (one agentic flow over all IBM software, with MCP Composer connecting to an A2A agent as a tool) requires three things that today's service-only Composer integration does not provide:
+
+1. **Sync calls** from MCP Composer to a Langflow-hosted A2A endpoint inside the same flow.
+2. **App-level pass-through** — Composer's "app" is a bundle of tools/skills/events that today is dropped when Composer runs under Langflow.
+3. **Long-running event handles** routed through the flow rather than swallowed by an inline `await`.
+
+The component itself does not invent any new abstraction. Composer's existing app concept is passed through unchanged.
+
+## Component shape
+
+### Inputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `project_id` | String | Project to bind the Composer instance to. Defaults to the current flow's project. One Composer process per project (matches `MCPComposerService` today). |
+| `streamable_http_url` | String | Upstream Langflow MCP endpoint Composer proxies to. Defaults to the project's own `/streamable` URL. |
+| `auth_config` | Dict | OAuth config block — `oauth_host`, `oauth_port`, `oauth_server_url`, `oauth_callback_path`, `oauth_client_id`, `oauth_client_secret`, `oauth_auth_url`, `oauth_token_url`, `oauth_scopes`. Mirrors keys consumed by [`config_utils.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/utils/mcp/config_utils.py). |
+| `app_filter` | List[String] | Optional. Restrict the `app_handle` output to a subset of Composer's apps by name. Empty = all apps. |
+| `start_timeout_s` | Int | How long to wait for the Composer subprocess to bind its port. Default 80s (matches service default of 40 checks × 2s). |
+
+### Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| `tools` | List[Tool] | Tools aggregated across the selected apps. Each is callable by downstream agent nodes. |
+| `resources` | List[Resource] | Resources (including skills — see [Skills](#skills-as-resources)) aggregated across the selected apps. |
+| `app_handle` | AppHandle | Opaque wrapper around Composer's app endpoints (`/apps/<app>/tools`, `/apps/<app>/resources`, `/apps/<app>/events`). Downstream components consume this directly to talk to Composer without re-discovering tools and resources. |
+| `composer_url` | String | The local URL Composer is listening on (e.g. `http://localhost:<port>`). Useful for debugging and for non-Langflow MCP clients in the same network. |
+
+### Execution semantics
+
+On `build()`:
+
+1. Component calls `mcp_composer_service.start_project_composer(project_id, streamable_http_url, auth_config, ...)`. If Composer is already running for the project, the existing instance is reused.
+2. Component polls `get_project_composer_port(project_id)` until non-null or `start_timeout_s` elapses.
+3. On success, component fetches the app catalog from Composer (new endpoint — see [Composer-side requirements](#composer-side-requirements)), filters by `app_filter`, and returns the aggregated `tools` / `resources` / `app_handle`.
+4. On failure, raises with `get_last_error(project_id)` as the message.
+
+The component does **not** stop the Composer process when the flow finishes — Composer lifecycle stays tied to the project, not to flow execution. This matches today's behavior and avoids paying the 80s startup cost per flow run.
+
+## Composer-side requirements
+
+The `app_handle` design depends on Composer (the external `mcp-composer` package) exposing a catalog endpoint. Specifically:
+
+- `GET /apps` — list apps the authenticated caller can see.
+- `GET /apps/<app>/tools`, `GET /apps/<app>/resources`, `GET /apps/<app>/events` — already exist in Composer's standalone mode; just need to be reachable from the Langflow-side Composer instance.
+
+If Composer does not yet expose `/apps`, the component falls back to a flat tool/resource list (no app grouping). This degrades the `app_handle` to a placeholder — the component logs a warning and the catalog UI shows everything under a single "default" app group.
+
+## Skills as resources
+
+Per the [catalog spec](/mcp-catalog-and-long-running#skills), "skills" are MCP resources with a content type that indicates skill semantics (`application/vnd.langflow.skill+json` or `text/markdown` with a `langflow-skill` URI scheme). The `MCPComposerComponent` surfaces all resources, then the `SkillComponent` and catalog UI filter for those that match the skill content type.
+
+This avoids inventing a new MCP primitive — skills ride on the existing resources channel.
+
+## Security and multi-tenancy
+
+- The component does not relax any existing MCP Composer auth. OAuth config is required when consuming external apps and is plumbed end-to-end via `auth_config`.
+- `MCPComposerService` already enforces per-project isolation (one process per project, per-project auth tokens). The component inherits this — a flow author cannot point their component at another tenant's Composer instance because `project_id` resolves through the authenticated user's accessible projects.
+- The internal backend auth token (`x-langflow-mcp-composer-token`) used for the Composer → Langflow callback continues to be generated and validated by `MCPComposerService`. The component never touches it.
+
+## Migration path
+
+This component is purely additive — no existing flows or APIs change. Today's "Composer runs in the background, invisible to flows" behavior continues to work for users who do not drop the component into a flow. The `LANGFLOW_MCP_COMPOSER_ENABLED` setting (default `true`) still gates the underlying service.
+
+## Verification
+
+End-to-end test, run after Phase 2 lands:
+
+1. Create a project with two flows marked `mcp_enabled`, one of them marked `long_running`.
+2. Drop `MCPComposerComponent` into a third flow. Wire `tools` into an agent and `app_handle` into a (future) `A2AAgentComponent`.
+3. Trigger the flow. Confirm Composer process is started for the project (check `get_project_composer_port`).
+4. Connect Claude Desktop to Composer's URL with the OAuth config; confirm tools list matches the project's `mcp_enabled` flows.
+5. Invoke the long-running tool from Claude; confirm a job handle is returned immediately and `GET /api/v1/mcp/jobs/{id}` reflects status until completion (depends on Phase 2).
+6. Stop the flow; confirm Composer process remains running for the project.
+
+## Status
+
+Spec only. Implementation is Phase 3a in the parent rollout plan. Critical files when implementing:
+
+- [`src/lfx/src/lfx/services/mcp_composer/service.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/mcp_composer/service.py) — service to wrap.
+- [`src/lfx/src/lfx/components/models_and_agents/mcp_component.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/components/models_and_agents/mcp_component.py) — template for new MCP-family components.
+- [`src/backend/base/langflow/api/utils/mcp/config_utils.py`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/utils/mcp/config_utils.py) — OAuth config helpers.

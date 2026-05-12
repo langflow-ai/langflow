@@ -71,6 +71,16 @@ class FlowBase(SQLModel):
         sa_column=Column(Text, nullable=True),
         description="The description of the action associated with the flow",
     )
+    long_running: bool | None = Field(
+        default=False,
+        nullable=True,
+        description="When True with mcp_enabled, MCP tool calls return a job handle instead of blocking",
+    )
+    default_timeout_s: int | None = Field(
+        default=3600,
+        nullable=True,
+        description="Job worker timeout in seconds when long_running is True (60-86400)",
+    )
     access_type: AccessTypeEnum = Field(
         default=AccessTypeEnum.PRIVATE,
         sa_column=Column(
@@ -255,6 +265,14 @@ class FlowHeader(BaseModel):
     mcp_enabled: bool | None = Field(None, description="Flag indicating whether the flow is exposed in the MCP server")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    long_running: bool | None = Field(
+        None,
+        description="When True with mcp_enabled, MCP tool calls return a job handle instead of blocking",
+    )
+    default_timeout_s: int | None = Field(
+        None,
+        description="Job worker timeout in seconds when long_running is True",
+    )
 
     @field_validator("data", mode="before")
     @classmethod
@@ -276,6 +294,20 @@ class FlowUpdate(SQLModel):
     action_description: str | None = None
     access_type: AccessTypeEnum | None = None
     fs_path: str | None = None
+    long_running: bool | None = None
+    default_timeout_s: int | None = None
+
+    @field_validator("default_timeout_s")
+    @classmethod
+    def _validate_timeout(cls, v: int | None) -> int | None:
+        if v is None:
+            return v
+        min_timeout_s = 60
+        max_timeout_s = 86400
+        if not min_timeout_s <= v <= max_timeout_s:
+            msg = f"default_timeout_s must be between {min_timeout_s} and {max_timeout_s}"
+            raise ValueError(msg)
+        return v
 
     @field_validator("endpoint_name")
     @classmethod

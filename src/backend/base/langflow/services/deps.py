@@ -27,6 +27,7 @@ from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
+from langflow.services.mcp_jobs.service import MCPJobExecutorService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 
@@ -245,6 +246,13 @@ def get_queue_service() -> JobQueueService:
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+
+
+def get_mcp_job_executor_service() -> MCPJobExecutorService:
+    """Retrieves the MCPJobExecutorService instance from the service manager."""
+    from langflow.services.mcp_jobs.factory import MCPJobExecutorServiceFactory
+
+    return get_service(ServiceType.MCP_JOB_EXECUTOR_SERVICE, MCPJobExecutorServiceFactory())
 
 
 def get_auth_service() -> BaseAuthService:
