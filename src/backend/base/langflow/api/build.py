@@ -138,6 +138,8 @@ async def get_flow_events_response(
                 queue=main_queue,
                 event_manager=event_manager,
                 event_task=event_task,
+                queue_service=queue_service,
+                job_id=job_id,
             )
 
         # Polling mode - get all available events
@@ -191,8 +193,18 @@ async def create_flow_response(
     queue: asyncio.Queue,
     event_manager: EventManager,
     event_task: asyncio.Task | None,
+    *,
+    queue_service: JobQueueService | None = None,
+    job_id: str | None = None,
 ) -> DisconnectHandlerStreamingResponse:
-    """Create a streaming response for the flow build process."""
+    """Create a streaming response for the flow build process.
+
+    When *queue_service* and *job_id* are provided and the service exposes a
+    ``signal_cancel`` method (RedisJobQueueService with cancel_channel_enabled),
+    a client disconnect on a non-owner worker (``event_task is None``) publishes
+    a cross-worker cancel so the producer worker stops emitting events promptly
+    instead of running the build to natural completion.
+    """
 
     async def consume_and_yield() -> AsyncIterator[str]:
         while True:
@@ -211,21 +223,17 @@ async def create_flow_response(
         logger.debug("Client disconnected, closing tasks")
         if event_task is not None:
             event_task.cancel()
-        else:
-            # Known limitation: cross-worker passive disconnect cannot be propagated.
-            # When this worker does not own the build task (event_task is None), there
-            # is no in-process handle to cancel the producer.  The producer worker will
-            # continue emitting events into the queue until the build completes naturally.
-            # Proper cross-worker cancellation would require a Redis side-channel
-            # (e.g. pubsub or a langflow:cancel:<job_id> key) that the build loop polls
-            # periodically.  Until that is implemented, log a warning so the silent
-            # no-op is at least observable in logs.
-            logger.warning(
-                "Client disconnected but no local event_task found — "
-                "this worker does not own the build task. "
-                "The producer will keep running until the build finishes naturally. "
-                "Cross-worker passive-disconnect cancellation is not yet implemented."
-            )
+        elif queue_service is not None and job_id is not None:
+            # Cross-worker passive disconnect: publish a cancel signal so the
+            # owning worker stops emitting events instead of running to natural
+            # completion. signal_cancel is a no-op when the side-channel is
+            # disabled or the backend is the in-memory queue.
+            signal = getattr(queue_service, "signal_cancel", None)
+            if signal is not None:
+                try:
+                    await signal(job_id)
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning(f"Cross-worker disconnect: signal_cancel for {job_id} failed: {exc}")
         queue_cancel = getattr(queue, "cancel", None)
         if queue_cancel is not None:
             maybe_coro = queue_cancel()

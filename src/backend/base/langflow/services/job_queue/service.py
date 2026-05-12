@@ -614,12 +614,11 @@ class RedisJobQueueService(JobQueueService):
     authorization checks.  The HTTP cancel endpoint already verifies job
     ownership before calling through; programmatic callers must do the same.
 
-    Known limitations
-    -----------------
-    * Cross-worker *passive* disconnect (client closes the connection) is still
-      a best-effort no-op — there is no automatic publish on disconnect.  Add a
-      ``signal_cancel`` call to the disconnect path if this matters for your
-      deployment.
+    Cross-worker passive disconnect is also wired through: when a client closes
+    its streaming connection on a worker that doesn't own the job, the streaming
+    response's disconnect handler calls :meth:`signal_cancel` so the owning
+    worker stops emitting events promptly instead of running to natural
+    completion.  See ``langflow.api.build.create_flow_response``.
     """
 
     STREAM_PREFIX = _STREAM_PREFIX

@@ -570,6 +570,55 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
     assert queue.cancelled
 
 
+@pytest.mark.asyncio
+async def test_cross_worker_disconnect_publishes_signal_cancel():
+    """Disconnect on a non-owner worker publishes signal_cancel so the producer worker cancels its task.
+
+    Closes the cross-worker passive-disconnect gap: previously, on_disconnect only
+    cancelled the local wrapper when event_task is None, leaving the producer
+    worker emitting events into Redis until the build completed naturally.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc_producer, _ = await _make_service(shared_client=shared_client)
+    svc_consumer, _ = await _make_service(shared_client=shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        svc_producer.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc_producer.start_job(job_id, _long_running())
+        await asyncio.sleep(0.05)
+
+        # Cross-worker poll: consumer opens a Redis-backed queue wrapper.
+        queue, *_ = svc_consumer.get_queue_data(job_id)
+        response = await create_flow_response(
+            queue=queue,
+            event_manager=EventManager(queue),
+            event_task=None,  # cross-worker → no local task handle
+            queue_service=svc_consumer,
+            job_id=job_id,
+        )
+
+        # Client disconnects from the consumer worker.
+        await response.on_disconnect()
+
+        # Producer worker's local task should be cancelled via pub/sub propagation.
+        await asyncio.wait_for(cancelled_event.wait(), timeout=2.0)
+        assert cancelled_event.is_set()
+        assert svc_consumer._cancel_stats["published"] == 1
+        assert svc_producer._cancel_stats["dispatched_owned"] == 1
+    finally:
+        await _stop_service(svc_consumer)
+        await _stop_service(svc_producer)
+
+
 # ---------------------------------------------------------------------------
 # Cross-worker cancel via Redis pub/sub
 # ---------------------------------------------------------------------------
