@@ -160,10 +160,7 @@ describe("useAssistantChat — refining plan UX", () => {
       mockPostAssistStream.mockResolvedValue(undefined);
 
       await act(async () => {
-        await hook.result.current.handleSend(
-          "use Claude instead",
-          TEST_MODEL,
-        );
+        await hook.result.current.handleSend("use Claude instead", TEST_MODEL);
       });
 
       expect(mockPostAssistStream).toHaveBeenCalledTimes(1);
@@ -221,10 +218,7 @@ describe("useAssistantChat — refining plan UX", () => {
       mockPostAssistStream.mockResolvedValue(undefined);
 
       await act(async () => {
-        await hook.result.current.handleSend(
-          "use Claude instead",
-          TEST_MODEL,
-        );
+        await hook.result.current.handleSend("use Claude instead", TEST_MODEL);
       });
 
       const userMessages = hook.result.current.messages.filter(
@@ -289,10 +283,7 @@ describe("useAssistantChat — refining plan UX", () => {
       // new propose_plan event so the hook sees the agent did replan.
       emitPlan("Plan v2");
       await act(async () => {
-        await hook.result.current.handleSend(
-          "use Claude instead",
-          TEST_MODEL,
-        );
+        await hook.result.current.handleSend("use Claude instead", TEST_MODEL);
       });
 
       // Now send a third message with NO new dismiss. The stash should

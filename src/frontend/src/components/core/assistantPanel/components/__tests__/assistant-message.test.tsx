@@ -489,9 +489,7 @@ describe("AssistantMessageItem", () => {
         hidden: true,
       });
 
-      const { container } = render(
-        <AssistantMessageItem message={message} />,
-      );
+      const { container } = render(<AssistantMessageItem message={message} />);
 
       expect(container).toBeEmptyDOMElement();
     });

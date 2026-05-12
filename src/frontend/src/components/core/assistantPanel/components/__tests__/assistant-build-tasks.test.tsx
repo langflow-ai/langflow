@@ -52,9 +52,7 @@ describe("AssistantBuildTasks", () => {
   });
 
   it("should_label_configure_with_component_id", () => {
-    const tasks = [
-      makeTask({ action: "configure", componentId: "Agent-xyz" }),
-    ];
+    const tasks = [makeTask({ action: "configure", componentId: "Agent-xyz" })];
     render(<AssistantBuildTasks tasks={tasks} />);
     expect(screen.getByText(/Configured Agent-xyz/i)).toBeInTheDocument();
   });

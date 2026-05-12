@@ -146,9 +146,7 @@ describe("AssistantInput", () => {
       // When the user dismissed a plan and is composing the refinement, we
       // override the idle placeholder with a directed cue so the input
       // reads as "this is the box where I tell the agent what to change".
-      render(
-        <AssistantInput {...defaultProps} isRefiningPlan={true} />,
-      );
+      render(<AssistantInput {...defaultProps} isRefiningPlan={true} />);
 
       expect(
         screen.getByPlaceholderText("Tell me what to change…"),

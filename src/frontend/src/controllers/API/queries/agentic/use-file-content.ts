@@ -19,7 +19,10 @@ interface UseFileContentOptions {
   enabled?: boolean;
 }
 
-export function useFileContent(path: string, options: UseFileContentOptions = {}) {
+export function useFileContent(
+  path: string,
+  options: UseFileContentOptions = {},
+) {
   const enabled = options.enabled ?? true;
 
   return useQuery<string, Error>({

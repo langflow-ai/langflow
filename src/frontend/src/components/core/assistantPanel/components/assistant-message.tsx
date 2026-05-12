@@ -26,10 +26,7 @@ interface AssistantMessageItemProps {
     actionId: string,
     status: "applied" | "dismissed",
   ) => void;
-  onApplyFlowProposal?: (
-    messageId: string,
-    mode?: "replace" | "add",
-  ) => void;
+  onApplyFlowProposal?: (messageId: string, mode?: "replace" | "add") => void;
   onDismissFlowProposal?: (messageId: string) => void;
   onApprovePlan?: (messageId: string) => void;
   onDismissPlan?: (messageId: string) => void;

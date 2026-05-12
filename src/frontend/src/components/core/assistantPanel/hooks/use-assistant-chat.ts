@@ -890,28 +890,25 @@ export function useAssistantChat(): UseAssistantChatReturn {
   // Same trick as handleApplyFlowProposalRef — drained by onComplete.
   handleApprovePlanRef.current = handleApprovePlan;
 
-  const handleDismissPlan = useCallback(
-    (messageId: string) => {
-      // Dismiss transitions the card to "refining": the markdown stays on
-      // the message (card keeps rendering) and is stashed so the user's
-      // next handleSend re-injects it as prior-context for the agent.
-      // The user is in control — we do NOT auto-send anything here.
-      setMessages((prev) => {
-        const target = prev.find((m) => m.id === messageId);
-        const markdown = target?.pendingPlanProposal?.markdown ?? "";
-        if (markdown) {
-          dismissedPlanMarkdownRef.current = markdown;
-        }
-        return prev.map((m) =>
-          m.id === messageId
-            ? { ...m, planProposalStatus: "refining" as const }
-            : m,
-        );
-      });
-      setIsRefiningPlan(true);
-    },
-    [],
-  );
+  const handleDismissPlan = useCallback((messageId: string) => {
+    // Dismiss transitions the card to "refining": the markdown stays on
+    // the message (card keeps rendering) and is stashed so the user's
+    // next handleSend re-injects it as prior-context for the agent.
+    // The user is in control — we do NOT auto-send anything here.
+    setMessages((prev) => {
+      const target = prev.find((m) => m.id === messageId);
+      const markdown = target?.pendingPlanProposal?.markdown ?? "";
+      if (markdown) {
+        dismissedPlanMarkdownRef.current = markdown;
+      }
+      return prev.map((m) =>
+        m.id === messageId
+          ? { ...m, planProposalStatus: "refining" as const }
+          : m,
+      );
+    });
+    setIsRefiningPlan(true);
+  }, []);
 
   const toggleSkipAll = useCallback(() => {
     setSkipAll((prev) => {
@@ -1016,7 +1013,10 @@ function buildTaskFromEvent(
   const receivedAt = Date.now();
   switch (event.action) {
     case "add_component": {
-      const node = (event.node ?? {}) as { id?: string; data?: { type?: string } };
+      const node = (event.node ?? {}) as {
+        id?: string;
+        data?: { type?: string };
+      };
       const componentId = typeof node.id === "string" ? node.id : undefined;
       const componentType =
         (event.component_type as string | undefined) ?? node.data?.type;

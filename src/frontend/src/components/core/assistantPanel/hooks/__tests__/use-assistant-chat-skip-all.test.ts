@@ -207,10 +207,7 @@ describe("useAssistantChat — skip-all", () => {
       const { result } = renderHook(() => useAssistantChat());
 
       await act(async () => {
-        await result.current.handleSend(
-          "/skip-all please",
-          TEST_MODEL,
-        );
+        await result.current.handleSend("/skip-all please", TEST_MODEL);
       });
 
       expect(mockPostAssistStream).toHaveBeenCalledTimes(1);

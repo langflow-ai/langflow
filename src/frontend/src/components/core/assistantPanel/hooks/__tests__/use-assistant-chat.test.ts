@@ -854,9 +854,9 @@ describe("useAssistantChat", () => {
       expect(mockSetNodes).toHaveBeenCalled();
       const firstCallArg = mockSetNodes.mock.calls[0][0];
       expect(Array.isArray(firstCallArg)).toBe(true);
-      expect(
-        (firstCallArg as Array<{ id: string }>).map((n) => n.id),
-      ).toEqual(FRESH_FLOW.data.nodes.map((n) => n.id));
+      expect((firstCallArg as Array<{ id: string }>).map((n) => n.id)).toEqual(
+        FRESH_FLOW.data.nodes.map((n) => n.id),
+      );
     });
 
     it("should_default_to_replace_when_mode_arg_is_omitted", async () => {

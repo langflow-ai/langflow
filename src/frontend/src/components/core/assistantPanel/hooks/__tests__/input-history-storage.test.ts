@@ -1,7 +1,4 @@
-import {
-  pushHistory,
-  readHistory,
-} from "../input-history-storage";
+import { pushHistory, readHistory } from "../input-history-storage";
 
 const STORAGE_KEY = "langflow-assistant-input-history";
 const MAX_HISTORY = 10;
