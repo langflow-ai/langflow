@@ -1266,6 +1266,14 @@ async def custom_component(
     request: Request,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
+
+    # P2: Check if custom component editing is restricted to admins only
+    if getattr(settings_service.settings, "custom_component_admin_only", False) is True and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is restricted to administrators",
+        )
+
     if not settings_service.settings.allow_custom_components:
         # Lazily compute hash lookups if they haven't been built yet
         # (e.g. during startup before the cache is fully populated).
@@ -1326,6 +1334,13 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
+
+    # P2: Note: The admin gate for custom_component_admin_only applies only to POST /custom_component
+    # (component creation) not to this endpoint (field refresh/update). This endpoint is called
+    # for metadata-only operations like refreshing available models when a provider changes.
+    # Non-admin users need to be able to refresh field metadata, so the gate does not apply here.
+    # See: https://github.com/langflow-ai/langflow/issues/XXX for details on the field refresh use case.
+
     if not settings_service.settings.allow_custom_components:
         get_component_hash_lookups_for_validation()
         all_known = component_cache.all_known_hashes
