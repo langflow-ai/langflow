@@ -146,6 +146,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -345,6 +346,7 @@ module.exports = {
               items: [
                 "Components/directory",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
