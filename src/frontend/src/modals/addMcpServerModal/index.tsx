@@ -24,6 +24,8 @@ import IOKeyPairInput, {
   type KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
+import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
@@ -102,6 +104,11 @@ export default function AddMcpServerModal({
 
   const location = useLocation();
   const isOnMcpSettingsPage = location.pathname === MCP_SETTINGS_PAGE;
+
+  // P2: Check if MCP servers are locked and if user is not admin
+  const mcpServersLocked = useUtilityStore((state) => state.mcpServersLocked);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const isModalLocked = mcpServersLocked && !isAdmin;
 
   const [type, setType] = useState(
     initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
@@ -332,234 +339,258 @@ export default function AddMcpServerModal({
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
-        <div className="flex flex-1 w-full flex-col overflow-hidden min-h-0">
-          <div className="flex flex-col gap-3 p-4 tracking-normal">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <ForwardedIconComponent
-                name="Mcp"
-                className="h-4 w-4 text-primary"
-                aria-hidden="true"
-              />
-              {initialData
-                ? t("mcp.modal.updateTitle")
-                : t("mcp.modal.addTitle")}
+        {isModalLocked ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center gap-4 flex-1">
+            <ForwardedIconComponent
+              name="Lock"
+              className="h-8 w-8 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold">
+                {t("mcp.modal.lockedTitle")}
+              </h3>
+              <p className="text-mmd text-muted-foreground">
+                {t("mcp.modal.lockedDescription")}
+              </p>
             </div>
-            <span className="text-mmd font-normal text-muted-foreground">
-              {isOnMcpSettingsPage ? (
-                t("mcp.modal.descriptionSettings")
-              ) : (
-                <>
-                  {t("mcp.modal.descriptionFlow")}{" "}
-                  <CustomLink
-                    className="underline"
-                    to={MCP_SETTINGS_PAGE}
-                    onClick={() => setOpen(false)}
-                  >
-                    {t("mcp.modal.descriptionFlowLink")}
-                  </CustomLink>
-                  .
-                </>
-              )}
-            </span>
           </div>
-          <Tabs
-            defaultValue={type}
-            onValueChange={changeType}
-            className="flex flex-1 w-full flex-col overflow-hidden min-h-0"
-          >
-            <div className="px-4">
-              <TabsList className="mb-4 flex w-full gap-2">
-                <TabsTrigger
-                  className="flex-1"
-                  disabled={!!initialData && type !== "JSON"}
-                  data-testid="json-tab"
-                  value="JSON"
-                >
-                  JSON
-                </TabsTrigger>
-                <TabsTrigger
-                  className="flex-1"
-                  data-testid="stdio-tab"
-                  disabled={!!initialData && type !== "STDIO"}
-                  value="STDIO"
-                >
-                  STDIO
-                </TabsTrigger>
-                <TabsTrigger
-                  className="flex-1"
-                  data-testid="http-tab"
-                  disabled={!!initialData && type !== "HTTP"}
-                  value="HTTP"
-                >
-                  Streamable HTTP/SSE
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            <div
-              className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
-              id="global-variable-modal-inputs"
-            >
-              {error && (
-                <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
-                  {error}
+        ) : (
+          <>
+            <div className="flex flex-1 w-full flex-col overflow-hidden min-h-0">
+              <div className="flex flex-col gap-3 p-4 tracking-normal">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <ForwardedIconComponent
+                    name="Mcp"
+                    className="h-4 w-4 text-primary"
+                    aria-hidden="true"
+                  />
+                  {initialData
+                    ? t("mcp.modal.updateTitle")
+                    : t("mcp.modal.addTitle")}
                 </div>
-              )}
-              <TabsContent value="JSON" className="flex flex-col p-0 m-0">
-                <Label className="!text-mmd mb-2">
-                  {t("mcp.modal.jsonTabLabel")}
-                </Label>
-                <Textarea
-                  value={jsonValue}
-                  data-testid="json-input"
-                  onChange={(e) => setJsonValue(e.target.value)}
-                  className="min-h-[300px] font-mono text-mmd resize-none"
-                  placeholder={t("mcp.modal.jsonPlaceholder")}
-                  disabled={isPending}
-                />
-              </TabsContent>
-              <TabsContent
-                value="STDIO"
-                className="flex flex-1 flex-col h-full p-0 m-0"
+                <span className="text-mmd font-normal text-muted-foreground">
+                  {isOnMcpSettingsPage ? (
+                    t("mcp.modal.descriptionSettings")
+                  ) : (
+                    <>
+                      {t("mcp.modal.descriptionFlow")}{" "}
+                      <CustomLink
+                        className="underline"
+                        to={MCP_SETTINGS_PAGE}
+                        onClick={() => setOpen(false)}
+                      >
+                        {t("mcp.modal.descriptionFlowLink")}
+                      </CustomLink>
+                      .
+                    </>
+                  )}
+                </span>
+              </div>
+              <Tabs
+                defaultValue={type}
+                onValueChange={changeType}
+                className="flex flex-1 w-full flex-col overflow-hidden min-h-0"
               >
-                <div className="flex h-full flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")}{" "}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      value={stdioName}
-                      onChange={(e) => setStdioName(e.target.value)}
-                      placeholder={t("mcp.modal.placeholderServerName")}
-                      data-testid="stdio-name-input"
-                      disabled={isPending}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldCommand")}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      value={stdioCommand}
-                      onChange={(e) => setStdioCommand(e.target.value)}
-                      placeholder={t("mcp.modal.placeholderCommand")}
-                      data-testid="stdio-command-input"
-                      disabled={isPending}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldArguments")}
-                    </Label>
-                    <InputListComponent
-                      value={stdioArgs}
-                      handleOnNewValue={({ value }) => setStdioArgs(value)}
-                      disabled={isPending}
-                      placeholder={t("mcp.modal.placeholderArgument")}
-                      listAddLabel={t("mcp.modal.addArgumentButton")}
-                      editNode={false}
-                      id="stdio-args"
-                      data-testid="stdio-args-input"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldEnvironmentVariables")}
-                    </Label>
-                    <IOKeyPairInput
-                      value={stdioEnv}
-                      onChange={setStdioEnv}
-                      duplicateKey={false}
-                      isList={true}
-                      isInputField={true}
-                      testId="stdio-env"
-                    />
-                  </div>
+                <div className="px-4">
+                  <TabsList className="mb-4 flex w-full gap-2">
+                    <TabsTrigger
+                      className="flex-1"
+                      disabled={!!initialData && type !== "JSON"}
+                      data-testid="json-tab"
+                      value="JSON"
+                    >
+                      JSON
+                    </TabsTrigger>
+                    <TabsTrigger
+                      className="flex-1"
+                      data-testid="stdio-tab"
+                      disabled={!!initialData && type !== "STDIO"}
+                      value="STDIO"
+                    >
+                      STDIO
+                    </TabsTrigger>
+                    <TabsTrigger
+                      className="flex-1"
+                      data-testid="http-tab"
+                      disabled={!!initialData && type !== "HTTP"}
+                      value="HTTP"
+                    >
+                      Streamable HTTP/SSE
+                    </TabsTrigger>
+                  </TabsList>
                 </div>
-              </TabsContent>
-              <TabsContent
-                value="HTTP"
-                className="flex flex-1 flex-col h-full p-0 m-0"
-              >
-                <div className="flex h-full flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldName")}
-                      <span className="text-destructive">*</span>
+                <div
+                  className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
+                  id="global-variable-modal-inputs"
+                >
+                  {error && (
+                    <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-xs font-medium text-destructive">
+                      {error}
+                    </div>
+                  )}
+                  <TabsContent value="JSON" className="flex flex-col p-0 m-0">
+                    <Label className="!text-mmd mb-2">
+                      {t("mcp.modal.jsonTabLabel")}
                     </Label>
-                    <Input
-                      value={httpName}
-                      onChange={(e) => setHttpName(e.target.value)}
-                      placeholder={t("mcp.modal.placeholderHttpName")}
-                      data-testid="http-name-input"
+                    <Textarea
+                      value={jsonValue}
+                      data-testid="json-input"
+                      onChange={(e) => setJsonValue(e.target.value)}
+                      className="min-h-[300px] font-mono text-mmd resize-none"
+                      placeholder={t("mcp.modal.jsonPlaceholder")}
                       disabled={isPending}
                     />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="flex items-start gap-1 !text-mmd">
-                      {t("mcp.modal.fieldStreamableUrl")}
-                      <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      value={httpUrl}
-                      onChange={(e) => setHttpUrl(e.target.value)}
-                      placeholder={t("mcp.modal.placeholderHttpUrl")}
-                      data-testid="http-url-input"
-                      disabled={isPending}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldHeaders")}
-                    </Label>
-                    <IOKeyPairInputWithVariables
-                      value={httpHeaders}
-                      onChange={setHttpHeaders}
-                      duplicateKey={false}
-                      isList={true}
-                      isInputField={true}
-                      testId="http-headers"
-                      enableGlobalVariables={true}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">
-                      {t("mcp.modal.fieldEnvironmentVariables")}
-                    </Label>
-                    <IOKeyPairInput
-                      value={httpEnv}
-                      onChange={setHttpEnv}
-                      duplicateKey={false}
-                      isList={true}
-                      isInputField={true}
-                      testId="http-env"
-                    />
-                  </div>
+                  </TabsContent>
+                  <TabsContent
+                    value="STDIO"
+                    className="flex flex-1 flex-col h-full p-0 m-0"
+                  >
+                    <div className="flex h-full flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label className="flex items-start gap-1 !text-mmd">
+                          {t("mcp.modal.fieldName")}{" "}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={stdioName}
+                          onChange={(e) => setStdioName(e.target.value)}
+                          placeholder={t("mcp.modal.placeholderServerName")}
+                          data-testid="stdio-name-input"
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="flex items-start gap-1 !text-mmd">
+                          {t("mcp.modal.fieldCommand")}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={stdioCommand}
+                          onChange={(e) => setStdioCommand(e.target.value)}
+                          placeholder={t("mcp.modal.placeholderCommand")}
+                          data-testid="stdio-command-input"
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="!text-mmd">
+                          {t("mcp.modal.fieldArguments")}
+                        </Label>
+                        <InputListComponent
+                          value={stdioArgs}
+                          handleOnNewValue={({ value }) => setStdioArgs(value)}
+                          disabled={isPending}
+                          placeholder={t("mcp.modal.placeholderArgument")}
+                          listAddLabel={t("mcp.modal.addArgumentButton")}
+                          editNode={false}
+                          id="stdio-args"
+                          data-testid="stdio-args-input"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="!text-mmd">
+                          {t("mcp.modal.fieldEnvironmentVariables")}
+                        </Label>
+                        <IOKeyPairInput
+                          value={stdioEnv}
+                          onChange={setStdioEnv}
+                          duplicateKey={false}
+                          isList={true}
+                          isInputField={true}
+                          testId="stdio-env"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  <TabsContent
+                    value="HTTP"
+                    className="flex flex-1 flex-col h-full p-0 m-0"
+                  >
+                    <div className="flex h-full flex-col gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label className="flex items-start gap-1 !text-mmd">
+                          {t("mcp.modal.fieldName")}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={httpName}
+                          onChange={(e) => setHttpName(e.target.value)}
+                          placeholder={t("mcp.modal.placeholderHttpName")}
+                          data-testid="http-name-input"
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="flex items-start gap-1 !text-mmd">
+                          {t("mcp.modal.fieldStreamableUrl")}
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input
+                          value={httpUrl}
+                          onChange={(e) => setHttpUrl(e.target.value)}
+                          placeholder={t("mcp.modal.placeholderHttpUrl")}
+                          data-testid="http-url-input"
+                          disabled={isPending}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="!text-mmd">
+                          {t("mcp.modal.fieldHeaders")}
+                        </Label>
+                        <IOKeyPairInputWithVariables
+                          value={httpHeaders}
+                          onChange={setHttpHeaders}
+                          duplicateKey={false}
+                          isList={true}
+                          isInputField={true}
+                          testId="http-headers"
+                          enableGlobalVariables={true}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label className="!text-mmd">
+                          {t("mcp.modal.fieldEnvironmentVariables")}
+                        </Label>
+                        <IOKeyPairInput
+                          value={httpEnv}
+                          onChange={setHttpEnv}
+                          duplicateKey={false}
+                          isList={true}
+                          isInputField={true}
+                          testId="http-env"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
                 </div>
-              </TabsContent>
+              </Tabs>
             </div>
-          </Tabs>
-        </div>
-        <div className="flex shrink-0 justify-end gap-2 p-4">
-          <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            <span className="text-mmd font-normal">
-              {t("mcp.modal.cancelButton")}
-            </span>
-          </Button>
-          <Button
-            size="sm"
-            onClick={submitForm}
-            data-testid="add-mcp-server-button"
-            loading={isPending}
-          >
-            <span className="text-mmd">
-              {initialData
-                ? t("mcp.modal.updateServerButton")
-                : t("mcp.modal.addServerButton")}
-            </span>
-          </Button>
-        </div>
+            <div className="flex shrink-0 justify-end gap-2 p-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setOpen(false)}
+              >
+                <span className="text-mmd font-normal">
+                  {t("mcp.modal.cancelButton")}
+                </span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={submitForm}
+                data-testid="add-mcp-server-button"
+                loading={isPending}
+              >
+                <span className="text-mmd">
+                  {initialData
+                    ? t("mcp.modal.updateServerButton")
+                    : t("mcp.modal.addServerButton")}
+                </span>
+              </Button>
+            </div>
+          </>
+        )}
       </BaseModal.Content>
     </BaseModal>
   );
