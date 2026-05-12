@@ -42,6 +42,30 @@ def feedback_score_id(message_id: UUID | str) -> str:
     return str(message_id).replace("-", "")
 
 
+def langfuse_is_configured() -> bool:
+    """Whether Langfuse credentials are set in the environment."""
+    return bool(LangFuseTracer._get_config())
+
+
+def _get_langfuse_client():
+    """Return a configured Langfuse client.
+
+    Callers must gate on `langfuse_is_configured()` being truthy; this raises
+    rather than silently no-opping so background-task failures don't
+    disappear into the void.
+    """
+    from langfuse import Langfuse
+
+    config = LangFuseTracer._get_config()
+    if not config:
+        msg = (
+            "Langfuse credentials missing — set LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, "
+            "and LANGFUSE_HOST (or LANGFUSE_BASE_URL)."
+        )
+        raise RuntimeError(msg)
+    return Langfuse(**config)
+
+
 def sync_feedback_score(
     *,
     message_id: UUID | str,
@@ -49,47 +73,46 @@ def sync_feedback_score(
     session_id: str,
     flow_id: UUID | str | None,
     sender: str,
-    positive_feedback: bool | None,
+    positive_feedback: bool,
 ) -> None:
-    """Send message feedback to Langfuse as a trace-linked score."""
+    """Send message feedback to Langfuse as a trace-linked score.
+
+    Callers must gate this on tracing being enabled and Langfuse being
+    configured; this function raises rather than silently no-opping so
+    background-task failures surface in logs.
+    """
     normalized_trace_id = normalize_langfuse_trace_id(trace_id)
-    if not normalized_trace_id or positive_feedback is None:
-        return
+    if not normalized_trace_id:
+        msg = f"Cannot sync feedback score without a Langfuse trace id (message_id={message_id})."
+        raise ValueError(msg)
 
-    try:
-        from langfuse import Langfuse
-    except ImportError:
-        return
+    client = _get_langfuse_client()
+    client.create_score(
+        name=LANGFUSE_FEEDBACK_SCORE_NAME,
+        value=1.0 if positive_feedback else 0.0,
+        trace_id=normalized_trace_id,
+        score_id=feedback_score_id(message_id),
+        data_type="BOOLEAN",
+        comment="positive" if positive_feedback else "negative",
+        metadata={
+            "message_id": str(message_id),
+            "session_id": session_id,
+            "flow_id": str(flow_id) if flow_id else None,
+            "sender": sender,
+        },
+    )
+    client.flush()
 
-    config = LangFuseTracer._get_config()
-    if not config:
-        return
 
-    try:
-        client = Langfuse(**config)
-        client.create_score(
-            name=LANGFUSE_FEEDBACK_SCORE_NAME,
-            value=1.0 if positive_feedback else 0.0,
-            trace_id=normalized_trace_id,
-            score_id=feedback_score_id(message_id),
-            data_type="BOOLEAN",
-            comment="positive" if positive_feedback else "negative",
-            metadata={
-                "message_id": str(message_id),
-                "session_id": session_id,
-                "flow_id": str(flow_id) if flow_id else None,
-                "sender": sender,
-            },
-        )
-        client.flush()
-    except Exception as exc:  # noqa: BLE001
-        logger.error(
-            "Langfuse feedback sync failed for message_id=%s flow_id=%s session_id=%s: %s",
-            message_id,
-            flow_id,
-            session_id,
-            exc,
-        )
+def delete_feedback_score(*, message_id: UUID | str) -> None:
+    """Delete the Langfuse feedback score previously synced for a message.
+
+    Used when a user clears their thumbs up/down so Langfuse stays in sync
+    with Langflow's UI state. Callers must gate on tracing being enabled
+    and Langfuse being configured.
+    """
+    client = _get_langfuse_client()
+    client.api.score.delete(score_id=feedback_score_id(message_id))
 
 
 class LangFuseTracer(BaseTracer):

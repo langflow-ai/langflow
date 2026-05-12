@@ -220,6 +220,7 @@ async def test_update_message_syncs_langfuse_feedback(
         )
 
     monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
 
     message_update = MessageUpdate(properties={"positive_feedback": True})
     response = await client.put(
@@ -254,6 +255,7 @@ async def test_update_message_does_not_sync_langfuse_feedback_without_langfuse_t
         sync_called = True
 
     monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
 
     message_update = MessageUpdate(properties={"positive_feedback": True})
     response = await client.put(
@@ -263,6 +265,73 @@ async def test_update_message_does_not_sync_langfuse_feedback_without_langfuse_t
     )
 
     assert response.status_code == 200, response.text
+    assert sync_called is False
+
+
+async def test_update_message_does_not_sync_when_langfuse_feedback_disabled(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.session_metadata = {"langfuse_trace_id": "81955a84cb1a1a096639ba1612a48ac0"}
+        session.add(db_message)
+        await session.flush()
+
+    sync_called = False
+
+    def fake_sync(**kwargs):  # noqa: ARG001
+        nonlocal sync_called
+        sync_called = True
+
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: False)
+
+    message_update = MessageUpdate(properties={"positive_feedback": True})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(exclude_none=True),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert sync_called is False
+
+
+async def test_update_message_deletes_langfuse_feedback_when_cleared(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.session_metadata = {"langfuse_trace_id": "81955a84cb1a1a096639ba1612a48ac0"}
+        db_message.properties = {"positive_feedback": True}
+        session.add(db_message)
+        await session.flush()
+
+    delete_calls = []
+    sync_called = False
+
+    def fake_delete(**kwargs):
+        delete_calls.append(str(kwargs["message_id"]))
+
+    def fake_sync(**kwargs):  # noqa: ARG001
+        nonlocal sync_called
+        sync_called = True
+
+    monkeypatch.setattr(monitor_api, "delete_feedback_score", fake_delete)
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
+
+    message_update = MessageUpdate(properties={"positive_feedback": None})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert delete_calls == [str(created_message.id)]
     assert sync_called is False
 
 
