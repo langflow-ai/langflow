@@ -21,6 +21,12 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 from langflow.utils import migration
+from sqlalchemy.dialects.postgresql import JSONB
+
+# JSONB on Postgres, JSON elsewhere — matches the JsonVariant used on the
+# MCPJob SQLModel. Declaring just sa.JSON() in the migration would cause
+# alembic's autogenerate check to detect a phantom type diff on every run.
+_JSON_VARIANT = sa.JSON().with_variant(JSONB(), "postgresql")
 
 revision: str = "mc02b3c4d5e6"  # pragma: allowlist secret
 down_revision: str | None = "mb01b2c3d4e5"  # pragma: allowlist secret
@@ -74,7 +80,7 @@ def upgrade() -> None:
                 nullable=False,
             ),
             sa.Column("tool_name", sa.String(length=255), nullable=False),
-            sa.Column("inputs", sa.JSON(), nullable=False),
+            sa.Column("inputs", _JSON_VARIANT, nullable=False),
             # status is Text() (not VARCHAR(n)) to match the SQLModel field —
             # the model stores enum values as TEXT so future states can be added
             # without an ALTER. Width-limiting would create a phantom-diff.
@@ -85,7 +91,7 @@ def upgrade() -> None:
                 server_default="pending",
             ),
             sa.Column("progress", sa.Integer(), nullable=False, server_default="0"),
-            sa.Column("result", sa.JSON(), nullable=True),
+            sa.Column("result", _JSON_VARIANT, nullable=True),
             sa.Column("error", sa.Text(), nullable=True),
             sa.Column("callback_url", sa.String(length=2048), nullable=True),
             sa.Column(

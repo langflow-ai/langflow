@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Text, Uuid
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
@@ -29,8 +29,25 @@ class MCPJobBase(SQLModel):
     until terminal. See ``docs/docs/Agents/mcp-catalog-and-long-running.mdx``.
     """
 
-    project_id: UUID = Field(foreign_key="folder.id", index=True, nullable=False)
-    flow_id: UUID = Field(foreign_key="flow.id", index=True, nullable=False)
+    # FKs use sa_column so we can pin ondelete behavior — SQLModel's
+    # ``foreign_key=`` shortcut creates anonymous FKs without ondelete, which
+    # the autogenerate check flags as a phantom diff against the migration.
+    project_id: UUID = Field(
+        sa_column=Column(
+            Uuid(),
+            ForeignKey("folder.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    )
+    flow_id: UUID = Field(
+        sa_column=Column(
+            Uuid(),
+            ForeignKey("flow.id", ondelete="CASCADE"),
+            nullable=False,
+            index=True,
+        ),
+    )
     tool_name: str = Field(max_length=255, nullable=False)
     inputs: dict[str, Any] = Field(sa_column=Column(JsonVariant, nullable=False))
     status: MCPJobStatus = Field(
@@ -49,7 +66,14 @@ class MCPJobBase(SQLModel):
     result: dict[str, Any] | None = Field(default=None, sa_column=Column(JsonVariant, nullable=True))
     error: str | None = Field(default=None, sa_column=Column(Text(), nullable=True))
     callback_url: str | None = Field(default=None, max_length=2048, nullable=True)
-    created_by: UUID | None = Field(default=None, foreign_key="user.id", nullable=True)
+    created_by: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            Uuid(),
+            ForeignKey("user.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
