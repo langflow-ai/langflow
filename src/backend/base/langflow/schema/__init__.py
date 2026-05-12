@@ -28,4 +28,5 @@ def __getattr__(name: str):
 
         globals()["DataFrame"] = DataFrame
         return DataFrame
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)

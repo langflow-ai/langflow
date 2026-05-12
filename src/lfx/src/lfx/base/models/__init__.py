@@ -51,7 +51,8 @@ _SOURCE_MAP: dict[str, str] = {
 
 def __getattr__(name: str):
     if name not in _SOURCE_MAP:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
     import importlib
 
     mod = importlib.import_module(_SOURCE_MAP[name], package=__spec__.parent)

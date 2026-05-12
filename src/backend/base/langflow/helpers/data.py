@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
 from fastapi.encoders import jsonable_encoder
@@ -8,6 +8,9 @@ from langchain_core.documents import Document
 from lfx.schema.data import Data
 
 from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from lfx.schema.dataframe import DataFrame
 
 
 def docs_to_data(documents: list[Document]) -> list[Data]:

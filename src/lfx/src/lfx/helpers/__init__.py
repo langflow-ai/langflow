@@ -59,7 +59,8 @@ _EXPORTS = frozenset(__all__)
 
 def __getattr__(name: str):
     if name not in _EXPORTS:
-        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
 
     import importlib
 
@@ -71,10 +72,11 @@ def __getattr__(name: str):
         try:
             mod = importlib.import_module(langflow_mod)
             val = getattr(mod, name)
-            globals()[name] = val
-            return val
         except (ImportError, AttributeError):
             pass
+        else:
+            globals()[name] = val
+            return val
 
     mod = importlib.import_module(lfx_mod)
     val = getattr(mod, name)
