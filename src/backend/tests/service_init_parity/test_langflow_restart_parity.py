@@ -251,6 +251,7 @@ def test_services_utils_module_structure_unchanged() -> None:
     expected = [
         "get_or_create_super_user",
         "setup_superuser",
+        "migrate_orphaned_mcp_servers_config",
         "teardown_superuser",
         "teardown_services",
         "initialize_settings_service",
