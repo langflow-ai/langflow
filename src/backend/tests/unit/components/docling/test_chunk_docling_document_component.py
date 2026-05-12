@@ -8,6 +8,11 @@ import pytest
 pytest.importorskip("tiktoken")
 pytest.importorskip("docling_core")
 
+try:
+    from docling_core.transforms.chunker.tokenizer import huggingface as _hf  # noqa: F401
+except (ImportError, RuntimeError):
+    pytest.skip("docling-core[chunking] extra not installed", allow_module_level=True)
+
 from lfx.components.docling.chunk_docling_document import ChunkDoclingDocumentComponent
 
 
