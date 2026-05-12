@@ -126,10 +126,12 @@ class TestExecuteActionRichTypeCoercion:
         assert "subject" not in args
 
     def test_multiple_message_fields_all_coerced(self):
-        args = self._run({
-            "subject": Message(text="Subject line"),
-            "body": Message(text="Body content"),
-        })
+        args = self._run(
+            {
+                "subject": Message(text="Subject line"),
+                "body": Message(text="Body content"),
+            }
+        )
         assert args["subject"] == "Subject line"
         assert args["body"] == "Body content"
 
