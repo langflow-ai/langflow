@@ -26,8 +26,33 @@ from langflow.services.database.models.vertex_builds.crud import (
     get_vertex_builds_by_flow_id,
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
+from langflow.services.deps import get_memory_base_service
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+
+async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
+    """Best-effort: drop ingested chunks for the deleted sessions from each MB.
+
+    Failures here are logged but never abort the message-delete response — the
+    user expects "delete this session" to succeed even if KB cleanup hits an
+    issue. The follow-up consequence (ghost chunks) is logged for ops to fix.
+    """
+    if not session_ids:
+        return
+    try:
+        await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids)
+    except Exception:  # noqa: BLE001
+        # Lazy import to avoid pulling logger into the module-import path for
+        # an endpoint that doesn't need it on the happy path.
+        from lfx.log.logger import logger
+
+        await logger.aerror(
+            "Memory Base session purge failed for user=%s sessions=%d",
+            user_id,
+            len(session_ids),
+            exc_info=True,
+        )
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -224,9 +249,14 @@ async def delete_messages_session(
         # If the session belongs to another user, this becomes a safe no-op.
         # This preserves existing client behavior while blocking cross-user deletes.
         await delete_messages_for_user_by_session(session, current_user.id, session_id)
+        await session.commit()
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # Purge ingested chunks AFTER the message rows are committed so a chunk-delete
+    # failure can never roll back the user-visible message delete.
+    await _purge_memory_base_session_data(current_user.id, [session_id])
 
     return {"message": "Messages deleted successfully"}
 
@@ -298,6 +328,9 @@ async def delete_messages_sessions(
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # Purge ingested chunks AFTER the messages are committed; same reasoning as above.
+    await _purge_memory_base_session_data(current_user.id, list(affected_session_ids))
 
     return {
         "message": f"Messages deleted successfully for {affected_count} session{'s' if affected_count != 1 else ''}",

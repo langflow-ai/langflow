@@ -7,7 +7,6 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { cn } from "../../utils/utils";
-import { AnimatedConditional } from "./animated-close";
 import { Button } from "./button";
 
 const SIMPLE_SIDEBAR_WIDTH = "400px";

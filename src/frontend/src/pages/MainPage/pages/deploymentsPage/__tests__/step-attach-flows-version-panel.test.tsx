@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FlowType } from "@/types/flow";
 import type { FlowVersionEntry } from "@/types/flow/version";
+import type { SelectedFlowVersion } from "../types";
 
 jest.mock(
   "@/components/common/genericIconComponent",
@@ -59,11 +60,11 @@ const defaultProps = {
   selectedFlow: selectedFlow as FlowType | undefined,
   versions,
   isLoadingVersions: false,
-  selectedVersionByFlow: new Map<
-    string,
-    { versionId: string; versionTag: string }
-  >(),
+  isCreatingDraftVersion: false,
+  selectedVersionByFlow: new Map<string, SelectedFlowVersion>(),
   onAttach: jest.fn(),
+  onCreateFromDraft: jest.fn(),
+  onDetach: jest.fn(),
 };
 
 function renderPanel(overrides: Partial<typeof defaultProps> = {}) {
@@ -106,7 +107,21 @@ describe("Loading state", () => {
 describe("No versions found", () => {
   it("shows empty state when no versions exist", () => {
     renderPanel({ versions: [] });
-    expect(screen.getByText("No versions found")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Deploy this flow by creating a version from current Draft",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("create-version-from-draft")).toBeInTheDocument();
+  });
+
+  it("calls onCreateFromDraft when clicking empty-state CTA", async () => {
+    const user = userEvent.setup();
+    const onCreateFromDraft = jest.fn();
+    renderPanel({ versions: [], onCreateFromDraft });
+
+    await user.click(screen.getByTestId("create-version-from-draft"));
+    expect(onCreateFromDraft).toHaveBeenCalled();
   });
 });
 
@@ -143,7 +158,15 @@ describe("Rendering version items", () => {
 describe("ATTACHED badge", () => {
   it("shows ATTACHED badge for the currently attached version", () => {
     const selectedVersionByFlow = new Map([
-      ["f1", { versionId: "v1", versionTag: "v1.0" }],
+      [
+        "f1:v1",
+        {
+          key: "f1:v1",
+          flowId: "f1",
+          versionId: "v1",
+          versionTag: "v1.0",
+        },
+      ],
     ]);
     renderPanel({ selectedVersionByFlow });
     expect(screen.getByText("ATTACHED")).toBeInTheDocument();

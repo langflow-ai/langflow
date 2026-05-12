@@ -24,7 +24,7 @@ const ProviderList = ({
     data: rawProviders = [],
     isLoading,
     isFetching,
-  } = useGetModelProviders({});
+  } = useGetModelProviders({ includeDeprecated: true });
 
   const filteredProviders: Provider[] = useMemo(() => {
     return rawProviders.map((provider) => {

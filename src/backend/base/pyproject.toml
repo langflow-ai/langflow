@@ -65,6 +65,8 @@ dependencies = [
     "opentelemetry-exporter-prometheus>=0.50b0,<1.0.0",
     "opentelemetry-exporter-otlp>=1.30.0,<2.0.0",
     "opentelemetry-instrumentation-fastapi>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-requests>=0.50b0,<1.0.0",
+    "opentelemetry-instrumentation-urllib3>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
     "pip>=26.0.0,<27.0.0",
@@ -73,7 +75,6 @@ dependencies = [
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
@@ -101,6 +102,12 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
+    "OpenDsStar==1.0.26; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+]
+
+[tool.uv]
+override-dependencies = [
+    "litellm>=1.83.0"
 ]
 
 [dependency-groups]
@@ -176,7 +183,6 @@ postgresql = [
 ]
 
 local = [
-    "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
 ]
@@ -224,7 +230,6 @@ sambanova = ["langchain-sambanova~=1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 
 # Individual local LLM providers
-llama-cpp = ["llama-cpp-python~=0.2.0"]
 sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
@@ -242,7 +247,6 @@ pytube = ["pytube==15.0.0"]
 # Individual agent frameworks
 # crewai is commented out due to httpx version conflict
 # crewai = ["crewai>=0.126.0"]
-dspy = ["dspy-ai==2.5.41"]
 smolagents = ["smolagents>=1.8.0"]
 
 # Individual tools
@@ -261,7 +265,7 @@ fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython==3.1.43"]
+gitpython = ["GitPython==3.1.47"]
 nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
@@ -274,7 +278,15 @@ aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
-litellm = ["litellm>=1.83.0"]
+litellm = [
+    "litellm>=1.83.0",
+    # Runtime deps from litellm[proxy] that langflow-ide hits when logging
+    # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
+    # [proxy] extra pins boto3>=1.40.76, which conflicts with our aioboto3
+    # transitive cap, so we pull in just the missing modules instead.
+    "apscheduler>=3.10.4,<4.0.0",
+    "cryptography",
+]
 zep = ["zep-python==2.0.2"]
 youtube = ["youtube-transcript-api>=1.0.0,<2.0.0"]
 markdown = ["Markdown>=3.8.0"]
@@ -399,7 +411,6 @@ complete = [
     "langflow-base[docx]",
     "langflow-base[pytube]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
-    "langflow-base[dspy]",
     "langflow-base[smolagents]",
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",

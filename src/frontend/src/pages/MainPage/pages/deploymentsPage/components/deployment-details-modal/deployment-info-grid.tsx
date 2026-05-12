@@ -77,7 +77,7 @@ export default function DeploymentInfoGrid({
       )}
 
       <span className="text-xs text-muted-foreground">
-        {t("deployments.labelProvider")}
+        {t("deployments.labelEnvironment")}
       </span>
       <span className="col-span-3 text-sm text-foreground">
         {providerName || "—"}

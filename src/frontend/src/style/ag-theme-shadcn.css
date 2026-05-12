@@ -87,6 +87,20 @@
   border-bottom: none !important;
 }
 
+/* Flush/embedded mode: removes the grid's own outer border and rounds so it
+   sits cleanly inside a panel that provides its own border and straight edges. */
+.ag-flush-mode .ag-root-wrapper {
+  border: none !important;
+  border-radius: 0 !important;
+}
+.ag-flush-mode .ag-header {
+  border-radius: 0 !important;
+}
+.ag-flush-mode .ag-header-cell:first-child,
+.ag-flush-mode .ag-header-cell:last-child {
+  border-radius: 0 !important;
+}
+
 .ag-no-border .ag-header {
   margin-bottom: 0.6rem !important;
 }

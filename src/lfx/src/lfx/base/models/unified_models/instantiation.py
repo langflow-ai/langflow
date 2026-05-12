@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_utils import _to_str
 
+from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .provider_queries import model_provider_metadata
 
 if TYPE_CHECKING:
@@ -262,15 +263,22 @@ def get_embeddings(
         msg = "Embedding model name is required"
         raise ValueError(msg)
 
-    # Get embedding class from metadata
-    embedding_class_name = metadata.get("embedding_class")
+    # Get embedding class from metadata. Selections persisted via the
+    # generic ``/models`` catalog (e.g. saved into ``KnowledgeBase.model_selection``
+    # by the KB upload flow) lack the enriched embedding metadata, so we
+    # fall back to deriving it from the provider name. Both lookups
+    # share the same source of truth in ``class_registry``.
+    embedding_class_name = metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
     if not embedding_class_name:
-        msg = f"No embedding class defined in metadata for {model_name}"
+        msg = (
+            f"No embedding class defined in metadata for {model_name} (provider: {provider}). "
+            "Add the provider to EMBEDDING_PROVIDER_CLASS_MAPPING or re-select the model."
+        )
         raise ValueError(msg)
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
     # --- build kwargs from param_mapping -------------------------------------
-    param_mapping: dict[str, str] = metadata.get("param_mapping", {})
+    param_mapping: dict[str, str] = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
     if not param_mapping:
         msg = (
             f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "

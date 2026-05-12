@@ -43,6 +43,9 @@ class LocalStorageService(StorageService, Service):
 
         Centralizes the path-containment check used across every file operation so
         a single bug cannot re-introduce the traversal issue on a subset of methods.
+        Both flow_id and file_name must be free of separators / traversal so a
+        caller-supplied flow_id like "/etc" cannot collapse data_dir via Path
+        joining (absolute segment resets the join).
         """
         if not isinstance(file_name, str) or "/" in file_name or "\\" in file_name or ".." in file_name:
             await logger.aerror(
@@ -51,25 +54,40 @@ class LocalStorageService(StorageService, Service):
             msg = "Invalid file name: contains path separators"
             raise ValueError(msg)
 
+        if (
+            not isinstance(flow_id, str)
+            or not flow_id
+            or "/" in flow_id
+            or "\\" in flow_id
+            or ".." in flow_id
+            or "\x00" in flow_id
+        ):
+            await logger.aerror("Invalid flow_id contains path separators or traversal sequences")
+            msg = "Invalid flow_id: contains path separators"
+            raise ValueError(msg)
+
         folder_path = self.data_dir / flow_id
         file_path = folder_path / file_name
 
         try:
-            resolved_folder = await folder_path.resolve()
+            resolved_data_dir = await self.data_dir.resolve()
             resolved_file = await file_path.resolve()
-            if not resolved_file.is_relative_to(resolved_folder):
+            # Containment check is anchored at data_dir, not folder_path: an
+            # attacker-controlled flow_id segment must not be allowed to define
+            # the boundary it is then compared against.
+            if not resolved_file.is_relative_to(resolved_data_dir):
                 await logger.aerror(
                     f"Path traversal attempt detected for flow_id='{flow_id}'. "
-                    "File path would escape flow directory boundary."
+                    "File path would escape data directory boundary."
                 )
                 msg = "Invalid file path: path traversal detected"
                 raise ValueError(msg)
         except ValueError:
             raise
         except AttributeError:
-            resolved_folder_str = str(await folder_path.resolve())
+            resolved_data_dir_str = str(await self.data_dir.resolve())
             resolved_file_str = str(await file_path.resolve())
-            if not resolved_file_str.startswith(resolved_folder_str):
+            if not resolved_file_str.startswith(resolved_data_dir_str):
                 await logger.aerror(f"Path traversal attempt detected for flow_id='{flow_id}' (fallback check)")
                 msg = "Invalid file path: path traversal detected"
                 raise ValueError(msg) from None

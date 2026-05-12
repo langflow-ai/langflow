@@ -125,6 +125,7 @@ export default function StepType() {
     !isEditMode &&
     !!providerId &&
     !!trimmedDeploymentName &&
+    !hasDeploymentNameFormatError &&
     !hasAgentNameErrors &&
     !isAgentNameValidationPending;
 

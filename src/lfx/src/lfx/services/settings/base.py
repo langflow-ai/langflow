@@ -69,6 +69,33 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    vector_store_backend: str = "chroma"
+    """Vector-store backend for Knowledge Bases.
+
+    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
+    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
+    of the KB DB-Connectors epic."""
+    vector_store_backend_config: dict = {}
+    """Backend-specific configuration for the selected ``vector_store_backend``.
+
+    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
+    connection URIs, index names, auth references) as additional backends land."""
+
+    kb_allowed_folder_roots: list[str] = []
+    """Directories the server-side ``FolderSource`` is permitted to walk.
+
+    Each entry is expanded (``~`` → user home) and resolved before use.
+    ``FolderSource`` refuses to ingest any folder whose resolved path is
+    not equal to or underneath one of these roots, which blocks both
+    arbitrary-path access and symlink escapes (``resolve()`` follows
+    symlinks before the containment check).
+
+    Defaults to an empty list — folder ingestion is disabled until an
+    operator opts in. Single-user desktop / self-hosted deployments can
+    set this to ``["~"]`` to allow ingestion from the user's home
+    directory; multi-tenant cloud deployments should configure
+    per-tenant roots (or leave empty to keep folder ingestion off)."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -180,12 +207,12 @@ class Settings(BaseSettings):
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
 
     # cache configuration
-    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    cache_type: Literal["async", "redis", "memory"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
     cache_dir: str | None = None
-    """The directory to store disk cache. Defaults to config_dir if not set."""
+    """Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 

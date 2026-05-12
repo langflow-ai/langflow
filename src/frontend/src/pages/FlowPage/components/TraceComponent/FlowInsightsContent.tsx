@@ -183,8 +183,10 @@ export function FlowInsightsContent({
   }, []);
 
   const totalRuns = tracesData?.total ?? rows.length;
-  const totalPages =
-    tracesData?.pages ?? Math.max(1, Math.ceil(totalRuns / pageSize));
+  const totalPages = Math.max(
+    1,
+    tracesData?.pages ?? Math.ceil(totalRuns / pageSize),
+  );
 
   useEffect(() => {
     if (pageIndex > totalPages) {
@@ -384,7 +386,7 @@ export function FlowInsightsContent({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="ag-flush-mode flex-1 overflow-hidden">
           {groupBySession ? (
             renderGroupedSessionContent({
               groupedRows,
@@ -408,7 +410,7 @@ export function FlowInsightsContent({
             />
           )}
         </div>
-        <div className="flex justify-end px-3 py-4">
+        <div className="flex justify-end border-t px-3 py-4">
           <PaginatorComponent
             pageIndex={pageIndex}
             pageSize={pageSize}

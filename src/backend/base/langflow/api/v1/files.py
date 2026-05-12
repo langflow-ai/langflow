@@ -13,7 +13,13 @@ from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName, ValidatedFolderName
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    ValidatedFileName,
+    ValidatedFolderName,
+    build_content_disposition,
+)
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.deps import get_settings_service, get_storage_service
@@ -127,7 +133,7 @@ async def download_file(
     try:
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
         headers = {
-            "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
+            "Content-Disposition": build_content_disposition(file_name),
             "Content-Type": "application/octet-stream",
             "Content-Length": str(len(file_content)),
         }

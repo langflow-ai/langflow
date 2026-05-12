@@ -1,9 +1,4 @@
-import React, {
-  type Dispatch,
-  ReactNode,
-  type SetStateAction,
-  useState,
-} from "react";
+import { type Dispatch, ReactNode, type SetStateAction, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";

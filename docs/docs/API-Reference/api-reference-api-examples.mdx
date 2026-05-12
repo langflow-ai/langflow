@@ -372,9 +372,7 @@ The following endpoints are most often used when contributing to the Langflow co
   * DELETE `/v1/variables/{variable_id}`: Delete a variable.
 
 * [Use voice mode](/concepts-voice-mode):
-  * WS `/v1/voice/ws/flow_as_tool/{flow_id}`: Bi-directional voice session exposing the flow as a tool.
-  * WS `/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}`: Same as above with explicit session ID.
-  * WS `/v1/voice/ws/flow_tts/{flow_id}`: Voice-to-text session that runs a flow and returns TTS.
+  * WS `/v1/voice/ws/flow_tts/{flow_id}`: Speech-to-text session that runs a flow and returns TTS.
   * WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.
   * GET `/v1/voice/elevenlabs/voice_ids`: List available ElevenLabs voice IDs for the user.
 
