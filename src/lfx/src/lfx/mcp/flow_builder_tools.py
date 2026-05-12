@@ -560,6 +560,62 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
         field["options"] = options
 
 
+class ProposePlan(Component):
+    """Propose a build plan to the user and pause until they approve or dismiss.
+
+    Emitted as a `propose_plan` event with the markdown body; the assistant
+    service forwards it to the frontend, which renders a Continue/Dismiss card
+    in the chat. The agent MUST stop after this tool call — the user's reply
+    arrives as a new user turn (Continue ⇒ "User approved the plan. Proceed.",
+    Dismiss ⇒ free-form refinement feedback).
+    """
+
+    display_name = "Propose Plan"
+    description = (
+        "Propose a high-level build plan to the user as markdown. The user sees a "
+        "Continue/Dismiss card and the agent must wait for the next user turn before "
+        "calling any other tools."
+    )
+    icon = "ClipboardList"
+    name = "ProposePlan"
+
+    inputs = [
+        MessageTextInput(
+            name="plan",
+            display_name="Plan (Markdown)",
+            info=(
+                "Markdown text describing what the agent will build. Should cover the "
+                "components to add, the model/persona, and any non-obvious configuration. "
+                "Keep it readable for the user — they will Continue or Dismiss it."
+            ),
+            required=True,
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(name="plan_result", display_name="Plan Result", method="propose_plan"),
+    ]
+
+    def propose_plan(self) -> Data:
+        plan = (self.plan or "").strip()
+        if not plan:
+            error_msg = (
+                "Plan is empty. Provide a non-empty markdown description of what you intend to build, "
+                "then call propose_plan again."
+            )
+            return Data(data={"error": error_msg, "text": error_msg})
+
+        _emit("propose_plan", markdown=self.plan)
+        marker = (
+            "Plan emitted to the user. STOP — do NOT call any other tools. "
+            "The user's Continue/Dismiss reply arrives as the next user turn. "
+            "On Continue, proceed with search_components / describe_component / build_flow. "
+            "On Dismiss, the user will send refinement feedback — replan with propose_plan."
+        )
+        return Data(data={"text": marker, "status": "awaiting_user_approval"})
+
+
 class BuildFlowFromSpec(Component):
     display_name = "Build Flow"
     description = (
