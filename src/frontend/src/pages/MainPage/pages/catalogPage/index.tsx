@@ -5,16 +5,20 @@ import {
   type MCPJobStatus,
   useListMCPJobs,
 } from "@/controllers/API/queries/mcp-jobs/use-list-mcp-jobs";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
+import type { FlowType } from "@/types/flow";
 
 type CatalogTab = "tools" | "skills" | "events";
 
 interface TabButtonProps {
   active: boolean;
   label: string;
+  count?: number;
   onClick: () => void;
 }
 
-function TabButton({ active, label, onClick }: TabButtonProps) {
+function TabButton({ active, label, count, onClick }: TabButtonProps) {
   return (
     <button
       type="button"
@@ -27,6 +31,11 @@ function TabButton({ active, label, onClick }: TabButtonProps) {
       }
     >
       {label}
+      {typeof count === "number" && (
+        <span className="ml-2 px-1.5 py-0.5 rounded bg-muted text-xs">
+          {count}
+        </span>
+      )}
     </button>
   );
 }
@@ -55,6 +64,80 @@ function StatusBadge({ status }: StatusBadgeProps) {
   );
 }
 
+interface ToolRow {
+  flow_id: string;
+  name: string;
+  description: string;
+  project_id: string | undefined;
+  project_name: string;
+  long_running: boolean;
+}
+
+interface ToolsTabProps {
+  tools: ToolRow[];
+  search: string;
+}
+
+function ToolsTab({ tools, search }: ToolsTabProps) {
+  const filtered = useMemo(() => {
+    if (!search) return tools;
+    const needle = search.toLowerCase();
+    return tools.filter(
+      (t) =>
+        t.name.toLowerCase().includes(needle) ||
+        t.description.toLowerCase().includes(needle) ||
+        t.project_name.toLowerCase().includes(needle),
+    );
+  }, [tools, search]);
+
+  if (filtered.length === 0) {
+    return (
+      <div className="p-8 text-center text-muted-foreground">
+        No MCP tools yet. Toggle <code>mcp_enabled</code> on a flow from the MCP
+        Server page to expose it as a tool.
+      </div>
+    );
+  }
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="text-left text-muted-foreground border-b">
+          <th className="py-2 px-3">Tool</th>
+          <th className="py-2 px-3">Description</th>
+          <th className="py-2 px-3">Project</th>
+          <th className="py-2 px-3">Long-running</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filtered.map((tool) => (
+          <tr key={tool.flow_id} className="border-b hover:bg-muted/30">
+            <td className="py-2 px-3 font-medium">{tool.name}</td>
+            <td className="py-2 px-3 text-muted-foreground">
+              {tool.description || (
+                <span className="italic text-muted-foreground/60">
+                  No description
+                </span>
+              )}
+            </td>
+            <td className="py-2 px-3 text-muted-foreground">
+              {tool.project_name}
+            </td>
+            <td className="py-2 px-3">
+              {tool.long_running ? (
+                <span className="inline-block px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs font-medium">
+                  yes
+                </span>
+              ) : (
+                <span className="text-muted-foreground/60 text-xs">no</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 interface EventsTabProps {
   jobs: MCPJob[];
   loading: boolean;
@@ -79,7 +162,8 @@ function EventsTab({ jobs, loading, search, onCancel }: EventsTabProps) {
   if (filtered.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground">
-        No MCP job events. Long-running tool invocations will appear here.
+        No MCP job events. Long-running tool invocations will appear here as
+        soon as a flow marked <code>long_running</code> is called over MCP.
       </div>
     );
   }
@@ -129,21 +213,58 @@ function EventsTab({ jobs, loading, search, onCancel }: EventsTabProps) {
   );
 }
 
-function PlaceholderTab({ label }: { label: string }) {
+function SkillsTab() {
   return (
     <div className="p-8 text-center text-muted-foreground">
-      {label} catalog is not yet wired up. See
-      <code className="mx-1 px-1 bg-muted rounded">
-        docs/Agents/mcp-catalog-and-long-running.mdx
-      </code>
-      for the data model.
+      <p className="mb-2">Skills are not yet wired up.</p>
+      <p className="text-xs">
+        Once the FastMCP Server component publishes resources with the
+        <code className="mx-1 px-1 bg-muted rounded">
+          application/vnd.langflow.skill+json
+        </code>
+        mime type, they'll appear here.
+      </p>
     </div>
   );
 }
 
+function buildToolRows(
+  flows: FlowType[] | null | undefined,
+  folderNames: Map<string, string>,
+): ToolRow[] {
+  if (!flows) return [];
+  return flows
+    .filter((f) => f.mcp_enabled === true)
+    .map((f) => ({
+      flow_id: f.id,
+      name: f.action_name || f.name,
+      description: f.action_description || f.description || "",
+      project_id: f.folder_id,
+      project_name: f.folder_id ? folderNames.get(f.folder_id) || "—" : "—",
+      long_running: Boolean(f.long_running),
+    }));
+}
+
 export default function CatalogPage() {
-  const [tab, setTab] = useState<CatalogTab>("events");
+  const [tab, setTab] = useState<CatalogTab>("tools");
   const [search, setSearch] = useState("");
+
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const folders = useFolderStore((state) => state.folders);
+
+  const folderNames = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const f of folders) {
+      if (f.id) map.set(f.id, f.name);
+    }
+    return map;
+  }, [folders]);
+
+  const tools = useMemo(
+    () => buildToolRows(flows, folderNames),
+    [flows, folderNames],
+  );
+
   const { data, isLoading, refetch } = useListMCPJobs({ limit: 100 });
   const jobs = data ?? [];
 
@@ -152,7 +273,6 @@ export default function CatalogPage() {
       await cancelMCPJob(jobId);
       await refetch();
     } catch (_error: unknown) {
-      // Refetch surfaces the unchanged state; explicit toast left for follow-up
       await refetch();
     }
   };
@@ -170,6 +290,7 @@ export default function CatalogPage() {
           <TabButton
             active={tab === "tools"}
             label="Tools"
+            count={tools.length}
             onClick={() => setTab("tools")}
           />
           <TabButton
@@ -180,6 +301,7 @@ export default function CatalogPage() {
           <TabButton
             active={tab === "events"}
             label="Events"
+            count={jobs.length}
             onClick={() => setTab("events")}
           />
         </div>
@@ -189,9 +311,12 @@ export default function CatalogPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="my-3 px-3 py-1 text-sm rounded border bg-background w-64"
+          data-testid="catalog-search"
         />
       </div>
       <main className="flex-1 overflow-auto p-6">
+        {tab === "tools" && <ToolsTab tools={tools} search={search} />}
+        {tab === "skills" && <SkillsTab />}
         {tab === "events" && (
           <EventsTab
             jobs={jobs}
@@ -200,8 +325,6 @@ export default function CatalogPage() {
             onCancel={handleCancel}
           />
         )}
-        {tab === "tools" && <PlaceholderTab label="Tools" />}
-        {tab === "skills" && <PlaceholderTab label="Skills" />}
       </main>
     </div>
   );

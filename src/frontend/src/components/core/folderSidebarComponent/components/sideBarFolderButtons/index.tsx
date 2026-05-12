@@ -383,6 +383,10 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const handleCatalogNavigation = () => {
+    _navigate("/catalog");
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -521,6 +525,15 @@ const SideBarFoldersButtonsComponent = ({
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
               {t("sidebar.myFiles")}
+            </SidebarMenuButton>
+            <SidebarMenuButton
+              onClick={handleCatalogNavigation}
+              size="md"
+              className="text-sm"
+              data-testid="sidebar-catalog-link"
+            >
+              <ForwardedIconComponent name="Server" className="h-4 w-4" />
+              MCP Catalog
             </SidebarMenuButton>
           </div>
         </SidebarFooter>

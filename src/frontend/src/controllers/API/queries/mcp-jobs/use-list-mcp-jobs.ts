@@ -1,6 +1,7 @@
 import { api } from "../../api";
-import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+
+const MCP_JOBS_URL = "/api/v1/mcp/jobs";
 
 export type MCPJobStatus =
   | "pending"
@@ -48,7 +49,7 @@ export function useListMCPJobs(params: ListMCPJobsParams = {}) {
   return query(
     ["mcp-jobs", params],
     async (): Promise<MCPJob[]> => {
-      const url = `${getURL("MCP_JOBS_BASE", undefined, true) ?? "/api/v1/mcp/jobs"}${buildQueryString(params)}`;
+      const url = `${MCP_JOBS_URL}${buildQueryString(params)}`;
       const { data } = await api.get<MCPJob[]>(url);
       return data;
     },
@@ -57,8 +58,6 @@ export function useListMCPJobs(params: ListMCPJobsParams = {}) {
 }
 
 export async function cancelMCPJob(jobId: string): Promise<MCPJob> {
-  const baseUrl =
-    getURL("MCP_JOBS_BASE", undefined, true) ?? "/api/v1/mcp/jobs";
-  const { data } = await api.delete<MCPJob>(`${baseUrl}/${jobId}`);
+  const { data } = await api.delete<MCPJob>(`${MCP_JOBS_URL}/${jobId}`);
   return data;
 }

@@ -18,7 +18,9 @@ import {
   SidebarGroupContent,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
 
 export default function ToolsTable({
@@ -30,8 +32,11 @@ export default function ToolsTable({
   open,
   handleOnNewValue,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped row shape
   rows: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped row shape
   data: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped row shape
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
@@ -40,12 +45,16 @@ export default function ToolsTable({
 }) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped row shape
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
   const agGrid = useRef<AgGridReact>(null);
 
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped row shape
   const [focusedRow, setFocusedRow] = useState<any | null>(null);
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
+  const [sidebarLongRunning, setSidebarLongRunning] = useState<boolean>(false);
+  const { mutate: patchFlow } = usePatchUpdateFlow();
 
   const editedSelection = useRef<boolean>(false);
   const applyingSelection = useRef<boolean>(false);
@@ -56,6 +65,7 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing ag-grid params shape
     return (params: any) =>
       params.data._uniqueId ||
       `${params.data.name}_${params.data.display_name}`;
@@ -176,11 +186,19 @@ export default function ToolsTable({
     if (focusedRow) {
       setSidebarName(focusedRow.name);
       setSidebarDescription(focusedRow.description);
+      setSidebarLongRunning(Boolean(focusedRow.long_running));
     } else {
       setSidebarName("");
       setSidebarDescription("");
+      setSidebarLongRunning(false);
     }
   }, [focusedRow]);
+
+  const handleLongRunningChange = (value: boolean): void => {
+    if (!focusedRow?.id) return;
+    setSidebarLongRunning(value);
+    patchFlow({ id: focusedRow.id, long_running: value });
+  };
 
   const columnDefs: ColDef[] = [
     {
@@ -284,6 +302,7 @@ export default function ToolsTable({
 
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
+      // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped args entries
       ([key, value]: [string, any]) => ({
         display_name: value.title,
         name: key,
@@ -419,6 +438,28 @@ export default function ToolsTable({
                       : t("toolsModal.descriptionHint")}
                   </div>
                 </div>
+                {isAction && focusedRow?.id && (
+                  <div className="flex items-start justify-between gap-3 rounded-md border border-border bg-muted/30 p-3">
+                    <div className="flex flex-col gap-1">
+                      <label
+                        className="text-mmd font-medium"
+                        htmlFor="sidebar-long-running-toggle"
+                      >
+                        Long-running tool
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Return a job handle instead of blocking the MCP call.
+                        Status is visible in MCP Catalog → Events.
+                      </p>
+                    </div>
+                    <Switch
+                      id="sidebar-long-running-toggle"
+                      checked={sidebarLongRunning}
+                      onCheckedChange={handleLongRunningChange}
+                      data-testid="switch_long_running"
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <div

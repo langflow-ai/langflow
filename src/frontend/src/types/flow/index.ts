@@ -34,6 +34,10 @@ export type FlowType = {
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
   mcp_enabled?: boolean;
+  action_name?: string | null;
+  action_description?: string | null;
+  long_running?: boolean | null;
+  default_timeout_s?: number | null;
   name_key?: string | null;
 };
 
@@ -50,6 +54,7 @@ export type noteClassType = Pick<
 > & {
   template: {
     backgroundColor?: string;
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing free-form template
     [key: string]: any;
   };
   outputs?: OutputFieldType[];
