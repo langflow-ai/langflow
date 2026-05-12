@@ -16,7 +16,7 @@ Today, FastMCP is used internally by Langflow in two places ([`lfx/mcp/server.py
 Two needs from the parent rollout:
 
 1. **Bespoke MCP servers per flow.** A Solis-style deployment needs to publish a curated set of tools (some sync, some long-running) and skills (resources) over MCP without changing Langflow source.
-2. **Long-running tools, declaratively.** The `long_running` flag on a tool input needs to plumb through to `@mcp.tool()` so the returned tool result is a job handle (see [catalog and long-running spec](/mcp-catalog-and-long-running#long-running-tools)) rather than an inline result.
+2. **Long-running tools, declaratively.** The `long_running` flag on a tool input needs to plumb through to `@mcp.tool()` so the returned tool result is a job handle (see [catalog and long-running spec](./mcp-catalog-and-long-running.mdx#long-running-tools)) rather than an inline result.
 
 ## Component shape
 
@@ -29,7 +29,7 @@ Two needs from the parent rollout:
 | `port` | Int | Required when `transport` ≠ `stdio`. Default: auto-allocate from a configurable port range. |
 | `host` | String | Required when `transport` ≠ `stdio`. Default `127.0.0.1`. |
 | `tools` | List[ToolInput] | List of components or flows to expose as `@mcp.tool()`. Each entry has a `name` (overrides the source's display name) and `description` (overrides). Optional `long_running` boolean per tool. |
-| `resources` | List[ResourceInput] | List of [`SkillComponent`](/mcp-catalog-and-long-running#skills) outputs or file references to expose as MCP resources. Each entry has a `uri`, `name`, `mime_type`, and content provider. |
+| `resources` | List[ResourceInput] | List of [`SkillComponent`](./mcp-catalog-and-long-running.mdx#skills) outputs or file references to expose as MCP resources. Each entry has a `uri`, `name`, `mime_type`, and content provider. |
 | `auth` | Dict | Optional. If set, the server requires auth on connection. Two modes: `{ "type": "bearer", "token": "..." }` or `{ "type": "oauth", ... }` (mirrors Composer's OAuth block). |
 | `enable_telemetry` | Boolean | Default `true`. If `true`, attaches the same lifespan telemetry hooks used by [`lfx/mcp/server.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/mcp/server.py). |
 
@@ -49,7 +49,7 @@ On `build()`:
 2. For each `tools` entry:
    - Resolve the source to a callable (component method or flow runner).
    - Generate a JSON schema from the source's input ports (reuse `json_schema_from_flow` from [`flow.py:463`](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/api/v1/flow.py)).
-   - Register `@mcp.tool(name=..., description=...)` whose body either awaits the source (sync) or enqueues a job and returns a [resource link](/mcp-catalog-and-long-running#job-handles-as-mcp-resource-links) (long-running).
+   - Register `@mcp.tool(name=..., description=...)` whose body either awaits the source (sync) or enqueues a job and returns a [resource link](./mcp-catalog-and-long-running.mdx#job-handles-as-mcp-resource-links) (long-running).
 3. For each `resources` entry: register an MCP resource with the given URI and a reader that calls the content provider.
 4. Start the transport in a managed task. For `stdio`, the server runs in-process and `endpoint_url` is a CLI invocation string; for HTTP/SSE, bind to `host:port` and return the URL.
 5. Server lifetime: tied to the **flow deployment**, not to a single flow run. Re-running the flow re-registers tools but does not restart the listener (port conflict otherwise).
@@ -58,7 +58,7 @@ On `build()`:
 
 When a tool entry has `long_running=true`:
 
-- The registered `@mcp.tool()` body enqueues a row in `mcp_jobs` (see [data model](/mcp-catalog-and-long-running#data-model)) and returns immediately with an MCP `resource_link` content block pointing at `/api/v1/mcp/jobs/<id>`.
+- The registered `@mcp.tool()` body enqueues a row in `mcp_jobs` (see [data model](./mcp-catalog-and-long-running.mdx#data-model)) and returns immediately with an MCP `resource_link` content block pointing at `/api/v1/mcp/jobs/<id>`.
 - The MCP client follows the resource link to poll status or subscribes to the resource for push updates if the client supports that capability.
 - Tools without `long_running` continue to run inline and return their result directly (preserving today's behavior).
 

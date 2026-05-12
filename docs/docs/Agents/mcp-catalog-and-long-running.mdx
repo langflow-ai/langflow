@@ -7,7 +7,7 @@ slug: /mcp-catalog-and-long-running
 This page specifies the long-running tool substrate and the MCP catalog UX planned for Langflow. The capabilities described here do not exist yet.
 :::
 
-This spec covers the foundation that the [`MCPComposerComponent`](/mcp-composer-component) and [`FastMCPServerComponent`](/mcp-fastmcp-component) depend on:
+This spec covers the foundation that the [`MCPComposerComponent`](./mcp-composer-component.mdx) and [`FastMCPServerComponent`](./mcp-fastmcp-component.mdx) depend on:
 
 1. **Long-running tool support** — letting a flow exposed as an MCP tool return a job handle immediately rather than blocking the MCP request until the flow finishes.
 2. **Skills** — first-class resource type for read-only knowledge that distinguishes itself from callable tools.
@@ -107,7 +107,7 @@ Resource URI scheme: `langflow://jobs/<id>`. The MCP resource reader resolves th
 
 A "skill" is an MCP resource whose `mime_type` is `application/vnd.langflow.skill+json` (or `text/markdown` with an `application/vnd.langflow.skill` profile parameter). Skills carry read-only knowledge — a prompt fragment, a domain ontology, a runbook — that an agent needs to do its job but should not be expressed as a callable tool.
 
-This is purely a convention layered on the existing MCP resources channel. No new MCP primitive, no new table — skills are rows in the existing flow/resource model, distinguished by mime type. The catalog UI groups them; the [`SkillComponent`](/mcp-fastmcp-component#skills-as-resources) is the authoring surface.
+This is purely a convention layered on the existing MCP resources channel. No new MCP primitive, no new table — skills are rows in the existing flow/resource model, distinguished by mime type. The catalog UI groups them; the [`SkillComponent`](./mcp-fastmcp-component.mdx#skills-as-resources) is the authoring surface.
 
 Rationale: the alternative was to invent a `skills` table parallel to `tools`. That would force callers (Composer, FastMCP) to discover skills via a non-standard route. Riding on resources keeps MCP-protocol compatibility without compromise.
 

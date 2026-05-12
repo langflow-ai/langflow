@@ -64,7 +64,7 @@ If Composer does not yet expose `/apps`, the component falls back to a flat tool
 
 ## Skills as resources
 
-Per the [catalog spec](/mcp-catalog-and-long-running#skills), "skills" are MCP resources with a content type that indicates skill semantics (`application/vnd.langflow.skill+json` or `text/markdown` with a `langflow-skill` URI scheme). The `MCPComposerComponent` surfaces all resources, then the `SkillComponent` and catalog UI filter for those that match the skill content type.
+Per the [catalog spec](./mcp-catalog-and-long-running.mdx#skills), "skills" are MCP resources with a content type that indicates skill semantics (`application/vnd.langflow.skill+json` or `text/markdown` with a `langflow-skill` URI scheme). The `MCPComposerComponent` surfaces all resources, then the `SkillComponent` and catalog UI filter for those that match the skill content type.
 
 This avoids inventing a new MCP primitive — skills ride on the existing resources channel.
 
