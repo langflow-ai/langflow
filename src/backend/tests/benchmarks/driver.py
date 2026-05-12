@@ -926,6 +926,24 @@ def compare_against_thresholds(
             continue
         baseline_ms = float(t_entry.get("mean_ms", 0.0))
         baseline_runs = int(t_entry.get("runs", 0) or 0)
+        # A scenario whose driver call errored (e.g. hyperfine non-zero exit,
+        # docker pull failure, missing report) returns an error-dict with no
+        # ``mean_ms`` key. Treat as FAIL — without this guard, ``current.get(
+        # "mean_ms", 0.0)`` returns 0.0 → delta_pct = -1.0 → status = PASS, so
+        # an infrastructural failure silently passes the regression gate.
+        if "error" in current and "mean_ms" not in current:
+            rows.append(
+                _VerifyRow(
+                    scenario=name,
+                    baseline_ms=baseline_ms,
+                    current_ms=0.0,
+                    delta_pct=float("inf"),
+                    allowed_pct=allowed_pct,
+                    status="FAIL",
+                )
+            )
+            any_fail = True
+            continue
         current_ms = float(current.get("mean_ms", 0.0))
         if baseline_ms <= 0.0 and baseline_runs <= 0:
             # Unanchored baseline: scenario is a placeholder that has never been
