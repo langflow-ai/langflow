@@ -1,18 +1,25 @@
+import os
 import threading
 from collections.abc import Mapping
 from enum import Enum
 from typing import Any
 from weakref import WeakValueDictionary
 
-from opentelemetry import metrics
+import orjson
+from opentelemetry import metrics, trace
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.metrics import CallbackOptions, Observation
 from opentelemetry.metrics._internal.instrument import Counter, Histogram, UpDownCounter
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.trace import SpanKind, Status, StatusCode
 
 # a default OpenTelemetry meter name
 langflow_meter_name = "langflow"
+langflow_tracer_name = "langflow.telemetry"
+telemetry_event_prefix = "langflow.telemetry"
 
 """
 If the measurement values are non-additive, use an Asynchronous Gauge.
@@ -109,6 +116,7 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     _metrics_registry: dict[str, Metric] = {}
     _metrics: dict[str, Counter | ObservableGaugeWrapper | Histogram | UpDownCounter] = {}
     _meter_provider: MeterProvider | None = None
+    _tracer_provider: TracerProvider | None = None
     _initialized: bool = False  # Add initialization flag
     prometheus_enabled: bool = True
 
@@ -145,6 +153,9 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
         # Only initialize once
         self.prometheus_enabled = prometheus_enabled
         if OpenTelemetry._initialized:
+            if self._meter_provider is not None:
+                self.meter = self._meter_provider.get_meter(langflow_meter_name)
+            self.tracer = trace.get_tracer(langflow_tracer_name)
             return
 
         if not self._metrics_registry:
@@ -175,7 +186,70 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             if name not in self._metrics:
                 self._metrics[metric.name] = self._create_metric(metric)
 
+        self._configure_tracer_provider_from_environment()
+        self.tracer = trace.get_tracer(langflow_tracer_name)
+
         OpenTelemetry._initialized = True
+
+    def _configure_tracer_provider_from_environment(self) -> None:
+        """Install a default OTLP tracer provider when standard OTel env vars opt in.
+
+        If another provider has already been installed by application code or
+        opentelemetry-instrument, leave it untouched.
+        """
+        endpoint = os.getenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT") or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+        if not endpoint:
+            return
+
+        existing_provider = trace.get_tracer_provider()
+        if existing_provider.__class__.__name__ != "ProxyTracerProvider":
+            return
+
+        try:
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
+            resource = Resource.create({"service.name": os.getenv("OTEL_SERVICE_NAME", "langflow")})
+            tracer_provider = TracerProvider(resource=resource)
+            tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+            trace.set_tracer_provider(tracer_provider)
+            self._tracer_provider = tracer_provider
+        except Exception:  # noqa: BLE001
+            return
+
+    def _normalize_attribute_value(self, value: Any) -> bool | str | bytes | int | float | list[Any]:
+        if isinstance(value, bool | str | bytes | int | float):
+            return value
+        if isinstance(value, tuple | list):
+            return [self._normalize_attribute_value(item) for item in value]
+        return orjson.dumps(value, default=str).decode("utf-8")
+
+    def _normalize_attributes(
+        self, attributes: Mapping[str, Any]
+    ) -> dict[str, bool | str | bytes | int | float | list[Any]]:
+        return {key: self._normalize_attribute_value(value) for key, value in attributes.items() if value is not None}
+
+    def emit_event(self, event_name: str, attributes: Mapping[str, Any], *, error: bool = False) -> None:
+        normalized_attributes = self._normalize_attributes(attributes)
+        normalized_attributes[f"{telemetry_event_prefix}.event"] = event_name
+
+        with self.tracer.start_as_current_span(
+            f"{telemetry_event_prefix}.{event_name}",
+            kind=SpanKind.INTERNAL,
+            attributes=normalized_attributes,
+        ) as span:
+            span.add_event(event_name, attributes=normalized_attributes)
+            if error:
+                span.set_status(Status(StatusCode.ERROR))
+
+    def force_flush(self, timeout_millis: int = 5000) -> bool:
+        provider = trace.get_tracer_provider()
+        force_flush = getattr(provider, "force_flush", None)
+        if force_flush is None:
+            return True
+        try:
+            return bool(force_flush(timeout_millis=timeout_millis))
+        except TypeError:
+            return bool(force_flush())
 
     def _create_metric(self, metric):
         # Remove _created_instruments check

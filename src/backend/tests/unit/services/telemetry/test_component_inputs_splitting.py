@@ -2,7 +2,7 @@
 
 from hypothesis import given
 from hypothesis import strategies as st
-from langflow.services.telemetry.schema import MAX_TELEMETRY_URL_SIZE, ComponentInputsPayload
+from langflow.services.telemetry.schema import MAX_TELEMETRY_EVENT_SIZE, ComponentInputsPayload
 
 
 def test_chunk_fields_exist():
@@ -49,8 +49,8 @@ def test_chunk_fields_optional_default_none():
     assert payload.total_chunks is None
 
 
-def test_calculate_url_size_returns_integer():
-    """Test that _calculate_url_size returns a positive integer."""
+def test_calculate_event_size_returns_integer():
+    """Test that _calculate_event_size returns a positive integer."""
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",
         component_id="test-comp-id",
@@ -58,13 +58,13 @@ def test_calculate_url_size_returns_integer():
         component_inputs={"input1": "value1"},
     )
 
-    size = payload._calculate_url_size()
+    size = payload._calculate_event_size()
     assert isinstance(size, int)
     assert size > 0
 
 
-def test_calculate_url_size_accounts_for_encoding():
-    """Test that URL size accounts for special character encoding."""
+def test_calculate_event_size_accounts_for_serialization():
+    """Test that event size accounts for serialization."""
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",
         component_id="test-comp-id",
@@ -72,16 +72,16 @@ def test_calculate_url_size_accounts_for_encoding():
         component_inputs={"input1": "value with spaces & special=chars"},
     )
 
-    size = payload._calculate_url_size()
-    # Size should be larger than raw dict due to JSON serialization and URL encoding
+    size = payload._calculate_event_size()
+    # Size should be larger than raw dict due to JSON serialization
     import orjson
 
     serialized_size = len(orjson.dumps(payload.component_inputs).decode("utf-8"))
     assert size > serialized_size
 
 
-def test_calculate_url_size_includes_all_fields():
-    """Test that URL size includes all payload fields."""
+def test_calculate_event_size_includes_all_fields():
+    """Test that event size includes all payload fields."""
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",
         component_id="test-comp-id",
@@ -91,8 +91,8 @@ def test_calculate_url_size_includes_all_fields():
         total_chunks=1,
     )
 
-    size = payload._calculate_url_size()
-    # Size should include base URL + all query params
+    size = payload._calculate_event_size()
+    # Size should include all serialized event fields
     assert size > 100  # Reasonable minimum for all fields
 
 
@@ -105,7 +105,7 @@ def test_split_if_needed_returns_list():
         component_inputs={"input1": "value1"},
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
     assert isinstance(result, list)
     assert len(result) > 0
 
@@ -119,7 +119,7 @@ def test_split_if_needed_no_split_returns_single_payload():
         component_inputs={"input1": "value1"},
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
     assert len(result) == 1
     assert result[0].component_run_id == "test-run-id"
     assert result[0].component_inputs == {"input1": "value1"}
@@ -134,7 +134,7 @@ def test_split_if_needed_no_split_has_no_chunk_metadata():
         component_inputs={"input1": "value1"},
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
     assert result[0].chunk_index is None
     assert result[0].total_chunks is None
 
@@ -151,7 +151,7 @@ def test_split_if_needed_splits_large_payload():
         component_inputs=large_inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
     assert len(result) > 1  # Should be split
 
 
@@ -166,7 +166,7 @@ def test_split_preserves_fixed_fields():
         component_inputs=large_inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     for chunk in result:
         assert chunk.component_run_id == "test-run-id"
@@ -185,7 +185,7 @@ def test_split_chunk_metadata_correct():
         component_inputs=large_inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Check chunk indices are sequential
     for i, chunk in enumerate(result):
@@ -204,7 +204,7 @@ def test_split_preserves_all_data():
         component_inputs=large_inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Merge all chunk inputs
     merged_inputs = {}
@@ -215,7 +215,7 @@ def test_split_preserves_all_data():
 
 
 def test_split_chunks_respect_max_size():
-    """Test that all chunks respect max URL size."""
+    """Test that all chunks respect max event size."""
     large_inputs = {f"input_{i}": "x" * 100 for i in range(50)}
 
     payload = ComponentInputsPayload(
@@ -225,11 +225,11 @@ def test_split_chunks_respect_max_size():
         component_inputs=large_inputs,
     )
 
-    max_size = MAX_TELEMETRY_URL_SIZE
-    result = payload.split_if_needed(max_url_size=max_size)
+    max_size = MAX_TELEMETRY_EVENT_SIZE
+    result = payload.split_if_needed(max_event_size=max_size)
 
     for chunk in result:
-        chunk_size = chunk._calculate_url_size()
+        chunk_size = chunk._calculate_event_size()
         assert chunk_size <= max_size
 
 
@@ -246,7 +246,7 @@ def test_split_truncates_oversized_single_field():
         component_inputs=inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Should return single payload with truncated value
     assert len(result) == 1
@@ -256,8 +256,8 @@ def test_split_truncates_oversized_single_field():
     assert "...[truncated]" in chunk_inputs["large_field"]
 
     # Verify the chunk respects max size
-    chunk_size = result[0]._calculate_url_size()
-    assert chunk_size <= MAX_TELEMETRY_URL_SIZE
+    chunk_size = result[0]._calculate_event_size()
+    assert chunk_size <= MAX_TELEMETRY_EVENT_SIZE
 
 
 def test_split_handles_empty_inputs():
@@ -269,7 +269,7 @@ def test_split_handles_empty_inputs():
         component_inputs={},
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
     assert len(result) == 1
     assert result[0].component_inputs == {}
 
@@ -287,7 +287,7 @@ def test_split_truncates_oversized_non_string_field():
         component_inputs=inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Should return single payload with truncated value
     assert len(result) == 1
@@ -299,8 +299,8 @@ def test_split_truncates_oversized_non_string_field():
     assert "...[truncated]" in chunk_inputs["large_list"]
 
     # Verify the chunk respects max size
-    chunk_size = result[0]._calculate_url_size()
-    assert chunk_size <= MAX_TELEMETRY_URL_SIZE
+    chunk_size = result[0]._calculate_event_size()
+    assert chunk_size <= MAX_TELEMETRY_EVENT_SIZE
 
 
 def test_split_truncates_oversized_field_in_multi_field_payload():
@@ -320,15 +320,15 @@ def test_split_truncates_oversized_field_in_multi_field_payload():
         component_inputs=inputs,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Should be split into multiple chunks
     assert len(result) > 1
 
     # All chunks must respect max size
     for chunk in result:
-        chunk_size = chunk._calculate_url_size()
-        assert chunk_size <= MAX_TELEMETRY_URL_SIZE
+        chunk_size = chunk._calculate_event_size()
+        assert chunk_size <= MAX_TELEMETRY_EVENT_SIZE
 
     # The huge_field should be truncated
     huge_field_found = False
@@ -346,7 +346,7 @@ def test_split_truncates_oversized_field_in_multi_field_payload():
 
 @given(st.dictionaries(st.text(min_size=1, max_size=50), st.text(max_size=200), min_size=1))
 def test_property_split_never_exceeds_max_size(inputs_dict):
-    """Property: Every chunk URL must be <= max_url_size."""
+    """Property: every chunk event must be <= max_event_size."""
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",
         component_id="test-comp-id",
@@ -354,11 +354,11 @@ def test_property_split_never_exceeds_max_size(inputs_dict):
         component_inputs=inputs_dict,
     )
 
-    max_size = MAX_TELEMETRY_URL_SIZE
-    result = payload.split_if_needed(max_url_size=max_size)
+    max_size = MAX_TELEMETRY_EVENT_SIZE
+    result = payload.split_if_needed(max_event_size=max_size)
 
     for chunk in result:
-        chunk_size = chunk._calculate_url_size()
+        chunk_size = chunk._calculate_event_size()
         assert chunk_size <= max_size, f"Chunk size {chunk_size} exceeds max {max_size}"
 
 
@@ -372,7 +372,7 @@ def test_property_split_preserves_all_data(inputs_dict):
         component_inputs=inputs_dict,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # Merge all chunk inputs
     merged_inputs = {}
@@ -404,7 +404,7 @@ def test_property_fixed_fields_identical_across_chunks(inputs_dict, run_id, comp
         component_inputs=inputs_dict,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     for chunk in result:
         assert chunk.component_run_id == run_id
@@ -422,7 +422,7 @@ def test_property_chunk_indices_sequential(inputs_dict):
         component_inputs=inputs_dict,
     )
 
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     if len(result) == 1:
         # Single payload should have None chunk metadata
@@ -450,7 +450,7 @@ def test_property_chunk_indices_sequential(inputs_dict):
     )
 )
 def test_property_handles_special_characters(inputs_dict):
-    """Property: URL encoding doesn't break splitting logic."""
+    """Property: serialization doesn't break splitting logic."""
     payload = ComponentInputsPayload(
         component_run_id="test-run-id",
         component_id="test-comp-id",
@@ -459,7 +459,7 @@ def test_property_handles_special_characters(inputs_dict):
     )
 
     # Should not raise any exceptions
-    result = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+    result = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
     # All chunks should be valid
     assert len(result) > 0

@@ -273,7 +273,8 @@ class Settings(BaseSettings):
     # Telemetry
     do_not_track: bool = False
     """If set to True, Langflow will not track telemetry."""
-    telemetry_base_url: str = "https://langflow.gateway.scarf.sh"
+    telemetry_base_url: str = ""
+    """Deprecated. Telemetry is emitted through OpenTelemetry OTEL_* configuration."""
     transactions_storage_enabled: bool = True
     """If set to True, Langflow will track transactions between flows."""
     vertex_builds_storage_enabled: bool = True

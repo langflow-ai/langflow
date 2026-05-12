@@ -91,7 +91,7 @@ class TestTelemetryService:
 
     @pytest.fixture
     def telemetry(self):
-        """Create a telemetry service with do_not_track so it doesn't hit the network."""
+        """Create a telemetry service with do_not_track so it doesn't emit telemetry."""
         return TelemetryService(do_not_track=True)
 
     def test_service_ready(self, telemetry):
@@ -113,20 +113,17 @@ class TestTelemetryService:
         telemetry.start()
         assert telemetry._running is False
         assert telemetry._worker_task is None
-        assert telemetry._client is None
 
     @pytest.mark.asyncio
     async def test_start_and_stop_lifecycle(self):
-        """Test that start creates worker/client and stop cleans them up."""
-        svc = TelemetryService(base_url="http://localhost:0")
+        """Test that start creates worker and stop cleans it up."""
+        svc = TelemetryService()
         svc.start()
         assert svc._running is True
         assert svc._worker_task is not None
-        assert svc._client is not None
 
         await svc.stop()
         assert svc._running is False
-        assert svc._client is None
 
     @pytest.mark.asyncio
     async def test_enqueue_skipped_when_do_not_track(self, telemetry):
@@ -160,12 +157,11 @@ class TestTelemetryService:
     @pytest.mark.asyncio
     async def test_teardown_after_start(self):
         """Test that teardown properly stops a started service."""
-        svc = TelemetryService(base_url="http://localhost:0")
+        svc = TelemetryService()
         svc.start()
         assert svc._running is True
         await svc.teardown()
         assert svc._running is False
-        assert svc._client is None
 
 
 class TestTracingService:
