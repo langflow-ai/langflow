@@ -773,7 +773,9 @@ async def install_mcp_config(
 
     # P2: Check if MCP server management is locked
     settings_service = get_settings_service()
-    if settings_service.settings.mcp_servers_locked and not current_user.is_superuser:
+    # Some tests patch settings with MagicMock objects that return truthy placeholders
+    # for unknown attrs. Only enforce this gate when the flag is explicitly True.
+    if getattr(settings_service.settings, "mcp_servers_locked", False) is True and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",

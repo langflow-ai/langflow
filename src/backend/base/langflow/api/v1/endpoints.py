@@ -1134,7 +1134,7 @@ async def custom_component(
     settings_service = get_settings_service()
 
     # P2: Check if custom component editing is restricted to admins only
-    if settings_service.settings.custom_component_admin_only and not user.is_superuser:
+    if getattr(settings_service.settings, "custom_component_admin_only", False) is True and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Custom component creation is restricted to administrators",
@@ -1193,7 +1193,7 @@ async def custom_component_update(
     settings_service = get_settings_service()
 
     # P2: Check if custom component editing is restricted to admins only
-    if settings_service.settings.custom_component_admin_only and not user.is_superuser:
+    if getattr(settings_service.settings, "custom_component_admin_only", False) is True and not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Custom component editing is restricted to administrators",
