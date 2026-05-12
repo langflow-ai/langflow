@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlmodel import col, delete, select
@@ -27,8 +27,25 @@ from langflow.services.database.models.vertex_builds.crud import (
 )
 from langflow.services.database.models.vertex_builds.model import VertexBuildMapModel
 from langflow.services.deps import get_memory_base_service
+from langflow.services.tracing.langfuse import normalize_langfuse_trace_id, sync_feedback_score
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+
+def _get_positive_feedback_value(db_message: MessageTable) -> bool | None:
+    properties = db_message.properties
+    if hasattr(properties, "positive_feedback"):
+        return properties.positive_feedback
+    if isinstance(properties, dict):
+        return properties.get("positive_feedback")
+    return None
+
+
+def _resolve_langfuse_trace_id(db_message: MessageTable) -> str | None:
+    session_metadata = db_message.session_metadata or {}
+    if isinstance(session_metadata, dict):
+        return normalize_langfuse_trace_id(session_metadata.get("langfuse_trace_id"))
+    return None
 
 
 async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
@@ -166,6 +183,7 @@ async def update_message(
     message_id: UUID,
     message: MessageUpdate,
     session: DbSession,
+    background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     try:
@@ -181,6 +199,7 @@ async def update_message(
         raise HTTPException(status_code=404, detail="Message not found")
 
     try:
+        previous_positive_feedback = _get_positive_feedback_value(db_message)
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         if "text" in message_dict and message_dict["text"] != db_message.text:
             # Keep edit flag consistent for UI/audit consumers when content changes.
@@ -191,6 +210,19 @@ async def update_message(
         await session.refresh(db_message)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+    current_positive_feedback = _get_positive_feedback_value(db_message)
+    langfuse_trace_id = _resolve_langfuse_trace_id(db_message)
+    if current_positive_feedback != previous_positive_feedback and langfuse_trace_id:
+        background_tasks.add_task(
+            sync_feedback_score,
+            message_id=db_message.id,
+            trace_id=langfuse_trace_id,
+            session_id=db_message.session_id,
+            flow_id=db_message.flow_id,
+            sender=db_message.sender,
+            positive_feedback=current_positive_feedback,
+        )
     return db_message
 
 

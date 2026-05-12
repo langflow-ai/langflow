@@ -1873,10 +1873,25 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
+        run_id: str | None = None
+        session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
-        stored_messages = await astore_message(message, flow_id=flow_id)
+            graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
+            run_id = graph_run_id
+            if self.tracing_service:
+                langfuse_tracer = self.tracing_service.get_tracer("langfuse")
+                langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
+                if langfuse_trace_id:
+                    session_metadata["langfuse_trace_id"] = langfuse_trace_id
+                if graph_run_id:
+                    session_metadata["graph_run_id"] = graph_run_id
+        if session_metadata:
+            message.session_metadata = session_metadata
+        if run_id and not getattr(message, "run_id", None):
+            message.run_id = run_id
+        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
