@@ -4,6 +4,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
+// biome-ignore lint/suspicious/noExplicitAny: process not in tsconfig scope for test files
 declare const process: any;
 
 withEventDeliveryModes(

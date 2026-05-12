@@ -19,6 +19,7 @@ test(
 
     // Find the Vector Store RAG starter project — it now uses native
     // KnowledgeIngestion / KnowledgeBase components instead of AstraDB.
+    // biome-ignore lint/suspicious/noExplicitAny: untyped API response
     const vectorStoreProject = responseBody.find((project: any) => {
       return project.name === "Vector Store RAG";
     });
@@ -27,6 +28,7 @@ test(
 
     // Verify the template uses the native Knowledge components
     const nodeTypes: string[] = (vectorStoreProject?.data?.nodes ?? []).map(
+      // biome-ignore lint/suspicious/noExplicitAny: untyped API response
       (node: any) => node.data?.type as string,
     );
 
