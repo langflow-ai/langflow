@@ -33,7 +33,12 @@ function basename(p: string): string {
   return last ?? p;
 }
 
-export function FileContentModal({ path, content, open, onClose }: FileContentModalProps) {
+export function FileContentModal({
+  path,
+  content,
+  open,
+  onClose,
+}: FileContentModalProps) {
   const { t } = useTranslation();
   const hasContent = content !== undefined;
   const isEmpty = !content || content.trim() === "";

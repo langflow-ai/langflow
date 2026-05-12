@@ -17,7 +17,6 @@ from types import SimpleNamespace
 import pytest
 from fastapi import HTTPException
 from fastapi.responses import Response
-
 from langflow.agentic.api.files_router import get_file
 
 
@@ -40,8 +39,8 @@ def _write_sandbox_file(sandbox_root: Path, user_id: str, relative_path: str, co
     from lfx.components.tools.filesystem import FileSystemToolComponent
 
     fs = FileSystemToolComponent()
-    fs._user_id = user_id  # noqa: SLF001 — test fixture forces the bound id
-    root = fs._validate_root()  # noqa: SLF001 — public toolkit entry
+    fs._user_id = user_id
+    root = fs._validate_root()
     target = root / relative_path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(content)
@@ -148,7 +147,8 @@ class TestPathTraversalRejection:
 
 class TestCrossUserDenial:
     """B5 — T2: user B must not read user A's files. Returns 404 (not 403)
-    so the existence of A's namespace is not leaked."""
+    so the existence of A's namespace is not leaked.
+    """
 
     @pytest.mark.asyncio
     async def test_should_return_404_when_target_in_other_user_namespace(self, isolated_sandbox):
@@ -208,7 +208,8 @@ class TestSizeAndBinaryGuards:
 
 class TestDownloadMode:
     """B5 — T7: ?download=true must force attachment + octet-stream so the
-    browser never inlines a returned .html / .svg / .js as page content."""
+    browser never inlines a returned .html / .svg / .js as page content.
+    """
 
     @pytest.mark.asyncio
     async def test_should_set_content_disposition_attachment_when_download_true(self, isolated_sandbox):
@@ -246,7 +247,8 @@ class TestDownloadMode:
 
 class TestAuditLogging:
     """B5 — T11: every successful read emits an audit log line with the
-    user_id, the (relative) path, and the size."""
+    user_id, the (relative) path, and the size.
+    """
 
     @pytest.mark.asyncio
     async def test_should_log_audit_event_when_file_read(self, isolated_sandbox, caplog):

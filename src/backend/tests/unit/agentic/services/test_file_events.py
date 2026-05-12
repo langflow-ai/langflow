@@ -14,7 +14,6 @@ from contextvars import copy_context
 from unittest.mock import MagicMock
 
 import pytest
-
 from langflow.agentic.services.file_events import (
     drain_file_events,
     emit_file_event,
@@ -137,9 +136,7 @@ class TestContextIsolation:
 
         result = asyncio.run(parent_run())
         paths = sorted(entry["path"] for entry in result)
-        assert paths == ["alpha.md", "beta.md"], (
-            f"Parent must see emits from both child tasks, got {result}"
-        )
+        assert paths == ["alpha.md", "beta.md"], f"Parent must see emits from both child tasks, got {result}"
 
 
 class TestPayloadShape:

@@ -32,7 +32,10 @@ beforeEach(() => {
 describe("AssistantFileCard", () => {
   it("should render filename basename", () => {
     render(
-      <AssistantFileCard file={makeFile({ path: "reports/2026.md" })} onOpen={jest.fn()} />,
+      <AssistantFileCard
+        file={makeFile({ path: "reports/2026.md" })}
+        onOpen={jest.fn()}
+      />,
     );
     expect(screen.getByText("2026.md")).toBeInTheDocument();
   });

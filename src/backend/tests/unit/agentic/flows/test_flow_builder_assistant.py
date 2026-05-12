@@ -52,9 +52,9 @@ class TestFlowBuilderPrompt:
 
     def test_should_warn_about_agents_built_in_model(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
-        assert "built-in model" in prompt_lower and (
-            "only" in prompt_lower or "unless" in prompt_lower
-        ), "Prompt must say the Agent has a built-in model and external models are opt-in."
+        assert "built-in model" in prompt_lower and ("only" in prompt_lower or "unless" in prompt_lower), (
+            "Prompt must say the Agent has a built-in model and external models are opt-in."
+        )
 
     def test_should_require_system_prompt_for_persona_use_cases(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
@@ -72,7 +72,8 @@ class TestFlowBuilderPrompt:
     def test_should_instruct_to_swap_model_via_configure_component(self):
         """When the user says 'change the model to X', the agent must update
         the Agent's `model` field via configure_component instead of adding
-        an external OpenAIModel/AnthropicModel component."""
+        an external OpenAIModel/AnthropicModel component.
+        """
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
         # Must mention the editing path explicitly.
         assert "configure_component" in prompt_lower
@@ -82,9 +83,10 @@ class TestFlowBuilderPrompt:
 
     def test_should_show_model_field_value_structure(self):
         """The agent needs the exact JSON shape for the Agent's model field
-        value so it can call configure_component without guessing."""
+        value so it can call configure_component without guessing.
+        """
         # The structure is `[{"provider": "...", "name": "..."}]`.
-        assert "\"provider\"" in FLOW_BUILDER_PROMPT and "\"name\"" in FLOW_BUILDER_PROMPT, (
+        assert '"provider"' in FLOW_BUILDER_PROMPT and '"name"' in FLOW_BUILDER_PROMPT, (
             "Prompt must show the model field value structure (provider+name)."
         )
 
@@ -289,6 +291,7 @@ class TestFilesystemToolsInToolkit:
 
         result_json = write_tool.func(path="DOCS.md", content="# Hello")
         import json
+
         result = json.loads(result_json)
         assert result.get("status") in {"created", "updated"}, result
 
@@ -350,6 +353,7 @@ class TestFilesystemToolsInToolkit:
         tools = await build_toolkit()
         write_tool = next(t for t in tools if t.name == "write_file")
         import json
+
         result = json.loads(write_tool.func(path="../escape.md", content="x"))
         assert "error" in result
 

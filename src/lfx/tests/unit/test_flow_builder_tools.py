@@ -117,14 +117,7 @@ class TestBuildFlowFromSpec:
         reset_working_flow()
         comp = BuildFlowFromSpec()
         comp.set(
-            spec=(
-                "name: Clean\n"
-                "nodes:\n"
-                "  A: ChatInput\n"
-                "  B: ChatOutput\n"
-                "edges:\n"
-                "  A.message -> B.input_value\n"
-            ),
+            spec=("name: Clean\nnodes:\n  A: ChatInput\n  B: ChatOutput\nedges:\n  A.message -> B.input_value\n"),
         )
         result = comp.build_flow()
 
@@ -414,7 +407,8 @@ class TestConnectComponents:
 
     def test_connect_emits_select_output_event_when_source_has_multiple_outputs(self):
         """The frontend can't infer selected_output from the edge alone — the
-        backend must broadcast a dedicated event so the canvas dropdown updates."""
+        backend must broadcast a dedicated event so the canvas dropdown updates.
+        """
         reset_working_flow()
 
         agent = AddComponent()
@@ -447,7 +441,8 @@ class TestConnectComponents:
         flips `_connectionMode=true` on the node — that's how the dropdown
         switches to displaying an external connection. The tool must
         auto-enable that flag when wiring an external model so the canvas
-        renders the edge instead of the dropdown."""
+        renders the edge instead of the dropdown.
+        """
         from lfx.mcp.flow_builder_tools import _ensure_working_flow, _find_node
 
         reset_working_flow()
@@ -485,7 +480,8 @@ class TestConnectComponents:
     def test_connect_to_model_field_emits_set_connection_mode_event(self):
         """The frontend dropdown reads `_connectionMode` from node data.
         Backend must broadcast the flip so the canvas updates without a
-        full set_flow round-trip."""
+        full set_flow round-trip.
+        """
         reset_working_flow()
 
         add_openai = AddComponent()

@@ -13,9 +13,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 
-import type {
-  AgenticFileWrittenEvent,
-} from "@/controllers/API/queries/agentic/types";
+import type { AgenticFileWrittenEvent } from "@/controllers/API/queries/agentic/types";
 import { useAssistantChat } from "../use-assistant-chat";
 
 jest.mock("@xyflow/react", () => ({
@@ -141,9 +139,7 @@ describe("useAssistantChat — file_written handler (F1)", () => {
     const assistantMsg = result.current.messages.find(
       (m) => m.role === "assistant",
     );
-    expect(
-      assistantMsg?.writtenFiles?.map((f) => [f.action, f.path]),
-    ).toEqual([
+    expect(assistantMsg?.writtenFiles?.map((f) => [f.action, f.path])).toEqual([
       ["write_file", "A.md"],
       ["write_file", "B.md"],
       ["edit_file", "A.md"],
