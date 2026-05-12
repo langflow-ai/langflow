@@ -11,7 +11,7 @@
 
 .theme-doc-sidebar-container nav.menu {
   padding-top: 0.75rem;
-  padding-left: 1rem;
+  padding-left: var(--docs-gutter);
   padding-right: 0.75rem;
 }
 

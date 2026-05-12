@@ -1,4 +1,5 @@
 :root {
+  --docs-gutter: 1rem;
   --ifm-navbar-link-hover-color: initial;
   --ifm-navbar-padding-vertical: 0;
   --ifm-global-radius: 10px;

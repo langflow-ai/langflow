@@ -20,7 +20,7 @@ html[data-theme="light"] .navbar__logo {
 }
 
 .navbar__inner {
-  padding: 0.5rem 1.5rem;
+  padding: 0.5rem var(--docs-gutter);
 }
 
 /* Social icons - smaller, muted */
