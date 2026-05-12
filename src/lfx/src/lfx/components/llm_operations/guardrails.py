@@ -8,7 +8,7 @@ from lfx.base.models.unified_models import (
 from lfx.custom import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
-from lfx.schema import Data
+from lfx.schema import Data, Message
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
 
 guardrail_descriptions = {
@@ -119,8 +119,22 @@ class GuardrailsComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Pass", name="pass_result", method="process_check", group_outputs=True),
-        Output(display_name="Fail", name="failed_result", method="process_check", group_outputs=True),
+        Output(display_name="Pass", name="pass_result", method="pass_message", group_outputs=True, types=["Message"]),
+        Output(display_name="Fail", name="failed_result", method="fail_message", group_outputs=True, types=["Message"]),
+        Output(
+            display_name="Pass Data",
+            name="pass_data_result",
+            method="pass_data",
+            group_outputs=True,
+            types=["Data"],
+        ),
+        Output(
+            display_name="Fail Data",
+            name="failed_data_result",
+            method="fail_data",
+            group_outputs=True,
+            types=["Data"],
+        ),
     ]
 
     def __init__(self, **kwargs):
@@ -578,20 +592,49 @@ Now analyze the user input above and respond according to the instructions:"""
 
         return all_passed
 
-    def process_check(self) -> Data:
-        """Process the Check output - returns validation result and justifications."""
-        # Run validation once
+    def _process_validation(self) -> tuple[bool, dict[str, str]]:
+        """Run validation once and return the active branch payload."""
         validation_passed = self._run_validation()
 
         if validation_passed:
             self.stop("failed_result")
+            self.stop("failed_data_result")
             payload = {"text": self._extracted_text, "result": "pass"}
         else:
             self.stop("pass_result")
+            self.stop("pass_data_result")
             payload = {
                 "text": self._extracted_text,
                 "result": "fail",
                 "justification": "\n".join(self._failed_checks),
             }
 
+        return validation_passed, payload
+
+    def pass_message(self) -> Message:
+        """Return the raw input text as a Message when validation passes."""
+        validation_passed, payload = self._process_validation()
+        if not validation_passed:
+            return Message(text="")
+        return Message(text=payload["text"])
+
+    def fail_message(self) -> Message:
+        """Return the failure justification as a Message when validation fails."""
+        validation_passed, payload = self._process_validation()
+        if validation_passed:
+            return Message(text="")
+        return Message(text=payload.get("justification", ""), error=True)
+
+    def pass_data(self) -> Data:
+        """Return pass metadata as hidden Data output."""
+        validation_passed, payload = self._process_validation()
+        if not validation_passed:
+            return Data(data={})
+        return Data(data=payload)
+
+    def fail_data(self) -> Data:
+        """Return fail metadata as hidden Data output."""
+        validation_passed, payload = self._process_validation()
+        if validation_passed:
+            return Data(data={})
         return Data(data=payload)
