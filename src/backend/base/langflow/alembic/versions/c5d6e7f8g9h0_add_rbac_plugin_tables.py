@@ -1,7 +1,7 @@
 """add RBAC plugin tables role, user_role, resource_permission, audit_log
 
 Revision ID: c5d6e7f8g9h0
-Revises: b4c2f8e9a1d3
+Revises: mb01b2c3d4e5
 Create Date: 2026-05-11
 
 Phase: EXPAND
@@ -15,7 +15,7 @@ from alembic import op
 from langflow.utils import migration
 
 revision: str = "c5d6e7f8g9h0"
-down_revision: str | None = "b4c2f8e9a1d3"
+down_revision: str | None = "mb01b2c3d4e5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
