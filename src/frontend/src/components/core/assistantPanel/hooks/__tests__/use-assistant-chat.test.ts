@@ -43,11 +43,21 @@ jest.mock("@/stores/flowsManagerStore", () => {
 const mockSetNodes = jest.fn();
 const mockSetEdges = jest.fn();
 const mockPaste = jest.fn();
+let _mockNodes: unknown[] = [];
+let _mockEdges: unknown[] = [];
+const mockGetNodes = jest.fn(() => _mockNodes);
+const mockGetEdges = jest.fn(() => _mockEdges);
 jest.mock("@/stores/flowStore", () => {
   const state = {
     setNodes: (...args: unknown[]) => mockSetNodes(...args),
     setEdges: (...args: unknown[]) => mockSetEdges(...args),
     paste: (...args: unknown[]) => mockPaste(...args),
+    get nodes() {
+      return mockGetNodes();
+    },
+    get edges() {
+      return mockGetEdges();
+    },
   };
   const fn = (selector?: (s: typeof state) => unknown) =>
     selector ? selector(state) : state;
@@ -562,7 +572,7 @@ describe("useAssistantChat", () => {
       expect(request.input_value.toLowerCase()).toContain("approve");
     });
 
-    it("should_mark_plan_as_dismissed_when_handleDismissPlan_called", async () => {
+    it("should_mark_plan_as_refining_when_handleDismissPlan_called", async () => {
       mockPostAssistStream.mockImplementation(
         async (_request: unknown, callbacks: Record<string, Function>) => {
           callbacks.onFlowUpdate({
@@ -590,7 +600,10 @@ describe("useAssistantChat", () => {
       const updated = result.current.messages.find(
         (m) => m.id === assistantMsg!.id,
       );
-      expect(updated?.planProposalStatus).toBe("dismissed");
+      // Dismiss no longer terminates the planning gate — it transitions to
+      // "refining" so the next user message can carry the dismissed plan
+      // as context (see use-assistant-chat-plan-refining.test.ts).
+      expect(updated?.planProposalStatus).toBe("refining");
       // Dismiss does NOT send a new turn — the user types refinement
       // feedback as a regular message.
       expect(mockPostAssistStream).not.toHaveBeenCalled();
@@ -793,6 +806,124 @@ describe("useAssistantChat", () => {
 
       const sessionId = mockPostAssistStream.mock.calls[0][0].session_id;
       expect(sessionId).toMatch(/^agentic_/);
+    });
+  });
+
+  describe("flow proposal add-vs-replace mode", () => {
+    const FRESH_FLOW = {
+      name: "Fresh",
+      data: {
+        nodes: [
+          { id: "ChatInput-new", position: { x: 0, y: 0 } },
+          { id: "Agent-new", position: { x: 200, y: 0 } },
+        ],
+        edges: [{ id: "e1", source: "ChatInput-new", target: "Agent-new" }],
+      },
+    };
+
+    beforeEach(() => {
+      _mockNodes = [];
+      _mockEdges = [];
+    });
+
+    it("should_replace_canvas_when_mode_is_replace", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: FRESH_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      const msg = result.current.messages[1];
+
+      mockSetNodes.mockClear();
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "replace");
+      });
+
+      // Replace path: setNodes called with a plain array equal to the
+      // proposal's nodes (no merge logic, just overwrite).
+      expect(mockSetNodes).toHaveBeenCalled();
+      const firstCallArg = mockSetNodes.mock.calls[0][0];
+      expect(Array.isArray(firstCallArg)).toBe(true);
+      expect(
+        (firstCallArg as Array<{ id: string }>).map((n) => n.id),
+      ).toEqual(FRESH_FLOW.data.nodes.map((n) => n.id));
+    });
+
+    it("should_default_to_replace_when_mode_arg_is_omitted", async () => {
+      // Backwards compatibility: existing callers without the second
+      // arg keep the destructive semantic.
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: FRESH_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      const msg = result.current.messages[1];
+
+      mockSetNodes.mockClear();
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id);
+      });
+
+      const firstCallArg = mockSetNodes.mock.calls[0][0];
+      expect(Array.isArray(firstCallArg)).toBe(true);
+    });
+
+    it("should_merge_into_existing_canvas_when_mode_is_add", async () => {
+      // Plant existing canvas state via the mock store getters.
+      _mockNodes = [{ id: "Existing-1", position: { x: 0, y: 0 } }];
+      _mockEdges = [];
+
+      mockPostAssistStream.mockImplementation(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: FRESH_FLOW,
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+      const msg = result.current.messages[1];
+
+      mockSetNodes.mockClear();
+      mockSetEdges.mockClear();
+
+      act(() => {
+        result.current.handleApplyFlowProposal(msg.id, "add");
+      });
+
+      // Merge path: setNodes called with a plain array equal to the
+      // concatenation of existing + proposal (with offset/remap applied
+      // by the helper). Length must be existing.length + proposal.length.
+      expect(mockSetNodes).toHaveBeenCalled();
+      const arg = mockSetNodes.mock.calls[0][0] as Array<{ id: string }>;
+      expect(Array.isArray(arg)).toBe(true);
+      expect(arg).toHaveLength(1 + FRESH_FLOW.data.nodes.length);
+      expect(arg[0].id).toBe("Existing-1");
     });
   });
 

@@ -32,7 +32,13 @@ interface AssistantFlowPreviewProps {
    * pastes the flow into the existing canvas via `paste()`.
    */
   status?: FlowProposalStatus;
-  onApply?: () => void;
+  /**
+   * Apply handler. Receives a ``mode`` so the card can distinguish
+   * additive vs destructive intent. Callers from older code paths that
+   * still invoke ``onApply()`` (zero args) default to ``"replace"`` for
+   * backwards compatibility with the original single-button design.
+   */
+  onApply?: (mode: "replace" | "add") => void;
   onDismiss?: () => void;
 }
 
@@ -180,14 +186,34 @@ export function AssistantFlowPreview({
     if (status === "pending") {
       return (
         <>
+          {/* Primary action: ADD to canvas. Non-destructive, keeps
+              existing nodes/edges intact. The legacy
+              `assistant-flow-continue-button` testid is reused on this
+              button: it's the "primary acceptance" action and E2E
+              specs that pinned the old name still find it. The new
+              tests use `assistant-flow-add-button` for the more
+              precise semantic. */}
           <button
             type="button"
-            data-testid="assistant-flow-continue-button"
+            data-testid="assistant-flow-add-button"
+            data-add-button-alias="assistant-flow-continue-button"
             className="flex h-8 items-center gap-1.5 rounded-[10px] bg-accent-emerald-foreground/10 px-3 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
-            onClick={() => onApply?.()}
+            onClick={() => onApply?.("add")}
           >
-            <span>Continue</span>
+            <span>Add to canvas</span>
             <ArrowRight className="h-4 w-4" />
+          </button>
+          {/* Secondary action: REPLACE canvas. Destructive — uses a
+              warning/neutral palette so the consequence reads at a
+              glance. */}
+          <button
+            type="button"
+            data-testid="assistant-flow-replace-button"
+            className="flex h-8 items-center gap-1.5 rounded-[10px] border border-border bg-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            onClick={() => onApply?.("replace")}
+            title="Discard the current canvas and replace it with this flow"
+          >
+            <span>Replace canvas</span>
           </button>
           <button
             type="button"

@@ -6,6 +6,7 @@ import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
+import { useInputHistory } from "../hooks/use-input-history";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { ModelSelector } from "./model-selector";
 
@@ -71,7 +72,16 @@ interface AssistantInputProps {
   autoFocus?: boolean;
   draftMessage?: string;
   onDraftChange?: (draft: string) => void;
+  /**
+   * Set when the user dismissed a plan and is composing the refinement.
+   * Swaps the idle placeholder for a directed cue ("Tell me what to
+   * change…"). Has no effect while a generating step is active — the
+   * intent-specific generating placeholder takes precedence.
+   */
+  isRefiningPlan?: boolean;
 }
+
+const REFINING_PLAN_PLACEHOLDER = "Tell me what to change…";
 
 export function AssistantInput({
   onSend,
@@ -84,6 +94,7 @@ export function AssistantInput({
   autoFocus = false,
   draftMessage = "",
   onDraftChange,
+  isRefiningPlan = false,
 }: AssistantInputProps) {
   const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
@@ -117,6 +128,7 @@ export function AssistantInput({
     },
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputHistory = useInputHistory();
 
   // Auto-focus textarea when requested
   useEffect(() => {
@@ -143,17 +155,69 @@ export function AssistantInput({
   const handleSend = () => {
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
+    inputHistory.push(trimmedMessage);
     onSend(trimmedMessage, selectedModel);
     updateMessage("");
   };
+
+  /**
+   * Up/Down trigger history recall only when the cursor is on the edge of
+   * the textarea (first line for Up, last line for Down). This keeps the
+   * default cursor-movement behavior usable in multiline drafts — pressing
+   * Up while editing a second line still moves the cursor up between
+   * lines, not into history.
+   */
+  function isCursorOnFirstLine(textarea: HTMLTextAreaElement): boolean {
+    const value = textarea.value;
+    const firstNewline = value.indexOf("\n");
+    if (firstNewline === -1) return true;
+    return textarea.selectionStart <= firstNewline;
+  }
+
+  function isCursorOnLastLine(textarea: HTMLTextAreaElement): boolean {
+    const value = textarea.value;
+    const lastNewline = value.lastIndexOf("\n");
+    if (lastNewline === -1) return true;
+    return textarea.selectionStart > lastNewline;
+  }
+
+  function applyRecall(recalled: string | null) {
+    if (recalled === null) return;
+    updateMessage(recalled);
+    // Defer cursor positioning to after React updates the value.
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (textarea) {
+        textarea.setSelectionRange(recalled.length, recalled.length);
+      }
+    });
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+      return;
     }
     if (e.key === "Escape") {
       textareaRef.current?.blur();
+      return;
+    }
+    const textarea = e.currentTarget;
+    if (e.key === "ArrowUp" && isCursorOnFirstLine(textarea)) {
+      const recalled = inputHistory.recall("up", message);
+      if (recalled !== null) {
+        e.preventDefault();
+        applyRecall(recalled);
+      }
+      return;
+    }
+    if (e.key === "ArrowDown" && isCursorOnLastLine(textarea)) {
+      const recalled = inputHistory.recall("down", message);
+      if (recalled !== null) {
+        e.preventDefault();
+        applyRecall(recalled);
+      }
     }
   };
 
@@ -192,7 +256,9 @@ export function AssistantInput({
                   ? ""
                   : (currentStep && GENERATING_PLACEHOLDER[currentStep]) ||
                     "Working on it..."
-                : (placeholder ?? idlePlaceholder)
+                : isRefiningPlan
+                  ? REFINING_PLAN_PLACEHOLDER
+                  : (placeholder ?? idlePlaceholder)
             }
             disabled={disabled || isProcessing}
             className={cn(

@@ -43,6 +43,7 @@ interface AssistantInputWithScrollProps {
   autoFocus?: boolean;
   draftMessage?: string;
   onDraftChange?: (draft: string) => void;
+  isRefiningPlan?: boolean;
 }
 
 function AssistantInputWithScroll({
@@ -54,6 +55,7 @@ function AssistantInputWithScroll({
   autoFocus,
   draftMessage,
   onDraftChange,
+  isRefiningPlan,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -72,6 +74,7 @@ function AssistantInputWithScroll({
       autoFocus={autoFocus}
       draftMessage={draftMessage}
       onDraftChange={onDraftChange}
+      isRefiningPlan={isRefiningPlan}
       compact
     />
   );
@@ -126,6 +129,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleDismissFlowProposal,
     handleApprovePlan,
     handleDismissPlan,
+    handleResetPlan,
+    isRefiningPlan,
+    skipAll,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,
@@ -273,6 +279,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           onSelectSession={switchSession}
           onDeleteSession={deleteSession}
           isExpanded={useExpandedSize}
+          skipAll={skipAll}
         />
         {!hasEnabledModels && !hasMessages ? (
           <AssistantNoModelsState />
@@ -293,7 +300,9 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onDismissFlowProposal={handleDismissFlowProposal}
                   onApprovePlan={handleApprovePlan}
                   onDismissPlan={handleDismissPlan}
+                  onResetPlan={handleResetPlan}
                   onRetry={hasEnabledModels ? handleRetry : undefined}
+                  skipApprovalGate={skipAll}
                 />
               ))}
             </StickToBottom.Content>
@@ -308,6 +317,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onDraftChange={(draft) => {
                 draftMessageCache = draft;
               }}
+              isRefiningPlan={isRefiningPlan}
             />
           </StickToBottom>
         ) : (
@@ -325,6 +335,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onDraftChange={(draft) => {
                 draftMessageCache = draft;
               }}
+              isRefiningPlan={isRefiningPlan}
             />
           </>
         )}

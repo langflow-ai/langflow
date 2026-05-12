@@ -36,6 +36,43 @@ export interface AssistantMessage {
   pendingPlanProposal?: PendingPlanProposal;
   planProposalStatus?: PlanProposalStatus;
   writtenFiles?: WrittenFile[];
+  /**
+   * Live checklist of incremental canvas mutations the agent performed
+   * (add/remove/connect/configure). Populated as the SSE stream lands;
+   * the UI renders this as a checkboxed task list above the markdown.
+   * Excludes the destructive ``set_flow`` proposal path — that goes
+   * through the dedicated Continue/Dismiss card.
+   */
+  buildTasks?: BuildTask[];
+  /**
+   * Skip rendering this message entirely. Used by skip-all to suppress
+   * the propose_plan turn's preamble — the user never sees the "I am
+   * proposing a plan and waiting" content that the LLM streams before
+   * the tool call.
+   */
+  hidden?: boolean;
+}
+
+/** A single incremental canvas operation surfaced to the user as a task. */
+export type BuildTaskAction =
+  | "add_component"
+  | "remove_component"
+  | "connect"
+  | "configure";
+
+export interface BuildTask {
+  /** Canvas action that produced this entry. */
+  action: BuildTaskAction;
+  /** Subject component id for add/remove/configure. */
+  componentId?: string;
+  /** Friendly type label for add (e.g. "ChatInput"). */
+  componentType?: string;
+  /** Source endpoint for connect. */
+  sourceId?: string;
+  /** Target endpoint for connect. */
+  targetId?: string;
+  /** Local timestamp the SSE event was received — for ordering. */
+  receivedAt: number;
 }
 
 /** A file the agent persisted via write_file or edit_file. */
@@ -60,11 +97,22 @@ export type FlowProposalStatus = "pending" | "applied" | "dismissed";
 
 /**
  * Status of the BUILD-mode planning gate that runs BEFORE the agent calls
- * search/describe/build_flow. The user sees the markdown plan as a card with
- * Continue/Dismiss. Continue ⇒ "approved" (agent proceeds). Dismiss ⇒
- * "dismissed" (user types refinement feedback and agent replans).
+ * search/describe/build_flow.
+ *
+ * - "pending"    — card shows Continue/Dismiss; agent is waiting.
+ * - "refining"   — user clicked Dismiss; card stays visible with Continue +
+ *                  Reset, and the next user message carries the prior plan
+ *                  markdown as context so the agent (which has no server-side
+ *                  conversation history) can replan with full awareness.
+ * - "approved"   — user clicked Continue; agent resumed and is building.
+ * - "dismissed"  — user clicked Reset on a refining card; planning gate is
+ *                  closed, stash cleared, no prior plan re-injected.
  */
-export type PlanProposalStatus = "pending" | "approved" | "dismissed";
+export type PlanProposalStatus =
+  | "pending"
+  | "refining"
+  | "approved"
+  | "dismissed";
 
 export interface PendingPlanProposal {
   /** Raw markdown emitted by the agent's propose_plan tool. */

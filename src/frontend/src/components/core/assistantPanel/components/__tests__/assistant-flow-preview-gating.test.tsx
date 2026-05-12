@@ -46,7 +46,11 @@ describe("AssistantFlowPreview gating", () => {
   });
 
   describe("pending status (Continue gate)", () => {
-    it("should_render_continue_button_when_status_is_pending", () => {
+    it("should_render_primary_apply_button_when_status_is_pending", () => {
+      // Pre-FP3 this was the single 'Continue' button with testid
+      // `assistant-flow-continue-button`. Post-FP3 the primary acceptance
+      // is 'Add to canvas' (non-destructive default). The test was
+      // renamed to match the new contract.
       render(
         <AssistantFlowPreview
           flowPreview={SAMPLE_PREVIEW}
@@ -56,7 +60,7 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
       expect(
-        screen.getByTestId("assistant-flow-continue-button"),
+        screen.getByTestId("assistant-flow-add-button"),
       ).toBeInTheDocument();
     });
 
@@ -74,7 +78,10 @@ describe("AssistantFlowPreview gating", () => {
       ).toBeInTheDocument();
     });
 
-    it("should_call_onApply_when_continue_button_clicked", () => {
+    it("should_call_onApply_with_add_when_primary_button_clicked", () => {
+      // Renamed from "should_call_onApply_when_continue_button_clicked"
+      // to match the FP3 dual-action card. The primary acceptance is
+      // now 'Add to canvas' (mode='add').
       const onApply = jest.fn();
       render(
         <AssistantFlowPreview
@@ -85,8 +92,75 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
 
-      fireEvent.click(screen.getByTestId("assistant-flow-continue-button"));
+      fireEvent.click(screen.getByTestId("assistant-flow-add-button"));
       expect(onApply).toHaveBeenCalledTimes(1);
+      expect(onApply).toHaveBeenCalledWith("add");
+    });
+
+    it("should_render_add_to_canvas_button_when_pending", () => {
+      // Dual-action card: 'Add to canvas' is always available so the
+      // user can preserve existing canvas state. The destructive
+      // 'Replace canvas' is the secondary action.
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-flow-add-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_render_replace_canvas_button_when_pending", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      // The legacy 'Continue' button is rebranded as 'Replace canvas'
+      // for clarity. We address it via a dedicated testid so the role
+      // is explicit in tests.
+      expect(
+        screen.getByTestId("assistant-flow-replace-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_call_onApply_with_add_when_add_button_clicked", () => {
+      const onApply = jest.fn();
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          onApply={onApply}
+          onDismiss={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId("assistant-flow-add-button"));
+      expect(onApply).toHaveBeenCalledTimes(1);
+      expect(onApply).toHaveBeenCalledWith("add");
+    });
+
+    it("should_call_onApply_with_replace_when_replace_button_clicked", () => {
+      const onApply = jest.fn();
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          onApply={onApply}
+          onDismiss={jest.fn()}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId("assistant-flow-replace-button"));
+      expect(onApply).toHaveBeenCalledTimes(1);
+      expect(onApply).toHaveBeenCalledWith("replace");
     });
 
     it("should_call_onDismiss_when_dismiss_button_clicked", () => {
@@ -117,7 +191,7 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
 
-      fireEvent.click(screen.getByTestId("assistant-flow-continue-button"));
+      fireEvent.click(screen.getByTestId("assistant-flow-add-button"));
       expect(mockPaste).not.toHaveBeenCalled();
     });
   });
@@ -145,7 +219,10 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
       expect(
-        screen.queryByTestId("assistant-flow-continue-button"),
+        screen.queryByTestId("assistant-flow-add-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("assistant-flow-replace-button"),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("assistant-flow-dismiss-button"),
@@ -176,7 +253,10 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
       expect(
-        screen.queryByTestId("assistant-flow-continue-button"),
+        screen.queryByTestId("assistant-flow-add-button"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("assistant-flow-replace-button"),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("assistant-flow-dismiss-button"),

@@ -8,6 +8,7 @@ import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import { getRandomThinkingMessage } from "../helpers/messages";
+import { AssistantBuildTasks } from "./assistant-build-tasks";
 import { AssistantComponentResult } from "./assistant-component-result";
 import { AssistantFileCard } from "./assistant-file-card";
 import { FlowEditCarousel } from "./assistant-flow-edit-card";
@@ -25,11 +26,22 @@ interface AssistantMessageItemProps {
     actionId: string,
     status: "applied" | "dismissed",
   ) => void;
-  onApplyFlowProposal?: (messageId: string) => void;
+  onApplyFlowProposal?: (
+    messageId: string,
+    mode?: "replace" | "add",
+  ) => void;
   onDismissFlowProposal?: (messageId: string) => void;
   onApprovePlan?: (messageId: string) => void;
   onDismissPlan?: (messageId: string) => void;
+  /** Fires when the user clicks Reset on a refining plan card. */
+  onResetPlan?: (messageId: string) => void;
   onRetry?: (messageId: string) => void;
+  /**
+   * When true, the message renders past the validation/document Continue
+   * gate immediately — no manual user click. Driven by the hook's
+   * persistent skip-all preference.
+   */
+  skipApprovalGate?: boolean;
 }
 
 function ThinkingIndicator({ message }: { message: string }) {
@@ -59,8 +71,16 @@ export function AssistantMessageItem({
   onDismissFlowProposal,
   onApprovePlan,
   onDismissPlan,
+  onResetPlan,
   onRetry,
+  skipApprovalGate = false,
 }: AssistantMessageItemProps) {
+  // Hidden messages bypass rendering entirely. Used by skip-all to drop
+  // the propose_plan turn's preamble so the chat reads as "user prompt →
+  // built flow" with nothing in between.
+  if (message.hidden) {
+    return null;
+  }
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
   const hasValidatedResult =
@@ -68,8 +88,11 @@ export function AssistantMessageItem({
   const hasValidationError =
     message.result?.validated === false && message.result?.validationError;
   const hasWrittenFiles = (message.writtenFiles?.length ?? 0) > 0;
+  // skip-all: pre-set the gate to "complete" so the result/file card
+  // renders immediately instead of behind the Continue button. We keep
+  // the state setter for the toggleable flow (skip-all may be off).
   const [validationAnimationComplete, setValidationAnimationComplete] =
-    useState(false);
+    useState(skipApprovalGate);
   // Modal state for "Open" on a file card. Single-modal-at-a-time per message
   // so the user always has clear focus on which file they're inspecting.
   const [openFilePath, setOpenFilePath] = useState<string | null>(null);
@@ -269,6 +292,7 @@ export function AssistantMessageItem({
             status={message.planProposalStatus}
             onApprove={() => onApprovePlan?.(message.id)}
             onDismiss={() => onDismissPlan?.(message.id)}
+            onReset={() => onResetPlan?.(message.id)}
           />
         </div>
       );
@@ -302,7 +326,7 @@ export function AssistantMessageItem({
           <AssistantFlowPreview
             flowPreview={proposalPreview}
             status={message.flowProposalStatus}
-            onApply={() => onApplyFlowProposal?.(message.id)}
+            onApply={(mode) => onApplyFlowProposal?.(message.id, mode)}
             onDismiss={() => onDismissFlowProposal?.(message.id)}
           />
         </div>
@@ -417,6 +441,9 @@ export function AssistantMessageItem({
           >
             {isUser ? "User" : "Langflow Assistant"}
           </span>
+          {!isUser && message.buildTasks && message.buildTasks.length > 0 && (
+            <AssistantBuildTasks tasks={message.buildTasks} />
+          )}
           <div className="mt-3 overflow-hidden">{renderContent()}</div>
         </div>
       </div>

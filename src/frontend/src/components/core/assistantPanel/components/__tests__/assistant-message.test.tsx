@@ -476,4 +476,87 @@ describe("AssistantMessageItem", () => {
       expect(screen.queryByTestId("component-result")).not.toBeInTheDocument();
     });
   });
+
+  describe("hidden flag", () => {
+    it("should_render_nothing_when_message_is_hidden", () => {
+      // Skip-all sets `hidden: true` on the propose_plan turn so its
+      // preamble doesn't pollute the chat. The renderer must opt out
+      // entirely — returning even an empty bubble would leave a gap.
+      const message = createMessage({
+        role: "assistant",
+        content: "I proposed a plan and am waiting.",
+        status: "complete",
+        hidden: true,
+      });
+
+      const { container } = render(
+        <AssistantMessageItem message={message} />,
+      );
+
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
+
+  describe("skipApprovalGate prop (skip-all mode)", () => {
+    it("should_render_component_result_immediately_when_skipApprovalGate_true_and_result_validated", () => {
+      // With the gate skipped, validationAnimationComplete starts true so
+      // the user sees the final component card without a Continue click.
+      const message = createMessage({
+        role: "assistant",
+        status: "complete",
+        content: "",
+        progress: {
+          step: "validated",
+          attempt: 0,
+          maxAttempts: 3,
+          message: "Validated",
+          componentCode: "class X: pass",
+          className: "X",
+        },
+        result: {
+          content: "",
+          validated: true,
+          componentCode: "class X: pass",
+          className: "X",
+        },
+      });
+
+      render(
+        <AssistantMessageItem message={message} skipApprovalGate={true} />,
+      );
+
+      expect(screen.getByTestId("component-result")).toBeInTheDocument();
+      // The loading-state Continue gate must NOT be on screen.
+      expect(screen.queryByTestId("loading-state")).not.toBeInTheDocument();
+    });
+
+    it("should_keep_loading_state_when_skipApprovalGate_false_and_result_validated", () => {
+      // Regression baseline: without skip, the Continue gate stays mounted
+      // until the user clicks Continue.
+      const message = createMessage({
+        role: "assistant",
+        status: "complete",
+        content: "",
+        progress: {
+          step: "validated",
+          attempt: 0,
+          maxAttempts: 3,
+          message: "Validated",
+          componentCode: "class X: pass",
+          className: "X",
+        },
+        result: {
+          content: "",
+          validated: true,
+          componentCode: "class X: pass",
+          className: "X",
+        },
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(screen.getByTestId("loading-state")).toBeInTheDocument();
+      expect(screen.queryByTestId("component-result")).not.toBeInTheDocument();
+    });
+  });
 });

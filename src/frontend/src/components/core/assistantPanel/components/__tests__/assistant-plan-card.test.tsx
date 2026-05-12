@@ -123,6 +123,102 @@ describe("AssistantPlanCard", () => {
     });
   });
 
+  describe("refining status", () => {
+    it("should_render_markdown_when_status_is_refining", () => {
+      // The card must stay visible during refining so the user can re-read
+      // what they're refining.
+      render(
+        <AssistantPlanCard
+          markdown="## Original plan"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={jest.fn()}
+        />,
+      );
+      expect(screen.getByTestId("markdown-content")).toHaveTextContent(
+        "## Original plan",
+      );
+    });
+
+    it("should_render_continue_button_when_status_is_refining", () => {
+      // A refined plan can still be approved if the user changes their mind.
+      render(
+        <AssistantPlanCard
+          markdown="x"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-plan-continue-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_render_reset_button_when_status_is_refining", () => {
+      render(
+        <AssistantPlanCard
+          markdown="x"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-plan-reset-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_not_render_dismiss_button_when_status_is_refining", () => {
+      // Dismiss is the pending→refining trigger. Once refining, the user
+      // refines via the input or fully resets via the Reset button.
+      render(
+        <AssistantPlanCard
+          markdown="x"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={jest.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId("assistant-plan-dismiss-button"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should_call_onReset_when_reset_button_clicked", () => {
+      const onReset = jest.fn();
+      render(
+        <AssistantPlanCard
+          markdown="x"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={onReset}
+        />,
+      );
+      fireEvent.click(screen.getByTestId("assistant-plan-reset-button"));
+      expect(onReset).toHaveBeenCalledTimes(1);
+    });
+
+    it("should_show_refining_label_when_status_is_refining", () => {
+      render(
+        <AssistantPlanCard
+          markdown="x"
+          status="refining"
+          onApprove={jest.fn()}
+          onDismiss={jest.fn()}
+          onReset={jest.fn()}
+        />,
+      );
+      // Loose match so we can iterate copy without breaking tests.
+      expect(screen.getByText(/refining/i)).toBeInTheDocument();
+    });
+  });
+
   describe("dismissed status", () => {
     it("should_show_dismissed_label_when_status_is_dismissed", () => {
       render(

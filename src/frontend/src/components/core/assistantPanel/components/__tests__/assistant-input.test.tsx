@@ -141,6 +141,36 @@ describe("AssistantInput", () => {
       // Post-generation steps clear the native placeholder to show animated overlay
       expect(screen.getByRole("textbox")).toHaveAttribute("placeholder", "");
     });
+
+    it("should show refining placeholder when isRefiningPlan is true and not processing", () => {
+      // When the user dismissed a plan and is composing the refinement, we
+      // override the idle placeholder with a directed cue so the input
+      // reads as "this is the box where I tell the agent what to change".
+      render(
+        <AssistantInput {...defaultProps} isRefiningPlan={true} />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Tell me what to change…"),
+      ).toBeInTheDocument();
+    });
+
+    it("should not show refining placeholder while a generating step is active", () => {
+      // The generating-step placeholder takes precedence — refining only
+      // overrides the idle placeholder, not the in-progress UX.
+      render(
+        <AssistantInput
+          {...defaultProps}
+          isRefiningPlan={true}
+          isProcessing={true}
+          currentStep="generating_flow"
+        />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Generating flow..."),
+      ).toBeInTheDocument();
+    });
   });
 
   describe("keyboard interactions", () => {
@@ -281,6 +311,116 @@ describe("AssistantInput", () => {
       await userEvent.type(textarea, "   {enter}");
 
       expect(onSend).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("command history (arrow-up / arrow-down)", () => {
+    const STORAGE_KEY = "langflow-assistant-input-history";
+
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    function seedHistory(entries: string[]) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+
+    it("should_recall_latest_input_when_arrow_up_pressed_with_empty_textarea", async () => {
+      seedHistory(["latest command"]);
+      render(<AssistantInput {...defaultProps} />);
+
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      textarea.focus();
+      await userEvent.keyboard("{ArrowUp}");
+
+      expect(textarea).toHaveValue("latest command");
+    });
+
+    it("should_walk_to_older_entries_on_subsequent_arrow_ups", async () => {
+      seedHistory(["newest", "middle", "oldest"]);
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      textarea.focus();
+
+      await userEvent.keyboard("{ArrowUp}");
+      expect(textarea).toHaveValue("newest");
+      await userEvent.keyboard("{ArrowUp}");
+      expect(textarea).toHaveValue("middle");
+      await userEvent.keyboard("{ArrowUp}");
+      expect(textarea).toHaveValue("oldest");
+    });
+
+    it("should_walk_back_toward_present_on_arrow_down", async () => {
+      seedHistory(["newest", "older"]);
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      textarea.focus();
+
+      await userEvent.keyboard("{ArrowUp}{ArrowUp}");
+      expect(textarea).toHaveValue("older");
+      await userEvent.keyboard("{ArrowDown}");
+      expect(textarea).toHaveValue("newest");
+      // One more Down past the newest entry → restore the (empty) draft.
+      await userEvent.keyboard("{ArrowDown}");
+      expect(textarea).toHaveValue("");
+    });
+
+    it("should_push_message_to_history_after_send", async () => {
+      const onSend = jest.fn();
+      const model = {
+        id: "openai/gpt-4",
+        name: "gpt-4",
+        provider: "openai",
+        displayName: "GPT-4",
+      };
+      // ModelSelector is mocked above — we need onSend to receive a model
+      // for AssistantInput's handleSend to call through. Use the model
+      // from localStorage trick: prime it.
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify(model),
+      );
+
+      render(<AssistantInput {...defaultProps} onSend={onSend} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      await userEvent.type(textarea, "my message{enter}");
+
+      // After send the textarea is empty. Arrow Up should bring back the
+      // just-sent message.
+      textarea.focus();
+      await userEvent.keyboard("{ArrowUp}");
+      expect(textarea).toHaveValue("my message");
+    });
+
+    it("should_preserve_in_progress_draft_when_navigating_and_coming_back", async () => {
+      // The shell convention: pressing Up while typing a draft must not
+      // discard the draft. Down past the newest entry restores it.
+      seedHistory(["history command"]);
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      await userEvent.type(textarea, "draft text");
+
+      await userEvent.keyboard("{ArrowUp}");
+      expect(textarea).toHaveValue("history command");
+      await userEvent.keyboard("{ArrowDown}");
+      expect(textarea).toHaveValue("draft text");
+    });
+
+    it("should_not_trigger_history_when_arrow_up_pressed_mid_textarea_on_multiline_content", async () => {
+      // For multiline inputs Up should keep its standard meaning (move
+      // cursor up between visual lines). History only kicks in when the
+      // cursor is on the first line of the textarea.
+      seedHistory(["history command"]);
+      render(<AssistantInput {...defaultProps} />);
+      const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+      await userEvent.type(textarea, "line one{Shift>}{Enter}{/Shift}line two");
+      // Cursor is now at the end of "line two" — i.e. on the SECOND line.
+
+      await userEvent.keyboard("{ArrowUp}");
+
+      // Value did NOT get replaced by history; user keeps editing what
+      // they typed.
+      expect(textarea).toHaveValue("line one\nline two");
     });
   });
 });

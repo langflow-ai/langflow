@@ -25,6 +25,29 @@ from lfx.mcp.redact import is_sensitive_field
 from lfx.mcp.registry import describe_component, search_registry
 from lfx.schema import Data
 
+
+def _load_registry_user_aware() -> dict[str, dict]:
+    """Return the base registry merged with the calling user's overlay.
+
+    Tries the langflow-side overlay (which reads the current_user_id
+    ContextVar and walks ``<sandbox>/.components/*.py`` for that user).
+    Falls back to the bare base registry when:
+        - the langflow package isn't installed alongside lfx (e.g., the
+          MCP server is running standalone),
+        - no user is bound to the context.
+
+    Keeps the lfx package free of a hard dependency on the langflow
+    code path while letting the agent's tools see user-registered
+    Components when both packages are co-installed.
+    """
+    try:
+        from langflow.agentic.services.user_components_overlay import (
+            load_registry_for_current_user,
+        )
+    except ImportError:
+        return load_local_registry()
+    return load_registry_for_current_user()
+
 # ---------------------------------------------------------------------------
 # Per-request state using contextvars. Each async request gets its own
 # working flow, flow ID, and event queue -- safe under concurrency.
@@ -120,9 +143,20 @@ class SearchComponentTypes(Component):
     ]
 
     def search_components(self) -> Data:
-        registry = load_local_registry()
-        results = search_registry(registry, query=self.query or None)
-        return Data(data={"results": results, "count": len(results)})
+        # Pure read against the local registry — memoize per request so
+        # repeated planning turns don't re-walk the registry.
+        from lfx.mcp.tool_cache import cached_tool_call
+
+        def producer() -> Data:
+            registry = _load_registry_user_aware()
+            results = search_registry(registry, query=self.query or None)
+            return Data(data={"results": results, "count": len(results)})
+
+        return cached_tool_call(
+            "search_components",
+            {"query": self.query or None},
+            producer,
+        )
 
 
 class DescribeComponentType(Component):
@@ -146,13 +180,26 @@ class DescribeComponentType(Component):
     ]
 
     def describe_component(self) -> Data:
-        registry = load_local_registry()
-        try:
-            result = describe_component(registry, self.component_type)
-        except ValueError as e:
-            logger.warning("describe_component failed: %s", e)
-            return Data(data={"error": str(e)})
-        return Data(data=result)
+        # Pure read — describing a registry type is deterministic per
+        # request. Cached so repeated configure/connect flows reuse it.
+        from lfx.mcp.tool_cache import cached_tool_call
+
+        component_type = self.component_type
+
+        def producer() -> Data:
+            registry = _load_registry_user_aware()
+            try:
+                result = describe_component(registry, component_type)
+            except ValueError as e:
+                logger.warning("describe_component failed: %s", e)
+                return Data(data={"error": str(e)})
+            return Data(data=result)
+
+        return cached_tool_call(
+            "describe_component",
+            {"component_type": component_type},
+            producer,
+        )
 
 
 class GetFieldValue(Component):
@@ -359,7 +406,7 @@ class AddComponent(Component):
     ]
 
     def add_component(self) -> Data:
-        registry = load_local_registry()
+        registry = _load_registry_user_aware()
         flow = _ensure_working_flow()
         try:
             result = fb_add_component(flow, self.component_type, registry)
@@ -654,7 +701,10 @@ class BuildFlowFromSpec(Component):
             node_count = len(existing["data"]["nodes"])
             logger.warning("build_flow called on non-empty canvas (%d nodes) -- replacing", node_count)
 
-        result = build_flow_from_spec(self.spec)
+        # Pass the user-aware registry so user-registered Components
+        # (created via Layer-2 validated generation) are addressable in
+        # the spec by their class name.
+        result = build_flow_from_spec(self.spec, registry=_load_registry_user_aware())
         if "error" in result:
             error_msg = f"Flow build failed: {result['error']}"
             if "details" in result:
