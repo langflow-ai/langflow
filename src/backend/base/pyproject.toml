@@ -2,7 +2,7 @@
 name = "langflow-base"
 version = "0.10.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -97,7 +97,8 @@ dependencies = [
     "langchain-chroma~=0.2.6",
     "jaraco-context>=6.1.0",
     "wheel>=0.46.2,<1.0.0",
-    "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; allow 1.23.x for agent-lifecycle-toolkit compatibility
+    "onnxruntime>=1.26; python_version>='3.14'",
     "dynaconf>=3.2.13,<4.0.0",
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
@@ -199,7 +200,10 @@ redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
-faiss = ["faiss-cpu==1.9.0.post1"]
+faiss = [
+    "faiss-cpu==1.9.0.post1; python_version<'3.14'",
+    "faiss-cpu>=1.13.2; python_version>='3.14'",
+]
 qdrant = ["qdrant-client==1.9.2"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
