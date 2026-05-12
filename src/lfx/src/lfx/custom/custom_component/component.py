@@ -115,6 +115,7 @@ class PlaceholderGraph(NamedTuple):
         flow_id (str | None): Unique identifier for the flow, if applicable.
         user_id (str | None): Identifier of the user associated with the flow, if any.
         session_id (str | None): Identifier for the current session, if applicable.
+        run_id (str | None): Identifier for the current graph run, if applicable.
         context (dict): Additional contextual information for the component's execution.
         flow_name (str | None): Name of the flow, if available.
     """
@@ -122,6 +123,7 @@ class PlaceholderGraph(NamedTuple):
     flow_id: str | None
     user_id: str | None
     session_id: str | None
+    run_id: str | None
     context: dict
     flow_name: str | None
 
@@ -1010,8 +1012,14 @@ class Component(CustomComponent):
             user_id = self._user_id if hasattr(self, "_user_id") else None
             flow_name = self._flow_name if hasattr(self, "_flow_name") else None
             flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            run_id = self._run_id if hasattr(self, "_run_id") else None
             return PlaceholderGraph(
-                flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
+                flow_id=flow_id,
+                user_id=str(user_id),
+                session_id=session_id,
+                run_id=run_id,
+                context={},
+                flow_name=flow_name,
             )
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
@@ -1873,10 +1881,25 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
+        run_id: str | None = None
+        session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
-        stored_messages = await astore_message(message, flow_id=flow_id)
+            graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
+            run_id = graph_run_id
+            if self.tracing_service:
+                langfuse_tracer = self.tracing_service.get_tracer("langfuse")
+                langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
+                if langfuse_trace_id:
+                    session_metadata["langfuse_trace_id"] = langfuse_trace_id
+                if graph_run_id:
+                    session_metadata["graph_run_id"] = graph_run_id
+        if session_metadata:
+            message.session_metadata = session_metadata
+        if run_id and not getattr(message, "run_id", None):
+            message.run_id = run_id
+        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)
