@@ -1,5 +1,9 @@
 export type DeploymentProviderType = "watsonx" | "kubernetes";
 
+export const DEFAULT_FLOW_NAME = "Flow";
+export const UNKNOWN_FLOW_NAME = "Unknown flow";
+export const WXO_PROVIDER_KEY = "watsonx-orchestrate";
+
 export interface EnvVarEntry {
   id: string;
   key: string;
@@ -42,6 +46,47 @@ export interface ProviderCredentials {
 }
 
 export type DeploymentType = "agent" | "mcp";
+
+export interface SelectedFlowVersion {
+  key: string;
+  flowId: string;
+  flowName?: string;
+  versionId: string;
+  versionTag: string;
+}
+
+export function getSelectedFlowVersionKey(flowId: string, versionId: string) {
+  return `${flowId}:${versionId}`;
+}
+
+function getShortIdentifier(value: string) {
+  const normalizedValue = value.trim();
+  const compactValue = normalizedValue.includes("-")
+    ? normalizedValue.split("-").at(-1) || normalizedValue
+    : normalizedValue;
+  return compactValue.slice(0, 8) || "tool";
+}
+
+export function createDeploymentToolNameScopeId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
+export function getDefaultDeploymentToolName(
+  flowName: string,
+  uniqueId: string,
+  scopeId?: string | null,
+) {
+  const trimmedFlowName = flowName.trim() || DEFAULT_FLOW_NAME;
+  const shortId = getShortIdentifier(uniqueId);
+  const shortScopeId = scopeId ? getShortIdentifier(scopeId).slice(0, 6) : "";
+  return shortScopeId
+    ? `${trimmedFlowName} ${shortScopeId}-${shortId}`
+    : `${trimmedFlowName} ${shortId}`;
+}
 
 export interface Deployment {
   id: string;

@@ -18,7 +18,14 @@ import {
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
 import { useErrorAlert } from "../hooks/use-error-alert";
-import type { Deployment, DeploymentProvider, ProviderAccount } from "../types";
+import {
+  DEFAULT_FLOW_NAME,
+  type Deployment,
+  type DeploymentProvider,
+  getSelectedFlowVersionKey,
+  type ProviderAccount,
+  type SelectedFlowVersion,
+} from "../types";
 import DeploymentStepper, { CREATE_DEPLOYED_STEPS } from "./deployment-stepper";
 import DeploymentStepperFooter from "./deployment-stepper-footer";
 import DeploymentSuccessContent from "./deployment-success-content";
@@ -90,33 +97,34 @@ export default function DeploymentStepperModal({
   const editInitialState = useMemo(() => {
     if (!isEditMode || !attachmentsData?.flow_versions) return null;
 
-    const versionMap = new Map<
-      string,
-      { versionId: string; versionTag: string }
-    >();
+    const versionMap = new Map<string, SelectedFlowVersion>();
     const toolNames = new Map<string, string>();
     const connectionsByFlow = new Map<string, string[]>();
 
     for (const fv of attachmentsData.flow_versions) {
-      versionMap.set(fv.flow_id, {
+      const key = getSelectedFlowVersionKey(fv.flow_id, fv.id);
+      versionMap.set(key, {
+        key,
+        flowId: fv.flow_id,
+        flowName: fv.flow_name ?? DEFAULT_FLOW_NAME,
         versionId: fv.id,
         versionTag: `v${fv.version_number}`,
       });
       // Pre-populate tool names from the provider (may differ from flow name).
       const providerToolName = fv.provider_data?.tool_name;
       if (providerToolName) {
-        toolNames.set(fv.flow_id, providerToolName);
+        toolNames.set(key, providerToolName);
       }
       // Pre-populate attached connections from existing tool assignments.
       const appIds = fv.provider_data?.app_ids;
       if (appIds && appIds.length > 0) {
-        connectionsByFlow.set(fv.flow_id, appIds);
+        connectionsByFlow.set(key, appIds);
       }
     }
 
     const llm =
       typeof deploymentDetail?.provider_data?.llm === "string"
-        ? (deploymentDetail.provider_data.llm as string)
+        ? deploymentDetail.provider_data.llm
         : "";
 
     return { versionMap, llm, toolNames, connectionsByFlow };
@@ -135,43 +143,43 @@ export default function DeploymentStepperModal({
     >
       <DialogContent
         className="flex h-[85vh] w-[900px] !max-w-none flex-col gap-0 overflow-hidden border-none bg-transparent p-0 shadow-none"
-        closeButtonClassName="top-5 right-4"
+        hideCloseButton
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
-        {isLoadingEditData ? (
-          <div className="flex flex-1 items-center justify-center">
-            <span className="text-sm text-muted-foreground">
-              Loading deployment data...
-            </span>
-          </div>
-        ) : (
-          <DeploymentStepperProvider
-            key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}`}
-            initialState={{
-              projectId: resolvedProjectId,
-              initialFlowId,
-              selectedVersionByFlow:
-                initialVersionByFlow ?? editInitialState?.versionMap,
-              initialProvider,
-              initialInstance,
-              initialStep: isEditMode
-                ? 1
-                : initialProvider && initialInstance
-                  ? 2
-                  : 1,
-              editingDeployment: editingDeployment ?? undefined,
-              initialLlm: editInitialState?.llm,
-              initialToolNameByFlow: editInitialState?.toolNames,
-              initialConnectionsByFlow: editInitialState?.connectionsByFlow,
-            }}
-          >
+        <DeploymentStepperProvider
+          key={`${open}-${editingDeployment?.id ?? ""}-${initialProvider?.id ?? ""}-${initialInstance?.id ?? ""}-${isLoadingEditData}`}
+          initialState={{
+            projectId: resolvedProjectId,
+            initialFlowId,
+            selectedVersionByFlow:
+              initialVersionByFlow ?? editInitialState?.versionMap,
+            initialProvider,
+            initialInstance,
+            initialStep: isEditMode
+              ? 1
+              : initialProvider && initialInstance
+                ? 2
+                : 1,
+            editingDeployment: editingDeployment ?? undefined,
+            initialLlm: editInitialState?.llm,
+            initialToolNameByFlow: editInitialState?.toolNames,
+            initialConnectionsByFlow: editInitialState?.connectionsByFlow,
+          }}
+        >
+          {isLoadingEditData ? (
+            <div className="flex flex-1 items-center justify-center">
+              <span className="text-sm text-muted-foreground">
+                Loading deployment data...
+              </span>
+            </div>
+          ) : (
             <DeploymentStepperModalContent
               setOpen={setOpen}
               onTestDeployment={onTestDeployment}
               onDeployingChange={setIsDeploying}
             />
-          </DeploymentStepperProvider>
-        )}
+          )}
+        </DeploymentStepperProvider>
       </DialogContent>
     </Dialog>
   );

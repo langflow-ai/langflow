@@ -24,8 +24,13 @@ export default function ToolsComponent({
   disabled = false,
   template,
   showParameter = true,
+  hideButton = false,
+  open,
+  setOpen,
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isModalOpen = open ?? internalOpen;
+  const setIsModalOpen = setOpen ?? setInternalOpen;
   const actions = value
     ?.filter((action) => action.status === true)
     .map((action) => {
@@ -69,7 +74,7 @@ export default function ToolsComponent({
         className="relative flex items-center w-full gap-3"
         data-testid={"div-" + id}
       >
-        {(visibleActions.length > 0 || isAction) && (
+        {!hideButton && (visibleActions.length > 0 || isAction) && (
           <Button
             variant={
               ENABLE_MCP_COMPOSER && button_description ? "outline" : "ghost"
@@ -103,7 +108,12 @@ export default function ToolsComponent({
             ))}
           </div>
         ) : visibleActions.length > 0 ? (
-          <div className="flex w-full flex-wrap gap-1 overflow-hidden py-1.5">
+          <div
+            className={cn(
+              "flex w-full flex-wrap gap-1 overflow-hidden pb-1.5",
+              hideButton ? "pt-0" : "pt-3",
+            )}
+          >
             {visibleActions.map((action, index) => (
               <Badge
                 key={index}
@@ -125,16 +135,21 @@ export default function ToolsComponent({
           </div>
         ) : (
           visibleActions.length === 0 &&
-          isAction && (
+          isAction &&
+          (hideButton ? (
+            <span className="py-1.5 text-sm text-muted-foreground">
+              No tools added to this server
+            </span>
+          ) : (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
-                No actions added to this server
+                No tools added to this server
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
-                <span>Add actions</span>
+                <span>Add tools</span>
               </Button>
             </div>
-          )
+          ))
         )}
 
         {visibleActions.length === 0 && !isAction && value && (

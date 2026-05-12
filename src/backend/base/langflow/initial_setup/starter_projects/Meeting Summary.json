@@ -689,7 +689,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -969,7 +969,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -1249,7 +1249,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -2340,10 +2340,10 @@
             "description": "### Add your Assembly AI API key and audio file here",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.meeting_summary.4868f127",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.meeting_summary.4868f127"
+            }
           },
           "type": "note"
         },
@@ -2370,10 +2370,10 @@
             "description": "### Add your Assembly AI API key here",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.meeting_summary.14364ee4",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.meeting_summary.14364ee4"
+            }
           },
           "type": "note"
         },
@@ -2400,10 +2400,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.meeting_summary.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.meeting_summary.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -2430,10 +2430,10 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.meeting_summary.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
-            },
-            "i18n_key": "template_notes.meeting_summary.cd87cff6"
+            }
           },
           "type": "note"
         },
@@ -2806,8 +2806,8 @@
             "description": "# 📖 README\nThis flow automatically transcribes and summarizes meetings by converting audio recordings into concise summaries using **AssemblyAI** and **OpenAI GPT-4**. \n\n## Prerequisites\n\n- **[AssemblyAI API Key](https://www.assemblyai.com/)**\n- **[OpenAI API Key](https://platform.openai.com/)**\n\n## Quick start\n\n1. Upload an audio file. Most common audio file formats are [supported](https://github.com/langflow-ai/langflow/blob/main/src/backend/base/langflow/components/assemblyai/assemblyai_start_transcript.py#L27).\n2. To run the summary generator flow, click **Playground**.\n\nThe flow transcribes the audio using **AssemblyAI**.\nThe transcript is formatted for AI processing.\nThe **GPT-4** model extracts key points and insights.\nThe summarized meeting details are displayed in a chat-friendly format.\n\n\n\n",
             "display_name": "",
             "documentation": "",
-            "template": {},
-            "i18n_key": "template_notes.meeting_summary.136e4d60"
+            "i18n_key": "template_notes.meeting_summary.136e4d60",
+            "template": {}
           },
           "type": "note"
         },

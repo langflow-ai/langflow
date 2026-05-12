@@ -216,4 +216,128 @@ describe("InputGlobalComponent", () => {
       expect(options.filter((o) => o === "MY_API_KEY")).toHaveLength(1);
     });
   });
+
+  describe("disabledOptions for Credential-typed variables", () => {
+    const variables = [
+      { name: "MY_GENERIC_VAR", type: "Generic" },
+      { name: "MY_CREDENTIAL", type: "Credential" },
+      { name: "ANOTHER_CREDENTIAL", type: "Credential" },
+    ];
+
+    beforeEach(() => {
+      mockUseGetGlobalVariables.mockReturnValue({
+        data: variables,
+        isFetchedAfterMount: true,
+        isFetching: false,
+        isSuccess: true,
+      });
+    });
+
+    const getRenderedDisabledOptions = (): Record<string, string> | undefined =>
+      mockInputComponent.mock.calls[mockInputComponent.mock.calls.length - 1][0]
+        .disabledOptions as Record<string, string> | undefined;
+
+    it("disables Credential-typed variables when field is non-secret (no _input_type, password=false)", () => {
+      render(
+        <InputGlobalComponent
+          id="test"
+          value=""
+          display_name="Some Field"
+          handleOnNewValue={handleOnNewValue}
+          load_from_db={false}
+          password={false}
+          editNode={false}
+          disabled={false}
+        />,
+      );
+
+      const disabledOptions = getRenderedDisabledOptions() ?? {};
+      expect(Object.keys(disabledOptions).sort()).toEqual([
+        "ANOTHER_CREDENTIAL",
+        "MY_CREDENTIAL",
+      ]);
+      expect(disabledOptions.MY_CREDENTIAL).toMatch(/secret fields/i);
+      expect(disabledOptions.MY_GENERIC_VAR).toBeUndefined();
+    });
+
+    it("does not disable any options for SecretStrInput", () => {
+      render(
+        <InputGlobalComponent
+          id="test"
+          value=""
+          display_name="API Key"
+          handleOnNewValue={handleOnNewValue}
+          load_from_db={false}
+          password={true}
+          _input_type="SecretStrInput"
+          editNode={false}
+          disabled={false}
+        />,
+      );
+
+      expect(getRenderedDisabledOptions()).toEqual({});
+    });
+
+    it("does not disable any options for MultilineSecretInput", () => {
+      render(
+        <InputGlobalComponent
+          id="test"
+          value=""
+          display_name="Token"
+          handleOnNewValue={handleOnNewValue}
+          load_from_db={false}
+          password={true}
+          _input_type="MultilineSecretInput"
+          editNode={false}
+          disabled={false}
+        />,
+      );
+
+      expect(getRenderedDisabledOptions()).toEqual({});
+    });
+
+    it("disables credentials for MultilineInput even when password=true (use_global_variable toggle case)", () => {
+      // TextInput's "Use Global Variable" toggle flips password=true on a
+      // MultilineInput field for display masking. The intrinsic type is still
+      // non-secret, so credentials must remain disabled.
+      render(
+        <InputGlobalComponent
+          id="test"
+          value=""
+          display_name="Text"
+          handleOnNewValue={handleOnNewValue}
+          load_from_db={false}
+          password={true}
+          _input_type="MultilineInput"
+          editNode={false}
+          disabled={false}
+        />,
+      );
+
+      const disabledOptions = getRenderedDisabledOptions() ?? {};
+      expect(Object.keys(disabledOptions).sort()).toEqual([
+        "ANOTHER_CREDENTIAL",
+        "MY_CREDENTIAL",
+      ]);
+      expect(disabledOptions.MY_GENERIC_VAR).toBeUndefined();
+    });
+
+    it("falls back to password flag when _input_type is missing", () => {
+      render(
+        <InputGlobalComponent
+          id="test"
+          value=""
+          display_name="Legacy"
+          handleOnNewValue={handleOnNewValue}
+          load_from_db={false}
+          password={true}
+          editNode={false}
+          disabled={false}
+        />,
+      );
+
+      // No _input_type → fall back to password=true → secret field → no disabling.
+      expect(getRenderedDisabledOptions()).toEqual({});
+    });
+  });
 });

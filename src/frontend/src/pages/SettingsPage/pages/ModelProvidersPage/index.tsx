@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelProvidersContent from "@/modals/modelProviderModal/components/ModelProvidersContent";
-import { useTranslation } from "react-i18next";
 
 export default function ModelProvidersPage() {
   const { t } = useTranslation();
