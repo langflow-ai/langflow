@@ -65,7 +65,13 @@ test(
 
     await page.getByTestId("shareable-playground").click();
     const newPage = await pagePromise;
-    await newPage.waitForTimeout(3000);
+    await newPage.waitForLoadState("domcontentloaded");
+    // Wait for the chat input to actually be present before filling. The
+    // default actionTimeout (20s) was not enough on Windows CI for the
+    // shareable-playground page to mount the message input.
+    await newPage
+      .getByPlaceholder("Send a message...")
+      .waitFor({ state: "visible", timeout: 60000 });
     const newUrl = newPage.url();
     await newPage.getByPlaceholder("Send a message...").fill("Hello");
     await newPage.getByTestId("button-send").last().click();

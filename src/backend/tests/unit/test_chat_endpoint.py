@@ -563,6 +563,73 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "malicious_files",
+    [
+        ["/etc/hosts"],
+        ["/etc/passwd"],
+        ["../../etc/passwd"],
+        ["..\\..\\windows\\system32\\drivers\\etc\\hosts"],
+        ["s3://other-bucket/secret.txt"],
+        ["just_a_filename.txt"],
+        # foreign flow_id segment — looks well-formed but isn't this flow's namespace
+        ["00000000-0000-0000-0000-000000000000/file.png"],
+        # null byte smuggling
+        ["abc\x00/file.png"],
+    ],
+)
+async def test_build_public_tmp_rejects_malicious_files(
+    client, json_memory_chatbot_no_llm, logged_in_headers, malicious_files
+):
+    """Regression for GHSA-rcjh-r59h-gq37 — unauth public build must not accept arbitrary file paths."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-validation-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": malicious_files,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert "file" in response.json()["detail"].lower()
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_accepts_files_in_own_namespace(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Files namespaced under the public flow's own UUID must still be accepted."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-allowed-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": [f"{flow_id}/example_attachment.png"],
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
 async def test_build_public_tmp_checks_public_access_before_validation(
     client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
 ):

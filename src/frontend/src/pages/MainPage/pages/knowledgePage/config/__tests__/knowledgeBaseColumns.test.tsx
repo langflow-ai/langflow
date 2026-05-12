@@ -49,10 +49,19 @@ const makeKb = (
   ...overrides,
 });
 
+type NameCellRendererProps = {
+  data: KnowledgeBaseInfo;
+  value: string;
+};
+
+type StatusCellRendererProps = {
+  data: KnowledgeBaseInfo;
+};
+
 describe("createKnowledgeBaseColumns", () => {
-  it("returns 7 column definitions", () => {
+  it("returns 8 column definitions", () => {
     const cols = createKnowledgeBaseColumns();
-    expect(cols).toHaveLength(7);
+    expect(cols).toHaveLength(8);
   });
 
   it("includes the expected header names", () => {
@@ -62,6 +71,7 @@ describe("createKnowledgeBaseColumns", () => {
         "Name",
         "Size",
         "Embedding Model",
+        "Vector Store",
         "Chunks",
         "Avg Chunk Size",
         "Status",
@@ -73,7 +83,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("renders the KB name", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(<CellRenderer data={makeKb()} value="My KB" />);
       expect(screen.getByText("My KB")).toBeInTheDocument();
     });
@@ -81,7 +92,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("shows a file icon when source_types is empty", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(
         <CellRenderer data={makeKb({ source_types: [] })} value="My KB" />,
       );
@@ -91,7 +103,8 @@ describe("createKnowledgeBaseColumns", () => {
     it("shows Layers icon when multiple source types present", () => {
       const cols = createKnowledgeBaseColumns();
       const nameCol = cols.find((c) => c.headerName === "Name")!;
-      const CellRenderer = nameCol.cellRenderer as React.ComponentType<any>;
+      const CellRenderer =
+        nameCol.cellRenderer as React.ComponentType<NameCellRendererProps>;
       render(
         <CellRenderer
           data={makeKb({ source_types: ["pdf", "txt"] })}
@@ -106,7 +119,7 @@ describe("createKnowledgeBaseColumns", () => {
     const getStatusRenderer = () => {
       const cols = createKnowledgeBaseColumns();
       return cols.find((c) => c.headerName === "Status")!
-        .cellRenderer as React.ComponentType<any>;
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
     it('renders "Ready" label for ready status', () => {
@@ -138,7 +151,7 @@ describe("createKnowledgeBaseColumns", () => {
     const getActionsRenderer = (callbacks = {}) => {
       const cols = createKnowledgeBaseColumns(callbacks);
       return cols.find((c) => c.headerName === "")!
-        .cellRenderer as React.ComponentType<any>;
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
     };
 
     it("calls onDelete when Delete menu item is clicked for a ready KB", async () => {
@@ -147,21 +160,21 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onDelete });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("Delete"));
       expect(onDelete).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
       );
     });
 
-    it("calls onAddSources when Update Knowledge is clicked for a ready KB", async () => {
+    it("calls onAddSources when Ingest Files is clicked for a ready KB", async () => {
       const onAddSources = jest.fn();
       const user = userEvent.setup();
       const CellRenderer = getActionsRenderer({ onAddSources });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
-      await user.click(screen.getByText("Update Knowledge"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
+      await user.click(screen.getByText("Ingest Files"));
       expect(onAddSources).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
       );
@@ -173,7 +186,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onViewChunks });
       render(<CellRenderer data={makeKb({ status: "ready" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("View Chunks"));
       expect(onViewChunks).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
@@ -185,7 +198,7 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       expect(screen.getByText("Stop Ingestion")).toBeInTheDocument();
       expect(screen.queryByText("Delete")).not.toBeInTheDocument();
     });
@@ -196,23 +209,55 @@ describe("createKnowledgeBaseColumns", () => {
       const CellRenderer = getActionsRenderer({ onStopIngestion });
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       await user.click(screen.getByText("Stop Ingestion"));
       expect(onStopIngestion).toHaveBeenCalledWith(
         expect.objectContaining({ dir_name: "my_kb" }),
       );
     });
 
-    it("disables Update Knowledge for an ingesting KB", async () => {
+    it("disables Ingest Files for an ingesting KB", async () => {
       const user = userEvent.setup();
       const CellRenderer = getActionsRenderer({});
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
 
-      await user.click(screen.getByRole("button"));
+      await user.click(screen.getByTestId("kb-row-actions-trigger"));
       const updateItem = screen
-        .getByText("Update Knowledge")
+        .getByText("Ingest Files")
         .closest('[role="menuitem"]');
       expect(updateItem).toHaveAttribute("data-disabled");
+    });
+  });
+
+  describe("Row ingest files icon shortcut", () => {
+    const getActionsRenderer = (callbacks = {}) => {
+      const cols = createKnowledgeBaseColumns(callbacks);
+      return cols.find((c) => c.headerName === "")!
+        .cellRenderer as React.ComponentType<StatusCellRendererProps>;
+    };
+
+    it("renders the ingest files icon button on each row", () => {
+      const CellRenderer = getActionsRenderer({});
+      render(<CellRenderer data={makeKb({ status: "ready" })} />);
+      expect(screen.getByTestId("kb-row-update-button")).toBeInTheDocument();
+    });
+
+    it("calls onAddSources directly when ingest files icon is clicked", async () => {
+      const onAddSources = jest.fn();
+      const user = userEvent.setup();
+      const CellRenderer = getActionsRenderer({ onAddSources });
+      render(<CellRenderer data={makeKb({ status: "ready" })} />);
+
+      await user.click(screen.getByTestId("kb-row-update-button"));
+      expect(onAddSources).toHaveBeenCalledWith(
+        expect.objectContaining({ dir_name: "my_kb" }),
+      );
+    });
+
+    it("disables the ingest files icon button while KB is ingesting", () => {
+      const CellRenderer = getActionsRenderer({});
+      render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
+      expect(screen.getByTestId("kb-row-update-button")).toBeDisabled();
     });
   });
 });

@@ -85,7 +85,14 @@ git push -u origin release-X.Y.Z       # Push RC branch to remote
 3. Review and approve as normal.
 4. Merge into the RC branch after review.
 
-### 3. Final Release
+### 3. Review Regression Log
+
+Before tagging, review `regressions/X.Y.x.yaml` to confirm no unresolved `blocking` entries exist.
+If `blocking` entries exist, they should be signed off on.
+
+See [regressions/README.md](./regressions/README.md) for the full schema and entry instructions.
+
+### 4. Final Release
 
 ```sh
 git checkout release-X.Y.Z && git pull # Ensure RC branch is up to date
@@ -93,7 +100,7 @@ git tag vX.Y.Z                         # Create final release tag
 git push origin vX.Y.Z                 # Push tag to remote
 ```
 
-### 4. Merge RC Back into Main
+### 5. Merge RC Back into Main
 
 ```sh
 git checkout main

@@ -172,33 +172,28 @@ def extract_usage_from_chunk(chunk: Any) -> Usage | None:
 
 
 def accumulate_usage(existing: Usage | None, new: Usage | None) -> Usage | None:
-    """Accumulate usage data across multiple chunks.
+    """Accumulate usage data across multiple chunks using max-based merge.
 
-    Some providers (e.g. Anthropic) split usage across chunks:
-    message_start has input_tokens, message_delta has output_tokens.
+    Uses max() per field instead of addition to handle both provider styles:
+    - Anthropic splits usage across chunks (input on start, output on delta) —
+      max picks each field's value from the chunk that carries it.
+    - OpenAI may send cumulative totals on multiple chunks — max picks the
+      latest (largest) value without double-counting.
 
     Args:
         existing: Previously accumulated usage, or None.
         new: New usage from the current chunk, or None.
 
     Returns:
-        Accumulated Usage, or None if both inputs are None.
+        Merged Usage, or None if both inputs are None.
     """
     if new is None:
         return existing
     if existing is None:
         return new
 
-    input_tokens = existing.input_tokens or 0
-    output_tokens = existing.output_tokens or 0
-
-    new_input = new.input_tokens or 0
-    new_output = new.output_tokens or 0
-
-    if new_input:
-        input_tokens += new_input
-    if new_output:
-        output_tokens += new_output
+    input_tokens = max(existing.input_tokens or 0, new.input_tokens or 0)
+    output_tokens = max(existing.output_tokens or 0, new.output_tokens or 0)
 
     return Usage(
         input_tokens=input_tokens,
