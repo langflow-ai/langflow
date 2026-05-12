@@ -76,8 +76,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   embeddedMode: false,
   setEmbeddedMode: (embeddedMode: boolean) => set({ embeddedMode }),
   hideLogoutButton: false,
-  setHideLogoutButton: (hideLogoutButton: boolean) =>
-    set({ hideLogoutButton }),
+  setHideLogoutButton: (hideLogoutButton: boolean) => set({ hideLogoutButton }),
   hideNewProjectButton: false,
   setHideNewProjectButton: (hideNewProjectButton: boolean) =>
     set({ hideNewProjectButton }),
@@ -88,8 +87,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   setHideStarterProjects: (hideStarterProjects: boolean) =>
     set({ hideStarterProjects }),
   mcpServersLocked: false,
-  setMcpServersLocked: (mcpServersLocked: boolean) =>
-    set({ mcpServersLocked }),
+  setMcpServersLocked: (mcpServersLocked: boolean) => set({ mcpServersLocked }),
   customComponentAdminOnly: false,
   setCustomComponentAdminOnly: (customComponentAdminOnly: boolean) =>
     set({ customComponentAdminOnly }),
