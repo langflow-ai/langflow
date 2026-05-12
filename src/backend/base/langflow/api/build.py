@@ -211,36 +211,59 @@ async def create_flow_response(
     a cross-worker cancel so the producer worker stops emitting events promptly
     instead of running the build to natural completion.
     """
-    # Refresh the polling-watchdog heartbeat at most once per this interval
-    # while streaming so long-running streams aren't reclaimed as abandoned.
+    # Interval at which the heartbeat task refreshes the polling-watchdog
+    # activity key while the streaming response is open.  The heartbeat is
+    # INDEPENDENT of the event yield cadence so a quiet build (long graph
+    # step, slow LLM, no tokens for a while) keeps proving its client is
+    # alive and does not get reclaimed by the watchdog.
     streaming_activity_refresh_s = 10.0
+    touch = getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
 
-    async def consume_and_yield() -> AsyncIterator[str]:
-        last_activity_refresh = time.monotonic()
-        touch = (
-            getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
-        )
+    async def _heartbeat() -> None:
+        # Strong reference is the local variable `heartbeat_task` below; this
+        # closure also keeps `touch` and `job_id` alive for the task's lifetime.
         while True:
             try:
-                event_id, value, put_time = await queue.get()
-                if value is None:
-                    break
-                get_time = time.time()
-                yield value.decode("utf-8")
-                await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
-                # Streaming-side heartbeat: refresh activity so the polling
-                # watchdog doesn't kill jobs whose client is actively streaming.
-                if touch is not None:
-                    now = time.monotonic()
-                    if now - last_activity_refresh >= streaming_activity_refresh_s:
-                        last_activity_refresh = now
-                        asyncio.create_task(touch(job_id))  # noqa: RUF006
+                await asyncio.sleep(streaming_activity_refresh_s)
+            except asyncio.CancelledError:
+                return
+            try:
+                await touch(job_id)  # type: ignore[misc]  # guarded by `if touch is not None` at task creation
+            except asyncio.CancelledError:
+                return
             except Exception as exc:  # noqa: BLE001
-                await logger.aexception(f"Error consuming event: {exc}")
-                break
+                # touch_activity already counts errors; a heartbeat hiccup must
+                # not crash the streaming response.  Debug-log and continue.
+                await logger.adebug(f"streaming heartbeat: touch_activity failed for {job_id}: {exc}")
+
+    heartbeat_task: asyncio.Task | None = (
+        asyncio.create_task(_heartbeat(), name=f"stream-heartbeat-{job_id}") if touch is not None else None
+    )
+
+    def _cancel_heartbeat() -> None:
+        if heartbeat_task is not None and not heartbeat_task.done():
+            heartbeat_task.cancel()
+
+    async def consume_and_yield() -> AsyncIterator[str]:
+        try:
+            while True:
+                try:
+                    event_id, value, put_time = await queue.get()
+                    if value is None:
+                        break
+                    get_time = time.time()
+                    yield value.decode("utf-8")
+                    await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+                except Exception as exc:  # noqa: BLE001
+                    await logger.aexception(f"Error consuming event: {exc}")
+                    break
+        finally:
+            # Natural stream end (sentinel reached) → stop heartbeating.
+            _cancel_heartbeat()
 
     async def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
+        _cancel_heartbeat()
         if event_task is not None:
             event_task.cancel()
         elif queue_service is not None and job_id is not None:

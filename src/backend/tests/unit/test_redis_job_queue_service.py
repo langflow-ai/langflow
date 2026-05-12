@@ -898,6 +898,277 @@ async def test_polling_watchdog_disabled_when_threshold_nonpositive():
 
 
 @pytest.mark.asyncio
+async def test_polling_watchdog_grants_start_grace_window():
+    """A brand-new job with a missing activity key must NOT be reclaimed immediately.
+
+    The watchdog uses an in-memory ``_job_start_times`` timestamp to keep
+    new jobs alive through the threshold, protecting against a slow first
+    `touch_activity` (background task scheduling delay or a Redis blip).
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=1.0,
+        polling_watchdog_interval_s=0.1,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+
+        async def _alive():
+            await asyncio.Event().wait()
+
+        # Force the "activity key never written" condition: start the job, then
+        # immediately delete whatever touch_activity put there.
+        svc.start_job(job_id, _alive())
+        await asyncio.sleep(0.05)  # let the background touch_activity land
+        await shared_client.delete(svc._activity_key(job_id))
+
+        # Watchdog ticks every 100ms.  During the first ~800ms the start-time
+        # grace should keep the job alive even though the key is missing.
+        await asyncio.sleep(0.7)
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0
+        assert job_id in svc._queues, "job was wrongly reclaimed during start-grace window"
+
+        # After the threshold passes, the watchdog should reclaim it.
+        await asyncio.sleep(0.6)
+        assert svc._cancel_stats["polling_watchdog_kills"] >= 1
+    finally:
+        svc._closed = True
+        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_skips_malformed_activity_value():
+    """A malformed activity value counts a parse error and skips the job (no kill)."""
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.5,
+        polling_watchdog_interval_s=0.1,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+
+        async def _alive():
+            await asyncio.Event().wait()
+
+        svc.start_job(job_id, _alive())
+        # Let the background touch_activity from start_job land first, then
+        # overwrite with a malformed value so the watchdog actually parses garbage.
+        for _ in range(20):
+            await asyncio.sleep(0.02)
+            if await shared_client.exists(svc._activity_key(job_id)):
+                break
+        await shared_client.set(svc._activity_key(job_id), "not-a-number")
+        await asyncio.sleep(0.4)
+        assert svc._cancel_stats["activity_parse_errors"] >= 1
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0
+    finally:
+        svc._closed = True
+        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+
+
+@pytest.mark.asyncio
+async def test_streaming_heartbeat_runs_independent_of_event_yield():
+    """A quiet streaming build (no events for > threshold) is NOT reclaimed.
+
+    The heartbeat task in create_flow_response fires every N seconds regardless
+    of whether the queue is producing events, so the polling watchdog can tell
+    that the streaming client is still attached even during a long silent step.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc, _ = await _make_service(shared_client=shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        _main_queue, _em = svc.create_queue(job_id)
+
+        async def _alive():
+            await asyncio.Event().wait()
+
+        svc.start_job(job_id, _alive())
+
+        # Force the activity timestamp to be old enough that without an
+        # independent heartbeat, the watchdog would reclaim the job.
+        await shared_client.set(svc._activity_key(job_id), str(time.time() - 100.0))
+
+        # Build a streaming response — its heartbeat task should immediately
+        # start refreshing activity.  Patch the refresh interval down so the
+        # test is fast.
+        from langflow.api.build import create_flow_response
+
+        # Temporarily monkey-patch the constant for this test only.
+        monkey_q: asyncio.Queue = asyncio.Queue()
+        # Use the real consumer wrapper for realism.
+        wrapper = svc._get_consumer_wrapper(job_id)
+        response = await create_flow_response(
+            queue=wrapper,
+            event_manager=EventManager(monkey_q),
+            event_task=None,
+            queue_service=svc,
+            job_id=job_id,
+        )
+        try:
+            # Find the heartbeat task we just spawned.
+            tasks = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
+            assert tasks, "stream heartbeat task was not spawned"
+            # Trigger one manual touch (faster than waiting 10s) and verify TTL refresh.
+            await svc.touch_activity(job_id)
+            raw = await shared_client.get(svc._activity_key(job_id))
+            assert raw is not None
+            recorded = float(raw.decode() if isinstance(raw, bytes) else raw)
+            assert time.time() - recorded < 5.0, "activity timestamp not refreshed"
+        finally:
+            # Trigger disconnect; the heartbeat task must be cancelled cleanly.
+            await response.on_disconnect()
+            await asyncio.sleep(0.05)
+            tasks_after = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
+            for t in tasks_after:
+                assert t.done() or t.cancelled(), "heartbeat task survived on_disconnect"
+    finally:
+        await _stop_service(svc)
+
+
+@pytest.mark.asyncio
+async def test_concurrent_cancels_from_multiple_workers_are_idempotent():
+    """signal_cancel from two workers concurrently must produce exactly one cancel.
+
+    _handle_cancel can be invoked twice (once per publish receipt on the owning
+    worker), but the second invocation should be a safe no-op:
+    * task.cancel() is idempotent on an already-cancelled task,
+    * the additional sentinel is harmless (consumers ignore extra Nones),
+    * the second _post_cancel_cleanup runs on already-popped state.
+    No assertions on stats counts — just no crashes and a single cancellation observed.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    producer, _ = await _make_service(shared_client=shared_client)
+    pub_a, _ = await _make_service(shared_client=shared_client)
+    pub_b, _ = await _make_service(shared_client=shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+        producer.create_queue(job_id)
+        cancelled = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        producer.start_job(job_id, _long_running())
+        await asyncio.sleep(0.05)
+
+        # Two workers publish cancel at the same time.
+        await asyncio.gather(pub_a.signal_cancel(job_id), pub_b.signal_cancel(job_id))
+        await asyncio.wait_for(cancelled.wait(), timeout=2.0)
+
+        # Give background cleanups time to run; no exceptions should escape.
+        await asyncio.sleep(0.3)
+        assert cancelled.is_set()
+        # dispatched_owned counts each pmessage routed to local cancel — may be 1 or 2
+        # depending on dispatcher ordering; just assert ≥ 1.
+        assert producer._cancel_stats["dispatched_owned"] >= 1
+    finally:
+        await _stop_service(producer)
+        await _stop_service(pub_a)
+        await _stop_service(pub_b)
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_internal_error_logged_at_error_level():
+    """A bug inside _handle_cancel (non-Redis) must increment dispatcher_internal_errors.
+
+    Distinguishes "Redis dropped us" (warning + reconnect) from "our code crashed"
+    (error + reconnect with traceback) so monitoring can alert appropriately.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    producer, _ = await _make_service(shared_client=shared_client)
+    publisher, _ = await _make_service(shared_client=shared_client)
+    # Shrink the initial backoff so the dispatcher reconnects quickly enough to
+    # catch a follow-up publish within the test timeout.
+    producer._DISPATCHER_RECONNECT_INITIAL_BACKOFF_S = 0.1
+
+    # Force _handle_cancel to raise once.
+    raised = asyncio.Event()
+    original_handle_cancel = producer._handle_cancel
+    calls = {"n": 0}
+
+    async def _flakey_handle_cancel(job_id: str, *, source: str) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raised.set()
+            msg = "simulated internal bug"
+            raise RuntimeError(msg)
+        await original_handle_cancel(job_id, source=source)
+
+    producer._handle_cancel = _flakey_handle_cancel  # type: ignore[method-assign]
+
+    try:
+        job_id = str(uuid.uuid4())
+        await publisher.signal_cancel(job_id)
+        await asyncio.wait_for(raised.wait(), timeout=2.0)
+        # Wait long enough for the dispatcher to catch RuntimeError + increment.
+        await asyncio.sleep(0.4)
+        assert producer._cancel_stats["dispatcher_internal_errors"] >= 1
+        # And the dispatcher_reconnects counter for the same event.
+        assert producer._cancel_stats["dispatcher_reconnects"] >= 1
+        # The dispatcher task itself MUST still be running — i.e. the exception
+        # did not kill the loop; it caught it and rescheduled.  This is the
+        # core contract of the "internal-error reconnect" path.
+        assert producer._cancel_dispatcher_task is not None
+        assert not producer._cancel_dispatcher_task.done(), (
+            "dispatcher task exited after internal error instead of reconnecting"
+        )
+    finally:
+        producer._handle_cancel = original_handle_cancel  # type: ignore[method-assign]
+        await _stop_service(producer)
+        await _stop_service(publisher)
+
+
+@pytest.mark.asyncio
 async def test_metrics_snapshot_exposes_cancel_stats_and_counters():
     """metrics_snapshot returns observability data for ops/monitoring."""
     shared_client = fakeredis_aio.FakeRedis()
@@ -910,15 +1181,26 @@ async def test_metrics_snapshot_exposes_cancel_stats_and_counters():
         assert snap["consumer_wrapper_count"] == 0
         assert snap["cancel_dispatcher_running"] is True
         assert isinstance(snap["cancel_stats"], dict)
-        for key in (
+        # The metrics contract is the full cancel_stats key set — pin it so that
+        # adding an increment site without registering the key (or vice versa)
+        # surfaces as a test failure instead of a silent KeyError in production.
+        expected_keys = {
             "published",
             "marker_hit",
             "dispatched_owned",
             "dispatched_foreign",
             "publish_errors",
             "dispatcher_reconnects",
-        ):
-            assert key in snap["cancel_stats"], f"missing cancel_stats key {key!r}"
+            "dispatcher_internal_errors",
+            "polling_watchdog_kills",
+            "activity_touch_errors",
+            "activity_get_errors",
+            "activity_parse_errors",
+        }
+        assert set(snap["cancel_stats"]) == expected_keys, (
+            f"cancel_stats key drift: missing={expected_keys - set(snap['cancel_stats'])}, "
+            f"extra={set(snap['cancel_stats']) - expected_keys}"
+        )
         # Snapshot must be a copy — mutating it doesn't affect the service.
         snap["cancel_stats"]["published"] = 99
         assert svc._cancel_stats["published"] == 0

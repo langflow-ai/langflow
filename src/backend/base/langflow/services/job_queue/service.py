@@ -690,8 +690,16 @@ class RedisJobQueueService(JobQueueService):
             "dispatched_foreign": 0,
             "publish_errors": 0,
             "dispatcher_reconnects": 0,
+            "dispatcher_internal_errors": 0,
             "polling_watchdog_kills": 0,
+            "activity_touch_errors": 0,
+            "activity_get_errors": 0,
+            "activity_parse_errors": 0,
         }
+        # Monotonic timestamp of when each owned job entered start_job.  Used
+        # by the polling watchdog to grant a brand-new job a grace window
+        # before reclaiming it if the activity key hasn't been written yet.
+        self._job_start_times: dict[str, float] = {}
 
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
@@ -891,6 +899,9 @@ class RedisJobQueueService(JobQueueService):
 
     def start_job(self, job_id: str, task_coro) -> None:  # type: ignore[override]
         """Start the build task, then check for any pre-arrived cancel marker."""
+        # Record start time BEFORE super().start_job() so the watchdog never
+        # sees the job in self._queues without a corresponding start timestamp.
+        self._job_start_times[job_id] = time.monotonic()
         super().start_job(job_id, task_coro)
         if not self._cancel_channel_enabled or self._client is None:
             return
@@ -908,18 +919,27 @@ class RedisJobQueueService(JobQueueService):
         """Refresh the activity heartbeat for *job_id*.
 
         Called by polling and streaming responses to signal "client still here".
-        The polling watchdog scans these keys to detect abandoned builds.  TTL
-        is set to several multiples of the stale threshold so a brief Redis
-        outage during the scan doesn't cause a false positive once the watchdog
-        falls back to TTL-based reasoning.
+        The polling watchdog scans these keys to detect abandoned builds.
+
+        TTL is set to 4x the stale threshold (min 60s) so the activity key
+        outlives a single dropped touch without the watchdog misclassifying
+        the job as abandoned — Redis keeps the value around long enough for
+        the next successful refresh to land.  Errors here are non-fatal but
+        observable via :attr:`_cancel_stats` (``activity_touch_errors``);
+        sustained heartbeat failure combined with the start-time grace window
+        in :meth:`_run_polling_watchdog` keeps an in-flight build alive even
+        through a brief Redis outage.
         """
         if self._client is None or self._polling_stale_threshold_s <= 0:
             return
-        # TTL = 4x threshold (min 60s) — long enough to ride out a missed scan,
-        # short enough that abandoned keys still expire on their own.
         ttl = max(int(self._polling_stale_threshold_s * 4), 60)
-        with contextlib.suppress(Exception):
+        try:
             await self._client.set(self._activity_key(job_id), str(time.time()), ex=ttl)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            self._cancel_stats["activity_touch_errors"] += 1
+            await logger.adebug(f"touch_activity SET failed for {job_id}: {exc}")
 
     async def _check_pending_cancel_marker(self, job_id: str) -> None:
         """Race-safety check: if a cancel marker exists, fire it immediately."""
@@ -936,12 +956,21 @@ class RedisJobQueueService(JobQueueService):
         """Periodically reclaim owned jobs whose activity heartbeat has gone stale.
 
         Each tick scans :attr:`_queues` (jobs this worker owns) and pulls the
-        activity timestamp from Redis.  Missing or older than
-        :attr:`_polling_stale_threshold_s` means the client gave up and the
-        watchdog publishes a cross-worker cancel.  Using ``signal_cancel``
-        (rather than a direct local cancel) keeps the path symmetric with the
-        HTTP cancel endpoint: marker is set, dispatcher fires, bridge flushes
-        sentinel, cleanup runs.
+        activity timestamp from Redis.  Missing-or-older-than
+        :attr:`_polling_stale_threshold_s` means the client gave up.
+
+        Brand-new jobs are protected by a start-time grace window: if the
+        activity key is missing (e.g. the background ``touch_activity`` from
+        ``start_job`` hasn't completed yet, or Redis was briefly unreachable),
+        the watchdog skips the kill until ``time - job_start >= threshold``.
+        Without this, a slow first SET could nuke an active build the moment
+        its first watchdog tick fires.
+
+        Cancellation goes through :meth:`_handle_cancel` directly rather than
+        ``signal_cancel`` for owned jobs — there is no need to round-trip
+        through pubsub when this worker already holds the cancel target, and
+        bypassing the wire path keeps the ``cancel_stats["published"]``
+        counter honest as a count of *external* cancels only.
         """
         interval = max(self._polling_watchdog_interval_s, 0.05)
         threshold = self._polling_stale_threshold_s
@@ -953,29 +982,44 @@ class RedisJobQueueService(JobQueueService):
             if self._closed or self._client is None:
                 continue
             now = time.time()
+            now_mono = time.monotonic()
             # Iterate a snapshot so concurrent inserts don't disturb the scan.
             for job_id in list(self._queues.keys()):
                 try:
                     raw = await self._client.get(self._activity_key(job_id))
                 except Exception as exc:  # noqa: BLE001
+                    self._cancel_stats["activity_get_errors"] += 1
                     await logger.adebug(f"polling watchdog: GET failed for {job_id}: {exc}")
                     continue
+                # Default to "infinitely stale" so a missed elif below cannot
+                # leave `last` unbound; the if-branches narrow this down.
+                last = 0.0
                 if raw is None:
-                    # Key never written (start_job activity touch lost?) or expired.
-                    # Treat as stale only if the bridge has been running for at
-                    # least the threshold — otherwise we'd kill brand-new jobs.
-                    last = 0.0
+                    # Activity key not in Redis.  Could be a brand-new job whose
+                    # background touch hasn't landed yet, or a touch_activity
+                    # failure (counter bumped elsewhere).  Respect the start-time
+                    # grace window before reclaiming.
+                    start_ts = self._job_start_times.get(job_id)
+                    if start_ts is None or (now_mono - start_ts) < threshold:
+                        continue
                 else:
-                    with contextlib.suppress(ValueError):
+                    try:
                         last = float(raw.decode() if isinstance(raw, bytes) else raw)
+                    except (ValueError, TypeError) as exc:
+                        self._cancel_stats["activity_parse_errors"] += 1
+                        await logger.awarning(
+                            f"polling watchdog: ignoring malformed activity value for {job_id}: {exc}"
+                        )
+                        continue
                 age = now - last if last > 0 else float("inf")
                 if age <= threshold:
                     continue
-                # Stale → cancel this job.
+                # Stale → cancel this job.  Local cancel on owned jobs skips the
+                # pubsub round-trip and stays correct even during a dispatcher
+                # reconnect window.
                 self._cancel_stats["polling_watchdog_kills"] += 1
                 await logger.ainfo(f"polling watchdog: reclaiming abandoned job {job_id} (age={age:.1f}s)")
-                with contextlib.suppress(Exception):
-                    await self.signal_cancel(job_id)
+                await self._handle_cancel(job_id, source="watchdog")
                 with contextlib.suppress(Exception):
                     await self._client.delete(self._activity_key(job_id))
 
@@ -1025,9 +1069,22 @@ class RedisJobQueueService(JobQueueService):
                     await pubsub.punsubscribe(pattern)
                 await self._close_pubsub(pubsub)
                 return
-            except Exception as exc:  # noqa: BLE001
+            except (ConnectionError, TimeoutError, OSError) as exc:
+                # Expected transient failure: Redis dropped the pubsub, network
+                # blip, broker restart.  Reconnect quietly via the backoff loop.
                 self._cancel_stats["dispatcher_reconnects"] += 1
-                await logger.awarning(f"Cancel dispatcher error (retrying in {backoff:.1f}s): {exc!r}")
+                await logger.awarning(f"Cancel dispatcher disconnect (retrying in {backoff:.1f}s): {exc!r}")
+            except Exception as exc:  # noqa: BLE001
+                # Unexpected exception — likely a bug in dispatch logic, NOT a
+                # Redis problem.  Surface at error level with traceback so it
+                # reaches Sentry / log aggregation, then still reconnect so a
+                # one-off bug doesn't kill cross-worker cancel permanently.
+                self._cancel_stats["dispatcher_reconnects"] += 1
+                self._cancel_stats["dispatcher_internal_errors"] += 1
+                await logger.aerror(
+                    f"Cancel dispatcher internal error (retrying in {backoff:.1f}s): {exc!r}",
+                    exc_info=True,
+                )
             # Clean up the dead pubsub before sleeping + retrying.
             with contextlib.suppress(Exception):
                 await pubsub.punsubscribe(pattern)
@@ -1099,10 +1156,22 @@ class RedisJobQueueService(JobQueueService):
         """
         bridge = self._bridge_tasks.get(job_id)
         if bridge is not None and not bridge.done():
-            with contextlib.suppress(Exception):
-                # ``shield`` keeps the bridge alive even if our task is cancelled
-                # during the wait; the timeout caps the worst case if XADD is stuck.
+            # ``shield`` keeps the bridge alive even if our task is cancelled
+            # during the wait; the inner timeout caps the worst case if XADD
+            # is stuck (cross-worker consumers can still recover via the
+            # missing-stream-key sentinel path).  Narrow the except to the
+            # timeout case only so real bridge failures bubble up.
+            try:
                 await asyncio.wait_for(asyncio.shield(bridge), timeout=2.0)
+            except asyncio.TimeoutError:
+                await logger.awarning(
+                    f"Post-cancel cleanup: bridge sentinel flush timed out for {job_id}; "
+                    "cross-worker consumers may see late end-of-stream."
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Post-cancel cleanup: bridge wait failed for {job_id}: {exc!r}")
         try:
             await asyncio.wait_for(
                 self.cleanup_job(job_id),
@@ -1183,7 +1252,11 @@ class RedisJobQueueService(JobQueueService):
           ``EventManager`` are returned from the local registry so that disconnect
           handling and ownership checks work normally.
         * **Cross-worker path**: no local entry exists; a null ``EventManager`` and
-          ``None`` task are returned (cross-worker cancel is a known limitation).
+          ``None`` task are returned.  Cancellation from this worker travels via
+          :meth:`signal_cancel` rather than a local ``task.cancel()`` — the
+          dispatcher on the owning worker fires the cancel, and the streaming
+          response's :func:`langflow.api.build.create_flow_response.on_disconnect`
+          wires this up automatically for passive client disconnects.
         """
         if self._closed:
             msg = f"Queue service is closed for job_id: {job_id}"
@@ -1240,6 +1313,8 @@ class RedisJobQueueService(JobQueueService):
         # the stream/owner keys from that worker would corrupt an in-flight build on
         # the true owner.
         is_owner = job_id in self._queues
+        # Drop the watchdog start-time entry alongside ownership.
+        self._job_start_times.pop(job_id, None)
 
         wrapper = self._consumer_wrappers.pop(job_id, None)
         if wrapper is not None:
