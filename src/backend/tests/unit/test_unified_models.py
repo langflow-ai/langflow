@@ -436,10 +436,14 @@ def test_get_embeddings_missing_model_name_raises(mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PROVIDER_CLASS_MAPPING.
+
+    So missing ``embedding_class`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",
-        "provider": "OpenAI",
+        "provider": "Unknown",
         "metadata": {"param_mapping": {"model": "model"}},
     }
     with pytest.raises(ValueError, match="No embedding class defined in metadata"):
@@ -448,14 +452,47 @@ def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_empty_param_mapping_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PARAM_MAPPINGS.
+
+    So empty ``param_mapping`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",
-        "provider": "OpenAI",
+        "provider": "Unknown",
         "metadata": {"embedding_class": "OpenAIEmbeddings", "param_mapping": {}},
     }
     with pytest.raises(ValueError, match="Parameter mapping not found in metadata"):
         get_embeddings([model_dict])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_falls_back_when_metadata_stripped(mock_get_class, mock_get_api_key):
+    """Selections persisted via the generic ``/models`` catalog lack enriched metadata.
+
+    ``embedding_class`` and ``param_mapping`` are missing in that case.
+    Instantiation should derive both from ``EMBEDDING_PROVIDER_CLASS_MAPPING``
+    and ``EMBEDDING_PARAM_MAPPINGS`` rather than failing — otherwise KB
+    ingestion would error on every model picked through the KB upload modal.
+    """
+    mock_get_api_key.return_value = "sk-test"
+    fake_class = MagicMock(return_value="embeddings-instance")
+    mock_get_class.return_value = fake_class
+
+    model_dict = {
+        "name": "text-embedding-3-small",
+        "provider": "OpenAI",
+        "metadata": {},  # No embedding_class, no param_mapping.
+    }
+    result = get_embeddings([model_dict])
+
+    mock_get_class.assert_called_once_with("OpenAIEmbeddings")
+    fake_class.assert_called_once()
+    kwargs = fake_class.call_args.kwargs
+    assert kwargs["model"] == "text-embedding-3-small"
+    assert kwargs["api_key"] == "sk-test"
+    assert result == "embeddings-instance"
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")

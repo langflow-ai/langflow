@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next";
 import { DEFAULT_SUBMIT_LABEL } from "../constants";
 import type { StepperModalFooterProps } from "../types";
 
