@@ -7,8 +7,10 @@
 """
 
 import asyncio
+import hashlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import orjson
 import pytest
 from lfx.interface.components import (
     component_cache,
@@ -435,3 +437,113 @@ class TestComponentLoadingFix:
             # Verify we got real langflow components
             assert isinstance(result, dict)
             assert len(result) >= 0  # Should not have langflow components
+
+
+class TestCacheHitCustomComponentMerge:
+    """Cache-hit path must load and merge user custom components.
+
+    Regression guard for the bug where get_and_cache_all_types_dict silently
+    dropped LANGFLOW_COMPONENTS_PATH custom components whenever the built-in
+    component cache blob was warm on disk.  The cache only stores lfx built-in
+    components; user custom components are always loaded fresh via
+    _determine_loading_strategy regardless of cache state.
+    """
+
+    _CACHED_VERSION = "test-cache-hit-1.0"
+
+    @staticmethod
+    def _make_blob(version: str, entries: list) -> dict:
+        """Return a cache blob with a valid SHA256 for the given entries."""
+        unsigned = {"version": version, "entries": entries}
+        sha256 = hashlib.sha256(orjson.dumps(unsigned, option=orjson.OPT_SORT_KEYS)).hexdigest()
+        return {**unsigned, "sha256": sha256}
+
+    @pytest.fixture
+    def mock_settings_service(self):
+        svc = MagicMock(spec=SettingsService)
+        svc.settings = MagicMock()
+        svc.settings.lazy_load_components = False
+        svc.settings.components_path = ["/some/custom/path"]
+        return svc
+
+    @pytest.fixture
+    def cache_file(self, tmp_path):
+        entries = [["builtin_cat", {"BuiltinComp": {"display_name": "BuiltinComp", "type": "builtin_cat"}}]]
+        blob = self._make_blob(self._CACHED_VERSION, entries)
+        path = tmp_path / "component_index.json"
+        path.write_bytes(orjson.dumps(blob))
+        return path
+
+    @pytest.fixture(autouse=True)
+    def reset_cache(self):
+        component_cache.all_types_dict = None
+        yield
+        component_cache.all_types_dict = None
+
+    @pytest.mark.asyncio
+    async def test_custom_components_present_on_cache_hit(self, mock_settings_service, cache_file):
+        """_determine_loading_strategy must be called and merged even when cache hits.
+
+        Before the fix, the cache-hit branch returned immediately after reconstructing
+        built-ins from the blob, never calling _determine_loading_strategy.  Any user
+        with LANGFLOW_COMPONENTS_PATH set would lose their custom components on every
+        warm-cache start with no error.
+        """
+        custom = {"custom_cat": {"CustomComp": {"display_name": "CustomComp", "type": "custom_cat"}}}
+
+        with (
+            patch("lfx.interface.components._get_cache_path", return_value=cache_file),
+            patch("importlib.metadata.version", return_value=self._CACHED_VERSION),
+            patch(
+                "lfx.interface.components._determine_loading_strategy",
+                AsyncMock(return_value=custom),
+            ) as mock_strategy,
+        ):
+            result = await get_and_cache_all_types_dict(mock_settings_service)
+
+        assert "builtin_cat" in result, "Built-in components from cache blob must be present"
+        assert "BuiltinComp" in result["builtin_cat"]
+
+        assert "custom_cat" in result, (
+            "Custom components from _determine_loading_strategy must be merged on "
+            "cache-hit; the warm-cache path was silently dropping them before the fix."
+        )
+        assert "CustomComp" in result["custom_cat"]
+        mock_strategy.assert_called_once_with(mock_settings_service)
+
+    @pytest.mark.asyncio
+    async def test_custom_components_present_on_cache_miss(self, mock_settings_service, tmp_path):
+        """Control: cache-miss path also loads custom components (pre-existing behavior)."""
+        absent_cache = tmp_path / "no_cache.json"
+        custom = {"custom_cat": {"CustomComp": {"display_name": "CustomComp"}}}
+        builtins = {"components": {"builtin_cat": {"BuiltinComp": {"display_name": "BuiltinComp"}}}}
+
+        with (
+            patch("lfx.interface.components._get_cache_path", return_value=absent_cache),
+            patch("importlib.metadata.version", return_value=self._CACHED_VERSION),
+            patch("lfx.interface.components.import_langflow_components", return_value=builtins),
+            patch(
+                "lfx.interface.components._determine_loading_strategy",
+                AsyncMock(return_value=custom),
+            ) as mock_strategy,
+        ):
+            result = await get_and_cache_all_types_dict(mock_settings_service)
+
+        assert "custom_cat" in result
+        mock_strategy.assert_called_once_with(mock_settings_service)
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_with_empty_custom_strategy_returns_only_builtins(
+        self, mock_settings_service, cache_file
+    ):
+        """When _determine_loading_strategy returns empty (no custom paths), only built-ins appear."""
+        with (
+            patch("lfx.interface.components._get_cache_path", return_value=cache_file),
+            patch("importlib.metadata.version", return_value=self._CACHED_VERSION),
+            patch("lfx.interface.components._determine_loading_strategy", AsyncMock(return_value={})),
+        ):
+            result = await get_and_cache_all_types_dict(mock_settings_service)
+
+        assert "builtin_cat" in result
+        assert "BuiltinComp" in result["builtin_cat"]
+        assert "custom_cat" not in result
