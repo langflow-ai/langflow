@@ -89,6 +89,56 @@ class TestFlowBuilderPrompt:
         )
 
 
+class TestFlowBuilderPromptProposePlan:
+    """The agent must call propose_plan as its FIRST tool when building a NEW
+    flow, so the user sees a markdown summary and can Continue or refine
+    before any canvas work happens.
+    """
+
+    def test_should_mention_propose_plan_tool(self):
+        assert "propose_plan" in FLOW_BUILDER_PROMPT, (
+            "Prompt must reference the propose_plan tool so the LLM knows to use it."
+        )
+
+    def test_should_require_propose_plan_before_other_build_tools(self):
+        # The instruction must make it unambiguous that in BUILD mode the
+        # agent's first tool call is propose_plan — search/describe/build_flow
+        # only run after the user approves.
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "propose_plan" in prompt_lower
+        # Look for an explicit "first" / "before" / "do not call" cue tied to BUILD mode.
+        assert ("first" in prompt_lower) or ("before" in prompt_lower), (
+            "Prompt must say propose_plan runs first/before other tools in BUILD mode."
+        )
+
+    def test_should_explain_user_continue_vs_dismiss_loop(self):
+        # After propose_plan, the next user turn is either an approval signal or
+        # refinement feedback. The agent needs to know how to act on each.
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "continue" in prompt_lower or "approve" in prompt_lower, (
+            "Prompt must describe what to do when the user continues/approves the plan."
+        )
+        assert "dismiss" in prompt_lower or "refine" in prompt_lower or "feedback" in prompt_lower, (
+            "Prompt must describe what to do when the user dismisses/refines the plan."
+        )
+
+
+class TestProposePlanInToolkit:
+    """The propose_plan tool must be present in the agent's toolkit and be
+    callable by name through the standard tool interface.
+    """
+
+    async def test_toolkit_should_include_propose_plan_tool(self):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+
+        tools = await build_toolkit()
+        names = {getattr(t, "name", None) for t in tools}
+
+        assert "propose_plan" in names, (
+            f"propose_plan must be in the toolkit, got: {sorted(n for n in names if n)}"
+        )
+
+
 class TestTranslationPromptBuildFlow:
     def test_should_contain_build_flow_intent(self):
         assert "build_flow" in TRANSLATION_PROMPT

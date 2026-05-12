@@ -26,7 +26,7 @@
 
 ### Summary
 
-The MCP Flow Builder extends the Langflow Assistant from a single-component generator into a full flow-construction **and** documentation agent. Users describe what they want ("build me a chatbot that answers questions over a PDF", "change the model to gpt-4o", "add a memory component", "crie um .md com a documentação desse flow"), and an Agent equipped with a toolkit of Model-Context-Protocol (MCP) tools either **builds** a new flow from scratch (destructive, gated behind an explicit **Continue** review step), **edits** the existing canvas live, or **writes/reads files** inside a sandboxed workspace (e.g. documentation, reports).
+The MCP Flow Builder extends the Langflow Assistant from a single-component generator into a full flow-construction **and** documentation agent. Users describe what they want ("build me a chatbot that answers questions over a PDF", "change the model to gpt-4o", "add a memory component", "create a markdown file documenting this flow"), and an Agent equipped with a toolkit of Model-Context-Protocol (MCP) tools either **builds** a new flow from scratch (destructive, gated behind an explicit **Continue** review step), **edits** the existing canvas live, or **writes/reads files** inside a sandboxed workspace (e.g. documentation, reports).
 
 ### Business Context
 
@@ -346,7 +346,7 @@ The base Assistant event table still applies. The MCP integration adds:
 ### Scenario: Create a documentation file (manage_files intent)
 
 - **Given** the assistant panel is open.
-- **When** I send "crie um arquivo .md com a documentação do flow".
+- **When** I send "create a markdown file documenting this flow".
 - **Then** the TranslationFlow classifies intent as `"manage_files"`.
 - **And** the request routes to the same `FlowBuilderAssistant` (toolkit includes `read_file`/`write_file`/`edit_file`/`glob_search`/`grep_search`).
 - **And** the frontend renders the thinking dots labelled "Generating document...".
@@ -376,7 +376,7 @@ The base Assistant event table still applies. The MCP integration adds:
 ### Scenario: Read a sandboxed file (read-only path)
 
 - **Given** the user previously wrote `NOTES.md` to the sandbox.
-- **When** I send "leia o arquivo NOTES.md".
+- **When** I send "read the NOTES.md file".
 - **Then** TranslationFlow classifies as `"manage_files"`.
 - **And** the agent calls `read_file(path="NOTES.md")`.
 - **And** the tool returns the content (with line numbers) to the LLM.
@@ -386,7 +386,7 @@ The base Assistant event table still applies. The MCP integration adds:
 ### Scenario: Search across sandbox files
 
 - **Given** the user has multiple `.md` files in the workspace.
-- **When** I send "ache 'API key' nos meus docs".
+- **When** I send "find 'API key' across my docs".
 - **Then** the agent calls `grep_search(pattern="API key")`.
 - **And** the result feeds the LLM's text response.
 - **And** no `file_written` events are emitted.

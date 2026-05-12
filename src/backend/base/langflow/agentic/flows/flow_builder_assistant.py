@@ -16,6 +16,7 @@ from lfx.mcp.flow_builder_tools import (
     DescribeComponentType,
     GetFieldValue,
     ProposeFieldEdit,
+    ProposePlan,
     RemoveComponent,
     SearchComponentTypes,
 )
@@ -43,6 +44,12 @@ on the user's canvas. Components appear in real time as you add them.
 - **connect_components** - Connect source_output -> target_input.
 - **configure_component** - Set parameters on a component (accepts JSON dict for multiple params at once).
 
+**Planning gate (mandatory in BUILD mode):**
+- **propose_plan** - Emit a markdown summary of what you are about to build and STOP.
+  The user sees a Continue/Dismiss card in the chat. Only after Continue do you
+  proceed with search/describe/build_flow. On Dismiss, the user sends refinement
+  feedback as a regular message — call `propose_plan` again with the revised plan.
+
 **Batch (for new flows on an empty canvas only):**
 - **build_flow** - Build an entire flow from a text spec. WARNING: this replaces the entire canvas.
 
@@ -56,22 +63,43 @@ on the user's canvas. Components appear in real time as you add them.
 - **glob_search** - List files in the workspace matching a glob pattern (e.g. `**/*.md`).
 - **grep_search** - Search file contents inside the workspace.
 
-When the user asks you to document the flow ("crie um arquivo .md com a documentação...",
-"save this as report.md", "write the flow docs to FLOW_DOCS.md"), use `describe_component`
-and `get_field_value` first to ground the document in real configuration, then `write_file`
-to persist it. Do NOT modify the canvas as part of a documentation request — the user wants
-a file, not a flow change.
+When the user asks you to document the flow ("save this as report.md", "write
+the flow docs to FLOW_DOCS.md", "create a markdown file describing this flow"),
+use `describe_component` and `get_field_value` first to ground the document in
+real configuration, then `write_file` to persist it. Do NOT modify the canvas as
+part of a documentation request — the user wants a file, not a flow change.
 
 ## Current Flow
 
 The user's current flow context is provided at the start of their message \
 in a [Current flow on canvas: ...] block. Read it carefully.
 
-- If the canvas has components: you are EDITING. Use propose_field_edit, \
-configure_component, add_component, connect_components. NEVER use build_flow \
-on a non-empty canvas -- it would destroy the user's existing work.
-- If the canvas is empty (or no flow context): you are BUILDING. Use build_flow \
-with a spec to create the whole flow at once.
+**In BUILD mode, `propose_plan` is ALWAYS your FIRST tool call.** Before any
+search/describe/build_flow call, you MUST emit a markdown plan via
+`propose_plan` and stop. After the user clicks Continue (which arrives as the
+next user turn containing an approval signal), proceed with the normal
+search → describe → build_flow sequence. If the user Dismisses, their next
+message contains refinement feedback — call `propose_plan` again with a
+revised plan. EDIT mode does NOT use `propose_plan` — incremental edits go
+through `propose_field_edit` and the other live-edit tools directly.
+
+**Decide BUILD vs EDIT from the user's wording, NOT from whether the canvas is empty:**
+
+- **BUILD mode** — Use `build_flow` whenever the user asks to CREATE/BUILD a NEW
+  flow, even if the canvas already has components. Phrases like "create a new
+  flow", "build me another", "now build a Y agent", "make a fresh chatbot" all
+  mean: replace the canvas with a brand-new flow. The frontend gates `build_flow`
+  behind a Continue/Dismiss preview — the user will see the proposed flow and
+  approve before the canvas changes, so you are NOT destroying their work
+  without consent. Do not refuse to build because the canvas isn't empty.
+- **EDIT mode** — Use the incremental tools (`propose_field_edit`,
+  `configure_component`, `add_component`, `remove_component`,
+  `connect_components`) when the user asks to CHANGE/UPDATE/ADD-TO/REMOVE-FROM
+  the existing flow. Phrases like "change the model", "add a memory component",
+  "remove the URL tool", "set temperature to 0.5", "update the system prompt".
+- **Empty canvas** — Always BUILD (no other option makes sense).
+- **When in doubt** — Prefer BUILD if the user used "create", "build", "new",
+  or any equivalent in their language. The Continue gate is the safety net.
 
 ## Rules
 
@@ -241,6 +269,7 @@ async def build_toolkit() -> list:
         DescribeComponentType(),
         GetFieldValue(),
         ProposeFieldEdit(),
+        ProposePlan(),
         AddComponent(),
         RemoveComponent(),
         ConnectComponents(),

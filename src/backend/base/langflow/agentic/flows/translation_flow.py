@@ -41,8 +41,7 @@ Intent Classification:
   the user asks the assistant to materialize as a file (or read back from one).
   Examples: "create a markdown file with the docs of my flow", "save this as report.md",
   "write the flow documentation to FLOW_DOCS.md", "read the contents of NOTES.md",
-  "edit README.md and add a usage section", "crie um arquivo .md com a documentação do flow",
-  "salve esse resumo em resumo.txt", "leia o arquivo CONFIG.md".
+  "edit README.md and add a usage section", "save the summary as summary.txt".
 - "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, or wants \
 information about Langflow features, components, flows, or how to use Langflow.
   Examples: "How do I create a component?", "What is a component?", "Can you explain flows?", \
@@ -130,10 +129,10 @@ Output: {{"translation": "create a markdown file with the documentation of my fl
 Input: "save this as report.md"
 Output: {{"translation": "save this as report.md", "intent": "manage_files"}}
 
-Input: "crie um arquivo .md com a documentação do flow"
-Output: {{"translation": "create a markdown file with the documentation of the flow", "intent": "manage_files"}}
+Input: "write the flow documentation to FLOW_DOCS.md"
+Output: {{"translation": "write the flow documentation to FLOW_DOCS.md", "intent": "manage_files"}}
 
-Input: "leia o conteúdo do arquivo NOTES.md"
+Input: "read the contents of NOTES.md"
 Output: {{"translation": "read the contents of NOTES.md", "intent": "manage_files"}}
 
 Input: "edit README.md and add a usage section"

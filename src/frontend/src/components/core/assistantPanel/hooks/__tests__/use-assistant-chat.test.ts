@@ -439,6 +439,164 @@ describe("useAssistantChat", () => {
     });
   });
 
+  describe("plan proposal flow (BUILD-mode planning gate)", () => {
+    it("should_record_pending_plan_proposal_when_onFlowUpdate_receives_propose_plan", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "## Plan\n\nBuild a chatbot.",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("build me a chatbot", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMsg?.pendingPlanProposal?.markdown).toBe(
+        "## Plan\n\nBuild a chatbot.",
+      );
+      expect(assistantMsg?.planProposalStatus).toBe("pending");
+    });
+
+    it("should_not_mutate_canvas_when_propose_plan_event_arrives", async () => {
+      // Plan events are purely advisory — they must NOT touch the canvas.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan body",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+
+      expect(mockSetNodes).not.toHaveBeenCalled();
+      expect(mockSetEdges).not.toHaveBeenCalled();
+    });
+
+    it("should_mark_plan_as_approved_when_handleApprovePlan_called", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+      expect(assistantMsg).toBeDefined();
+
+      mockPostAssistStream.mockReset();
+      mockPostAssistStream.mockResolvedValue(undefined);
+
+      await act(async () => {
+        await result.current.handleApprovePlan(assistantMsg!.id);
+      });
+
+      const updated = result.current.messages.find(
+        (m) => m.id === assistantMsg!.id,
+      );
+      expect(updated?.planProposalStatus).toBe("approved");
+    });
+
+    it("should_send_approval_turn_to_backend_when_handleApprovePlan_called", async () => {
+      // Approval must reach the backend as a normal user turn so the agent
+      // resumes — the backend has no state about "this plan was approved",
+      // it just sees the next user message and the prompt tells it what to do.
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan",
+          });
+          // Fire onComplete so isProcessing resets — otherwise the next
+          // handleSend would short-circuit on the "already processing" guard.
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "", validated: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+
+      mockPostAssistStream.mockReset();
+      mockPostAssistStream.mockResolvedValue(undefined);
+
+      await act(async () => {
+        await result.current.handleApprovePlan(assistantMsg!.id);
+      });
+
+      expect(mockPostAssistStream).toHaveBeenCalledTimes(1);
+      const [request] = mockPostAssistStream.mock.calls[0];
+      expect(request.input_value.toLowerCase()).toContain("approve");
+    });
+
+    it("should_mark_plan_as_dismissed_when_handleDismissPlan_called", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "propose_plan",
+            markdown: "Plan",
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("build a flow", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages.find(
+        (m) => m.role === "assistant",
+      );
+      mockPostAssistStream.mockReset();
+
+      act(() => {
+        result.current.handleDismissPlan(assistantMsg!.id);
+      });
+
+      const updated = result.current.messages.find(
+        (m) => m.id === assistantMsg!.id,
+      );
+      expect(updated?.planProposalStatus).toBe("dismissed");
+      // Dismiss does NOT send a new turn — the user types refinement
+      // feedback as a regular message.
+      expect(mockPostAssistStream).not.toHaveBeenCalled();
+    });
+  });
+
   describe("handleStopGeneration", () => {
     it("should cancel streaming and reset state", async () => {
       // Make postAssistStream hang to simulate in-progress

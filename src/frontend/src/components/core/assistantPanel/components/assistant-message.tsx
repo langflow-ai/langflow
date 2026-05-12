@@ -13,6 +13,7 @@ import { AssistantFileCard } from "./assistant-file-card";
 import { FlowEditCarousel } from "./assistant-flow-edit-card";
 import { AssistantFlowPreview } from "./assistant-flow-preview";
 import { AssistantLoadingState } from "./assistant-loading-state";
+import { AssistantPlanCard } from "./assistant-plan-card";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
 import { FileContentModal } from "./file-content-modal";
 
@@ -26,6 +27,8 @@ interface AssistantMessageItemProps {
   ) => void;
   onApplyFlowProposal?: (messageId: string) => void;
   onDismissFlowProposal?: (messageId: string) => void;
+  onApprovePlan?: (messageId: string) => void;
+  onDismissPlan?: (messageId: string) => void;
   onRetry?: (messageId: string) => void;
 }
 
@@ -54,6 +57,8 @@ export function AssistantMessageItem({
   onUpdateFlowAction,
   onApplyFlowProposal,
   onDismissFlowProposal,
+  onApprovePlan,
+  onDismissPlan,
   onRetry,
 }: AssistantMessageItemProps) {
   const isUser = message.role === "user";
@@ -240,6 +245,30 @@ export function AssistantMessageItem({
             onUpdateAction={(actionId, status) =>
               onUpdateFlowAction?.(message.id, actionId, status)
             }
+          />
+        </div>
+      );
+    }
+
+    // BUILD-mode planning gate: agent emitted a propose_plan event with a
+    // markdown summary. The user clicks Continue (resumes the agent via a
+    // new user turn) or Dismiss (types refinement feedback, agent replans).
+    if (message.planProposalStatus && message.pendingPlanProposal) {
+      return (
+        <div className="flex flex-col gap-3">
+          {message.content && (
+            <Markdown
+              remarkPlugins={[remarkGfm]}
+              className="prose prose-sm max-w-full text-muted-foreground dark:prose-invert prose-p:leading-relaxed prose-p:my-1"
+            >
+              {message.content}
+            </Markdown>
+          )}
+          <AssistantPlanCard
+            markdown={message.pendingPlanProposal.markdown}
+            status={message.planProposalStatus}
+            onApprove={() => onApprovePlan?.(message.id)}
+            onDismiss={() => onDismissPlan?.(message.id)}
           />
         </div>
       );

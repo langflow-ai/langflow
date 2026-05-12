@@ -17,7 +17,7 @@ import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
 export const MemoizedBackground = memo(() => (
-  <Background size={2} gap={20} className="" />
+  <Background id="main-canvas-bg" size={2} gap={20} className="" />
 ));
 
 interface MemoizedCanvasControlsProps {

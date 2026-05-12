@@ -33,6 +33,8 @@ interface UseAssistantChatReturn {
   ) => void;
   handleApplyFlowProposal: (messageId: string) => void;
   handleDismissFlowProposal: (messageId: string) => void;
+  handleApprovePlan: (messageId: string) => Promise<void>;
+  handleDismissPlan: (messageId: string) => void;
   handleRetry: (messageId: string) => void;
   handleStopGeneration: () => void;
   handleClearHistory: () => void;
@@ -356,6 +358,19 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 }));
                 return;
               }
+              if (event.action === "propose_plan") {
+                // BUILD-mode planning gate: the agent emits a markdown plan
+                // and stops. Canvas is untouched — the user must Continue
+                // (triggers handleApprovePlan) or Dismiss (handleDismissPlan)
+                // before the agent moves on to search/describe/build_flow.
+                const markdown =
+                  typeof event.markdown === "string" ? event.markdown : "";
+                updateMessage(assistantMessageId, () => ({
+                  pendingPlanProposal: { markdown },
+                  planProposalStatus: "pending" as const,
+                }));
+                return;
+              }
               if (event.action === "set_flow") {
                 // Build-from-scratch path: buffer the entire flow into a
                 // proposal the user must Accept/Dismiss. Canvas stays
@@ -583,6 +598,38 @@ export function useAssistantChat(): UseAssistantChatReturn {
     [updateMessage],
   );
 
+  const handleApprovePlan = useCallback(
+    async (messageId: string) => {
+      // Continue on the planning gate. Mark the card as approved (the user
+      // sees a muted "Plan approved" badge), then send a fresh user turn so
+      // the agent resumes from where it stopped after propose_plan. The
+      // approval signal is plain text — the agent's prompt teaches it that
+      // an approval message means "now run search/describe/build_flow".
+      updateMessage(messageId, () => ({
+        planProposalStatus: "approved" as const,
+      }));
+      if (!lastModelRef.current) return;
+      await handleSend(
+        "User approved the plan. Proceed with the build.",
+        lastModelRef.current,
+      );
+    },
+    [updateMessage, handleSend],
+  );
+
+  const handleDismissPlan = useCallback(
+    (messageId: string) => {
+      // Dismiss leaves the chat open. The user types refinement feedback
+      // (e.g. "use Claude instead of GPT") as a regular message; the agent
+      // sees it and re-calls propose_plan with a revised plan. We do NOT
+      // auto-send anything here — the user is in control.
+      updateMessage(messageId, () => ({
+        planProposalStatus: "dismissed" as const,
+      }));
+    },
+    [updateMessage],
+  );
+
   const handleStopGeneration = useCallback(() => {
     abortControllerRef.current?.abort();
 
@@ -630,6 +677,8 @@ export function useAssistantChat(): UseAssistantChatReturn {
     handleUpdateFlowAction,
     handleApplyFlowProposal,
     handleDismissFlowProposal,
+    handleApprovePlan,
+    handleDismissPlan,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,

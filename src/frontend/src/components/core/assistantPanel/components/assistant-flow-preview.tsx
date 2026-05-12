@@ -165,7 +165,7 @@ export function AssistantFlowPreview({
               preventScrolling={false}
               proOptions={{ hideAttribution: true }}
             >
-              <Background gap={12} size={0.5} />
+              <Background id="assistant-preview-bg" gap={12} size={0.5} />
             </ReactFlow>
           </ReactFlowProvider>
         </div>

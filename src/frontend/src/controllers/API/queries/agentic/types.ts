@@ -61,7 +61,8 @@ export interface AgenticFlowUpdateEvent {
     | "set_flow"
     | "edit_field"
     | "select_output"
-    | "set_connection_mode";
+    | "set_connection_mode"
+    | "propose_plan";
   [key: string]: unknown;
 }
 

@@ -33,6 +33,8 @@ export interface AssistantMessage {
   flowActions?: FlowAction[];
   pendingFlowProposal?: PendingFlowProposal;
   flowProposalStatus?: FlowProposalStatus;
+  pendingPlanProposal?: PendingPlanProposal;
+  planProposalStatus?: PlanProposalStatus;
   writtenFiles?: WrittenFile[];
 }
 
@@ -55,6 +57,19 @@ export interface WrittenFile {
 }
 
 export type FlowProposalStatus = "pending" | "applied" | "dismissed";
+
+/**
+ * Status of the BUILD-mode planning gate that runs BEFORE the agent calls
+ * search/describe/build_flow. The user sees the markdown plan as a card with
+ * Continue/Dismiss. Continue ⇒ "approved" (agent proceeds). Dismiss ⇒
+ * "dismissed" (user types refinement feedback and agent replans).
+ */
+export type PlanProposalStatus = "pending" | "approved" | "dismissed";
+
+export interface PendingPlanProposal {
+  /** Raw markdown emitted by the agent's propose_plan tool. */
+  markdown: string;
+}
 
 export interface PendingFlowProposal {
   flow: Record<string, unknown>;

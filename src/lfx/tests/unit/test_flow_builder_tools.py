@@ -7,6 +7,7 @@ from lfx.mcp.flow_builder_tools import (
     BuildFlowFromSpec,
     ConnectComponents,
     DescribeComponentType,
+    ProposePlan,
     SearchComponentTypes,
     drain_flow_events,
     get_working_flow,
@@ -141,6 +142,75 @@ class TestBuildFlowFromSpec:
 
         assert "error" in result.data
         assert "orphan" in result.data["error"].lower()
+
+
+class TestProposePlan:
+    """ProposePlan emits a markdown plan to the user as a gate BEFORE the
+    agent runs search/describe/build_flow tools. The agent's next step
+    depends on the user's Continue/Dismiss reply, which arrives as a new
+    user turn — the tool itself does not block.
+    """
+
+    def test_should_push_propose_plan_event_when_plan_is_valid(self):
+        reset_working_flow()
+        comp = ProposePlan()
+        comp.set(plan="I'll create a ChatInput -> Agent (GPT-4) -> ChatOutput flow.")
+        comp.propose_plan()
+
+        events = drain_flow_events()
+        assert len(events) == 1
+        assert events[0]["action"] == "propose_plan"
+        assert events[0]["markdown"] == (
+            "I'll create a ChatInput -> Agent (GPT-4) -> ChatOutput flow."
+        )
+
+    def test_should_return_wait_marker_text_when_plan_is_valid(self):
+        reset_working_flow()
+        comp = ProposePlan()
+        comp.set(plan="Plan text.")
+        result = comp.propose_plan()
+
+        # Agent must see a marker that tells it to stop and wait for the
+        # user's Continue/Dismiss reply before calling any other tools.
+        text = result.data["text"].lower()
+        assert "plan" in text
+        assert ("wait" in text) or ("stop" in text) or ("user" in text)
+
+    def test_should_reject_when_plan_is_empty(self):
+        reset_working_flow()
+        comp = ProposePlan()
+        comp.set(plan="")
+        result = comp.propose_plan()
+
+        assert "error" in result.data
+        # No event must leak when validation rejects the call.
+        assert drain_flow_events() == []
+
+    def test_should_reject_when_plan_is_whitespace_only(self):
+        reset_working_flow()
+        comp = ProposePlan()
+        comp.set(plan="   \n\t  ")
+        result = comp.propose_plan()
+
+        assert "error" in result.data
+        assert drain_flow_events() == []
+
+    def test_should_preserve_markdown_verbatim_when_plan_contains_formatting(self):
+        # Plan markdown must be passed through unchanged so the frontend can
+        # render headings, lists, code blocks. No truncation, no escaping.
+        reset_working_flow()
+        comp = ProposePlan()
+        plan = (
+            "## Plan\n\n"
+            "- Add `ChatInput`\n"
+            "- Add `Agent` with `model=gpt-4o`\n"
+            "- Connect them with `message -> input_value`"
+        )
+        comp.set(plan=plan)
+        comp.propose_plan()
+
+        events = drain_flow_events()
+        assert events[0]["markdown"] == plan
 
 
 class TestAddComponent:
