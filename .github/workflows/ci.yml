@@ -88,6 +88,22 @@ jobs:
           echo "  run-all-tests: ${{ inputs.run-all-tests }}"
           echo "  runs-on: ${{ inputs.runs-on }}"
 
+  validate-pr-title:
+    name: Validate PR Title
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Reject titles ending in ellipsis
+        run: |
+          echo "PR title: $PR_TITLE"
+          if [[ "$PR_TITLE" == *"..." || "$PR_TITLE" == *"…" ]]; then
+            echo "❌ PR title ends with ellipsis. Please write a complete, descriptive title."
+            exit 1
+          fi
+          echo "✅ PR title is complete."
+
   check-nightly-status:
     name: Check PyPI Version Update
     runs-on: ubuntu-latest
@@ -427,6 +443,7 @@ jobs:
     name: "CI Success"
     needs:
       [
+        validate-pr-title,
         test-backend,
         test-frontend-unit,
         test-frontend,
@@ -476,7 +493,9 @@ jobs:
               to_entries[]
               | select(.value.result=="failure")
               | .key as $job
-              | if $job == "test-backend" then
+              | if $job == "validate-pr-title" then
+                  "  - PR Title Validation: Title ends with ellipsis (...). Use a complete, descriptive title."
+                elif $job == "test-backend" then
                   "  - Backend Tests: Check Python code, tests, and dependencies"
                 elif $job == "test-frontend-unit" then
                   "  - Frontend Unit Tests: Check React components and unit test logic"
