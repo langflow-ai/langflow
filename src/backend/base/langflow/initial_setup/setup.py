@@ -1313,7 +1313,25 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     await session.rollback()
                     break
 
-    # If no existing folder found, create a new one
+    # If the user already has any folder (e.g. they renamed the default), return
+    # one of them rather than creating a duplicate default alongside it. Without
+    # this guard, every login or server restart would silently recreate
+    # "Starter Project" next to the user's renamed folder. (Regression of #12746.)
+    #
+    # ``Folder.id`` is a random UUID, so ``order_by(Folder.id)`` does NOT mean
+    # "earliest by creation"; it is an implementation-defined-but-stable choice
+    # to keep the result deterministic across DBs. For the common cases (rename,
+    # or delete-default-then-create-one) the user has exactly one folder, so the
+    # ordering is moot. Users with multiple folders get one of them; we treat
+    # "which one" as best-effort because the intent is "don't create a phantom
+    # duplicate", not "promote a specific folder to default".
+    any_folder_stmt = select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)
+    any_result = await session.exec(any_folder_stmt)
+    any_folder = any_result.first()
+    if any_folder:
+        return FolderRead.model_validate(any_folder, from_attributes=True)
+
+    # No folder of any kind exists for this user — create the default one.
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)

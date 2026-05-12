@@ -176,11 +176,17 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
     after fork, before any request is served. No event loop exists yet here —
     this function MUST remain fully synchronous.
 
-    Currently resets ``TelemetryService.client`` (an ``httpx.AsyncClient``
-    constructed during master preload) so ``TelemetryService.start()`` can
-    reconstruct it inside the worker's event loop. ``httpx.AsyncClient`` has
-    no synchronous ``.close()``, so replacing the reference is the correct
-    pattern.
+    Resets:
+    - ``TelemetryService.client`` (an ``httpx.AsyncClient`` constructed during
+      master preload) so ``TelemetryService.start()`` can reconstruct it inside
+      the worker's event loop. ``httpx.AsyncClient`` has no synchronous
+      ``.close()``, so replacing the reference is the correct pattern.
+    - ``component_cache._lock`` (an ``asyncio.Lock`` lazily created in the
+      master and bound to the master's event-loop policy). After fork the
+      inherited Lock references a dead loop; the next acquirer in the worker
+      would either deadlock or trip a "Future bound to a different loop"
+      error. Clearing it forces the property to rebuild a fresh Lock against
+      the worker's loop on first access.
     """
     try:
         from langflow.services.deps import get_telemetry_service
@@ -189,4 +195,12 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
     except Exception:  # noqa: BLE001, S110
         # Service not yet initialized (e.g. preload_app=False path). The
         # hook must not crash gunicorn.
+        pass
+
+    try:
+        from lfx.interface.components import component_cache
+
+        component_cache._lock = None  # noqa: SLF001
+    except Exception:  # noqa: BLE001, S110
+        # Module not importable in this worker for any reason — non-fatal.
         pass
