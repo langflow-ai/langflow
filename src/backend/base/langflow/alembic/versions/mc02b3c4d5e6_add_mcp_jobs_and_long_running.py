@@ -75,9 +75,12 @@ def upgrade() -> None:
             ),
             sa.Column("tool_name", sa.String(length=255), nullable=False),
             sa.Column("inputs", sa.JSON(), nullable=False),
+            # status is Text() (not VARCHAR(n)) to match the SQLModel field —
+            # the model stores enum values as TEXT so future states can be added
+            # without an ALTER. Width-limiting would create a phantom-diff.
             sa.Column(
                 "status",
-                sa.String(length=32),
+                sa.Text(),
                 nullable=False,
                 server_default="pending",
             ),
@@ -96,30 +99,21 @@ def upgrade() -> None:
             sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )
-        op.create_index(
-            "ix_mcp_jobs_project_status",
-            "mcp_jobs",
-            ["project_id", "status", "created_at"],
-        )
-        op.create_index(
-            "ix_mcp_jobs_flow",
-            "mcp_jobs",
-            ["flow_id", "created_at"],
-        )
-        op.create_index(
-            "ix_mcp_jobs_status_pending",
-            "mcp_jobs",
-            ["status", "created_at"],
-        )
+        # Single-column indexes match the ``index=True`` flags on the SQLModel
+        # fields. Composite indexes would phantom-diff against the model on
+        # every autogenerate run.
+        op.create_index("ix_mcp_jobs_project_id", "mcp_jobs", ["project_id"])
+        op.create_index("ix_mcp_jobs_flow_id", "mcp_jobs", ["flow_id"])
+        op.create_index("ix_mcp_jobs_status", "mcp_jobs", ["status"])
 
 
 def downgrade() -> None:
     conn = op.get_bind()
 
     if migration.table_exists("mcp_jobs", conn):
-        op.drop_index("ix_mcp_jobs_status_pending", table_name="mcp_jobs")
-        op.drop_index("ix_mcp_jobs_flow", table_name="mcp_jobs")
-        op.drop_index("ix_mcp_jobs_project_status", table_name="mcp_jobs")
+        op.drop_index("ix_mcp_jobs_status", table_name="mcp_jobs")
+        op.drop_index("ix_mcp_jobs_flow_id", table_name="mcp_jobs")
+        op.drop_index("ix_mcp_jobs_project_id", table_name="mcp_jobs")
         op.drop_table("mcp_jobs")
 
     with op.batch_alter_table("flow", schema=None) as batch_op:
