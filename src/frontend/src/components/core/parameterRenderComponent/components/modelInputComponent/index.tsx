@@ -95,7 +95,7 @@ export default function ModelInputComponent({
   // prevents infinite loop when no models are available
   const hasProcessedEmptyRef = useRef(false);
 
-  const postTemplateValue = usePostTemplateValue({
+  const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
     nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
