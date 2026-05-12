@@ -26,9 +26,9 @@ test(
     expect(vectorStoreProject).toBeDefined();
 
     // Verify the template uses the native Knowledge components
-    const nodeTypes: string[] = (
-      vectorStoreProject?.data?.nodes ?? []
-    ).map((node: any) => node.data?.type as string);
+    const nodeTypes: string[] = (vectorStoreProject?.data?.nodes ?? []).map(
+      (node: any) => node.data?.type as string,
+    );
 
     expect(nodeTypes).toContain("KnowledgeIngestion");
     expect(nodeTypes).toContain("KnowledgeBase");

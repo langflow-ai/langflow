@@ -29,9 +29,9 @@ withEventDeliveryModes(
     await initialGPTsetup(page);
 
     // Confirm the template uses native Knowledge components (no AstraDB)
-    await expect(
-      page.getByTestId("title-Knowledge Ingestion"),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("title-Knowledge Ingestion")).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page.getByTestId("title-Knowledge Base")).toBeVisible();
     await expect(page.getByTestId("title-Astra DB")).toHaveCount(0);
 
@@ -82,14 +82,10 @@ withEventDeliveryModes(
     });
 
     // Refresh the KB list so the newly ingested KB appears
-    await knowledgeBaseNode
-      .getByTestId("dropdown_str_knowledge_base")
-      .click();
+    await knowledgeBaseNode.getByTestId("dropdown_str_knowledge_base").click();
     await page.getByTestId("refresh-dropdown-list-knowledge_base").click();
     await page.waitForTimeout(1000);
-    await knowledgeBaseNode
-      .getByTestId("dropdown_str_knowledge_base")
-      .click();
+    await knowledgeBaseNode.getByTestId("dropdown_str_knowledge_base").click();
     await page.getByTestId("test-kb-rag-0-option").click();
 
     // Run the full RAG pipeline
@@ -115,9 +111,7 @@ withEventDeliveryModes(
     await page.waitForSelector("text=this is a test file", {
       timeout: 120000,
     });
-    await expect(
-      page.getByText("this is a test file").last(),
-    ).toBeVisible();
+    await expect(page.getByText("this is a test file").last()).toBeVisible();
   },
   { timeout: 120000 },
 );
