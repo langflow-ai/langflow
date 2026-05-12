@@ -358,7 +358,7 @@ html[data-theme="light"] .sidebar-group-label {
 }
 
 [data-theme="dark"] .sidebar-ad a.menu__link {
-  background-color: var(--ifm-card-background-color, #232328);
+  background-color: #111;
   border-color: var(--ifm-card-border-color, #303038);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.04) inset,
@@ -367,7 +367,7 @@ html[data-theme="light"] .sidebar-group-label {
 }
 
 [data-theme="light"] .sidebar-ad a.menu__link {
-  background-color: var(--ifm-background-surface-color);
+  background-color: var(--ifm-background-color);
   border-color: var(--ifm-color-emphasis-200);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.8) inset,
