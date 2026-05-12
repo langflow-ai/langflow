@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import time
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -12,9 +13,6 @@ from lfx.log.logger import logger
 
 from langflow.events.event_manager import EventManager
 from langflow.services.base import Service
-
-if TYPE_CHECKING:
-    from uuid import UUID
 
 # Sentinel value written to Redis Streams to signal end-of-stream to consumers.
 _STREAM_SENTINEL_DATA = b"__sentinel__"
@@ -460,12 +458,17 @@ class RedisQueueWrapper:
     # Protects against the early-poll race where the consumer wrapper is created
     # before the producer worker has issued its first XADD.
     _STARTUP_GRACE_S = 30.0
+    # Upper bound on the local buffer.  Provides backpressure so the fill task
+    # doesn't read arbitrarily far ahead of a slow consumer and accumulate events
+    # in memory unboundedly.  1 000 events x ~200 B each ~= 200 KB per wrapper —
+    # well within reason even with many concurrent jobs.
+    _BUFFER_MAXSIZE = 1000
 
     def __init__(self, job_id: str, client: Any, ttl: int) -> None:
         self._job_id = job_id
         self._client = client
         self._ttl = ttl
-        self._buffer: asyncio.Queue = asyncio.Queue()
+        self._buffer: asyncio.Queue = asyncio.Queue(maxsize=self._BUFFER_MAXSIZE)
         self._last_id = "0-0"  # read from the beginning of the stream
         # Flips to True the first time XREAD returns messages for this stream.
         # Until then, "stream key does not exist" is NOT treated as end-of-stream
@@ -478,10 +481,39 @@ class RedisQueueWrapper:
         # and lets the fill task populate the buffer before the loop exits.
         self._first_read_done: bool = False
         self._fill_task: asyncio.Task = asyncio.create_task(self._fill_from_redis())
+        self._fill_task.add_done_callback(self._on_fill_done)
 
     @property
     def _stream_key(self) -> str:
         return f"{self.STREAM_PREFIX}{self._job_id}"
+
+    def _on_fill_done(self, task: asyncio.Task) -> None:
+        """Ensure the consumer is unblocked if the fill task exits unexpectedly.
+
+        A clean exit (sentinel received or ``CancelledError``) already puts the
+        end-of-stream sentinel into the buffer.  If the task raised an unhandled
+        exception that path is skipped — this callback catches that gap so the
+        consumer's ``await queue.get()`` doesn't block forever.
+
+        Done callbacks run synchronously, so we use the non-blocking
+        ``put_nowait``.  If the buffer happens to be at capacity (slow consumer
+        + bounded buffer), evict the oldest item to make room: losing one event
+        is strictly preferable to a stuck consumer.
+        """
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        logger.error(
+            f"RedisQueueWrapper fill task raised for job {self._job_id}: {exc!r} "
+            "— delivering end-of-stream sentinel so the consumer is not left hanging."
+        )
+        if self._buffer.full():
+            with contextlib.suppress(asyncio.QueueEmpty):
+                self._buffer.get_nowait()
+        with contextlib.suppress(asyncio.QueueFull):
+            self._buffer.put_nowait((None, None, time.time()))
 
     async def _fill_from_redis(self) -> None:
         """Read events from the Redis Stream and forward them to the local buffer."""
@@ -525,11 +557,20 @@ class RedisQueueWrapper:
                         await self._buffer.put((None, None, time.time()))
                         return
                     # Otherwise keep looping — next XREAD will block again.
-                elif not await self._client.exists(self._stream_key):
-                    # Stream was observed before and the key is now gone — the job
-                    # was cleaned up on the producer side; signal end-of-stream.
-                    await self._buffer.put((None, None, time.time()))
-                    return
+                else:
+                    # Stream was observed before; check whether the key still exists.
+                    # Wrap in try/except so a transient Redis error here uses the same
+                    # backoff path as an XREAD error rather than crashing the fill task.
+                    try:
+                        key_exists = await self._client.exists(self._stream_key)
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.awarning(f"RedisQueueWrapper exists() check failed for {self._job_id}: {exc}")
+                        await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
+                        continue
+                    if not key_exists:
+                        # Key gone — the job was cleaned up on the producer side.
+                        await self._buffer.put((None, None, time.time()))
+                        return
         except asyncio.CancelledError:
             return
 
@@ -602,6 +643,16 @@ class RedisJobQueueService(JobQueueService):
 
     STREAM_PREFIX = _STREAM_PREFIX
     OWNER_PREFIX = _OWNER_PREFIX
+
+    # Bridge retry / TTL tunables — class-level so tests can override without
+    # patching the loop body.
+    _MAX_BRIDGE_RETRY_DELAY_S = 4.0
+    # Refresh the stream TTL on the first event, then every _TTL_REFRESH_EVENTS
+    # events *or* every _TTL_REFRESH_SECS seconds, whichever comes first.
+    # Calling expire() on every XADD doubles Redis round-trips and caps
+    # single-job throughput; periodic refresh preserves semantics at ~1/100 the cost.
+    _TTL_REFRESH_EVENTS = 100
+    _TTL_REFRESH_SECS = 30.0
 
     def __init__(
         self,
@@ -684,13 +735,6 @@ class RedisJobQueueService(JobQueueService):
         self._bridge_tasks[job_id] = bridge
         return local_queue, event_manager
 
-    # Refresh the stream TTL on the first event, then every _TTL_REFRESH_EVENTS
-    # events *or* every _TTL_REFRESH_SECS seconds, whichever comes first.
-    # Calling expire() on every XADD doubles Redis round-trips and caps
-    # single-job throughput; periodic refresh preserves semantics at ~1/100 the cost.
-    _TTL_REFRESH_EVENTS = 100
-    _TTL_REFRESH_SECS = 30.0
-
     async def _bridge_to_redis(self, job_id: str, local_queue: asyncio.Queue) -> None:
         """Drain the local queue and publish each event to the Redis Stream.
 
@@ -700,7 +744,6 @@ class RedisJobQueueService(JobQueueService):
         backs off before retrying, preventing event loss.
         """
         stream_key = self._stream_key(job_id)
-        _max_retry_delay = 4.0
         _retry_delay = 0.1
         in_flight_item = None
         published = False
@@ -744,7 +787,7 @@ class RedisJobQueueService(JobQueueService):
                             f"Bridge XADD failed for job_id {job_id} (retrying in {_retry_delay}s): {exc}"
                         )
                         await asyncio.sleep(_retry_delay)
-                        _retry_delay = min(_retry_delay * 2, _max_retry_delay)
+                        _retry_delay = min(_retry_delay * 2, self._MAX_BRIDGE_RETRY_DELAY_S)
                 event_count += 1
                 if is_sentinel:
                     return
@@ -869,10 +912,8 @@ class RedisJobQueueService(JobQueueService):
             owner_key = self._owner_key(job_id)
             value = await self._client.get(owner_key)
             if value:
-                from uuid import UUID as _UUID
-
                 # Slide the TTL forward so builds longer than the initial TTL
                 # continue to pass ownership checks as long as they are polled.
                 await self._client.expire(owner_key, self._ttl)
-                return _UUID(value.decode())
+                return UUID(value.decode())
         return None

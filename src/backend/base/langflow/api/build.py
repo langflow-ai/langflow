@@ -4,6 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from typing import Protocol, runtime_checkable
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
@@ -40,6 +41,21 @@ from langflow.services.deps import (
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
+
+
+@runtime_checkable
+class _CancellableQueue(Protocol):
+    """Structural protocol for queues that expose an async ``cancel()`` hook.
+
+    Used by ``create_flow_response.on_disconnect`` to terminate background work
+    owned by the queue itself.  :class:`~langflow.services.job_queue.service.RedisQueueWrapper`
+    implements this so the wrapper's background fill task is cancelled on client
+    disconnect.  Plain ``asyncio.Queue`` does not have a ``cancel`` method and
+    so does not satisfy the protocol — those cases are covered by the separate
+    ``event_task.cancel()`` call in ``on_disconnect``.
+    """
+
+    async def cancel(self) -> None: ...
 
 
 def _log_component_input_telemetry(
@@ -226,11 +242,8 @@ async def create_flow_response(
                 "The producer will keep running until the build finishes naturally. "
                 "Cross-worker passive-disconnect cancellation is not yet implemented."
             )
-        queue_cancel = getattr(queue, "cancel", None)
-        if queue_cancel is not None:
-            maybe_coro = queue_cancel()
-            if asyncio.iscoroutine(maybe_coro):
-                await maybe_coro
+        if isinstance(queue, _CancellableQueue):
+            await queue.cancel()
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(

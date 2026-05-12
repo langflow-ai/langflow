@@ -13,7 +13,7 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
-from langflow.api.build import create_flow_response, get_flow_events_response
+from langflow.api.build import _CancellableQueue, create_flow_response, get_flow_events_response
 from langflow.api.utils import EventDeliveryType
 from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
@@ -543,3 +543,105 @@ async def test_streaming_disconnect_cancels_queue_wrapper_without_event_task():
     await response.on_disconnect()
 
     assert queue.cancelled
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_satisfies_cancellable_queue_protocol():
+    """RedisQueueWrapper satisfies the _CancellableQueue structural Protocol."""
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    assert isinstance(wrapper, _CancellableQueue), (
+        "RedisQueueWrapper must satisfy the _CancellableQueue Protocol so that "
+        "on_disconnect() can call wrapper.cancel() via isinstance check."
+    )
+    await wrapper.cancel()
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_done_callback_delivers_sentinel_on_fill_crash():
+    """If the fill task crashes, the done callback puts the sentinel in the buffer.
+
+    This guards against consumers hanging indefinitely on ``await queue.get()``
+    when an unexpected exception escapes ``_fill_from_redis``.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+
+    # Forcibly inject a RuntimeError into the fill task by cancelling it first,
+    # then directly invoking the done-callback with a fake failed task.
+    await wrapper.cancel()
+
+    class _FailedTask:
+        def cancelled(self) -> bool:
+            return False
+
+        def exception(self) -> BaseException:
+            return RuntimeError("simulated fill crash")
+
+    # Drain anything already in the buffer so the sentinel is the next item.
+    while not wrapper._buffer.empty():
+        wrapper._buffer.get_nowait()
+
+    wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+    sentinel = wrapper._buffer.get_nowait()
+    assert sentinel[0] is None
+    assert sentinel[1] is None
+
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_buffer_bounded():
+    """The internal buffer respects _BUFFER_MAXSIZE to bound memory usage."""
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    await wrapper.cancel()
+
+    assert wrapper._buffer.maxsize == RedisQueueWrapper._BUFFER_MAXSIZE
+    assert wrapper._buffer.maxsize > 0
+
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_done_callback_evicts_to_make_room_for_sentinel():
+    """If the buffer is full when the fill task crashes, an oldest item is evicted.
+
+    Losing one event is strictly preferable to leaving the consumer blocked on
+    ``await get()`` indefinitely.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    await wrapper.cancel()
+
+    # Saturate the buffer so put_nowait(sentinel) would otherwise fail.
+    for i in range(wrapper._buffer.maxsize):
+        wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))
+    assert wrapper._buffer.full()
+
+    class _FailedTask:
+        def cancelled(self) -> bool:
+            return False
+
+        def exception(self) -> BaseException:
+            return RuntimeError("simulated fill crash")
+
+    wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+    # The buffer should still be at capacity (one evicted, one sentinel added).
+    assert wrapper._buffer.full()
+
+    # Drain everything; the sentinel must be present.
+    items = []
+    while not wrapper._buffer.empty():
+        items.append(wrapper._buffer.get_nowait())
+    sentinels = [item for item in items if item[0] is None and item[1] is None]
+    assert len(sentinels) == 1, "Exactly one sentinel must reach the consumer"
+
+    await fake_client.aclose()
