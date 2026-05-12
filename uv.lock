@@ -5585,9 +5585,9 @@ name = "ibm-watsonx-orchestrate-clients"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ibm-cloud-sdk-core", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "websocket-client", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-cloud-sdk-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "websocket-client", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/02/6b/73365345e2564fff78d612bff1289dac7d3ff00058e3064fa9aaf2c2691e/ibm_watsonx_orchestrate_clients-2.8.0.tar.gz", hash = "sha256:3d36113ed3190d5be7dae647b86937522b5af0711aa4011c13c898ee4d859938", size = 1878, upload-time = "2026-04-14T18:58:40.961Z" }
 wheels = [
@@ -5599,8 +5599,8 @@ name = "ibm-watsonx-orchestrate-core"
 version = "2.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pydantic", marker = "python_full_version >= '3.11'" },
-    { name = "pyyaml", marker = "python_full_version >= '3.11'" },
+    { name = "pydantic", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "pyyaml", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/9f/df367b888da6a11c3fc3bc675c215a6fbc71a83cd7e2396c7a7cbcdd8cd0/ibm_watsonx_orchestrate_core-2.8.0.tar.gz", hash = "sha256:3e47c5add6b94d762f90654f72b8d29181afcae32714ab190b4066c457ff3d17", size = 1216, upload-time = "2026-04-14T18:58:41.963Z" }
 wheels = [
@@ -6963,9 +6963,9 @@ version = "1.0.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ibm-watsonx-ai", version = "1.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "json-repair" },
-    { name = "langchain-core" },
+    { name = "ibm-watsonx-ai", version = "1.5.10", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14' and platform_machine != 'arm64') or (python_full_version >= '3.11' and platform_machine == 'arm64') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "json-repair", marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or platform_machine == 'arm64' or sys_platform != 'darwin'" },
+    { name = "langchain-core", marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or platform_machine == 'arm64' or sys_platform != 'darwin'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/89/51/ad29bbb1a0ef24f6ede376d00660d8ea76c56cc07aabf52c1d0c7234c8bd/langchain_ibm-1.0.7.tar.gz", hash = "sha256:a332a06d8765139a78d0d7e5ea2be1c7a6a9a19dea9954fee8d59c7d747f3cc3", size = 70401, upload-time = "2026-04-27T08:16:49.524Z" }
 wheels = [
@@ -7376,7 +7376,7 @@ dependencies = [
     { name = "gunicorn" },
     { name = "httpx", extra = ["http2"] },
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ibm-watsonx-ai", version = "1.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-ai", version = "1.5.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
     { name = "jaraco-context" },
     { name = "jq", marker = "sys_platform != 'win32'" },
     { name = "json-repair" },
@@ -7386,7 +7386,7 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langchain-experimental" },
-    { name = "langchain-ibm" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
     { name = "langchainhub" },
     { name = "langgraph-checkpoint" },
     { name = "lfx" },
@@ -7488,8 +7488,8 @@ all = [
     { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
@@ -7656,8 +7656,8 @@ complete = [
     { name = "graph-retriever" },
     { name = "huggingface-hub" },
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
     { name = "jigsawstack" },
     { name = "json-repair" },
     { name = "kubernetes" },
@@ -7811,8 +7811,8 @@ huggingface = [
 ]
 ibm-watsonx-clients = [
     { name = "ibm-cloud-sdk-core" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
 ]
 jigsawstack = [
     { name = "jigsawstack" },
@@ -8107,9 +8107,9 @@ requires-dist = [
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
-    { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
-    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
-    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
+    { name = "ibm-watsonx-ai", marker = "python_full_version < '3.14'", specifier = ">=1.3.1,<2.0.0" },
+    { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11' and python_full_version < '3.14' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
+    { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11' and python_full_version < '3.14' and extra == 'ibm-watsonx-clients'", specifier = "~=2.8.0" },
     { name = "jaraco-context", specifier = ">=6.1.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "jq", marker = "sys_platform != 'win32'", specifier = ">=1.7.0,<2.0.0" },
@@ -8135,7 +8135,7 @@ requires-dist = [
     { name = "langchain-graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'langchain-huggingface') or (sys_platform != 'darwin' and extra == 'langchain-huggingface')", specifier = "~=1.2.0" },
-    { name = "langchain-ibm", specifier = "~=1.0.2" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'", specifier = "~=1.0.2" },
     { name = "langchain-mcp-adapters", marker = "extra == 'langchain-mcp-adapters'", specifier = ">=0.1.14,<0.2.0" },
     { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "~=0.3.2" },
     { name = "langchain-mistralai", marker = "extra == 'mistral'", specifier = "~=1.1.1" },
