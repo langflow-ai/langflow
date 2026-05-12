@@ -4,8 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from lfx.components.models_and_agents.memory import MemoryComponent, _coerce_flow_id_to_uuid
-from lfx.memory import aget_messages
+from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
@@ -480,16 +479,14 @@ class AgentComponent(ToolCallingAgentComponent):
     async def get_memory_data(self):
         # Scope by flow_id so default playground session names (e.g. "New Session 0")
         # cannot leak chat history across unrelated flows. See issue #13059.
-        flow_id_scope = _coerce_flow_id_to_uuid(getattr(self.graph, "flow_id", None))
-        messages = await aget_messages(
+        # The helper also returns [] when n_messages == 0, preserving the
+        # explicit "memory disabled" contract from MemoryComponent.retrieve_messages.
+        messages = await aget_agent_chat_history(
             session_id=self.graph.session_id,
+            flow_id=getattr(self.graph, "flow_id", None),
             context_id=self.context_id,
-            flow_id=flow_id_scope,
-            limit=10000,
-            order="ASC",
+            n_messages=self.n_messages,
         )
-        if self.n_messages:
-            messages = messages[-self.n_messages :]
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]

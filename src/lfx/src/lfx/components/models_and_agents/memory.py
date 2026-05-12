@@ -51,6 +51,39 @@ def _safe_graph_flow_id(component: Component) -> Any:
     return getattr(graph, "flow_id", None)
 
 
+async def aget_agent_chat_history(
+    *,
+    session_id: str | UUID | None,
+    flow_id: Any,
+    context_id: str | None = None,
+    n_messages: int | None = None,
+) -> list[Message]:
+    """Fetch chat history for an agent, scoped to a single flow.
+
+    Centralizes the contract previously implemented by
+    ``MemoryComponent.retrieve_messages`` for agent callers:
+
+    * Returns ``[]`` when ``n_messages == 0`` (memory explicitly disabled).
+      Without this short-circuit, the limit=10000 query would still execute
+      and the caller's ``messages[-0:]`` would return everything.
+    * Scopes by ``flow_id`` (coerced to ``UUID``) so default playground
+      session names cannot leak history across flows (issue #13059).
+    * Returns up to ``n_messages`` most recent messages in ascending order.
+    """
+    if n_messages == 0:
+        return []
+    messages = await aget_messages(
+        session_id=session_id,
+        context_id=context_id,
+        flow_id=_coerce_flow_id_to_uuid(flow_id),
+        limit=10000,
+        order="ASC",
+    )
+    if n_messages:
+        messages = messages[-n_messages:]
+    return messages
+
+
 class MemoryComponent(Component):
     display_name = "Message History"
     description = "Stores or retrieves stored chat messages from Langflow tables or an external memory."

@@ -21,7 +21,11 @@ from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from lfx.components.models_and_agents.memory import MemoryComponent, _coerce_flow_id_to_uuid
+from lfx.components.models_and_agents.memory import (
+    MemoryComponent,
+    _coerce_flow_id_to_uuid,
+    aget_agent_chat_history,
+)
 
 
 def _build_component(
@@ -154,54 +158,143 @@ class TestRetrieveMessagesPassesFlowId:
         mock_get.assert_not_awaited()
 
 
-class TestAgentGetMemoryDataPassesFlowId:
-    """The Agent component delegates chat history fetching; verify the leak fix.
+class TestAgetAgentChatHistoryHelper:
+    """The shared helper centralizes the agent-side memory contract.
 
-    ``Agent.get_memory_data`` previously spawned an ad-hoc MemoryComponent
-    whose ``_vertex`` was None, so it could not learn the running flow's
-    ``flow_id`` and emitted an unscoped query. The fix calls
-    ``aget_messages`` directly with the parent agent's ``self.graph.flow_id``.
+    Both ``AgentComponent`` and ``CugaComponent`` route through this helper,
+    so testing the helper directly covers their common behavior.
     """
 
+    @pytest.mark.asyncio
+    async def test_passes_flow_id_as_uuid(self):
+        flow_id_str = "44444444-4444-4444-4444-444444444444"
+
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=[]),
+        ) as mock_get:
+            await aget_agent_chat_history(
+                session_id="New Session 0",
+                flow_id=flow_id_str,
+                context_id="",
+                n_messages=10,
+            )
+
+        mock_get.assert_awaited_once()
+        kwargs = mock_get.await_args.kwargs
+        assert kwargs["flow_id"] == UUID(flow_id_str), "aget_agent_chat_history must scope by flow_id (issue #13059)."
+        assert kwargs["session_id"] == "New Session 0"
+        assert kwargs["order"] == "ASC"
+
+    @pytest.mark.asyncio
+    async def test_n_messages_zero_short_circuits_without_querying(self):
+        """Regression: ``n_messages == 0`` means "memory disabled".
+
+        Before this short-circuit, ``messages[-0:]`` returned the full
+        ``limit=10000`` result, so users who set the field to 0 to disable
+        chat memory unexpectedly got full history back.
+        """
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=[SimpleNamespace(id=f"msg-{i}") for i in range(5)]),
+        ) as mock_get:
+            result = await aget_agent_chat_history(
+                session_id="s",
+                flow_id="66666666-6666-6666-6666-666666666666",
+                n_messages=0,
+            )
+
+        assert result == []
+        mock_get.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_slices_to_n_messages_most_recent(self):
+        messages = [SimpleNamespace(id=f"msg-{i}") for i in range(5)]
+
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=messages),
+        ):
+            result = await aget_agent_chat_history(
+                session_id="s",
+                flow_id="77777777-7777-7777-7777-777777777777",
+                n_messages=2,
+            )
+
+        assert [m.id for m in result] == ["msg-3", "msg-4"]
+
+    @pytest.mark.asyncio
+    async def test_missing_n_messages_returns_all_fetched(self):
+        messages = [SimpleNamespace(id=f"msg-{i}") for i in range(3)]
+
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=messages),
+        ):
+            result = await aget_agent_chat_history(
+                session_id="s",
+                flow_id=None,
+                n_messages=None,
+            )
+
+        assert [m.id for m in result] == ["msg-0", "msg-1", "msg-2"]
+
+    @pytest.mark.asyncio
+    async def test_invalid_flow_id_falls_back_to_unscoped_query(self):
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=[]),
+        ) as mock_get:
+            await aget_agent_chat_history(
+                session_id="s",
+                flow_id="not-a-uuid",
+                n_messages=10,
+            )
+
+        assert mock_get.await_args.kwargs["flow_id"] is None
+
+
+class TestAgentGetMemoryDataIntegration:
+    """End-to-end checks at the AgentComponent boundary."""
+
     @staticmethod
-    def _make_agent(flow_id: str | UUID | None, session_id: str = "New Session 0"):
+    def _make_agent(flow_id: str | UUID | None, session_id: str = "New Session 0", n_messages: int = 10):
         from lfx.components.models_and_agents.agent import AgentComponent
 
         agent = AgentComponent.__new__(AgentComponent)
         agent._vertex = SimpleNamespace(graph=SimpleNamespace(flow_id=flow_id, session_id=session_id))
         agent.context_id = ""
-        agent.n_messages = 10
+        agent.n_messages = n_messages
         agent.input_value = SimpleNamespace(id="current-input-id")
         return agent
 
     @pytest.mark.asyncio
-    async def test_agent_get_memory_data_scopes_by_flow_id(self):
-        flow_id_str = "44444444-4444-4444-4444-444444444444"
+    async def test_agent_routes_through_helper_with_flow_id(self):
+        flow_id_str = "88888888-8888-8888-8888-888888888888"
         agent = self._make_agent(flow_id=flow_id_str)
 
         with patch(
-            "lfx.components.models_and_agents.agent.aget_messages",
+            "lfx.components.models_and_agents.agent.aget_agent_chat_history",
             new=AsyncMock(return_value=[]),
-        ) as mock_get:
+        ) as mock_helper:
             await agent.get_memory_data()
 
-        mock_get.assert_awaited_once()
-        kwargs = mock_get.await_args.kwargs
-        assert kwargs["flow_id"] == UUID(flow_id_str), "Agent.get_memory_data must scope by flow_id (issue #13059)."
+        mock_helper.assert_awaited_once()
+        kwargs = mock_helper.await_args.kwargs
+        assert kwargs["flow_id"] == flow_id_str
         assert kwargs["session_id"] == "New Session 0"
-        assert kwargs["order"] == "ASC"
+        assert kwargs["n_messages"] == 10
 
     @pytest.mark.asyncio
     async def test_agent_filters_out_current_input_message(self):
         """The agent must not echo the current input back as chat history."""
-        flow_id_str = "55555555-5555-5555-5555-555555555555"
-        agent = self._make_agent(flow_id=flow_id_str)
+        agent = self._make_agent(flow_id="55555555-5555-5555-5555-555555555555")
 
         current = SimpleNamespace(id="current-input-id", text="ping")
         old = SimpleNamespace(id="old-msg-id", text="earlier")
 
         with patch(
-            "lfx.components.models_and_agents.agent.aget_messages",
+            "lfx.components.models_and_agents.agent.aget_agent_chat_history",
             new=AsyncMock(return_value=[old, current]),
         ):
             result = await agent.get_memory_data()
@@ -209,13 +302,61 @@ class TestAgentGetMemoryDataPassesFlowId:
         assert [m.id for m in result] == ["old-msg-id"]
 
     @pytest.mark.asyncio
-    async def test_agent_handles_missing_flow_id_without_raising(self):
-        agent = self._make_agent(flow_id=None)
+    async def test_agent_n_messages_zero_disables_memory(self):
+        """Regression: setting "Number of Chat History Messages" to 0 must disable memory."""
+        agent = self._make_agent(flow_id="99999999-9999-9999-9999-999999999999", n_messages=0)
+
+        # Patch the underlying DB query so a regression resurfaces as a real call.
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=[SimpleNamespace(id=f"msg-{i}") for i in range(5)]),
+        ) as mock_get:
+            result = await agent.get_memory_data()
+
+        assert result == []
+        mock_get.assert_not_awaited()
+
+
+class TestCugaGetMemoryDataIntegration:
+    """The Cuga agent had the same leak pattern; verify the fix reaches it too."""
+
+    @staticmethod
+    def _make_cuga(flow_id: str | UUID | None, session_id: str = "shared", n_messages: int = 10):
+        try:
+            from lfx.components.cuga import cuga_agent
+        except Exception as exc:  # pragma: no cover - optional deps
+            pytest.skip(f"cuga_agent not importable in this env: {exc}")
+
+        agent = cuga_agent.CugaComponent.__new__(cuga_agent.CugaComponent)
+        agent._vertex = SimpleNamespace(graph=SimpleNamespace(flow_id=flow_id, session_id=session_id))
+        agent.n_messages = n_messages
+        agent.input_value = SimpleNamespace(id="current-input-id")
+        return agent
+
+    @pytest.mark.asyncio
+    async def test_cuga_scopes_by_flow_id(self):
+        flow_id_str = "cccccccc-cccc-cccc-cccc-cccccccccccc"
+        agent = self._make_cuga(flow_id=flow_id_str)
 
         with patch(
-            "lfx.components.models_and_agents.agent.aget_messages",
+            "lfx.components.cuga.cuga_agent.aget_agent_chat_history",
             new=AsyncMock(return_value=[]),
-        ) as mock_get:
+        ) as mock_helper:
             await agent.get_memory_data()
 
-        assert mock_get.await_args.kwargs["flow_id"] is None
+        kwargs = mock_helper.await_args.kwargs
+        assert kwargs["flow_id"] == flow_id_str
+        assert kwargs["session_id"] == "shared"
+
+    @pytest.mark.asyncio
+    async def test_cuga_n_messages_zero_disables_memory(self):
+        agent = self._make_cuga(flow_id="dddddddd-dddd-dddd-dddd-dddddddddddd", n_messages=0)
+
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=[SimpleNamespace(id=f"msg-{i}") for i in range(3)]),
+        ) as mock_get:
+            result = await agent.get_memory_data()
+
+        assert result == []
+        mock_get.assert_not_awaited()
