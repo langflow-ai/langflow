@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -19,6 +20,7 @@ import { McpFlowsSection } from "./McpFlowsSection";
 import { McpJsonContent } from "./McpJsonContent";
 
 const McpServerTab = ({ folderName }: { folderName: string }) => {
+  const { t } = useTranslation();
   const isDarkMode = useTheme().dark;
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
@@ -29,7 +31,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
   );
   const isLocalConnection = useCustomIsLocalConnection();
   const [selectedMode, setSelectedMode] = useState<string>(
-    isLocalConnection ? "Auto install" : "JSON",
+    isLocalConnection ? "auto-install" : "json",
   );
   const [selectedTransport, setSelectedTransport] =
     useState<MCPTransport>("streamablehttp");
@@ -68,11 +70,10 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
       <div className="flex justify-between gap-4 items-start">
         <div>
           <div className="pb-2 font-medium" data-testid="mcp-server-title">
-            MCP Server
+            {t("mcp.serverTitle")}
           </div>
           <div className="pb-4 text-mmd text-muted-foreground">
-            Access your Project's flows as Tools within a MCP Server. Learn more
-            in our
+            {t("mcp.serverDescription")}
             <a
               className="text-accent-pink-foreground"
               href="https://docs.langflow.org/mcp-server"
@@ -80,7 +81,7 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
               rel="noreferrer"
             >
               {" "}
-              Projects as MCP Servers guide.
+              {t("mcp.serverGuideLink")}
             </a>
           </div>
         </div>
@@ -105,24 +106,27 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
 
           <div className={cn("flex flex-col", !ENABLE_MCP_COMPOSER && "mt-2")}>
             <div className="flex flex-row justify-start border-b border-border">
-              {[{ name: "Auto install" }, { name: "JSON" }].map((item) => (
+              {[
+                { id: "auto-install", label: t("mcp.autoInstall") },
+                { id: "json", label: "JSON" },
+              ].map((item) => (
                 <Button
                   unstyled
-                  key={item.name}
+                  key={item.id}
                   className={`flex h-6 flex-row items-end gap-2 text-nowrap border-b-2 border-border border-b-transparent !py-1 font-medium ${
-                    selectedMode === item.name
+                    selectedMode === item.id
                       ? "border-b-2 border-black dark:border-b-white"
                       : "text-muted-foreground hover:text-foreground"
                   } px-3 py-2 text-[13px]`}
-                  onClick={() => setSelectedMode(item.name)}
+                  onClick={() => setSelectedMode(item.id)}
                 >
-                  <span>{item.name}</span>
+                  <span>{item.label}</span>
                 </Button>
               ))}
             </div>
           </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 rounded-md border border-dashed border-border p-4">
             {hasOAuthError ? (
               <div className="p-4 bg-accent-red-subtle border border-accent-red-border rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -131,18 +135,17 @@ const McpServerTab = ({ folderName }: { folderName: string }) => {
                     className="h-4 w-4 text-accent-red-foreground"
                   />
                   <span className="font-medium text-accent-red-foreground">
-                    MCP Server Configuration Error
+                    {t("mcp.configError")}
                   </span>
                 </div>
                 <p className="text-mmd text-accent-red-foreground">
                   {composerUrlData?.error_message}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Please fix the OAuth configuration in your project settings to
-                  generate the MCP server configuration.
+                  {t("mcp.configErrorFix")}
                 </p>
               </div>
-            ) : selectedMode === "JSON" ? (
+            ) : selectedMode === "json" ? (
               <McpJsonContent
                 selectedPlatform={selectedPlatform}
                 setSelectedPlatform={setSelectedPlatform}

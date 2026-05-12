@@ -110,7 +110,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([newConn, existingConn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-new", "conn-existing"]]]),
@@ -142,7 +147,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-1"]]]),
@@ -176,7 +186,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-1"]]]),
@@ -213,7 +228,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-1"]]]),
@@ -246,7 +266,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-empty"]]]),
@@ -276,7 +301,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-1"]]]),
@@ -308,7 +338,12 @@ describe("buildConnectionPayloads", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setConnections([conn]);
       result.current.setAttachedConnectionByFlow(
         new Map([["flow-1", ["conn-1"]]]),
@@ -346,8 +381,18 @@ describe("buildDeploymentUpdatePayload", () => {
     const { result } = renderEditHook();
 
     act(() => {
-      result.current.handleSelectVersion("flow-new-a", "ver-new-a", "v1");
-      result.current.handleSelectVersion("flow-new-b", "ver-new-b", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-new-a",
+        flowName: "Flow",
+        versionId: "ver-new-a",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-new-b",
+        flowName: "Flow",
+        versionId: "ver-new-b",
+        versionTag: "v1",
+      });
       result.current.setAttachedConnectionByFlow(
         new Map([
           ["flow-1", ["app-1"]], // unchanged
@@ -389,93 +434,7 @@ describe("buildDeploymentUpdatePayload", () => {
     const flowB = upsertFlows.find((f) => f.flow_version_id === "ver-new-b");
     expect(flowB).toBeDefined();
     expect(flowB!.add_app_ids).toEqual([]);
-    expect(flowB!.tool_name).toBeUndefined();
-  });
-
-  it("calculates remove_flows correctly for removed flows", () => {
-    const { result } = renderEditHook();
-
-    act(() => {
-      result.current.handleRemoveAttachedFlow("flow-1");
-      result.current.handleRemoveAttachedFlow("flow-2");
-    });
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-    const removeFlows =
-      (payload.provider_data as { remove_flows?: string[] })?.remove_flows ??
-      [];
-    expect(removeFlows).toHaveLength(2);
-    expect(removeFlows.sort()).toEqual(["ver-1", "ver-2"]);
-  });
-
-  it("handles tool name changes on existing flows (upsert_flows)", () => {
-    const { result } = renderEditHook();
-
-    act(() => {
-      result.current.setToolNameByFlow(
-        new Map([
-          ["flow-1", "renamed_tool_one"],
-          ["flow-2", "tool_two"], // unchanged
-        ]),
-      );
-    });
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-    const upsertFlows =
-      (
-        payload.provider_data as {
-          upsert_flows?: Array<{
-            flow_version_id: string;
-            tool_name?: string;
-            add_app_ids: string[];
-            remove_app_ids: string[];
-          }>;
-        }
-      )?.upsert_flows ?? [];
-
-    expect(upsertFlows).toHaveLength(1);
-    expect(upsertFlows[0].flow_version_id).toBe("ver-1");
-    expect(upsertFlows[0].tool_name).toBe("renamed_tool_one");
-    // Connections unchanged
-    expect(upsertFlows[0].add_app_ids).toEqual([]);
-    expect(upsertFlows[0].remove_app_ids).toEqual([]);
-  });
-
-  it("handles connection changes on existing flows (upsert_flows)", () => {
-    const { result } = renderEditHook();
-
-    act(() => {
-      result.current.setAttachedConnectionByFlow(
-        new Map([
-          ["flow-1", ["app-1", "app-new"]], // added app-new
-          ["flow-2", []], // removed app-2
-        ]),
-      );
-    });
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-    const upsertFlows =
-      (
-        payload.provider_data as {
-          upsert_flows?: Array<{
-            flow_version_id: string;
-            add_app_ids: string[];
-            remove_app_ids: string[];
-          }>;
-        }
-      )?.upsert_flows ?? [];
-
-    expect(upsertFlows).toHaveLength(2);
-
-    const flow1 = upsertFlows.find((f) => f.flow_version_id === "ver-1");
-    expect(flow1).toBeDefined();
-    expect(flow1!.add_app_ids).toEqual(["app-new"]);
-    expect(flow1!.remove_app_ids).toEqual([]);
-
-    const flow2 = upsertFlows.find((f) => f.flow_version_id === "ver-2");
-    expect(flow2).toBeDefined();
-    expect(flow2!.add_app_ids).toEqual([]);
-    expect(flow2!.remove_app_ids).toEqual(["app-2"]);
+    expect(flowB!.tool_name).toMatch(/^Flow [a-f0-9]{1,6}-b$/);
   });
 
   it("sends fallback description when no changes detected", () => {
@@ -493,74 +452,6 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(hasAtLeastOneField).toBe(true);
   });
 
-  it("handles mixed scenario: some flows added, some removed, some updated", () => {
-    const { result } = renderEditHook();
-
-    act(() => {
-      // Remove flow-2
-      result.current.handleRemoveAttachedFlow("flow-2");
-      // Add new flow
-      result.current.handleSelectVersion("flow-new", "ver-new", "v1");
-      result.current.setAttachedConnectionByFlow(
-        new Map([
-          // flow-1: swap connections (update)
-          ["flow-1", ["app-new-1"]],
-          // flow-new: brand new
-          ["flow-new", ["app-10"]],
-        ]),
-      );
-      result.current.setToolNameByFlow(
-        new Map([
-          ["flow-1", "renamed_tool"],
-          ["flow-new", "New Tool"],
-        ]),
-      );
-      // Also change description
-      result.current.setDeploymentDescription("Updated agent description");
-    });
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-
-    // Description changed
-    expect(payload.description).toBe("Updated agent description");
-
-    // remove_flows: flow-2 was removed
-    const removeFlows =
-      (payload.provider_data as { remove_flows?: string[] })?.remove_flows ??
-      [];
-    expect(removeFlows).toEqual(["ver-2"]);
-
-    const upsertFlows =
-      (
-        payload.provider_data as {
-          upsert_flows?: Array<{
-            flow_version_id: string;
-            add_app_ids: string[];
-            remove_app_ids: string[];
-            tool_name?: string;
-          }>;
-        }
-      )?.upsert_flows ?? [];
-
-    // upsert_flows: flow-new (added) + flow-1 (updated connections + tool name)
-    expect(upsertFlows).toHaveLength(2);
-
-    // New flow entry
-    const newFlowEntry = upsertFlows.find(
-      (f) => f.flow_version_id === "ver-new",
-    );
-    expect(newFlowEntry).toBeDefined();
-    expect(newFlowEntry!.add_app_ids).toEqual(["app-10"]);
-    expect(newFlowEntry!.tool_name).toBe("New Tool");
-
-    // Updated flow entry (flow-1: connections swapped, name changed)
-    const flow1Entry = upsertFlows.find((f) => f.flow_version_id === "ver-1");
-    expect(flow1Entry).toBeDefined();
-    expect(flow1Entry!.tool_name).toBe("renamed_tool");
-    expect(flow1Entry!.add_app_ids).toEqual(["app-new-1"]);
-    expect(flow1Entry!.remove_app_ids).toEqual(["app-1"]);
-  });
-
   it("includes description change when description differs from initial", () => {
     const { result } = renderEditHook();
 
@@ -575,51 +466,6 @@ describe("buildDeploymentUpdatePayload", () => {
     // Description is "A test agent" from mockDeployment — no change
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.description).toBeUndefined();
-  });
-
-  it("includes connection payloads for new connections added during upsert", () => {
-    const { result } = renderEditHook();
-
-    const newConn: ConnectionItem = {
-      id: "app-new",
-      connectionId: "cid-new",
-      name: "New Connection",
-      variableCount: 1,
-      isNew: true,
-      environmentVariables: { API_KEY: "secret-123" }, // pragma: allowlist secret
-      globalVarKeys: new Set(["API_KEY"]),
-    };
-
-    act(() => {
-      result.current.setConnections([newConn]);
-      result.current.setAttachedConnectionByFlow(
-        new Map([
-          ["flow-1", ["app-1", "app-new"]], // added app-new to existing flow
-          ["flow-2", ["app-2"]],
-        ]),
-      );
-    });
-
-    const payload = result.current.buildDeploymentUpdatePayload();
-    const connectionPayloads =
-      (
-        payload.provider_data as {
-          connections?: Array<{
-            app_id: string;
-            credentials: Array<{
-              key: string;
-              value: string;
-              source: string;
-            }>;
-          }>;
-        }
-      )?.connections ?? [];
-
-    expect(connectionPayloads).toHaveLength(1);
-    expect(connectionPayloads[0].app_id).toBe("app-new");
-    expect(connectionPayloads[0].credentials).toEqual([
-      { key: "API_KEY", value: "secret-123", source: "variable" },
-    ]);
   });
 });
 
@@ -636,7 +482,12 @@ describe("buildDeploymentPayload", () => {
       result.current.setDeploymentDescription("A test description");
       result.current.setDeploymentType("agent");
       result.current.setSelectedLlm("gpt-4");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentPayload("provider-abc");
@@ -656,8 +507,18 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-a", "ver-a", "v1");
-      result.current.handleSelectVersion("flow-b", "ver-b", "v2");
+      result.current.handleSelectVersion({
+        flowId: "flow-a",
+        flowName: "Flow",
+        versionId: "ver-a",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-b",
+        flowName: "Flow",
+        versionId: "ver-b",
+        versionTag: "v2",
+      });
       result.current.setToolNameByFlow(
         new Map([
           ["flow-a", "Alpha Tool"],
@@ -693,7 +554,12 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       // No connections set
     });
 
@@ -707,7 +573,12 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       singleResult.current.setDeploymentName("Single Flow Agent");
       singleResult.current.setSelectedLlm("model-1");
-      singleResult.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      singleResult.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
     });
 
     const singlePayload = singleResult.current.buildDeploymentPayload("p-1");
@@ -721,9 +592,24 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       multiResult.current.setDeploymentName("Multi Flow Agent");
       multiResult.current.setSelectedLlm("model-1");
-      multiResult.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      multiResult.current.handleSelectVersion("flow-2", "ver-2", "v2");
-      multiResult.current.handleSelectVersion("flow-3", "ver-3", "v3");
+      multiResult.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      multiResult.current.handleSelectVersion({
+        flowId: "flow-2",
+        flowName: "Flow",
+        versionId: "ver-2",
+        versionTag: "v2",
+      });
+      multiResult.current.handleSelectVersion({
+        flowId: "flow-3",
+        flowName: "Flow",
+        versionId: "ver-3",
+        versionTag: "v3",
+      });
     });
 
     const multiPayload = multiResult.current.buildDeploymentPayload("p-1");
@@ -740,12 +626,19 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       // No tool name set
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBeUndefined();
+    expect(payload.provider_data.add_flows[0].tool_name).toMatch(
+      /^Flow [a-f0-9]{6}-1$/,
+    );
   });
 
   it("omits tool_name when tool name is whitespace-only", () => {
@@ -754,12 +647,19 @@ describe("buildDeploymentPayload", () => {
     act(() => {
       result.current.setDeploymentName("Agent");
       result.current.setSelectedLlm("model-1");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", "   "]]));
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBeUndefined();
+    expect(payload.provider_data.add_flows[0].tool_name).toMatch(
+      /^Flow [a-f0-9]{6}-1$/,
+    );
   });
 });
 

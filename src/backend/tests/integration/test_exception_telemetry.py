@@ -1,7 +1,7 @@
 """Integration tests for exception telemetry."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.services.telemetry.schema import (
@@ -19,11 +19,10 @@ class TestExceptionTelemetryIntegration:
     """Integration test suite for exception telemetry functionality."""
 
     @pytest.mark.asyncio
-    async def test_telemetry_http_request_format(self):
-        """Integration test verifying the exact HTTP request sent to Scarf."""
+    async def test_telemetry_otel_event_format(self):
+        """Integration test verifying the OpenTelemetry event emitted for an exception."""
         # Create service
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -31,13 +30,7 @@ class TestExceptionTelemetryIntegration:
             "platform": "python_package",
             "os": "darwin",
         }
-
-        # Mock successful response
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_client = AsyncMock()
-        mock_client.get.return_value = mock_response
-        telemetry_service.client = mock_client
+        telemetry_service.ot = MagicMock()
 
         # Create a real exception to get realistic stack trace
         try:
@@ -60,27 +53,21 @@ class TestExceptionTelemetryIntegration:
         # Test the full flow
         await telemetry_service.log_exception(real_exc, "lifespan")
 
-        # Verify the exact HTTP request that would be sent to Scarf
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
-
-        # Verify URL
-        assert call_args[0][0] == "https://mock-telemetry.example.com/exception"
-
-        # Verify parameters match our schema
-        params = call_args[1]["params"]
-        assert params["exceptionType"] == "ValueError"
-        assert "Integration test exception" in params["exceptionMessage"]
-        assert params["exceptionContext"] == "lifespan"
-        assert "stackTraceHash" in params
-        assert len(params["stackTraceHash"]) == 16
+        telemetry_service.ot.emit_event.assert_called_once()
+        event_name, attributes = telemetry_service.ot.emit_event.call_args.args
+        assert event_name == "exception"
+        assert telemetry_service.ot.emit_event.call_args.kwargs == {"error": True}
+        assert attributes["exceptionType"] == "ValueError"
+        assert "Integration test exception" in attributes["exceptionMessage"]
+        assert attributes["exceptionContext"] == "lifespan"
+        assert "stackTraceHash" in attributes
+        assert len(attributes["stackTraceHash"]) == 16
 
     @pytest.mark.asyncio
     async def test_exception_telemetry_service_integration(self):
         """Integration test for exception telemetry service without FastAPI."""
         # Create service with mocked dependencies
         telemetry_service = TelemetryService.__new__(TelemetryService)
-        telemetry_service.base_url = "https://mock-telemetry.example.com"
         telemetry_service.do_not_track = False
         telemetry_service.client_type = "oss"
         telemetry_service.common_telemetry_fields = {
@@ -89,19 +76,16 @@ class TestExceptionTelemetryIntegration:
             "os": "darwin",
         }
 
-        # Mock the async queue and HTTP client
+        # Mock the async queue
         telemetry_service.telemetry_queue = asyncio.Queue()
 
         # Track actual calls
-        http_calls = []
+        telemetry_calls = []
 
         async def mock_send_data(payload, path):
-            http_calls.append(
-                {
-                    "url": f"{telemetry_service.base_url}/{path}",
-                    "payload": payload.model_dump(by_alias=True),
-                    "path": path,
-                }
+            attributes = telemetry_service._build_telemetry_attributes(payload, path)
+            telemetry_calls.append(
+                {"event": telemetry_service._get_event_name(payload, path), "attributes": attributes}
             )
 
         # Mock _queue_event to call our mock directly
@@ -116,15 +100,15 @@ class TestExceptionTelemetryIntegration:
         await telemetry_service.log_exception(test_exception, "handler")
 
         # Verify the call was made with correct data
-        assert len(http_calls) == 1
-        call = http_calls[0]
+        assert len(telemetry_calls) == 1
+        call = telemetry_calls[0]
 
-        assert call["url"] == "https://mock-telemetry.example.com/exception"
-        assert call["path"] == "exception"
-        assert call["payload"]["exceptionType"] == "RuntimeError"
-        assert call["payload"]["exceptionMessage"] == "Service integration test"
-        assert call["payload"]["exceptionContext"] == "handler"
-        assert "stackTraceHash" in call["payload"]
+        assert call["event"] == "exception"
+        assert call["attributes"]["telemetryPath"] == "exception"
+        assert call["attributes"]["exceptionType"] == "RuntimeError"
+        assert call["attributes"]["exceptionMessage"] == "Service integration test"
+        assert call["attributes"]["exceptionContext"] == "handler"
+        assert "stackTraceHash" in call["attributes"]
 
 
 @pytest.mark.asyncio

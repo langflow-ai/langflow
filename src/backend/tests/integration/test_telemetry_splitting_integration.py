@@ -76,7 +76,6 @@ async def test_service_no_split_for_small_payload(mock_settings_service):
 def mock_settings_service():
     """Mock settings service for testing."""
     settings_service = MagicMock()
-    settings_service.settings.telemetry_base_url = "https://api.scarf.sh/v1/pixel"
     settings_service.settings.do_not_track = False
     settings_service.settings.prometheus_enabled = False
     settings_service.auth_settings.AUTO_LOGIN = False

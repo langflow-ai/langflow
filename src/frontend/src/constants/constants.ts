@@ -808,6 +808,10 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "cassandra",
   "FAISS",
   "pgvector",
+  "codeagents",
+  "Code Agents",
+  "files_ingestion",
+  "File Processing",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
@@ -895,6 +899,13 @@ export const NOTE_NODE_MIN_HEIGHT = 140;
 export const DEFAULT_NOTE_SIZE = 324;
 export const CHAT_INPUT_MIN_HEIGHT = 24;
 export const CHAT_INPUT_MAX_HEIGHT = 200;
+
+/**
+ * Collision padding (px) reserved at the bottom of the canvas viewport for
+ * node popovers (dropdowns) when the build status / error notification panel
+ * is visible. Keeps Radix popovers from opening over the panel.
+ */
+export const BUILD_PANEL_COLLISION_PADDING_PX = 160;
 
 export const COLOR_OPTIONS = {
   amber: "hsl(var(--note-amber))",

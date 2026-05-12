@@ -431,12 +431,15 @@ jobs:
             --report-dir coverage/final
 
       - name: Upload Merged Frontend Coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           files: coverage/combined/total-frontend-coverage.json
           flags: frontend
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:

@@ -522,6 +522,7 @@
             "description": "# 📖 README\nThis template demonstrates a standard chat flow with additional instructions provided by a prompt. Prompts provide instructions and inputs for a Large Language Model (LLM) beyond the standard user-provided chat input. In this example, the prompt describes the LLM's role and persona.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground** to start the chat and run the flow.\n\n## Next steps\nChange the prompt template, model, or model settings, such as **Temperature**, and then see how the responses change with these different inputs.\n💡 Some component settings are hidden by default; to view all settings click **Controls** in each component's header menu.\n💡 You can use curly braces to create variables in your template, such as `{variable}`. These can be populated from other components, with Langflow global variables, or at runtime.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.basic_prompting.bd8ff52b",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -558,6 +559,7 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.basic_prompting.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
             }
@@ -626,7 +628,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",

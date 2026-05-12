@@ -1,6 +1,7 @@
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from unittest.mock import MagicMock
 
 import pytest
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
@@ -9,9 +10,9 @@ from langflow.services.telemetry.service import TelemetryService
 
 
 @pytest.fixture
-def mock_settings_service(mocker):
+def mock_settings_service(mocker, monkeypatch):
+    monkeypatch.delenv("DO_NOT_TRACK", raising=False)
     settings = mocker.MagicMock()
-    settings.settings.telemetry_base_url = "http://test.telemetry"
     settings.settings.prometheus_enabled = False
     settings.settings.do_not_track = False
     return settings
@@ -31,7 +32,7 @@ async def test_log_package_deployment(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path = telemetry_service.telemetry_queue.get_nowait()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment"
@@ -46,7 +47,7 @@ async def test_log_package_deployment_provider(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_provider(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path = telemetry_service.telemetry_queue.get_nowait()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_provider"
@@ -61,7 +62,7 @@ async def test_log_package_deployment_run(telemetry_service):
         deployment_success=True,
     )
     await telemetry_service.log_package_deployment_run(payload)
-    func, queued_payload, path = await telemetry_service.telemetry_queue.get()
+    func, queued_payload, path = telemetry_service.telemetry_queue.get_nowait()
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment_run"
@@ -124,6 +125,23 @@ def test_gauge_with_up_down_counter_method(opentelemetry_instance):
 
 def test_increment_counter(opentelemetry_instance):
     opentelemetry_instance.increment_counter(metric_name="num_files_uploaded", value=5, labels=fixed_labels)
+
+
+def test_emit_event(opentelemetry_instance):
+    span = MagicMock()
+    span_context = MagicMock()
+    span_context.__enter__.return_value = span
+    span_context.__exit__.return_value = None
+    opentelemetry_instance.tracer = MagicMock()
+    opentelemetry_instance.tracer.start_as_current_span.return_value = span_context
+
+    opentelemetry_instance.emit_event("component_inputs", {"componentInputs": {"temperature": 0.7}}, error=True)
+
+    _, kwargs = opentelemetry_instance.tracer.start_as_current_span.call_args
+    assert kwargs["attributes"]["componentInputs"] == '{"temperature":0.7}'
+    assert kwargs["attributes"]["langflow.telemetry.event"] == "component_inputs"
+    span.add_event.assert_called_once()
+    span.set_status.assert_called_once()
 
 
 def test_increment_counter_empty_label(opentelemetry_instance):

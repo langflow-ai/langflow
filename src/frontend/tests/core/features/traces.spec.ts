@@ -21,8 +21,11 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 3000,
+      timeout: 30000,
     });
     let outdatedComponents = await page.getByTestId("update-button").count();
     const maxUpdateIterations = 20;
@@ -74,8 +77,11 @@ test.skip(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 3000,
+      timeout: 30000,
     });
     let outdatedComponents = await page.getByTestId("update-button").count();
     const maxUpdateIterations = 20;

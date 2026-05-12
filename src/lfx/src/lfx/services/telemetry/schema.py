@@ -1,14 +1,14 @@
 """Telemetry payload schemas.
 
-All payloads are sent as URL query parameters via GET requests (Scarf pixel
-tracking), so keep fields small. Max URL size is ~2KB.
+Payloads are emitted as OpenTelemetry span event attributes, so keep fields small.
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-MAX_TELEMETRY_URL_SIZE = 2048
+MAX_TELEMETRY_EVENT_SIZE = 2048
+MAX_TELEMETRY_URL_SIZE = MAX_TELEMETRY_EVENT_SIZE
 
 
 class BasePayload(BaseModel):
@@ -49,7 +49,7 @@ class ExceptionPayload(BasePayload):
 
 
 class MCPToolPayload(BasePayload):
-    """Tracks an MCP tool invocation. Kept small for URL query params."""
+    """Tracks an MCP tool invocation. Kept small for telemetry event attributes."""
 
     tool: str
     success: bool

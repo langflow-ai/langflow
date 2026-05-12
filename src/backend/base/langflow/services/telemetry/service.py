@@ -6,15 +6,14 @@ import os
 import platform
 import traceback
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import httpx
 from lfx.log.logger import logger
 
 from langflow.services.base import Service
 from langflow.services.telemetry.opentelemetry import OpenTelemetry
 from langflow.services.telemetry.schema import (
-    MAX_TELEMETRY_URL_SIZE,
+    MAX_TELEMETRY_EVENT_SIZE,
     ComponentIndexPayload,
     ComponentInputsPayload,
     ComponentPayload,
@@ -39,9 +38,7 @@ class TelemetryService(Service):
     def __init__(self, settings_service: SettingsService):
         super().__init__()
         self.settings_service = settings_service
-        self.base_url = settings_service.settings.telemetry_base_url
         self.telemetry_queue: asyncio.Queue = asyncio.Queue()
-        self.client = httpx.AsyncClient(timeout=10.0)  # Set a reasonable timeout
         self.running = False
         self._stopping = False
 
@@ -79,34 +76,45 @@ class TelemetryService(Service):
             await logger.adebug("Telemetry tracking is disabled.")
             return
 
-        if payload.client_type is None:
+        if hasattr(payload, "client_type") and payload.client_type is None:
             payload.client_type = self.client_type
 
-        url = f"{self.base_url}"
-        if path:
-            url = f"{url}/{path}"
-
         try:
-            payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
-
-            # Add common fields to all payloads except VersionPayload
-            if not isinstance(payload, VersionPayload):
-                payload_dict.update(self.common_telemetry_fields)
-            # Add timestamp dynamically
-            if "timestamp" not in payload_dict:
-                payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
-
-            response = await self.client.get(url, params=payload_dict)
-            if response.status_code != httpx.codes.OK:
-                await logger.aerror(f"Failed to send telemetry data: {response.status_code} {response.text}")
-            else:
-                await logger.adebug("Telemetry data sent successfully.")
-        except httpx.HTTPStatusError as err:
-            await logger.aerror(f"HTTP error occurred: {err}.")
-        except httpx.RequestError as err:
-            await logger.aerror(f"Request error occurred: {err}.")
+            payload_dict = self._build_telemetry_attributes(payload, path)
+            self.ot.emit_event(
+                self._get_event_name(payload, path),
+                payload_dict,
+                error=self._payload_represents_error(payload, payload_dict),
+            )
+            await logger.adebug("Telemetry data emitted successfully.")
         except Exception as err:  # noqa: BLE001
             await logger.aerror(f"Unexpected error occurred: {err}.")
+
+    def _build_telemetry_attributes(self, payload: BaseModel, path: str | None) -> dict[str, Any]:
+        payload_dict = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
+
+        if not isinstance(payload, VersionPayload):
+            payload_dict.update(self.common_telemetry_fields)
+        if "timestamp" not in payload_dict:
+            payload_dict["timestamp"] = datetime.now(timezone.utc).isoformat()
+
+        payload_dict["telemetryPayload"] = payload.__class__.__name__
+        if path:
+            payload_dict["telemetryPath"] = path
+        return payload_dict
+
+    def _get_event_name(self, payload: BaseModel, path: str | None) -> str:
+        if path:
+            return path
+        payload_name = payload.__class__.__name__
+        return payload_name.removesuffix("Payload").lower()
+
+    def _payload_represents_error(self, payload: BaseModel, payload_dict: dict[str, Any]) -> bool:
+        if isinstance(payload, ExceptionPayload):
+            return True
+        return any(
+            (key.endswith("Success") or key == "success") and value is False for key, value in payload_dict.items()
+        )
 
     async def log_package_run(self, payload: RunPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "run"))
@@ -122,7 +130,7 @@ class TelemetryService(Service):
 
     async def log_package_shutdown(self) -> None:
         payload = ShutdownPayload(time_running=(datetime.now(timezone.utc) - self._start_time).seconds)
-        await self._queue_event(payload)
+        await self._queue_event((self.send_telemetry_data, payload, "shutdown"))
 
     async def _queue_event(self, payload) -> None:
         if self.do_not_track or self._stopping:
@@ -184,13 +192,13 @@ class TelemetryService(Service):
         await self._queue_event((self.send_telemetry_data, payload, "component"))
 
     async def log_package_component_inputs(self, payload: ComponentInputsPayload) -> None:
-        """Log component input values, splitting into multiple requests if needed.
+        """Log component input values, splitting into multiple events if needed.
 
         Args:
             payload: Component inputs payload to log
         """
-        # Split payload if it exceeds URL size limit
-        chunks = payload.split_if_needed(max_url_size=MAX_TELEMETRY_URL_SIZE)
+        # Split payload if it exceeds the configured event size limit.
+        chunks = payload.split_if_needed(max_event_size=MAX_TELEMETRY_EVENT_SIZE)
 
         # Queue each chunk separately
         for chunk in chunks:
@@ -238,6 +246,7 @@ class TelemetryService(Service):
             return
         try:
             await self.telemetry_queue.join()
+            await asyncio.to_thread(self.ot.force_flush)
         except Exception:  # noqa: BLE001
             await logger.aexception("Error flushing logs")
 
@@ -270,7 +279,6 @@ class TelemetryService(Service):
                     self.log_package_email_task,
                     "Cancel telemetry log package email task",
                 )
-            await self.client.aclose()
         except Exception:  # noqa: BLE001
             await logger.aexception("Error stopping tracing service")
 

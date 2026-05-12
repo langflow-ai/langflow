@@ -1,6 +1,6 @@
 """Telemetry service for lfx.
 
-Sends lightweight analytics via GET requests to a Scarf pixel endpoint.
+Emits lightweight analytics as OpenTelemetry span events.
 All data goes through an async queue so tool calls are never blocked.
 Respects DO_NOT_TRACK env var and the settings flag.
 """
@@ -14,9 +14,9 @@ import os
 import platform
 import traceback
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import httpx
+import orjson
 
 from lfx.log.logger import logger
 from lfx.services.telemetry.base import BaseTelemetryService
@@ -30,11 +30,19 @@ from lfx.services.telemetry.schema import (
 if TYPE_CHECKING:
     from pydantic import BaseModel
 
-_DEFAULT_BASE_URL = "https://langflow.gateway.scarf.sh"
+try:
+    from opentelemetry import trace
+    from opentelemetry.trace import SpanKind, Status, StatusCode
+except ImportError:  # pragma: no cover - lfx can run without OpenTelemetry installed
+    trace = None
+    SpanKind = Status = StatusCode = None
+
+_TRACER_NAME = "langflow.telemetry"
+_EVENT_PREFIX = "langflow.telemetry"
 
 
 class TelemetryService(BaseTelemetryService):
-    """Async telemetry service that sends events to Scarf via query params."""
+    """Async telemetry service that emits events through OpenTelemetry."""
 
     def __init__(
         self,
@@ -43,14 +51,13 @@ class TelemetryService(BaseTelemetryService):
         do_not_track: bool | None = None,
     ):
         super().__init__()
-        self.base_url = base_url or os.environ.get("LANGFLOW_TELEMETRY_BASE_URL", _DEFAULT_BASE_URL)
+        self.base_url = base_url  # Deprecated compatibility hook; OpenTelemetry uses standard OTEL_* config.
 
         if do_not_track is None:
             do_not_track = os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"}
         self.do_not_track = do_not_track
 
         self._queue: asyncio.Queue[tuple] = asyncio.Queue()
-        self._client: httpx.AsyncClient | None = None
         self._worker_task: asyncio.Task | None = None
         self._running = False
         self._stopping = False
@@ -76,7 +83,6 @@ class TelemetryService(BaseTelemetryService):
             return
         self._running = True
         self._start_time = datetime.now(timezone.utc)
-        self._client = httpx.AsyncClient(timeout=10.0)
         self._worker_task = asyncio.create_task(self._worker())
 
     async def stop(self) -> None:
@@ -89,9 +95,7 @@ class TelemetryService(BaseTelemetryService):
             self._worker_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._worker_task
-        if self._client:
-            await self._client.aclose()
-            self._client = None
+        self._force_flush()
         self._stopping = False
 
     async def flush(self) -> None:
@@ -99,6 +103,7 @@ class TelemetryService(BaseTelemetryService):
             return
         with contextlib.suppress(Exception):
             await asyncio.wait_for(self._queue.join(), timeout=5.0)
+            self._force_flush()
 
     async def teardown(self) -> None:
         await self.stop()
@@ -108,20 +113,26 @@ class TelemetryService(BaseTelemetryService):
     # ------------------------------------------------------------------
 
     async def send_telemetry_data(self, payload: BaseModel, path: str | None = None) -> None:
-        if self.do_not_track or self._client is None:
+        if self.do_not_track:
             return
         try:
-            url = f"{self.base_url}/{path}" if path else self.base_url
+            if hasattr(payload, "client_type") and payload.client_type is None:
+                payload.client_type = "mcp"
             params = payload.model_dump(by_alias=True, exclude_none=True, exclude_unset=True)
             if not isinstance(payload, VersionPayload):
                 params.update(self._common_fields)
             params.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+            params["telemetryPayload"] = payload.__class__.__name__
+            if path:
+                params["telemetryPath"] = path
 
-            resp = await self._client.get(url, params=params)
-            if resp.status_code != httpx.codes.OK:
-                await logger.adebug(f"Telemetry response {resp.status_code}")
+            self._emit_event(
+                self._get_event_name(payload, path),
+                params,
+                error=self._payload_represents_error(payload, params),
+            )
         except Exception:  # noqa: BLE001
-            await logger.adebug("Telemetry send failed")
+            await logger.adebug("Telemetry emit failed")
 
     # ------------------------------------------------------------------
     # Public log methods
@@ -198,3 +209,52 @@ class TelemetryService(BaseTelemetryService):
             return version("lfx")
         except Exception:  # noqa: BLE001
             return "unknown"
+
+    def _get_event_name(self, payload: BaseModel, path: str | None) -> str:
+        if path:
+            return path
+        return payload.__class__.__name__.removesuffix("Payload").lower()
+
+    def _payload_represents_error(self, payload: BaseModel, attributes: dict[str, Any]) -> bool:
+        if isinstance(payload, ExceptionPayload):
+            return True
+        return any(
+            (key.endswith("Success") or key == "success") and value is False for key, value in attributes.items()
+        )
+
+    def _normalize_attribute_value(self, value: Any) -> bool | str | bytes | int | float | list[Any]:
+        if isinstance(value, bool | str | bytes | int | float):
+            return value
+        if isinstance(value, tuple | list):
+            return [self._normalize_attribute_value(item) for item in value]
+        return orjson.dumps(value, default=str).decode("utf-8")
+
+    def _normalize_attributes(
+        self, attributes: dict[str, Any]
+    ) -> dict[str, bool | str | bytes | int | float | list[Any]]:
+        return {key: self._normalize_attribute_value(value) for key, value in attributes.items() if value is not None}
+
+    def _emit_event(self, event_name: str, attributes: dict[str, Any], *, error: bool = False) -> None:
+        if trace is None:
+            return
+
+        normalized_attributes = self._normalize_attributes(attributes)
+        normalized_attributes[f"{_EVENT_PREFIX}.event"] = event_name
+        tracer = trace.get_tracer(_TRACER_NAME)
+        with tracer.start_as_current_span(
+            f"{_EVENT_PREFIX}.{event_name}",
+            kind=SpanKind.INTERNAL,
+            attributes=normalized_attributes,
+        ) as span:
+            span.add_event(event_name, attributes=normalized_attributes)
+            if error:
+                span.set_status(Status(StatusCode.ERROR))
+
+    def _force_flush(self) -> None:
+        if trace is None:
+            return
+        force_flush = getattr(trace.get_tracer_provider(), "force_flush", None)
+        if force_flush is None:
+            return
+        with contextlib.suppress(Exception):
+            force_flush(timeout_millis=5000)

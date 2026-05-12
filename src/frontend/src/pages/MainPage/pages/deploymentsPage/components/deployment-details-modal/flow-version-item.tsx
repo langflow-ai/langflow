@@ -1,5 +1,6 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { UNKNOWN_FLOW_NAME } from "../../types";
 import ConnectionItem from "./connection-item";
 
 interface FlowVersionItemProps {
@@ -23,7 +24,7 @@ export default function FlowVersionItem({
           className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
         />
         <span className="text-sm font-medium text-foreground">
-          {flowName ?? "Unknown flow"}
+          {flowName ?? UNKNOWN_FLOW_NAME}
         </span>
         <Badge
           variant="secondaryStatic"
