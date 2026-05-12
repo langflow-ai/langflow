@@ -1472,6 +1472,7 @@
   "modal.logs": "Logs",
   "modelProvider.disableModel": "Disable {{modelName}}",
   "modelProvider.enableModel": "Enable {{modelName}}",
+  "modelProvider.deprecated": "Deprecated",
   "node.approved": "Approved",
   "node.viewCode": "View Code",
   "output.inspectDescription": "Inspect the output of the component below.",
