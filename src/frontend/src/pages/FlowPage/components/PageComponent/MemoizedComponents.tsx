@@ -24,10 +24,7 @@ interface MemoizedCanvasControlsProps {
 }
 
 export const MemoizedCanvasControls = memo(
-  ({
-    selectedNode,
-    isAgentWorking,
-  }: MemoizedCanvasControlsProps) => {
+  ({ selectedNode, isAgentWorking }: MemoizedCanvasControlsProps) => {
     const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
     const isLocked = currentFlow?.locked ?? false;
     const effectiveLocked = isLocked || isAgentWorking;
