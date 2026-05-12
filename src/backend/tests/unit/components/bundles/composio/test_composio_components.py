@@ -74,8 +74,7 @@ def _make_component(action_key: str, fields: dict) -> ComposioOutlookAPIComponen
 
 @pytest.mark.unit
 class TestExecuteActionRichTypeCoercion:
-    """Regression: Message and Data objects must be coerced to primitives before
-    being passed to the Composio API.
+    """Regression: Message and Data objects must be coerced to primitives before being passed to the Composio API.
 
     When a ChatInput node is wired to a str field (e.g. subject, body), Langflow
     stores a Message object in the component attribute.  execute_action previously
