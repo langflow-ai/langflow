@@ -479,6 +479,9 @@ class Settings(BaseSettings):
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
+    custom_component_admin_only: bool = False
+    """If set to True, only admin users can edit custom component code. Regular editors
+    are blocked from modifying custom component templates."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = True
@@ -496,6 +499,24 @@ class Settings(BaseSettings):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    # Embedded/iframe mode - ICA integration flags
+    embedded_mode: bool = False
+    """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
+    standalone installations (logout button, new project/flow buttons, starter projects, etc.)."""
+    hide_logout_button: bool = False
+    """If set to True, hides the Logout button in the account menu."""
+    hide_new_project_button: bool = False
+    """If set to True, hides the ability to create new projects/folders."""
+    hide_new_flow_button: bool = False
+    """If set to True, hides the ability to create new flows."""
+    hide_starter_projects: bool = False
+    """If set to True, hides starter projects from the UI (does not affect database seeding)."""
+
+    # MCP Server management
+    mcp_servers_locked: bool = False
+    """If set to True, users cannot add or modify MCP servers via the UI. Only admin/superuser
+    can modify them through backend configuration. ContextForge remains the single ingress."""
 
     @field_validator("runtime_port", mode="before")
     @classmethod
