@@ -24,6 +24,8 @@ import IOKeyPairInput, {
   type KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
+import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { MCPServerType } from "@/types/mcp";
 import { extractMcpServersFromJson } from "@/utils/mcpUtils";
 import { parseString } from "@/utils/stringManipulation";
@@ -102,6 +104,11 @@ export default function AddMcpServerModal({
 
   const location = useLocation();
   const isOnMcpSettingsPage = location.pathname === MCP_SETTINGS_PAGE;
+  
+  // P2: Check if MCP servers are locked and if user is not admin
+  const mcpServersLocked = useUtilityStore((state) => state.mcpServersLocked);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const isModalLocked = mcpServersLocked && !isAdmin;
 
   const [type, setType] = useState(
     initialData ? (initialData.command ? "STDIO" : "HTTP") : "JSON",
@@ -332,18 +339,35 @@ export default function AddMcpServerModal({
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
-        <div className="flex flex-1 w-full flex-col overflow-hidden min-h-0">
-          <div className="flex flex-col gap-3 p-4 tracking-normal">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <ForwardedIconComponent
-                name="Mcp"
-                className="h-4 w-4 text-primary"
-                aria-hidden="true"
-              />
-              {initialData
-                ? t("mcp.modal.updateTitle")
-                : t("mcp.modal.addTitle")}
+        {isModalLocked ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center gap-4 flex-1">
+            <ForwardedIconComponent
+              name="Lock"
+              className="h-8 w-8 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-semibold">
+                {t("mcp.modal.lockedTitle")}
+              </h3>
+              <p className="text-mmd text-muted-foreground">
+                {t("mcp.modal.lockedDescription")}
+              </p>
             </div>
+          </div>
+        ) : (
+          <div className="flex flex-1 w-full flex-col overflow-hidden min-h-0">
+            <div className="flex flex-col gap-3 p-4 tracking-normal">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ForwardedIconComponent
+                  name="Mcp"
+                  className="h-4 w-4 text-primary"
+                  aria-hidden="true"
+                />
+                {initialData
+                  ? t("mcp.modal.updateTitle")
+                  : t("mcp.modal.addTitle")}
+              </div>
             <span className="text-mmd font-normal text-muted-foreground">
               {isOnMcpSettingsPage ? (
                 t("mcp.modal.descriptionSettings")
@@ -560,6 +584,8 @@ export default function AddMcpServerModal({
             </span>
           </Button>
         </div>
+          </div>
+        )}
       </BaseModal.Content>
     </BaseModal>
   );

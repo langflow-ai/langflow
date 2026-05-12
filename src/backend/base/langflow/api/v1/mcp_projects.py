@@ -771,6 +771,14 @@ async def install_mcp_config(
     if not is_local_ip(client_ip):
         raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")
 
+    # P2: Check if MCP server management is locked
+    settings_service = get_settings_service()
+    if settings_service.settings.mcp_servers_locked and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     removed_servers: list[str] = []  # Track removed servers for reinstallation
     try:
         project = await verify_project_access(project_id, current_user)

@@ -14,6 +14,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
 import {
   HeaderMenu,
@@ -35,6 +36,10 @@ export const AccountMenu = () => {
     isAdmin: state.isAdmin,
     autoLogin: state.autoLogin,
   }));
+
+  const hideLogoutButton = useUtilityStore(
+    (state) => state.hideLogoutButton,
+  );
 
   const handleLogout = () => {
     mutationLogout();
@@ -171,7 +176,7 @@ export const AccountMenu = () => {
             </div>
           </div>
 
-          {!autoLogin && (
+          {!autoLogin && !hideLogoutButton && (
             <div>
               <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
                 {t("account.logout")}

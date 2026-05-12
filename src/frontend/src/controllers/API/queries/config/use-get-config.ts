@@ -37,6 +37,13 @@ export interface ConfigResponse extends BaseConfig {
   webhook_auth_enable: boolean;
   default_folder_name: string;
   hide_getting_started_progress: boolean;
+  embedded_mode: boolean;
+  hide_logout_button: boolean;
+  hide_new_project_button: boolean;
+  hide_new_flow_button: boolean;
+  hide_starter_projects: boolean;
+  mcp_servers_locked: boolean;
+  custom_component_admin_only: boolean;
 }
 
 // Union type for the response (can be either public or full config)
@@ -84,6 +91,25 @@ export const useGetConfig: useQueryFunctionType<
     (state) => state.setAllowCustomComponents,
   );
   const setMcpBaseUrl = useUtilityStore((state) => state.setMcpBaseUrl);
+  const setEmbeddedMode = useUtilityStore((state) => state.setEmbeddedMode);
+  const setHideLogoutButton = useUtilityStore(
+    (state) => state.setHideLogoutButton,
+  );
+  const setHideNewProjectButton = useUtilityStore(
+    (state) => state.setHideNewProjectButton,
+  );
+  const setHideNewFlowButton = useUtilityStore(
+    (state) => state.setHideNewFlowButton,
+  );
+  const setHideStarterProjects = useUtilityStore(
+    (state) => state.setHideStarterProjects,
+  );
+  const setMcpServersLocked = useUtilityStore(
+    (state) => state.setMcpServersLocked,
+  );
+  const setCustomComponentAdminOnly = useUtilityStore(
+    (state) => state.setCustomComponentAdminOnly,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -124,6 +150,14 @@ export const useGetConfig: useQueryFunctionType<
         setHideGettingStartedProgress(
           data.hide_getting_started_progress ?? false,
         );
+        // P2 ICA integration flags
+        setEmbeddedMode(data.embedded_mode ?? false);
+        setHideLogoutButton(data.hide_logout_button ?? false);
+        setHideNewProjectButton(data.hide_new_project_button ?? false);
+        setHideNewFlowButton(data.hide_new_flow_button ?? false);
+        setHideStarterProjects(data.hide_starter_projects ?? false);
+        setMcpServersLocked(data.mcp_servers_locked ?? false);
+        setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
       }
     }
     return data;

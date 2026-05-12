@@ -1132,6 +1132,14 @@ async def custom_component(
     user: CurrentActiveUser,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
+
+    # P2: Check if custom component editing is restricted to admins only
+    if settings_service.settings.custom_component_admin_only and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is restricted to administrators",
+        )
+
     if not settings_service.settings.allow_custom_components:
         # Lazily compute hash lookups if they haven't been built yet
         # (e.g. during startup before the cache is fully populated).
@@ -1183,6 +1191,14 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
+
+    # P2: Check if custom component editing is restricted to admins only
+    if settings_service.settings.custom_component_admin_only and not user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component editing is restricted to administrators",
+        )
+
     if not settings_service.settings.allow_custom_components:
         get_component_hash_lookups_for_validation()
         all_known = component_cache.all_known_hashes
