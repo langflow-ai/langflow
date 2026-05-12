@@ -153,9 +153,7 @@ class TestProposePlan:
         events = drain_flow_events()
         assert len(events) == 1
         assert events[0]["action"] == "propose_plan"
-        assert events[0]["markdown"] == (
-            "I'll create a ChatInput -> Agent (GPT-4) -> ChatOutput flow."
-        )
+        assert events[0]["markdown"] == ("I'll create a ChatInput -> Agent (GPT-4) -> ChatOutput flow.")
 
     def test_should_return_wait_marker_text_when_plan_is_valid(self):
         reset_working_flow()

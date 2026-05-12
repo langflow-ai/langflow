@@ -136,9 +136,7 @@ class TestProposePlanInToolkit:
         tools = await build_toolkit()
         names = {getattr(t, "name", None) for t in tools}
 
-        assert "propose_plan" in names, (
-            f"propose_plan must be in the toolkit, got: {sorted(n for n in names if n)}"
-        )
+        assert "propose_plan" in names, f"propose_plan must be in the toolkit, got: {sorted(n for n in names if n)}"
 
 
 class TestTranslationPromptBuildFlow:
