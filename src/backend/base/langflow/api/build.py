@@ -663,10 +663,15 @@ async def cancel_flow_build(
             try:
                 receivers = await signal(job_id)
             except Exception as exc:  # noqa: BLE001
-                await logger.awarning(f"signal_cancel for {job_id} failed: {exc}")
-                receivers = 0
-            await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} ({receivers} subscriber(s))")
-            return receivers > 0
+                # Redis publish failed; the marker isn't reliable either.  Surface
+                # this so the client can retry rather than silently no-op.
+                await logger.aerror(f"signal_cancel for {job_id} failed: {exc}")
+                return False
+            # A return of 0 is not a failure: the persistent marker key was also
+            # set, so a worker that picks up the job later will still apply the
+            # cancel during its start_job marker check.
+            await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))")
+            return True
         await logger.awarning(f"No event task found for job_id {job_id}")
         return True  # Nothing to cancel is still a success
 

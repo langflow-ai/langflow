@@ -602,16 +602,22 @@ class RedisJobQueueService(JobQueueService):
 
     Cross-worker cancel
     -------------------
-    When ``cancel_channel_enabled=True`` (the default), the service publishes and
-    subscribes a per-job Redis pub/sub channel ``langflow:cancel:<job_id>``.  The
-    producer worker subscribes when the job starts; any worker can publish a
-    cancel signal via :meth:`signal_cancel`.  When the signal arrives, the
-    subscriber cancels the local build task.
+    When ``cancel_channel_enabled=True`` (the default), the service runs a
+    single Redis PSUBSCRIBE dispatcher per worker over the pattern
+    ``langflow:cancel:*``.  Any worker can publish a cancel signal via
+    :meth:`signal_cancel`; the worker that owns the job (i.e. has an entry in
+    ``self._queues``) cancels the local task, flushes a sentinel through the
+    bridge so cross-worker consumers see end-of-stream promptly, and triggers
+    fast cleanup of the Redis stream + owner keys.
+
+    Note: callers of :meth:`signal_cancel` are responsible for any
+    authorization checks.  The HTTP cancel endpoint already verifies job
+    ownership before calling through; programmatic callers must do the same.
 
     Known limitations
     -----------------
-    * Cross-worker *passive* disconnect (client closes the connection) is still a
-      best-effort no-op — there is no automatic publish on disconnect.  Add a
+    * Cross-worker *passive* disconnect (client closes the connection) is still
+      a best-effort no-op — there is no automatic publish on disconnect.  Add a
       ``signal_cancel`` call to the disconnect path if this matters for your
       deployment.
     """
@@ -628,6 +634,7 @@ class RedisJobQueueService(JobQueueService):
         url: str | None = None,
         ttl: int = 3600,
         startup_grace_s: float = 30.0,
+        cancel_marker_ttl: int = 60,
         *,
         cancel_channel_enabled: bool = True,
     ) -> None:
@@ -639,12 +646,27 @@ class RedisJobQueueService(JobQueueService):
         self._ttl = ttl
         self._startup_grace_s = startup_grace_s
         self._cancel_channel_enabled = cancel_channel_enabled
+        self._cancel_marker_ttl = cancel_marker_ttl
         self._client: Any = None
         self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
         self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
-        # Per-job cancel-channel subscriber tasks (producer side only).
-        self._cancel_subscribers: dict[str, asyncio.Task] = {}
+        # Single PSUBSCRIBE task per worker — handles every job's cancel channel.
+        # Replaces the previous per-job subscriber so connection-pool usage is O(1)
+        # in active job count.
+        self._cancel_dispatcher_task: asyncio.Task | None = None
+        # Strong references for short-lived fire-and-forget tasks (marker check,
+        # post-cancel cleanup).  Each task removes itself on completion.  Without
+        # this, asyncio is free to GC the task while it's still scheduled.
+        self._background_tasks: set[asyncio.Task] = set()
+        # Counters used for observability — bumped on each cancel event.
+        self._cancel_stats: dict[str, int] = {
+            "published": 0,
+            "marker_hit": 0,
+            "dispatched_owned": 0,
+            "dispatched_foreign": 0,
+            "publish_errors": 0,
+        }
 
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
@@ -655,8 +677,19 @@ class RedisJobQueueService(JobQueueService):
     def _cancel_channel(self, job_id: str) -> str:
         return f"{self.CANCEL_CHANNEL_PREFIX}{job_id}"
 
+    def _spawn_background(self, coro) -> asyncio.Task:
+        """Schedule a fire-and-forget task with a strong reference until completion.
+
+        Without holding a strong reference, asyncio is free to garbage-collect a
+        scheduled task before it runs.  Each task removes itself on completion.
+        """
+        task = asyncio.create_task(coro)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
+
     def start(self) -> None:
-        """Create the Redis client and start the periodic cleanup routine."""
+        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
         from redis.asyncio import StrictRedis
 
         if self._redis_url:
@@ -666,6 +699,10 @@ class RedisJobQueueService(JobQueueService):
         super().start()
         # Schedule a connectivity check so startup logs a clear error if Redis is unreachable.
         self._connection_check_task = asyncio.create_task(self._check_connection())
+        # One PSUBSCRIBE per worker handles every job's cancel channel — bounded
+        # connection-pool usage regardless of how many jobs are active.
+        if self._cancel_channel_enabled:
+            self._cancel_dispatcher_task = asyncio.create_task(self._run_cancel_dispatcher())
         logger.debug("RedisJobQueueService started.")
 
     async def _check_connection(self) -> None:
@@ -682,12 +719,27 @@ class RedisJobQueueService(JobQueueService):
             )
 
     async def stop(self) -> None:
-        """Stop the service, cancel all bridge tasks, and close the Redis client."""
+        """Stop the service, cancel all background tasks, and close the Redis client."""
         if self._connection_check_task and not self._connection_check_task.done():
             self._connection_check_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._connection_check_task
         self._connection_check_task = None
+
+        if self._cancel_dispatcher_task and not self._cancel_dispatcher_task.done():
+            self._cancel_dispatcher_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._cancel_dispatcher_task
+        self._cancel_dispatcher_task = None
+
+        # Wait briefly for any fire-and-forget background tasks (marker checks,
+        # post-cancel cleanups) so they don't leak across stop boundaries.
+        for bg in list(self._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        self._background_tasks.clear()
 
         for bridge in list(self._bridge_tasks.values()):
             if not bridge.done():
@@ -695,12 +747,6 @@ class RedisJobQueueService(JobQueueService):
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
         self._bridge_tasks.clear()
-        for sub in list(self._cancel_subscribers.values()):
-            if not sub.done():
-                sub.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await sub
-        self._cancel_subscribers.clear()
         for wrapper in list(self._consumer_wrappers.values()):
             await wrapper.cancel()
         self._consumer_wrappers.clear()
@@ -799,102 +845,154 @@ class RedisJobQueueService(JobQueueService):
             self._consumer_wrappers[job_id] = wrapper
         return wrapper
 
-    # Persistent marker that signal_cancel sets in addition to publishing.  Catches
-    # the race where the signal is sent before the producer's subscriber has
-    # completed SUBSCRIBE — the subscriber polls this key on startup and treats it
-    # as an immediate cancel if present.
+    # Persistent marker that :meth:`signal_cancel` sets in addition to publishing.
+    # Closes the race where a cancel signal is sent before the worker's dispatcher
+    # finishes PSUBSCRIBE (or before this worker has even started the job).  On
+    # ``start_job`` the worker checks the marker; if present, fires cancel immediately.
     _CANCEL_MARKER_PREFIX = "langflow:cancel-marker:"
-    _CANCEL_MARKER_TTL = 60  # seconds — short window covering startup race only
 
     def _cancel_marker_key(self, job_id: str) -> str:
         return f"{self._CANCEL_MARKER_PREFIX}{job_id}"
 
     def start_job(self, job_id: str, task_coro) -> None:  # type: ignore[override]
-        """Start the build task and subscribe to the cross-worker cancel channel."""
-        # If a previous subscriber for this job_id exists (e.g. start_job called
-        # twice), cancel it so we don't orphan a pubsub connection.
-        previous_sub = self._cancel_subscribers.pop(job_id, None)
-        if previous_sub is not None and not previous_sub.done():
-            previous_sub.cancel()
-
+        """Start the build task, then check for any pre-arrived cancel marker."""
         super().start_job(job_id, task_coro)
         if not self._cancel_channel_enabled or self._client is None:
             return
-        # Hand the subscriber the task we just registered so it can cancel it on signal.
-        _, _, task, _ = self._queues[job_id]
-        if task is None:
-            return
-        sub = asyncio.create_task(self._run_cancel_subscriber(job_id, task))
-        self._cancel_subscribers[job_id] = sub
+        # Cancel may have been signaled before we registered this job_id.  Check
+        # the persistent marker in a background task to avoid making start_job async.
+        self._spawn_background(self._check_pending_cancel_marker(job_id))
 
-    async def _run_cancel_subscriber(self, job_id: str, task: asyncio.Task) -> None:
-        """Listen on the per-job cancel channel; cancel the local task when signaled.
-
-        Closes the race where a cancel signal arrives before SUBSCRIBE completes by
-        checking a persistent marker key (set by signal_cancel) immediately after
-        subscribing.
-        """
-        channel = self._cancel_channel(job_id)
+    async def _check_pending_cancel_marker(self, job_id: str) -> None:
+        """Race-safety check: if a cancel marker exists, fire it immediately."""
         marker_key = self._cancel_marker_key(job_id)
-        pubsub = self._client.pubsub()
         try:
-            await pubsub.subscribe(channel)
-
-            # Race-safety: did a cancel signal arrive while we were subscribing?
             if await self._client.exists(marker_key):
                 await self._client.delete(marker_key)
-                await self._fire_cancel(job_id, task)
-                return
+                self._cancel_stats["marker_hit"] += 1
+                await self._handle_cancel(job_id, source="marker")
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Pending cancel marker check failed for {job_id}: {exc}")
 
+    async def _run_cancel_dispatcher(self) -> None:
+        """One PSUBSCRIBE loop per worker; routes cancel messages to local jobs."""
+        pattern = f"{self.CANCEL_CHANNEL_PREFIX}*"
+        pubsub = self._client.pubsub()
+        try:
+            await pubsub.psubscribe(pattern)
+            await logger.adebug(f"RedisJobQueueService: cancel dispatcher subscribed to {pattern}")
             async for message in pubsub.listen():
-                if message.get("type") != "message":
+                if message.get("type") != "pmessage":
                     continue
-                await self._fire_cancel(job_id, task)
-                return
+                channel = message.get("channel")
+                if channel is None:
+                    continue
+                channel_str = channel.decode() if isinstance(channel, bytes) else channel
+                if not channel_str.startswith(self.CANCEL_CHANNEL_PREFIX):
+                    continue
+                job_id = channel_str[len(self.CANCEL_CHANNEL_PREFIX) :]
+                await self._handle_cancel(job_id, source="pubsub")
         except asyncio.CancelledError:
             return
         except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"Cancel subscriber error for {job_id}: {exc}")
+            await logger.aerror(f"Cancel dispatcher loop error: {exc}")
         finally:
             with contextlib.suppress(Exception):
-                await pubsub.unsubscribe(channel)
-            with contextlib.suppress(Exception):
-                await pubsub.aclose()
+                await pubsub.punsubscribe(pattern)
+            await self._close_pubsub(pubsub)
 
-    async def _fire_cancel(self, job_id: str, task: asyncio.Task) -> None:
-        """Apply a received cancel signal: cancel the task and flush a sentinel.
+    @staticmethod
+    async def _close_pubsub(pubsub: Any) -> None:
+        """Close a pubsub object regardless of redis-py version.
 
-        Putting a sentinel on the local queue lets the bridge publish the Redis
-        end-of-stream marker so cross-worker consumers exit immediately instead of
-        waiting up to CLEANUP_GRACE_PERIOD for periodic cleanup to delete the
-        stream key.
+        Newer redis-py (>=5) exposes ``aclose``; older releases used ``close``.
         """
-        await logger.ainfo(f"Cross-worker cancel signal received for {job_id}")
-        if not task.done():
-            task.cancel()
+        close = getattr(pubsub, "aclose", None) or getattr(pubsub, "close", None)
+        if close is None:
+            return
+        with contextlib.suppress(Exception):
+            result = close()
+            if asyncio.iscoroutine(result):
+                await result
+
+    async def _handle_cancel(self, job_id: str, *, source: str) -> None:
+        """Apply a received cancel signal for *job_id* if this worker owns the job.
+
+        Cancels the local task, flushes a sentinel through the bridge so cross-worker
+        consumers see end-of-stream promptly, and triggers fast cleanup of the
+        Redis stream + owner keys.  No-op if this worker doesn't own the job
+        (the owning worker's dispatcher will receive the same publish).
+        """
         entry = self._queues.get(job_id)
-        if entry is not None:
-            main_queue = entry[0]
+        if entry is None:
+            self._cancel_stats["dispatched_foreign"] += 1
+            await logger.adebug(f"Cancel for {job_id} ignored on this worker (not owner); source={source}")
+            return
+        self._cancel_stats["dispatched_owned"] += 1
+        await logger.ainfo(f"Cross-worker cancel applied to {job_id} (source={source})")
+        main_queue, _, task, _ = entry
+        if task is not None and not task.done():
+            task.cancel()
+        # Flush a sentinel so the bridge publishes the Redis end-of-stream marker
+        # before cleanup deletes the stream key.
+        with contextlib.suppress(Exception):
+            main_queue.put_nowait((None, None, time.time()))
+        # Trigger fast cleanup; runs as a fire-and-forget task that swallows the
+        # expected CancelledError re-raised by super().cleanup_job.
+        self._spawn_background(self._post_cancel_cleanup(job_id))
+
+    async def _post_cancel_cleanup(self, job_id: str) -> None:
+        """Fire-and-forget cleanup wrapper that runs after the bridge has flushed.
+
+        Waits for the bridge task to drain the sentinel we just put on the local
+        queue and publish the Redis end-of-stream marker before cancelling it via
+        :meth:`cleanup_job`.  Without this wait, a fast cleanup races the bridge
+        and may cancel it before XADD completes, leaving cross-worker consumers
+        without the sentinel record in the stream.
+        """
+        bridge = self._bridge_tasks.get(job_id)
+        if bridge is not None and not bridge.done():
             with contextlib.suppress(Exception):
-                main_queue.put_nowait((None, None, time.time()))
+                # ``shield`` keeps the bridge alive even if our task is cancelled
+                # during the wait; the timeout caps the worst case if XADD is stuck.
+                await asyncio.wait_for(asyncio.shield(bridge), timeout=2.0)
+        try:
+            await self.cleanup_job(job_id)
+        except asyncio.CancelledError:
+            # Expected: super().cleanup_job re-raises after a user-initiated cancel.
+            pass
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Post-cancel cleanup error for {job_id}: {exc}")
 
     async def signal_cancel(self, job_id: str) -> int:
-        """Publish a cancel signal for *job_id* across all subscribed workers.
+        """Publish a cancel signal for *job_id* across all worker dispatchers.
 
-        Returns the number of subscribers that received the publish.  A return of
-        0 does not necessarily mean failure — the persistent marker key is also
-        set, so a producer that hasn't finished subscribing yet will still pick
-        up the cancel during its startup race-check.  Safe to call from any worker.
+        Authorization note: this method does not perform any authorization check.
+        Callers must verify the caller has rights to cancel the job — the HTTP
+        cancel endpoint does this via ``_verify_job_ownership`` before calling
+        through.
+
+        Returns the number of dispatchers reached by the PUBLISH.  A return of 0
+        is not necessarily a failure — the persistent marker key is also set, so
+        a worker that picks up the job *after* this publish will still process
+        the cancel during its start_job marker check.
+
+        Raises:
+            redis exceptions if the Redis connection is unavailable.  Callers
+            that want best-effort behaviour should wrap in their own try/except.
         """
         if not self._cancel_channel_enabled or self._client is None:
             return 0
         try:
-            # Set the marker first so a subscriber racing SUBSCRIBE still sees it.
-            await self._client.set(self._cancel_marker_key(job_id), "1", ex=self._CANCEL_MARKER_TTL)
-            return int(await self._client.publish(self._cancel_channel(job_id), "1"))
-        except Exception as exc:  # noqa: BLE001
-            await logger.awarning(f"signal_cancel publish failed for {job_id}: {exc}")
-            return 0
+            # Set the marker first so any worker that races the publish still sees it.
+            await self._client.set(self._cancel_marker_key(job_id), "1", ex=self._cancel_marker_ttl)
+            receivers = int(await self._client.publish(self._cancel_channel(job_id), "1"))
+        except Exception:
+            self._cancel_stats["publish_errors"] += 1
+            raise
+        self._cancel_stats["published"] += 1
+        await logger.ainfo(f"signal_cancel: job_id={job_id} receivers={receivers}")
+        return receivers
 
     def get_queue_data(self, job_id: str) -> tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:  # type: ignore[override]
         """Return queue data for a job, always backed by a Redis Stream consumer.
@@ -976,12 +1074,6 @@ class RedisJobQueueService(JobQueueService):
             bridge.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await bridge
-
-        sub = self._cancel_subscribers.pop(job_id, None)
-        if sub and not sub.done():
-            sub.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await sub
 
         try:
             await super().cleanup_job(job_id)

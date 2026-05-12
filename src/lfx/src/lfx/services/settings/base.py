@@ -239,9 +239,14 @@ class Settings(BaseSettings):
     latency on the producer worker can exceed the default (e.g. large graph
     instantiation, slow container image pulls)."""
     redis_queue_cancel_channel_enabled: bool = True
-    """If True, RedisJobQueueService publishes/subscribes a per-job cancel channel so
-    that POST /build/{job_id}/cancel works cross-worker. The producer worker
-    subscribes when the job starts; any worker can publish a cancel signal."""
+    """If True, RedisJobQueueService runs a single PSUBSCRIBE dispatcher per worker
+    so POST /build/{job_id}/cancel works cross-worker. Any worker can publish a
+    cancel signal; the owning worker cancels the local build task."""
+    redis_queue_cancel_marker_ttl: int = 60
+    """TTL in seconds for the persistent cancel-marker key used to close the race
+    where a cancel signal is published before the owning worker's dispatcher
+    subscribes or before the job is registered. Should comfortably exceed worker
+    cold-start latency."""
 
     # Sentry
     sentry_dsn: str | None = None
