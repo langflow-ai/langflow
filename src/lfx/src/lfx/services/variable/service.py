@@ -13,10 +13,6 @@ class VariableService(Service):
     This is a lightweight implementation for LFX that maintains in-memory
     variables and falls back to environment variables for reads. No database storage.
 
-    Resolution is strict: only the requested name matches (in-memory,
-    LANGFLOW_REQUEST_VARIABLES, process environment, or normalized
-    ``x-langflow-global-var-*`` keys). No synthetic names such as deriving
-    ``*_bearer_token`` from ``*_access_token``.
     """
 
     name = "variable_service"
