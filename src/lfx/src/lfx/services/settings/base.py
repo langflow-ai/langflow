@@ -247,6 +247,15 @@ class Settings(BaseSettings):
     where a cancel signal is published before the owning worker's dispatcher
     subscribes or before the job is registered. Should comfortably exceed worker
     cold-start latency."""
+    redis_queue_polling_stale_threshold_s: float = 90.0
+    """Maximum seconds a polling job may go without client activity before the
+    watchdog publishes a cross-worker cancel. Polling clients have no persistent
+    connection, so the server detects abandonment by tracking the most recent
+    poll (or streaming-response heartbeat). Set to <= 0 to disable the watchdog."""
+    redis_queue_polling_watchdog_interval_s: float = 15.0
+    """How often the polling watchdog scans owned jobs. Smaller values give
+    faster reclamation of abandoned builds at the cost of more Redis GETs.
+    The watchdog only checks jobs this worker owns (entries in self._queues)."""
 
     # Sentry
     sentry_dsn: str | None = None

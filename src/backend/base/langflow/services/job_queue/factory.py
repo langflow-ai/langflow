@@ -30,5 +30,7 @@ class JobQueueServiceFactory(ServiceFactory):
                 startup_grace_s=settings.redis_queue_startup_grace_s,
                 cancel_marker_ttl=settings.redis_queue_cancel_marker_ttl,
                 cancel_channel_enabled=settings.redis_queue_cancel_channel_enabled,
+                polling_stale_threshold_s=settings.redis_queue_polling_stale_threshold_s,
+                polling_watchdog_interval_s=settings.redis_queue_polling_watchdog_interval_s,
             )
         return JobQueueService()

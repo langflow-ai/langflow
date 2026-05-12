@@ -30,6 +30,24 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildMap
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 
+@router.get("/job_queue", dependencies=[Depends(get_current_active_user)])
+async def job_queue_metrics() -> dict:
+    """Return a snapshot of job-queue observability metrics.
+
+    For the in-memory backend this exposes only ``backend`` and ``active_jobs``.
+    For the Redis backend the snapshot also includes bridge counts, consumer
+    wrappers, cancel-dispatcher liveness, and the cancel-stats counters
+    (``published`` / ``marker_hit`` / ``dispatched_owned`` /
+    ``dispatched_foreign`` / ``publish_errors`` / ``dispatcher_reconnects``).
+
+    Authenticated endpoint — no per-user filtering since the metrics are
+    process-wide.  Mount behind your usual admin auth if you want to gate it.
+    """
+    from langflow.services.deps import get_queue_service
+
+    return get_queue_service().metrics_snapshot()
+
+
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
 async def get_vertex_builds(
     flow_id: Annotated[UUID, Query()],

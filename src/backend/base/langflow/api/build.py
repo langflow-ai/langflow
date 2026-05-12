@@ -133,6 +133,12 @@ async def get_flow_events_response(
     """Get events for a specific build job, either as a stream or single event."""
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
+        # Refresh the polling-watchdog heartbeat for any client-driven access
+        # (polling and streaming both count as "client alive").  No-op for the
+        # in-memory queue or when the watchdog is disabled.
+        touch = getattr(queue_service, "touch_activity", None)
+        if touch is not None:
+            await touch(job_id)
         if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
             return await create_flow_response(
                 queue=main_queue,
@@ -205,8 +211,15 @@ async def create_flow_response(
     a cross-worker cancel so the producer worker stops emitting events promptly
     instead of running the build to natural completion.
     """
+    # Refresh the polling-watchdog heartbeat at most once per this interval
+    # while streaming so long-running streams aren't reclaimed as abandoned.
+    streaming_activity_refresh_s = 10.0
 
     async def consume_and_yield() -> AsyncIterator[str]:
+        last_activity_refresh = time.monotonic()
+        touch = (
+            getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
+        )
         while True:
             try:
                 event_id, value, put_time = await queue.get()
@@ -215,6 +228,13 @@ async def create_flow_response(
                 get_time = time.time()
                 yield value.decode("utf-8")
                 await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+                # Streaming-side heartbeat: refresh activity so the polling
+                # watchdog doesn't kill jobs whose client is actively streaming.
+                if touch is not None:
+                    now = time.monotonic()
+                    if now - last_activity_refresh >= streaming_activity_refresh_s:
+                        last_activity_refresh = now
+                        asyncio.create_task(touch(job_id))  # noqa: RUF006
             except Exception as exc:  # noqa: BLE001
                 await logger.aexception(f"Error consuming event: {exc}")
                 break

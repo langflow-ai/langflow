@@ -26,6 +26,9 @@ _OWNER_PREFIX = "langflow:owner:"
 # Pub/Sub channel for cross-worker cancel signals.  Any worker can publish here;
 # the producer worker subscribes when the job starts and cancels the local task.
 _CANCEL_CHANNEL_PREFIX = "langflow:cancel:"
+# Activity heartbeat key written by polling and streaming responses.  The
+# polling watchdog scans these to detect abandoned builds (client gave up).
+_ACTIVITY_PREFIX = "langflow:activity:"
 
 
 class JobQueueNotFoundError(Exception):
@@ -142,6 +145,18 @@ class JobQueueService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+
+    def metrics_snapshot(self) -> dict[str, Any]:
+        """Return a read-only snapshot of queue metrics for ops/monitoring.
+
+        Subclasses extend this dict with backend-specific fields (e.g.
+        :class:`RedisJobQueueService` adds bridge / wrapper / cancel stats).
+        Callers MUST NOT mutate the returned mapping — it is a fresh copy.
+        """
+        return {
+            "backend": "memory",
+            "active_jobs": len(self._queues),
+        }
 
     def create_queue(self, job_id: str) -> tuple[asyncio.Queue, EventManager]:
         """Create and register a new queue along with its corresponding event manager for a job.
@@ -624,6 +639,7 @@ class RedisJobQueueService(JobQueueService):
     STREAM_PREFIX = _STREAM_PREFIX
     OWNER_PREFIX = _OWNER_PREFIX
     CANCEL_CHANNEL_PREFIX = _CANCEL_CHANNEL_PREFIX
+    ACTIVITY_PREFIX = _ACTIVITY_PREFIX
 
     def __init__(
         self,
@@ -634,6 +650,8 @@ class RedisJobQueueService(JobQueueService):
         ttl: int = 3600,
         startup_grace_s: float = 30.0,
         cancel_marker_ttl: int = 60,
+        polling_stale_threshold_s: float = 90.0,
+        polling_watchdog_interval_s: float = 15.0,
         *,
         cancel_channel_enabled: bool = True,
     ) -> None:
@@ -646,6 +664,8 @@ class RedisJobQueueService(JobQueueService):
         self._startup_grace_s = startup_grace_s
         self._cancel_channel_enabled = cancel_channel_enabled
         self._cancel_marker_ttl = cancel_marker_ttl
+        self._polling_stale_threshold_s = polling_stale_threshold_s
+        self._polling_watchdog_interval_s = polling_watchdog_interval_s
         self._client: Any = None
         self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
@@ -654,6 +674,10 @@ class RedisJobQueueService(JobQueueService):
         # Replaces the previous per-job subscriber so connection-pool usage is O(1)
         # in active job count.
         self._cancel_dispatcher_task: asyncio.Task | None = None
+        # Periodic loop that publishes cancel for owned jobs whose activity
+        # heartbeat has gone stale (client abandoned a polling build).  Started
+        # only when polling_stale_threshold_s > 0.
+        self._polling_watchdog_task: asyncio.Task | None = None
         # Strong references for short-lived fire-and-forget tasks (marker check,
         # post-cancel cleanup).  Each task removes itself on completion.  Without
         # this, asyncio is free to GC the task while it's still scheduled.
@@ -665,6 +689,8 @@ class RedisJobQueueService(JobQueueService):
             "dispatched_owned": 0,
             "dispatched_foreign": 0,
             "publish_errors": 0,
+            "dispatcher_reconnects": 0,
+            "polling_watchdog_kills": 0,
         }
 
     def _stream_key(self, job_id: str) -> str:
@@ -702,6 +728,10 @@ class RedisJobQueueService(JobQueueService):
         # connection-pool usage regardless of how many jobs are active.
         if self._cancel_channel_enabled:
             self._cancel_dispatcher_task = asyncio.create_task(self._run_cancel_dispatcher())
+        # Polling watchdog: nuke abandoned builds whose activity heartbeat has
+        # gone stale.  Disabled when threshold <= 0 so deployments can opt out.
+        if self._polling_stale_threshold_s > 0 and self._cancel_channel_enabled:
+            self._polling_watchdog_task = asyncio.create_task(self._run_polling_watchdog())
         logger.debug("RedisJobQueueService started.")
 
     async def _check_connection(self) -> None:
@@ -730,6 +760,12 @@ class RedisJobQueueService(JobQueueService):
             with contextlib.suppress(asyncio.CancelledError):
                 await self._cancel_dispatcher_task
         self._cancel_dispatcher_task = None
+
+        if self._polling_watchdog_task and not self._polling_watchdog_task.done():
+            self._polling_watchdog_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._polling_watchdog_task
+        self._polling_watchdog_task = None
 
         # Wait briefly for any fire-and-forget background tasks (marker checks,
         # post-cancel cleanups) so they don't leak across stop boundaries.
@@ -858,9 +894,32 @@ class RedisJobQueueService(JobQueueService):
         super().start_job(job_id, task_coro)
         if not self._cancel_channel_enabled or self._client is None:
             return
+        # Initialize the activity heartbeat so the watchdog gives clients the
+        # configured threshold to make first contact before reclaiming the job.
+        self._spawn_background(self.touch_activity(job_id))
         # Cancel may have been signaled before we registered this job_id.  Check
         # the persistent marker in a background task to avoid making start_job async.
         self._spawn_background(self._check_pending_cancel_marker(job_id))
+
+    def _activity_key(self, job_id: str) -> str:
+        return f"{self.ACTIVITY_PREFIX}{job_id}"
+
+    async def touch_activity(self, job_id: str) -> None:
+        """Refresh the activity heartbeat for *job_id*.
+
+        Called by polling and streaming responses to signal "client still here".
+        The polling watchdog scans these keys to detect abandoned builds.  TTL
+        is set to several multiples of the stale threshold so a brief Redis
+        outage during the scan doesn't cause a false positive once the watchdog
+        falls back to TTL-based reasoning.
+        """
+        if self._client is None or self._polling_stale_threshold_s <= 0:
+            return
+        # TTL = 4x threshold (min 60s) — long enough to ride out a missed scan,
+        # short enough that abandoned keys still expire on their own.
+        ttl = max(int(self._polling_stale_threshold_s * 4), 60)
+        with contextlib.suppress(Exception):
+            await self._client.set(self._activity_key(job_id), str(time.time()), ex=ttl)
 
     async def _check_pending_cancel_marker(self, job_id: str) -> None:
         """Race-safety check: if a cancel marker exists, fire it immediately."""
@@ -873,32 +932,111 @@ class RedisJobQueueService(JobQueueService):
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(f"Pending cancel marker check failed for {job_id}: {exc}")
 
+    async def _run_polling_watchdog(self) -> None:
+        """Periodically reclaim owned jobs whose activity heartbeat has gone stale.
+
+        Each tick scans :attr:`_queues` (jobs this worker owns) and pulls the
+        activity timestamp from Redis.  Missing or older than
+        :attr:`_polling_stale_threshold_s` means the client gave up and the
+        watchdog publishes a cross-worker cancel.  Using ``signal_cancel``
+        (rather than a direct local cancel) keeps the path symmetric with the
+        HTTP cancel endpoint: marker is set, dispatcher fires, bridge flushes
+        sentinel, cleanup runs.
+        """
+        interval = max(self._polling_watchdog_interval_s, 0.05)
+        threshold = self._polling_stale_threshold_s
+        while True:
+            try:
+                await asyncio.sleep(interval)
+            except asyncio.CancelledError:
+                return
+            if self._closed or self._client is None:
+                continue
+            now = time.time()
+            # Iterate a snapshot so concurrent inserts don't disturb the scan.
+            for job_id in list(self._queues.keys()):
+                try:
+                    raw = await self._client.get(self._activity_key(job_id))
+                except Exception as exc:  # noqa: BLE001
+                    await logger.adebug(f"polling watchdog: GET failed for {job_id}: {exc}")
+                    continue
+                if raw is None:
+                    # Key never written (start_job activity touch lost?) or expired.
+                    # Treat as stale only if the bridge has been running for at
+                    # least the threshold — otherwise we'd kill brand-new jobs.
+                    last = 0.0
+                else:
+                    with contextlib.suppress(ValueError):
+                        last = float(raw.decode() if isinstance(raw, bytes) else raw)
+                age = now - last if last > 0 else float("inf")
+                if age <= threshold:
+                    continue
+                # Stale → cancel this job.
+                self._cancel_stats["polling_watchdog_kills"] += 1
+                await logger.ainfo(f"polling watchdog: reclaiming abandoned job {job_id} (age={age:.1f}s)")
+                with contextlib.suppress(Exception):
+                    await self.signal_cancel(job_id)
+                with contextlib.suppress(Exception):
+                    await self._client.delete(self._activity_key(job_id))
+
+    # Reconnect tunables — class-level so tests can override without patching the loop.
+    _DISPATCHER_RECONNECT_INITIAL_BACKOFF_S = 0.5
+    _DISPATCHER_RECONNECT_MAX_BACKOFF_S = 30.0
+
     async def _run_cancel_dispatcher(self) -> None:
-        """One PSUBSCRIBE loop per worker; routes cancel messages to local jobs."""
+        """PSUBSCRIBE loop with auto-reconnect.
+
+        The dispatcher is the single point of cross-worker cancel delivery for
+        this worker.  If the pubsub connection dies (Redis restart, network
+        blip, broker timeout), we MUST reconnect — otherwise the worker becomes
+        silently blind to cancels until restart.
+
+        Strategy:
+        * Each iteration of the outer loop opens a fresh pubsub.
+        * On successful PSUBSCRIBE the backoff resets.
+        * Any non-cancel exception is logged at warning, backoff doubles up to
+          ``_DISPATCHER_RECONNECT_MAX_BACKOFF_S``, and we retry.
+        * ``asyncio.CancelledError`` (service stop) breaks out cleanly.
+        """
         pattern = f"{self.CANCEL_CHANNEL_PREFIX}*"
-        pubsub = self._client.pubsub()
-        try:
-            await pubsub.psubscribe(pattern)
-            await logger.adebug(f"RedisJobQueueService: cancel dispatcher subscribed to {pattern}")
-            async for message in pubsub.listen():
-                if message.get("type") != "pmessage":
-                    continue
-                channel = message.get("channel")
-                if channel is None:
-                    continue
-                channel_str = channel.decode() if isinstance(channel, bytes) else channel
-                if not channel_str.startswith(self.CANCEL_CHANNEL_PREFIX):
-                    continue
-                job_id = channel_str[len(self.CANCEL_CHANNEL_PREFIX) :]
-                await self._handle_cancel(job_id, source="pubsub")
-        except asyncio.CancelledError:
-            return
-        except Exception as exc:  # noqa: BLE001
-            await logger.aerror(f"Cancel dispatcher loop error: {exc}")
-        finally:
+        backoff = self._DISPATCHER_RECONNECT_INITIAL_BACKOFF_S
+        while True:
+            pubsub = self._client.pubsub()
+            try:
+                await pubsub.psubscribe(pattern)
+                backoff = self._DISPATCHER_RECONNECT_INITIAL_BACKOFF_S
+                await logger.adebug(f"RedisJobQueueService: cancel dispatcher subscribed to {pattern}")
+                async for message in pubsub.listen():
+                    if message.get("type") != "pmessage":
+                        continue
+                    channel = message.get("channel")
+                    if channel is None:
+                        continue
+                    channel_str = channel.decode() if isinstance(channel, bytes) else channel
+                    if not channel_str.startswith(self.CANCEL_CHANNEL_PREFIX):
+                        continue
+                    job_id = channel_str[len(self.CANCEL_CHANNEL_PREFIX) :]
+                    await self._handle_cancel(job_id, source="pubsub")
+                # listen() returned cleanly — treat as a soft disconnect and reconnect.
+                self._cancel_stats["dispatcher_reconnects"] += 1
+                await logger.awarning(f"Cancel dispatcher pubsub.listen() ended; reconnecting in {backoff:.1f}s")
+            except asyncio.CancelledError:
+                with contextlib.suppress(Exception):
+                    await pubsub.punsubscribe(pattern)
+                await self._close_pubsub(pubsub)
+                return
+            except Exception as exc:  # noqa: BLE001
+                self._cancel_stats["dispatcher_reconnects"] += 1
+                await logger.awarning(f"Cancel dispatcher error (retrying in {backoff:.1f}s): {exc!r}")
+            # Clean up the dead pubsub before sleeping + retrying.
             with contextlib.suppress(Exception):
                 await pubsub.punsubscribe(pattern)
             await self._close_pubsub(pubsub)
+            try:
+                await asyncio.sleep(backoff)
+            except asyncio.CancelledError:
+                return
+            backoff = min(backoff * 2, self._DISPATCHER_RECONNECT_MAX_BACKOFF_S)
 
     @staticmethod
     async def _close_pubsub(pubsub: Any) -> None:
@@ -940,6 +1078,11 @@ class RedisJobQueueService(JobQueueService):
         # expected CancelledError re-raised by super().cleanup_job.
         self._spawn_background(self._post_cancel_cleanup(job_id))
 
+    # Max time _post_cancel_cleanup waits on cleanup_job before giving up.
+    # Bounds the lifetime of the background task even under Redis pathology
+    # (e.g. a hung DELETE).  Periodic cleanup will still reap stale state later.
+    _POST_CANCEL_CLEANUP_TIMEOUT_S = 10.0
+
     async def _post_cancel_cleanup(self, job_id: str) -> None:
         """Fire-and-forget cleanup wrapper that runs after the bridge has flushed.
 
@@ -948,6 +1091,11 @@ class RedisJobQueueService(JobQueueService):
         :meth:`cleanup_job`.  Without this wait, a fast cleanup races the bridge
         and may cancel it before XADD completes, leaving cross-worker consumers
         without the sentinel record in the stream.
+
+        The outer :data:`_POST_CANCEL_CLEANUP_TIMEOUT_S` bounds total runtime so
+        a stuck cleanup_job (e.g. Redis stalls during stream DELETE) does not
+        leak this background task forever; periodic cleanup will reap whatever
+        state remains on its next pass.
         """
         bridge = self._bridge_tasks.get(job_id)
         if bridge is not None and not bridge.done():
@@ -956,10 +1104,18 @@ class RedisJobQueueService(JobQueueService):
                 # during the wait; the timeout caps the worst case if XADD is stuck.
                 await asyncio.wait_for(asyncio.shield(bridge), timeout=2.0)
         try:
-            await self.cleanup_job(job_id)
+            await asyncio.wait_for(
+                self.cleanup_job(job_id),
+                timeout=self._POST_CANCEL_CLEANUP_TIMEOUT_S,
+            )
         except asyncio.CancelledError:
             # Expected: super().cleanup_job re-raises after a user-initiated cancel.
             pass
+        except asyncio.TimeoutError:
+            await logger.awarning(
+                f"Post-cancel cleanup timed out for {job_id} after "
+                f"{self._POST_CANCEL_CLEANUP_TIMEOUT_S:.1f}s; periodic cleanup will retry."
+            )
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(f"Post-cancel cleanup error for {job_id}: {exc}")
 
@@ -992,6 +1148,27 @@ class RedisJobQueueService(JobQueueService):
         self._cancel_stats["published"] += 1
         await logger.ainfo(f"signal_cancel: job_id={job_id} receivers={receivers}")
         return receivers
+
+    def metrics_snapshot(self) -> dict[str, Any]:  # type: ignore[override]
+        """Extend the base snapshot with Redis-backed bridge / cancel observability.
+
+        Fields:
+        * ``bridge_count`` — active bridge tasks (one per locally-owned job).
+        * ``consumer_wrapper_count`` — open cross-worker consumer wrappers.
+        * ``background_task_count`` — fire-and-forget marker checks + cleanups.
+        * ``cancel_dispatcher_running`` — True if the PSUBSCRIBE loop is alive.
+        * ``cancel_stats`` — a copy of the cancel observability counters.
+        """
+        base = super().metrics_snapshot()
+        base["backend"] = "redis"
+        base["bridge_count"] = len(self._bridge_tasks)
+        base["consumer_wrapper_count"] = len(self._consumer_wrappers)
+        base["background_task_count"] = len(self._background_tasks)
+        base["cancel_dispatcher_running"] = (
+            self._cancel_dispatcher_task is not None and not self._cancel_dispatcher_task.done()
+        )
+        base["cancel_stats"] = dict(self._cancel_stats)
+        return base
 
     def get_queue_data(self, job_id: str) -> tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]:  # type: ignore[override]
         """Return queue data for a job, always backed by a Redis Stream consumer.
@@ -1078,7 +1255,13 @@ class RedisJobQueueService(JobQueueService):
             await super().cleanup_job(job_id)
         finally:
             if is_owner and self._client:
-                await self._client.delete(self._stream_key(job_id), self._owner_key(job_id))
+                # Best-effort delete of all Redis state owned by this job.
+                # Combined into one DEL so a single round-trip handles them.
+                await self._client.delete(
+                    self._stream_key(job_id),
+                    self._owner_key(job_id),
+                    self._activity_key(job_id),
+                )
                 await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:

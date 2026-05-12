@@ -757,11 +757,335 @@ async def test_redis_service_cancel_marker_closes_signal_before_subscribe_race()
 
 
 @pytest.mark.asyncio
+async def test_polling_watchdog_cancels_stale_owned_job():
+    """If a polling job stops being touched, the watchdog publishes a cancel."""
+    shared_client = fakeredis_aio.FakeRedis()
+    producer = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.3,
+        polling_watchdog_interval_s=0.1,
+    )
+    producer._client = shared_client
+    producer._closed = False
+    producer._cleanup_task = asyncio.create_task(producer._periodic_cleanup())
+    producer._cancel_dispatcher_task = asyncio.create_task(producer._run_cancel_dispatcher())
+    producer._polling_watchdog_task = asyncio.create_task(producer._run_polling_watchdog())
+    producer.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        producer.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        producer.start_job(job_id, _long_running())
+        # touch_activity ran via start_job; stop touching to let the threshold expire.
+        # Wait long enough for the threshold to lapse + watchdog scan to fire.
+        await asyncio.wait_for(cancelled_event.wait(), timeout=3.0)
+        assert cancelled_event.is_set()
+        assert producer._cancel_stats["polling_watchdog_kills"] >= 1
+    finally:
+        producer._closed = True
+        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(producer, task_attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(producer._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(producer._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_skips_fresh_activity():
+    """If the activity key is refreshed within the threshold, the watchdog leaves the job alone."""
+    shared_client = fakeredis_aio.FakeRedis()
+    producer = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.5,
+        polling_watchdog_interval_s=0.1,
+    )
+    producer._client = shared_client
+    producer._closed = False
+    producer._cleanup_task = asyncio.create_task(producer._periodic_cleanup())
+    producer._cancel_dispatcher_task = asyncio.create_task(producer._run_cancel_dispatcher())
+    producer._polling_watchdog_task = asyncio.create_task(producer._run_polling_watchdog())
+    producer.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        producer.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        producer.start_job(job_id, _long_running())
+
+        # Keep the activity key fresh for ~1.5s — longer than the threshold.
+        async def _heartbeat():
+            for _ in range(15):
+                await asyncio.sleep(0.1)
+                await producer.touch_activity(job_id)
+
+        heartbeat_task = asyncio.create_task(_heartbeat())
+        await heartbeat_task
+        # Job must still be alive after heartbeating.
+        assert not cancelled_event.is_set()
+        assert producer._cancel_stats["polling_watchdog_kills"] == 0
+    finally:
+        producer._closed = True
+        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(producer, task_attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(producer._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(producer._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_disabled_when_threshold_nonpositive():
+    """polling_stale_threshold_s <= 0 disables the watchdog entirely."""
+    svc = RedisJobQueueService(polling_stale_threshold_s=0.0)
+    svc._client = fakeredis_aio.FakeRedis()
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    # Watchdog should NOT be started when threshold <= 0; emulate start() behavior.
+    if svc._polling_stale_threshold_s > 0:
+        svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+    try:
+        assert svc._polling_watchdog_task is None
+    finally:
+        svc._closed = True
+        svc._cleanup_task.cancel()
+        svc._cancel_dispatcher_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await svc._cleanup_task
+        with contextlib.suppress(asyncio.CancelledError):
+            await svc._cancel_dispatcher_task
+
+
+@pytest.mark.asyncio
+async def test_metrics_snapshot_exposes_cancel_stats_and_counters():
+    """metrics_snapshot returns observability data for ops/monitoring."""
+    shared_client = fakeredis_aio.FakeRedis()
+    svc, _ = await _make_service(shared_client=shared_client)
+    try:
+        snap = svc.metrics_snapshot()
+        assert snap["backend"] == "redis"
+        assert snap["active_jobs"] == 0
+        assert snap["bridge_count"] == 0
+        assert snap["consumer_wrapper_count"] == 0
+        assert snap["cancel_dispatcher_running"] is True
+        assert isinstance(snap["cancel_stats"], dict)
+        for key in (
+            "published",
+            "marker_hit",
+            "dispatched_owned",
+            "dispatched_foreign",
+            "publish_errors",
+            "dispatcher_reconnects",
+        ):
+            assert key in snap["cancel_stats"], f"missing cancel_stats key {key!r}"
+        # Snapshot must be a copy — mutating it doesn't affect the service.
+        snap["cancel_stats"]["published"] = 99
+        assert svc._cancel_stats["published"] == 0
+    finally:
+        await _stop_service(svc)
+
+
+@pytest.mark.asyncio
+async def test_metrics_snapshot_for_in_memory_queue():
+    """Base service snapshot reports the memory backend and active job count."""
+    from langflow.services.job_queue.service import JobQueueService
+
+    svc = JobQueueService()
+    svc.start()
+    try:
+        snap = svc.metrics_snapshot()
+        assert snap["backend"] == "memory"
+        assert snap["active_jobs"] == 0
+        assert "cancel_stats" not in snap  # only redis-backed exposes pubsub stats
+    finally:
+        await svc.teardown()
+
+
+@pytest.mark.asyncio
+async def test_post_cancel_cleanup_bounded_by_outer_timeout():
+    """A hung cleanup_job must not pin a background task indefinitely.
+
+    Without an outer timeout, a Redis stall during stream DELETE leaves the
+    cleanup task pending forever.  The bound preserves shutdown / GC behaviour
+    even under Redis pathology.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc, _ = await _make_service(shared_client=shared_client)
+    try:
+        job_id = str(uuid.uuid4())
+
+        # Patch cleanup_job to hang forever.
+        async def _hang_forever(_job_id: str) -> None:
+            await asyncio.Event().wait()
+
+        svc.cleanup_job = _hang_forever  # type: ignore[method-assign]
+        svc._POST_CANCEL_CLEANUP_TIMEOUT_S = 0.2
+
+        start = asyncio.get_event_loop().time()
+        await svc._post_cancel_cleanup(job_id)
+        elapsed = asyncio.get_event_loop().time() - start
+
+        # Should have given up within roughly the timeout, not blocked forever.
+        assert elapsed < 1.0, f"_post_cancel_cleanup did not bound runtime; elapsed={elapsed:.2f}s"
+    finally:
+        await _stop_service(svc)
+
+
+@pytest.mark.asyncio
+async def test_cancel_dispatcher_reconnects_after_pubsub_error():
+    """Dispatcher should reconnect with backoff if the pubsub stream errors out.
+
+    Without this resilience, a Redis blip kills the dispatcher silently and the
+    worker becomes blind to cross-worker cancels until restart.
+    """
+
+    class _FlakeyPubSub:
+        """Fakes pubsub.listen() raising once then yielding normally."""
+
+        def __init__(self, real: Any, *, raise_on_listen_count: int = 1) -> None:
+            self._real = real
+            self._raises_left = raise_on_listen_count
+
+        async def psubscribe(self, *args: Any, **kwargs: Any) -> Any:
+            return await self._real.psubscribe(*args, **kwargs)
+
+        async def punsubscribe(self, *args: Any, **kwargs: Any) -> Any:
+            return await self._real.punsubscribe(*args, **kwargs)
+
+        async def aclose(self) -> None:
+            with contextlib.suppress(Exception):
+                await self._real.aclose()
+
+        def listen(self):
+            if self._raises_left > 0:
+                self._raises_left -= 1
+
+                async def _raiser():
+                    msg = "simulated pubsub blip"
+                    raise ConnectionError(msg)
+                    yield  # pragma: no cover
+
+                return _raiser()
+            return self._real.listen()
+
+    class _FlakeyClient:
+        """Real fake client whose pubsub() returns a flakey wrapper exactly once."""
+
+        def __init__(self, real: fakeredis_aio.FakeRedis) -> None:
+            self._real = real
+            self._pubsub_count = 0
+
+        def pubsub(self) -> Any:
+            self._pubsub_count += 1
+            base = self._real.pubsub()
+            # Only the first dispatcher's pubsub fails; subsequent reconnects succeed.
+            return _FlakeyPubSub(base, raise_on_listen_count=1 if self._pubsub_count == 1 else 0)
+
+        # Delegate everything else.
+        def __getattr__(self, item: str) -> Any:
+            return getattr(self._real, item)
+
+    real_client = fakeredis_aio.FakeRedis()
+    flakey_client = _FlakeyClient(real_client)
+    # Build a service that uses our flakey client + an aggressive reconnect for fast test.
+    svc_producer = RedisJobQueueService(ttl=60, cancel_channel_enabled=True)
+    svc_producer._client = flakey_client
+    svc_producer._closed = False
+    svc_producer._cleanup_task = asyncio.create_task(svc_producer._periodic_cleanup())
+    svc_producer._cancel_dispatcher_task = asyncio.create_task(svc_producer._run_cancel_dispatcher())
+    svc_producer.ready = True
+    # Allow the first (flakey) subscribe + the reconnect to settle.
+    await asyncio.sleep(0.6)
+
+    svc_other, _ = await _make_service(shared_client=real_client)
+    try:
+        # After reconnect, a publish should still reach the dispatcher.
+        job_id = str(uuid.uuid4())
+        svc_producer.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc_producer.start_job(job_id, _long_running())
+        await asyncio.sleep(0.1)
+        await svc_other.signal_cancel(job_id)
+        await asyncio.wait_for(cancelled_event.wait(), timeout=2.0)
+        assert cancelled_event.is_set()
+        # Reconnect counter should be incremented exactly once.
+        assert svc_producer._cancel_stats["dispatcher_reconnects"] == 1
+    finally:
+        # Stop service manually since _make_service helper wasn't used.
+        svc_producer._closed = True
+        if svc_producer._cleanup_task:
+            svc_producer._cleanup_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await svc_producer._cleanup_task
+        if svc_producer._cancel_dispatcher_task:
+            svc_producer._cancel_dispatcher_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await svc_producer._cancel_dispatcher_task
+        for bg in list(svc_producer._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        await _stop_service(svc_other)
+
+
+@pytest.mark.asyncio
 async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
     """signal_cancel triggers a prompt end-of-stream sentinel for consumers.
 
-    The dispatcher puts a sentinel on the local queue so the bridge publishes
-    the Redis end-of-stream marker without waiting for periodic cleanup.
+    Verifies deterministically that the bridge XADDs the sentinel record to the
+    Redis Stream *before* cleanup deletes the stream key.  We replace
+    ``cleanup_job`` on the producer service with a no-op so the assertion can
+    inspect the stream without racing the deletion path.
     """
     shared_client = fakeredis_aio.FakeRedis()
     producer, _ = await _make_service(shared_client=shared_client)
@@ -773,25 +1097,38 @@ async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
         async def _long_running():
             await asyncio.Event().wait()
 
+        # Replace cleanup_job with a no-op so the stream survives our assertion.
+        # The bridge still publishes the sentinel; only the post-cancel deletion
+        # is skipped.  We restore the original method in the finally block so
+        # _stop_service can clean state.
+        original_cleanup = producer.cleanup_job
+
+        async def _noop_cleanup(_job_id: str) -> None:
+            return None
+
+        producer.cleanup_job = _noop_cleanup  # type: ignore[method-assign]
+
         producer.start_job(job_id, _long_running())
         await asyncio.sleep(0.1)
         await publisher.signal_cancel(job_id)
-        # Allow the bridge to drain the sentinel before cleanup deletes the stream.
-        await asyncio.sleep(0.5)
 
-        # Bridge should have flushed the sentinel to the Redis Stream before
-        # cleanup deleted the key, OR cleanup deleted it — either way the consumer
-        # sees end-of-stream. Verify by reading messages BEFORE cleanup runs:
-        # the test sleeps 0.1s, so we check the stream content within that window.
+        # Bridge has up to a few hundred ms to drain the sentinel into Redis.
         stream_key = f"langflow:queue:{job_id}"
-        # Check the captured xrange we already took. If the stream was deleted
-        # before we got here, that's also acceptable end-of-stream behaviour.
-        messages = await shared_client.xrange(stream_key)
-        if not messages:
-            # Stream already deleted by cleanup — consumers see end via missing-key path.
-            pytest.skip("stream cleaned up before xrange — end-of-stream still delivered via missing-key path")
-        last_fields = messages[-1][1]
+        deadline = asyncio.get_event_loop().time() + 2.0
+        last_fields: dict[bytes, bytes] | None = None
+        while asyncio.get_event_loop().time() < deadline:
+            messages = await shared_client.xrange(stream_key)
+            if messages and messages[-1][1].get(b"data") == _STREAM_SENTINEL_DATA:
+                last_fields = messages[-1][1]
+                break
+            await asyncio.sleep(0.05)
+
+        assert last_fields is not None, f"sentinel never XADDed to {stream_key} after signal_cancel"
         assert last_fields.get(b"data") == _STREAM_SENTINEL_DATA
+        assert last_fields.get(b"event_id") == b"__sentinel__"
+
+        # Restore so _stop_service can run the full cleanup path.
+        producer.cleanup_job = original_cleanup  # type: ignore[method-assign]
     finally:
         await _stop_service(producer)
         await _stop_service(publisher)
