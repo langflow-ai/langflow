@@ -2371,9 +2371,11 @@
             "description": "# Ingestion Pipeline",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b",
             "template": {
               "backgroundColor": "lime"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b"
           },
           "type": "note"
         },
@@ -2400,9 +2402,11 @@
             "description": "# Agent Inference",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3",
             "template": {
               "backgroundColor": "blue"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3"
           },
           "type": "note"
         },
@@ -2429,9 +2433,11 @@
             "description": "## About OpenDsStar and structured data analysis\n\n**OpenDsStar — Structured Data Agent 📚**\n\n[OpenDsStar](https://github.com/IBM/OpenDsStar) is an open-source implementation of the [DS-Star](https://arxiv.org/abs/2509.21825) agent. It keeps the core DS-Star workflow of planning, code generation, execution, debugging, and verification, while using a more practical tool-centric architecture that improves modularity, extensibility, and execution efficiency.\n\nThis Langflow template applies OpenDsStar to **structured data analysis** over tabular datasets such as **CSV, Excel, Parquet, JSON, and TSV**. It enables natural-language exploration, retrieval, and reasoning over uploaded structured data.\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b"
           },
           "type": "note"
         },
@@ -2458,9 +2464,11 @@
             "description": "# Models",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8",
             "template": {
               "backgroundColor": "rose"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8"
           },
           "type": "note"
         },
@@ -2487,9 +2495,11 @@
             "description": "# Data",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d",
             "template": {
               "backgroundColor": "amber"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d"
           },
           "type": "note"
         },
@@ -5064,9 +5074,11 @@
             "description": "## How the flow works\n\nThis flow is organized into four color-coded sections:\n\n**Data (Yellow)**  \nUpload one or more structured data files that you want the agent to analyze.\n\n**Models (Pink)**  \nConfigure a language model for reasoning and description generation, and an embedding model for indexing and retrieval.\n\n**Ingestion Pipeline (Green)**  \nThe ingestion flow reads uploaded files, generates semantic descriptions for them, stores those descriptions in a vector database, and prepares file retrieval data for later use.\n\n**Agent Inference (Blue)**  \nDuring chat, the OpenDsStar agent reuses the ingested vector data and file retrieval data through tools. It searches for relevant files, retrieves their contents when needed, reasons over the data, and returns an answer.\n\nIn short: **upload files → ingest and index them → reuse the ingested data at query time → analyze and answer**\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef"
           },
           "type": "note"
         },
@@ -5093,9 +5105,11 @@
             "description": "## Setup\n\n**Configure the models**  \nSet a language model and an embedding model in the **Models** section.\n\n**Configure persistent storage correctly**  \nThis flow uses both the **Vector Store** and the **File Content Retriever** twice:\n- once in the **Ingestion Pipeline**\n- again in **Agent Inference**, where they are used as tools over the ingested data\n\nSet the directories as follows:\n- both **Vector Store** components should use the **same Persistent Directory**\n- both **File Content Retriever** components should use the **same Persistent Directory**\n- the **Vector Store** directory and the **File Content Retriever** directory should be **different**\n\nThis allows the ingestion and inference stages to share the same stored vector data and file retrieval data, while keeping those two storage layers separate.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d"
           },
           "type": "note"
         },
@@ -5122,9 +5136,11 @@
             "description": "## How to run it\n\n**Upload your files**  \nAdd one or more structured data files in the **Data** section.\n\n**Run the ingestion pipeline**  \nExecute the ingestion flow so each file is processed, described, and indexed.\n\n**Open the chat / playground**  \nStart the agent flow and ask questions in plain English.\n\n**Analyze your data**  \nThe agent will use the ingested vector store and file retrieval tools to find relevant files, access their contents, and answer based on the uploaded data.\n",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b"
           },
           "type": "note"
         },
@@ -5151,9 +5167,11 @@
             "description": "## Notes\n\n- The **Write File** tool is also included, allowing the agent to create structured output files such as **CSV, Excel, or JSON** with analysis results.  \n  (e.g. *Create a CSV with all Airbnb listings in NYC that cost less than 300 USD per night.*)\n- Using the **Write File** tool, code agents can also save plots as **HTML** files when requested.  \n  (e.g. *Create a plot of house price vs. review score for all Airbnb listings in the Upper East Side, and save it as an HTML file.*)",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972",
             "template": {
               "backgroundColor": "neutral"
-            }
+            },
+            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972"
           },
           "type": "note"
         },

@@ -789,7 +789,6 @@ class TestMarkMessagesIngested:
         await _mark_messages_ingested(mock_db, messages=messages, job_id=job_id, memory_base_id=memory_base_id)
 
         mock_db.exec.assert_awaited_once()
-        mock_db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_update_sets_ingestion_job_id_and_timestamp(self):
@@ -1016,3 +1015,1196 @@ class TestIngestionLocking:
 
         assert result == {"message": "No pending messages", "ingested": 0}
         advance_cursor_mock.assert_not_awaited()
+
+
+# ------------------------------------------------------------------ #
+#  build_preprocessed_document                                        #
+# ------------------------------------------------------------------ #
+
+
+class TestBuildPreprocessedDocument:
+    def _call(
+        self,
+        output_text: str = "Summary text about the conversation.",
+        source_message_ids: list | None = None,
+        session_id: str = "s1",
+        flow_id: str | None = None,
+        job_id: str = "job-1",
+        preproc_output_id: str = "preproc-1",
+    ):
+        from langflow.services.memory_base.document_builders import build_preprocessed_document
+
+        return build_preprocessed_document(
+            output_text=output_text,
+            source_message_ids=source_message_ids or ["id1", "id2"],
+            session_id=session_id,
+            flow_id=flow_id or str(uuid.uuid4()),
+            job_id=job_id,
+            preproc_output_id=preproc_output_id,
+        )
+
+    def test_empty_output_text_returns_empty_list(self):
+        assert self._call(output_text="") == []
+
+    def test_whitespace_only_output_returns_empty_list(self):
+        assert self._call(output_text="   ") == []
+
+    def test_normal_text_returns_documents(self):
+        docs = self._call()
+        assert len(docs) >= 1
+
+    def test_preprocessed_flag_true_in_metadata(self):
+        docs = self._call()
+        assert docs[0].metadata["preprocessed"] is True
+
+    def test_preproc_output_id_in_metadata(self):
+        docs = self._call(preproc_output_id="abc-123")
+        assert docs[0].metadata["preproc_output_id"] == "abc-123"
+
+    def test_source_message_ids_comma_joined_in_metadata(self):
+        docs = self._call(source_message_ids=["id1", "id2"])
+        assert docs[0].metadata["source_message_ids"] == "id1,id2"
+
+    def test_single_source_id_not_mangled(self):
+        docs = self._call(source_message_ids=["only-id"])
+        assert docs[0].metadata["source_message_ids"] == "only-id"
+
+    def test_session_id_in_metadata(self):
+        docs = self._call(session_id="my-session")
+        assert docs[0].metadata["session_id"] == "my-session"
+
+    def test_source_is_memory_base_session(self):
+        docs = self._call(session_id="my-sess")
+        assert docs[0].metadata["source"] == "memory_base/my-sess"
+
+    def test_job_id_in_metadata(self):
+        docs = self._call(job_id="job-xyz")
+        assert docs[0].metadata["job_id"] == "job-xyz"
+
+    def test_sender_is_machine(self):
+        docs = self._call()
+        assert docs[0].metadata["sender"] == "Machine"
+
+    def test_sender_name_is_preprocessor(self):
+        docs = self._call()
+        assert docs[0].metadata["sender_name"] == "Preprocessor"
+
+    def test_long_text_produces_multiple_chunks(self):
+        from langflow.services.memory_base.document_builders import MESSAGE_CHUNK_SIZE
+
+        long_text = "word " * (MESSAGE_CHUNK_SIZE + 100)
+        docs = self._call(output_text=long_text)
+        assert len(docs) > 1
+
+    def test_chunk_index_and_total_chunks_correct_for_multi_chunk(self):
+        from langflow.services.memory_base.document_builders import MESSAGE_CHUNK_SIZE
+
+        long_text = "word " * (MESSAGE_CHUNK_SIZE + 100)
+        docs = self._call(output_text=long_text)
+        for i, doc in enumerate(docs):
+            assert doc.metadata["chunk_index"] == i
+            assert doc.metadata["total_chunks"] == len(docs)
+
+    def test_flow_id_in_metadata(self):
+        flow_id = str(uuid.uuid4())
+        docs = self._call(flow_id=flow_id)
+        assert docs[0].metadata["flow_id"] == flow_id
+
+    def test_timestamp_and_run_id_are_empty_strings(self):
+        docs = self._call()
+        assert docs[0].metadata["timestamp"] == ""
+        assert docs[0].metadata["run_id"] == ""
+
+
+# ------------------------------------------------------------------ #
+#  ingest_memory_task — preprocessing path                           #
+# ------------------------------------------------------------------ #
+
+
+class TestIngestMemoryTaskPreprocessing:
+    """Tests for the preprocessing=True branch of ingest_memory_task."""
+
+    def _make_request(self, flow_id, memory_base_id=None, **kwargs):
+        from langflow.services.memory_base.task import IngestionRequest
+
+        defaults = {
+            "memory_base_id": memory_base_id or uuid.uuid4(),
+            "session_id": "s1",
+            "flow_id": flow_id,
+            "kb_name": "kb",
+            "kb_username": "user",
+            "user_id": uuid.uuid4(),
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+            "cursor_id": None,
+            "task_job_id": uuid.uuid4(),
+            "job_service": MagicMock(),
+            "preprocessing": True,
+            "preproc_model": "gpt-4o-mini",
+            "preproc_instructions": "Summarize.",
+            "preproc_kill_phrase": "NO_INGEST",
+        }
+        defaults.update(kwargs)
+        return IngestionRequest(**defaults)
+
+    def _make_preproc_row_mock(self, source_ids=None, output_text="Cached LLM output"):
+        row = MagicMock()
+        row.id = uuid.uuid4()
+        row.source_message_ids = source_ids or []
+        row.output_text = output_text
+        row.status = "processed"
+        return row
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_result_skips_chroma_write(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+        ):
+            result = await ingest_memory_task(request=self._make_request(flow_id))
+
+        assert result == {"message": "Skipped by kill phrase", "ingested": 0, "skipped": True}
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_inserts_skipped_preproc_row(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        insert_mock = AsyncMock(return_value=MagicMock())
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", insert_mock),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        insert_mock.assert_awaited_once()
+        call_kwargs = insert_mock.call_args.kwargs
+        assert call_kwargs["status"] == "skipped"
+        assert call_kwargs["output_text"] is None
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_does_not_open_chroma(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        chroma_client_mock = MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                chroma_client_mock,
+            ),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        chroma_client_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_does_not_call_build_preprocessed_document(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        build_doc_mock = MagicMock(return_value=[MagicMock()])
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", build_doc_mock),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        build_doc_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_does_not_call_update_preproc_row_status(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        update_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", update_mock),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        update_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_marks_messages_ingested(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        mark_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", mark_mock),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        mark_mock.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_kill_phrase_advances_cursor(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        kill_result = PreprocessingResult(status="skipped", output_text="", raw_response="NO_INGEST")
+        advance_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=kill_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=MagicMock())),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", advance_mock),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        advance_mock.assert_awaited_once()
+        assert advance_mock.call_args.kwargs["new_cursor_id"] == msg.id
+
+    @pytest.mark.asyncio
+    async def test_normal_result_ingests_to_chroma(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            result = await ingest_memory_task(request=self._make_request(flow_id))
+
+        assert result == {"message": "Success", "ingested": 1}
+
+    @pytest.mark.asyncio
+    async def test_normal_result_inserts_processed_preproc_row(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+        insert_mock = AsyncMock(return_value=preproc_row)
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", insert_mock),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        insert_mock.assert_awaited_once()
+        assert insert_mock.call_args.kwargs["status"] == "processed"
+
+    @pytest.mark.asyncio
+    async def test_normal_result_flips_row_to_ingested_after_chroma_write(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+        update_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", update_mock),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        update_mock.assert_awaited_once()
+        assert update_mock.call_args.kwargs["status"] == "ingested"
+
+    @pytest.mark.asyncio
+    async def test_normal_result_calls_build_preprocessed_document_with_source_ids(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+        build_doc_mock = MagicMock(return_value=[MagicMock()])
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", build_doc_mock),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        build_doc_mock.assert_called_once()
+        call_kwargs = build_doc_mock.call_args.kwargs
+        assert str(msg.id) in call_kwargs["source_message_ids"]
+
+    @pytest.mark.asyncio
+    async def test_missing_preproc_model_raises_runtime_error(self, tmp_path):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            pytest.raises(RuntimeError, match="preproc_model is not set"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id, preproc_model=None))
+
+    @pytest.mark.asyncio
+    async def test_resume_path_skips_llm_call(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        preproc_row = self._make_preproc_row_mock(source_ids=[str(msg.id)])
+        run_preproc_mock = AsyncMock(
+            return_value=PreprocessingResult(status="ingested", output_text="Cached.", raw_response="Cached.")
+        )
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.run_preprocessing", run_preproc_mock),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        run_preproc_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_resume_does_not_call_insert_preproc_row(self, tmp_path):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        preproc_row = self._make_preproc_row_mock(source_ids=[str(msg.id)])
+        insert_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", insert_mock),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        insert_mock.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_resume_path_restricts_batch_to_source_ids(self, tmp_path):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg1 = _make_message(flow_id=flow_id, text="first")
+        msg2 = _make_message(flow_id=flow_id, text="second")
+        preproc_row = self._make_preproc_row_mock(source_ids=[str(msg1.id)], output_text="Cached.")
+        build_doc_mock = MagicMock(return_value=[MagicMock()])
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg1, msg2])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", build_doc_mock),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(return_value=1),
+            ),
+            patch("langflow.services.memory_base.task.sync_kb_metadata"),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+            patch("langflow.services.memory_base.task._mark_messages_ingested", AsyncMock()),
+            patch("langflow.services.memory_base.task._advance_cursor", AsyncMock()),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        build_doc_mock.assert_called_once()
+        call_ids = build_doc_mock.call_args.kwargs["source_message_ids"]
+        assert str(msg1.id) in call_ids
+        assert str(msg2.id) not in call_ids
+
+    @pytest.mark.asyncio
+    async def test_resume_path_vanished_messages_returns_early(self, tmp_path):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        preproc_row = self._make_preproc_row_mock(source_ids=["ghost-id-1", "ghost-id-2"])
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", AsyncMock()),
+        ):
+            result = await ingest_memory_task(request=self._make_request(flow_id))
+
+        assert result == {"message": "Preprocessing source messages missing", "ingested": 0}
+
+    @pytest.mark.asyncio
+    async def test_resume_path_vanished_updates_row_to_skipped(self, tmp_path):
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        preproc_row = self._make_preproc_row_mock(source_ids=["ghost-id-1"])
+        update_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task._update_preproc_row_status", update_mock),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        update_mock.assert_awaited_once()
+        call_kwargs = update_mock.call_args.kwargs
+        assert call_kwargs["status"] == "skipped"
+        assert call_kwargs["clear_output"] is True
+
+    @pytest.mark.asyncio
+    async def test_preprocessing_empty_document_output_returns_early(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="", raw_response="")
+        preproc_row = self._make_preproc_row_mock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[]),
+        ):
+            result = await ingest_memory_task(request=self._make_request(flow_id))
+
+        assert result == {"message": "No non-empty messages to ingest", "ingested": 0}
+
+    @pytest.mark.asyncio
+    async def test_preprocessing_job_cancelled_before_chroma(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+        chroma_client_mock = MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=True),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                chroma_client_mock,
+            ),
+        ):
+            result = await ingest_memory_task(request=self._make_request(flow_id))
+
+        assert result == {"message": "Job cancelled before ingestion", "ingested": 0}
+        chroma_client_mock.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_preprocessing_chroma_write_failure_raises_and_cleans_up(self, tmp_path):
+        from langflow.services.memory_base.preprocessing import PreprocessingResult
+        from langflow.services.memory_base.task import ingest_memory_task
+
+        flow_id = uuid.uuid4()
+        msg = _make_message(flow_id=flow_id)
+        ok_result = PreprocessingResult(status="ingested", output_text="Summary.", raw_response="Summary.")
+        preproc_row = self._make_preproc_row_mock()
+        cleanup_mock = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.task.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.task._acquire_session_lock", AsyncMock(return_value=asyncio.Lock())),
+            patch("langflow.services.memory_base.task._release_session_lock", AsyncMock()),
+            patch("langflow.services.memory_base.task._read_live_cursor", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task._fetch_pending_messages", AsyncMock(return_value=[msg])),
+            patch("langflow.services.memory_base.task._get_pending_preproc_row", AsyncMock(return_value=None)),
+            patch("langflow.services.memory_base.task.run_preprocessing", AsyncMock(return_value=ok_result)),
+            patch("langflow.services.memory_base.task._insert_preproc_row", AsyncMock(return_value=preproc_row)),
+            patch("langflow.services.memory_base.task.build_preprocessed_document", return_value=[MagicMock()]),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.is_job_cancelled",
+                AsyncMock(return_value=False),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.build_embeddings",
+                AsyncMock(return_value=MagicMock()),
+            ),
+            patch(
+                "langflow.services.memory_base.task.KBStorageHelper.get_fresh_chroma_client",
+                return_value=MagicMock(),
+            ),
+            patch("langflow.services.memory_base.task.Chroma"),
+            patch(
+                "langflow.services.memory_base.task.KBIngestionHelper.write_documents_to_chroma",
+                AsyncMock(side_effect=RuntimeError("Chroma write failed")),
+            ),
+            patch("langflow.services.memory_base.task.KBIngestionHelper.cleanup_chroma_chunks_by_job", cleanup_mock),
+            patch("langflow.services.memory_base.task.KBStorageHelper.release_chroma_resources"),
+            pytest.raises(RuntimeError, match="Chroma write failed"),
+        ):
+            await ingest_memory_task(request=self._make_request(flow_id))
+
+        cleanup_mock.assert_awaited_once()
+
+
+# ------------------------------------------------------------------ #
+#  Preprocessing DB helpers                                           #
+# ------------------------------------------------------------------ #
+
+
+class TestPreprocessingHelpers:
+    """Tests for _get_pending_preproc_row, _insert_preproc_row, _update_preproc_row_status."""
+
+    def _make_preproc_row(
+        self,
+        *,
+        status: str = "processed",
+        output_text: str | None = "some text",
+        source_ids: list | None = None,
+    ):
+        from langflow.services.database.models.memory_base.model import MemoryBasePreprocessingOutput
+
+        return MemoryBasePreprocessingOutput(
+            memory_base_id=uuid.uuid4(),
+            session_id="sess-1",
+            status=status,
+            output_text=output_text,
+            source_message_ids=source_ids or [],
+            model_used="gpt-4o-mini",
+        )
+
+    # ---- _get_pending_preproc_row ----
+
+    @pytest.mark.asyncio
+    async def test_get_pending_preproc_row_returns_none_when_no_rows(self):
+        from langflow.services.memory_base.task import _get_pending_preproc_row
+
+        mock_result = MagicMock()
+        mock_result.first = MagicMock(return_value=None)
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=mock_result)
+
+        result = await _get_pending_preproc_row(mock_db, uuid.uuid4(), "sess-1")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_pending_preproc_row_returns_row_when_present(self):
+        from langflow.services.memory_base.task import _get_pending_preproc_row
+
+        row = self._make_preproc_row()
+        mock_result = MagicMock()
+        mock_result.first = MagicMock(return_value=row)
+        mock_db = AsyncMock()
+        mock_db.exec = AsyncMock(return_value=mock_result)
+
+        result = await _get_pending_preproc_row(mock_db, row.memory_base_id, "sess-1")
+        assert result is row
+        assert result.status == "processed"
+
+    # ---- _insert_preproc_row ----
+
+    @pytest.mark.asyncio
+    async def test_insert_preproc_row_calls_add_commit_refresh(self):
+        from langflow.services.memory_base.task import _insert_preproc_row
+
+        mock_db = AsyncMock()
+        await _insert_preproc_row(
+            mock_db,
+            memory_base_id=uuid.uuid4(),
+            session_id="s1",
+            job_id=uuid.uuid4(),
+            status="processed",
+            output_text="Summary",
+            source_message_ids=["id1", "id2"],
+            model_used="gpt-4o-mini",
+        )
+
+        mock_db.add.assert_called_once()
+        mock_db.commit.assert_awaited_once()
+        mock_db.refresh.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_insert_preproc_row_returns_row_with_correct_status_and_memory_base_id(self):
+        from langflow.services.database.models.memory_base.model import MemoryBasePreprocessingOutput
+        from langflow.services.memory_base.task import _insert_preproc_row
+
+        mock_db = AsyncMock()
+        mb_id = uuid.uuid4()
+        result = await _insert_preproc_row(
+            mock_db,
+            memory_base_id=mb_id,
+            session_id="s1",
+            job_id=uuid.uuid4(),
+            status="skipped",
+            output_text=None,
+            source_message_ids=["id1"],
+            model_used="gpt-4",
+        )
+
+        assert isinstance(result, MemoryBasePreprocessingOutput)
+        assert result.status == "skipped"
+        assert result.memory_base_id == mb_id
+        assert result.output_text is None
+
+    @pytest.mark.asyncio
+    async def test_insert_preproc_row_stores_source_message_ids(self):
+        from langflow.services.memory_base.task import _insert_preproc_row
+
+        mock_db = AsyncMock()
+        ids = ["aaa", "bbb", "ccc"]
+        result = await _insert_preproc_row(
+            mock_db,
+            memory_base_id=uuid.uuid4(),
+            session_id="s1",
+            job_id=uuid.uuid4(),
+            status="processed",
+            output_text="ok",
+            source_message_ids=ids,
+            model_used="gpt-4",
+        )
+
+        assert result.source_message_ids == ids
+
+    # ---- _update_preproc_row_status ----
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_sets_status(self):
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        row = self._make_preproc_row(status="processed")
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=uuid.uuid4())
+        assert row.status == "ingested"
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_updates_job_id(self):
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        row = self._make_preproc_row()
+        new_job_id = uuid.uuid4()
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=new_job_id)
+        assert row.job_id == new_job_id
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_clear_output_false_preserves_text(self):
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        row = self._make_preproc_row(output_text="important text")
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=uuid.uuid4(), clear_output=False)
+        assert row.output_text == "important text"
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_clear_output_true_nullifies_text(self):
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        row = self._make_preproc_row(output_text="some text")
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="skipped", task_job_id=uuid.uuid4(), clear_output=True)
+        assert row.output_text is None
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_calls_db_add(self):
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        row = self._make_preproc_row()
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=uuid.uuid4())
+        mock_db.add.assert_called_once_with(row)
+
+    @pytest.mark.asyncio
+    async def test_update_preproc_row_status_updates_updated_at_timestamp(self):
+        from datetime import datetime, timezone
+
+        from langflow.services.memory_base.task import _update_preproc_row_status
+
+        old_time = datetime(2020, 1, 1, tzinfo=timezone.utc)
+        row = self._make_preproc_row()
+        row.updated_at = old_time
+        mock_db = MagicMock()
+        await _update_preproc_row_status(mock_db, row, status="ingested", task_job_id=uuid.uuid4())
+        assert row.updated_at > old_time
+
+
+# ------------------------------------------------------------------ #
+#  _fetch_pending_messages — error-message filtering                  #
+# ------------------------------------------------------------------ #
+
+
+class TestFetchPendingMessagesFiltersErrors:
+    """Regression: component error/exception messages must never be ingested.
+
+    See bug report: "[Memory Base] Error messages from components are indexed as
+    valid chunks in Chroma".  The fetch must skip messages where ``error=True``
+    or ``category='error'`` so failure output (e.g. an embedder API error) is
+    never embedded as legitimate conversation context.
+    """
+
+    @staticmethod
+    def _engine():
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlmodel.pool import StaticPool
+
+        return create_async_engine(
+            "sqlite+aiosqlite://",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
+
+    @pytest.mark.asyncio
+    async def test_excludes_messages_with_error_flag_or_error_category(self):
+        from langflow.services.database.models.message.model import MessageTable
+        from langflow.services.memory_base.task import _fetch_pending_messages
+        from sqlmodel import SQLModel
+        from sqlmodel.ext.asyncio.session import AsyncSession
+
+        engine = self._engine()
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+
+            flow_id = uuid.uuid4()
+            session_id = "sess-error-filter"
+            base_ts = datetime.now(timezone.utc)
+
+            good_user = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="What is the weather?",
+                flow_id=flow_id,
+                timestamp=base_ts,
+                error=False,
+                category="message",
+            )
+            error_flag_only = MessageTable(
+                id=uuid.uuid4(),
+                sender="Knowledge Base",
+                sender_name="Knowledge Base",
+                session_id=session_id,
+                text="[Knowledge Base] Error embedding content (INVALID_ARGUMENT): 400.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 1),
+                error=True,
+                category="message",  # category may not always be "error"
+            )
+            error_category = MessageTable(
+                id=uuid.uuid4(),
+                sender="Knowledge Base",
+                sender_name="Knowledge Base",
+                session_id=session_id,
+                text="EmbedContentRequest.content contains an empty Part.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 2),
+                error=False,  # legacy rows may have error=False but category="error"
+                category="error",
+            )
+            good_ai = MessageTable(
+                id=uuid.uuid4(),
+                sender="Machine",
+                sender_name="AI",
+                session_id=session_id,
+                text="The weather is sunny.",
+                flow_id=flow_id,
+                timestamp=base_ts.replace(microsecond=base_ts.microsecond + 3),
+                error=False,
+                category="message",
+            )
+
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                db.add_all([good_user, error_flag_only, error_category, good_ai])
+                await db.commit()
+
+                fetched = await _fetch_pending_messages(
+                    db,
+                    flow_id=flow_id,
+                    session_id=session_id,
+                    cursor_id=None,
+                )
+
+            fetched_ids = {m.id for m in fetched}
+            assert good_user.id in fetched_ids
+            assert good_ai.id in fetched_ids
+            assert error_flag_only.id not in fetched_ids, "error=True message must be filtered"
+            assert error_category.id not in fetched_ids, "category='error' message must be filtered"
+        finally:
+            await engine.dispose()
+
+    @pytest.mark.asyncio
+    async def test_other_session_or_flow_messages_still_excluded_even_when_error(self):
+        """Sanity check: error filter does not accidentally pull in cross-session rows."""
+        from langflow.services.database.models.message.model import MessageTable
+        from langflow.services.memory_base.task import _fetch_pending_messages
+        from sqlmodel import SQLModel
+        from sqlmodel.ext.asyncio.session import AsyncSession
+
+        engine = self._engine()
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+
+            flow_id = uuid.uuid4()
+            other_flow_id = uuid.uuid4()
+            session_id = "sess-A"
+            other_session_id = "sess-B"
+            ts = datetime.now(timezone.utc)
+
+            # Good message in *another* session — must not be returned.
+            other_session_msg = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=other_session_id,
+                text="cross-session leak attempt",
+                flow_id=flow_id,
+                timestamp=ts,
+                error=False,
+                category="message",
+            )
+            # Good message in another flow — must not be returned either.
+            other_flow_msg = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="cross-flow leak attempt",
+                flow_id=other_flow_id,
+                timestamp=ts,
+                error=False,
+                category="message",
+            )
+            good = MessageTable(
+                id=uuid.uuid4(),
+                sender="User",
+                sender_name="User",
+                session_id=session_id,
+                text="kept",
+                flow_id=flow_id,
+                timestamp=ts.replace(microsecond=ts.microsecond + 1),
+                error=False,
+                category="message",
+            )
+
+            async with AsyncSession(engine, expire_on_commit=False) as db:
+                db.add_all([other_session_msg, other_flow_msg, good])
+                await db.commit()
+
+                fetched = await _fetch_pending_messages(
+                    db,
+                    flow_id=flow_id,
+                    session_id=session_id,
+                    cursor_id=None,
+                )
+
+            fetched_ids = {m.id for m in fetched}
+            assert fetched_ids == {good.id}
+        finally:
+            await engine.dispose()

@@ -39,6 +39,9 @@ class FieldTypes(str, Enum):
     TOOLS = "tools"
     MCP = "mcp"
     MODEL = "model"
+    # Wire value stays "knowledge_backend" for backward compatibility with
+    # serialized flows that predate the UI rename to "DB Provider".
+    DB_PROVIDER = "knowledge_backend"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
