@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.base.composio.composio_base import ComposioBaseComponent
 from lfx.components.composio.composio_api import ComposioAPIComponent
+from lfx.components.composio.outlook_composio import ComposioOutlookAPIComponent
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 
@@ -38,10 +39,10 @@ class TestComposioCloudValidation:
             assert "astra" in error_msg or "cloud" in error_msg
 
 
-def _make_component(action_key: str, fields: dict) -> ComposioBaseComponent:
-    """Build a ComposioBaseComponent pre-wired with test data, bypassing real API calls."""
+def _make_component(action_key: str, fields: dict) -> ComposioOutlookAPIComponent:
+    """Build a ComposioOutlookAPIComponent pre-wired with test data, bypassing real API calls."""
     with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
-        component = ComposioBaseComponent(api_key="test-key")
+        component = ComposioOutlookAPIComponent(api_key="test-key")
 
     component.entity_id = "default"
     component.action_button = [{"name": "Send Email"}]
