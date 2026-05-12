@@ -242,12 +242,17 @@ class TestWriteFile:
         assert "error" in result
         assert "size" in result["error"].lower() or "limit" in result["error"].lower()
 
-    def test_should_return_structured_error_when_parent_directory_missing(
-        self, component: FileSystemToolComponent
+    def test_should_create_parent_directories_when_writing_to_nested_path(
+        self, component: FileSystemToolComponent, sandbox: Path
     ) -> None:
-        result = component._write_file("missing_dir/new.txt", "x")
-        assert "error" in result
-        assert "directory" in result["error"].lower() or "parent" in result["error"].lower()
+        # BUG-1: agent filesystem tools must create missing parent directories
+        # automatically (standard mkdir(parents=True) behavior). Previously this
+        # returned {"error": "Parent directory does not exist: ..."} which forced
+        # agents to issue a separate mkdir tool call we do not expose.
+        result = component._write_file("subdir/nested/file.txt", "hello")
+        assert result["status"] == "created"
+        assert result["bytes_written"] == len(b"hello")
+        assert (sandbox / "subdir" / "nested" / "file.txt").read_text(encoding="utf-8") == "hello"
 
     def test_should_return_structured_error_when_path_escapes_sandbox(self, component: FileSystemToolComponent) -> None:
         result = component._write_file("../escape.txt", "x")
@@ -340,6 +345,35 @@ class TestGlobSearch:
     def test_should_return_structured_error_when_scope_path_escapes(self, component: FileSystemToolComponent) -> None:
         result = component._glob_search("*.txt", path="../")
         assert "error" in result
+
+    def test_should_return_structured_error_when_glob_pattern_is_empty(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # BUG-2: Path.glob("") raises ValueError("Unacceptable pattern: ''") which
+        # propagates uncaught and crashes the agent. The tool surface contract is
+        # to return a structured error dict for every misuse.
+        result = component._glob_search("")
+        assert "error" in result
+        assert "empty" in result["error"].lower()
+
+    def test_should_return_structured_error_when_glob_pattern_contains_dotdot_traversal(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # BUG-3: a "../*" pattern silently slipped through because each match
+        # was resolved and compared against the sandbox root, but `shared/../shared`
+        # resolves back to the root itself and surfaced as "." in matches.
+        # Must be rejected up-front — same posture as `_validate_path`.
+        result = component._glob_search("../*")
+        assert "error" in result
+        assert ".." in result["error"] or "traversal" in result["error"].lower()
+
+    def test_should_return_structured_error_when_glob_pattern_contains_nested_dotdot(
+        self, component: FileSystemToolComponent
+    ) -> None:
+        # Variant of BUG-3 — `..` mid-pattern is equally a traversal attempt.
+        result = component._glob_search("foo/../*")
+        assert "error" in result
+        assert ".." in result["error"] or "traversal" in result["error"].lower()
 
 
 class TestGrepSearch:
