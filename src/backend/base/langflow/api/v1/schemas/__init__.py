@@ -432,6 +432,14 @@ class ConfigResponse(BaseConfigResponse):
     default_folder_name: str
     hide_getting_started_progress: bool
     allow_custom_components: bool
+    # P2 feature flags for ICA integration
+    embedded_mode: bool
+    hide_logout_button: bool
+    hide_new_project_button: bool
+    hide_new_flow_button: bool
+    hide_starter_projects: bool
+    mcp_servers_locked: bool
+    custom_component_admin_only: bool
 
     @classmethod
     def from_settings(cls, settings: Settings, auth_settings) -> "ConfigResponse":
@@ -467,6 +475,13 @@ class ConfigResponse(BaseConfigResponse):
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
             allow_custom_components=settings.allow_custom_components,
+            embedded_mode=settings.embedded_mode,
+            hide_logout_button=settings.hide_logout_button or settings.embedded_mode,
+            hide_new_project_button=settings.hide_new_project_button or settings.embedded_mode,
+            hide_new_flow_button=settings.hide_new_flow_button or settings.embedded_mode,
+            hide_starter_projects=settings.hide_starter_projects or settings.embedded_mode,
+            mcp_servers_locked=settings.mcp_servers_locked,
+            custom_component_admin_only=settings.custom_component_admin_only,
         )
 
 
