@@ -24,7 +24,6 @@ When the number of unprocessed runs reaches the threshold, an asynchronous inges
 **Auto-capture** controls whether this counting and triggering happens automatically.
 Auto-capture is enabled by default, so the memory base tracks every flow run and fires an ingestion job when the batch threshold is reached.
 When auto-capture is disabled, the counter never increments and no ingestion job fires automatically.
-To ingest manually when auto-capture is off, use the [`/flush` endpoint](/api-memories#flush-manually-trigger-ingestion).
 
 :::tip
 The flow must contain a **Chat Input** or a **Chat Output** component to write messages to the `messages` table.
