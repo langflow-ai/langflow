@@ -239,9 +239,15 @@ async def run(
         # asyncio errors, KeyboardInterrupt, etc.  Re-raise immediately so
         # normal error handling is unaffected; the only purpose here is to
         # ensure the atexit guard uses the correct exit code before it fires.
+        #
+        # typer.Exit inherits from RuntimeError (not SystemExit), so it must
+        # be checked before the unconditional else-branch to avoid masking a
+        # clean typer.Exit(0) as exit code 1.
         if isinstance(exc, SystemExit):
             code = exc.code
             _torch_exit_code[0] = code if isinstance(code, int) else (0 if code is None else 1)
+        elif isinstance(exc, typer.Exit):
+            _torch_exit_code[0] = int(exc.exit_code) if exc.exit_code is not None else 0
         else:
             _torch_exit_code[0] = 1
         raise
