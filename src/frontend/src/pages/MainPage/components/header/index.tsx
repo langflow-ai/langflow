@@ -1,292 +1,176 @@
-import { debounce } from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import { useDeleteDeleteFlows } from "@/controllers/API/queries/flows/use-delete-delete-flows";
-import { useGetDownloadFlows } from "@/controllers/API/queries/flows/use-get-download-flows";
-import { ENABLE_MCP } from "@/customization/feature-flags";
-import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
-import useAlertStore from "@/stores/alertStore";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { track } from "@/customization/utils/analytics";
+import useAddFlow from "@/hooks/flows/use-add-flow";
 import { useUtilityStore } from "@/stores/utilityStore";
+import type { Category } from "@/types/templates/types";
 import { cn } from "@/utils/utils";
+import type { newFlowModalPropsType } from "../../types/components";
+import BaseModal from "../baseModal";
+import GetStartedComponent from "./components/GetStartedComponent";
+import { Nav } from "./components/navComponent";
+import TemplateContentComponent from "./components/TemplateContentComponent";
 
-import type { FlowTabType } from "../../types";
-
-interface HeaderComponentProps {
-  flowType: FlowTabType;
-  setFlowType: (flowType: FlowTabType) => void;
-  view: "list" | "grid";
-  setView: (view: "list" | "grid") => void;
-  setNewProjectModal: (newProjectModal: boolean) => void;
-  folderName?: string;
-  setSearch: (search: string) => void;
-  isEmptyFolder: boolean;
-  selectedFlows: string[];
-}
-
-const HeaderComponent = ({
-  folderName = "",
-  flowType,
-  setFlowType,
-  view,
-  setView,
-  setNewProjectModal,
-  setSearch,
-  isEmptyFolder,
-  selectedFlows,
-}: HeaderComponentProps) => {
+export default function TemplatesModal({
+  open,
+  setOpen,
+}: newFlowModalPropsType): JSX.Element {
   const { t } = useTranslation();
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const isMCPEnabled = ENABLE_MCP;
-  const setSuccessData = useAlertStore((state) => state.setSuccessData);
-  // Debounce the setSearch function from the parent
-  const debouncedSetSearch = useCallback(
-    debounce((value: string) => {
-      setSearch(value);
-    }, 1000),
-    [setSearch],
+  const [currentTab, setCurrentTab] = useState("get-started");
+  const [loading, setLoading] = useState(false);
+  const addFlow = useAddFlow();
+  const navigate = useCustomNavigate();
+  const { folderId } = useParams();
+  const hideStarterProjects = useUtilityStore(
+    (state) => state.hideStarterProjects,
   );
 
-  const { mutate: downloadFlows, isPending: isDownloading } =
-    useGetDownloadFlows();
-  const { mutate: deleteFlows, isPending: isDeleting } = useDeleteDeleteFlows();
+  // If starter projects are hidden and we're on the get-started tab, switch to all-templates
+  const effectiveTab = hideStarterProjects && currentTab === "get-started" ? "all-templates" : currentTab;
 
-  useEffect(() => {
-    debouncedSetSearch(debouncedSearch);
-
-    return () => {
-      debouncedSetSearch.cancel(); // Cleanup on unmount
-    };
-  }, [debouncedSearch, debouncedSetSearch]);
-
-  // If current flowType is not available based on feature flag, switch to flows
-  useEffect(() => {
-    if (
-      (flowType === "mcp" && !isMCPEnabled) ||
-      (flowType === "components" && isMCPEnabled)
-    ) {
-      setFlowType("flows");
-    }
-  }, [flowType, isMCPEnabled, setFlowType]);
-
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setDebouncedSearch(e.target.value);
+  const handleFlowCreating = (isCreating: boolean) => {
+    setLoading(isCreating);
   };
 
-  const isDeploymentsEnabled = useUtilityStore(
-    (s) => s.featureFlags.wxo_deployments === true,
-  );
+  const handleCreateBlankFlow = () => {
+    if (loading) return;
 
-  // Determine which tabs to show based on feature flags
-  const tabTypes = [
-    ...(isDeploymentsEnabled ? ["deployments"] : []),
-    ...(isMCPEnabled ? ["mcp"] : ["components"]),
-    "flows",
+    handleFlowCreating(true);
+    track("New Flow Created", { template: "Blank Flow" });
+
+    addFlow()
+      .then((id) => {
+        navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      })
+      .finally(() => {
+        handleFlowCreating(false);
+      });
+  };
+
+  // Define categories and their items
+  const categories: Category[] = [
+    {
+      title: t("templatesModal.title"),
+      items: [
+        // Hide "Get Started" tab if starter projects are hidden
+        ...(hideStarterProjects
+          ? []
+          : [
+              {
+                title: t("templatesModal.getStarted"),
+                icon: "SquarePlay",
+                id: "get-started",
+              },
+            ]),
+        {
+          title: t("templatesModal.allTemplates"),
+          icon: "LayoutPanelTop",
+          id: "all-templates",
+        },
+      ],
+    },
+    {
+      title: t("templatesModal.useCases"),
+      items: [
+        {
+          title: t("templatesModal.assistants"),
+          icon: "BotMessageSquare",
+          id: "assistants",
+        },
+        {
+          title: t("templatesModal.classification"),
+          icon: "Tags",
+          id: "classification",
+        },
+        {
+          title: t("templatesModal.coding"),
+          icon: "TerminalIcon",
+          id: "coding",
+        },
+        {
+          title: t("templatesModal.contentGeneration"),
+          icon: "Newspaper",
+          id: "content-generation",
+        },
+        { title: t("templatesModal.qa"), icon: "Database", id: "q-a" },
+        // { title: "Summarization", icon: "Bot", id: "summarization" },
+        // { title: "Web Scraping", icon: "CodeXml", id: "web-scraping" },
+      ],
+    },
+    {
+      title: t("templatesModal.methodology"),
+      items: [
+        {
+          title: t("templatesModal.prompting"),
+          icon: "MessagesSquare",
+          id: "chatbots",
+        },
+        { title: t("templatesModal.rag"), icon: "Database", id: "rag" },
+        { title: t("templatesModal.agents"), icon: "Bot", id: "agents" },
+      ],
+    },
   ];
 
-  const handleDownload = () => {
-    downloadFlows({ ids: selectedFlows });
-    setSuccessData({ title: t("mainPage.flowsDownloadedSuccess") });
-  };
-
-  const flows = useFlowsManagerStore((state) => state.flows);
-  const setFlows = useFlowsManagerStore((state) => state.setFlows);
-
-  const handleDelete = () => {
-    deleteFlows(
-      { flow_ids: selectedFlows },
-      {
-        onSuccess: () => {
-          setSuccessData({ title: t("mainPage.flowsDeletedSuccess") });
-          if (flows) {
-            setFlows(flows.filter((flow) => !selectedFlows.includes(flow.id)));
-          }
-        },
-      },
-    );
-  };
-
-  const hasSelection = selectedFlows.length > 0;
-
   return (
-    <>
-      <div
-        className="flex items-center pb-4 text-sm font-medium"
-        data-testid="mainpage_title"
-      >
-        <div className="h-7 w-10 transition-all group-data-[open=true]/sidebar-wrapper:md:w-0 lg:hidden">
-          <div className="relative left-0 opacity-100 transition-all group-data-[open=true]/sidebar-wrapper:md:opacity-0">
-            <SidebarTrigger>
-              <ForwardedIconComponent
-                name="PanelLeftOpen"
-                aria-hidden="true"
-                className=""
-              />
-            </SidebarTrigger>
-          </div>
-        </div>
-        {folderName}
-      </div>
-      {!isEmptyFolder && (
-        <>
-          <div className={cn("flex flex-row-reverse pb-4")}>
-            <div className="w-full border-b dark:border-border" />
-            {tabTypes.map((type) => (
-              <Button
-                key={type}
-                unstyled
-                id={`${type}-btn`}
-                data-testid={`${type}-btn`}
-                onClick={() => {
-                  setFlowType(type as FlowTabType);
-                }}
-                className={`border-b ${
-                  flowType === type
-                    ? "border-b-2 border-foreground text-foreground"
-                    : "border-border text-muted-foreground hover:text-foreground"
-                } text-nowrap px-2 pb-2 pt-1 text-mmd`}
-              >
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5",
-                    flowType === type && "-mb-px",
-                  )}
-                >
-                  {type === "mcp"
-                    ? t("mainPage.mcpServer")
-                    : type.charAt(0).toUpperCase() + type.slice(1)}
-                  {type === "deployments" && (
-                    <Badge
-                      variant="purpleStatic"
-                      size="xq"
-                      className="h-auto shrink-0 rounded px-1 py-px text-[11px] leading-none text-accent-purple-foreground"
-                    >
-                      Beta
-                    </Badge>
-                  )}
-                </div>
-              </Button>
-            ))}
-          </div>
-          {/* Search and filters */}
-          {flowType !== "mcp" && flowType !== "deployments" && (
-            <div className="flex justify-between">
-              <div className="flex w-full xl:w-5/12">
-                <Input
-                  icon="Search"
-                  data-testid="search-store-input"
-                  type="text"
-                  placeholder={t("mainPage.searchPlaceholder", { flowType })}
-                  className="mr-2 !text-mmd"
-                  inputClassName="!text-mmd"
-                  value={debouncedSearch}
-                  onChange={handleSearch}
+    <BaseModal size="templates" open={open} setOpen={setOpen} className="p-0">
+      <BaseModal.Content className="flex flex-col p-0">
+        <div className="flex h-full">
+          <SidebarProvider width="15rem" defaultOpen={false}>
+            <Nav
+              categories={categories}
+              currentTab={currentTab}
+              setCurrentTab={setCurrentTab}
+            />
+            <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
+              {effectiveTab === "get-started" ? (
+                <GetStartedComponent
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
                 />
-                <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
-                  {/* Sliding Indicator */}
-                  <div
-                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
-                      view === "list"
-                        ? "left-[2px] translate-x-0"
-                        : "left-[6px] translate-x-full"
-                    }`}
-                  ></div>
-
-                  {/* Buttons */}
-                  {["list", "grid"].map((viewType) => (
-                    <Button
-                      key={viewType}
-                      unstyled
-                      size="icon"
-                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
-                        view === viewType
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:bg-muted"
-                      }`}
-                      onClick={() => setView(viewType as "list" | "grid")}
-                    >
-                      <ForwardedIconComponent
-                        name={viewType === "list" ? "Menu" : "LayoutGrid"}
-                        aria-hidden="true"
-                        className="h-4 w-4 group-hover:text-foreground"
-                      />
-                    </Button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div
-                  className={cn(
-                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
-                    selectedFlows.length > 0 && "w-36 opacity-100",
-                  )}
-                >
+              ) : (
+                <TemplateContentComponent
+                  currentTab={effectiveTab}
+                  categories={categories.flatMap((category) => category.items)}
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
+                />
+              )}
+              <BaseModal.Footer>
+                <div className="flex w-full flex-col justify-between gap-4 pb-4 sm:flex-row sm:items-center">
+                  <div className="flex flex-col items-start justify-center">
+                    <div className="font-semibold">
+                      {t("templatesModal.startFromScratch")}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {t("templatesModal.startFromScratchDescription")}
+                    </div>
+                  </div>
                   <Button
-                    variant="outline"
-                    size="iconMd"
-                    className="h-8 w-8"
-                    data-testid="download-bulk-btn"
-                    onClick={handleDownload}
-                    loading={isDownloading}
-                    tabIndex={hasSelection ? 0 : -1}
-                  >
-                    <ForwardedIconComponent name="Download" />
-                  </Button>
-                  <DeleteConfirmationModal
-                    asChild
-                    onConfirm={handleDelete}
-                    description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
-                    note={
-                      "and " +
-                      (selectedFlows.length > 1 ? "their" : "its") +
-                      " message history"
-                    }
-                  >
-                    <Button
-                      variant="destructive"
-                      size="iconMd"
-                      className="px-2.5 !text-mmd"
-                      data-testid="delete-bulk-btn"
-                      loading={isDeleting}
-                      tabIndex={hasSelection ? 0 : -1}
-                    >
-                      <ForwardedIconComponent name="Trash2" />
-                      {t("mainPage.delete")}
-                    </Button>
-                  </DeleteConfirmationModal>
-                </div>
-                <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
-                  <Button
-                    variant="default"
-                    size="iconMd"
-                    className="z-50 px-2.5 !text-mmd"
-                    onClick={() => setNewProjectModal(true)}
-                    id="new-project-btn"
-                    data-testid="new-project-btn"
+                    onClick={handleCreateBlankFlow}
+                    size="sm"
+                    data-testid="blank-flow"
+                    className={cn(
+                      "shrink-0",
+                      loading ? "cursor-default opacity-80" : "cursor-pointer",
+                    )}
                   >
                     <ForwardedIconComponent
                       name="Plus"
-                      aria-hidden="true"
-                      className="h-4 w-4"
+                      className="h-4 w-4 shrink-0"
                     />
-                    <span className="hidden whitespace-nowrap font-semibold md:inline">
-                      {t("mainPage.newFlow")}
-                    </span>
+                    {t("templatesModal.blankFlow")}
                   </Button>
-                </ShadTooltip>
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </>
+                </div>
+              </BaseModal.Footer>
+            </main>
+          </SidebarProvider>
+        </div>
+      </BaseModal.Content>
+    </BaseModal>
   );
-};
-
-export default HeaderComponent;
+}
