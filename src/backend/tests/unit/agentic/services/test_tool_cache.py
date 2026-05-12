@@ -70,12 +70,8 @@ class TestCachedToolCallHits:
 
             return producer
 
-        chat = cached_tool_call(
-            "describe_component", {"name": "ChatInput"}, producer_for("ChatInput")
-        )
-        agent = cached_tool_call(
-            "describe_component", {"name": "Agent"}, producer_for("Agent")
-        )
+        chat = cached_tool_call("describe_component", {"name": "ChatInput"}, producer_for("ChatInput"))
+        agent = cached_tool_call("describe_component", {"name": "Agent"}, producer_for("Agent"))
 
         assert chat == {"name": "ChatInput"}
         assert agent == {"name": "Agent"}

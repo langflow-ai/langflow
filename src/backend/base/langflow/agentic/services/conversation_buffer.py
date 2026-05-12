@@ -86,9 +86,7 @@ class ConversationBuffer:
         async with self._lock:
             self.push(session_id, turn)
 
-    def get_recent(
-        self, session_id: str, limit: int | None = None
-    ) -> list[ConversationTurn]:
+    def get_recent(self, session_id: str, limit: int | None = None) -> list[ConversationTurn]:
         """Return up to ``limit`` most recent turns, oldest-first.
 
         Unknown session → empty list. ``limit=None`` returns the entire

@@ -48,18 +48,14 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 class TestRegistryOverlay:
-    def test_should_return_base_registry_when_no_user_components_exist(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_base_registry_when_no_user_components_exist(self, isolated_sandbox: Path) -> None:
         registry = load_registry_with_user_overlay(user_id="user-alice")
         # Base registry contains a known component.
         assert "ChatInput" in registry
         # Nothing user-overlaid yet.
         assert "SumComponent" not in registry
 
-    def test_should_include_user_component_in_registry_after_registration(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_include_user_component_in_registry_after_registration(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -72,9 +68,7 @@ class TestRegistryOverlay:
         # And the base entries are still there.
         assert "ChatInput" in registry
 
-    def test_should_isolate_user_components_between_users(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_isolate_user_components_between_users(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -87,9 +81,7 @@ class TestRegistryOverlay:
         alice_registry = load_registry_with_user_overlay(user_id="user-alice")
         assert "SumComponent" in alice_registry
 
-    def test_should_return_base_only_when_user_id_is_none(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_base_only_when_user_id_is_none(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -102,9 +94,7 @@ class TestRegistryOverlay:
         # Base registry still present.
         assert "ChatInput" in registry
 
-    def test_should_carry_user_code_into_overlay_template(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_carry_user_code_into_overlay_template(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -126,9 +116,7 @@ class TestRegistryOverlay:
         else:
             assert code_field == SAMPLE_CODE
 
-    def test_should_pick_up_overwritten_component(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_pick_up_overwritten_component(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -147,9 +135,7 @@ class TestRegistryOverlay:
         observed = code_field.get("value") if isinstance(code_field, dict) else code_field
         assert observed == new_code
 
-    def test_should_silently_skip_invalid_files(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_silently_skip_invalid_files(self, isolated_sandbox: Path) -> None:
         # A file in `.components/` that isn't valid Python must NOT crash
         # the overlay — the rest of the user's components must still load.
         register_user_component(
@@ -163,18 +149,14 @@ class TestRegistryOverlay:
         )
 
         components_dir = _resolve_components_dir(user_id="user-alice")
-        (components_dir / "BrokenComponent.py").write_text(
-            "this is not valid python !!!", encoding="utf-8"
-        )
+        (components_dir / "BrokenComponent.py").write_text("this is not valid python !!!", encoding="utf-8")
 
         registry = load_registry_with_user_overlay(user_id="user-alice")
         assert "SumComponent" in registry
         # Broken file is simply skipped — no exception, no entry.
         assert "BrokenComponent" not in registry
 
-    def test_should_not_clobber_base_registry_with_user_name_collision(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_not_clobber_base_registry_with_user_name_collision(self, isolated_sandbox: Path) -> None:
         # If the user names their class identically to a base component,
         # the overlay must NOT silently replace the platform built-in.
         # Two acceptable behaviors:

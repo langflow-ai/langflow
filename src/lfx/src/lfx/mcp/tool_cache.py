@@ -47,8 +47,8 @@ MAX_CACHE_ENTRIES = 100
 # Per-request cache. Default None lazily allocates the OrderedDict on
 # first access in the current context so child contexts get their own
 # instance instead of inheriting a shared one.
-_cache_var: contextvars.ContextVar[OrderedDict[str, Any] | None] = (
-    contextvars.ContextVar("lfx_tool_cache", default=None)
+_cache_var: contextvars.ContextVar[OrderedDict[str, Any] | None] = contextvars.ContextVar(
+    "lfx_tool_cache", default=None
 )
 
 

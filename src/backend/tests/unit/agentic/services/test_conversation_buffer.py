@@ -134,9 +134,7 @@ class TestConcurrency:
         buf = ConversationBuffer()
 
         async def push_one(i: int):
-            await buf.push_async(
-                "s1", ConversationTurn(user=f"u{i}", assistant=f"a{i}")
-            )
+            await buf.push_async("s1", ConversationTurn(user=f"u{i}", assistant=f"a{i}"))
 
         async def main():
             await asyncio.gather(*[push_one(i) for i in range(8)])

@@ -80,15 +80,11 @@ class TestComponentsReservedInIsolatedMode:
 
         result = component._read_file(path)
 
-        assert "error" in result, (
-            f"`.components/` must be reserved, got: {result}"
-        )
+        assert "error" in result, f"`.components/` must be reserved, got: {result}"
         # Be specific: the rejection must be a *reservation* failure,
         # not an incidental "file not found" — otherwise the test would
         # pass before the guard exists.
-        assert "reserved" in result["error"].lower(), (
-            f"Expected reservation error, got: {result['error']}"
-        )
+        assert "reserved" in result["error"].lower(), f"Expected reservation error, got: {result['error']}"
 
     @pytest.mark.parametrize(
         "path",
@@ -112,12 +108,8 @@ class TestComponentsReservedInIsolatedMode:
 
         result = component._write_file(path, "class Evil: pass")
 
-        assert "error" in result, (
-            f"`.components/` writes must be reserved, got: {result}"
-        )
-        assert "reserved" in result["error"].lower(), (
-            f"Expected reservation error, got: {result['error']}"
-        )
+        assert "error" in result, f"`.components/` writes must be reserved, got: {result}"
+        assert "reserved" in result["error"].lower(), f"Expected reservation error, got: {result['error']}"
 
     @pytest.mark.parametrize(
         "path",
@@ -165,12 +157,8 @@ class TestComponentsReservedInSharedMode:
 
         result = component._read_file(path)
 
-        assert "error" in result, (
-            f"`.components/` must be reserved in shared mode too, got: {result}"
-        )
-        assert "reserved" in result["error"].lower(), (
-            f"Expected reservation error, got: {result['error']}"
-        )
+        assert "error" in result, f"`.components/` must be reserved in shared mode too, got: {result}"
+        assert "reserved" in result["error"].lower(), f"Expected reservation error, got: {result['error']}"
 
 
 class TestExistingLfsigReservationStillHolds:

@@ -32,11 +32,6 @@ from langflow.agentic.services.conversation_buffer import (
     ConversationTurn,
     get_conversation_buffer,
 )
-from langflow.agentic.services.user_components import register_user_component_if_valid
-from langflow.agentic.services.user_components_context import (
-    reset_current_user_id,
-    set_current_user_id,
-)
 from langflow.agentic.services.file_events import drain_file_events, reset_file_events
 from langflow.agentic.services.flow_executor import (
     execute_flow_file,
@@ -53,6 +48,11 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionError,
 )
 from langflow.agentic.services.helpers.intent_classification import classify_intent
+from langflow.agentic.services.user_components import register_user_component_if_valid
+from langflow.agentic.services.user_components_context import (
+    reset_current_user_id,
+    set_current_user_id,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine
@@ -101,9 +101,7 @@ def clear_session_history(session_id: str | None) -> None:
     get_conversation_buffer().clear(session_id)
 
 
-def record_conversation_turn(
-    *, session_id: str | None, user_input: str, assistant_response: str
-) -> None:
+def record_conversation_turn(*, session_id: str | None, user_input: str, assistant_response: str) -> None:
     """Persist a completed exchange into the session buffer.
 
     Skips when ``session_id`` is missing (anonymous) or when the
@@ -343,9 +341,7 @@ async def execute_flow_with_validation_streaming(
     # input is what the LLM sees; the recorded user message is what the
     # user typed.
     original_user_input = sanitization.sanitized_input
-    current_input = inject_conversation_history(
-        session_id=session_id, input_value=current_input
-    )
+    current_input = inject_conversation_history(session_id=session_id, input_value=current_input)
 
     # Build-flow and manage_files both route to the FlowBuilderAssistant —
     # they share the same toolkit (canvas tools + filesystem). The step label

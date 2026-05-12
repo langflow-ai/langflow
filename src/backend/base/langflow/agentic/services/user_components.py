@@ -103,9 +103,7 @@ def register_user_component(*, user_id: str | None, class_name: str, code: str) 
     return target
 
 
-def register_user_component_if_valid(
-    *, user_id: str | None, class_name: str | None, code: str | None
-) -> Path | None:
+def register_user_component_if_valid(*, user_id: str | None, class_name: str | None, code: str | None) -> Path | None:
     """Best-effort wrapper for the streaming-loop hook.
 
     Wraps ``register_user_component`` with two policies the orchestrator
@@ -128,9 +126,7 @@ def register_user_component_if_valid(
     if not user_id or not class_name or not code:
         return None
     try:
-        return register_user_component(
-            user_id=user_id, class_name=class_name, code=code
-        )
+        return register_user_component(user_id=user_id, class_name=class_name, code=code)
     except UserComponentError:
         return None
 
@@ -218,10 +214,7 @@ def _validate_class_name(class_name: str) -> None:
     # the error message is specific and the rest of the validator never
     # has to reason about pathological inputs.
     if len(class_name) > MAX_CLASS_NAME_LENGTH:
-        msg = (
-            f"class_name length {len(class_name)} exceeds max "
-            f"{MAX_CLASS_NAME_LENGTH} (Windows MAX_PATH safeguard)"
-        )
+        msg = f"class_name length {len(class_name)} exceeds max {MAX_CLASS_NAME_LENGTH} (Windows MAX_PATH safeguard)"
         raise UserComponentError(msg)
     # Filesystem-portability guard (rejects NUL, Windows-forbidden punct,
     # path separators, dotdot, control chars, trailing dot/space, etc.).
@@ -246,10 +239,7 @@ def _validate_code(code: str) -> None:
         raise UserComponentError(msg)
     encoded_size = len(code.encode("utf-8"))
     if encoded_size > MAX_COMPONENT_SOURCE_BYTES:
-        msg = (
-            f"code size {encoded_size} bytes exceeds limit of "
-            f"{MAX_COMPONENT_SOURCE_BYTES} bytes"
-        )
+        msg = f"code size {encoded_size} bytes exceeds limit of {MAX_COMPONENT_SOURCE_BYTES} bytes"
         raise UserComponentError(msg)
 
 
@@ -293,9 +283,7 @@ def _atomic_write_text(target: Path, text: str) -> None:
     """
     # Use tempfile inside the SAME directory so os.replace stays
     # cross-device-safe (replace requires source+dest on the same FS).
-    tmp_fd, tmp_name = tempfile.mkstemp(
-        prefix=f"{target.stem}.", suffix=".py.tmp", dir=str(target.parent)
-    )
+    tmp_fd, tmp_name = tempfile.mkstemp(prefix=f"{target.stem}.", suffix=".py.tmp", dir=str(target.parent))
     tmp_path = Path(tmp_name)
     try:
         with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:

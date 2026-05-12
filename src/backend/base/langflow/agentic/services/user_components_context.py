@@ -20,9 +20,7 @@ from __future__ import annotations
 
 import contextvars
 
-_user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "agentic_current_user_id", default=None
-)
+_user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("agentic_current_user_id", default=None)
 
 
 def set_current_user_id(user_id: str | None) -> None:

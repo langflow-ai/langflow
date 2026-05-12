@@ -119,7 +119,9 @@ class TestResetSessionEndpointWipesComponents:
         assert fresh_conversation_buffer.get_recent("agentic_xxx") == []
 
     async def test_should_not_touch_other_users_components(
-        self, isolated_sandbox: Path, fresh_conversation_buffer: ConversationBuffer  # noqa: ARG002
+        self,
+        isolated_sandbox: Path,
+        fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         register_user_component(
             user_id="user-alice",
@@ -169,7 +171,9 @@ class TestResetSessionEndpointWipesComponents:
 
 class TestResetSessionEndpointShape:
     async def test_should_accept_missing_session_id(
-        self, isolated_sandbox: Path, fresh_conversation_buffer: ConversationBuffer  # noqa: ARG002
+        self,
+        isolated_sandbox: Path,
+        fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         register_user_component(
             user_id="user-alice",
@@ -190,7 +194,9 @@ class TestResetSessionEndpointShape:
         assert result["components_cleared"] == 1
 
     async def test_should_return_zero_counts_when_nothing_to_clear(
-        self, isolated_sandbox: Path, fresh_conversation_buffer: ConversationBuffer  # noqa: ARG002
+        self,
+        isolated_sandbox: Path,
+        fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         from langflow.agentic.api.sessions_router import reset_session
 

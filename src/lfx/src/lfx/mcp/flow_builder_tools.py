@@ -48,6 +48,7 @@ def _load_registry_user_aware() -> dict[str, dict]:
         return load_local_registry()
     return load_registry_for_current_user()
 
+
 # ---------------------------------------------------------------------------
 # Per-request state using contextvars. Each async request gets its own
 # working flow, flow ID, and event queue -- safe under concurrency.

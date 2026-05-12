@@ -101,9 +101,7 @@ class TestOverlayConsumesContextVar:
     def setup_method(self):
         reset_current_user_id()
 
-    def test_should_read_overlay_for_contextvar_user(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_read_overlay_for_contextvar_user(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -120,9 +118,7 @@ class TestOverlayConsumesContextVar:
         registry = load_registry_for_current_user()
         assert "SumComponent" in registry
 
-    def test_should_return_base_only_when_contextvar_unset(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_base_only_when_contextvar_unset(self, isolated_sandbox: Path) -> None:
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -164,9 +160,7 @@ class TestRegisterIfValid:
         assert components_dir is not None
         assert (components_dir / "SumComponent.py").exists()
 
-    def test_should_return_none_and_swallow_when_user_id_missing(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_none_and_swallow_when_user_id_missing(self, isolated_sandbox: Path) -> None:
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -179,9 +173,7 @@ class TestRegisterIfValid:
 
         assert result is None  # swallowed, not raised
 
-    def test_should_return_none_and_swallow_when_class_name_missing(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_none_and_swallow_when_class_name_missing(self, isolated_sandbox: Path) -> None:
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -194,9 +186,7 @@ class TestRegisterIfValid:
 
         assert result is None
 
-    def test_should_return_none_and_swallow_when_class_name_unsafe(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_none_and_swallow_when_class_name_unsafe(self, isolated_sandbox: Path) -> None:
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -211,9 +201,7 @@ class TestRegisterIfValid:
 
         assert result is None
 
-    def test_should_return_none_and_swallow_when_code_empty(
-        self, isolated_sandbox: Path
-    ) -> None:
+    def test_should_return_none_and_swallow_when_code_empty(self, isolated_sandbox: Path) -> None:
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
