@@ -20,7 +20,9 @@ class ServiceType(str, Enum):
     TELEMETRY_SERVICE = "telemetry_service"
     JOB_QUEUE_SERVICE = "job_queue_service"
     MCP_COMPOSER_SERVICE = "mcp_composer_service"
-    MCP_JOB_EXECUTOR_SERVICE = "mcp_job_executor_service"
+    # Value must be "<module>_service" so the auto-discovery in
+    # services/factory.py maps it to langflow.services.mcp_jobs.service
+    MCP_JOBS_SERVICE = "mcp_jobs_service"
     JOB_SERVICE = "jobs_service"
     FLOW_EVENTS_SERVICE = "flow_events_service"
     MEMORY_BASE_SERVICE = "memory_base_service"

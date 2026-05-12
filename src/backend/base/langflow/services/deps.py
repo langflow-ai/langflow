@@ -252,7 +252,7 @@ def get_mcp_job_executor_service() -> MCPJobExecutorService:
     """Retrieves the MCPJobExecutorService instance from the service manager."""
     from langflow.services.mcp_jobs.factory import MCPJobExecutorServiceFactory
 
-    return get_service(ServiceType.MCP_JOB_EXECUTOR_SERVICE, MCPJobExecutorServiceFactory())
+    return get_service(ServiceType.MCP_JOBS_SERVICE, MCPJobExecutorServiceFactory())
 
 
 def get_auth_service() -> BaseAuthService:

@@ -75,7 +75,7 @@ def _allow_http_callback() -> bool:
 class MCPJobExecutorService(Service):
     """Persistent MCP job executor — claim, run, persist, callback."""
 
-    name = "mcp_job_executor_service"
+    name = "mcp_jobs_service"
 
     def __init__(self) -> None:
         self._workers: list[asyncio.Task] = []
