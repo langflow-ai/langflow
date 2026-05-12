@@ -13,7 +13,7 @@ Unlike a [knowledge base](/knowledge), which you populate manually with files, a
 
 Each memory base is backed by a local [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector store.
 
-After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](/memory-base).
+After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](../Components/memory-base.mdx).
 
 ### How memory bases ingest messages
 
@@ -29,7 +29,7 @@ When auto-capture is disabled, the counter never increments and no ingestion job
 The flow must contain a **Chat Input** or a **Chat Output** component to write messages to the `messages` table.
 :::
 
-By default, the [**Memory Base** component](/memory-base) retrieves only chunks that match the current `session_id`.
+By default, the [**Memory Base** component](../Components/memory-base.mdx) retrieves only chunks that match the current `session_id`.
 Disable **Filter by Session** to search across all sessions that have been ingested into the memory base.
 
 When optional LLM preprocessing is enabled, messages are passed through an LLM before they are embedded.
@@ -60,10 +60,10 @@ A new memory base's status is **Empty** until the first ingestion job completes.
 
 ## Use a memory base in a flow
 
-After creating a memory base, add the [**Memory Base** component](/memory-base) to your flow to retrieve relevant context from it.
+After creating a memory base, add the [**Memory Base** component](../Components/memory-base.mdx) to your flow to retrieve relevant context from it.
 For example, to connect a Memory Base to an Agent to give the agent memory of all past conversations, do the following:
 
-1. Create a [Simple Agent starter flow](/quickstart).
+1. Create a [Simple Agent starter flow](/get-started-quickstart).
 2. In the visual editor, add a **Memory Base** component.
 3. In the **Memory Base** field, select the memory base you created in [Create a memory base](#create-a-memory-base).
 4. In the **Memory Base** component, enable **Tool Mode**.
@@ -72,7 +72,7 @@ For example, to connect a Memory Base to an Agent to give the agent memory of al
     Each time the flow runs, the component queries the memory base for chunks similar to the current **Search Query**.
     By default, only chunks from the same `session_id` are returned. To retrieve chunks from all sessions, disable **Filter by Session**.
 
-For more information, see the [**Memory Base** component reference](/memory-base).
+For more information, see the [**Memory Base** component reference](../Components/memory-base.mdx).
 
 ## Manage memory bases
 
@@ -119,6 +119,6 @@ export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 
 ## See also
 
-- [Memory Base component](/memory-base)
+- [Memory Base component](../Components/memory-base.mdx)
 - [Manage vector data](/knowledge)
 - [Memory management options](/memory)
