@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useBlocker, useParams } from "react-router-dom";
 import { AssistantPanel } from "@/components/core/assistantPanel";
 import { FlowPageSlidingContainerContent } from "@/components/core/playgroundComponent/sliding-container/components/flow-page-sliding-container";
@@ -31,9 +31,9 @@ import {
   FlowSearchProvider,
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
+import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
-import MemoriesMainContent from "./components/MemoriesMainContent";
 
 function FlowPageMainContent({
   flowId,
