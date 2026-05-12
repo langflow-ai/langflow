@@ -531,34 +531,26 @@ def run_pyinstrument(scenario: Scenario, *, output_dir: Path) -> Path | None:
     #   https://pyinstrument.readthedocs.io/en/latest/reference.html#command-line-reference
     cmd_argv = scenario.command
     profile_cmd: list[str]
+    pyinstrument_prefix = [
+        "uv",
+        "run",
+        "pyinstrument",
+        "--use-timing-thread",
+        "--renderer",
+        "html",
+        "--outfile",
+        f"/out/{scenario.name}.html",
+    ]
     if cmd_argv[:2] == ["uv", "run"] and cmd_argv[2:4] == ["lfx", "run"]:
-        tail = cmd_argv[4:]
-        profile_cmd = [
-            "uv",
-            "run",
-            "pyinstrument",
-            "--use-timing-thread",
-            "--renderer",
-            "html",
-            "--outfile",
-            f"/out/{scenario.name}.html",
-            "-m",
-            "lfx",
-            "run",
-            *tail,
-        ]
+        profile_cmd = [*pyinstrument_prefix, "-m", "lfx", "run", *cmd_argv[4:]]
+    elif cmd_argv[:4] == ["uv", "run", "python", "-m"]:
+        # e.g. langflow_run_http_ready: ["uv", "run", "python", "-m", "<module>"]
+        # Passing "uv run python -m ..." as-is would make pyinstrument try to exec `uv`
+        # directly, which fails because pyinstrument resolves via its own lookup rather
+        # than the shell PATH. Translate to `pyinstrument -m <module>` instead.
+        profile_cmd = [*pyinstrument_prefix, "-m", *cmd_argv[4:]]
     else:
-        profile_cmd = [
-            "uv",
-            "run",
-            "pyinstrument",
-            "--use-timing-thread",
-            "--renderer",
-            "html",
-            "--outfile",
-            f"/out/{scenario.name}.html",
-            *cmd_argv,
-        ]
+        profile_cmd = [*pyinstrument_prefix, *cmd_argv]
 
     cmd = [
         CONTAINER_CMD,

@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot bench-verify-synthetic
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax bench-local bench-docker bench-snapshot bench-verify-synthetic build-lfx-reference
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -52,6 +52,11 @@ check_tools:
 # - bench-snapshot: one-shot; captures a baseline and overwrites src/backend/tests/benchmarks/thresholds.json.
 #
 # All targets delegate to src/backend/tests/benchmarks/driver.py.
+
+build-lfx-reference: ## build the lfx-reference image from src/lfx/docker/Dockerfile (required for lfx_reference_image scenario)
+	@echo "$(GREEN)build-lfx-reference:$(NC) building production lfx image tagged as lfx-reference"
+	@command -v $(DOCKER) >/dev/null 2>&1 || { echo >&2 "$(RED)$(DOCKER) is not installed. Aborting.$(NC)"; exit 1; }
+	$(DOCKER) build -t lfx-reference -f src/lfx/docker/Dockerfile .
 
 bench-local: ## run cold-start harness against dev venv (fast iteration; NOT authoritative)
 	@echo "$(YELLOW)bench-local:$(NC) running harness against dev venv (no cold-cache prep)"

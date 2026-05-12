@@ -53,6 +53,11 @@ for old_path, new_path in _redirected_submodules.items():
                 self._target_path = target_path
                 self._original_path = original_path
                 self._module = None
+                # Prevent find_spec from triggering __getattr__ and importing the module
+                self.__spec__ = None
+                self.__loader__ = None
+                self.__package__ = original_path.rsplit(".", 1)[0]
+                self.__name__ = original_path
 
             def __getattr__(self, name: str) -> Any:
                 if self._module is None:

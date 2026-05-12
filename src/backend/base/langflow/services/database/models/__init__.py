@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
 from .deployment import Deployment
@@ -10,8 +12,6 @@ from .folder import Folder
 from .jobs import Job
 from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
 from .message import MessageTable
-from .traces.model import SpanTable, TraceTable
-from .transactions import TransactionTable
 from .user import User
 from .variable import Variable
 
@@ -38,3 +38,19 @@ __all__ = [
     "User",
     "Variable",
 ]
+
+# SpanTable, TraceTable, and TransactionTable all eagerly import
+# langflow.serialization.serialization which loads pandas (~13s). Keep lazy.
+def __getattr__(name: str):
+    if name in {"SpanTable", "TraceTable"}:
+        from .traces.model import SpanTable, TraceTable
+
+        globals()["SpanTable"] = SpanTable
+        globals()["TraceTable"] = TraceTable
+        return globals()[name]
+    if name == "TransactionTable":
+        from .transactions import TransactionTable
+
+        globals()["TransactionTable"] = TransactionTable
+        return TransactionTable
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
