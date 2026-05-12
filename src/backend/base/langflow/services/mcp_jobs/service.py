@@ -20,6 +20,7 @@ from uuid import UUID
 
 import httpx
 from lfx.log.logger import logger
+from lfx.services.deps import session_scope
 from sqlalchemy import select, update
 
 from langflow.services.base import Service
@@ -28,19 +29,6 @@ from langflow.services.database.models.mcp_job.model import MCPJob, MCPJobStatus
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-
-def _get_db_service():
-    """Lazy accessor for the DB service.
-
-    Imported at call time to break the circular import between this module and
-    ``langflow.services.deps`` (deps eagerly imports this service for its
-    return-type annotation, which would otherwise re-enter this module while
-    deps is still initializing).
-    """
-    from langflow.services.deps import get_db_service
-
-    return get_db_service()
 
 
 _DEFAULT_WORKERS = 4
@@ -117,8 +105,7 @@ class MCPJobExecutorService(Service):
         the client polling endpoint sees the terminal state.
         """
         now = datetime.now(timezone.utc)
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             stmt = (
                 update(MCPJob)
                 .where(MCPJob.status == MCPJobStatus.RUNNING)
@@ -166,8 +153,7 @@ class MCPJobExecutorService(Service):
         Postgres without dialect-specific locking.
         """
         now = datetime.now(timezone.utc)
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             session: AsyncSession  # type: ignore[no-redef]
             stmt = select(MCPJob.id).where(MCPJob.status == MCPJobStatus.PENDING).order_by(MCPJob.created_at).limit(1)
             result = await session.exec(stmt)
@@ -194,8 +180,7 @@ class MCPJobExecutorService(Service):
         from langflow.schema.message import Message
         from langflow.services.database.models.user.model import User
 
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             job = await session.get(MCPJob, job_id)
             if job is None:
                 return
@@ -262,8 +247,7 @@ class MCPJobExecutorService(Service):
         while True:
             await asyncio.sleep(_PROGRESS_INTERVAL_S)
             progress = min(90, progress + 10)
-            db = _get_db_service()
-            async with db.with_session() as session:
+            async with session_scope() as session:
                 stmt = (
                     update(MCPJob)
                     .where(MCPJob.id == job_id, MCPJob.status == MCPJobStatus.RUNNING)
@@ -291,8 +275,7 @@ class MCPJobExecutorService(Service):
             values["result"] = result
         if error is not None:
             values["error"] = error[:4096]
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             stmt = update(MCPJob).where(MCPJob.id == job_id).values(**values)
             await session.exec(stmt)
             await session.commit()
@@ -346,8 +329,7 @@ class MCPJobExecutorService(Service):
             created_at=now,
             updated_at=now,
         )
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             session.add(job)
             await session.commit()
             await session.refresh(job)
@@ -361,8 +343,7 @@ class MCPJobExecutorService(Service):
         writing a completed/failed result over the cancellation.
         """
         now = datetime.now(timezone.utc)
-        db = _get_db_service()
-        async with db.with_session() as session:
+        async with session_scope() as session:
             stmt = (
                 update(MCPJob)
                 .where(
