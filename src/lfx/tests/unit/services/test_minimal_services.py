@@ -280,12 +280,12 @@ class TestVariableService:
             del os.environ["LFX_KWARG_TEST"]
 
     @pytest.mark.asyncio
-    async def test_get_wxo_bearer_alias_from_environment(self, variables):
-        """Test that bearer aliases are synthesized from WXO access tokens."""
+    async def test_strict_no_bearer_token_from_access_token_env(self, variables):
+        """*_bearer_token is not synthesized from *_access_token; exact env keys only."""
         os.environ["WXO_DEMO_ACCESS_TOKEN"] = "token-123"  # noqa: S105
         try:
-            value = await variables.get_variable("wxo_demo_bearer_token")
-            assert value == "Bearer token-123"
+            assert await variables.get_variable("wxo_demo_bearer_token") is None
+            assert await variables.get_variable("WXO_DEMO_ACCESS_TOKEN") == "token-123"
         finally:
             del os.environ["WXO_DEMO_ACCESS_TOKEN"]
 
@@ -311,11 +311,12 @@ class TestVariableService:
             del os.environ["FALLBACK_ENV_KEY"]
 
     @pytest.mark.asyncio
-    async def test_wxo_bearer_alias_from_langflow_request_variables(self, variables):
-        """Test bearer alias synthesis from request-scoped WXO access token variable."""
+    async def test_strict_no_bearer_token_from_request_access_token(self, variables):
+        """Request-scoped *_access_token does not satisfy *_bearer_token name."""
         os.environ["LANGFLOW_REQUEST_VARIABLES"] = '{"wxo_github_access_token":"request-token"}'
         try:
-            assert await variables.get_variable("wxo_github_bearer_token") == "Bearer request-token"
+            assert await variables.get_variable("wxo_github_bearer_token") is None
+            assert await variables.get_variable("wxo_github_access_token") == "request-token"
         finally:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
 
@@ -329,14 +330,14 @@ class TestVariableService:
             del os.environ["DEMO_ACCESS_TOKEN"]
 
     @pytest.mark.asyncio
-    async def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
-        """Test that synthesized aliases are not persisted in in-memory variable list."""
-        os.environ["WXO_DEMO_ACCESS_TOKEN"] = "token-789"  # noqa: S105
+    async def test_explicit_bearer_token_env_not_listed_in_memory(self, variables):
+        """Env-backed reads do not add names to the in-memory variable list."""
+        os.environ["WXO_DEMO_BEARER_TOKEN"] = "Bearer explicit-789"  # noqa: S105
         try:
-            assert await variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
-            assert "wxo_demo_bearer_token" not in variables.list_variables()
+            assert await variables.get_variable("WXO_DEMO_BEARER_TOKEN") == "Bearer explicit-789"
+            assert "WXO_DEMO_BEARER_TOKEN" not in variables.list_variables()
         finally:
-            del os.environ["WXO_DEMO_ACCESS_TOKEN"]
+            del os.environ["WXO_DEMO_BEARER_TOKEN"]
 
     @pytest.mark.asyncio
     async def test_strict_no_token_access_token_alias_resolution(self, variables):

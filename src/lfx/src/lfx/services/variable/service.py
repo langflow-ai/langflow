@@ -13,7 +13,10 @@ class VariableService(Service):
     This is a lightweight implementation for LFX that maintains in-memory
     variables and falls back to environment variables for reads. No database storage.
 
-    Exposes WXO OAuth bearer aliases from environment variables on demand.
+    Resolution is strict: only the requested name matches (in-memory,
+    LANGFLOW_REQUEST_VARIABLES, process environment, or normalized
+    ``x-langflow-global-var-*`` keys). No synthetic names such as deriving
+    ``*_bearer_token`` from ``*_access_token``.
     """
 
     name = "variable_service"
@@ -28,24 +31,6 @@ class VariableService(Service):
     @staticmethod
     def _normalize_global_var_key(name: str) -> str:
         return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
-
-    @staticmethod
-    def _format_bearer_value(value: str) -> str:
-        if value.lower().startswith("bearer "):
-            return value
-        return f"Bearer {value}"
-
-    def _get_wxo_bearer_alias(self, name: str) -> str | None:
-        """Resolve a <prefix>_bearer_token alias from matching <prefix> token env vars."""
-        normalized = name.lower()
-        if not normalized.endswith("_bearer_token"):
-            return None
-        base_name = normalized[: -len("_bearer_token")]
-        candidate_names = (f"{base_name}_access_token",)
-        for key, value in os.environ.items():
-            if key.lower() in candidate_names:
-                return self._format_bearer_value(value)
-        return None
 
     @staticmethod
     def _get_request_variables() -> dict[str, str]:
@@ -63,22 +48,11 @@ class VariableService(Service):
             return {}
         return {str(key): str(value) for key, value in parsed.items()}
 
-    def _get_wxo_bearer_alias_from_request_variables(self, name: str) -> str | None:
-        """Resolve <prefix>_bearer_token alias from request-scoped token values."""
-        normalized = name.lower()
-        if not normalized.endswith("_bearer_token"):
-            return None
-        base_name = normalized[: -len("_bearer_token")]
-        candidate_names = (f"{base_name}_access_token",)
-        for key, value in self._get_request_variables().items():
-            if key.lower() in candidate_names:
-                return self._format_bearer_value(value)
-        return None
-
     async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
 
-        First checks in-memory cache, then environment variables, then WXO bearer aliases.
+        First checks in-memory cache, then LANGFLOW_REQUEST_VARIABLES, then
+        environment variables, then ``x-langflow-global-var-*`` normalized keys.
 
         Async to match the call signature in custom_component.get_variable
         (`await variable_service.get_variable(...)`), which is the path used
@@ -119,17 +93,6 @@ class VariableService(Service):
             logger.debug(f"Variable '{name}' loaded from global alias '{global_alias}'")
             return value
 
-        # For WXO OAuth vars, synthesize a <prefix>_bearer_token alias from request variables first.
-        bearer_value = self._get_wxo_bearer_alias_from_request_variables(name)
-        if bearer_value:
-            logger.debug(f"Variable '{name}' synthesized from WXO access token request variable")
-            return bearer_value
-
-        # For WXO OAuth vars, synthesize a <prefix>_bearer_token alias on demand.
-        bearer_value = self._get_wxo_bearer_alias(name)
-        if bearer_value:
-            logger.debug(f"Variable '{name}' synthesized from WXO access token environment variable")
-            return bearer_value
         return None
 
     def set_variable(self, name: str, value: str, **kwargs) -> None:  # noqa: ARG002
