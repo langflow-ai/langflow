@@ -2434,6 +2434,14 @@ class ComposioBaseComponent(Component):
                     continue
                 value = getattr(self, field)
 
+                # Coerce Langflow rich types to primitives the Composio API can serialise.
+                # A Message connected to a str field (e.g. subject, body) must arrive as
+                # plain text; a Data object should be unwrapped to its dict payload.
+                if isinstance(value, Message):
+                    value = value.text
+                elif isinstance(value, Data):
+                    value = value.data
+
                 # Skip None, empty strings, and empty lists
                 if value is None or value == "" or (isinstance(value, list) and len(value) == 0):
                     continue
