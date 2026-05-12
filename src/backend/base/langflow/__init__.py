@@ -122,16 +122,18 @@ def _setup_compatibility_modules():
     # (e.g. langflow.schema.knowledge_base) that don't exist in their lfx counterparts.
     # Proxying them via LangflowCompatibilityModule would hide those submodules because
     # the proxy's __path__ points to the lfx directory, not langflow's.
-    _skip_proxy: frozenset[str] = frozenset({
-        "langflow.schema",
-        "langflow.schema.data",
-        "langflow.schema.serialize",
-        "langflow.inputs",
-        "langflow.inputs.inputs",
-        "langflow.template",
-        "langflow.template.field",
-        "langflow.template.field.base",
-    })
+    _skip_proxy: frozenset[str] = frozenset(
+        {
+            "langflow.schema",
+            "langflow.schema.data",
+            "langflow.schema.serialize",
+            "langflow.inputs",
+            "langflow.inputs.inputs",
+            "langflow.template",
+            "langflow.template.field",
+            "langflow.template.field.base",
+        }
+    )
 
     # Create compatibility modules for each mapping
     for langflow_name, lfx_name in module_mappings.items():

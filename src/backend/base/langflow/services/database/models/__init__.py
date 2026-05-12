@@ -39,6 +39,7 @@ __all__ = [
     "Variable",
 ]
 
+
 # SpanTable, TraceTable, and TransactionTable all eagerly import
 # langflow.serialization.serialization which loads pandas (~13s). Keep lazy.
 def __getattr__(name: str):
