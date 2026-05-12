@@ -1,5 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+/* biome-ignore-all lint/suspicious/noExplicitAny: jest mocks intentionally
+   use `any` for prop bags so the table component contract isn't pinned by
+   test doubles. */
+import { render, screen } from "@testing-library/react";
 import React from "react";
 import ToolsTable from "../index";
 
@@ -74,6 +76,24 @@ jest.mock(
 jest.mock("@/utils/stringManipulation", () => ({
   parseString: (str: string) => str,
   sanitizeMcpName: (str: string) => str,
+}));
+
+// usePatchUpdateFlow uses React Query; the tests render ToolsTable without a
+// QueryClientProvider so we mock it out at the module level.
+jest.mock("@/controllers/API/queries/flows/use-patch-update-flow", () => ({
+  usePatchUpdateFlow: () => ({ mutate: jest.fn() }),
+}));
+
+jest.mock("@/components/ui/switch", () => ({
+  Switch: ({ checked, onCheckedChange, id, ...props }: any) => (
+    <input
+      type="checkbox"
+      id={id}
+      data-testid={props["data-testid"]}
+      checked={!!checked}
+      onChange={(e) => onCheckedChange?.(e.target.checked)}
+    />
+  ),
 }));
 
 describe("ToolsTable - Pagination Tests", () => {
