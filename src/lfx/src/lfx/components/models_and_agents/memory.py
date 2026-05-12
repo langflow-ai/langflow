@@ -1,8 +1,10 @@
 from typing import Any, cast
+from uuid import UUID
 
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import data_to_text
 from lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
+from lfx.log.logger import logger
 from lfx.memory import aget_messages, astore_message
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -11,6 +13,42 @@ from lfx.schema.message import Message
 from lfx.template.field.base import Output
 from lfx.utils.component_utils import set_current_fields, set_field_display
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
+
+
+def _coerce_flow_id_to_uuid(flow_id: Any) -> UUID | None:
+    """Coerce a graph flow_id (typically str) to UUID for DB filtering.
+
+    Returns None if flow_id is missing or cannot be parsed, so the caller
+    falls back to the previous unscoped behavior rather than raising.
+    """
+    if flow_id is None or flow_id == "":
+        return None
+    if isinstance(flow_id, UUID):
+        return flow_id
+    try:
+        return UUID(str(flow_id))
+    except (ValueError, TypeError, AttributeError):
+        logger.warning(
+            "flow_id %r is not a valid UUID; chat history will not be scoped by flow_id.",
+            flow_id,
+        )
+        return None
+
+
+def _safe_graph_flow_id(component: Component) -> Any:
+    """Best-effort lookup of the component's graph flow_id.
+
+    ``Component.graph`` is a property that reaches into ``self._vertex.graph``;
+    when a MemoryComponent is constructed ad-hoc (e.g. by the Agent component
+    via ``MemoryComponent(**self.get_base_args())``), ``_vertex`` is ``None`` and
+    accessing the property raises ``AttributeError``. Swallow that here so
+    retrieval falls back to the previous unscoped behavior rather than crashing.
+    """
+    try:
+        graph = component.graph
+    except AttributeError:
+        return None
+    return getattr(graph, "flow_id", None)
 
 
 class MemoryComponent(Component):
@@ -201,6 +239,7 @@ class MemoryComponent(Component):
                     context_id=message.context_id,
                     sender_name=message.sender_name,
                     sender=message.sender,
+                    flow_id=_coerce_flow_id_to_uuid(_safe_graph_flow_id(self)),
                 )
                 or []
             )
@@ -250,12 +289,16 @@ class MemoryComponent(Component):
                 expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
         else:
-            # For internal memory, we always fetch the last N messages by ordering by DESC
+            # For internal memory, we always fetch the last N messages by ordering by DESC.
+            # Scope by flow_id so default session names (e.g. "New Session 0") do not
+            # leak chat history across unrelated flows. See issue #13059.
+            flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
             stored = await aget_messages(
                 sender=sender_type,
                 sender_name=sender_name,
                 session_id=session_id,
                 context_id=context_id,
+                flow_id=flow_id_scope,
                 limit=10000,
                 order=order,
             )
