@@ -5,7 +5,7 @@
   "errors.incompleteLoop": "Flow มีลูปที่ไม่สมบูรณ์ โปรดตรวจสอบการเชื่อมต่อของคุณแล้วลองอีกครั้ง",
   "errors.invalidFile": "โปรดเลือกไฟล์ที่ถูกต้อง อนุญาตเฉพาะไฟล์ประเภทเหล่านี้เท่านั้น:",
   "errors.fileTooLarge": "ขนาดไฟล์ใหญ่เกินไป โปรดเลือกไฟล์ที่เล็กกว่า {{maxSizeMB}}",
-  "errors.wrongFileType": "ประเภทไฟล์ไม่ถูกต้อง",
+  "errors.wrongFileType": "ประเภทไฟล์ไม่ถูกต้อง", 
   "errors.uploadJsonOnly": "โปรดอัปโหลดไฟล์ JSON",
   "errors.uploadFile": "เกิดข้อผิดพลาดขณะอัปโหลดไฟล์",
   "errors.upload": "เกิดข้อผิดพลาดในการอัปโหลดไฟล์",
