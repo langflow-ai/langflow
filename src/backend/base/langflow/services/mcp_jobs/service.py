@@ -69,20 +69,33 @@ class MCPJobExecutorService(Service):
         self._workers: list[asyncio.Task] = []
         self._shutdown = asyncio.Event()
         self._started = False
+        self._start_lock = asyncio.Lock()
 
     def is_started(self) -> bool:
         return self._started
 
     async def start(self) -> None:
+        """Start the worker pool.
+
+        Idempotent and safe to call multiple times. Workers are started lazily
+        on the first ``enqueue()`` instead of unconditionally during app
+        lifespan — tests that spin up the app but never enqueue a job were
+        leaking 4 asyncio tasks (one per worker) and failing pyleak.
+        Reconciliation of orphaned ``running`` rows still happens here so the
+        first job-using request pays the one-time cost.
+        """
         if self._started:
             return
-        await self._reconcile_orphaned_running_jobs()
-        self._shutdown.clear()
-        workers = _worker_count()
-        for i in range(workers):
-            self._workers.append(asyncio.create_task(self._worker_loop(i)))
-        self._started = True
-        await logger.adebug("MCPJobExecutorService started with %d workers", workers)
+        async with self._start_lock:
+            if self._started:
+                return
+            await self._reconcile_orphaned_running_jobs()
+            self._shutdown.clear()
+            workers = _worker_count()
+            for i in range(workers):
+                self._workers.append(asyncio.create_task(self._worker_loop(i)))
+            self._started = True
+            await logger.adebug("MCPJobExecutorService started with %d workers", workers)
 
     async def stop(self) -> None:
         self._shutdown.set()
@@ -316,7 +329,12 @@ class MCPJobExecutorService(Service):
         created_by: UUID | None,
         callback_url: str | None = None,
     ) -> MCPJob:
-        """Insert a new pending job row. The worker pool will pick it up."""
+        """Insert a new pending job row. The worker pool will pick it up.
+
+        Lazily starts the worker pool on first call so tests that never
+        enqueue a job don't leak the worker tasks.
+        """
+        await self.start()
         now = datetime.now(timezone.utc)
         job = MCPJob(
             project_id=project_id,
