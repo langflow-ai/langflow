@@ -37,9 +37,7 @@ export const AccountMenu = () => {
     autoLogin: state.autoLogin,
   }));
 
-  const hideLogoutButton = useUtilityStore(
-    (state) => state.hideLogoutButton,
-  );
+  const hideLogoutButton = useUtilityStore((state) => state.hideLogoutButton);
 
   const handleLogout = () => {
     mutationLogout();
