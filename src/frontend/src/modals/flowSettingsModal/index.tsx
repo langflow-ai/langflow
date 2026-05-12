@@ -18,7 +18,9 @@ export default function FlowSettingsModal({
       className="p-4"
     >
       <BaseModal.Header>
-        <span className="text-base font-semibold">{t("modal.flowDetails")}</span>
+        <span className="text-base font-semibold">
+          {t("modal.flowDetails")}
+        </span>
       </BaseModal.Header>
       <BaseModal.Content>
         <FlowSettingsComponent

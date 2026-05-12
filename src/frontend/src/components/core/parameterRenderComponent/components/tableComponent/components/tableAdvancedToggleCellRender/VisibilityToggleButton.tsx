@@ -22,7 +22,9 @@ export default function VisibilityToggleButton({
       data-testid={id}
       role="switch"
       aria-checked={checked}
-      aria-label={checked ? t("tableField.hideField") : t("tableField.showField")}
+      aria-label={
+        checked ? t("tableField.hideField") : t("tableField.showField")
+      }
       disabled={disabled}
       className={cn(
         "flex items-center justify-center rounded-md p-1 transition-colors",

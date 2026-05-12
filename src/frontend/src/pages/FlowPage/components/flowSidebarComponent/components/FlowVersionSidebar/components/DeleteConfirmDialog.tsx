@@ -28,10 +28,14 @@ export default function DeleteConfirmDialog({
             name="Trash2"
             className="h-5 w-5 text-destructive"
           />
-          <span className="text-lg font-semibold">{t("flowVersion.deleteDialogTitle")}</span>
+          <span className="text-lg font-semibold">
+            {t("flowVersion.deleteDialogTitle")}
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          {t("flowVersion.deleteConfirmText", { versionTag: entry.version_tag })}
+          {t("flowVersion.deleteConfirmText", {
+            versionTag: entry.version_tag,
+          })}
         </p>
         <div className="flex justify-end gap-2">
           <Button

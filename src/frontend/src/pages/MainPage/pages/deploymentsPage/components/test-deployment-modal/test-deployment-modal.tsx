@@ -42,7 +42,9 @@ export default function TestDeploymentModal({
         closeButtonClassName="top-5 right-4"
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
-        <DialogTitle className="sr-only">{t("deployments.testDeployment")}</DialogTitle>
+        <DialogTitle className="sr-only">
+          {t("deployments.testDeployment")}
+        </DialogTitle>
         <DialogDescription className="sr-only">
           Chat interface to test the {deployment?.name ?? "deployment"}
         </DialogDescription>

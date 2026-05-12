@@ -300,7 +300,12 @@ function DeploymentStepperModalContent({
     } catch (err: unknown) {
       setDeploymentPhase("idle");
       onDeployingChange(false);
-      showError(isEditMode ? t("deployments.failedToUpdateDeployment") : t("deployments.failedToCreateDeployment"), err);
+      showError(
+        isEditMode
+          ? t("deployments.failedToUpdateDeployment")
+          : t("deployments.failedToCreateDeployment"),
+        err,
+      );
     }
   };
 
@@ -310,14 +315,20 @@ function DeploymentStepperModalContent({
     setOpen(false);
   };
 
-  const actionLabel = isEditMode ? t("deployments.update") : t("deployments.deploy");
+  const actionLabel = isEditMode
+    ? t("deployments.update")
+    : t("deployments.deploy");
   const actionIcon = isEditMode ? "Save" : "Rocket";
-  const progressLabel = isEditMode ? t("deployments.updating") : t("deployments.deploying");
+  const progressLabel = isEditMode
+    ? t("deployments.updating")
+    : t("deployments.deploying");
 
   return (
     <>
       <DialogTitle className="sr-only">
-        {isEditMode ? t("deployments.updateDeployment") : t("deployments.createNewDeploymentTitle")}
+        {isEditMode
+          ? t("deployments.updateDeployment")
+          : t("deployments.createNewDeploymentTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
         {t("deployments.stepOf", { current: currentStep, total: totalSteps })}

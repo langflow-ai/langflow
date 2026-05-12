@@ -37,7 +37,9 @@ export default function DeleteAccountPage() {
           setOpen={setShowConfirmation}
           size="x-small"
         >
-          <BaseModal.Header description={t("deleteAccount.irreversibleDescription")}>
+          <BaseModal.Header
+            description={t("deleteAccount.irreversibleDescription")}
+          >
             <h3>{t("deleteAccount.areYouSure")}</h3>
           </BaseModal.Header>
           <BaseModal.Trigger>

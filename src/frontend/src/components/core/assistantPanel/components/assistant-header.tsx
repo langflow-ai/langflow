@@ -2,9 +2,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import {
-  ASSISTANT_MAX_SESSIONS,
-} from "../assistant-panel.constants";
+import { ASSISTANT_MAX_SESSIONS } from "../assistant-panel.constants";
 import type { SessionHistoryEntry } from "../assistant-panel.types";
 import { SessionHistoryDropdown } from "./session-history-dropdown";
 
@@ -35,7 +33,9 @@ export function AssistantHeader({
 
   return (
     <div className="flex h-12 items-center justify-between px-4">
-      <h2 className="text-sm font-medium text-foreground">{t("assistant.title")}</h2>
+      <h2 className="text-sm font-medium text-foreground">
+        {t("assistant.title")}
+      </h2>
       <div className="flex items-center">
         <ShadTooltip
           content={

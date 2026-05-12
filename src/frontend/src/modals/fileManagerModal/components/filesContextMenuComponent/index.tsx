@@ -137,8 +137,14 @@ export default function FilesContextMenuComponent({
         open={showDeleteConfirmation}
         onClose={() => setShowDeleteConfirmation(false)}
         onCancel={() => setShowDeleteConfirmation(false)}
-        title={isLocal ? t("files.deleteFileTitle") : t("files.removeFileTitle")}
-        titleHeader={isLocal ? t("files.deleteFileConfirm", { name: file.name }) : t("files.removeFileConfirm", { name: file.name })}
+        title={
+          isLocal ? t("files.deleteFileTitle") : t("files.removeFileTitle")
+        }
+        titleHeader={
+          isLocal
+            ? t("files.deleteFileConfirm", { name: file.name })
+            : t("files.removeFileConfirm", { name: file.name })
+        }
         cancelText={t("files.cancel")}
         size="x-small"
         confirmationText={isLocal ? t("files.delete") : t("files.remove")}

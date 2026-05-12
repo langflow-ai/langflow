@@ -229,9 +229,13 @@ export function FlowInsightsContent({
           <AccordionItem key={sessionId} value={sessionId}>
             <AccordionTrigger className="px-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="font-medium text-foreground">{t("trace.session")}</span>
+                <span className="font-medium text-foreground">
+                  {t("trace.session")}
+                </span>
                 <span className="font-mono text-xs">{sessionId}</span>
-                <span className="text-xs">{t("trace.runsCount", { count: sessionRows.length })}</span>
+                <span className="text-xs">
+                  {t("trace.runsCount", { count: sessionRows.length })}
+                </span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
@@ -262,14 +266,18 @@ export function FlowInsightsContent({
             className="border-b border-border px-4 py-3"
             data-testid="flow-activity-header"
           >
-            <h2 className="text-base font-semibold">{t("trace.flowActivity")}</h2>
+            <h2 className="text-base font-semibold">
+              {t("trace.flowActivity")}
+            </h2>
           </div>
         )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">
           <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
             <div className="flex items-center gap-3 text-sm">
               <span className="font-medium">{t("trace.runs")}</span>
-              <span className="text-muted-foreground">{t("trace.total", { count: totalRuns })}</span>
+              <span className="text-muted-foreground">
+                {t("trace.total", { count: totalRuns })}
+              </span>
             </div>
             <Button
               variant="ghost"

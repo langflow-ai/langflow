@@ -98,7 +98,9 @@ export const FlowListPanel = memo(function FlowListPanel({
                       >
                         {activeEntries.length === 1
                           ? t("deployments.oneVersion")
-                          : t("deployments.manyVersions", { count: activeEntries.length })}
+                          : t("deployments.manyVersions", {
+                              count: activeEntries.length,
+                            })}
                       </Badge>
                     )}
                     {isRemoved && (
@@ -118,7 +120,9 @@ export const FlowListPanel = memo(function FlowListPanel({
                   )}
                   {removedEntries.length > 0 && !isRemoved && (
                     <p className="truncate text-xs text-muted-foreground">
-                      {t("deployments.removedCount", { count: removedEntries.length })}
+                      {t("deployments.removedCount", {
+                        count: removedEntries.length,
+                      })}
                     </p>
                   )}
                 </div>

@@ -202,7 +202,11 @@ export function StepReview({
       </div>
 
       <div className="shrink-0">
-        <SummaryItem icon="Type" label={t("knowledge.labelName")} value={sourceName} />
+        <SummaryItem
+          icon="Type"
+          label={t("knowledge.labelName")}
+          value={sourceName}
+        />
         <SummaryItem
           icon="Files"
           label={t("knowledge.files")}
@@ -236,7 +240,8 @@ export function StepReview({
               />
             )}
             <span className="text-sm font-medium">
-              {selectedEmbeddingModel[0]?.name || t("knowledge.labelNotSelected")}
+              {selectedEmbeddingModel[0]?.name ||
+                t("knowledge.labelNotSelected")}
             </span>
           </div>
         </div>
@@ -283,7 +288,9 @@ export function StepReview({
                 >
                   {filesWithOverrides === 1
                     ? t("knowledge.oneFileOverride")
-                    : t("knowledge.nFileOverrides", { count: filesWithOverrides })}
+                    : t("knowledge.nFileOverrides", {
+                        count: filesWithOverrides,
+                      })}
                 </span>
               )}
             </div>

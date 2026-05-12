@@ -93,7 +93,9 @@ export default function OutputModal({
           }
         >
           <TabsList>
-            <TabsTrigger value="Outputs">{t("misc.outputsModalTitle")}</TabsTrigger>
+            <TabsTrigger value="Outputs">
+              {t("misc.outputsModalTitle")}
+            </TabsTrigger>
             <TabsTrigger value="Logs">{t("modal.logs")}</TabsTrigger>
           </TabsList>
         </Tabs>

@@ -112,7 +112,9 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       <div className="border-b border-border px-4 py-3 pr-12">
         <div className="flex flex-nowrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
-            <span className="shrink-0 text-sm font-medium">{t("trace.traceDetails")}</span>
+            <span className="shrink-0 text-sm font-medium">
+              {t("trace.traceDetails")}
+            </span>
             <span className="shrink-0 text-sm text-muted-foreground">—</span>
             <span className="shrink-0 text-sm font-medium">{trace.id}</span>
           </div>

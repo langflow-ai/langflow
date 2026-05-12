@@ -200,7 +200,9 @@ export default function StoreCardComponent({
             <div className="flex w-full flex-wrap items-end justify-end gap-2">
               <div className="flex gap-0.5">
                 <ShadTooltip
-                  content={authorized ? t("store.like") : t("store.reviewApiKey")}
+                  content={
+                    authorized ? t("store.like") : t("store.reviewApiKey")
+                  }
                 >
                   <Button
                     disabled={isPending}

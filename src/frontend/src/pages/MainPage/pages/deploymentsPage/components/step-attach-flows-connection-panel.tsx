@@ -96,7 +96,8 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             <div className="flex flex-col gap-4">
               <div className="flex flex-col">
                 <span className="pb-2 text-sm font-medium">
-                  {t("deployments.connectionNameLabel")}<span className="text-destructive">*</span>
+                  {t("deployments.connectionNameLabel")}
+                  <span className="text-destructive">*</span>
                 </span>
                 <Input
                   placeholder={t("deployments.placeholderConnectionName")}
@@ -119,7 +120,9 @@ export const ConnectionPanel = memo(function ConnectionPanel({
                 </span>
                 {detectedVarCount > 0 && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    {t("deployments.variablesAutoDetected", { count: detectedVarCount })}
+                    {t("deployments.variablesAutoDetected", {
+                      count: detectedVarCount,
+                    })}
                   </p>
                 )}
                 <div className="space-y-2">

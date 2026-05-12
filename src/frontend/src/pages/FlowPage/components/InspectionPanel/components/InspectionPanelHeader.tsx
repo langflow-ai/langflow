@@ -118,7 +118,10 @@ export default function InspectionPanelHeader({
         onMouseLeave={() => setIsHoveringContent(false)}
       >
         <div className="absolute -left-2 top-[18px] w-7 pr-2">
-          <ShadTooltip content={editMode ? t("settings.saveButton") : t("admin.editTitle")} side="top">
+          <ShadTooltip
+            content={editMode ? t("settings.saveButton") : t("admin.editTitle")}
+            side="top"
+          >
             <Button
               unstyled
               onClick={() => {

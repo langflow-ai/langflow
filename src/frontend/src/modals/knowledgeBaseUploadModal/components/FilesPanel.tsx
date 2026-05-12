@@ -106,8 +106,12 @@ export function FilesPanel({
                       onClick={() => toggleExpanded(key)}
                       aria-label={
                         isOpen
-                          ? t("knowledge.collapseMetadataFor", { name: file.name })
-                          : t("knowledge.expandMetadataFor", { name: file.name })
+                          ? t("knowledge.collapseMetadataFor", {
+                              name: file.name,
+                            })
+                          : t("knowledge.expandMetadataFor", {
+                              name: file.name,
+                            })
                       }
                       data-testid={`kb-file-metadata-toggle-${index}`}
                     >

@@ -26,9 +26,14 @@ export function DateRangePopover({
   const { t } = useTranslation();
   const rangeLabel = useMemo(() => {
     if (!startDate && !endDate) return "";
-    if (startDate && !endDate) return t("trace.dateFrom", { date: formatDateLabel(startDate) });
-    if (!startDate && endDate) return t("trace.dateUntil", { date: formatDateLabel(endDate) });
-    return t("trace.dateRangeLabel", { start: formatDateLabel(startDate), end: formatDateLabel(endDate) });
+    if (startDate && !endDate)
+      return t("trace.dateFrom", { date: formatDateLabel(startDate) });
+    if (!startDate && endDate)
+      return t("trace.dateUntil", { date: formatDateLabel(endDate) });
+    return t("trace.dateRangeLabel", {
+      start: formatDateLabel(startDate),
+      end: formatDateLabel(endDate),
+    });
   }, [startDate, endDate]);
 
   const hasInvalidRange = Boolean(startDate && endDate && endDate < startDate);

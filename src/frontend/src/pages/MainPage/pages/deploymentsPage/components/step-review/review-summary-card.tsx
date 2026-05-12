@@ -27,7 +27,9 @@ export function ReviewSummaryCard({
           </span>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelType")}</span>
+              <span className="w-10 text-xs text-muted-foreground">
+                {t("deployments.labelType")}
+              </span>
               <div className="flex items-center gap-1.5">
                 <ForwardedIconComponent
                   name={deploymentType === "agent" ? "Bot" : "Server"}
@@ -39,7 +41,9 @@ export function ReviewSummaryCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">{t("deployments.labelName")}</span>
+              <span className="w-10 text-xs text-muted-foreground">
+                {t("deployments.labelName")}
+              </span>
               <span className="text-sm text-foreground">
                 {deploymentName || "—"}
               </span>

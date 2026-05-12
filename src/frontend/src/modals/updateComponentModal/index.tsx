@@ -199,7 +199,10 @@ export default function UpdateComponentModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: components.length > 1 ? t("updateComponent.updateButtonPlural") : t("updateComponent.updateButton"),
+          label:
+            components.length > 1
+              ? t("updateComponent.updateButtonPlural")
+              : t("updateComponent.updateButton"),
           onClick: handleUpdate,
           disabled: isMultiple && selectedComponents.size === 0,
           loading,

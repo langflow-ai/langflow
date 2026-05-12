@@ -23,7 +23,9 @@ export function ReviewDetachingSection({
   return (
     <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
       <div className="flex flex-col gap-3">
-        <span className="text-sm font-medium text-destructive">{t("deployments.detaching")}</span>
+        <span className="text-sm font-medium text-destructive">
+          {t("deployments.detaching")}
+        </span>
         <div className="flex flex-col gap-2">
           {removedFlows.map((flow) => (
             <div

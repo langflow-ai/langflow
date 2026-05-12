@@ -22,7 +22,8 @@ export default function ProviderCredentialsForm({
     <>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {t("deployments.fieldServiceInstanceUrl")} <span className="text-destructive">*</span>
+          {t("deployments.fieldServiceInstanceUrl")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Input
           type="url"
@@ -39,7 +40,8 @@ export default function ProviderCredentialsForm({
       </div>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {t("deployments.fieldApiKey")} <span className="text-destructive">*</span>
+          {t("deployments.fieldApiKey")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <div className="relative">
           <Input
@@ -74,7 +76,8 @@ export default function ProviderCredentialsForm({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {t("deployments.fieldName")} <span className="text-destructive">*</span>
+          {t("deployments.fieldName")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Input
           type="text"

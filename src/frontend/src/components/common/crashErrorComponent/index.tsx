@@ -46,7 +46,9 @@ export default function CrashErrorComponent({
 
             <CardFooter>
               <div className="m-auto mt-4 flex justify-center">
-                <Button onClick={resetErrorBoundary}>{t("crash.restartButton")}</Button>
+                <Button onClick={resetErrorBoundary}>
+                  {t("crash.restartButton")}
+                </Button>
 
                 <a
                   href="https://github.com/langflow-ai/langflow/issues/new"

@@ -73,7 +73,9 @@ export default function FlowVersionSidebarContent({
               >
                 <div className="flex w-full items-center justify-between">
                   <div className="flex flex-col items-start">
-                    <span className="font-medium text-sm pb-1">{t("flowVersion.currentLabel")}</span>
+                    <span className="font-medium text-sm pb-1">
+                      {t("flowVersion.currentLabel")}
+                    </span>
                     <span className="text-xs text-muted-foreground">
                       {t("flowVersion.workingVersion")}
                     </span>

@@ -166,7 +166,9 @@ export const BotMessage = memo(
                   )}
                   <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
-                      <span>{t("chat.runningStatus")} {formatSeconds(displayTime)}</span>
+                      <span>
+                        {t("chat.runningStatus")} {formatSeconds(displayTime)}
+                      </span>
                     ) : !thinkingActive && displayTime > 0 ? (
                       <>
                         <span className="text-muted-foreground">

@@ -129,7 +129,9 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Cost (if applicable) */}
         {hasTokenUsage && span.tokenUsage!.cost > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-md bg-muted p-3">
-            <span className="text-sm font-medium">{t("trace.estimatedCost")}</span>
+            <span className="text-sm font-medium">
+              {t("trace.estimatedCost")}
+            </span>
             <span className="text-sm font-semibold">
               {formatCost(span.tokenUsage!.cost)}
             </span>

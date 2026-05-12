@@ -240,7 +240,9 @@ export function useDeploymentChat({
           } catch (err: unknown) {
             if (!isMountedRef.current) return;
             const message =
-              err instanceof Error ? err.message : t("errors.failedToFetchRunStatus");
+              err instanceof Error
+                ? err.message
+                : t("errors.failedToFetchRunStatus");
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,

@@ -87,7 +87,11 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           ></TableComponent>
         </BaseModal.Content>
         <BaseModal.Footer
-          submit={onSave ? { label: t("tableModal.save"), onClick: onSave } : undefined}
+          submit={
+            onSave
+              ? { label: t("tableModal.save"), onClick: onSave }
+              : undefined
+          }
         ></BaseModal.Footer>
       </BaseModal>
     );

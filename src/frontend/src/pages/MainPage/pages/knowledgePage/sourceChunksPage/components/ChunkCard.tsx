@@ -101,7 +101,9 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">{t("knowledge.chunkLabel", { index })}</span>
+          <span className="text-sm font-medium">
+            {t("knowledge.chunkLabel", { index })}
+          </span>
           <Badge
             variant="secondary"
             size="sq"

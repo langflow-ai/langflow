@@ -49,7 +49,9 @@ export default function DeploymentPhaseContent({
         <DialogTitle>{t("deployments.selectDeployment")}</DialogTitle>
         <DialogDescription>
           {selectedProvider
-            ? t("deployments.deploymentsOnProvider", { name: selectedProvider.name })
+            ? t("deployments.deploymentsOnProvider", {
+                name: selectedProvider.name,
+              })
             : t("deployments.selectDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
@@ -81,7 +83,9 @@ export default function DeploymentPhaseContent({
               >
                 <span className="text-sm font-medium">{deployment.name}</span>
                 <span className="text-xs text-muted-foreground">
-                  {t("deployments.deploymentTypeLabel", { type: deployment.type })}
+                  {t("deployments.deploymentTypeLabel", {
+                    type: deployment.type,
+                  })}
                 </span>
               </Label>
             </div>
@@ -93,10 +97,14 @@ export default function DeploymentPhaseContent({
               htmlFor="deploy-new"
               className="flex flex-1 cursor-pointer flex-col gap-0.5"
             >
-              <span className="text-sm font-medium">{t("deployments.createNewDeployment")}</span>
+              <span className="text-sm font-medium">
+                {t("deployments.createNewDeployment")}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {selectedProvider
-                  ? t("deployments.newDeploymentOnProvider", { name: selectedProvider.name })
+                  ? t("deployments.newDeploymentOnProvider", {
+                      name: selectedProvider.name,
+                    })
                   : t("deployments.setupNewDeployment")}
               </span>
             </Label>

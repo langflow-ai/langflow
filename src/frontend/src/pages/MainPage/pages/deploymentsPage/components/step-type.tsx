@@ -186,11 +186,14 @@ export default function StepType() {
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
-      <h2 className="text-lg font-semibold">{t("deployments.deploymentType")}</h2>
+      <h2 className="text-lg font-semibold">
+        {t("deployments.deploymentType")}
+      </h2>
 
       <div className="flex flex-col gap-3">
         <span className="text-sm font-medium">
-          {t("deployments.chooseType")} <span className="text-destructive">*</span>
+          {t("deployments.chooseType")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <div
           className="grid grid-cols-2 gap-3"
@@ -228,7 +231,9 @@ export default function StepType() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{t("deployments.agentTypeLabel")}</span>
+                <span className="text-sm font-medium">
+                  {t("deployments.agentTypeLabel")}
+                </span>
                 <p className="text-xs text-muted-foreground">
                   {t("deployments.agentTypeDescription")}
                 </p>
@@ -240,7 +245,8 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {t("deployments.agentName")} <span className="text-destructive">*</span>
+          {t("deployments.agentName")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <div className="relative">
           <Input
@@ -293,7 +299,8 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          {t("deployments.labelModel")} <span className="text-destructive">*</span>
+          {t("deployments.labelModel")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Select
           value={selectedLlm}
@@ -302,7 +309,11 @@ export default function StepType() {
         >
           <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
             <SelectValue
-              placeholder={llmsLoading ? t("deployments.loadingModels") : t("deployments.selectModel")}
+              placeholder={
+                llmsLoading
+                  ? t("deployments.loadingModels")
+                  : t("deployments.selectModel")
+              }
             />
           </SelectTrigger>
           <SelectContent
@@ -335,7 +346,9 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">{t("deployments.descriptionLabel")}</span>
+        <span className="pb-2 text-sm font-medium">
+          {t("deployments.descriptionLabel")}
+        </span>
         <Textarea
           placeholder={t("deployments.placeholderAgentPurpose")}
           rows={3}

@@ -357,7 +357,9 @@ const SettingsVoiceModal = ({
                       size="md"
                       data-testid="voice-assistant-settings-modal-save-button"
                     >
-                      {isEditingOpenAIKey ? t("deployments.update") : t("settings.saveButton")}
+                      {isEditingOpenAIKey
+                        ? t("deployments.update")
+                        : t("settings.saveButton")}
                     </Button>
                   </div>
                 )}

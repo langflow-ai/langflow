@@ -26,7 +26,11 @@ export const MCPServerNotice: FC<{
           </div>
           <div className="">{t("sidebar.mcpProjectsTitle")}</div>
         </div>
-        <img src={MCPLangflow} alt={t("sidebar.mcpNoticeImageAlt")} className="rounded-xl" />
+        <img
+          src={MCPLangflow}
+          alt={t("sidebar.mcpNoticeImageAlt")}
+          className="rounded-xl"
+        />
         <p className="text-sm text-secondary-foreground">
           {t("sidebar.mcpExposeFlows")}
         </p>

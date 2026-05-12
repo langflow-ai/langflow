@@ -221,7 +221,9 @@ export const createKnowledgeBaseColumns = (
                     />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t("knowledge.action.ingestFiles")}</TooltipContent>
+                <TooltipContent>
+                  {t("knowledge.action.ingestFiles")}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <DropdownMenu>

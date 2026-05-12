@@ -26,7 +26,9 @@ export default function UpdatePhaseContent({
   return (
     <>
       <DialogTitle className="sr-only">
-        {isUpdating ? t("deployments.updatingTitle") : t("deployments.updatedTitle")}
+        {isUpdating
+          ? t("deployments.updatingTitle")
+          : t("deployments.updatedTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
         {isUpdating

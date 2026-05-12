@@ -198,7 +198,11 @@ export default function SessionSelector({
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
         >
-          <ShadTooltip styleClasses="z-50" side="right" content={t("chat.options")}>
+          <ShadTooltip
+            styleClasses="z-50"
+            side="right"
+            content={t("chat.options")}
+          >
             <SelectTrigger
               onClick={(e) => {
                 e.stopPropagation();

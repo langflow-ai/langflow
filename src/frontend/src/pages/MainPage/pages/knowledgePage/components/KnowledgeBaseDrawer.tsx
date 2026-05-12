@@ -51,21 +51,27 @@ const KnowledgeBaseDrawer = ({
           <Separator />
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">{t("knowledge.embeddingProviderLabel")}</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.embeddingProviderLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.embedding_provider || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">{t("knowledge.embeddingModelLabel")}</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.embeddingModelLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.embedding_model || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">{t("knowledge.vectorStoreLabel")}</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.vectorStoreLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
               {backendLabel}
             </div>
@@ -73,7 +79,9 @@ const KnowledgeBaseDrawer = ({
 
           {backendTarget && (
             <div className="space-y-2 px-4">
-              <label className="text-sm font-medium">{t("knowledge.targetLabel")}</label>
+              <label className="text-sm font-medium">
+                {t("knowledge.targetLabel")}
+              </label>
               <div className="text-sm font-medium text-muted-foreground">
                 {backendTarget}
               </div>
@@ -81,7 +89,9 @@ const KnowledgeBaseDrawer = ({
           )}
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">{t("knowledge.statusLabel")}</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.statusLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
               {knowledgeBase.status || t("knowledge.unknown")}
             </div>

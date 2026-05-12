@@ -175,7 +175,9 @@ export function ChatSidebar({
                       {selectedSessions.size > 0 && (
                         <ShadTooltip
                           styleClasses="z-50"
-                          content={t("chat.deleteSessionsCount", { count: selectedSessions.size })}
+                          content={t("chat.deleteSessionsCount", {
+                            count: selectedSessions.size,
+                          })}
                           side="top"
                         >
                           <Button

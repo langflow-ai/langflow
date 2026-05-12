@@ -150,7 +150,9 @@ export default function StepReview() {
   return (
     <div className="flex flex-col gap-4 py-3">
       <div>
-        <h2 className="text-lg font-semibold">{t("deployments.reviewAndConfirm")}</h2>
+        <h2 className="text-lg font-semibold">
+          {t("deployments.reviewAndConfirm")}
+        </h2>
         <p className="text-sm text-muted-foreground">
           {t("deployments.reviewDetails")}
         </p>
@@ -162,7 +164,6 @@ export default function StepReview() {
         reviewFlows={reviewFlows}
         selectedLlm={selectedLlm}
       />
-
 
       {reviewFlows.length > 0 && (
         <div className="flex flex-col gap-3">

@@ -36,7 +36,11 @@ export function EditMessageButton({
   return (
     <div className="flex items-center rounded-md border border-border bg-background">
       {!isAudioMessage && onEdit && (
-        <ShadTooltip styleClasses="z-50" content={t("chat.editMessage")} side="top">
+        <ShadTooltip
+          styleClasses="z-50"
+          content={t("chat.editMessage")}
+          side="top"
+        >
           <div className="p-1">
             <Button
               variant="ghost"
@@ -72,7 +76,11 @@ export function EditMessageButton({
 
       {isBotMessage && (
         <div className="flex">
-          <ShadTooltip styleClasses="z-50" content={t("chat.helpful")} side="top">
+          <ShadTooltip
+            styleClasses="z-50"
+            content={t("chat.helpful")}
+            side="top"
+          >
             <div className="p-1">
               <Button
                 variant="ghost"
@@ -89,7 +97,11 @@ export function EditMessageButton({
             </div>
           </ShadTooltip>
 
-          <ShadTooltip styleClasses="z-50" content={t("chat.notHelpful")} side="top">
+          <ShadTooltip
+            styleClasses="z-50"
+            content={t("chat.notHelpful")}
+            side="top"
+          >
             <div className="p-1">
               <Button
                 variant="ghost"

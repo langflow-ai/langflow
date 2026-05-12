@@ -180,7 +180,9 @@ export const ErrorView = ({
                                 </h3>
                                 <ol className="list-decimal pl-5">
                                   <li>{t("instructions.checkSettings")}</li>
-                                  <li>{t("instructions.fillRequiredFields")}</li>
+                                  <li>
+                                    {t("instructions.fillRequiredFields")}
+                                  </li>
                                   <li>{t("instructions.rerunFlow")}</li>
                                 </ol>
                               </div>

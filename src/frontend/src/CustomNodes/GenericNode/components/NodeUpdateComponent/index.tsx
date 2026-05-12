@@ -49,7 +49,9 @@ export default function NodeUpdateComponent({
             loading={loadingUpdate}
             data-testid={hasBreakingChange ? "review-button" : "update-button"}
           >
-            {hasBreakingChange ? t("deployments.review") : t("nodeToolbar.update")}
+            {hasBreakingChange
+              ? t("deployments.review")
+              : t("nodeToolbar.update")}
           </Button>
         )}
       </div>
@@ -106,7 +108,9 @@ export default function NodeUpdateComponent({
           loading={loadingUpdate}
           data-testid={hasBreakingChange ? "review-button" : "update-button"}
         >
-          {hasBreakingChange ? t("deployments.review") : t("nodeToolbar.update")}
+          {hasBreakingChange
+            ? t("deployments.review")
+            : t("nodeToolbar.update")}
         </Button>
       )}
     </div>

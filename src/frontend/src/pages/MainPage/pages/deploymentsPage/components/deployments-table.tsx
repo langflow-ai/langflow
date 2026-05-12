@@ -155,7 +155,9 @@ export default function DeploymentsTable({
                       />
                     )}
                     {deployment.attached_count}{" "}
-                    {deployment.attached_count === 1 ? t("deployments.flow") : t("deployments.flows")}
+                    {deployment.attached_count === 1
+                      ? t("deployments.flow")
+                      : t("deployments.flows")}
                   </button>
                 </TableCell>
                 <TableCell>
@@ -174,7 +176,9 @@ export default function DeploymentsTable({
                     size="icon"
                     className="h-8 w-8"
                     data-testid={`test-deployment-${deployment.id}`}
-                    aria-label={t("deployments.testDeploymentAriaLabel", { name: deployment.name })}
+                    aria-label={t("deployments.testDeploymentAriaLabel", {
+                      name: deployment.name,
+                    })}
                     onClick={() => onTestDeployment(deployment)}
                   >
                     <ForwardedIconComponent name="Play" className="h-4 w-4" />

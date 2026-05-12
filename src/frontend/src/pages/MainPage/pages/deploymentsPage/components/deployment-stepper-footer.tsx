@@ -84,7 +84,9 @@ export default function DeploymentStepperFooter({
             {progressLabel}
           </Button>
         )}
-        {isDeployed && <Button onClick={onClose}>{t("deployments.done")}</Button>}
+        {isDeployed && (
+          <Button onClick={onClose}>{t("deployments.done")}</Button>
+        )}
       </div>
     </div>
   );

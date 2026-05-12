@@ -85,7 +85,8 @@ export const VersionPanel = memo(function VersionPanel({
                 ignoreTitleCase
                 data-testid="create-version-from-draft"
               >
-                {t("deployments.createFromDraft")}</Button>
+                {t("deployments.createFromDraft")}
+              </Button>
             </div>
           )}
 
@@ -157,7 +158,9 @@ export const VersionPanel = memo(function VersionPanel({
                       )}
                     </span>
                     <span className="text-xxs leading-tight text-muted-foreground">
-                      {t("deployments.versionCreated", { date: formatDate(version.created_at) })}
+                      {t("deployments.versionCreated", {
+                        date: formatDate(version.created_at),
+                      })}
                     </span>
                     {connectionNames.length > 0 && !isRemoved && (
                       <span className="truncate text-xxs leading-tight text-muted-foreground">

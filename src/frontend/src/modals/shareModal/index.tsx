@@ -109,7 +109,9 @@ export default function ShareModal({
         saveFlow(flow);
       }
       setSuccessData({
-        title: t("share.sharedSuccessfully", { type: is_component ? t("deleteModal.component") : "Flow" }),
+        title: t("share.sharedSuccessfully", {
+          type: is_component ? t("deleteModal.component") : "Flow",
+        }),
       });
     }
 
@@ -120,7 +122,10 @@ export default function ShareModal({
         sharePublic,
       ).then(successShare, (err) => {
         setErrorData({
-          title: t("errors.errorSharing") + " " + (is_component ? "component" : "flow"),
+          title:
+            t("errors.errorSharing") +
+            " " +
+            (is_component ? "component" : "flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -132,7 +137,10 @@ export default function ShareModal({
         unavaliableNames.find((e) => e.name === name)!.id,
       ).then(successShare, (err) => {
         setErrorData({
-          title: t("errors.errorSharing") + " " + (is_component ? "component" : "flow"),
+          title:
+            t("errors.errorSharing") +
+            " " +
+            (is_component ? "component" : "flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -168,9 +176,7 @@ export default function ShareModal({
           }}
         >
           <ConfirmationModal.Content>
-            <span>
-              {t("share.replaceExisting", { name })}
-            </span>
+            <span>{t("share.replaceExisting", { name })}</span>
             <br></br>
             <span className="text-xs text-destructive">
               {t("share.thisActionIrreversible")}
@@ -210,7 +216,11 @@ export default function ShareModal({
           {children ? children : <></>}
         </BaseModal.Trigger>
         <BaseModal.Header
-          description={t("share.publishDescription", { type: is_component ? t("shareModal.yourComponent") : t("shareModal.workflow") })}
+          description={t("share.publishDescription", {
+            type: is_component
+              ? t("shareModal.yourComponent")
+              : t("shareModal.workflow"),
+          })}
         >
           <span className="pr-2">{t("misc.share")}</span>
           <IconComponent
@@ -259,7 +269,9 @@ export default function ShareModal({
 
         <BaseModal.Footer
           submit={{
-            label: is_component ? t("share.shareComponent") : t("share.shareFlow"),
+            label: is_component
+              ? t("share.shareComponent")
+              : t("share.shareFlow"),
             loading: loadingNames,
             dataTestId: "share-modal-button-flow",
           }}

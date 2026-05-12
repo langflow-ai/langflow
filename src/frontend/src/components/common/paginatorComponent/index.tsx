@@ -99,7 +99,9 @@ export default function PaginatorComponent({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground">{t("paginator.ofPages", { maxIndex })}</span>
+          <span className="text-muted-foreground">
+            {t("paginator.ofPages", { maxIndex })}
+          </span>
         </div>
         <div className="flex items-center gap-1">
           <Button
