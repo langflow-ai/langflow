@@ -1314,9 +1314,17 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     break
 
     # If the user already has any folder (e.g. they renamed the default), return
-    # the earliest one rather than creating a duplicate default alongside it.
-    # Without this guard, every login or server restart would silently recreate
+    # one of them rather than creating a duplicate default alongside it. Without
+    # this guard, every login or server restart would silently recreate
     # "Starter Project" next to the user's renamed folder. (Regression of #12746.)
+    #
+    # ``Folder.id`` is a random UUID, so ``order_by(Folder.id)`` does NOT mean
+    # "earliest by creation"; it is an implementation-defined-but-stable choice
+    # to keep the result deterministic across DBs. For the common cases (rename,
+    # or delete-default-then-create-one) the user has exactly one folder, so the
+    # ordering is moot. Users with multiple folders get one of them; we treat
+    # "which one" as best-effort because the intent is "don't create a phantom
+    # duplicate", not "promote a specific folder to default".
     any_folder_stmt = select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)
     any_result = await session.exec(any_folder_stmt)
     any_folder = any_result.first()

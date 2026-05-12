@@ -5,6 +5,7 @@ import inspect
 import json
 import os
 import pkgutil
+import tempfile
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
@@ -259,15 +260,31 @@ def _save_generated_index(modules_dict: dict) -> None:
         payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
         index["sha256"] = hashlib.sha256(payload).hexdigest()
 
-        # Atomic write: temp file in the SAME directory as the target, then
-        # rename via Path.replace (atomic on POSIX and Windows since Python 3.3).
-        # The temp file must share a filesystem with the target to avoid
-        # cross-device-link errors in containers where $TMPDIR is tmpfs and the
-        # cache dir is a persistent volume.
+        # Atomic write: temp file in the SAME directory as the target with a
+        # unique per-writer name, then rename via Path.replace (atomic on POSIX
+        # and Windows since Python 3.3). The temp file must share a filesystem
+        # with the target to avoid cross-device-link errors in containers where
+        # $TMPDIR is tmpfs and the cache dir is a persistent volume.
+        # A unique name (vs a fixed ``.tmp`` suffix) is required because two
+        # workers writing concurrently to the same cache dir would otherwise
+        # clobber each other's tempfile mid-write and produce a torn target.
         json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
-        tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
-        tmp_path.write_bytes(json_bytes)
-        tmp_path.replace(cache_path)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_fd, tmp_name = tempfile.mkstemp(
+            prefix=cache_path.name + ".",
+            suffix=".tmp",
+            dir=cache_path.parent,
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(tmp_fd, "wb") as f:
+                f.write(json_bytes)
+                f.flush()
+                os.fsync(f.fileno())
+            tmp_path.replace(cache_path)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
         logger.debug(f"Saved generated component index to cache: {cache_path}")
     except OSError as e:
@@ -662,32 +679,36 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
 async def _determine_loading_strategy(settings_service: "SettingsService") -> dict[str, Any]:
     """Determines and executes the appropriate component loading strategy.
 
+    Builds the custom-components dict locally and returns it. Must NOT mutate
+    ``component_cache.all_types_dict`` directly — the caller is responsible for
+    a single final assignment so external readers never observe a transient
+    empty / partially-merged singleton during the load.
+
     Args:
         settings_service: Service containing loading configuration
 
     Returns:
         Dictionary containing loaded component types and templates
     """
-    component_cache.all_types_dict = {}
+    result: dict[str, Any] = {}
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         await logger.adebug("Using partial component loading")
-        component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
+        result = await aget_component_metadata(settings_service.settings.components_path)
     elif settings_service.settings.components_path:
         # Traditional full loading - filter out base components path to only load custom components
         custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
         if custom_paths:
-            component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
+            result = await aget_all_types_dict(custom_paths)
 
     # Log custom component loading stats
-    components_dict = component_cache.all_types_dict or {}
-    component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
+    component_count = sum(len(comps) for comps in (result or {}).get("components", {}).values())
     if component_count > 0 and settings_service.settings.components_path:
         await logger.adebug(
             f"Built {component_count} custom components from {settings_service.settings.components_path}"
         )
 
-    return component_cache.all_types_dict or {}
+    return result or {}
 
 
 def _build_code_hash_lookups(cache: ComponentCache) -> None:

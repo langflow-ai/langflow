@@ -333,13 +333,39 @@ def create_class(code, class_name):
             symbol = LANGCHAIN_SYMBOLS.get(missing)
             if symbol is not None:
                 module = symbol[0]
-        hint = f" Add `from {module} import {missing}` to your component code." if module else ""
+        # Cover both cases: the user forgot the import line entirely, AND the
+        # case where they have the line but the underlying package is broken
+        # (proxy resolution side-effects can surface as a NameError on a later
+        # access even when the import statement parsed). The hint avoids
+        # blaming the user for a missing line they already have.
+        hint = (
+            f" If not already imported, add `from {module} import {missing}` to your "
+            f"component code; if already imported, verify that '{module}' is installed "
+            f"and importable in this environment."
+            if module
+            else ""
+        )
         msg = f"Name error (possibly undefined variable): {e!s}.{hint}"
         raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except (ImportError, ModuleNotFoundError) as e:
+        # Surface lazy-proxy resolution failures (and any other import-time
+        # error raised during class-body exec, decorators, or class-level
+        # instantiations) distinctly from the generic catch-all below. Without
+        # this branch the user sees "Error creating class. ImportError(...)"
+        # with no signal that the fix is a package install / environment
+        # repair rather than a code typo.
+        missing_module = getattr(e, "name", None)
+        install_hint = (
+            f" Ensure the '{missing_module}' package is installed and importable in this environment."
+            if missing_module
+            else ""
+        )
+        msg = f"Import error while creating class: {e!s}.{install_hint}"
+        raise ValueError(msg) from e
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e

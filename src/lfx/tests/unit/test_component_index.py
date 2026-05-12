@@ -1523,15 +1523,11 @@ class TestCorrectnessFixes:
         cache_file = tmp_path / "component_index.json"
         monkeypatch.setattr(ci, "_get_cache_path", lambda: cache_file)
 
-        original_write_bytes = type(cache_file).write_bytes
+        def deny(*_a, **_kw):
+            msg = "simulated read-only mount"
+            raise PermissionError(msg)
 
-        def deny(self, *_a, **_kw):
-            if str(self).endswith(".tmp"):
-                msg = "simulated read-only mount"
-                raise PermissionError(msg)
-            return original_write_bytes(self, *_a, **_kw)
-
-        monkeypatch.setattr(type(cache_file), "write_bytes", deny)
+        monkeypatch.setattr(ci.tempfile, "mkstemp", deny)
 
         warning_mock = MagicMock()
         monkeypatch.setattr(ci.logger, "warning", warning_mock)

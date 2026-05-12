@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import hashlib
 import os
+import tempfile
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import aiofiles
@@ -25,7 +27,6 @@ from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from pathlib import Path
 
     import anyio
 
@@ -97,9 +98,15 @@ async def read_hash_file_safe(hash_path: Path) -> str | None:
 async def write_hash_file_safe(hash_path: Path, sha_hex: str, version_string: str) -> None:
     """Write ``sha_hex`` + a ``# version:`` comment line to ``hash_path``.
 
-    Ensures the parent directory exists (``mkdir(parents=True, exist_ok=True)``
-    on the parent). Swallows ``OSError`` (Pattern E) so that a read-only
-    filesystem -- common in containerized deployments with
+    Atomic write: a uniquely-named temp file is created in the SAME directory
+    as ``hash_path`` and then renamed via ``os.replace`` so concurrent writers
+    cannot tear the target file and so a crash mid-write leaves either the old
+    value or the new value, never a truncated one. The unique tempfile name
+    (``tempfile.mkstemp``) is required because the hash gate runs without a
+    FileLock at every preload call site.
+
+    Ensures the parent directory exists. Swallows ``OSError`` (Pattern E) so
+    that a read-only filesystem -- common in containerized deployments with
     ``readOnlyRootFilesystem: true`` -- does not crash lifespan startup; the
     hash gate simply falls through to a full re-sync on every restart in that
     environment.
@@ -107,8 +114,20 @@ async def write_hash_file_safe(hash_path: Path, sha_hex: str, version_string: st
     content = f"{sha_hex}\n# version: {version_string}\n"
     try:
         hash_path.parent.mkdir(parents=True, exist_ok=True)
-        async with aiofiles.open(str(hash_path), "w", encoding="utf-8") as f:
-            await f.write(content)
+        tmp_fd, tmp_name = tempfile.mkstemp(
+            prefix=hash_path.name + ".",
+            suffix=".tmp",
+            dir=hash_path.parent,
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            async with aiofiles.open(tmp_fd, "w", encoding="utf-8", closefd=True) as f:
+                await f.write(content)
+                await f.flush()
+            tmp_path.replace(hash_path)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
     except OSError as e:
         await logger.adebug(
             f"Could not write starter-projects hash file (read-only filesystem): {e}. "

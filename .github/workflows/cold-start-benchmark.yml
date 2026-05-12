@@ -58,20 +58,42 @@ jobs:
       mode: ${{ steps.resolve.outputs.mode }}
     steps:
       - id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          HAS_SNAPSHOT_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') }}
         run: |
           # Mode selection precedence:
           #   1. workflow_dispatch input (maintainer-specified)
-          #   2. run-benchmark-snapshot label on the PR (snapshot mode)
+          #   2. run-benchmark-snapshot label, gated against snapshot poisoning
           #   3. default: verify mode (regression gate)
-          if [ -n "${{ github.event.inputs.mode }}" ]; then
-            mode="${{ github.event.inputs.mode }}"
-          elif ${{ contains(github.event.pull_request.labels.*.name, 'run-benchmark-snapshot') }}; then
-            mode="snapshot"
+          #
+          # Snapshot poisoning gate
+          # -----------------------
+          # Snapshot mode rebuilds thresholds.json from the current ref. Without
+          # gating, ANY PR with the `run-benchmark-snapshot` label captures a
+          # new "authoritative" baseline from that PR's tree — which means a
+          # regressed or malicious PR can poison the baseline through label
+          # application alone. Restrict snapshot mode to:
+          #   - workflow_dispatch with mode=snapshot (maintainer-only), OR
+          #   - push to a cold-start/** branch (org members only).
+          # Snapshot via PR label is rejected; maintainers who need it must use
+          # workflow_dispatch and choose the ref explicitly.
+          if [ -n "$INPUT_MODE" ]; then
+            mode="$INPUT_MODE"
+          elif [ "$HAS_SNAPSHOT_LABEL" = "true" ]; then
+            if [ "$EVENT_NAME" = "push" ] && [[ "$HEAD_REF" == cold-start/* ]]; then
+              mode="snapshot"
+            else
+              echo "::warning ::run-benchmark-snapshot label is present but snapshot mode is restricted to workflow_dispatch or cold-start/** push events to prevent baseline poisoning. Falling back to verify mode. Use workflow_dispatch with mode=snapshot to capture a new baseline."
+              mode="verify"
+            fi
           else
             mode="verify"
           fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-          echo "Resolved mode: $mode"
+          echo "Resolved mode: $mode (event=$EVENT_NAME, ref=$HEAD_REF, label=$HAS_SNAPSHOT_LABEL)"
 
   # Build benchmarks-lean AND benchmarks-lean-uncompiled once, save both as a
   # tarball, upload as an artifact. Matrix jobs `docker load` it. Cuts wall-
@@ -397,20 +419,66 @@ jobs:
 
       - name: Verify mode — final gate summary
         if: needs.mode.outputs.mode == 'verify'
+        env:
+          SCENARIO_RESULT: ${{ needs.scenario.result }}
         run: |
           # Per-scenario verify already ran in the matrix jobs (each one exited
-          # non-zero on regression). This step just summarizes the results for
-          # the workflow-run UI.
+          # non-zero on regression). This step asserts:
+          #   1. needs.scenario.result == 'success' (any blocking-scenario
+          #      failure — regression OR infrastructural — has already failed
+          #      this aggregate; continue-on-error cells do not contribute).
+          #   2. Every blocking scenario produced a parseable hyperfine JSON
+          #      with at least one timing sample. Without this, a matrix cell
+          #      that died before the driver wrote its report would leave no
+          #      regression_comment.md and the old "file existence" check
+          #      would silently pass the gate.
           echo "## Verify mode results" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          # Inspect the needs.scenario.result for each matrix cell in aggregate.
-          # GitHub doesn't expose per-cell results directly, so we read file
-          # existence of regression_comment.md as the signal.
-          if ls src/backend/tests/benchmarks/reports/regression_comment*.md 1> /dev/null 2>&1; then
+
+          gate_failed=0
+
+          if [ "$SCENARIO_RESULT" != "success" ]; then
+            echo "Scenario matrix aggregate result: $SCENARIO_RESULT (expected 'success')." >> "$GITHUB_STEP_SUMMARY"
+            echo "At least one blocking scenario failed infrastructurally OR regressed; inspect matrix job logs." >> "$GITHUB_STEP_SUMMARY"
+            gate_failed=1
+          fi
+
+          # Blocking scenarios MUST each have a hyperfine JSON with at least
+          # one timing sample. Non-blocking scenarios are skipped here.
+          reports_dir="src/backend/tests/benchmarks/reports"
+          missing_reports=""
+          for scenario in lfx_bare lfx_with_flow lfx_with_flow_prebaked langflow_run_http_ready; do
+            hfile="$reports_dir/$scenario.json"
+            if [ ! -s "$hfile" ]; then
+              missing_reports="$missing_reports $scenario(missing)"
+              continue
+            fi
+            if ! python3 -c "
+          import json, sys
+          d = json.loads(open('$hfile').read())
+          r = d.get('results') or []
+          if not r or not r[0].get('times'):
+              sys.exit(1)
+          "; then
+              missing_reports="$missing_reports $scenario(empty/malformed)"
+            fi
+          done
+
+          if [ -n "$missing_reports" ]; then
+            echo "Blocking scenarios with missing or unusable hyperfine reports:$missing_reports" >> "$GITHUB_STEP_SUMMARY"
+            echo "This indicates an infrastructural failure (Docker pull, OOM, runner timeout)." >> "$GITHUB_STEP_SUMMARY"
+            gate_failed=1
+          fi
+
+          if ls "$reports_dir"/regression_comment*.md 1> /dev/null 2>&1; then
             echo "One or more scenarios regressed. See the bot comments on the PR." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          else
+            gate_failed=1
+          fi
+
+          if [ "$gate_failed" -eq 0 ]; then
             echo "All scenarios within tolerance ✓" >> "$GITHUB_STEP_SUMMARY"
+          else
+            exit 1
           fi
 
       - name: Upload final rollup
