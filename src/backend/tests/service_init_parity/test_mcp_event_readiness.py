@@ -53,8 +53,7 @@ def test_delayed_init_mcp_servers_remains_inline_inside_lifespan() -> None:
     tree = parse_lifespan_module()
 
     module_level_defs = [
-        node for node in tree.body
-        if isinstance(node, ast.AsyncFunctionDef) and node.name == "delayed_init_mcp_servers"
+        node for node in tree.body if isinstance(node, ast.AsyncFunctionDef) and node.name == "delayed_init_mcp_servers"
     ]
     assert module_level_defs == [], (
         "delayed_init_mcp_servers must NOT be defined at module level. "
@@ -64,12 +63,12 @@ def test_delayed_init_mcp_servers_remains_inline_inside_lifespan() -> None:
 
     lifespan_node = _get_lifespan_func_node(tree)
     inside_defs = [
-        node for node in ast.walk(lifespan_node)
+        node
+        for node in ast.walk(lifespan_node)
         if isinstance(node, ast.AsyncFunctionDef) and node.name == "delayed_init_mcp_servers"
     ]
     assert len(inside_defs) == 1, (
-        "Expected exactly one inline `async def delayed_init_mcp_servers` inside "
-        f"lifespan(). Found {len(inside_defs)}."
+        f"Expected exactly one inline `async def delayed_init_mcp_servers` inside lifespan(). Found {len(inside_defs)}."
     )
 
 

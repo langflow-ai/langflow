@@ -533,9 +533,7 @@ class TestCacheHitCustomComponentMerge:
         mock_strategy.assert_called_once_with(mock_settings_service)
 
     @pytest.mark.asyncio
-    async def test_cache_hit_with_empty_custom_strategy_returns_only_builtins(
-        self, mock_settings_service, cache_file
-    ):
+    async def test_cache_hit_with_empty_custom_strategy_returns_only_builtins(self, mock_settings_service, cache_file):
         """When _determine_loading_strategy returns empty (no custom paths), only built-ins appear."""
         with (
             patch("lfx.interface.components._get_cache_path", return_value=cache_file),

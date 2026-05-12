@@ -33,10 +33,12 @@ def __getattr__(name: str) -> Any:
     """
     if name == "Message":
         from langflow.schema.message import Message
+
         globals()["Message"] = Message
         return Message
     if name == "DataFrame":
         from lfx.schema.dataframe import DataFrame
+
         globals()["DataFrame"] = DataFrame
         return DataFrame
     if name == "CUSTOM_COMPONENT_SUPPORTED_TYPES":
@@ -44,12 +46,14 @@ def __getattr__(name: str) -> Any:
         from lfx.schema.dataframe import DataFrame as _DataFrame
 
         from langflow.schema.message import Message as _Message
+
         return {
             **_c.CUSTOM_COMPONENT_SUPPORTED_TYPES,
             "Message": _Message,
             "DataFrame": _DataFrame,
         }
     import lfx.field_typing.constants as _c
+
     try:
         return getattr(_c, name)
     except AttributeError:

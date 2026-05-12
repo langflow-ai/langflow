@@ -226,6 +226,7 @@ async def _run_master_preload() -> None:
     # this entire preload layer exists to prevent.
     try:
         await initialize_services(fix_migration=False)
+
         # Wave 1: profile-picture copy and bundle download/extract are independent
         # (different filesystem subtrees, no shared state). Run them concurrently
         # so the master pays max(profile, bundles) instead of profile + bundles.
