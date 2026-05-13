@@ -236,6 +236,12 @@ class TestTraceSummaryReadIoFields:
             == "[Unserializable Object]"
         )
 
+    def test_accepts_arbitrary_string_as_input(self):
+        assert TraceSummaryRead(**{**_TRACE_DEFAULTS, "input": "plain string"}).input == "plain string"
+
+    def test_accepts_arbitrary_string_as_output(self):
+        assert TraceSummaryRead(**{**_TRACE_DEFAULTS, "output": "plain string"}).output == "plain string"
+
     def test_defaults_input_and_output_to_none(self):
         s = TraceSummaryRead(**_TRACE_DEFAULTS)
         assert s.input is None
@@ -243,8 +249,15 @@ class TestTraceSummaryReadIoFields:
 
 
 _TRACE_READ_DEFAULTS: dict = {
-    **_TRACE_DEFAULTS,
+    "id": "00000000-0000-0000-0000-000000000001",
+    "name": "t",
+    "status": SpanStatus.OK,
+    "start_time": None,
     "end_time": None,
+    "total_latency_ms": 0,
+    "total_tokens": 0,
+    "flow_id": "00000000-0000-0000-0000-000000000002",
+    "session_id": "s",
 }
 
 
@@ -282,3 +295,47 @@ class TestTraceReadIoFields:
         t = TraceRead(**_TRACE_READ_DEFAULTS)
         assert t.input is None
         assert t.output is None
+    """Regression: TraceRead.input/output accept the '[Unserializable Object]' sentinel.
+
+    The detail endpoint builds a ``TraceRead`` from the same stored span data as
+    the list endpoint.  Before the fix, ``TraceRead.input`` and
+    ``TraceRead.output`` were typed as ``dict | None``, so a stored sentinel
+    string raised a ``ValidationError`` (which escaped as a 500).
+    """
+
+    def test_should_accept_dict_input(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "input": {"key": "value"}})
+        assert trace.input == {"key": "value"}
+
+    def test_should_accept_dict_output(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "output": {"result": 1}})
+        assert trace.output == {"result": 1}
+
+    def test_should_accept_none_input(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "input": None})
+        assert trace.input is None
+
+    def test_should_accept_none_output(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "output": None})
+        assert trace.output is None
+
+    def test_should_accept_unserializable_sentinel_as_input(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "input": "[Unserializable Object]"})
+        assert trace.input == "[Unserializable Object]"
+
+    def test_should_accept_unserializable_sentinel_as_output(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "output": "[Unserializable Object]"})
+        assert trace.output == "[Unserializable Object]"
+
+    def test_should_accept_arbitrary_string_as_input(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "input": "plain string"})
+        assert trace.input == "plain string"
+
+    def test_should_accept_arbitrary_string_as_output(self):
+        trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "output": "plain string"})
+        assert trace.output == "plain string"
+
+    def test_should_default_input_and_output_to_none(self):
+        trace = TraceRead(**_TRACE_READ_DEFAULTS)
+        assert trace.input is None
+        assert trace.output is None
