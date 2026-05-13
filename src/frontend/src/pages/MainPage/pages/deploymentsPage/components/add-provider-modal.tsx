@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,10 +8,10 @@ import {
 } from "@/components/ui/dialog";
 import { usePatchProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-patch-provider-account";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
-import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import type { ProviderAccount, ProviderCredentials } from "../types";
 import ProviderCredentialsForm from "./provider-credentials-form";
+import ProviderModalIntro from "./provider-modal-intro";
 
 interface AddProviderModalProps {
   open: boolean;
@@ -128,52 +126,7 @@ export default function AddProviderModal({
         </DialogDescription>
 
         <div className="flex flex-col gap-4 pt-2">
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted p-3">
-              <ForwardedIconComponent
-                name="WatsonxOrchestrate"
-                className="h-8 w-8 text-foreground"
-              />
-              <span className="text-sm font-medium">watsonx Orchestrate</span>
-              <Badge variant="purpleStatic" size="xq" className="shrink-0">
-                Beta
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {provider ? (
-                "Update environment name or rotate API key. Service instance URL is fixed after creation."
-              ) : (
-                <>
-                  Configure your watsonx Orchestrate credentials below. New to
-                  wxO?{" "}
-                  <a
-                    href={decorateWxoUrl(
-                      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
-                      "signup-pricing",
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Sign up for watsonx Orchestrate
-                  </a>
-                  . Already have an account?{" "}
-                  <a
-                    href={decorateWxoUrl(
-                      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
-                      "docs-credentials",
-                    )}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Find your credentials
-                  </a>
-                  .
-                </>
-              )}
-            </p>
-          </div>
+          <ProviderModalIntro provider={provider} />
 
           <ProviderCredentialsForm
             credentials={credentials}

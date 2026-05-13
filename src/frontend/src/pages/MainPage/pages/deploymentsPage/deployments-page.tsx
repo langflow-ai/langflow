@@ -113,17 +113,6 @@ export default function DeploymentsPage() {
         )}
       </div>
 
-      {providers.length > 1 && activeSubTab === "providers" && (
-        <div
-          className="flex h-8 min-h-8 shrink-0 items-center gap-2"
-          data-testid="deployments-shared-toolbar"
-        >
-          <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-            These environments are used when you create or run deployments.
-          </p>
-        </div>
-      )}
-
       {showEnvironmentToolbar && activeSubTab === "deployments" && (
         <div
           className="flex h-8 min-h-8 shrink-0 items-center gap-2"
