@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useTranslation } from "react-i18next";
 import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import { cn } from "@/utils/utils";
 
@@ -39,6 +40,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const { data, isLoading, isError } = useGetIngestionRuns(
     { kb_name: kbName, page: 1, limit: HISTORY_LIMIT },
@@ -64,7 +66,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             name="History"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">Previously ingested</span>
+          <span className="text-sm font-medium">{t("knowledge.previouslyIngested")}</span>
           {total > 0 && (
             <span className="text-xs text-muted-foreground">({total})</span>
           )}

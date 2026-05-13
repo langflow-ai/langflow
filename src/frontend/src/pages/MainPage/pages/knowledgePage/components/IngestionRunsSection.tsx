@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useTranslation } from "react-i18next";
 import {
   type PaginatedIngestionRunResponse,
   useGetIngestionRuns,
@@ -56,6 +57,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
+  const { t } = useTranslation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const { data, isLoading, isError } = useGetIngestionRuns(
     {
@@ -82,7 +84,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
   return (
     <div className="space-y-3 px-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Ingestion Runs</h4>
+        <h4 className="text-sm font-medium">{t("knowledge.ingestionRuns")}</h4>
         {data?.total ? (
           <span className="text-xs text-muted-foreground">
             {data.total} total
@@ -91,7 +93,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
       </div>
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Loading runs…</div>
+        <div className="text-sm text-muted-foreground">{t("knowledge.loadingRuns")}</div>
       )}
       {isError && (
         <div className="text-sm text-rose-600">

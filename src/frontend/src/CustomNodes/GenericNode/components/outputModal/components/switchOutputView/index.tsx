@@ -199,7 +199,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{"Streaming is not supported"}</AlertTitle>
+            <AlertTitle>{t("output.streamingNotSupported")}</AlertTitle>
             <AlertDescription>
               {
                 "Use the playground to interact with components that stream data"

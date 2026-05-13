@@ -384,7 +384,7 @@ const JsonEditor = ({
       {/* {allowFilter && (
         <div className="mb-2 flex shrink-0 gap-2">
           <Input
-            placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
+            placeholder={t("jsonEditor.pathPlaceholder")}
             value={transformQuery}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}

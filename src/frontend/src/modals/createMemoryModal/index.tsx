@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
+import { useTranslation } from "react-i18next";
 import BaseModal from "../baseModal";
 import { useCreateMemoryModal } from "./useCreateMemoryModal";
 
@@ -46,6 +47,7 @@ export default function CreateMemoryModal({
     onSuccess,
     onClose: () => setOpen(false),
   });
+  const { t } = useTranslation();
 
   if (!open) return <></>;
 
@@ -69,7 +71,7 @@ export default function CreateMemoryModal({
             id="memory-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Memory name"
+            placeholder={t("memory.memoryName")}
           />
         </div>
 
@@ -88,7 +90,7 @@ export default function CreateMemoryModal({
                   setSelectedEmbeddingModel(value);
                 }}
                 options={embeddingModelOptions}
-                placeholder="Select embedding model"
+                placeholder={t("memory.selectEmbeddingModel")}
               />
             </div>
             {selectedEmbeddingModel[0]?.provider && (
@@ -100,7 +102,7 @@ export default function CreateMemoryModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="memory-batch-size">Batch Size</Label>
+          <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
           <span className="text-xs text-muted-foreground">
             Messages per ingestion batch (min 1)
           </span>
@@ -153,7 +155,7 @@ export default function CreateMemoryModal({
                     setSelectedPreprocessingModel(value);
                   }}
                   options={llmModelOptions}
-                  placeholder="Select preprocessing model"
+                  placeholder={t("memory.selectPreprocessingModel")}
                 />
               </div>
               {selectedPreprocessingModel[0]?.provider && (
@@ -170,7 +172,7 @@ export default function CreateMemoryModal({
                 id="preprocessing-prompt"
                 value={preprocessingPrompt}
                 onChange={(e) => setPreprocessingPrompt(e.target.value)}
-                placeholder="Produce a concise summary that captures key facts and context."
+                placeholder={t("memory.preprocessingPromptPlaceholder")}
                 className="min-h-[80px] resize-y"
               />
             </div>

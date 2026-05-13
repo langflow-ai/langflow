@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import { useTranslation } from "react-i18next";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
@@ -21,6 +22,7 @@ export function MemoryDetailsHeader({
   hasNextSessionsPage,
   isFetchingNextSessionsPage,
 }: MemoryDetailsHeaderProps) {
+  const { t } = useTranslation();
   const effectiveSession = (selectedSession ?? sessions?.[0] ?? "") as
     | string
     | null;
@@ -55,7 +57,7 @@ export function MemoryDetailsHeader({
           variant="outline"
           size="sm"
           onClick={onRefresh}
-          aria-label="Reload sessions and messages"
+          aria-label={t("memory.reloadSessions")}
         >
           <IconComponent name="RefreshCw" className="h-4 w-4" />
         </Button>
@@ -66,7 +68,7 @@ export function MemoryDetailsHeader({
               <Button
                 variant="outline"
                 size="sm"
-                aria-label="Session filter"
+                aria-label={t("memory.sessionFilter")}
                 disabled={sessions.length <= 1 && !hasNextSessionsPage}
                 className="w-[240px] justify-between px-3"
               >
@@ -126,7 +128,7 @@ export function MemoryDetailsHeader({
           size="sm"
           onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
           aria-pressed={memory.is_active}
-          aria-label="Toggle auto-capture"
+          aria-label={t("memory.toggleAutoCapture")}
           className="gap-2"
         >
           <IconComponent

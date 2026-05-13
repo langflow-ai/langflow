@@ -154,8 +154,8 @@ export function ColumnConfig({
         }
         setIsTableModalOpen(open);
       }}
-      tableTitle="Column Configuration"
-      description="Configure column behavior for the knowledge base."
+      tableTitle={t("knowledge.columnConfiguration")}
+      description={t("knowledge.configureColumns")}
       ref={agGrid}
       onSelectionChanged={() => {}}
       rowSelection="multiple"

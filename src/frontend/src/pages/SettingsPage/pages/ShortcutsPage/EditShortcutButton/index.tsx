@@ -164,7 +164,7 @@ export default function EditShortcutButton({
 
   return (
     <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
-      <BaseModal.Header description={"Recording your keyboard"}>
+      <BaseModal.Header description={t("settings.recordingKeyboard")}>
         <span className="pr-2">{t("modal.keyCombination")}</span>
         <ForwardedIconComponent
           name="Keyboard"

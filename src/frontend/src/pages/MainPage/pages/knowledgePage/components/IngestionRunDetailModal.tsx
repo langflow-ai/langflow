@@ -1,6 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetIngestionRun } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-run";
+import { useTranslation } from "react-i18next";
 
 interface IngestionRunDetailModalProps {
   kbName: string;
@@ -25,6 +26,7 @@ const IngestionRunDetailModal = ({
   runId,
   onClose,
 }: IngestionRunDetailModalProps) => {
+  const { t } = useTranslation();
   const { data, isLoading, isError } = useGetIngestionRun({
     kb_name: kbName,
     run_id: runId,
@@ -43,7 +45,7 @@ const IngestionRunDetailModal = ({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <div className="text-sm font-semibold">Ingestion run detail</div>
+            <div className="text-sm font-semibold">{t("knowledge.ingestionRunDetail")}</div>
             {data && (
               <div className="text-xs text-muted-foreground">
                 {kbName} · {data.source_type} ·{" "}
@@ -58,7 +60,7 @@ const IngestionRunDetailModal = ({
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading && (
-            <div className="text-sm text-muted-foreground">Loading run…</div>
+            <div className="text-sm text-muted-foreground">{t("knowledge.loadingRun")}</div>
           )}
           {isError && (
             <div className="text-sm text-rose-600">
@@ -87,8 +89,8 @@ const IngestionRunDetailModal = ({
               )}
 
               <div className="grid grid-cols-1 gap-2 rounded-md border border-border bg-card p-3 text-xs sm:grid-cols-2">
-                <IdField label="Run ID" value={data.id} />
-                <IdField label="Job ID" value={data.job_id} />
+                <IdField label={t("knowledge.runId")} value={data.id} />
+                <IdField label={t("knowledge.jobId")} value={data.job_id} />
               </div>
 
               <div>

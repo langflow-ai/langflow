@@ -1,6 +1,7 @@
 import type { UIEvent } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -23,6 +24,7 @@ export function MemoryKnowledgeBaseSection({
   groupedBySession,
   handleOpenDocumentPanel,
 }: MemoryKnowledgeBaseSectionProps) {
+  const { t } = useTranslation();
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     if (!hasNextMessagesPage || isFetchingNextMessagesPage) return;
     const el = e.currentTarget;
@@ -36,7 +38,7 @@ export function MemoryKnowledgeBaseSection({
     <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold">Memory Base</h3>
+          <h3 className="text-xs font-semibold">{t("memory.memoryBase")}</h3>
           <span className="text-xs text-muted-foreground">
             {docsData?.total ?? 0} chunks
           </span>
@@ -54,7 +56,7 @@ export function MemoryKnowledgeBaseSection({
               name="Database"
               className="mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-xs font-medium">No chunks yet.</p>
+            <p className="text-xs font-medium">{t("memory.noChunksYet")}</p>
           </div>
         ) : (
           <Table>
