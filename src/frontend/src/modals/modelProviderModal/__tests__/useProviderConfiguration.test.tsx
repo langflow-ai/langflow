@@ -1,5 +1,6 @@
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
+import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import type { Provider } from "../components/types";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
 
@@ -42,6 +43,16 @@ jest.mock("@tanstack/react-query", () => ({
 // ---------------------------------------------------------------------------
 jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   useGetModelProviders: () => ({ data: [], isFetching: false }),
+}));
+
+// The hook subscribes to ``useGetEnabledModels`` so the re-overlay effect can
+// react when a refetch lands. The shared mock starts with the same baseline
+// the trackingQueryClient holds. Individual tests can override the return
+// value to simulate a refetch.
+jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
+  useGetEnabledModels: jest.fn(() => ({
+    data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+  })),
 }));
 
 jest.mock(
@@ -163,6 +174,71 @@ describe("useProviderConfiguration.handleModelToggle", () => {
     });
 
     expect(trackingQueryClient.cancelQueries).not.toHaveBeenCalled();
+    expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
+  });
+
+  it("re-applies the pending overlay when a refetch surfaces stale data", () => {
+    const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+      typeof useGetEnabledModels
+    >;
+
+    // Initial render: gpt-4 enabled on the server.
+    mockedEnabled.mockReturnValue({
+      data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+    } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+    const { result, rerender } = renderHook(() =>
+      useProviderConfiguration({ selectedProvider: provider }),
+    );
+
+    // User toggles gpt-4 off — pending now holds {gpt-4: false}.
+    act(() => {
+      result.current.handleModelToggle("gpt-4", false);
+    });
+    expect(trackingQueryClient.setQueryData).toHaveBeenCalled();
+
+    // Drain the call log so we can detect the re-overlay specifically.
+    recordedCalls.length = 0;
+    trackingQueryClient.setQueryData.mockClear();
+
+    // Simulate a refetch that lands inside the debounce window. The mock
+    // now reports the still-stale server state (gpt-4: true) — the same
+    // state the optimistic toggle just overwrote.
+    mockedEnabled.mockReturnValue({
+      data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+    } as unknown as ReturnType<typeof useGetEnabledModels>);
+    rerender();
+
+    // The re-overlay effect must detect the drift between pending
+    // ({gpt-4: false}) and the refetched data ({gpt-4: true}) and re-apply
+    // the optimistic overlay.
+    expect(trackingQueryClient.setQueryData).toHaveBeenCalledWith(
+      ["useGetEnabledModels"],
+      expect.any(Function),
+    );
+
+    // The overlay updater applied to old data must yield the pending state.
+    const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+      old: unknown,
+    ) => unknown;
+    const result2 = updater({
+      enabled_models: { OpenAI: { "gpt-4": true, "gpt-3.5-turbo": true } },
+    }) as { enabled_models: { OpenAI: Record<string, boolean> } };
+    expect(result2.enabled_models.OpenAI["gpt-4"]).toBe(false);
+    expect(result2.enabled_models.OpenAI["gpt-3.5-turbo"]).toBe(true);
+  });
+
+  it("does not re-overlay when no toggles are pending", () => {
+    const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+      typeof useGetEnabledModels
+    >;
+    mockedEnabled.mockReturnValue({
+      data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+    } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+    renderHook(() => useProviderConfiguration({ selectedProvider: provider }));
+
+    // No toggle was performed — the mount effect must NOT call setQueryData.
     expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
   });
 });

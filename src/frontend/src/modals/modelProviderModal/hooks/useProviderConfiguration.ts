@@ -5,7 +5,10 @@ import {
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
-import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
+import {
+  EnabledModelsResponse,
+  useGetEnabledModels,
+} from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
@@ -558,16 +561,54 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
+  // ``pendingModelToggles`` holds the user's intended state for any model
+  // whose change has not yet been confirmed by the server. It serves two
+  // roles:
+  //
+  //   1. It's the send buffer the debounced flush snapshots into a mutation
+  //      payload.
+  //   2. It's the overlay the re-overlay effect (further down) re-applies
+  //      whenever ``useGetEnabledModels`` emits new data — so that a
+  //      refetch which lands inside the debounce or in-flight-mutation
+  //      window can't overwrite the optimistic cache with stale server
+  //      state.
+  //
+  // Because of role (2), we MUST keep entries in this map until the
+  // corresponding mutation settles. Clearing too early would leave the
+  // optimistic UI unprotected against any refetch that runs between the
+  // click and ``onSettled``.
   const pendingModelToggles = useRef<Record<string, boolean>>({});
   const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
     undefined,
   );
 
+  // Subscribe to enabled-models data changes so the re-overlay effect below
+  // can react when a refetch lands.
+  const { data: enabledModelsData } = useGetEnabledModels();
+
+  // After a mutation settles, remove only the entries we just sent — and
+  // only if their value still matches what we sent (a faster ``=== `` test
+  // catches the case where the user re-toggled the same model mid-flight,
+  // which becomes a fresh intent that must NOT be cleared).
+  const clearSentToggles = useCallback((sent: Record<string, boolean>) => {
+    for (const [key, value] of Object.entries(sent)) {
+      if (pendingModelToggles.current[key] === value) {
+        delete pendingModelToggles.current[key];
+      }
+    }
+    if (Object.keys(pendingModelToggles.current).length === 0) {
+      fallbackModelData.current = undefined;
+    }
+  }, []);
+
   const flushModelToggles = useDebounce(() => {
     if (!syncedSelectedProvider?.provider) return;
     const providerName = syncedSelectedProvider.provider;
 
-    const updates = Object.entries(pendingModelToggles.current).map(
+    const togglesToSend = { ...pendingModelToggles.current };
+    if (Object.keys(togglesToSend).length === 0) return;
+
+    const updates = Object.entries(togglesToSend).map(
       ([modelName, enabled]) => ({
         provider: providerName,
         model_id: modelName,
@@ -575,19 +616,17 @@ export const useProviderConfiguration = ({
       }),
     );
 
-    if (updates.length === 0) return;
-
-    // Capture the fallback data
     const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
+    // NOTE: we deliberately do NOT clear ``pendingModelToggles`` or
+    // ``fallbackModelData`` here. They stay populated until ``onSettled``
+    // so the re-overlay effect can repel any refetch that lands while the
+    // mutation is in flight.
 
     updateEnabledModels(
       { updates },
       {
         onError: (error: unknown) => {
+          clearSentToggles(togglesToSend);
           if (previousData) {
             queryClient.setQueryData(["useGetEnabledModels"], previousData);
           }
@@ -597,6 +636,7 @@ export const useProviderConfiguration = ({
           });
         },
         onSettled: () => {
+          clearSentToggles(togglesToSend);
           queryClient.invalidateQueries({
             queryKey: ["useGetEnabledModels"],
           });
@@ -616,26 +656,27 @@ export const useProviderConfiguration = ({
     if (!syncedSelectedProvider?.provider) return;
     const providerName = syncedSelectedProvider.provider;
 
-    const toggles = { ...pendingModelToggles.current };
-    if (Object.keys(toggles).length === 0) return;
+    const togglesToSend = { ...pendingModelToggles.current };
+    if (Object.keys(togglesToSend).length === 0) return;
 
-    const updates = Object.entries(toggles).map(([modelName, enabled]) => ({
-      provider: providerName,
-      model_id: modelName,
-      enabled,
-    }));
+    const updates = Object.entries(togglesToSend).map(
+      ([modelName, enabled]) => ({
+        provider: providerName,
+        model_id: modelName,
+        enabled,
+      }),
+    );
 
     const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
+    // See ``flushModelToggles``: pending stays populated until settle.
 
     try {
       await updateEnabledModelsAsync({ updates });
+      clearSentToggles(togglesToSend);
       // Mutation succeeded — query invalidation is handled by
       // refreshAllModelInputs which runs after this promise resolves.
     } catch (error: unknown) {
+      clearSentToggles(togglesToSend);
       // Revert optimistic update on failure
       if (previousData) {
         queryClient.setQueryData(["useGetEnabledModels"], previousData);
@@ -651,6 +692,7 @@ export const useProviderConfiguration = ({
     queryClient,
     updateEnabledModelsAsync,
     setErrorData,
+    clearSentToggles,
   ]);
 
   const handleModelToggle = useCallback(
@@ -660,13 +702,9 @@ export const useProviderConfiguration = ({
       const providerName = syncedSelectedProvider.provider;
 
       // Cancel any in-flight refetch of useGetEnabledModels so its (stale)
-      // result cannot overwrite the optimistic cache update below. Without
-      // this, default React Query refetch triggers (window focus, remount)
-      // can race with the 1s-debounced flush mutation and snap the Switch
-      // back to its prior value before the mutation lands — the visible
-      // "bounce" on rapid toggle. Fire-and-forget is intentional: cancellation
-      // takes effect immediately on the query, and resolved-but-cancelled
-      // refetches are dropped by React Query.
+      // result cannot overwrite the optimistic cache update below. The
+      // re-overlay effect handles refetches that start AFTER this point;
+      // ``cancelQueries`` covers the ones already in flight at click time.
       void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
 
       if (Object.keys(pendingModelToggles.current).length === 0) {
@@ -698,6 +736,45 @@ export const useProviderConfiguration = ({
     },
     [syncedSelectedProvider, queryClient, flushModelToggles],
   );
+
+  // Re-overlay effect — protects the pending-toggle window in its entirety,
+  // not just the instant of the click. Any refetch (window focus, remount,
+  // reconnect, or a stale-time expiry) that lands while ``pendingModelToggles``
+  // has entries will surface the server's pre-toggle state into
+  // ``enabledModelsData``; this effect detects the drift and re-applies the
+  // pending overlay so the Switch tracks the user's intent through the entire
+  // debounce + in-flight window. Once ``clearSentToggles`` drains the entry
+  // on ``onSettled``, the next data emission is a no-op.
+  useEffect(() => {
+    if (!syncedSelectedProvider?.provider) return;
+    if (!enabledModelsData) return;
+    const pending = pendingModelToggles.current;
+    if (Object.keys(pending).length === 0) return;
+
+    const providerName = syncedSelectedProvider.provider;
+    const current = enabledModelsData.enabled_models[providerName] ?? {};
+    const drifted = Object.entries(pending).some(
+      ([model, enabled]) => current[model] !== enabled,
+    );
+    if (!drifted) return;
+
+    queryClient.setQueryData<EnabledModelsResponse>(
+      ["useGetEnabledModels"],
+      (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          enabled_models: {
+            ...old.enabled_models,
+            [providerName]: {
+              ...(old.enabled_models[providerName] ?? {}),
+              ...pending,
+            },
+          },
+        };
+      },
+    );
+  }, [enabledModelsData, syncedSelectedProvider, queryClient]);
 
   return {
     variableValues,
