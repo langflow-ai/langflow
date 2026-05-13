@@ -171,7 +171,10 @@ const defaultProps: BaseInputProps & ModelInputComponentType = {
   editNode: false,
 };
 
-// Helper to render with QueryClientProvider
+// Helper to render with QueryClientProvider. Returns the raw RTL handle plus
+// a ``rerenderWithProvider`` wrapper so callers can rerender without losing
+// the surrounding ``QueryClientProvider`` (rerender replaces the root JSX —
+// dropping the wrapper would force a remount and reset component state).
 const renderWithQueryClient = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -179,9 +182,13 @@ const renderWithQueryClient = (component: React.ReactElement) => {
       mutations: { retry: false },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>,
+  const wrap = (node: React.ReactElement) => (
+    <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
   );
+  const result = render(wrap(component));
+  const rerenderWithProvider = (node: React.ReactElement) =>
+    result.rerender(wrap(node));
+  return { ...result, rerenderWithProvider };
 };
 
 describe("ModelInputComponent", () => {
@@ -321,6 +328,80 @@ describe("ModelInputComponent", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("keeps loading state until both providers and enabled-models refetches settle", async () => {
+      // The post-close refresh invalidates both ``useGetModelProviders`` AND
+      // ``useGetEnabledModels``. The component must wait for BOTH to finish
+      // before clearing the loading state — otherwise ``groupedOptions``
+      // renders against a stale ``enabledModelsData`` cache and disabled
+      // models briefly leak back into the dropdown after the user closes
+      // the provider modal.
+      let providersFetching = true;
+      let enabledFetching = true;
+
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockImplementation(
+        () =>
+          ({
+            data: mockProvidersData,
+            isLoading: false,
+            isFetching: providersFetching,
+          }) as unknown as ReturnType<typeof useGetModelProviders>,
+      );
+      mockedEnabled.mockImplementation(
+        () =>
+          ({
+            data: { enabled_models: {} },
+            isLoading: false,
+            isFetching: enabledFetching,
+          }) as unknown as ReturnType<typeof useGetEnabledModels>,
+      );
+
+      const user = userEvent.setup();
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} />,
+      );
+
+      // Open the dropdown then the provider manager dialog
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
+      await user.click(screen.getByTestId("manage-model-providers"));
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+
+      // Close the modal — this sets isRefreshingAfterClose=true and the
+      // loading button replaces the dropdown.
+      await user.click(screen.getByTestId("close-provider-modal"));
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+
+      // Providers refetch completes FIRST. With the fix, loading persists
+      // because the enabled-models refetch is still in flight.
+      providersFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await new Promise((r) => setTimeout(r, 30));
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+
+      // Enabled-models refetch completes. Loading state clears.
+      enabledFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
       });
     });
   });

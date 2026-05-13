@@ -24,6 +24,17 @@ import { Provider } from "../components/types";
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
 
+// Extract a user-facing message from an error caught from an API call.
+// Handles Axios-shaped errors (``response.data.detail``) and standard
+// ``Error.message`` without resorting to ``any``.
+const getErrorMessage = (error: unknown): string | undefined => {
+  const e = error as {
+    response?: { data?: { detail?: string } };
+    message?: string;
+  };
+  return e?.response?.data?.detail || e?.message;
+};
+
 interface UseProviderConfigurationOptions {
   selectedProvider: Provider | null;
 }
@@ -342,7 +353,7 @@ export const useProviderConfiguration = ({
         setValidationError(result.error || "Validation failed");
         return false;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ensure minimum 500ms duration even on error
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < 500) {
@@ -350,7 +361,7 @@ export const useProviderConfiguration = ({
       }
 
       setValidationState("invalid");
-      setValidationError(error?.message || "Validation failed");
+      setValidationError(getErrorMessage(error) || "Validation failed");
       return false;
     }
   }, [selectedProvider, getVariablesForValidation, validateProvider]);
@@ -420,12 +431,12 @@ export const useProviderConfiguration = ({
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setValidationFailed(true);
       setErrorData({
         title: "Error Saving Configuration",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -488,11 +499,11 @@ export const useProviderConfiguration = ({
 
       setSuccessData({ title: `${syncedSelectedProvider.provider} Activated` });
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: "Error Activating Provider",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -529,11 +540,11 @@ export const useProviderConfiguration = ({
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: "Error Disconnecting Provider",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -576,17 +587,13 @@ export const useProviderConfiguration = ({
     updateEnabledModels(
       { updates },
       {
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           if (previousData) {
             queryClient.setQueryData(["useGetEnabledModels"], previousData);
           }
-          const errorMessage =
-            error?.response?.data?.detail ||
-            error?.message ||
-            "Failed to update model status";
           setErrorData({
             title: "Error updating model status",
-            list: [errorMessage],
+            list: [getErrorMessage(error) || "Failed to update model status"],
           });
         },
         onSettled: () => {
@@ -628,18 +635,14 @@ export const useProviderConfiguration = ({
       await updateEnabledModelsAsync({ updates });
       // Mutation succeeded — query invalidation is handled by
       // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Revert optimistic update on failure
       if (previousData) {
         queryClient.setQueryData(["useGetEnabledModels"], previousData);
       }
-      const errorMessage =
-        error?.response?.data?.detail ||
-        error?.message ||
-        "Failed to update model status";
       setErrorData({
         title: "Error updating model status",
-        list: [errorMessage],
+        list: [getErrorMessage(error) || "Failed to update model status"],
       });
     }
   }, [
@@ -655,6 +658,16 @@ export const useProviderConfiguration = ({
       if (!syncedSelectedProvider?.provider) return;
 
       const providerName = syncedSelectedProvider.provider;
+
+      // Cancel any in-flight refetch of useGetEnabledModels so its (stale)
+      // result cannot overwrite the optimistic cache update below. Without
+      // this, default React Query refetch triggers (window focus, remount)
+      // can race with the 1s-debounced flush mutation and snap the Switch
+      // back to its prior value before the mutation lands — the visible
+      // "bounce" on rapid toggle. Fire-and-forget is intentional: cancellation
+      // takes effect immediately on the query, and resolved-but-cancelled
+      // refetches are dropped by React Query.
+      void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
 
       if (Object.keys(pendingModelToggles.current).length === 0) {
         fallbackModelData.current =
