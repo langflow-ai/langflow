@@ -10,12 +10,14 @@ from fastapi import HTTPException, Query, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
+    DeploymentNotFoundError,
     DeploymentServiceError,
     ResourceConflictError,
     http_status_for_deployment_error,
 )
 from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
+    DeploymentGetResult,
     DeploymentType,
     DeploymentUpdateResult,
     SnapshotListParams,
@@ -29,7 +31,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
 from sqlmodel import col, func, select
 
-from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
+from langflow.api.v1.mappers.deployments.contracts import ProviderDeploymentMetadata, ProviderSnapshotBinding
 from langflow.api.v1.mappers.deployments.sync import (
     extract_verified_provider_snapshot_ids,
     extract_verified_snapshot_ids,
@@ -43,9 +45,12 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.database.models.deployment.crud import (
+    DeploymentMetadataUpdate,
     count_deployments_by_provider,
     delete_deployment_by_id,
     list_deployments_page,
+    update_deployment_metadata,
+    update_deployment_metadata_batch,
 )
 from langflow.services.database.models.deployment.crud import (
     get_deployment as get_deployment_db,
@@ -692,6 +697,140 @@ async def rollback_provider_update(
         )
 
 
+async def sync_deployment_display_metadata(
+    db: DbSession,
+    *,
+    deployment: Deployment,
+    provider_metadata: ProviderDeploymentMetadata,
+    user_id: UUID,
+) -> Deployment:
+    """Sync provider-owned display metadata into a local deployment row."""
+    return await update_deployment_metadata(
+        db,
+        user_id=user_id,
+        deployment=deployment,
+        display_name=provider_metadata.display_name,
+        description=provider_metadata.description,
+    )
+
+
+async def sync_deployment_attachment_count_for_get(
+    *,
+    deployment_mapper: BaseDeploymentMapper,
+    provider_deployment: DeploymentGetResult,
+    deployment: Deployment,
+    provider_key: str,
+    user_id: UUID,
+    db: DbSession,
+) -> int:
+    """Reconcile tracked attachments against provider binding state for this deployment."""
+    try:
+        bindings = deployment_mapper.extract_snapshot_bindings_for_get(
+            provider_deployment,
+            resource_key=deployment.resource_key,
+        )
+
+        async with db.begin_nested():
+            await delete_unbound_attachments(
+                db=db,
+                user_id=user_id,
+                provider_account_id=deployment.deployment_provider_account_id,
+                deployment_ids=[deployment.id],
+                bindings=bindings,
+            )
+
+        return await count_deployment_attachments(db, user_id=user_id, deployment_id=deployment.id)
+    except NotImplementedError as exc:
+        logger.error(
+            "Mapper for provider %s does not support binding-aware GET sync for deployment %s",
+            provider_key,
+            deployment.id,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                f"Deployment provider {provider_key} does not support binding-aware GET sync "
+                f"for deployment {deployment.id}."
+            ),
+        ) from exc
+    except Exception:  # noqa: BLE001
+        logger.warning(
+            "Binding-aware sync failed for deployment %s; returning unverified attachment count",
+            deployment.id,
+            exc_info=True,
+        )
+        await db.rollback()  # rollback outer session to avoid partially synced state
+        try:
+            return await count_deployment_attachments(db, user_id=user_id, deployment_id=deployment.id)
+        except Exception as exc:
+            logger.warning(
+                "Fallback attachment count query also failed for deployment %s",
+                deployment.id,
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to retrieve the number of flows attached to deployment {deployment.id}.",
+            ) from exc
+
+
+async def get_deployment_synced(
+    *,
+    deployment_adapter: DeploymentServiceProtocol,
+    deployment_mapper: BaseDeploymentMapper,
+    deployment: Deployment,
+    provider_key: str,
+    user_id: UUID,
+    db: DbSession,
+) -> tuple[Deployment, DeploymentGetResult, int]:
+    """Fetch a provider deployment and sync local state."""
+    try:
+        provider_deployment = await deployment_adapter.get(
+            user_id=user_id,
+            deployment_id=deployment.resource_key,
+            db=db,
+        )
+    except DeploymentNotFoundError:
+        logger.warning(
+            "Deployment %s (resource_key=%s) not found on provider — deleting stale row",
+            deployment.id,
+            deployment.resource_key,
+        )
+        try:
+            await delete_deployment_by_id(db, user_id=user_id, deployment_id=deployment.id)
+            await db.commit()
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "Failed to delete stale deployment row %s; returning 404 anyway",
+                deployment.id,
+                exc_info=True,
+            )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.") from None
+    except DeploymentServiceError as exc:
+        raise HTTPException(
+            status_code=http_status_for_deployment_error(exc),
+            detail=exc.message,
+        ) from exc
+
+    provider_metadata = deployment_mapper.extract_metadata_for_get(provider_deployment)
+    deployment = await sync_deployment_display_metadata(
+        db,
+        deployment=deployment,
+        provider_metadata=provider_metadata,
+        user_id=user_id,
+    )
+    attached_count = await sync_deployment_attachment_count_for_get(
+        deployment_mapper=deployment_mapper,
+        provider_deployment=provider_deployment,
+        deployment=deployment,
+        provider_key=provider_key,
+        user_id=user_id,
+        db=db,
+    )
+    return deployment, provider_deployment, attached_count
+
+
 async def list_deployments_synced(
     *,
     deployment_adapter: DeploymentServiceProtocol,
@@ -709,13 +848,15 @@ async def list_deployments_synced(
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
     Fetches DB rows in batches, sends each batch's resource keys to the
-    provider for validation, and deletes stale rows inline. The cursor does
-    not advance for deleted rows (deletion shifts subsequent offsets down).
+    provider for validation, deletes stale rows inline, and syncs
+    provider-owned display metadata for rows that still exist. The cursor
+    does not advance for deleted rows (deletion shifts subsequent offsets down).
     """
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
     provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
+    provider_metadata_by_resource_key: dict[str, ProviderDeploymentMetadata] = {}
     cursor = page_offset(page, size)
     max_sync_rounds = 2  # Initial pass + one refill pass.
     for _ in range(max_sync_rounds):
@@ -744,6 +885,7 @@ async def list_deployments_synced(
         )
         provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
         provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
+        provider_metadata_by_resource_key.update(deployment_mapper.extract_metadata_for_list(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
@@ -763,7 +905,24 @@ async def list_deployments_synced(
             accepted_deployment_ids.append(row.id)
             cursor += 1
 
-    # Phase 2: binding-level sync.
+    # Phase 2: metadata and binding-level sync.
+    if accepted:
+        metadata_updates: list[DeploymentMetadataUpdate] = []
+        for row, _attached_count, _matched in accepted:
+            provider_metadata = provider_metadata_by_resource_key[row.resource_key]
+            metadata_updates.append(
+                DeploymentMetadataUpdate(
+                    langflow_db_row=row,
+                    display_name=provider_metadata.display_name,
+                    description=provider_metadata.description,
+                )
+            )
+        await update_deployment_metadata_batch(
+            db,
+            user_id=user_id,
+            deployment_updates=metadata_updates,
+        )
+
     # Remove stale local attachments based on provider bindings, then recount.
     # Best-effort - provider or DB failures should not block the list response.
     if accepted:

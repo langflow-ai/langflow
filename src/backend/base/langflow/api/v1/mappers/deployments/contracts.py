@@ -58,6 +58,13 @@ class ProviderSnapshotBinding(BaseModel):
     snapshot_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+class ProviderDeploymentMetadata(BaseModel):
+    """Provider-owned deployment metadata synced into local rows."""
+
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    description: str | None = None
+
+
 class CreatedSnapshotIds(BaseModel):
     """Normalized created snapshot ids emitted by mapper reconciliation."""
 

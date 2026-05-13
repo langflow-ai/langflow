@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
@@ -491,6 +492,26 @@ def test_operation_results_share_provider_result_contract() -> None:
 def test_base_deployment_data_update_requires_at_least_one_field() -> None:
     with pytest.raises(ValidationError, match="At least one of 'name' or 'description'"):
         BaseDeploymentDataUpdate()
+
+
+def test_base_deployment_data_normalizes_name() -> None:
+    payload = BaseDeploymentData(name=" My Deployment ", type=DeploymentType.AGENT)
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentData(name="   ", type=DeploymentType.AGENT)
+
+
+def test_base_deployment_data_update_normalizes_name() -> None:
+    payload = BaseDeploymentDataUpdate(name=" My Deployment ")
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_update_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentDataUpdate(name="   ")
 
 
 def test_deployment_update_requires_at_least_one_section() -> None:

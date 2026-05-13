@@ -51,7 +51,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_agent_tool_ids,
-    validate_wxo_name,
 )
 
 if TYPE_CHECKING:
@@ -592,7 +591,11 @@ async def apply_provider_update_plan_with_rollback(
     )
 
 
-def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm: str | None = None) -> dict[str, Any]:
+def build_update_payload_from_spec(
+    spec: BaseDeploymentDataUpdate | None,
+    *,
+    llm: str | None = None,
+) -> dict[str, Any]:
     """Build agent update payload from deployment spec updates.
 
     Uses ``exclude_unset=True`` so that fields the caller did not explicitly
@@ -602,16 +605,10 @@ def build_update_payload_from_spec(spec: BaseDeploymentDataUpdate | None, *, llm
     """
     update_payload: dict[str, Any] = {}
     if spec:
-        spec_updates = spec.model_dump(exclude_unset=True)
-        if "name" in spec_updates and spec_updates["name"] is not None:
-            update_payload.update(
-                {
-                    "name": validate_wxo_name(spec_updates["name"]),
-                    "display_name": spec_updates["name"],
-                }
-            )
-        if "description" in spec_updates:
-            update_payload["description"] = spec_updates["description"]
+        if "name" in spec.model_fields_set:
+            update_payload["display_name"] = spec.name
+        if "description" in spec.model_fields_set:
+            update_payload["description"] = spec.description
     if llm is not None:
         update_payload["llm"] = llm
     return update_payload

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+from sqlalchemy import column, values
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
@@ -17,10 +19,19 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 from langflow.services.database.utils import parse_uuid
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from lfx.services.adapters.deployment.schema import DeploymentType
+    from sqlalchemy.sql.selectable import CTE
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentMetadataUpdate:
+    langflow_db_row: Deployment
+    display_name: str
+    description: str | None
 
 
 def _strip_or_raise(value: str, field_name: str) -> str:
@@ -152,6 +163,110 @@ async def update_deployment(
         raise ValueError(msg) from exc
     await db.refresh(deployment)
     return deployment
+
+
+async def update_deployment_metadata(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment: Deployment,
+    display_name: str,
+    description: str | None,
+) -> Deployment:
+    """Update provider-owned display metadata without changing local audit fields."""
+    update_item = DeploymentMetadataUpdate(
+        langflow_db_row=deployment,
+        display_name=_strip_or_raise(display_name, "display_name"),
+        description=_validate_description_max_length(description),
+    )
+    if not _deployment_metadata_has_changed(update_item):
+        return deployment
+
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.user_id == user_id,
+            Deployment.id == deployment.id,
+        )
+        .values(
+            display_name=update_item.display_name,
+            description=update_item.description,
+            # Provider metadata sync should not look like a local edit.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes the loaded Deployment instance.
+    if (await db.exec(stmt)).first() is None:
+        msg = f"Deployment not found. (id={deployment.id})"
+        raise ValueError(msg)
+    return deployment
+
+
+def _deployment_metadata_has_changed(update_item: DeploymentMetadataUpdate) -> bool:
+    langflow_data = update_item.langflow_db_row
+    return (
+        update_item.display_name != langflow_data.display_name or update_item.description != langflow_data.description
+    )
+
+
+def _deployment_metadata_updates_cte(
+    updates: Sequence[DeploymentMetadataUpdate],
+) -> CTE:
+    return (
+        values(
+            column("id", Deployment.__table__.c.id.type),
+            column("display_name", Deployment.__table__.c.display_name.type),
+            column("description", Deployment.__table__.c.description.type),
+        )
+        .data(
+            [
+                (
+                    item.langflow_db_row.id,
+                    item.display_name,
+                    item.description,
+                )
+                for item in updates
+            ],
+        )
+        .cte("metadata_updates")
+    )
+
+
+async def update_deployment_metadata_batch(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment_updates: Sequence[DeploymentMetadataUpdate],
+) -> None:
+    """Update provider-owned display metadata for multiple deployment rows in one statement."""
+    updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
+    if not updates:
+        return
+
+    metadata_updates = _deployment_metadata_updates_cte(updates)
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.user_id == user_id,
+            Deployment.id == metadata_updates.c.id,
+        )
+        .values(
+            display_name=metadata_updates.c.display_name,
+            description=metadata_updates.c.description,
+            # TODO: add a new synced_at column
+            # to differentiate between provider metadata sync and local updates.
+            # For now, explicitly preserve original updated_at value
+            # so that onupdate does not replace it.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes loaded Deployment instances
+    # and callers see the updated values when re-reading the orm objects in the same session.
+    (await db.exec(stmt)).all()
 
 
 async def list_deployments_page(

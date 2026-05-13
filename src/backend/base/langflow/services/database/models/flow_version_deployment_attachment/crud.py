@@ -151,16 +151,18 @@ async def list_deployment_attachments(
     deployment_id: UUID,
     flow_ids: list[UUID] | None = None,
 ) -> list[FlowVersionDeploymentAttachment]:
-    stmt = select(FlowVersionDeploymentAttachment).where(
-        FlowVersionDeploymentAttachment.user_id == user_id,
-        FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+    from langflow.services.database.models.flow_version.model import FlowVersion
+
+    stmt = (
+        select(FlowVersionDeploymentAttachment)
+        .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            FlowVersionDeploymentAttachment.deployment_id == deployment_id,
+        )
     )
     if flow_ids:
-        from langflow.services.database.models.flow_version.model import FlowVersion
-
-        stmt = stmt.join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id).where(
-            col(FlowVersion.flow_id).in_(flow_ids),
-        )
+        stmt = stmt.where(col(FlowVersion.flow_id).in_(flow_ids))
     stmt = stmt.order_by(FlowVersionDeploymentAttachment.created_at)
     return list((await db.exec(stmt)).all())
 

@@ -52,6 +52,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderDeploymentMetadata,
     ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
@@ -712,7 +713,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             if payload.display_name is not None or payload.description is not None
             else None
         )
-        if payload.provider_data is None:  # pure metadata update, e.g., name, description
+        if payload.provider_data is None:
             return AdapterDeploymentUpdate(spec=adapter_spec, provider_data=None)
 
         api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
@@ -863,12 +864,29 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             resource_key = str(item.id)
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
                 name=item_provider_data.name,
-                display_name=item_provider_data.display_name,
-                description=item_provider_data.description,
                 environments=item_provider_data.environments,
             ).model_dump(mode="json")
 
         return provider_data_by_resource_key
+
+    def extract_metadata_for_list(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, ProviderDeploymentMetadata]:
+        metadata_by_resource_key: dict[str, ProviderDeploymentMetadata] = {}
+        for item in provider_view.deployments:
+            item_provider_data = self._parse_required_payload_slot(
+                slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+                slot_name="deployment_item_data",
+                raw=item.provider_data,
+                operation="reading deployment list item metadata",
+            )
+            resource_key = str(item.id)
+            metadata_by_resource_key[resource_key] = ProviderDeploymentMetadata(
+                display_name=item_provider_data.display_name,
+                description=item_provider_data.description,
+            )
+        return metadata_by_resource_key
 
     def extract_snapshot_bindings_for_get(
         self,
@@ -893,6 +911,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id)) for snapshot_id in tool_ids
         ]
 
+    def extract_metadata_for_get(
+        self,
+        get_result: DeploymentGetResult,
+    ) -> ProviderDeploymentMetadata:
+        parsed = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+            slot_name="deployment_item_data",
+            raw=get_result.provider_data,
+            operation="reading deployment metadata",
+        )
+        return ProviderDeploymentMetadata(
+            display_name=parsed.display_name,
+            description=parsed.description,
+        )
+
     async def resolve_rollback_update(
         self,
         *,
@@ -906,7 +939,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         Queries flow_version_deployment_attachment for provider_snapshot_ids
         (WXO tool IDs) and constructs an update that declaratively sets the
         agent's tool list to match the (still-committed) DB state.  Also
-        restores deployment name/description via spec.
+        restores deployment display_name and description via spec.
 
         If the provider snapshots were concurrently deleted, the adapter call
         may fail; read-path snapshot sync handles that residual divergence.
@@ -1511,8 +1544,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         return WatsonxApiDeploymentGetProviderData(
             llm=parsed.llm,
             name=parsed.name,
-            display_name=parsed.display_name,
-            description=parsed.description,
+            environments=parsed.environments,
         ).model_dump(mode="json")
 
     def shape_config_item_data(self, provider_data: dict[str, Any]) -> WatsonxApiConfigListItem:

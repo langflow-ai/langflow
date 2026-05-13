@@ -85,6 +85,7 @@ from .contracts import (
     CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
+    ProviderDeploymentMetadata,
     ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -695,6 +696,30 @@ class BaseDeploymentMapper:
         """
         _ = provider_view
         return {}
+
+    def extract_metadata_for_list(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, ProviderDeploymentMetadata]:
+        """Extract provider-owned display metadata for local row sync."""
+        _ = provider_view
+        msg = (
+            "BaseDeploymentMapper does not implement extract_metadata_for_list; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
+
+    def extract_metadata_for_get(
+        self,
+        get_result: DeploymentGetResult,
+    ) -> ProviderDeploymentMetadata:
+        """Extract provider-owned display metadata for local row sync."""
+        _ = get_result
+        msg = (
+            "BaseDeploymentMapper does not implement extract_metadata_for_get; "
+            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
+        )
+        raise NotImplementedError(msg)
 
     def extract_snapshot_bindings_for_get(
         self,

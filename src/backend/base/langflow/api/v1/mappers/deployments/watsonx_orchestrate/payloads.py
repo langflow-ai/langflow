@@ -496,8 +496,6 @@ class WatsonxApiDeploymentListItemProviderData(BaseModel):
     model_config = {"extra": "forbid"}
 
     name: str
-    display_name: str
-    description: str
     environments: list[NormalizedStr]
 
 
@@ -508,8 +506,7 @@ class WatsonxApiDeploymentGetProviderData(BaseModel):
 
     llm: NormalizedStr | None
     name: str
-    display_name: str
-    description: str
+    environments: list[NormalizedStr]
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):

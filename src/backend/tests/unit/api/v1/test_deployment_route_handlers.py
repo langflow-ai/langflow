@@ -2160,14 +2160,12 @@ class TestUpdateDeploymentMetadataPersistence:
 
 class TestGetDeploymentSync:
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
-    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_stale_row_deleted_when_provider_returns_not_found(
         self,
         mock_resolve,
         mock_delete_row,
-        mock_list_att,  # noqa: ARG002
     ):
         """When the provider raises DeploymentNotFoundError, the DB row is deleted and 404 returned."""
         from langflow.api.v1.deployments import get_deployment
@@ -2189,7 +2187,7 @@ class TestGetDeploymentSync:
         session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_non_404_adapter_error_does_not_delete_row(
         self,
@@ -2214,7 +2212,7 @@ class TestGetDeploymentSync:
         mock_delete_row.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_service_unavailable_returns_503(
         self,
@@ -2239,12 +2237,14 @@ class TestGetDeploymentSync:
         mock_delete_row.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock, return_value=[])
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_get_deployment_does_not_inject_resource_key_into_provider_data(
         self,
         mock_resolve,
-        mock_list_att,  # noqa: ARG002
+        mock_count_att,  # noqa: ARG002
+        mock_delete_unbound,  # noqa: ARG002
     ):
         from langflow.api.v1.deployments import get_deployment
         from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
@@ -2256,6 +2256,16 @@ class TestGetDeploymentSync:
                 sanitized_provider_data = dict(provider_data)
                 sanitized_provider_data.pop("tool_ids", None)
                 return sanitized_provider_data or None
+
+            def extract_metadata_for_get(self, get_result):
+                _ = get_result
+                return SimpleNamespace(display_name=dep_row.display_name, description=dep_row.description)
+
+            def extract_snapshot_bindings_for_get(self, get_result, *, resource_key: str):
+                return [
+                    ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=snapshot_id)
+                    for snapshot_id in get_result.model_dump()["provider_data"]["tool_ids"]
+                ]
 
         created_at = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
         updated_at = datetime(2026, 1, 3, 4, 5, 6, tzinfo=timezone.utc)
@@ -2284,6 +2294,7 @@ class TestGetDeploymentSync:
         mock_resolve.return_value = (dep_row, adapter, _MapperForGet(), "watsonx-orchestrate", "tenant-1")
 
         session = AsyncMock()
+        session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.resource_key == "provider-rk-1"
@@ -2296,13 +2307,13 @@ class TestGetDeploymentSync:
         assert result.provider_data == {"llm": "virtual-model/bedrock/openai.gpt-oss-120b-1:0"}
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_snapshot_sync_corrects_attached_count(
         self,
         mock_resolve,
-        mock_list_att,
+        mock_count_att,
         mock_delete_unbound,
     ):
         """Binding-aware sync corrects attached_count in the response."""
@@ -2322,11 +2333,13 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
+        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
+            display_name=dep_row.display_name,
+            description=dep_row.description,
+        )
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
-
-        att_good = _fake_attachment(provider_snapshot_id="snap-1")
-        mock_list_att.return_value = [att_good]
+        mock_count_att.return_value = 1
 
         session = AsyncMock()
         session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
@@ -2336,16 +2349,16 @@ class TestGetDeploymentSync:
         mock_delete_unbound.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_unsupported_provider_falls_back_to_unverified_count(
+    async def test_unsupported_provider_get_sync_raises(
         self,
         mock_resolve,
-        mock_list_att,
+        mock_count_att,
         mock_delete_unbound,
     ):
-        """NotImplemented mapper sync falls back to unverified count."""
+        """NotImplemented mapper GET sync fails because binding-aware sync is required."""
         from langflow.api.v1.deployments import get_deployment
 
         dep_row = _fake_deployment_row()
@@ -2360,25 +2373,31 @@ class TestGetDeploymentSync:
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
         mapper.extract_snapshot_bindings_for_get.side_effect = NotImplementedError("not supported")
+        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
+            display_name=dep_row.display_name,
+            description=dep_row.description,
+        )
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
-        mock_list_att.return_value = [_fake_attachment(provider_snapshot_id=None)]
 
         session = AsyncMock()
-        result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+        with pytest.raises(HTTPException) as exc_info:
+            await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
-        assert result.attached_count == 1
+        assert exc_info.value.status_code == 500
+        assert "does not support binding-aware GET sync" in str(exc_info.value.detail)
         session.rollback.assert_not_awaited()
+        mock_count_att.assert_not_awaited()
         mock_delete_unbound.assert_not_awaited()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_binding_aware_sync_error_falls_back_to_unverified_count(
         self,
         mock_resolve,
-        mock_list_att,
+        mock_count_att,
         mock_delete_unbound,
     ):
         """When binding-aware sync raises, response uses unverified attachment count."""
@@ -2398,12 +2417,13 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
+        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
+            display_name=dep_row.display_name,
+            description=dep_row.description,
+        )
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
-
-        att1 = _fake_attachment(provider_snapshot_id="snap-1")
-        att2 = _fake_attachment(provider_snapshot_id="snap-2")
-        mock_list_att.return_value = [att1, att2]
+        mock_count_att.return_value = 2
         mock_delete_unbound.side_effect = RuntimeError("provider down")
 
         session = AsyncMock()
@@ -2414,13 +2434,59 @@ class TestGetDeploymentSync:
         session.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
-    @patch(f"{ROUTES_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_binding_aware_sync_and_fallback_count_failure_raises(
+        self,
+        mock_resolve,
+        mock_count_att,
+        mock_delete_unbound,
+    ):
+        """When sync and fallback count both fail, return an explicit count error."""
+        from langflow.api.v1.deployments import get_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        provider_deployment = MagicMock()
+        provider_deployment.name = "deployed-agent"
+        provider_deployment.description = "desc"
+        provider_deployment.type = "agent"
+        provider_deployment.created_at = None
+        provider_deployment.updated_at = None
+        provider_deployment.model_dump.return_value = {}
+        adapter.get.return_value = provider_deployment
+        mapper.extract_snapshot_bindings_for_get.return_value = [
+            ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
+        ]
+        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
+            display_name=dep_row.display_name,
+            description=dep_row.description,
+        )
+        mapper.shape_deployment_get_data.return_value = None
+        mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
+        mock_delete_unbound.side_effect = RuntimeError("sync failed")
+        mock_count_att.side_effect = RuntimeError("count failed")
+
+        session = AsyncMock()
+        session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
+        with pytest.raises(HTTPException) as exc_info:
+            await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
+
+        assert exc_info.value.status_code == 500
+        assert str(dep_row.id) in str(exc_info.value.detail)
+        assert "Failed to retrieve the number of flows attached" in str(exc_info.value.detail)
+        session.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
+    @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
     async def test_binding_aware_sync_prunes_detached_attachments(
         self,
         mock_resolve,
-        mock_list_att,
+        mock_count_att,
         mock_delete_unbound,
     ):
         """Binding-aware sync sends authoritative bindings and returns corrected count."""
@@ -2435,9 +2501,13 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")
         ]
+        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
+            display_name=dep_row.display_name,
+            description=dep_row.description,
+        )
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
-        mock_list_att.return_value = [_fake_attachment(provider_snapshot_id="snap-1")]
+        mock_count_att.return_value = 1
 
         session = AsyncMock()
         session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
