@@ -106,6 +106,7 @@ if TYPE_CHECKING:
         yahoosearch,
         youtube,
         zep,
+        regolo,
     )
 
 
@@ -342,6 +343,7 @@ __all__ = [
     "yahoosearch",
     "youtube",
     "zep",
+    "regolo",
 ]
 
 

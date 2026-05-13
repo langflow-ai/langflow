@@ -1,0 +1,15 @@
+REGOLO_CHAT_MODEL_NAMES = [
+    "apertus-70b",
+    "gemma4-31b",
+    "gpt-oss-120b",
+    "gpt-oss-20b",
+    "Llama-3.1-8B-Instruct",
+    "Llama-3.3-70B-Instruct",
+    "minimax-m2.5",
+    "mistral-small-4-119b",
+    "mistral-small3.2",
+    "qwen3-coder-next",
+    "qwen3.5-122b",
+    "qwen3.5-9b",
+    "qwen3.6-27b",
+]
