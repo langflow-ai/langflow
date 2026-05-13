@@ -54,9 +54,7 @@ export function MemoryKnowledgeBaseSection({
               name="Database"
               className="h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-sm font-medium text-foreground">
-              No chunks yet
-            </p>
+            <p className="text-sm font-medium text-foreground">No chunks yet</p>
             <p className="max-w-xs text-xs text-muted-foreground">
               Head to the Playground, run your flow, and chunks will start
               appearing here automatically.

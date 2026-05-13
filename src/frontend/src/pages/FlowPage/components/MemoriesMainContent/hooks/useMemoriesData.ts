@@ -161,7 +161,11 @@ export function useMemoriesData({
   }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
   const onRefresh = useCallback(async () => {
-    await Promise.all([refetchMemories(), refetchMemorySessions(), refetchMessages()]);
+    await Promise.all([
+      refetchMemories(),
+      refetchMemorySessions(),
+      refetchMessages(),
+    ]);
   }, [refetchMemories, refetchMemorySessions, refetchMessages]);
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {

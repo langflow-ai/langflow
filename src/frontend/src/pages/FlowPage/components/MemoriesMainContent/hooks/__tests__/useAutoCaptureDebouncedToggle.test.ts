@@ -132,7 +132,10 @@ describe("useAutoCaptureDebouncedToggle", () => {
       act(() => jest.runAllTimers());
       expect(mutate).toHaveBeenCalledWith(
         { memoryId: "m1", auto_capture: true },
-        expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+        expect.objectContaining({
+          onSuccess: expect.any(Function),
+          onError: expect.any(Function),
+        }),
       );
     });
 
