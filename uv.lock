@@ -3067,6 +3067,20 @@ wheels = [
 ]
 
 [[package]]
+name = "fakeredis"
+version = "2.35.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "redis" },
+    { name = "sortedcontainers" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/50/b748233c02fa77e5105238190cc9bb58b852eb1c8b1d0763230d3a5b745a/fakeredis-2.35.1.tar.gz", hash = "sha256:5bae5eba7b9d93cb968944ac40936373cf2397ff71667d4b595df65c3d2e413f", size = 189118, upload-time = "2026-04-12T17:05:58.539Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6f/27/b8b057a23f7777177e92d3a602fd866751b6b45014964548997e92e048fd/fakeredis-2.35.1-py3-none-any.whl", hash = "sha256:67d97e11f562b7870e11e5c30cf182270bfb2dd37f6707dba47cc6d91628d1b9", size = 129678, upload-time = "2026-04-12T17:05:56.86Z" },
+]
+
+[[package]]
 name = "farama-notifications"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -6444,6 +6458,7 @@ dev = [
     { name = "elevenlabs", version = "1.58.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.12.*'" },
     { name = "elevenlabs", version = "1.59.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version != '3.12.*'" },
     { name = "faker" },
+    { name = "fakeredis" },
     { name = "httpx" },
     { name = "hypothesis" },
     { name = "ipykernel" },
@@ -6506,6 +6521,7 @@ dev = [
     { name = "elevenlabs", marker = "python_full_version != '3.12.*'", specifier = ">=1.52.0" },
     { name = "elevenlabs", marker = "python_full_version == '3.12.*'", specifier = "==1.58.1" },
     { name = "faker", specifier = ">=37.0.0" },
+    { name = "fakeredis", specifier = ">=2.0.0" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "hypothesis", specifier = ">=6.123.17" },
     { name = "ipykernel", specifier = ">=6.29.0" },
@@ -7202,6 +7218,7 @@ dev = [
     { name = "codeflash" },
     { name = "devtools" },
     { name = "dictdiffer" },
+    { name = "fakeredis" },
     { name = "httpx", extra = ["http2"] },
     { name = "ipykernel" },
     { name = "pre-commit" },
@@ -7542,6 +7559,7 @@ dev = [
     { name = "codeflash", specifier = ">=0.8.4" },
     { name = "devtools", specifier = ">=0.12.2" },
     { name = "dictdiffer", specifier = ">=0.9.0" },
+    { name = "fakeredis", specifier = ">=2.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27" },
     { name = "ipykernel", specifier = ">=6.29.0" },
     { name = "pre-commit", specifier = ">=3.7.0" },
