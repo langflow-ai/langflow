@@ -490,25 +490,25 @@ class RedisQueueWrapper:
     def _on_fill_done(self, task: asyncio.Task) -> None:
         """Ensure the consumer is unblocked if the fill task exits unexpectedly.
 
-        A clean exit (sentinel received or ``CancelledError``) already puts the
-        end-of-stream sentinel into the buffer.  If the task raised an unhandled
-        exception that path is skipped — this callback catches that gap so the
-        consumer's ``await queue.get()`` doesn't block forever.
+        A clean exit (sentinel received) already puts the end-of-stream sentinel
+        into the buffer.  Cancellation and unhandled exceptions skip that path —
+        this callback catches both gaps so the consumer's ``await queue.get()``
+        doesn't block forever.
 
         Done callbacks run synchronously, so we use the non-blocking
         ``put_nowait``.  If the buffer happens to be at capacity (slow consumer
         + bounded buffer), evict the oldest item to make room: losing one event
         is strictly preferable to a stuck consumer.
         """
-        if task.cancelled():
+        exc = task.exception() if not task.cancelled() else None
+        if not task.cancelled() and exc is None:
+            # Clean exit: _fill_from_redis already put the sentinel in the buffer.
             return
-        exc = task.exception()
-        if exc is None:
-            return
-        logger.error(
-            f"RedisQueueWrapper fill task raised for job {self._job_id}: {exc!r} "
-            "— delivering end-of-stream sentinel so the consumer is not left hanging."
-        )
+        if exc is not None:
+            logger.error(
+                f"RedisQueueWrapper fill task raised for job {self._job_id}: {exc!r} "
+                "— delivering end-of-stream sentinel so the consumer is not left hanging."
+            )
         if self._buffer.full():
             with contextlib.suppress(asyncio.QueueEmpty):
                 self._buffer.get_nowait()
@@ -517,6 +517,7 @@ class RedisQueueWrapper:
 
     async def _fill_from_redis(self) -> None:
         """Read events from the Redis Stream and forward them to the local buffer."""
+        _error_start: float | None = None
         try:
             while True:
                 try:
@@ -526,23 +527,41 @@ class RedisQueueWrapper:
                         count=self._XREAD_BATCH_COUNT,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning(f"RedisQueueWrapper read error for {self._job_id}: {exc}")
+                    now = time.monotonic()
+                    if _error_start is None:
+                        _error_start = now
+                    elapsed = now - _error_start
+                    await logger.awarning(
+                        f"RedisQueueWrapper read error for {self._job_id} "
+                        f"(elapsed {elapsed:.1f}s): {exc}"
+                    )
+                    if elapsed >= self._STARTUP_GRACE_S:
+                        await logger.aerror(
+                            f"RedisQueueWrapper: persistent Redis error for {self._job_id} "
+                            f"after {elapsed:.1f}s; delivering end-of-stream sentinel."
+                        )
+                        await self._buffer.put((None, None, time.time()))
+                        return
                     await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                     continue
+                _error_start = None  # reset on successful XREAD
 
                 self._first_read_done = True
                 if results:
                     self._observed_stream = True
                     for _, messages in results:
                         for msg_id, fields in messages:
-                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                             data = fields.get(b"data")
-                            ts = float(fields.get(b"ts", b"0") or b"0")
+                            ts = float(fields.get(b"ts") or b"0")
                             if data == _STREAM_SENTINEL_DATA:
                                 await self._buffer.put((None, None, ts))
+                                self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                                 return
                             event_id = (fields.get(b"event_id") or b"").decode()
                             await self._buffer.put((event_id, data, ts))
+                            # Advance cursor only after the item is safely in the buffer.
+                            # Advancing before the await would skip this message on cancellation.
+                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                 # No results within the block timeout.
                 elif not self._observed_stream:
                     # Stream hasn't appeared yet — the producer may not have issued its
@@ -564,7 +583,21 @@ class RedisQueueWrapper:
                     try:
                         key_exists = await self._client.exists(self._stream_key)
                     except Exception as exc:  # noqa: BLE001
-                        await logger.awarning(f"RedisQueueWrapper exists() check failed for {self._job_id}: {exc}")
+                        now = time.monotonic()
+                        if _error_start is None:
+                            _error_start = now
+                        elapsed = now - _error_start
+                        await logger.awarning(
+                            f"RedisQueueWrapper exists() check failed for {self._job_id} "
+                            f"(elapsed {elapsed:.1f}s): {exc}"
+                        )
+                        if elapsed >= self._STARTUP_GRACE_S:
+                            await logger.aerror(
+                                f"RedisQueueWrapper: persistent Redis error for {self._job_id} "
+                                f"after {elapsed:.1f}s; delivering end-of-stream sentinel."
+                            )
+                            await self._buffer.put((None, None, time.time()))
+                            return
                         await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                         continue
                     if not key_exists:

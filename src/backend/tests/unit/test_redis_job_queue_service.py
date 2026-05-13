@@ -620,6 +620,11 @@ async def test_redis_queue_wrapper_done_callback_evicts_to_make_room_for_sentine
     wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
     await wrapper.cancel()
 
+    # cancel() delivers the sentinel; drain it so we can test the exception-path
+    # eviction independently with a fully saturated buffer.
+    while not wrapper._buffer.empty():
+        wrapper._buffer.get_nowait()
+
     # Saturate the buffer so put_nowait(sentinel) would otherwise fail.
     for i in range(wrapper._buffer.maxsize):
         wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))

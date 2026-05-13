@@ -667,8 +667,14 @@ async def cancel_flow_build(
     _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
-        await logger.awarning(f"No event task found for job_id {job_id}")
-        return True  # Nothing to cancel is still a success
+        # Cross-worker path: the job is owned by another process. We have no local task
+        # to cancel, so the build continues unaffected. Return False so callers know the
+        # cancellation did not take effect rather than reporting a false success.
+        await logger.awarning(
+            f"No event task found for job_id {job_id} — likely owned by another worker. "
+            "Cross-worker cancellation is not supported; the build will continue."
+        )
+        return False
 
     if event_task.done():
         await logger.ainfo(f"Task for job_id {job_id} is already completed")
