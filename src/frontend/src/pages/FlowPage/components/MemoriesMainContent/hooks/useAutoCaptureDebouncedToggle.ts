@@ -96,9 +96,13 @@ export const useAutoCaptureDebouncedToggle = ({
       autoCaptureTimerRef.current = null;
     }
 
+    const capturedId = memory.id;
+    const capturedName = memory.name;
+    const capturedIsActive = memory.is_active;
+
     autoCaptureTimerRef.current = setTimeout(() => {
       // If the committed value already matches, skip a no-op update.
-      if ((committedIsActiveRef.current ?? memory.is_active) === nextIsActive) {
+      if ((committedIsActiveRef.current ?? capturedIsActive) === nextIsActive) {
         setAutoCaptureDraft(null);
         draftIsActiveRef.current = null;
         autoCaptureTimerRef.current = null;
@@ -112,7 +116,7 @@ export const useAutoCaptureDebouncedToggle = ({
 
       updateMemoryMutation.mutate(
         {
-          memoryId: memory.id,
+          memoryId: capturedId,
           auto_capture: nextIsActive,
         },
         {
@@ -120,8 +124,8 @@ export const useAutoCaptureDebouncedToggle = ({
             clearDraft();
             setSuccessData({
               title: nextIsActive
-                ? `Auto-capture enabled for memory "${memory.name}"`
-                : `Auto-capture disabled for memory "${memory.name}"`,
+                ? `Auto-capture enabled for memory "${capturedName}"`
+                : `Auto-capture disabled for memory "${capturedName}"`,
             });
           },
           onError: () => {
