@@ -6,7 +6,6 @@ import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import isWrappedWithClass from "../../pages/FlowPage/components/PageComponent/utils/is-wrapped-with-class";
 import { cn } from "../../utils/utils";
-import { AnimatedConditional } from "./animated-close";
 import { Button } from "./button";
 
 const SIMPLE_SIDEBAR_WIDTH = "400px";
@@ -445,7 +444,7 @@ const SimpleSidebarTrigger = React.forwardRef<
       variant="ghost"
       size="md"
       className={cn(
-        "!px-2 !font-normal !justify-start !gap-1.5 !w-[7.2rem]",
+        "!px-2 !font-normal !justify-start !gap-1.5 w-auto",
         className,
       )}
       onClick={handleClick}

@@ -1,9 +1,10 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.base.models.unified_models import (
     _get_all_provider_mapped_fields,
     apply_provider_variable_config_to_build_config,
+    get_embedding_model_options,
     get_embeddings,
     get_unified_models_detailed,
     handle_model_input_update,
@@ -87,6 +88,22 @@ def test_filter_by_model_type_embeddings():
     assert models, "Expected at least one embedding model"
     for model in models:
         assert model["metadata"].get("model_type", "llm") == "embeddings"
+
+
+@patch("lfx.base.models.unified_models.model_catalog._fetch_enabled_providers_for_user", new_callable=AsyncMock)
+@patch("lfx.base.models.unified_models.model_catalog._get_model_status", new_callable=AsyncMock)
+def test_google_embedding_options_map_dimensions_to_output_dimensionality(mock_get_model_status, mock_fetch_providers):
+    mock_get_model_status.return_value = (set(), set())
+    mock_fetch_providers.return_value = {"Google Generative AI"}
+
+    options = get_embedding_model_options(user_id="test-user")
+
+    google_embedding = next(
+        option
+        for option in options
+        if option["provider"] == "Google Generative AI" and option["name"] == "models/gemini-embedding-001"
+    )
+    assert google_embedding["metadata"]["param_mapping"]["dimensions"] == "output_dimensionality"
 
 
 def test_update_model_options_with_custom_field_name():
@@ -419,10 +436,14 @@ def test_get_embeddings_missing_model_name_raises(mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PROVIDER_CLASS_MAPPING.
+
+    So missing ``embedding_class`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",
-        "provider": "OpenAI",
+        "provider": "Unknown",
         "metadata": {"param_mapping": {"model": "model"}},
     }
     with pytest.raises(ValueError, match="No embedding class defined in metadata"):
@@ -431,14 +452,47 @@ def test_get_embeddings_missing_embedding_class_raises(mock_get_api_key):
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 def test_get_embeddings_empty_param_mapping_raises(mock_get_api_key):
+    """Unknown providers can't be looked up in EMBEDDING_PARAM_MAPPINGS.
+
+    So empty ``param_mapping`` metadata still raises.
+    """
     mock_get_api_key.return_value = "test-key"
     model_dict = {
         "name": "text-embedding-3-small",
-        "provider": "OpenAI",
+        "provider": "Unknown",
         "metadata": {"embedding_class": "OpenAIEmbeddings", "param_mapping": {}},
     }
     with pytest.raises(ValueError, match="Parameter mapping not found in metadata"):
         get_embeddings([model_dict])
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_falls_back_when_metadata_stripped(mock_get_class, mock_get_api_key):
+    """Selections persisted via the generic ``/models`` catalog lack enriched metadata.
+
+    ``embedding_class`` and ``param_mapping`` are missing in that case.
+    Instantiation should derive both from ``EMBEDDING_PROVIDER_CLASS_MAPPING``
+    and ``EMBEDDING_PARAM_MAPPINGS`` rather than failing — otherwise KB
+    ingestion would error on every model picked through the KB upload modal.
+    """
+    mock_get_api_key.return_value = "sk-test"
+    fake_class = MagicMock(return_value="embeddings-instance")
+    mock_get_class.return_value = fake_class
+
+    model_dict = {
+        "name": "text-embedding-3-small",
+        "provider": "OpenAI",
+        "metadata": {},  # No embedding_class, no param_mapping.
+    }
+    result = get_embeddings([model_dict])
+
+    mock_get_class.assert_called_once_with("OpenAIEmbeddings")
+    fake_class.assert_called_once()
+    kwargs = fake_class.call_args.kwargs
+    assert kwargs["model"] == "text-embedding-3-small"
+    assert kwargs["api_key"] == "sk-test"
+    assert result == "embeddings-instance"
 
 
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
@@ -484,7 +538,7 @@ def test_get_embeddings_optional_params_only_added_when_mapped(mock_get_class, m
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 def test_get_embeddings_google_timeout_wrapped_in_dict(mock_get_class, mock_get_api_key):
-    """For Google Generative AI, request_timeout should be wrapped as {'timeout': value}."""
+    """For Google Generative AI, request_timeout is wrapped and dimensions are passed through."""
     mock_get_api_key.return_value = "google-key"
     mock_embedding_class = MagicMock()
     mock_get_class.return_value = mock_embedding_class
@@ -497,14 +551,21 @@ def test_get_embeddings_google_timeout_wrapped_in_dict(mock_get_class, mock_get_
             "param_mapping": {
                 "model": "model",
                 "api_key": "google_api_key",  # pragma: allowlist secret
+                "dimensions": "output_dimensionality",
                 "request_timeout": "request_options",
             },
         },
     }
 
-    get_embeddings([google_model], api_key="google-key", request_timeout=30.0)  # pragma: allowlist secret
+    get_embeddings(
+        [google_model],
+        api_key="google-key",  # pragma: allowlist secret
+        dimensions=768,
+        request_timeout=30.0,
+    )
 
     kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs.get("output_dimensionality") == 768
     assert kwargs.get("request_options") == {"timeout": 30.0}
 
 

@@ -420,7 +420,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.135.3"
                   },
                   {
                     "name": "lfx",
@@ -667,6 +667,7 @@
             "description": "# 📖 README\nThis flow loads a file and uses an LLM to answer questions based on content from the loaded document. \n\n## Prerequisites\n\n* An [OpenAI API key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2.  In the **File** component, select a file  you want to load.\n3. Open the **Playground** and chat with your document.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.document_q_a.6585acf3",
             "template": {}
           },
           "type": "note"
@@ -1319,11 +1320,11 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.3.1"
+                    "version": "1.2.29"
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.4"
                   },
                   {
                     "name": "googleapiclient",

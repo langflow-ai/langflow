@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -24,6 +25,7 @@ export default function TemplateContentComponent({
   loading,
   onFlowCreating,
 }: TemplateContentComponentProps) {
+  const { t } = useTranslation();
   const allExamples = useFlowsManagerStore((state) => state.examples);
 
   const examples = useMemo(() => {
@@ -108,7 +110,7 @@ export default function TemplateContentComponent({
         />
         <Input
           type="search"
-          placeholder="Search..."
+          placeholder={t("templatesModal.search")}
           icon={"SearchIcon"}
           data-testid="search-input-template"
           value={searchQuery}
@@ -130,14 +132,14 @@ export default function TemplateContentComponent({
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
             <p className="text-sm text-secondary-foreground">
-              No templates found.{" "}
+              {t("templatesModal.noTemplatesFound")}{" "}
               <a
                 className="cursor-pointer underline underline-offset-4"
                 onClick={handleClearSearch}
               >
-                Clear your search
+                {t("templatesModal.clearSearch")}
               </a>{" "}
-              and try a different query.
+              {t("templatesModal.tryDifferentQuery")}
             </p>
           </div>
         )}

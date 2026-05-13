@@ -45,6 +45,7 @@ DeploymentProviderName = Annotated[
 ]  # the name of the deployment provider.
 
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
 DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
@@ -471,6 +472,11 @@ class DeploymentListParams(_BaseListParams[T_DeploymentListParams]):
         None,
         description="Config ids to filter by.",
     )
+    deployment_names: list[NormalizedStr] | None = Field(
+        None,
+        min_length=1,
+        description="Deployment names to filter by.",
+    )
 
     @field_validator("deployment_types")
     @classmethod
@@ -507,7 +513,7 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
         None,
         description="Snapshot ids to filter by.",
     )
-    snapshot_names: list[str] | None = Field(
+    snapshot_names: list[NormalizedStr] | None = Field(
         None,
         min_length=1,
         description="Snapshot names to filter by.",
@@ -517,17 +523,6 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
     @classmethod
     def validate_snapshot_ids(cls, value: list[IdLike] | None, info) -> list[str] | None:
         return cls._normalize_filter_id_values(value, field_name=info.field_name)
-
-    @field_validator("snapshot_names")
-    @classmethod
-    def validate_snapshot_names(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-        stripped = [name.strip() for name in value]
-        if any(not name for name in stripped):
-            msg = "snapshot_names must not contain empty or whitespace-only entries."
-            raise ValueError(msg)
-        return stripped
 
 
 class DeploymentCreate(BaseModel):
