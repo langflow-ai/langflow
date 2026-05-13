@@ -98,7 +98,7 @@ describe("Basic rendering", () => {
       screen.getByRole("link", { name: "Sign up for watsonx Orchestrate" }),
     ).toHaveAttribute(
       "href",
-      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+      "https://www.ibm.com/products/watsonx-orchestrate?utm_source=langflow&utm_medium=integration&utm_campaign=wxo-integration&utm_content=signup-pricing#pricing",
     );
     expect(
       screen.getByRole("link", { name: "Find your credentials" }),
