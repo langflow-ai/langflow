@@ -1,33 +1,23 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import Loading from "@/components/ui/loading";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/utils";
 import type { ProviderAccount } from "../types";
 
 interface ProvidersTableProps {
   providers: ProviderAccount[];
   deletingId?: string | null;
+  deploymentTotalsByProvider?: Record<string, number>;
+  onConfigureProvider?: (provider: ProviderAccount) => void;
   onDeleteProvider?: (provider: ProviderAccount) => void;
-}
-
-function truncateMiddle(text: string, maxLength = 50): string {
-  if (text.length <= maxLength) return text;
-  const half = Math.floor((maxLength - 3) / 2);
-  return `${text.slice(0, half)}...${text.slice(-half)}`;
 }
 
 function formatDate(iso: string | null) {
@@ -39,89 +29,121 @@ function formatDate(iso: string | null) {
   });
 }
 
+function formatProviderLabel(providerKey: string) {
+  return providerKey
+    .split("-")
+    .map((part) => {
+      if (part.toLowerCase() === "watsonx") return "watsonx";
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(" ");
+}
+
+function getProviderEndpoint(provider: ProviderAccount) {
+  return typeof provider.provider_data?.url === "string"
+    ? provider.provider_data.url
+    : "—";
+}
+
 export default function ProvidersTable({
   providers,
   deletingId,
+  deploymentTotalsByProvider = {},
+  onConfigureProvider,
   onDeleteProvider,
 }: ProvidersTableProps) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>URL</TableHead>
-          <TableHead>Provider Key</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead className="w-10" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {providers.map((provider) => {
-          const isDeleting = deletingId === provider.id;
-          return (
-            <TableRow
-              key={provider.id}
-              data-testid={`provider-row-${provider.id}`}
-              className={cn(isDeleting && "pointer-events-none opacity-50")}
-            >
-              <TableCell>
-                <span className="font-medium">{provider.name}</span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm text-muted-foreground">
-                  {typeof provider.provider_data?.url === "string"
-                    ? truncateMiddle(provider.provider_data.url)
-                    : "—"}
-                </span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm">{provider.provider_key}</span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm">
-                  {formatDate(provider.created_at)}
-                </span>
-              </TableCell>
-              <TableCell>
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {providers.map((provider) => {
+        const isDeleting = deletingId === provider.id;
+        const endpoint = getProviderEndpoint(provider);
+        const lastUpdated = formatDate(
+          provider.updated_at ?? provider.created_at,
+        );
+        const deploymentCount = deploymentTotalsByProvider[provider.id] ?? 0;
+
+        return (
+          <Card
+            key={provider.id}
+            data-testid={`provider-row-${provider.id}`}
+            className={cn(
+              "border-border bg-background",
+              isDeleting && "pointer-events-none opacity-50",
+            )}
+          >
+            <CardHeader className="flex-row items-start justify-between space-y-0 gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <ForwardedIconComponent
+                    name="Cloud"
+                    className="h-5 w-5 text-foreground"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="truncate text-xl">
+                    {provider.name}
+                  </CardTitle>
+                  <p className="pt-1 text-sm text-muted-foreground">
+                    {formatProviderLabel(provider.provider_key)}
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Endpoint</p>
+                <p
+                  className="break-all text-sm text-foreground"
+                  title={endpoint}
+                >
+                  {endpoint}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Last Updated</p>
+                  <p className="text-sm text-foreground">{lastUpdated}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-sm text-muted-foreground">Deployments</p>
+                  <p className="text-sm text-foreground">{deploymentCount}</p>
+                </div>
+              </div>
+
+              <Separator />
+            </CardContent>
+
+            <CardFooter className="gap-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                data-testid={`configure-provider-${provider.id}`}
+                onClick={() => onConfigureProvider?.(provider)}
+                disabled={isDeleting}
+              >
+                <ForwardedIconComponent name="Settings" className="h-4 w-4" />
+                Configure
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                data-testid={`delete-provider-${provider.id}`}
+                onClick={() => onDeleteProvider?.(provider)}
+                disabled={isDeleting}
+              >
                 {isDeleting ? (
-                  <div className="flex h-8 w-8 items-center justify-center">
-                    <Loading size={16} className="text-muted-foreground" />
-                  </div>
+                  <Loading size={16} className="text-muted-foreground" />
                 ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        data-testid={`actions-provider-${provider.id}`}
-                        aria-label={`Actions for ${provider.name}`}
-                      >
-                        <ForwardedIconComponent
-                          name="EllipsisVertical"
-                          className="h-4 w-4"
-                        />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => onDeleteProvider?.(provider)}
-                      >
-                        <ForwardedIconComponent
-                          name="Trash2"
-                          className="mr-2 h-4 w-4"
-                        />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
                 )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                Delete
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+      })}
+    </div>
   );
 }
