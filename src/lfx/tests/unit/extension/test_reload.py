@@ -20,7 +20,6 @@ HTTP / CLI layers stay out of scope.
 
 from __future__ import annotations
 
-import contextlib
 import json
 import sys
 import threading
@@ -520,6 +519,26 @@ def test_swap_retag_survives_subsequent_reload(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def _isolated_post_swap_hooks() -> Iterable[None]:
+    """Snapshot and restore the post-swap hook list.
+
+    When the full lfx test suite runs, langflow startup may have already
+    registered ``_post_reload_refresh_cache`` -- which then raises on these
+    synthetic Component stubs (they don't inherit from the real lfx
+    ``Component``) and contaminates ``ReloadResult.warnings``.  Tests that
+    assert on warnings need a clean hook list.
+    """
+    snapshot = list(reload_mod._POST_SWAP_HOOKS)
+    reload_mod._POST_SWAP_HOOKS.clear()
+    try:
+        yield
+    finally:
+        reload_mod._POST_SWAP_HOOKS.clear()
+        reload_mod._POST_SWAP_HOOKS.extend(snapshot)
+
+
+@pytest.mark.usefixtures("_isolated_post_swap_hooks")
 def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
     """A raising post-swap hook surfaces on ``ReloadResult.warnings``.
 
@@ -536,12 +555,8 @@ def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
         raise RuntimeError(msg)
 
     reload_mod.register_post_swap_hook(_always_raises)
-    try:
-        (root / "components" / "thing.py").write_text(_component_source("RenamedThing"), encoding="utf-8")
-        result = reload_bundle(registry, "pilot")
-    finally:
-        with contextlib.suppress(ValueError):
-            reload_mod._POST_SWAP_HOOKS.remove(_always_raises)
+    (root / "components" / "thing.py").write_text(_component_source("RenamedThing"), encoding="utf-8")
+    result = reload_bundle(registry, "pilot")
 
     # Swap committed despite the hook failure.
     assert result.ok, result.errors
@@ -553,11 +568,12 @@ def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
     assert "synthetic hook failure" in hook_warnings[0].message
 
 
+@pytest.mark.usefixtures("_isolated_post_swap_hooks")
 def test_post_swap_hook_success_adds_no_warnings(tmp_path: Path) -> None:
     """The happy path emits no ``reload-post-swap-hook-failed`` warning.
 
     Regression guard against accidentally appending an error to the warnings
-    list on every reload.
+    list on every reload when no hook raised.
     """
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()
