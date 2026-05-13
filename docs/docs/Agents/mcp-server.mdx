@@ -122,7 +122,7 @@ Langflow times are evaluated in the following order:
 
 2. Global timeout is set with the `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` environment variable. The default is 180 seconds.
 
-3. Langflow enforces a minimum floor of 180 seconds for tool execution, regardless of lower values set at the component or global level.
+3. Langflow enforces a minimum of 180 seconds for tool execution, regardless of lower values set at the component or global level.
 
 To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` or the per-component **Tool Execution Timeout (seconds)** field to a value greater than `180`.
 
