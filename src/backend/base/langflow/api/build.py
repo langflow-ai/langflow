@@ -4,6 +4,7 @@ import time
 import traceback
 import uuid
 from collections.abc import AsyncIterator
+from typing import Protocol, runtime_checkable
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.graph.graph.base import Graph
@@ -40,6 +41,21 @@ from langflow.services.deps import (
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
 from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
+
+
+@runtime_checkable
+class _CancellableQueue(Protocol):
+    """Structural protocol for queues that expose an async ``cancel()`` hook.
+
+    Used by ``create_flow_response.on_disconnect`` to terminate background work
+    owned by the queue itself.  :class:`~langflow.services.job_queue.service.RedisQueueWrapper`
+    implements this so the wrapper's background fill task is cancelled on client
+    disconnect.  Plain ``asyncio.Queue`` does not have a ``cancel`` method and
+    so does not satisfy the protocol — those cases are covered by the separate
+    ``event_task.cancel()`` call in ``on_disconnect``.
+    """
+
+    async def cancel(self) -> None: ...
 
 
 def _log_component_input_telemetry(
@@ -134,9 +150,6 @@ async def get_flow_events_response(
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
         if event_delivery in (EventDeliveryType.STREAMING, EventDeliveryType.DIRECT):
-            if event_task is None:
-                await logger.aerror(f"No event task found for job {job_id}")
-                raise HTTPException(status_code=404, detail="No event task found for job")
             return await create_flow_response(
                 queue=main_queue,
                 event_manager=event_manager,
@@ -193,7 +206,7 @@ async def get_flow_events_response(
 async def create_flow_response(
     queue: asyncio.Queue,
     event_manager: EventManager,
-    event_task: asyncio.Task,
+    event_task: asyncio.Task | None,
 ) -> DisconnectHandlerStreamingResponse:
     """Create a streaming response for the flow build process."""
 
@@ -210,9 +223,27 @@ async def create_flow_response(
                 await logger.aexception(f"Error consuming event: {exc}")
                 break
 
-    def on_disconnect() -> None:
+    async def on_disconnect() -> None:
         logger.debug("Client disconnected, closing tasks")
-        event_task.cancel()
+        if event_task is not None:
+            event_task.cancel()
+        else:
+            # Known limitation: cross-worker passive disconnect cannot be propagated.
+            # When this worker does not own the build task (event_task is None), there
+            # is no in-process handle to cancel the producer.  The producer worker will
+            # continue emitting events into the queue until the build completes naturally.
+            # Proper cross-worker cancellation would require a Redis side-channel
+            # (e.g. pubsub or a langflow:cancel:<job_id> key) that the build loop polls
+            # periodically.  Until that is implemented, log a warning so the silent
+            # no-op is at least observable in logs.
+            logger.warning(
+                "Client disconnected but no local event_task found — "
+                "this worker does not own the build task. "
+                "The producer will keep running until the build finishes naturally. "
+                "Cross-worker passive-disconnect cancellation is not yet implemented."
+            )
+        if isinstance(queue, _CancellableQueue):
+            await queue.cancel()
         event_manager.on_end(data={})
 
     return DisconnectHandlerStreamingResponse(
@@ -636,8 +667,14 @@ async def cancel_flow_build(
     _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
-        await logger.awarning(f"No event task found for job_id {job_id}")
-        return True  # Nothing to cancel is still a success
+        # Cross-worker path: the job is owned by another process. We have no local task
+        # to cancel, so the build continues unaffected. Return False so callers know the
+        # cancellation did not take effect rather than reporting a false success.
+        await logger.awarning(
+            f"No event task found for job_id {job_id} — likely owned by another worker. "
+            "Cross-worker cancellation is not supported; the build will continue."
+        )
+        return False
 
     if event_task.done():
         await logger.ainfo(f"Task for job_id {job_id} is already completed")

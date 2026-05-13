@@ -523,6 +523,45 @@ async def test_upload_file(client: AsyncClient, json_flow: str, logged_in_header
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_file_flows_not_a_list_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": <non-list> } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": "oops"})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_item_not_a_dict_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [1] } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": [1]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_mixed_items_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [{}, 42] } must return 422 at the bad item."""
+    file_contents = orjson.dumps({"flows": [{}, 42]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows[1]" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
 async def test_download_file(
     client: AsyncClient,
     json_flow,
