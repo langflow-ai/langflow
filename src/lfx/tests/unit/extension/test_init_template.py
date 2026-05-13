@@ -246,6 +246,29 @@ def test_files_written_list_is_complete(tmp_path: Path) -> None:
         "components/my_ext/__init__.py",
         "components/my_ext/hello.py",
         "extension.json",
+        "pyproject.toml",
         "tests/__init__.py",
         "tests/test_hello.py",
     ]
+
+
+def test_scaffolded_pyproject_is_pip_installable(tmp_path: Path) -> None:
+    """The scaffolded pyproject.toml must satisfy ``pip install -e .`` shape.
+
+    The quickstart and author guide both tell first-time authors to run
+    ``pip install -e .``; this test parses the generated file with
+    ``tomllib`` and asserts the [build-system] + [project] keys exist.
+    """
+    import tomllib
+
+    target = tmp_path / "my-ext"
+    init_extension(_options(target))
+    payload = (target / "pyproject.toml").read_text(encoding="utf-8")
+    data = tomllib.loads(payload)
+    assert "build-system" in data
+    assert data["build-system"]["build-backend"] == "setuptools.build_meta"
+    assert data["project"]["name"] == "lfx-my-ext"
+    assert data["project"]["version"] == "0.1.0"
+    # The [tool.langflow.extension] section points back at the manifest so
+    # the installed wheel is discoverable by lfx.extension.discovery.
+    assert data["tool"]["langflow"]["extension"]["manifest"] == "extension.json"

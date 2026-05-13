@@ -174,8 +174,22 @@ def list_command(
     all_errors = errors + dup_errors
     rows = registry.list_extensions()
 
+    # Codes that signal "something is wrong but discovery itself succeeded".
+    # ``lfx extension list`` should still exit 0 in those cases so CI scripts
+    # like ``lfx extension list && ...`` keep flowing -- the warning stays on
+    # stderr where humans see it.  Configuration errors that point at a
+    # missing seed dir stay as hard failures: that's an operator misconfig,
+    # not a runtime warning.
+    warn_only_codes = frozenset({"seed-bundle-shadowed"})
+    hard_errors = [err for err in all_errors if err.code not in warn_only_codes]
+
     if output_format == "json":
         payload = {
+            "interpreter": {
+                "executable": sys.executable,
+                "prefix": sys.prefix,
+                "version": sys.version.split()[0],
+            },
             "extensions": [
                 {
                     "id": ext.extension_id,
@@ -193,9 +207,17 @@ def list_command(
             "errors": [err.to_dict() for err in all_errors],
         }
         typer.echo(json.dumps(payload, indent=2, sort_keys=True))
-        if all_errors:
+        if hard_errors:
             raise typer.Exit(code=1)
         return
+
+    # Print interpreter info up front so an operator who sees an empty
+    # listing can immediately spot a wrong-venv mismatch between ``lfx``
+    # and ``langflow run`` without a separate "did my bundle install?"
+    # debug cycle.
+    typer.echo(f"python:     {sys.executable}")
+    typer.echo(f"sys.prefix: {sys.prefix}")
+    typer.echo("")
 
     if not rows and not all_errors:
         typer.echo("No installed or seed-directory Extensions discovered.")
@@ -243,7 +265,8 @@ def list_command(
         for err in all_errors:
             typer.echo(format_extension_error(err), err=True)
             typer.echo("", err=True)
-        raise typer.Exit(code=1)
+        if hard_errors:
+            raise typer.Exit(code=1)
 
 
 @extension_app.command(
@@ -268,7 +291,7 @@ def reload_command(
     target: str | None = typer.Option(
         None,
         "--target",
-        help=("Langflow server URL (default: $LANGFLOW_HOST / $LANGFLOW_SERVER_URL / http://localhost:7860)."),
+        help=("Langflow server URL (default: $LANGFLOW_HOST / http://localhost:7860)."),
     ),
     api_key: str | None = typer.Option(
         None,

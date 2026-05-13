@@ -299,6 +299,52 @@ be picked up at server startup as a real `@official` Extension.
 """
 
 
+def _pyproject_payload(options: InitOptions) -> str:
+    """A minimal PEP 621 ``pyproject.toml`` so ``pip install -e .`` works.
+
+    The author guide and quickstart both tell first-time authors to
+    ``pip install -e .`` after ``lfx extension init``; without this file
+    that step fails with ``Neither 'setup.py' nor 'pyproject.toml' found``.
+
+    The ``[tool.langflow.extension]`` entry mirrors the ``extension.json``
+    discovery path so an installed wheel is picked up at server startup
+    even when the consumer copied the manifest into a non-default
+    location.  The wheel still ships ``extension.json`` (declared under
+    ``[tool.setuptools.package-data]``) so ``importlib.metadata.files()``
+    can locate it the way :func:`discover_installed_extensions` expects.
+    """
+    distribution_name = f"lfx-{options.extension_id}".replace("_", "-")
+    package_name = options.bundle_name
+    return f"""\
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "{distribution_name}"
+version = "0.1.0"
+description = "{options.display_name} -- a Langflow Extension."
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+package-dir = {{"" = "."}}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["components*"]
+
+[tool.setuptools.package-data]
+"*" = ["extension.json"]
+
+[tool.langflow.extension]
+manifest = "extension.json"
+
+[project.entry-points."langflow.extensions"]
+{package_name} = "components.{package_name}"
+"""
+
+
 _GITIGNORE_BODY: str = """# Python
 __pycache__/
 *.py[cod]
@@ -335,6 +381,7 @@ def _files_for(options: InitOptions) -> list[tuple[str, str]]:
     """
     return [
         ("extension.json", json.dumps(_manifest_payload(options), indent=2, sort_keys=False) + "\n"),
+        ("pyproject.toml", _pyproject_payload(options)),
         ("README.md", _readme(options)),
         (".gitignore", _GITIGNORE_BODY),
         (f"components/{options.bundle_name}/__init__.py", ""),

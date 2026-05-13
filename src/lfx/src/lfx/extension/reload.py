@@ -258,8 +258,9 @@ def reload_bundle(
                     location=bundle,
                     content=bundle,
                     hint=(
-                        "Install the extension first or pass an explicit source path "
-                        "to reload (e.g. via `extension reload --bundle <name> <path>`)."
+                        "Install the extension first (pip install / seed directory / "
+                        "`lfx extension dev <path>`), then reload via "
+                        "`lfx extension reload <extension-id> --bundle <name>`."
                     ),
                 )
             ],

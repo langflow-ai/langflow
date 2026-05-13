@@ -109,6 +109,10 @@ Atomic-swap reload (Mode A only) is what makes the dev loop tolerable. The five 
 4. **Stage 4 — clean up** the staging namespace.
 5. **Stage 5 — notify**. Today this is a logger emission of the added/removed component lists plus a registered post-swap hook that refreshes the component cache; the typed `bundle_reloaded` events pipeline (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook) is deferred to LE-1017. The reload route's HTTP response body already carries the typed result, so the palette's reload action gets immediate feedback through the existing mutation hook ([`use-reload-bundle.ts`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/controllers/API/queries/extensions/use-reload-bundle.ts)) until the events stream lands.
 
+:::note First reload after boot
+On the **first** reload after a fresh server boot, `components_added` and `components_removed` are always empty: the bundle is already registered at startup, so the post-swap diff is against an identical pre-swap snapshot. This is expected — non-empty deltas only appear once you edit a component (add/remove a class, rename, etc.) and reload again.
+:::
+
 Reload is **not** a trust boundary. Bundle code was trusted at install time; the reload pipeline only handles the swap mechanics. Mode B/C deployments rebuild the Docker image rather than reload — see [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx).
 
 ## Porting an in-tree component

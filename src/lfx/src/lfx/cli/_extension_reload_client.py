@@ -42,10 +42,10 @@ class ReloadHttpResponse:
 
 
 def resolve_target(explicit: str | None) -> str:
-    """Pick the server URL to call.  Precedence: explicit > env > default."""
+    """Pick the server URL to call.  Precedence: explicit > $LANGFLOW_HOST > default."""
     if explicit:
         return explicit.rstrip("/")
-    env_target = os.environ.get("LANGFLOW_HOST") or os.environ.get("LANGFLOW_SERVER_URL")
+    env_target = os.environ.get("LANGFLOW_HOST")
     if env_target:
         return env_target.rstrip("/")
     return DEFAULT_TARGET
