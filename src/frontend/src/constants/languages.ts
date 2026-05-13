@@ -1,4 +1,5 @@
 export const SUPPORTED_LANGUAGES = [
+  { code: "th", label: "ภาษาไทย" },
   { code: "en", label: "English" },
   { code: "fr", label: "Français" },
   { code: "es", label: "Español" },
