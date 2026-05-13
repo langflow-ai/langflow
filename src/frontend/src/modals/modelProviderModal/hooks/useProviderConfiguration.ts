@@ -561,23 +561,26 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  // ``pendingModelToggles`` holds the user's intended state for any model
-  // whose change has not yet been confirmed by the server. It serves two
-  // roles:
+  // Two separate model-toggle buffers, each with a single responsibility:
   //
-  //   1. It's the send buffer the debounced flush snapshots into a mutation
-  //      payload.
-  //   2. It's the overlay the re-overlay effect (further down) re-applies
-  //      whenever ``useGetEnabledModels`` emits new data — so that a
-  //      refetch which lands inside the debounce or in-flight-mutation
-  //      window can't overwrite the optimistic cache with stale server
-  //      state.
+  //   - ``overlayToggles`` is the union of every toggle the user has made
+  //     whose change has not yet been confirmed by the server. The
+  //     re-overlay effect (further down) re-applies it whenever
+  //     ``useGetEnabledModels`` emits new data, so any refetch which lands
+  //     inside the debounce or in-flight-mutation window can't overwrite
+  //     the optimistic cache with stale server state. Entries are drained
+  //     per-key on ``onSettled``, but only when the entry still matches the
+  //     value we sent (a user re-toggle mid-flight becomes a fresh intent
+  //     and must survive the clear).
   //
-  // Because of role (2), we MUST keep entries in this map until the
-  // corresponding mutation settles. Clearing too early would leave the
-  // optimistic UI unprotected against any refetch that runs between the
-  // click and ``onSettled``.
-  const pendingModelToggles = useRef<Record<string, boolean>>({});
+  //   - ``unsentToggles`` is the strict subset that has NOT been sent in a
+  //     mutation yet (or was re-toggled since the last send). It's drained
+  //     immediately at flush time so subsequent flushes don't resend the
+  //     same payload — without this split, mutation A's in-flight overlay
+  //     entries would be snapshotted into mutation B's payload, producing
+  //     duplicate requests with non-deterministic success/failure ordering.
+  const overlayToggles = useRef<Record<string, boolean>>({});
+  const unsentToggles = useRef<Record<string, boolean>>({});
   const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
     undefined,
   );
@@ -586,17 +589,18 @@ export const useProviderConfiguration = ({
   // can react when a refetch lands.
   const { data: enabledModelsData } = useGetEnabledModels();
 
-  // After a mutation settles, remove only the entries we just sent — and
-  // only if their value still matches what we sent (a faster ``=== `` test
-  // catches the case where the user re-toggled the same model mid-flight,
-  // which becomes a fresh intent that must NOT be cleared).
-  const clearSentToggles = useCallback((sent: Record<string, boolean>) => {
+  // After a mutation settles, remove its entries from the overlay — but
+  // only when the current overlay value still matches what we sent. A
+  // mismatch means the user re-toggled the same model mid-flight; that
+  // entry already sits in ``unsentToggles`` for the next flush and must
+  // not be dropped from the overlay until its own mutation settles.
+  const clearSentOverlay = useCallback((sent: Record<string, boolean>) => {
     for (const [key, value] of Object.entries(sent)) {
-      if (pendingModelToggles.current[key] === value) {
-        delete pendingModelToggles.current[key];
+      if (overlayToggles.current[key] === value) {
+        delete overlayToggles.current[key];
       }
     }
-    if (Object.keys(pendingModelToggles.current).length === 0) {
+    if (Object.keys(overlayToggles.current).length === 0) {
       fallbackModelData.current = undefined;
     }
   }, []);
@@ -605,7 +609,7 @@ export const useProviderConfiguration = ({
     if (!syncedSelectedProvider?.provider) return;
     const providerName = syncedSelectedProvider.provider;
 
-    const togglesToSend = { ...pendingModelToggles.current };
+    const togglesToSend = { ...unsentToggles.current };
     if (Object.keys(togglesToSend).length === 0) return;
 
     const updates = Object.entries(togglesToSend).map(
@@ -617,16 +621,16 @@ export const useProviderConfiguration = ({
     );
 
     const previousData = fallbackModelData.current;
-    // NOTE: we deliberately do NOT clear ``pendingModelToggles`` or
-    // ``fallbackModelData`` here. They stay populated until ``onSettled``
-    // so the re-overlay effect can repel any refetch that lands while the
-    // mutation is in flight.
+    // Drain ``unsentToggles`` immediately — a follow-up flush triggered by
+    // a new user toggle must NOT resend what we already sent. The matching
+    // ``overlayToggles`` entries stay around to repel mid-flight refetches.
+    unsentToggles.current = {};
 
     updateEnabledModels(
       { updates },
       {
         onError: (error: unknown) => {
-          clearSentToggles(togglesToSend);
+          clearSentOverlay(togglesToSend);
           if (previousData) {
             queryClient.setQueryData(["useGetEnabledModels"], previousData);
           }
@@ -636,7 +640,7 @@ export const useProviderConfiguration = ({
           });
         },
         onSettled: () => {
-          clearSentToggles(togglesToSend);
+          clearSentOverlay(togglesToSend);
           queryClient.invalidateQueries({
             queryKey: ["useGetEnabledModels"],
           });
@@ -656,7 +660,7 @@ export const useProviderConfiguration = ({
     if (!syncedSelectedProvider?.provider) return;
     const providerName = syncedSelectedProvider.provider;
 
-    const togglesToSend = { ...pendingModelToggles.current };
+    const togglesToSend = { ...unsentToggles.current };
     if (Object.keys(togglesToSend).length === 0) return;
 
     const updates = Object.entries(togglesToSend).map(
@@ -668,15 +672,15 @@ export const useProviderConfiguration = ({
     );
 
     const previousData = fallbackModelData.current;
-    // See ``flushModelToggles``: pending stays populated until settle.
+    unsentToggles.current = {};
 
     try {
       await updateEnabledModelsAsync({ updates });
-      clearSentToggles(togglesToSend);
+      clearSentOverlay(togglesToSend);
       // Mutation succeeded — query invalidation is handled by
       // refreshAllModelInputs which runs after this promise resolves.
     } catch (error: unknown) {
-      clearSentToggles(togglesToSend);
+      clearSentOverlay(togglesToSend);
       // Revert optimistic update on failure
       if (previousData) {
         queryClient.setQueryData(["useGetEnabledModels"], previousData);
@@ -692,7 +696,7 @@ export const useProviderConfiguration = ({
     queryClient,
     updateEnabledModelsAsync,
     setErrorData,
-    clearSentToggles,
+    clearSentOverlay,
   ]);
 
   const handleModelToggle = useCallback(
@@ -707,7 +711,7 @@ export const useProviderConfiguration = ({
       // ``cancelQueries`` covers the ones already in flight at click time.
       void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
 
-      if (Object.keys(pendingModelToggles.current).length === 0) {
+      if (Object.keys(overlayToggles.current).length === 0) {
         fallbackModelData.current =
           queryClient.getQueryData<EnabledModelsResponse>([
             "useGetEnabledModels",
@@ -731,7 +735,10 @@ export const useProviderConfiguration = ({
         },
       );
 
-      pendingModelToggles.current[modelName] = enabled;
+      // Track in BOTH buffers: overlay for UI protection across refetches,
+      // unsent for the next flush's payload.
+      overlayToggles.current[modelName] = enabled;
+      unsentToggles.current[modelName] = enabled;
       flushModelToggles();
     },
     [syncedSelectedProvider, queryClient, flushModelToggles],
@@ -739,21 +746,21 @@ export const useProviderConfiguration = ({
 
   // Re-overlay effect — protects the pending-toggle window in its entirety,
   // not just the instant of the click. Any refetch (window focus, remount,
-  // reconnect, or a stale-time expiry) that lands while ``pendingModelToggles``
+  // reconnect, or a stale-time expiry) that lands while ``overlayToggles``
   // has entries will surface the server's pre-toggle state into
   // ``enabledModelsData``; this effect detects the drift and re-applies the
-  // pending overlay so the Switch tracks the user's intent through the entire
-  // debounce + in-flight window. Once ``clearSentToggles`` drains the entry
-  // on ``onSettled``, the next data emission is a no-op.
+  // pending overlay so the Switch tracks the user's intent through the
+  // entire debounce + in-flight window. Once ``clearSentOverlay`` drains
+  // the entry on ``onSettled``, the next data emission is a no-op.
   useEffect(() => {
     if (!syncedSelectedProvider?.provider) return;
     if (!enabledModelsData) return;
-    const pending = pendingModelToggles.current;
-    if (Object.keys(pending).length === 0) return;
+    const overlay = overlayToggles.current;
+    if (Object.keys(overlay).length === 0) return;
 
     const providerName = syncedSelectedProvider.provider;
     const current = enabledModelsData.enabled_models[providerName] ?? {};
-    const drifted = Object.entries(pending).some(
+    const drifted = Object.entries(overlay).some(
       ([model, enabled]) => current[model] !== enabled,
     );
     if (!drifted) return;
@@ -768,7 +775,7 @@ export const useProviderConfiguration = ({
             ...old.enabled_models,
             [providerName]: {
               ...(old.enabled_models[providerName] ?? {}),
-              ...pending,
+              ...overlay,
             },
           },
         };

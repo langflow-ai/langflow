@@ -62,10 +62,26 @@ jest.mock(
   }),
 );
 
+// Mutation mock — tests can read the recorded payloads to assert that each
+// flush sends ONLY the unsent slice, never re-sending an in-flight overlay.
+const mutationCalls: Array<{
+  updates: { provider: string; model_id: string; enabled: boolean }[];
+}> = [];
+const mutationCallbacks: Array<{
+  onError?: (error: unknown) => void;
+  onSettled?: () => void;
+}> = [];
+
 jest.mock("@/controllers/API/queries/models/use-update-enabled-models", () => ({
   useUpdateEnabledModels: () => ({
-    mutate: jest.fn(),
-    mutateAsync: jest.fn(() => Promise.resolve({ disabled_models: [] })),
+    mutate: jest.fn((vars, callbacks) => {
+      mutationCalls.push(vars);
+      mutationCallbacks.push(callbacks);
+    }),
+    mutateAsync: jest.fn((vars) => {
+      mutationCalls.push(vars);
+      return Promise.resolve({ disabled_models: [] });
+    }),
   }),
 }));
 
@@ -126,9 +142,27 @@ const provider: Provider = {
   ],
 } as Provider;
 
+const providerWithBoth: Provider = {
+  provider: "OpenAI",
+  is_enabled: true,
+  is_configured: true,
+  models: [
+    {
+      model_name: "gpt-4",
+      metadata: { model_type: "llm" },
+    },
+    {
+      model_name: "gpt-3.5-turbo",
+      metadata: { model_type: "llm" },
+    },
+  ],
+} as Provider;
+
 describe("useProviderConfiguration.handleModelToggle", () => {
   beforeEach(() => {
     recordedCalls.length = 0;
+    mutationCalls.length = 0;
+    mutationCallbacks.length = 0;
     trackingQueryClient.cancelQueries.mockClear();
     trackingQueryClient.setQueryData.mockClear();
     trackingQueryClient.getQueryData.mockClear();
@@ -226,6 +260,57 @@ describe("useProviderConfiguration.handleModelToggle", () => {
     }) as { enabled_models: { OpenAI: Record<string, boolean> } };
     expect(result2.enabled_models.OpenAI["gpt-4"]).toBe(false);
     expect(result2.enabled_models.OpenAI["gpt-3.5-turbo"]).toBe(true);
+  });
+
+  it("does not resend in-flight toggles when a new toggle is flushed", () => {
+    const { result } = renderHook(() =>
+      useProviderConfiguration({ selectedProvider: providerWithBoth }),
+    );
+
+    // Toggle A → debounced flush (synchronous via test mock) sends only A.
+    act(() => {
+      result.current.handleModelToggle("gpt-4", false);
+    });
+    expect(mutationCalls).toHaveLength(1);
+    expect(mutationCalls[0].updates).toEqual([
+      { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+    ]);
+
+    // Toggle B while A's mutation is still in flight (we haven't fired
+    // onSettled yet). The next flush MUST send ONLY B — re-sending A would
+    // be a duplicate request with non-deterministic ordering vs the original.
+    act(() => {
+      result.current.handleModelToggle("gpt-3.5-turbo", false);
+    });
+    expect(mutationCalls).toHaveLength(2);
+    expect(mutationCalls[1].updates).toEqual([
+      { provider: "OpenAI", model_id: "gpt-3.5-turbo", enabled: false },
+    ]);
+  });
+
+  it("re-sends a model when the user re-toggles it after the previous flush fired", () => {
+    const { result } = renderHook(() =>
+      useProviderConfiguration({ selectedProvider: provider }),
+    );
+
+    // Toggle A → false.
+    act(() => {
+      result.current.handleModelToggle("gpt-4", false);
+    });
+    expect(mutationCalls).toHaveLength(1);
+    expect(mutationCalls[0].updates).toEqual([
+      { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+    ]);
+
+    // User re-toggles A → true before the first mutation settles. The
+    // re-toggle is a fresh intent and must be sent.
+    act(() => {
+      result.current.handleModelToggle("gpt-4", true);
+    });
+    expect(mutationCalls).toHaveLength(2);
+    expect(mutationCalls[1].updates).toEqual([
+      { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+    ]);
   });
 
   it("does not re-overlay when no toggles are pending", () => {
