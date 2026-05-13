@@ -761,7 +761,8 @@ async def test_should_call_tool_and_populate_token_usage_when_running_against_re
     Skipped without `OPENAI_API_KEY`; uses `gpt-4o-mini` to keep the run cheap.
     """
     from langchain_core.tools import tool
-    from langchain_openai import ChatOpenAI
+
+    ChatOpenAI = pytest.importorskip("langchain_openai").ChatOpenAI
 
     @tool
     def echo(text: str) -> str:
