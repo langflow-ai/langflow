@@ -153,12 +153,8 @@ class JobService(Service):
             Updated Job object or None if not found
         """
         async with session_scope() as session:
-            job = await update_job_status(session, job_id, status)
-            if job and finished_timestamp:
-                job.finished_timestamp = datetime.now(timezone.utc)
-                session.add(job)
-                await session.flush()
-            return job
+            finished_at = datetime.now(timezone.utc) if finished_timestamp else None
+            return await update_job_status(session, job_id, status, finished_timestamp=finished_at)
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.

@@ -41,7 +41,8 @@ async def job_queue_metrics() -> dict:
     ``dispatched_foreign`` / ``publish_errors`` / ``dispatcher_reconnects`` /
     ``polling_watchdog_kills`` / ``activity_touch_errors`` /
     ``activity_get_errors`` / ``activity_parse_errors`` /
-    ``dispatcher_internal_errors``).
+    ``dispatcher_internal_errors``). ``dispatcher_reconnects`` tracks explicit
+    dispatcher-loop retries and redis-py transparent pubsub reconnect callbacks.
 
     Restricted to superusers because the snapshot exposes process-wide tenant
     activity (live job counts, cancel rates) — useful for ops, sensitive in

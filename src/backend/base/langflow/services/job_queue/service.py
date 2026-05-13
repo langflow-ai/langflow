@@ -246,9 +246,9 @@ class JobQueueService(Service):
            writes ``_STREAM_SENTINEL_DATA`` to the Redis Stream before cleanup
            deletes the key, preventing consumers from hanging indefinitely.
 
-        ``asyncio.CancelledError`` is not caught here; the caller (``cleanup_job`` /
-        ``cancel_flow_build``) is responsible for those paths and already handles
-        sentinel delivery via bridge cancellation + stream-key deletion.
+        ``asyncio.CancelledError`` is not caught here; the caller
+        (``cancel_job`` / ``cancel_flow_build``) is responsible for user-initiated
+        cancel paths and any backend-specific end-of-stream delivery.
         """
         try:
             await task_coro
@@ -355,6 +355,15 @@ class JobQueueService(Service):
         self._queues.pop(job_id, None)
         self._job_owners.pop(job_id, None)
         await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
+
+    async def cancel_job(self, job_id: str) -> None:
+        """Cancel an active job and release its resources.
+
+        The in-memory backend can use the normal cleanup path directly.  Backends
+        with cross-worker consumers can override this hook when cancellation needs
+        extra coordination before resource teardown.
+        """
+        await self.cleanup_job(job_id)
 
     async def _periodic_cleanup(self) -> None:
         """Execute a periodic task that cleans up completed or cancelled job queues.
@@ -588,6 +597,14 @@ class RedisQueueWrapper:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._fill_task
 
+    async def finish_with_sentinel(self) -> None:
+        """Stop the fill task and wake active consumers with an end-of-stream item."""
+        if not self._fill_task.done():
+            self._fill_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._fill_task
+        await self._buffer.put((None, None, time.time()))
+
 
 class RedisJobQueueService(JobQueueService):
     """Redis-backed job queue service for multi-worker deployments.
@@ -670,6 +687,7 @@ class RedisJobQueueService(JobQueueService):
         self._connection_check_task: asyncio.Task | None = None
         self._bridge_tasks: dict[str, asyncio.Task] = {}
         self._consumer_wrappers: dict[str, RedisQueueWrapper] = {}
+        self._owner_refresh_tasks: dict[str, asyncio.Task] = {}
         # Single PSUBSCRIBE task per worker — handles every job's cancel channel.
         # Replaces the previous per-job subscriber so connection-pool usage is O(1)
         # in active job count.
@@ -777,6 +795,13 @@ class RedisJobQueueService(JobQueueService):
 
         # Wait briefly for any fire-and-forget background tasks (marker checks,
         # post-cancel cleanups) so they don't leak across stop boundaries.
+        for refresh_task in list(self._owner_refresh_tasks.values()):
+            if not refresh_task.done():
+                refresh_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await refresh_task
+        self._owner_refresh_tasks.clear()
+
         for bg in list(self._background_tasks):
             if not bg.done():
                 bg.cancel()
@@ -903,6 +928,8 @@ class RedisJobQueueService(JobQueueService):
         # sees the job in self._queues without a corresponding start timestamp.
         self._job_start_times[job_id] = time.monotonic()
         super().start_job(job_id, task_coro)
+        if job_id in self._job_owners:
+            self._ensure_owner_refresh_task(job_id)
         if not self._cancel_channel_enabled or self._client is None:
             return
         # Initialize the activity heartbeat so the watchdog gives clients the
@@ -940,6 +967,37 @@ class RedisJobQueueService(JobQueueService):
         except Exception as exc:  # noqa: BLE001
             self._cancel_stats["activity_touch_errors"] += 1
             await logger.adebug(f"touch_activity SET failed for {job_id}: {exc}")
+
+    def _owner_refresh_interval_s(self) -> float:
+        """Return the owner-key refresh cadence for active Redis jobs."""
+        return max(min(self._ttl / 2, 30.0), 0.1)
+
+    async def _set_owner_key(self, job_id: str, user_id: UUID) -> None:
+        if self._client:
+            await self._client.set(self._owner_key(job_id), str(user_id), ex=self._ttl)
+
+    def _ensure_owner_refresh_task(self, job_id: str) -> None:
+        task = self._owner_refresh_tasks.get(job_id)
+        if task is None or task.done():
+            self._owner_refresh_tasks[job_id] = asyncio.create_task(self._refresh_owner_key_until_done(job_id))
+
+    async def _refresh_owner_key_until_done(self, job_id: str) -> None:
+        """Keep the Redis owner key alive while this worker still owns the job."""
+        current_task = asyncio.current_task()
+        try:
+            while not self._closed and job_id in self._queues:
+                user_id = self._job_owners.get(job_id)
+                if user_id is not None and self._client is not None:
+                    try:
+                        await self._set_owner_key(job_id, user_id)
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.adebug(f"owner key refresh failed for {job_id}: {exc}")
+                await asyncio.sleep(self._owner_refresh_interval_s())
+        finally:
+            if self._owner_refresh_tasks.get(job_id) is current_task:
+                self._owner_refresh_tasks.pop(job_id, None)
 
     async def _check_pending_cancel_marker(self, job_id: str) -> None:
         """Race-safety check: if a cancel marker exists, fire it immediately."""
@@ -1040,6 +1098,8 @@ class RedisJobQueueService(JobQueueService):
         * On successful PSUBSCRIBE the backoff resets.
         * Any non-cancel exception is logged at warning, backoff doubles up to
           ``_DISPATCHER_RECONNECT_MAX_BACKOFF_S``, and we retry.
+        * redis-py may also reconnect the active pubsub connection internally;
+          the connection callback below records those transparent reconnects.
         * ``asyncio.CancelledError`` (service stop) breaks out cleanly.
         """
         pattern = f"{self.CANCEL_CHANNEL_PREFIX}*"
@@ -1048,6 +1108,7 @@ class RedisJobQueueService(JobQueueService):
             pubsub = self._client.pubsub()
             try:
                 await pubsub.psubscribe(pattern)
+                self._register_cancel_dispatcher_reconnect_callback(pubsub)
                 backoff = self._DISPATCHER_RECONNECT_INITIAL_BACKOFF_S
                 await logger.adebug(f"RedisJobQueueService: cancel dispatcher subscribed to {pattern}")
                 async for message in pubsub.listen():
@@ -1095,12 +1156,29 @@ class RedisJobQueueService(JobQueueService):
                 return
             backoff = min(backoff * 2, self._DISPATCHER_RECONNECT_MAX_BACKOFF_S)
 
-    @staticmethod
-    async def _close_pubsub(pubsub: Any) -> None:
+    async def _on_cancel_dispatcher_connection_reconnect(self, _connection: Any) -> None:
+        """Record redis-py reconnects that happen inside an active PubSub."""
+        self._cancel_stats["dispatcher_reconnects"] += 1
+        with contextlib.suppress(Exception):
+            await logger.awarning("Cancel dispatcher pubsub connection reconnected transparently")
+
+    def _register_cancel_dispatcher_reconnect_callback(self, pubsub: Any) -> None:
+        connection = getattr(pubsub, "connection", None)
+        register = getattr(connection, "register_connect_callback", None)
+        if register is not None:
+            with contextlib.suppress(Exception):
+                register(self._on_cancel_dispatcher_connection_reconnect)
+
+    async def _close_pubsub(self, pubsub: Any) -> None:
         """Close a pubsub object regardless of redis-py version.
 
         Newer redis-py (>=5) exposes ``aclose``; older releases used ``close``.
         """
+        connection = getattr(pubsub, "connection", None)
+        deregister = getattr(connection, "deregister_connect_callback", None)
+        if deregister is not None:
+            with contextlib.suppress(Exception):
+                deregister(self._on_cancel_dispatcher_connection_reconnect)
         close = getattr(pubsub, "aclose", None) or getattr(pubsub, "close", None)
         if close is None:
             return
@@ -1109,13 +1187,14 @@ class RedisJobQueueService(JobQueueService):
             if asyncio.iscoroutine(result):
                 await result
 
-    async def _handle_cancel(self, job_id: str, *, source: str) -> None:
-        """Apply a received cancel signal for *job_id* if this worker owns the job.
+    async def _apply_cancel(self, job_id: str, *, source: str, wait_for_cleanup: bool) -> None:
+        """Apply a cancel signal for *job_id* if this worker owns the job.
 
         Cancels the local task, flushes a sentinel through the bridge so cross-worker
         consumers see end-of-stream promptly, and triggers fast cleanup of the
         Redis stream + owner keys.  No-op if this worker doesn't own the job
-        (the owning worker's dispatcher will receive the same publish).
+        (the owning worker's dispatcher will receive the same publish for
+        pub/sub cancels).
         """
         entry = self._queues.get(job_id)
         if entry is None:
@@ -1123,7 +1202,7 @@ class RedisJobQueueService(JobQueueService):
             await logger.adebug(f"Cancel for {job_id} ignored on this worker (not owner); source={source}")
             return
         self._cancel_stats["dispatched_owned"] += 1
-        await logger.ainfo(f"Cross-worker cancel applied to {job_id} (source={source})")
+        await logger.ainfo(f"Cancel applied to {job_id} (source={source})")
         main_queue, _, task, _ = entry
         if task is not None and not task.done():
             task.cancel()
@@ -1133,7 +1212,15 @@ class RedisJobQueueService(JobQueueService):
             main_queue.put_nowait((None, None, time.time()))
         # Trigger fast cleanup; runs as a fire-and-forget task that swallows the
         # expected CancelledError re-raised by super().cleanup_job.
-        self._spawn_background(self._post_cancel_cleanup(job_id))
+        cleanup_task = self._spawn_background(self._post_cancel_cleanup(job_id))
+        if wait_for_cleanup:
+            # Keep cleanup alive even if the HTTP request is cancelled while the
+            # endpoint is waiting for confirmation.
+            await asyncio.shield(cleanup_task)
+
+    async def _handle_cancel(self, job_id: str, *, source: str) -> None:
+        """Apply a received pub/sub or marker cancel signal for *job_id*."""
+        await self._apply_cancel(job_id, source=source, wait_for_cleanup=False)
 
     # Max time _post_cancel_cleanup waits on cleanup_job before giving up.
     # Bounds the lifetime of the background task even under Redis pathology
@@ -1188,6 +1275,16 @@ class RedisJobQueueService(JobQueueService):
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(f"Post-cancel cleanup error for {job_id}: {exc}")
 
+    async def cancel_job(self, job_id: str) -> None:
+        """Cancel an owned Redis job after publishing an end-of-stream sentinel.
+
+        ``cleanup_job`` alone cancels the bridge before the cancelled build task
+        can publish a terminal stream record.  Route explicit same-worker cancels
+        through the same sentinel-flush path used by cross-worker pub/sub cancels
+        so any Redis-backed consumer terminates promptly.
+        """
+        await self._apply_cancel(job_id, source="local", wait_for_cleanup=True)
+
     async def signal_cancel(self, job_id: str) -> int:
         """Publish a cancel signal for *job_id* across all worker dispatchers.
 
@@ -1227,6 +1324,8 @@ class RedisJobQueueService(JobQueueService):
         * ``background_task_count`` — fire-and-forget marker checks + cleanups.
         * ``cancel_dispatcher_running`` — True if the PSUBSCRIBE loop is alive.
         * ``cancel_stats`` — a copy of the cancel observability counters.
+          ``dispatcher_reconnects`` counts explicit dispatcher-loop retries and
+          redis-py transparent pubsub reconnect callbacks.
         """
         base = super().metrics_snapshot()
         base["backend"] = "redis"
@@ -1316,9 +1415,18 @@ class RedisJobQueueService(JobQueueService):
         # Drop the watchdog start-time entry alongside ownership.
         self._job_start_times.pop(job_id, None)
 
+        owner_refresh_task = self._owner_refresh_tasks.pop(job_id, None)
+        if owner_refresh_task is not None and not owner_refresh_task.done():
+            owner_refresh_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await owner_refresh_task
+
         wrapper = self._consumer_wrappers.pop(job_id, None)
         if wrapper is not None:
-            await wrapper.cancel()
+            if is_owner:
+                await wrapper.finish_with_sentinel()
+            else:
+                await wrapper.cancel()
 
         bridge = self._bridge_tasks.pop(job_id, None)
         if bridge and not bridge.done():
@@ -1342,8 +1450,9 @@ class RedisJobQueueService(JobQueueService):
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
         """Store the job owner in Redis for cross-worker ownership checks."""
         self._job_owners[job_id] = user_id
-        if self._client:
-            await self._client.set(self._owner_key(job_id), str(user_id), ex=self._ttl)
+        await self._set_owner_key(job_id, user_id)
+        if job_id in self._queues:
+            self._ensure_owner_refresh_task(job_id)
 
     async def get_job_owner(self, job_id: str) -> UUID | None:
         """Retrieve the job owner, checking Redis when not found locally.

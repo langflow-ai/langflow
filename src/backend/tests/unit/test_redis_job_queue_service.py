@@ -13,7 +13,7 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
-from langflow.api.build import create_flow_response, get_flow_events_response
+from langflow.api.build import cancel_flow_build, create_flow_response, get_flow_events_response
 from langflow.api.utils import EventDeliveryType
 from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
@@ -64,6 +64,12 @@ async def _stop_service(service: RedisJobQueueService) -> None:
         with contextlib.suppress(asyncio.CancelledError):
             await service._cancel_dispatcher_task
     service._cancel_dispatcher_task = None
+    for refresh_task in list(service._owner_refresh_tasks.values()):
+        if not refresh_task.done():
+            refresh_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await refresh_task
+    service._owner_refresh_tasks.clear()
     for bg in list(service._background_tasks):
         if not bg.done():
             bg.cancel()
@@ -431,6 +437,35 @@ async def test_redis_service_owner_stored_in_redis():
 
 
 @pytest.mark.asyncio
+async def test_redis_service_refreshes_owner_key_while_owned_job_is_active():
+    """Active private jobs keep their Redis owner key alive beyond redis_queue_ttl."""
+    shared_client = fakeredis_aio.FakeRedis()
+    producer, _ = await _make_service(ttl=1, shared_client=shared_client, cancel_channel_enabled=False)
+    consumer, _ = await _make_service(ttl=1, shared_client=shared_client, cancel_channel_enabled=False)
+    try:
+        job_id = str(uuid.uuid4())
+        user_id = uuid.uuid4()
+        producer.create_queue(job_id)
+
+        async def _long_running():
+            await asyncio.Event().wait()
+
+        producer.start_job(job_id, _long_running())
+        await producer.register_job_owner(job_id, user_id)
+
+        # Wait longer than the Redis owner TTL.  Without the owner refresh task,
+        # a cross-worker lookup would see None and authorization would treat the
+        # private build as public.
+        await asyncio.sleep(1.6)
+
+        assert await consumer.get_job_owner(job_id) == user_id
+        assert await shared_client.ttl(producer._owner_key(job_id)) > 0
+    finally:
+        await _stop_service(consumer)
+        await _stop_service(producer)
+
+
+@pytest.mark.asyncio
 async def test_redis_service_owner_cleaned_up_after_cleanup_job():
     """cleanup_job removes the _job_owners entry and the Redis owner key."""
     service, fake_client = await _make_service()
@@ -662,6 +697,88 @@ async def test_redis_service_cross_worker_cancel_dispatches_to_owning_worker():
     finally:
         await _stop_service(svc_producer)
         await _stop_service(svc_other)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_owner_local_cancel_flushes_sentinel_to_consumer_before_first_event():
+    """Owner-local API cancel must promptly end a cross-worker Redis consumer.
+
+    The owner-local branch of cancel_flow_build has a real task handle, so it
+    does not publish through signal_cancel.  It must still use the Redis cancel
+    path that writes an end-of-stream sentinel before bridge cleanup; otherwise
+    a consumer that opened the stream before the first event waits for the full
+    startup grace window.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    producer, _ = await _make_service(shared_client=shared_client, cancel_channel_enabled=False)
+    consumer, _ = await _make_service(shared_client=shared_client, cancel_channel_enabled=False)
+    try:
+        job_id = str(uuid.uuid4())
+        producer.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        producer.start_job(job_id, _long_running())
+        await asyncio.sleep(0.05)
+
+        # Cross-worker consumer starts before any Redis stream event exists.
+        queue, _, event_task, _ = consumer.get_queue_data(job_id)
+        assert event_task is None
+
+        started = time.monotonic()
+        assert await cancel_flow_build(job_id=job_id, queue_service=producer)
+
+        sentinel = await asyncio.wait_for(queue.get(), timeout=2.0)
+        elapsed = time.monotonic() - started
+        assert sentinel[0] is None
+        assert sentinel[1] is None
+        assert elapsed < 2.0
+        await asyncio.wait_for(cancelled_event.wait(), timeout=2.0)
+        assert producer._cancel_stats["dispatched_owned"] == 1
+    finally:
+        await _stop_service(consumer)
+        await _stop_service(producer)
+
+
+@pytest.mark.asyncio
+async def test_redis_service_same_worker_cancel_wakes_active_consumer_before_first_event():
+    """Owner-local cancel must wake a cached same-worker Redis consumer."""
+    svc, _ = await _make_service(cancel_channel_enabled=False)
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc.start_job(job_id, _long_running())
+        await asyncio.sleep(0.05)
+
+        queue, _, event_task, _ = svc.get_queue_data(job_id)
+        assert event_task is not None
+
+        started = time.monotonic()
+        assert await cancel_flow_build(job_id=job_id, queue_service=svc)
+
+        sentinel = await asyncio.wait_for(queue.get(), timeout=2.0)
+        elapsed = time.monotonic() - started
+        assert sentinel[0] is None
+        assert sentinel[1] is None
+        assert elapsed < 2.0
+        await asyncio.wait_for(cancelled_event.wait(), timeout=2.0)
+    finally:
+        await _stop_service(svc)
 
 
 @pytest.mark.asyncio
@@ -1358,6 +1475,69 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
                 with contextlib.suppress(asyncio.CancelledError, Exception):
                     await bg
         await _stop_service(svc_other)
+
+
+@pytest.mark.asyncio
+async def test_cancel_dispatcher_counts_transparent_pubsub_reconnect_callback():
+    """The dispatcher tracks redis-py reconnects that do not restart listen()."""
+
+    class _FakeConnection:
+        def __init__(self) -> None:
+            self.callbacks: list[Any] = []
+
+        def register_connect_callback(self, callback: Any) -> None:
+            self.callbacks.append(callback)
+
+        def deregister_connect_callback(self, callback: Any) -> None:
+            with contextlib.suppress(ValueError):
+                self.callbacks.remove(callback)
+
+    class _CapturingPubSub:
+        def __init__(self) -> None:
+            self.connection = _FakeConnection()
+            self.subscribed = asyncio.Event()
+
+        async def psubscribe(self, *_args: Any, **_kwargs: Any) -> None:
+            self.subscribed.set()
+
+        async def punsubscribe(self, *_args: Any, **_kwargs: Any) -> None:
+            return None
+
+        async def aclose(self) -> None:
+            return None
+
+        def listen(self):
+            async def _blocked():
+                await asyncio.Event().wait()
+                yield {}  # pragma: no cover
+
+            return _blocked()
+
+    class _CapturingClient:
+        def __init__(self, pubsub: _CapturingPubSub) -> None:
+            self._pubsub = pubsub
+
+        def pubsub(self) -> _CapturingPubSub:
+            return self._pubsub
+
+    pubsub = _CapturingPubSub()
+    svc = RedisJobQueueService(ttl=60, cancel_channel_enabled=True)
+    svc._client = _CapturingClient(pubsub)
+    svc._closed = False
+    task = asyncio.create_task(svc._run_cancel_dispatcher())
+    try:
+        await asyncio.wait_for(pubsub.subscribed.wait(), timeout=1.0)
+        assert pubsub.connection.callbacks == [svc._on_cancel_dispatcher_connection_reconnect]
+
+        await pubsub.connection.callbacks[0](pubsub.connection)
+
+        assert svc._cancel_stats["dispatcher_reconnects"] == 1
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert pubsub.connection.callbacks == []
 
 
 @pytest.mark.asyncio

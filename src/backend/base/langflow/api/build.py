@@ -734,8 +734,9 @@ async def cancel_flow_build(
     task_before_cleanup = event_task
 
     try:
-        # Perform cleanup using the queue service
-        await queue_service.cleanup_job(job_id)
+        # Perform cancel using the queue service so backends can preserve any
+        # backend-specific end-of-stream guarantees before resource cleanup.
+        await queue_service.cancel_job(job_id)
     except asyncio.CancelledError:
         # Check if the task was actually cancelled
         if task_before_cleanup.cancelled():
