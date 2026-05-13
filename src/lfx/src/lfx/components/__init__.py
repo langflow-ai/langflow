@@ -83,6 +83,7 @@ if TYPE_CHECKING:
         prototypes,
         qdrant,
         redis,
+        regolo,
         sambanova,
         scrapegraph,
         searchapi,
@@ -106,7 +107,6 @@ if TYPE_CHECKING:
         yahoosearch,
         youtube,
         zep,
-        regolo,
     )
 
 
@@ -320,6 +320,7 @@ __all__ = [
     "prototypes",
     "qdrant",
     "redis",
+    "regolo",
     "sambanova",
     "scrapegraph",
     "searchapi",
@@ -343,7 +344,6 @@ __all__ = [
     "yahoosearch",
     "youtube",
     "zep",
-    "regolo",
 ]
 
 

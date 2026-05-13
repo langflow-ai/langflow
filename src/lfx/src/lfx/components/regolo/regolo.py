@@ -1,12 +1,12 @@
+from langchain_openai import ChatOpenAI
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent
+from lfx.components.regolo.regolo_constants import REGOLO_CHAT_MODEL_NAMES
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.components.regolo.regolo_constants import REGOLO_CHAT_MODEL_NAMES
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput, StrInput
 from lfx.log.logger import logger
-from langchain_openai import ChatOpenAI
 
 
 class RegoloModelComponent(LCModelComponent):
