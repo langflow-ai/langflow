@@ -55,7 +55,10 @@ function LangflowDrawingIcon({ size = 24 }: { size?: number }) {
   useEffect(() => {
     // getTotalLength is a real SVGPathElement method but jsdom does not
     // implement it (so unit tests would crash). Guard the call.
-    if (pathRef.current && typeof pathRef.current.getTotalLength === "function") {
+    if (
+      pathRef.current &&
+      typeof pathRef.current.getTotalLength === "function"
+    ) {
       const measured = pathRef.current.getTotalLength();
       if (measured > 0) setLength(measured);
     }
