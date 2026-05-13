@@ -121,7 +121,7 @@ class TestContextIsolation:
         children inherit the same object by reference. Cross-request
         isolation is provided at the FastAPI level (each request task has
         its own context).
-        """
+        """  # noqa: D205
 
         async def emit_in_task(token: str) -> None:
             emit_file_event(action="write_file", path=f"{token}.md", size=len(token))

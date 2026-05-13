@@ -52,15 +52,17 @@ class TestFlowBuilderPrompt:
 
     def test_should_warn_about_agents_built_in_model(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
-        assert "built-in model" in prompt_lower and ("only" in prompt_lower or "unless" in prompt_lower), (
-            "Prompt must say the Agent has a built-in model and external models are opt-in."
+        assert "built-in model" in prompt_lower, "Prompt must mention the Agent has a built-in model."
+        assert "only" in prompt_lower or "unless" in prompt_lower, (
+            "Prompt must say external models are opt-in (use 'only' or 'unless')."
         )
 
     def test_should_require_system_prompt_for_persona_use_cases(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
-        assert "system_prompt" in prompt_lower and "persona" in prompt_lower, (
-            "Prompt must instruct the agent to fill system_prompt when the user describes a persona."
+        assert "system_prompt" in prompt_lower, (
+            "Prompt must instruct the agent to fill system_prompt for persona use cases."
         )
+        assert "persona" in prompt_lower, "Prompt must reference the persona use case explicitly."
 
     def test_should_have_chatbot_or_assistant_example_with_system_prompt(self):
         # The example must show both the input wiring AND a populated system prompt.
@@ -73,7 +75,7 @@ class TestFlowBuilderPrompt:
         """When the user says 'change the model to X', the agent must update
         the Agent's `model` field via configure_component instead of adding
         an external OpenAIModel/AnthropicModel component.
-        """
+        """  # noqa: D205
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
         # Must mention the editing path explicitly.
         assert "configure_component" in prompt_lower
@@ -84,18 +86,17 @@ class TestFlowBuilderPrompt:
     def test_should_show_model_field_value_structure(self):
         """The agent needs the exact JSON shape for the Agent's model field
         value so it can call configure_component without guessing.
-        """
+        """  # noqa: D205
         # The structure is `[{"provider": "...", "name": "..."}]`.
-        assert '"provider"' in FLOW_BUILDER_PROMPT and '"name"' in FLOW_BUILDER_PROMPT, (
-            "Prompt must show the model field value structure (provider+name)."
-        )
+        assert '"provider"' in FLOW_BUILDER_PROMPT, "Prompt must show the `provider` key of the model field value."
+        assert '"name"' in FLOW_BUILDER_PROMPT, "Prompt must show the `name` key of the model field value."
 
 
 class TestFlowBuilderPromptProposePlan:
     """The agent must call propose_plan as its FIRST tool when building a NEW
     flow, so the user sees a markdown summary and can Continue or refine
     before any canvas work happens.
-    """
+    """  # noqa: D205
 
     def test_should_mention_propose_plan_tool(self):
         assert "propose_plan" in FLOW_BUILDER_PROMPT, (
@@ -128,7 +129,7 @@ class TestFlowBuilderPromptProposePlan:
 class TestProposePlanInToolkit:
     """The propose_plan tool must be present in the agent's toolkit and be
     callable by name through the standard tool interface.
-    """
+    """  # noqa: D205
 
     async def test_toolkit_should_include_propose_plan_tool(self):
         from langflow.agentic.flows.flow_builder_assistant import build_toolkit

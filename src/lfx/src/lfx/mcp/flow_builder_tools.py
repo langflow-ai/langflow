@@ -575,11 +575,12 @@ class ConfigureComponent(Component):
 
 
 def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict) -> None:
-    """For each ModelInput field touched in `params`, ensure the new selection
-    is present in the field's `options` array.
+    """Mirror the new ModelInput selection into the field's `options` array.
 
-    No-op for non-model fields. Idempotent: existing entries with the same
-    name+provider are not duplicated.
+    For each ModelInput field touched in `params`, ensure the new selection
+    is present in the field's `options` array. No-op for non-model fields.
+    Idempotent: existing entries with the same name+provider are not
+    duplicated.
     """
     node = _find_node(flow, component_id)
     if node is None:

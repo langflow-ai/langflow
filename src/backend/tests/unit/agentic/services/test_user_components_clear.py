@@ -8,13 +8,16 @@ isolated — wiping Alice's components must not touch Bob's.
 from __future__ import annotations
 
 import secrets
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from langflow.agentic.services.user_components import (
     clear_user_components,
     register_user_component,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 SAMPLE_CODE = (
     "from lfx.custom import Component\n"
@@ -39,7 +42,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: False,
+        lambda self: False,  # noqa: ARG005
     )
     return tmp_path
 
@@ -54,13 +57,13 @@ def shared_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: True,
+        lambda self: True,  # noqa: ARG005
     )
     return tmp_path
 
 
 class TestClearUserComponentsHappyPath:
-    def test_should_delete_all_py_files_in_isolated_user_namespace(self, isolated_sandbox: Path) -> None:
+    def test_should_delete_all_py_files_in_isolated_user_namespace(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -86,12 +89,12 @@ class TestClearUserComponentsHappyPath:
         assert components_dir.exists()
         assert list(components_dir.iterdir()) == []
 
-    def test_should_be_idempotent_when_directory_empty(self, isolated_sandbox: Path) -> None:
+    def test_should_be_idempotent_when_directory_empty(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # No prior registration. Wipe is a no-op, returns 0.
         deleted = clear_user_components(user_id="user-alice")
         assert deleted == 0
 
-    def test_should_be_idempotent_when_called_twice(self, isolated_sandbox: Path) -> None:
+    def test_should_be_idempotent_when_called_twice(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -119,7 +122,7 @@ class TestClearUserComponentsHappyPath:
 
 
 class TestClearUserComponentsIsolation:
-    def test_should_not_touch_other_users_components(self, isolated_sandbox: Path) -> None:
+    def test_should_not_touch_other_users_components(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(
             user_id="user-alice",
             class_name="AliceSum",
@@ -136,7 +139,7 @@ class TestClearUserComponentsIsolation:
         # Bob's file still there.
         assert bob_path.exists()
 
-    def test_should_not_touch_files_outside_components_directory(self, isolated_sandbox: Path) -> None:
+    def test_should_not_touch_files_outside_components_directory(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Plant a user-authored file in the sandbox ROOT (not .components/).
         # The FS tool would create one normally via write_file.
         register_user_component(
@@ -164,14 +167,14 @@ class TestClearUserComponentsIsolation:
 
 
 class TestClearUserComponentsRefusal:
-    def test_should_return_zero_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:
+    def test_should_return_zero_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Sandbox resolution refuses without a user; clear silently
         # returns 0 (no-op) rather than raising — same shape as the
         # post-validation hook contract.
         deleted = clear_user_components(user_id=None)
         assert deleted == 0
 
-    def test_should_only_delete_py_files_not_arbitrary_files(self, isolated_sandbox: Path) -> None:
+    def test_should_only_delete_py_files_not_arbitrary_files(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Defensive: even if some other code planted a non-.py file in
         # .components/ (shouldn't happen — reserved segment + privileged
         # writer — but assume the FS layer could be future-broken), we

@@ -255,7 +255,7 @@ class TestFormatFlowUpdateEventProposePlan:
 
     These tests lock in the wire format so future refactors of the SSE layer
     cannot silently break the assistant's planning step.
-    """
+    """  # noqa: D205
 
     def test_should_emit_flow_update_event_with_propose_plan_action(self):
         update = {"action": "propose_plan", "markdown": "Plan text."}

@@ -143,7 +143,12 @@ export function AssistantMessageItem({
   }
 
   return (
-    <div className="mb-6">
+    <div
+      className="mb-6"
+      data-testid={
+        isUser ? "assistant-message-user" : "assistant-message-assistant"
+      }
+    >
       <div className="flex items-start gap-3">
         {isUser ? (
           <CustomProfileIcon className="h-7 w-7 shrink-0 rounded-full" />

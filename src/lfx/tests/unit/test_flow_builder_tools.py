@@ -142,7 +142,7 @@ class TestProposePlan:
     agent runs search/describe/build_flow tools. The agent's next step
     depends on the user's Continue/Dismiss reply, which arrives as a new
     user turn — the tool itself does not block.
-    """
+    """  # noqa: D205
 
     def test_should_push_propose_plan_event_when_plan_is_valid(self):
         reset_working_flow()
@@ -232,7 +232,7 @@ class TestConfigureComponentModelField:
     options the dropdown silently falls back to options[0], so the canvas
     label keeps showing the previous selection even though `value` was
     updated. The tool must mirror the new selection into `options`.
-    """
+    """  # noqa: D205
 
     def test_configure_model_field_should_mirror_value_into_options(self):
         from lfx.mcp.flow_builder_tools import (
@@ -369,7 +369,7 @@ class TestConnectComponents:
         canvas dropdown reflects the connected output. Uses Agent's
         `structured_response` (Data) into ChatOutput, since the Agent has
         multiple outputs by default and ChatOutput.input_value accepts Data.
-        """
+        """  # noqa: D205
         from lfx.mcp.flow_builder_tools import _ensure_working_flow, _find_node
 
         reset_working_flow()
@@ -406,7 +406,7 @@ class TestConnectComponents:
     def test_connect_emits_select_output_event_when_source_has_multiple_outputs(self):
         """The frontend can't infer selected_output from the edge alone — the
         backend must broadcast a dedicated event so the canvas dropdown updates.
-        """
+        """  # noqa: D205
         reset_working_flow()
 
         agent = AddComponent()
@@ -440,7 +440,7 @@ class TestConnectComponents:
         switches to displaying an external connection. The tool must
         auto-enable that flag when wiring an external model so the canvas
         renders the edge instead of the dropdown.
-        """
+        """  # noqa: D205
         from lfx.mcp.flow_builder_tools import _ensure_working_flow, _find_node
 
         reset_working_flow()
@@ -479,7 +479,7 @@ class TestConnectComponents:
         """The frontend dropdown reads `_connectionMode` from node data.
         Backend must broadcast the flip so the canvas updates without a
         full set_flow round-trip.
-        """
+        """  # noqa: D205
         reset_working_flow()
 
         add_openai = AddComponent()

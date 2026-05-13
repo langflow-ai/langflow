@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import secrets
 import types
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from langflow.agentic.services.conversation_buffer import (
@@ -30,6 +30,9 @@ from langflow.agentic.services.user_components import (
     get_user_components_dir,
     register_user_component,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 SAMPLE_CODE = (
     "from lfx.custom import Component\n"
@@ -54,7 +57,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: False,
+        lambda self: False,  # noqa: ARG005
     )
     return tmp_path
 
@@ -79,7 +82,9 @@ def _make_user(user_id: str = "user-alice"):
 
 class TestResetSessionEndpointWipesComponents:
     async def test_should_delete_registered_components_for_calling_user(
-        self, isolated_sandbox: Path, fresh_conversation_buffer: ConversationBuffer
+        self,
+        isolated_sandbox: Path,  # noqa: ARG002
+        fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         register_user_component(
             user_id="user-alice",
@@ -120,7 +125,7 @@ class TestResetSessionEndpointWipesComponents:
 
     async def test_should_not_touch_other_users_components(
         self,
-        isolated_sandbox: Path,
+        isolated_sandbox: Path,  # noqa: ARG002
         fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         register_user_component(
@@ -172,7 +177,7 @@ class TestResetSessionEndpointWipesComponents:
 class TestResetSessionEndpointShape:
     async def test_should_accept_missing_session_id(
         self,
-        isolated_sandbox: Path,
+        isolated_sandbox: Path,  # noqa: ARG002
         fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         register_user_component(
@@ -195,7 +200,7 @@ class TestResetSessionEndpointShape:
 
     async def test_should_return_zero_counts_when_nothing_to_clear(
         self,
-        isolated_sandbox: Path,
+        isolated_sandbox: Path,  # noqa: ARG002
         fresh_conversation_buffer: ConversationBuffer,  # noqa: ARG002
     ) -> None:
         from langflow.agentic.api.sessions_router import reset_session

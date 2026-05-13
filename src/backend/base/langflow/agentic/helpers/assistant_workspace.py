@@ -61,10 +61,7 @@ def resolve_assistant_fs_root() -> Path | None:
         return None
 
     raw = os.environ.get(BASE_DIR_ENV, "").strip()
-    if raw:
-        candidate = Path(raw).expanduser()
-    else:
-        candidate = Path.home() / DEFAULT_BASE_SUBPATH
+    candidate = Path(raw).expanduser() if raw else Path.home() / DEFAULT_BASE_SUBPATH
 
     resolved = candidate.resolve()
     resolved.mkdir(parents=True, exist_ok=True)

@@ -17,13 +17,16 @@ The helper itself is the only path that may write into the reserved
 from __future__ import annotations
 
 import secrets
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from langflow.agentic.services.user_components import (
     UserComponentError,
     register_user_component,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -44,7 +47,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: False,
+        lambda self: False,  # noqa: ARG005
     )
     return tmp_path
 
@@ -61,7 +64,7 @@ def shared_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: True,
+        lambda self: True,  # noqa: ARG005
     )
     return tmp_path
 
@@ -107,7 +110,7 @@ class TestRegisterUserComponentHappyPath:
         assert result_path.parent == shared_sandbox / "shared" / ".components"
         assert result_path.name == "SumComponent.py"
 
-    def test_should_overwrite_when_same_class_name_re_registered(self, isolated_sandbox: Path) -> None:
+    def test_should_overwrite_when_same_class_name_re_registered(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         first = register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -124,7 +127,7 @@ class TestRegisterUserComponentHappyPath:
         assert first == second
         assert second.read_text(encoding="utf-8") == new_code
 
-    def test_should_isolate_components_by_user(self, isolated_sandbox: Path) -> None:
+    def test_should_isolate_components_by_user(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         alice_path = register_user_component(
             user_id="user-alice",
             class_name="AliceSum",
@@ -144,7 +147,7 @@ class TestRegisterUserComponentHappyPath:
 
 
 class TestRegisterUserComponentRefusesUntrustedInputs:
-    def test_should_refuse_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_when_user_id_missing_and_auto_login_false(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError, match="authenticated user"):
             register_user_component(
                 user_id=None,
@@ -152,7 +155,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
                 code=SAMPLE_CODE,
             )
 
-    def test_should_refuse_empty_class_name(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_empty_class_name(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError, match="class_name"):
             register_user_component(
                 user_id="user-alice",
@@ -177,7 +180,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
             "LPT9",
         ],
     )
-    def test_should_refuse_path_traversal_or_reserved_class_names(self, isolated_sandbox: Path, bad_name: str) -> None:
+    def test_should_refuse_path_traversal_or_reserved_class_names(self, isolated_sandbox: Path, bad_name: str) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError):
             register_user_component(
                 user_id="user-alice",
@@ -185,7 +188,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
                 code=SAMPLE_CODE,
             )
 
-    def test_should_refuse_class_name_longer_than_max(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_class_name_longer_than_max(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Windows-portability safeguard: the on-disk path is
         # ``<BASE>/users/<32-hex-hash>/.components/<ClassName>.py``. Even
         # with a deep BASE on Windows (``C:\Users\<long-username>\AppData\
@@ -206,7 +209,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
                 code=SAMPLE_CODE,
             )
 
-    def test_should_accept_class_name_exactly_at_max_length(self, isolated_sandbox: Path) -> None:
+    def test_should_accept_class_name_exactly_at_max_length(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Boundary: a name of exactly MAX_CLASS_NAME_LENGTH chars must be
         # ACCEPTED. Off-by-one regression guard.
         from langflow.agentic.services.user_components import (
@@ -233,7 +236,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
 
         assert MAX_CLASS_NAME_LENGTH == 64
 
-    def test_should_refuse_dunder_or_leading_dot_class_name(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_dunder_or_leading_dot_class_name(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # `.hidden` or `__init__` would be filesystem-valid but break the
         # registry overlay (it'd treat them as importable modules).
         for name in ("__init__", "_private", ".hidden"):
@@ -244,7 +247,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
                     code=SAMPLE_CODE,
                 )
 
-    def test_should_refuse_empty_code(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_empty_code(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         with pytest.raises(UserComponentError, match="code"):
             register_user_component(
                 user_id="user-alice",
@@ -252,7 +255,7 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
                 code="",
             )
 
-    def test_should_refuse_oversized_code(self, isolated_sandbox: Path) -> None:
+    def test_should_refuse_oversized_code(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # The component-generation flow validates code well below 1 MB.
         # Anything larger is almost certainly an attack / runaway model.
         with pytest.raises(UserComponentError, match="size"):
@@ -265,7 +268,9 @@ class TestRegisterUserComponentRefusesUntrustedInputs:
 
 class TestAtomicWrite:
     def test_should_not_leave_partial_file_when_write_fails(
-        self, isolated_sandbox: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        isolated_sandbox: Path,  # noqa: ARG002
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Atomic write: tmp file + rename.
 
@@ -287,7 +292,7 @@ class TestAtomicWrite:
 
         original_replace = os.replace
 
-        def boom(src, dst):
+        def boom(src, dst):  # noqa: ARG001
             msg = "simulated rename failure"
             raise OSError(msg)
 

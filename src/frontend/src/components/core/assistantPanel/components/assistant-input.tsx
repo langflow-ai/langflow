@@ -6,8 +6,8 @@ import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
-import { useInputHistory } from "../hooks/use-input-history";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
+import { useInputHistory } from "../hooks/use-input-history";
 import { ModelSelector } from "./model-selector";
 
 // Steps where the "thinking" animation is showing in the message area.
@@ -223,7 +223,13 @@ export function AssistantInput({
     }
   };
 
-  const canSend = message.trim().length > 0 && !disabled;
+  // Also gate on selectedModel so the send button stays disabled during the
+  // window between the model selector mounting and its auto-select effect
+  // propagating a model up. Without this, a fast click can fire while
+  // selectedModel is still null, and use-assistant-chat early-returns
+  // without ever adding the user message to the chat.
+  const canSend =
+    message.trim().length > 0 && !disabled && selectedModel !== null;
   const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
   const showCharCount = message.length > MAX_MESSAGE_LENGTH * 0.8;
 

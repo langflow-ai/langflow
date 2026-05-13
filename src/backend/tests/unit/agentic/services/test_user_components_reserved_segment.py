@@ -12,7 +12,7 @@ Mirrors the existing `.lfsig` reservation pattern (T4 in the FS plan).
 from __future__ import annotations
 
 import secrets
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,6 +21,9 @@ import pytest
 # colocate the test with the production code. Place the test where the
 # main test runner reaches it.
 from lfx.components.tools.filesystem import FileSystemToolComponent
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _make_component(
@@ -46,7 +49,7 @@ def _make_component(
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: auto_login,
+        lambda self: auto_login,  # noqa: ARG005
     )
     if user_id is not None:
         component._user_id = user_id

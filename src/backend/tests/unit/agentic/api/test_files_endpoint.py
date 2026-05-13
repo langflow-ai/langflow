@@ -2,29 +2,32 @@
 
 The endpoint lets the frontend read files the agent wrote inside the
 sandboxed workspace. Every adversarial test below maps to one threat in
-``CZL/DEVELOPMENT/PLAN_document_assistant.md`` (T1–T13).
+``CZL/DEVELOPMENT/PLAN_document_assistant.md`` (T1-T13).
 
 Tests invoke the route handler directly (not via TestClient) so we focus on
-the security logic — authentication is decoupled via a mock ``current_user``.
+the security logic - authentication is decoupled via a mock ``current_user``.
 End-to-end HTTP wiring is covered by the integration smoke test at the end.
 """
 
 from __future__ import annotations
 
-from pathlib import Path
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 
 import pytest
 from fastapi import HTTPException
 from fastapi.responses import Response
 from langflow.agentic.api.files_router import get_file
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 def _make_user(user_id: str = "u-abc") -> SimpleNamespace:
     return SimpleNamespace(id=user_id)
 
 
-def _write_sandbox_file(sandbox_root: Path, user_id: str, relative_path: str, content: bytes) -> Path:
+def _write_sandbox_file(sandbox_root: Path, user_id: str, relative_path: str, content: bytes) -> Path:  # noqa: ARG001
     """Materialize a file inside the user's FileSystemToolComponent sandbox.
 
     Reproduces the layout FileSystemToolComponent uses so the endpoint
@@ -64,7 +67,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: False,
+        lambda self: False,  # noqa: ARG005
     )
     return tmp_path
 
@@ -101,42 +104,42 @@ class TestPathTraversalRejection:
             "subdir/..",
         ],
     )
-    async def test_should_reject_path_when_contains_dotdot(self, isolated_sandbox, evil_path):
+    async def test_should_reject_path_when_contains_dotdot(self, isolated_sandbox, evil_path):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path=evil_path, download=False, current_user=user)
         assert exc.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_should_reject_path_when_absolute_unix(self, isolated_sandbox):
+    async def test_should_reject_path_when_absolute_unix(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="/etc/passwd", download=False, current_user=user)
         assert exc.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_should_reject_path_when_absolute_unix_backslash(self, isolated_sandbox):
+    async def test_should_reject_path_when_absolute_unix_backslash(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="\\etc\\passwd", download=False, current_user=user)
         assert exc.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_should_reject_path_when_windows_drive_letter(self, isolated_sandbox):
+    async def test_should_reject_path_when_windows_drive_letter(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="C:\\Users\\victim\\file.md", download=False, current_user=user)
         assert exc.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_should_reject_path_when_null_byte(self, isolated_sandbox):
+    async def test_should_reject_path_when_null_byte(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="DOCS.md\x00.txt", download=False, current_user=user)
         assert exc.value.status_code == 400
 
     @pytest.mark.asyncio
-    async def test_should_reject_path_when_empty(self, isolated_sandbox):
+    async def test_should_reject_path_when_empty(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="", download=False, current_user=user)
@@ -148,7 +151,7 @@ class TestPathTraversalRejection:
 class TestCrossUserDenial:
     """B5 — T2: user B must not read user A's files. Returns 404 (not 403)
     so the existence of A's namespace is not leaked.
-    """
+    """  # noqa: D205
 
     @pytest.mark.asyncio
     async def test_should_return_404_when_target_in_other_user_namespace(self, isolated_sandbox):
@@ -170,7 +173,7 @@ class TestMissingFile:
     """B5 — request for a file that doesn't exist returns 404."""
 
     @pytest.mark.asyncio
-    async def test_should_return_404_when_file_does_not_exist(self, isolated_sandbox):
+    async def test_should_return_404_when_file_does_not_exist(self, isolated_sandbox):  # noqa: ARG002
         user = _make_user("u-abc")
         with pytest.raises(HTTPException) as exc:
             await get_file(path="NONEXISTENT.md", download=False, current_user=user)
@@ -209,7 +212,7 @@ class TestSizeAndBinaryGuards:
 class TestDownloadMode:
     """B5 — T7: ?download=true must force attachment + octet-stream so the
     browser never inlines a returned .html / .svg / .js as page content.
-    """
+    """  # noqa: D205
 
     @pytest.mark.asyncio
     async def test_should_set_content_disposition_attachment_when_download_true(self, isolated_sandbox):
@@ -248,7 +251,7 @@ class TestDownloadMode:
 class TestAuditLogging:
     """B5 — T11: every successful read emits an audit log line with the
     user_id, the (relative) path, and the size.
-    """
+    """  # noqa: D205
 
     @pytest.mark.asyncio
     async def test_should_log_audit_event_when_file_read(self, isolated_sandbox, caplog):

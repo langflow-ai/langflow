@@ -72,12 +72,12 @@ class TestStreamingEmitsFileWrittenEvents:
         We exercise the streaming function with a fake flow_generator and assert
         on the textual SSE output. This pinpoints the drain insertion point
         without requiring a real LLM call.
-        """
+        """  # noqa: D205
         from langflow.agentic.services import assistant_service
         from langflow.agentic.services.file_events import emit_file_event, reset_file_events
 
         # Arrange — stub classify_intent to return manage_files (routes to same flow).
-        async def fake_classify_intent(*args, **kwargs):
+        async def fake_classify_intent(*args, **kwargs):  # noqa: ARG001
             from langflow.agentic.services.flow_types import IntentResult
 
             return IntentResult(translation="hi", intent="manage_files")
@@ -85,7 +85,7 @@ class TestStreamingEmitsFileWrittenEvents:
         monkeypatch.setattr(assistant_service, "classify_intent", fake_classify_intent)
 
         # Stub the flow generator: emit one token, then end with a benign result.
-        async def fake_flow_streaming(*args, **kwargs):
+        async def fake_flow_streaming(*args, **kwargs):  # noqa: ARG001
             # Push a file event from inside the same task so it lands in this context.
             emit_file_event(action="write_file", path="DOCS.md", size=10)
             yield ("token", "ok")
@@ -110,20 +110,21 @@ class TestStreamingEmitsFileWrittenEvents:
         reset_file_events()
 
         # Act — collect every SSE line.
-        sse_lines: list[str] = []
-        async for line in assistant_service.execute_flow_with_validation_streaming(
-            flow_filename="LangflowAssistant.json",  # default; overridden internally by intent
-            input_value="crie um doc",
-            global_variables={"FLOW_ID": None},
-            max_retries=0,
-            user_id="u1",
-            session_id="agentic_session_1",
-            provider="OpenAI",
-            model_name="gpt-4o-mini",
-            api_key_var=None,
-            is_disconnected=None,
-        ):
-            sse_lines.append(line)
+        sse_lines: list[str] = [
+            line
+            async for line in assistant_service.execute_flow_with_validation_streaming(
+                flow_filename="LangflowAssistant.json",  # default; overridden internally by intent
+                input_value="crie um doc",
+                global_variables={"FLOW_ID": None},
+                max_retries=0,
+                user_id="u1",
+                session_id="agentic_session_1",
+                provider="OpenAI",
+                model_name="gpt-4o-mini",
+                api_key_var=None,
+                is_disconnected=None,
+            )
+        ]
 
         # Assert — at least one SSE line is a file_written event with the right path.
         file_written = [line for line in sse_lines if '"event": "file_written"' in line]
@@ -138,18 +139,18 @@ class TestStreamingEmitsFileWrittenEvents:
         """The first progress event for manage_files intent must use the
         generating_document step (so the frontend label says
         "Generating document..." instead of "Generating flow...").
-        """
+        """  # noqa: D205
         from langflow.agentic.services import assistant_service
         from langflow.agentic.services.file_events import reset_file_events
 
-        async def fake_classify_intent(*args, **kwargs):
+        async def fake_classify_intent(*args, **kwargs):  # noqa: ARG001
             from langflow.agentic.services.flow_types import IntentResult
 
             return IntentResult(translation="hi", intent="manage_files")
 
         monkeypatch.setattr(assistant_service, "classify_intent", fake_classify_intent)
 
-        async def fake_flow_streaming(*args, **kwargs):
+        async def fake_flow_streaming(*args, **kwargs):  # noqa: ARG001
             yield ("end", {"result": "ok"})
 
         monkeypatch.setattr(
@@ -169,20 +170,21 @@ class TestStreamingEmitsFileWrittenEvents:
 
         reset_file_events()
 
-        sse_lines: list[str] = []
-        async for line in assistant_service.execute_flow_with_validation_streaming(
-            flow_filename="LangflowAssistant.json",  # default; overridden internally by intent
-            input_value="crie um doc",
-            global_variables={"FLOW_ID": None},
-            max_retries=0,
-            user_id="u1",
-            session_id="agentic_session_1",
-            provider="OpenAI",
-            model_name="gpt-4o-mini",
-            api_key_var=None,
-            is_disconnected=None,
-        ):
-            sse_lines.append(line)
+        sse_lines: list[str] = [
+            line
+            async for line in assistant_service.execute_flow_with_validation_streaming(
+                flow_filename="LangflowAssistant.json",  # default; overridden internally by intent
+                input_value="crie um doc",
+                global_variables={"FLOW_ID": None},
+                max_retries=0,
+                user_id="u1",
+                session_id="agentic_session_1",
+                provider="OpenAI",
+                model_name="gpt-4o-mini",
+                api_key_var=None,
+                is_disconnected=None,
+            )
+        ]
 
         # First progress event should be generating_document.
         first_progress = next(line for line in sse_lines if '"event": "progress"' in line)

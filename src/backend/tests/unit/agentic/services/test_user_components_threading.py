@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import secrets
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from langflow.agentic.services.user_components import (
@@ -24,6 +24,9 @@ from langflow.agentic.services.user_components_context import (
     reset_current_user_id,
     set_current_user_id,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 SAMPLE_CODE = (
     "from lfx.custom import Component\n"
@@ -48,7 +51,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setattr(
         FileSystemToolComponent,
         "_resolve_auto_login",
-        lambda self: False,
+        lambda self: False,  # noqa: ARG005
     )
     return tmp_path
 
@@ -101,7 +104,7 @@ class TestOverlayConsumesContextVar:
     def setup_method(self):
         reset_current_user_id()
 
-    def test_should_read_overlay_for_contextvar_user(self, isolated_sandbox: Path) -> None:
+    def test_should_read_overlay_for_contextvar_user(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -118,7 +121,7 @@ class TestOverlayConsumesContextVar:
         registry = load_registry_for_current_user()
         assert "SumComponent" in registry
 
-    def test_should_return_base_only_when_contextvar_unset(self, isolated_sandbox: Path) -> None:
+    def test_should_return_base_only_when_contextvar_unset(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(
             user_id="user-alice",
             class_name="SumComponent",
@@ -143,7 +146,7 @@ class TestRegisterIfValid:
     is already streamed to the chat.
     """
 
-    def test_should_register_on_valid_input(self, isolated_sandbox: Path) -> None:
+    def test_should_register_on_valid_input(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -160,7 +163,7 @@ class TestRegisterIfValid:
         assert components_dir is not None
         assert (components_dir / "SumComponent.py").exists()
 
-    def test_should_return_none_and_swallow_when_user_id_missing(self, isolated_sandbox: Path) -> None:
+    def test_should_return_none_and_swallow_when_user_id_missing(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -173,7 +176,7 @@ class TestRegisterIfValid:
 
         assert result is None  # swallowed, not raised
 
-    def test_should_return_none_and_swallow_when_class_name_missing(self, isolated_sandbox: Path) -> None:
+    def test_should_return_none_and_swallow_when_class_name_missing(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -186,7 +189,7 @@ class TestRegisterIfValid:
 
         assert result is None
 
-    def test_should_return_none_and_swallow_when_class_name_unsafe(self, isolated_sandbox: Path) -> None:
+    def test_should_return_none_and_swallow_when_class_name_unsafe(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -201,7 +204,7 @@ class TestRegisterIfValid:
 
         assert result is None
 
-    def test_should_return_none_and_swallow_when_code_empty(self, isolated_sandbox: Path) -> None:
+    def test_should_return_none_and_swallow_when_code_empty(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         from langflow.agentic.services.user_components import (
             register_user_component_if_valid,
         )
@@ -215,7 +218,9 @@ class TestRegisterIfValid:
         assert result is None
 
     def test_should_still_raise_on_unexpected_errors(
-        self, isolated_sandbox: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        isolated_sandbox: Path,  # noqa: ARG002
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Unexpected errors must propagate, not be swallowed.
 
@@ -225,7 +230,7 @@ class TestRegisterIfValid:
         """
         from langflow.agentic.services import user_components as uc_mod
 
-        def boom(*args, **kwargs):
+        def boom(*args, **kwargs):  # noqa: ARG001
             msg = "disk on fire"
             raise OSError(msg)
 

@@ -25,7 +25,7 @@ class TestResolveAssistantFsRoot:
     """Resolution order: skip if isolation module is present →
     env var (expanded, stripped) → ~/.langflow/fs_tool/fs_sandbox default.
     Always mkdir when a path is returned.
-    """
+    """  # noqa: D205
 
     @pytest.fixture(autouse=True)
     def _isolate_env(self, monkeypatch, tmp_path):
@@ -37,10 +37,19 @@ class TestResolveAssistantFsRoot:
         monkeypatch.setenv("USERPROFILE", str(fake_home))
         # Make sure the isolation module is NOT importable by default
         # (so we test the legacy path; one test below puts it back).
+        # The module ships on disk once PR #13031 lands, so `find_spec`
+        # would discover it via the filesystem — stub it out to force
+        # the legacy resolution path.
         monkeypatch.delitem(sys.modules, ISOLATION_MODULE, raising=False)
+        original_find_spec = importlib.util.find_spec
+        monkeypatch.setattr(
+            importlib.util,
+            "find_spec",
+            lambda name, *a, **kw: (None if name == ISOLATION_MODULE else original_find_spec(name, *a, **kw)),
+        )
         return fake_home
 
-    def test_should_resolve_to_default_when_env_unset(self, _isolate_env):
+    def test_should_resolve_to_default_when_env_unset(self, _isolate_env):  # noqa: PT019
         result = resolve_assistant_fs_root()
 
         assert result == (_isolate_env / DEFAULT_BASE_SUBPATH).resolve()
@@ -53,7 +62,7 @@ class TestResolveAssistantFsRoot:
 
         assert result == target.resolve()
 
-    def test_should_expanduser_in_env_var(self, _isolate_env, monkeypatch):
+    def test_should_expanduser_in_env_var(self, _isolate_env, monkeypatch):  # noqa: PT019
         monkeypatch.setenv(BASE_DIR_ENV, "~/my-workspace")
 
         result = resolve_assistant_fs_root()
@@ -90,7 +99,7 @@ class TestResolveAssistantFsRoot:
 
         assert result == target.resolve()
 
-    def test_should_fall_back_to_default_when_env_var_is_blank(self, _isolate_env, monkeypatch):
+    def test_should_fall_back_to_default_when_env_var_is_blank(self, _isolate_env, monkeypatch):  # noqa: PT019
         monkeypatch.setenv(BASE_DIR_ENV, "   ")
 
         result = resolve_assistant_fs_root()
