@@ -109,6 +109,7 @@ class RegoloModelComponent(LCModelComponent):
         model_kwargs = {}
         if self.model_kwargs:
             import json
+
             try:
                 model_kwargs = json.loads(self.model_kwargs)
             except json.JSONDecodeError:
