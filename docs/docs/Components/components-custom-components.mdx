@@ -70,6 +70,19 @@ You can have multiple category folders to organize components into different cat
         └── custom_tool.py
 ```
 
+:::warning Directory Depth Limitation
+
+Components must be at most **2 levels deep** (`category/component.py`):
+
+- ✅ `data/custom_component.py` (level 2)
+- ❌ `data/tools/custom_component.py` (level 3 - not discovered)
+
+Each first-level directory becomes an independent category in the UI.
+
+**Advanced:** To increase the depth limit, modify `MAX_DEPTH` in `src/lfx/src/lfx/custom/directory_reader/directory_reader.py`. Subdirectories will still appear as separate categories, not nested hierarchies.
+
+:::
+
 ### Create the `__init__.py` file
 
 Each category directory **must** contain an `__init__.py` file for Langflow to properly recognize and load the components.
