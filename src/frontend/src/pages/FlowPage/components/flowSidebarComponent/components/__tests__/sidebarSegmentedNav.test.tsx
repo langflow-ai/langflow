@@ -422,7 +422,7 @@ describe("SidebarSegmentedNav", () => {
     });
     expect(NAV_ITEMS[6]).toEqual({
       id: "memories",
-      icon: "Brain",
+      icon: "BrainCog",
       label: "Memories",
       tooltip: "Memories",
     });
