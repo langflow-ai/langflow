@@ -462,12 +462,13 @@ def test_extra_slot_reload_uses_bundle_directory(tmp_path: Path) -> None:
 
 
 def test_swap_retags_class_module_to_prod_namespace(tmp_path: Path) -> None:
-    """After Stage 3, every component class's __module__ must point at the
-    production ``_lfx_ext.*`` key in ``sys.modules``, not at the dropped
+    """Stage 3 retags every component class's ``__module__`` to the prod namespace.
+
+    Without this retag, ``cls.__module__`` keeps pointing at the dropped
     ``__reload_staging__.<id>.*`` key it was stamped with at class-definition
-    time.  Without this retag, ``inspect.getmodule(cls)`` returns ``None``
-    and :func:`Component.set_class_code` raises -- silently breaking the
-    post-swap component-cache rebuild (the empty-palette-after-reload bug).
+    time -- ``inspect.getmodule(cls)`` then returns ``None`` and
+    :func:`Component.set_class_code` raises, silently breaking the post-swap
+    component-cache rebuild (the empty-palette-after-reload bug).
     """
     import inspect as inspect_mod
 
@@ -520,10 +521,11 @@ def test_swap_retag_survives_subsequent_reload(tmp_path: Path) -> None:
 
 
 def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
-    """A raising post-swap hook must not roll back the swap, but its failure
-    must appear on ``ReloadResult.warnings`` with the
-    ``reload-post-swap-hook-failed`` code so HTTP callers see "swap committed
-    but downstream side-effects broke" instead of silent 200 OK.
+    """A raising post-swap hook surfaces on ``ReloadResult.warnings``.
+
+    The swap must not roll back, but the failure must appear with code
+    ``reload-post-swap-hook-failed`` so HTTP callers see "swap committed but
+    downstream side-effects broke" instead of silent 200 OK.
     """
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()
@@ -539,7 +541,7 @@ def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
         result = reload_bundle(registry, "pilot")
     finally:
         with contextlib.suppress(ValueError):
-            reload_mod._POST_SWAP_HOOKS.remove(_always_raises)  # noqa: SLF001
+            reload_mod._POST_SWAP_HOOKS.remove(_always_raises)
 
     # Swap committed despite the hook failure.
     assert result.ok, result.errors
@@ -552,9 +554,10 @@ def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
 
 
 def test_post_swap_hook_success_adds_no_warnings(tmp_path: Path) -> None:
-    """The happy path must not emit a stray ``reload-post-swap-hook-failed``
-    warning -- a regression guard against accidentally appending an error to
-    the warnings list on every reload.
+    """The happy path emits no ``reload-post-swap-hook-failed`` warning.
+
+    Regression guard against accidentally appending an error to the warnings
+    list on every reload.
     """
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()

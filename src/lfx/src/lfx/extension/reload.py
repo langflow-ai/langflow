@@ -134,7 +134,7 @@ def _fire_post_swap_hooks(record: BundleRecord) -> tuple[ExtensionError, ...]:
     for hook in _POST_SWAP_HOOKS:
         try:
             hook(record)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # A failing hook (cache rebuild error, etc.) must not roll back
             # the swap or block the next hook.  Log and record the failure
             # so the caller can attach it to ReloadResult.warnings.
