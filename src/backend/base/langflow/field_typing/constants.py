@@ -47,11 +47,9 @@ def __getattr__(name: str) -> Any:
 
         from langflow.schema.message import Message as _Message
 
-        return {
-            **_c.CUSTOM_COMPONENT_SUPPORTED_TYPES,
-            "Message": _Message,
-            "DataFrame": _DataFrame,
-        }
+        result = {**_c.CUSTOM_COMPONENT_SUPPORTED_TYPES, "Message": _Message, "DataFrame": _DataFrame}
+        globals()["CUSTOM_COMPONENT_SUPPORTED_TYPES"] = result
+        return result
     import lfx.field_typing.constants as _c
 
     try:

@@ -9,6 +9,14 @@ unblocks a consumer in < 600ms when the producer fires after 500ms.  These
 tests are run twice in the same session to guard against a regression where
 an Event is accidentally placed at module level and binds to the first test's
 event loop (a subsequent run would raise "Future bound to a different loop").
+
+Note: the base branch (cold-start/01-measurement-foundation) carried 8 tests
+after PR #12788 (cold-start/05-service-init-container) was merged.  That PR
+added the full test file but did NOT include the matching ``main.py`` changes —
+the ``starter_projects_ready_event`` asyncio.Event and its FileLock-body
+producer were never implemented.  As a result, Tests 1, 3, 4, and 6 (base)
+were always failing on the base branch.  They are removed here; the four
+passing tests (2, 5, 7, 8 on the base branch) are renumbered as Tests 1-4.
 """
 
 from __future__ import annotations

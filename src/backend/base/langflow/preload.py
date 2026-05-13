@@ -328,16 +328,19 @@ async def _run_master_preload() -> None:
         # process.
         #
         # Guard: if initialize_services raised before registering the DB service
-        # (or before constructing the engine), get_db_service() / .engine will
-        # raise or be None.  In that case there is nothing to dispose, but we
-        # must not mask the original exception by raising a second one here.
+        # we skip disposal (nothing to close). We check the service registry
+        # directly so that a real dispose() failure propagates instead of being
+        # swallowed — a failed dispose() is a fork-safety hazard.
         await logger.adebug("[preload] disposing master DB engine before fork")
-        try:
+        from langflow.services.manager import get_service_manager
+        from langflow.services.schema import ServiceType as _ServiceType
+
+        if _ServiceType.DATABASE_SERVICE in get_service_manager().services:
             _db_svc = get_db_service()
             _engine = getattr(_db_svc, "engine", None)
             if _engine is not None:
                 await _engine.dispose()
-        except Exception:  # noqa: BLE001
+        else:
             await logger.adebug("[preload] DB engine dispose skipped (service not yet initialized)")
 
         # Close cache service socket (e.g. Redis) to prevent sharing across fork.

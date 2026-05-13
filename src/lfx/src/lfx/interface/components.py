@@ -829,6 +829,10 @@ async def get_and_cache_all_types_dict(
                     # may live at an arbitrary LANGFLOW_COMPONENTS_PATH). Always
                     # load and merge them even on a cache hit so they are not
                     # silently absent when the cache is warm.
+                    # _determine_loading_strategy returns {} immediately when
+                    # lazy_load_components=False and components_path is unset
+                    # (the default for most installs), so the cache-hit path
+                    # stays near-zero cost.
                     custom_components_dict = await _determine_loading_strategy(settings_service)
                     custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
                     component_cache.all_types_dict = {**merged, **custom_flat}
