@@ -762,14 +762,14 @@ async def test_should_call_tool_and_populate_token_usage_when_running_against_re
     """
     from langchain_core.tools import tool
 
-    ChatOpenAI = pytest.importorskip("langchain_openai").ChatOpenAI
+    langchain_openai = pytest.importorskip("langchain_openai")
 
     @tool
     def echo(text: str) -> str:
         """Echo the given text back verbatim."""
         return text
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    llm = langchain_openai.ChatOpenAI(model="gpt-4o-mini", temperature=0)
 
     component = _build_component()
     component.set_attributes(
