@@ -1,0 +1,178 @@
+name: Check Tests in PR
+
+# Posts a sticky comment on PRs whose code changes do not include
+# matching test changes. Soft check by design — it never fails the
+# build. Configurable via labels and PR body markers.
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-tests:
+    name: Check tests
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Detect and report missing tests
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const COMMENT_MARKER = '<!-- check-tests-in-pr -->';
+            const MIN_CODE_LINES_THRESHOLD = 20;
+            const SKIP_LABELS = new Set([
+              'skip-tests',
+              'docs-only',
+              'documentation',
+              'style',
+              'chore',
+              'build',
+            ]);
+            const SKIP_MARKERS = ['#trivial', '#skip-tests', '#notest'];
+
+            const TEST_PATH_RE = /(^|\/)(tests?|__tests__)\//;
+            const TEST_FILE_RE = /(_test\.py|test_[^/]+\.py|\.spec\.(t|j)sx?$|\.test\.(t|j)sx?$)/;
+
+            const CODE_BACKEND_RE = /^src\/(backend|lfx|sdk)\/.+\.py$/;
+            const CODE_FRONTEND_RE = /^src\/frontend\/src\/.+\.(ts|tsx|js|jsx)$/;
+
+            const EXEMPT_EXT_RE = /\.(md|mdx|css|scss|sass|less|svg|png|jpe?g|gif|ico|webp|woff2?|ttf|eot|txt|lock|toml|yaml|yml|json|cfg|ini|properties|env\.example|gitignore|dockerignore|editorconfig)$/i;
+            const EXEMPT_PATH_RE = /^(docs\/|\.github\/(?!workflows\/)|src\/frontend\/public\/|src\/frontend\/.+\.css|LICENSE|CHANGELOG|README|AGENTS\.md|CLAUDE\.md)/i;
+
+            const pr = context.payload.pull_request;
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            const prNumber = pr.number;
+
+            const labels = (pr.labels || []).map((l) => l.name);
+            const body = pr.body || '';
+            const title = pr.title || '';
+
+            const isTestFile = (f) => TEST_PATH_RE.test(f) || TEST_FILE_RE.test(f);
+            const isExemptFile = (f) => EXEMPT_EXT_RE.test(f) || EXEMPT_PATH_RE.test(f);
+            const isCodeFile = (f) => CODE_BACKEND_RE.test(f) || CODE_FRONTEND_RE.test(f);
+
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...repo,
+              pull_number: prNumber,
+              per_page: 100,
+            });
+
+            const testFiles = [];
+            const exemptFiles = [];
+            const codeFiles = [];
+            let codeAdditions = 0;
+
+            for (const f of files) {
+              if (f.status === 'removed') continue;
+              if (isTestFile(f.filename)) {
+                testFiles.push(f.filename);
+              } else if (isExemptFile(f.filename)) {
+                exemptFiles.push(f.filename);
+              } else if (isCodeFile(f.filename)) {
+                codeFiles.push(f.filename);
+                codeAdditions += f.additions || 0;
+              }
+            }
+
+            const skipLabel = labels.find((l) => SKIP_LABELS.has(l));
+            const skipMarker = SKIP_MARKERS.find((m) =>
+              (body + ' ' + title).toLowerCase().includes(m),
+            );
+
+            let status;
+            let reason;
+            if (skipLabel) {
+              status = 'skipped';
+              reason = `Skipped: label \`${skipLabel}\` is set on this PR.`;
+            } else if (skipMarker) {
+              status = 'skipped';
+              reason = `Skipped: marker \`${skipMarker}\` found in the PR title or body.`;
+            } else if (codeFiles.length === 0) {
+              status = 'skipped';
+              reason =
+                'Skipped: this PR does not modify any backend or frontend source files (only tests, docs, styles, or config).';
+            } else if (codeAdditions < MIN_CODE_LINES_THRESHOLD) {
+              status = 'skipped';
+              reason = `Skipped: only ${codeAdditions} line(s) of code added — under the ${MIN_CODE_LINES_THRESHOLD}-line threshold.`;
+            } else if (testFiles.length > 0) {
+              status = 'ok';
+              reason = `Tests detected: ${testFiles.length} test file(s) changed alongside ${codeFiles.length} source file(s).`;
+            } else {
+              status = 'missing';
+              reason = `Found ${codeFiles.length} source file(s) with ${codeAdditions} line(s) added, but no test files were changed.`;
+            }
+
+            core.info(`Status: ${status}`);
+            core.info(reason);
+            core.info(`Code files: ${codeFiles.length} (+${codeAdditions} lines)`);
+            core.info(`Test files: ${testFiles.length}`);
+            core.info(`Exempt files: ${exemptFiles.length}`);
+
+            const buildBody = () => {
+              if (status === 'missing') {
+                const sample = codeFiles.slice(0, 10).map((f) => `- \`${f}\``).join('\n');
+                const more = codeFiles.length > 10 ? `\n_…and ${codeFiles.length - 10} more_` : '';
+                return [
+                  COMMENT_MARKER,
+                  '### Missing tests in this PR',
+                  '',
+                  reason,
+                  '',
+                  '<details><summary>Changed source files</summary>',
+                  '',
+                  sample + more,
+                  '',
+                  '</details>',
+                  '',
+                  '**This is a soft check — it will not block the merge.** Please consider adding tests, or use one of the exemptions below if appropriate:',
+                  '',
+                  '- Add a label: `skip-tests`, `docs-only`, `documentation`, `style`, `chore`, or `build`',
+                  '- Add `#trivial` or `#skip-tests` to the PR title or body',
+                  '- Push a commit that updates the relevant tests under `src/backend/tests`, `src/frontend/tests`, `src/frontend/src/**/__tests__`, or co-located `*.test.ts` / `*.spec.ts` files',
+                ].join('\n');
+              }
+              return [
+                COMMENT_MARKER,
+                '### Test check passed',
+                '',
+                reason,
+              ].join('\n');
+            };
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+            const existing = comments.find((c) => (c.body || '').includes(COMMENT_MARKER));
+
+            const shouldComment = status === 'missing' || existing;
+            if (!shouldComment) {
+              core.info('No comment needed.');
+              return;
+            }
+
+            const newBody = buildBody();
+            if (existing) {
+              if (existing.body === newBody) {
+                core.info('Comment already up to date.');
+              } else {
+                await github.rest.issues.updateComment({
+                  ...repo,
+                  comment_id: existing.id,
+                  body: newBody,
+                });
+                core.info(`Updated comment ${existing.id}.`);
+              }
+            } else {
+              await github.rest.issues.createComment({
+                ...repo,
+                issue_number: prNumber,
+                body: newBody,
+              });
+              core.info('Created new comment.');
+            }
