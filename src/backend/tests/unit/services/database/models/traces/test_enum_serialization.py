@@ -296,14 +296,6 @@ class TestTraceReadIoFields:
         assert t.input is None
         assert t.output is None
 
-    """Regression: TraceRead.input/output accept the '[Unserializable Object]' sentinel.
-
-    The detail endpoint builds a ``TraceRead`` from the same stored span data as
-    the list endpoint.  Before the fix, ``TraceRead.input`` and
-    ``TraceRead.output`` were typed as ``dict | None``, so a stored sentinel
-    string raised a ``ValidationError`` (which escaped as a 500).
-    """
-
     def test_should_accept_dict_input(self):
         trace = TraceRead(**{**_TRACE_READ_DEFAULTS, "input": {"key": "value"}})
         assert trace.input == {"key": "value"}
