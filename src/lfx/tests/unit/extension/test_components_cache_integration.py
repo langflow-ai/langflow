@@ -503,10 +503,10 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
 
 
 def test_refresh_cache_preserves_entry_on_total_failure(tmp_path: Path) -> None:
-    """When every component fails to template, refuse to overwrite the
-    previous cache entry with ``{}`` and raise so the hook layer can surface
-    the failure on ``ReloadResult.warnings``.
+    """Total template failure preserves the previous cache entry and raises.
 
+    Refuse to overwrite the previous cache entry with ``{}``; raise so the
+    hook layer can surface the failure on ``ReloadResult.warnings``.
     Regression guard for the empty-palette-after-reload bug: the prior code
     silently logged a warning per failed component, then unconditionally
     wrote an empty dict to ``component_cache.all_types_dict[bundle]``.
@@ -565,10 +565,10 @@ def test_refresh_cache_preserves_entry_on_total_failure(tmp_path: Path) -> None:
 
 
 def test_refresh_cache_writes_partial_on_partial_failure(tmp_path: Path) -> None:
-    """A bundle with one passing and one failing component must commit the
-    partial cache entry (palette is "less broken" than pre-reload), but the
-    bundle dict must not be empty -- otherwise the total-failure guard
-    would have raised.
+    """One passing + one failing component commits a partial cache entry.
+
+    Palette is "less broken" than pre-reload; the bundle dict must not be
+    empty (otherwise the total-failure guard would have raised).
     """
     from lfx.extension.bundle_registry import BundleRecord
     from lfx.extension.loader._types import LoadedComponent
@@ -627,7 +627,7 @@ def test_refresh_cache_writes_partial_on_partial_failure(tmp_path: Path) -> None
     def _template(component_extractor, module_name=None):  # noqa: ARG001
         if isinstance(component_extractor, _Bad):
             msg = "synthetic per-component failure"
-            raise RuntimeError(msg)
+            raise RuntimeError(msg)  # noqa: TRY004
         return _stub_template()
 
     with patch("lfx.interface.components.create_component_template", side_effect=_template):
