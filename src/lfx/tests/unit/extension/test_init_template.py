@@ -256,10 +256,13 @@ def test_scaffolded_pyproject_is_pip_installable(tmp_path: Path) -> None:
     """The scaffolded pyproject.toml must satisfy ``pip install -e .`` shape.
 
     The quickstart and author guide both tell first-time authors to run
-    ``pip install -e .``; this test parses the generated file with
-    ``tomllib`` and asserts the [build-system] + [project] keys exist.
+    ``pip install -e .``; this test parses the generated file and asserts
+    the [build-system] + [project] keys exist.
     """
-    import tomllib
+    try:
+        import tomllib  # stdlib on 3.11+
+    except ModuleNotFoundError:  # pragma: no cover - 3.10 fallback
+        import tomli as tomllib  # type: ignore[no-redef]
 
     target = tmp_path / "my-ext"
     init_extension(_options(target))
