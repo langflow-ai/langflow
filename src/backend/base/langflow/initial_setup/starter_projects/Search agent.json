@@ -942,12 +942,12 @@
             "last_updated": "2025-12-11T21:41:48.407Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "645cad9738fe",
+              "code_hash": "2c5c063b032b",
               "dependencies": {
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.2.17"
+                    "version": "1.2.15"
                   },
                   {
                     "name": "lfx",

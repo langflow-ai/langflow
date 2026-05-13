@@ -800,12 +800,12 @@
             "last_updated": "2026-03-20T22:35:04.094Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "645cad9738fe",
+              "code_hash": "2c5c063b032b",
               "dependencies": {
                 "dependencies": [
                   {
                     "name": "langchain",
-                    "version": "1.2.17"
+                    "version": "1.2.15"
                   },
                   {
                     "name": "lfx",
