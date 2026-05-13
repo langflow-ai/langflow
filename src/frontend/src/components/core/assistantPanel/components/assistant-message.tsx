@@ -388,7 +388,7 @@ export function AssistantMessageItem({
             if (isCodeBlock(className, props, content)) {
               return (
                 <SimplifiedCodeTabComponent
-                  language={extractLanguage(className, content)}
+                  language={extractLanguage(className)}
                   code={content.replace(/\n$/, "")}
                   maxHeight={isStreaming ? "200px" : undefined}
                 />
