@@ -1,34 +1,173 @@
-import { useId, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useGetKbMetadataKeys } from "@/controllers/API/queries/knowledge-bases/use-get-kb-metadata-keys";
+import { cn } from "@/utils/utils";
 
 const KEY_PATTERN = /^[a-z0-9_]{1,32}$/;
 
 interface ChunksMetadataFilterProps {
-  /** Knowledge base name — used to fetch the available metadata keys. */
   kbName: string;
-  /** Called when the user submits a key/value pair. */
   onAdd: (key: string, value: string) => void;
 }
+
+interface MetadataComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder: string;
+  emptyMessage: string;
+  testId: string;
+  disabled?: boolean;
+  onEnter?: () => void;
+}
+
+const MetadataCombobox = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyMessage,
+  testId,
+  disabled,
+  onEnter,
+}: MetadataComboboxProps) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const trimmedQuery = query.trim();
+  const normalizedOptions = useMemo(
+    () => options.map((option) => option.toLowerCase()),
+    [options],
+  );
+  const showCustom =
+    trimmedQuery.length > 0 &&
+    !normalizedOptions.includes(trimmedQuery.toLowerCase());
+
+  const commit = (next: string) => {
+    onChange(next);
+    setQuery("");
+    setOpen(false);
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setQuery("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+          data-testid={testId}
+        >
+          <span
+            className={cn(
+              "truncate text-left",
+              value ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {value || placeholder}
+          </span>
+          <ForwardedIconComponent
+            name="ChevronDown"
+            className="ml-2 h-4 w-4 shrink-0 opacity-50"
+          />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[--radix-popover-trigger-width] p-0"
+      >
+        <Command shouldFilter>
+          <CommandInput
+            value={query}
+            onValueChange={setQuery}
+            placeholder={placeholder}
+            data-testid={`${testId}-input`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !showCustom && options.length === 0) {
+                e.preventDefault();
+                if (trimmedQuery) commit(trimmedQuery);
+                else onEnter?.();
+              }
+            }}
+          />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            {options.length > 0 && (
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option}
+                    value={option}
+                    onSelect={() => commit(option)}
+                    data-testid={`${testId}-option-${option}`}
+                  >
+                    <ForwardedIconComponent
+                      name="Check"
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    {option}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            {showCustom && (
+              <CommandGroup>
+                <CommandItem
+                  value={`__custom__${trimmedQuery}`}
+                  onSelect={() => commit(trimmedQuery)}
+                  data-testid={`${testId}-custom`}
+                >
+                  <ForwardedIconComponent
+                    name="Plus"
+                    className="mr-2 h-4 w-4"
+                  />
+                  Use “{trimmedQuery}”
+                </CommandItem>
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 /**
  * "+ Filter by metadata" popover for the chunks-browser metadata chips.
  *
- * Both inputs are bound to a `<datalist>` populated from the new
- * `/metadata/keys` endpoint so the user gets self-documenting key + value
- * suggestions on click and free-text typing for keys not in the list.
+ * Key and value pickers are shadcn comboboxes (Popover + Command). They
+ * match the visual style of the surrounding shadcn `Select` controls (e.g.
+ * "All sources") while still letting users type a custom key/value that is
+ * not yet in the suggestion list.
  *
  * Validation mirrors the backend rules so an obviously malformed key (e.g.
  * uppercase or punctuation) is rejected before it would 422 server-side.
- * Submitting closes the popover and clears the inputs so the user can chain
- * multiple chips without re-opening it manually.
  */
 export const ChunksMetadataFilter = ({
   kbName,
@@ -38,8 +177,6 @@ export const ChunksMetadataFilter = ({
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const keyListId = useId();
-  const valueListId = useId();
 
   const {
     data: metadataKeys,
@@ -52,12 +189,9 @@ export const ChunksMetadataFilter = ({
     [metadataKeys],
   );
 
-  // Distinct values for the currently typed key, when that key matches one
-  // of the keys returned from the server. Falls back to no suggestions for
-  // free-typed keys.
   const valueSuggestions = useMemo(() => {
     const trimmed = key.trim();
-    if (!trimmed) return [];
+    if (!trimmed) return [] as string[];
     return metadataKeys?.keys?.[trimmed] ?? [];
   }, [key, metadataKeys]);
 
@@ -81,18 +215,18 @@ export const ChunksMetadataFilter = ({
 
   const hasKeys = availableKeys.length > 0;
 
-  // Refetch on every popover open so a fresh ingestion's new keys/values
-  // surface without a hard page refresh. The `enabled` flag re-arms the
-  // query when the popover opens; calling `refetch` here forces a network
-  // round-trip even when React Query already has cached data, which is the
-  // case after the user closes and re-opens the popover within the same
-  // browser session.
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
     if (next && kbName) {
       void refetchMetadataKeys();
     }
   };
+
+  const keyPlaceholder = isLoading
+    ? "Loading keys..."
+    : hasKeys
+      ? "Pick or type a key"
+      : "Type a key";
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -109,51 +243,45 @@ export const ChunksMetadataFilter = ({
       </PopoverTrigger>
       <PopoverContent className="w-72" align="end">
         <div className="flex flex-col gap-2">
-          <Input
-            list={keyListId}
-            placeholder={
+          <MetadataCombobox
+            value={key}
+            onChange={(next) => {
+              setKey(next);
+              setError(null);
+              setValue("");
+            }}
+            options={availableKeys}
+            placeholder={keyPlaceholder}
+            emptyMessage={
               isLoading
                 ? "Loading keys..."
                 : hasKeys
-                  ? "Pick or type a key"
-                  : "key"
+                  ? "No matching key. Press Enter or pick to use as typed."
+                  : "Type a key to filter."
             }
-            value={key}
-            onChange={(e) => setKey(e.target.value)}
-            data-testid="chunks-metadata-filter-key"
-            autoFocus
+            testId="chunks-metadata-filter-key"
           />
-          <datalist
-            id={keyListId}
-            data-testid="chunks-metadata-filter-key-options"
-          >
-            {availableKeys.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
-          <Input
-            list={valueListId}
-            placeholder={
-              valueSuggestions.length > 0 ? "Pick or type a value" : "value"
-            }
+          <MetadataCombobox
             value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submit();
-              }
+            onChange={(next) => {
+              setValue(next);
+              setError(null);
             }}
-            data-testid="chunks-metadata-filter-value"
+            options={valueSuggestions}
+            placeholder={
+              valueSuggestions.length > 0
+                ? "Pick or type a value"
+                : "Type a value"
+            }
+            emptyMessage={
+              valueSuggestions.length > 0
+                ? "No matching value. Press Enter or pick to use as typed."
+                : "Type a value."
+            }
+            testId="chunks-metadata-filter-value"
+            disabled={!key.trim()}
+            onEnter={submit}
           />
-          <datalist
-            id={valueListId}
-            data-testid="chunks-metadata-filter-value-options"
-          >
-            {valueSuggestions.map((option) => (
-              <option key={option} value={option} />
-            ))}
-          </datalist>
           {!isLoading && !hasKeys && (
             <span
               className="text-xs text-muted-foreground"
