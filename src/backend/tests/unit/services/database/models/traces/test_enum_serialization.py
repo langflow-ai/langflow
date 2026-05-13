@@ -295,6 +295,7 @@ class TestTraceReadIoFields:
         t = TraceRead(**_TRACE_READ_DEFAULTS)
         assert t.input is None
         assert t.output is None
+
     """Regression: TraceRead.input/output accept the '[Unserializable Object]' sentinel.
 
     The detail endpoint builds a ``TraceRead`` from the same stored span data as
