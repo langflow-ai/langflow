@@ -171,7 +171,10 @@ const defaultProps: BaseInputProps & ModelInputComponentType = {
   editNode: false,
 };
 
-// Helper to render with QueryClientProvider
+// Helper to render with QueryClientProvider. Returns the raw RTL handle plus
+// a ``rerenderWithProvider`` wrapper so callers can rerender without losing
+// the surrounding ``QueryClientProvider`` (rerender replaces the root JSX —
+// dropping the wrapper would force a remount and reset component state).
 const renderWithQueryClient = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -179,9 +182,13 @@ const renderWithQueryClient = (component: React.ReactElement) => {
       mutations: { retry: false },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>,
+  const wrap = (node: React.ReactElement) => (
+    <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
   );
+  const result = render(wrap(component));
+  const rerenderWithProvider = (node: React.ReactElement) =>
+    result.rerender(wrap(node));
+  return { ...result, rerenderWithProvider };
 };
 
 describe("ModelInputComponent", () => {
@@ -190,14 +197,15 @@ describe("ModelInputComponent", () => {
   });
 
   describe("Rendering", () => {
-    it("should render disabled combobox when no options are provided", () => {
+    it("renders the Setup Provider CTA when no models are enabled", () => {
       renderWithQueryClient(
         <ModelInputComponent {...defaultProps} options={[]} />,
       );
 
-      const combobox = screen.getByRole("combobox");
-      expect(combobox).toBeInTheDocument();
-      expect(combobox).toBeDisabled();
+      // No combobox — the trigger swaps for the Setup Provider button when
+      // there's nothing to pick from.
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.getByText("Setup Provider")).toBeInTheDocument();
     });
 
     it("should render the model selector when options are available", () => {
@@ -321,6 +329,80 @@ describe("ModelInputComponent", () => {
 
       await waitFor(() => {
         expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+    });
+
+    it("keeps loading state until both providers and enabled-models refetches settle", async () => {
+      // The post-close refresh invalidates both ``useGetModelProviders`` AND
+      // ``useGetEnabledModels``. The component must wait for BOTH to finish
+      // before clearing the loading state — otherwise ``groupedOptions``
+      // renders against a stale ``enabledModelsData`` cache and disabled
+      // models briefly leak back into the dropdown after the user closes
+      // the provider modal.
+      let providersFetching = true;
+      let enabledFetching = true;
+
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockImplementation(
+        () =>
+          ({
+            data: mockProvidersData,
+            isLoading: false,
+            isFetching: providersFetching,
+          }) as unknown as ReturnType<typeof useGetModelProviders>,
+      );
+      mockedEnabled.mockImplementation(
+        () =>
+          ({
+            data: { enabled_models: {} },
+            isLoading: false,
+            isFetching: enabledFetching,
+          }) as unknown as ReturnType<typeof useGetEnabledModels>,
+      );
+
+      const user = userEvent.setup();
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} />,
+      );
+
+      // Open the dropdown then the provider manager dialog
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
+      await user.click(screen.getByTestId("manage-model-providers"));
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+
+      // Close the modal — this sets isRefreshingAfterClose=true and the
+      // loading button replaces the dropdown.
+      await user.click(screen.getByTestId("close-provider-modal"));
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+
+      // Providers refetch completes FIRST. With the fix, loading persists
+      // because the enabled-models refetch is still in flight.
+      providersFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await new Promise((r) => setTimeout(r, 30));
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+
+      // Enabled-models refetch completes. Loading state clears.
+      enabledFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
       });
     });
   });
@@ -602,117 +684,88 @@ describe("ModelInputComponent", () => {
       expect(screen.getByRole("combobox")).not.toBeDisabled();
     });
 
-    it("keeps a saved value whose model isn't enabled locally and renders the Configure wrench", async () => {
-      // The backend's update_model_options_in_build_config injects the saved
-      // value into options tagged with `not_enabled_locally: true` whenever
-      // it isn't in the user's enabled list. The frontend must:
-      //   1. NOT auto-reset the saved value.
-      //   2. Keep the option visible/selectable in the dropdown.
-      //   3. Render the Configure wrench next to the trigger.
-      mockedUseGetEnabledModels.mockReturnValue({
-        data: {
-          enabled_models: {
-            OpenAI: { "gpt-4": true, "gpt-3.5-turbo": true },
-          },
-        },
-        isLoading: false,
-      });
-
-      const handleOnNewValue = jest.fn();
-      const savedValue = [
-        {
-          id: "ibm/granite-3",
-          name: "ibm/granite-3",
-          icon: "IBMWatsonx",
-          provider: "IBM watsonx.ai",
-          metadata: { not_enabled_locally: true },
-        },
-      ];
-      // Backend-style options: the saved value is injected into options with
-      // the sticky flag so the client can render it.
-      const optionsWithSticky = [
-        ...mockOptions,
-        {
-          id: "ibm/granite-3",
-          name: "ibm/granite-3",
-          icon: "IBMWatsonx",
-          provider: "IBM watsonx.ai",
-          metadata: { not_enabled_locally: true },
-        },
-      ];
-
-      renderWithQueryClient(
-        <ModelInputComponent
-          {...defaultProps}
-          options={optionsWithSticky}
-          value={savedValue}
-          handleOnNewValue={handleOnNewValue}
-        />,
-      );
-
-      // Value must not be reset by the auto-select effect.
-      expect(handleOnNewValue).not.toHaveBeenCalled();
-
-      // Saved model remains visible in the trigger label.
-      await waitFor(() => {
-        expect(screen.getByText("ibm/granite-3")).toBeInTheDocument();
-      });
-
-      // Configure wrench is rendered next to the trigger.
-      expect(
-        screen.getByTestId(`${defaultProps.id}-configure`),
-      ).toBeInTheDocument();
-    });
-
-    it("opens the provider manager when the Configure wrench is clicked", async () => {
+    it("auto-selects an available model when the saved value is globally disabled", async () => {
+      // The user previously chose ibm/granite-3 but that provider's models
+      // are no longer enabled. Some other models (gpt-4) ARE enabled, so the
+      // component must drop the stale selection and align the stored value
+      // with the first available option rather than visually showing a model
+      // the dropdown doesn't contain.
       mockedUseGetEnabledModels.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
         isLoading: false,
       });
 
+      const handleOnNewValue = jest.fn();
       const savedValue = [
         {
           id: "ibm/granite-3",
           name: "ibm/granite-3",
           icon: "IBMWatsonx",
           provider: "IBM watsonx.ai",
-          metadata: { not_enabled_locally: true },
-        },
-      ];
-      const optionsWithSticky = [
-        ...mockOptions,
-        {
-          id: "ibm/granite-3",
-          name: "ibm/granite-3",
-          icon: "IBMWatsonx",
-          provider: "IBM watsonx.ai",
-          metadata: { not_enabled_locally: true },
+          metadata: {},
         },
       ];
 
-      const handleOnNewValue = jest.fn();
-      const user = userEvent.setup();
       renderWithQueryClient(
         <ModelInputComponent
           {...defaultProps}
-          options={optionsWithSticky}
           value={savedValue}
           handleOnNewValue={handleOnNewValue}
         />,
       );
 
-      const wrench = await screen.findByTestId(`${defaultProps.id}-configure`);
-      await user.click(wrench);
-
+      // Auto-select fires because the saved name isn't in flatOptions.
       await waitFor(() => {
-        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+        expect(handleOnNewValue).toHaveBeenCalled();
       });
-      // Clicking the wrench must not mutate the saved value.
-      expect(handleOnNewValue).not.toHaveBeenCalled();
+      const newValue = handleOnNewValue.mock.calls[0][0].value;
+      expect(newValue[0].name).toBe("gpt-4");
+
+      // The stale model name must NOT be rendered anywhere.
+      expect(screen.queryByText("ibm/granite-3")).not.toBeInTheDocument();
     });
 
-    it("does not render Configure when the selected model isn't flagged", () => {
-      // Baseline: a normal enabled model must not surface the wrench.
+    it("renders the Setup Provider CTA when a provider is configured but all its models are disabled", () => {
+      // OpenAI is configured (is_configured/is_enabled true on the provider)
+      // but every model is explicitly disabled in enabled_models. There's
+      // nothing for the user to pick from, so we must show the Setup
+      // Provider CTA — same UX as the never-configured case.
+      mockedUseGetModelProviders.mockReturnValue({
+        data: [
+          {
+            provider: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            icon: "OpenAI",
+            models: [
+              { model_name: "gpt-4", metadata: { model_type: "llm" } },
+              { model_name: "gpt-3.5-turbo", metadata: { model_type: "llm" } },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+      mockedUseGetEnabledModels.mockReturnValue({
+        data: {
+          enabled_models: {
+            OpenAI: { "gpt-4": false, "gpt-3.5-turbo": false },
+          },
+        },
+        isLoading: false,
+      });
+
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={[]} />,
+      );
+
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      expect(screen.getByText("Setup Provider")).toBeInTheDocument();
+    });
+
+    it("never renders the Configure wrench affordance", () => {
+      // The sticky-default UX was removed: there's no per-trigger affordance
+      // for a disabled-but-saved model. The dropdown is the single source
+      // of truth.
       mockedUseGetEnabledModels.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
         isLoading: false,
