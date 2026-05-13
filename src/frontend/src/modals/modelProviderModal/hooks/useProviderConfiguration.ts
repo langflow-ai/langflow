@@ -5,13 +5,8 @@ import {
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
-import {
-  EnabledModelsResponse,
-  useGetEnabledModels,
-} from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   useDeleteGlobalVariables,
@@ -19,10 +14,10 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
+import { useModelToggleQueue } from "./useModelToggleQueue";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
@@ -114,8 +109,6 @@ export const useProviderConfiguration = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
-  const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
-    useUpdateEnabledModels({ retry: 0 });
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
@@ -561,227 +554,14 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  // Two separate model-toggle buffers, each with a single responsibility:
-  //
-  //   - ``overlayToggles`` is the union of every toggle the user has made
-  //     whose change has not yet been confirmed by the server. The
-  //     re-overlay effect (further down) re-applies it whenever
-  //     ``useGetEnabledModels`` emits new data, so any refetch which lands
-  //     inside the debounce or in-flight-mutation window can't overwrite
-  //     the optimistic cache with stale server state. Entries are drained
-  //     per-key on ``onSettled``, but only when the entry still matches the
-  //     value we sent (a user re-toggle mid-flight becomes a fresh intent
-  //     and must survive the clear).
-  //
-  //   - ``unsentToggles`` is the strict subset that has NOT been sent in a
-  //     mutation yet (or was re-toggled since the last send). It's drained
-  //     immediately at flush time so subsequent flushes don't resend the
-  //     same payload — without this split, mutation A's in-flight overlay
-  //     entries would be snapshotted into mutation B's payload, producing
-  //     duplicate requests with non-deterministic success/failure ordering.
-  const overlayToggles = useRef<Record<string, boolean>>({});
-  const unsentToggles = useRef<Record<string, boolean>>({});
-  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
-    undefined,
-  );
-
-  // Subscribe to enabled-models data changes so the re-overlay effect below
-  // can react when a refetch lands.
-  const { data: enabledModelsData } = useGetEnabledModels();
-
-  // After a mutation settles, remove its entries from the overlay — but
-  // only when the current overlay value still matches what we sent. A
-  // mismatch means the user re-toggled the same model mid-flight; that
-  // entry already sits in ``unsentToggles`` for the next flush and must
-  // not be dropped from the overlay until its own mutation settles.
-  const clearSentOverlay = useCallback((sent: Record<string, boolean>) => {
-    for (const [key, value] of Object.entries(sent)) {
-      if (overlayToggles.current[key] === value) {
-        delete overlayToggles.current[key];
-      }
-    }
-    if (Object.keys(overlayToggles.current).length === 0) {
-      fallbackModelData.current = undefined;
-    }
-  }, []);
-
-  const flushModelToggles = useDebounce(() => {
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const togglesToSend = { ...unsentToggles.current };
-    if (Object.keys(togglesToSend).length === 0) return;
-
-    const updates = Object.entries(togglesToSend).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
-
-    const previousData = fallbackModelData.current;
-    // Drain ``unsentToggles`` immediately — a follow-up flush triggered by
-    // a new user toggle must NOT resend what we already sent. The matching
-    // ``overlayToggles`` entries stay around to repel mid-flight refetches.
-    unsentToggles.current = {};
-
-    updateEnabledModels(
-      { updates },
-      {
-        onError: (error: unknown) => {
-          clearSentOverlay(togglesToSend);
-          if (previousData) {
-            queryClient.setQueryData(["useGetEnabledModels"], previousData);
-          }
-          setErrorData({
-            title: "Error updating model status",
-            list: [getErrorMessage(error) || "Failed to update model status"],
-          });
-        },
-        onSettled: () => {
-          clearSentOverlay(togglesToSend);
-          queryClient.invalidateQueries({
-            queryKey: ["useGetEnabledModels"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["useGetModelProviders"],
-          });
-          refreshAllModelInputs({ silent: true });
-        },
-      },
-    );
-  }, 1000);
-
-  const flushPendingChanges = useCallback(async () => {
-    // Cancel the pending debounce timer — we'll send the toggles directly
-    flushModelToggles.cancel();
-
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const togglesToSend = { ...unsentToggles.current };
-    if (Object.keys(togglesToSend).length === 0) return;
-
-    const updates = Object.entries(togglesToSend).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
-
-    const previousData = fallbackModelData.current;
-    unsentToggles.current = {};
-
-    try {
-      await updateEnabledModelsAsync({ updates });
-      clearSentOverlay(togglesToSend);
-      // Mutation succeeded — query invalidation is handled by
-      // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: unknown) {
-      clearSentOverlay(togglesToSend);
-      // Revert optimistic update on failure
-      if (previousData) {
-        queryClient.setQueryData(["useGetEnabledModels"], previousData);
-      }
-      setErrorData({
-        title: "Error updating model status",
-        list: [getErrorMessage(error) || "Failed to update model status"],
-      });
-    }
-  }, [
-    flushModelToggles,
-    syncedSelectedProvider,
-    queryClient,
-    updateEnabledModelsAsync,
-    setErrorData,
-    clearSentOverlay,
-  ]);
-
-  const handleModelToggle = useCallback(
-    (modelName: string, enabled: boolean) => {
-      if (!syncedSelectedProvider?.provider) return;
-
-      const providerName = syncedSelectedProvider.provider;
-
-      // Cancel any in-flight refetch of useGetEnabledModels so its (stale)
-      // result cannot overwrite the optimistic cache update below. The
-      // re-overlay effect handles refetches that start AFTER this point;
-      // ``cancelQueries`` covers the ones already in flight at click time.
-      void queryClient.cancelQueries({ queryKey: ["useGetEnabledModels"] });
-
-      if (Object.keys(overlayToggles.current).length === 0) {
-        fallbackModelData.current =
-          queryClient.getQueryData<EnabledModelsResponse>([
-            "useGetEnabledModels",
-          ]);
-      }
-
-      queryClient.setQueryData<EnabledModelsResponse>(
-        ["useGetEnabledModels"],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            enabled_models: {
-              ...old.enabled_models,
-              [providerName]: {
-                ...old.enabled_models[providerName],
-                [modelName]: enabled,
-              },
-            },
-          };
-        },
-      );
-
-      // Track in BOTH buffers: overlay for UI protection across refetches,
-      // unsent for the next flush's payload.
-      overlayToggles.current[modelName] = enabled;
-      unsentToggles.current[modelName] = enabled;
-      flushModelToggles();
-    },
-    [syncedSelectedProvider, queryClient, flushModelToggles],
-  );
-
-  // Re-overlay effect — protects the pending-toggle window in its entirety,
-  // not just the instant of the click. Any refetch (window focus, remount,
-  // reconnect, or a stale-time expiry) that lands while ``overlayToggles``
-  // has entries will surface the server's pre-toggle state into
-  // ``enabledModelsData``; this effect detects the drift and re-applies the
-  // pending overlay so the Switch tracks the user's intent through the
-  // entire debounce + in-flight window. Once ``clearSentOverlay`` drains
-  // the entry on ``onSettled``, the next data emission is a no-op.
-  useEffect(() => {
-    if (!syncedSelectedProvider?.provider) return;
-    if (!enabledModelsData) return;
-    const overlay = overlayToggles.current;
-    if (Object.keys(overlay).length === 0) return;
-
-    const providerName = syncedSelectedProvider.provider;
-    const current = enabledModelsData.enabled_models[providerName] ?? {};
-    const drifted = Object.entries(overlay).some(
-      ([model, enabled]) => current[model] !== enabled,
-    );
-    if (!drifted) return;
-
-    queryClient.setQueryData<EnabledModelsResponse>(
-      ["useGetEnabledModels"],
-      (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          enabled_models: {
-            ...old.enabled_models,
-            [providerName]: {
-              ...(old.enabled_models[providerName] ?? {}),
-              ...overlay,
-            },
-          },
-        };
-      },
-    );
-  }, [enabledModelsData, syncedSelectedProvider, queryClient]);
+  // Model-toggle queue — overlay buffer, unsent buffer, debounced flush,
+  // awaitable close-time flush, re-overlay effect. Extracted into its own
+  // hook so this file stays focused on variable CRUD + provider lifecycle.
+  // See ``useModelToggleQueue`` for the full design rationale (split
+  // buffers, drain-before-rollback ordering, re-overlay loop guard).
+  const { handleModelToggle, flushPendingChanges } = useModelToggleQueue({
+    providerName: syncedSelectedProvider?.provider,
+  });
 
   return {
     variableValues,
