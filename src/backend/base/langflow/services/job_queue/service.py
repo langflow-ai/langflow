@@ -532,8 +532,7 @@ class RedisQueueWrapper:
                         _error_start = now
                     elapsed = now - _error_start
                     await logger.awarning(
-                        f"RedisQueueWrapper read error for {self._job_id} "
-                        f"(elapsed {elapsed:.1f}s): {exc}"
+                        f"RedisQueueWrapper read error for {self._job_id} (elapsed {elapsed:.1f}s): {exc}"
                     )
                     if elapsed >= self._STARTUP_GRACE_S:
                         await logger.aerror(
