@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
 from lfx.base.agents.agent import LCToolsAgentComponent
+from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -119,12 +120,9 @@ class AgentComponent(ToolCallingAgentComponent):
             display_name="Agent Instructions",
             info=(
                 "System Prompt: Initial instructions and context provided to guide the agent's behavior. "
-                "Supports dynamic placeholders: {current_date}, {model_name}."
+                "Supports dynamic placeholders: {current_date}, {model_name}, {optional_user_context}."
             ),
-            value=(
-                "You are a helpful assistant that can use tools to answer questions and perform tasks. "
-                "Today is {current_date}. You are powered by {model_name}."
-            ),
+            value=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
             advanced=False,
         ),
         MessageTextInput(
@@ -327,7 +325,10 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
-            self.tools.append(current_date_tool)
+            # Skip if an externally-connected tool already provides the same name.
+            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.
+            if not any(getattr(t, "name", None) == current_date_tool.name for t in self.tools):
+                self.tools.append(current_date_tool)
 
         # Add calculator tool if enabled (zero-config arithmetic)
         if getattr(self, "add_calculator_tool", False):
@@ -338,7 +339,10 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(calculator_tool, StructuredTool):
                 msg = "CalculatorComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
-            self.tools.append(calculator_tool)
+            # Skip if an externally-connected tool already provides the same name.
+            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.
+            if not any(getattr(t, "name", None) == calculator_tool.name for t in self.tools):
+                self.tools.append(calculator_tool)
 
         # Set shared callbacks for tracing the tools used by the agent
         self.set_tools_callbacks(self.tools, self._get_shared_callbacks())
@@ -368,16 +372,20 @@ class AgentComponent(ToolCallingAgentComponent):
         return ""
 
     def _inject_dynamic_prompt_values(self, prompt: str | None) -> str | None:
-        """Replace {current_date} / {model_name} placeholders in the system prompt.
+        """Replace known env placeholders in the system prompt.
 
-        Uses str.replace (not str.format) so user prompts containing literal braces
-        such as JSON examples ({"key": 1}) never break the agent.
+        Handles {current_date}, {model_name}, and {optional_user_context} (the
+        last one ships with the structured DEFAULT_SYSTEM_PROMPT_TEMPLATE and
+        is currently unused at the AgentComponent layer, so it resolves to "").
+        Uses str.replace (not str.format) so user prompts containing literal
+        braces such as JSON examples ({"key": 1}) never break the agent.
         """
         if not prompt:
             return prompt
         replacements = {
             "{current_date}": datetime.now(tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
             "{model_name}": self._get_resolved_model_name(),
+            "{optional_user_context}": "",
         }
         for placeholder, value in replacements.items():
             prompt = prompt.replace(placeholder, value)

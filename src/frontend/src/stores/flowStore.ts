@@ -9,7 +9,7 @@ import {
 import { cloneDeep, zip } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
-import i18n from "../i18n";
+import { queryClient } from "@/contexts";
 import {
   ENABLE_DATASTAX_LANGFLOW,
   ENABLE_INSPECTION_PANEL,
@@ -21,6 +21,7 @@ import {
 } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
+import i18n from "../i18n";
 import type { LogsLogType, VertexBuildTypeAPI } from "../types/api";
 import type { ChatInputType, ChatOutputType } from "../types/chat";
 import type {
@@ -1046,6 +1047,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           false,
         );
         get().setIsBuilding(false);
+        // Invalidate KB-related caches so any KnowledgeIngestion node
+        // that ran inside this build surfaces its updated stats / runs
+        // the next time the user opens the assets/knowledge-bases tab.
+        // Cheap when no subscribers are mounted; the queries only
+        // refetch if a component is actively reading them.
+        queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
+        queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
+        queryClient.invalidateQueries({
+          queryKey: ["useGetKnowledgeBaseChunks"],
+        });
         trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
           flowId: get().currentFlow?.id,
         });
@@ -1370,13 +1381,13 @@ export function syncNodeTranslations(): void {
     }
   }
 
-  let noteIndex = 0;
+  let _noteIndex = 0;
   const updatedNodes = nodes.map((node) => {
     const nodeType = node.data.type;
 
     // Skip note nodes — translations are handled by useGetNoteTranslationsQuery
     if (node.type === "noteNode") {
-      noteIndex += 1;
+      _noteIndex += 1;
       return node;
     }
 
