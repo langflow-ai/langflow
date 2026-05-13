@@ -104,7 +104,7 @@ describe("Basic rendering", () => {
       screen.getByRole("link", { name: "Find your credentials" }),
     ).toHaveAttribute(
       "href",
-      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started&utm_source=langflow&utm_medium=integration&utm_campaign=wxo-integration&utm_content=docs-credentials",
     );
   });
 });
