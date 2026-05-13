@@ -82,9 +82,7 @@ export function AssistantMessageBody({
   // once the user clicked Continue (or the 30s timeout fired) so the gate
   // doesn't reappear on remount (panel close+reopen).
   const [validationAnimationComplete, setValidationAnimationComplete] =
-    useState(
-      () => skipApprovalGate || Boolean(message.validationAcknowledged),
-    );
+    useState(() => skipApprovalGate || Boolean(message.validationAcknowledged));
 
   // Persist the acknowledgement onto the message itself. Fires once when
   // the local state transitions to true (Continue click OR 30s timeout).
