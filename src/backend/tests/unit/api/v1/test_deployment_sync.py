@@ -1036,8 +1036,8 @@ def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
     non-empty ``deployment_ids`` as a wipe of every local attachment for
     the GETted deployment). Raising prevents that destructive
     interpretation for any provider that hasn't overridden the method —
-    the GET call site catches ``NotImplementedError`` and skips the sync
-    instead of wiping local attachment state.
+    the GET call site treats ``NotImplementedError`` as a mapper implementation
+    error instead of wiping local attachment state.
     """
     mapper = BaseDeploymentMapper()
     get_result = DeploymentGetResult(

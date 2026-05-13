@@ -12,6 +12,7 @@ from langflow.services.database.models.deployment.crud import (
     get_deployment,
     list_deployments_page,
     update_deployment,
+    update_deployment_metadata,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import (
@@ -466,6 +467,43 @@ async def test_update_deployment_strips_whitespace(
     fetched = await get_deployment(db, user_id=user.id, deployment_id=updated.id)
     assert fetched is not None
     assert fetched.display_name == "new-name"
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_preserves_updated_at(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-sync",
+        display_name="original",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(row)
+    original_updated_at = row.updated_at
+
+    updated = await update_deployment_metadata(
+        db,
+        user_id=user.id,
+        deployment=row,
+        display_name="provider name",
+        description="provider desc",
+    )
+    assert updated is row
+    assert row.display_name == "provider name"
+    assert row.description == "provider desc"
+    await db.commit()
+
+    fetched = await get_deployment(db, user_id=user.id, deployment_id=row.id)
+    assert fetched is not None
+    assert fetched.display_name == "provider name"
+    assert fetched.description == "provider desc"
+    assert fetched.updated_at == original_updated_at
 
 
 @pytest.mark.asyncio

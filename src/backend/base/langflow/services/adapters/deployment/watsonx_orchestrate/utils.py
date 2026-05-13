@@ -169,7 +169,6 @@ def build_agent_payload_from_values(
     *,
     agent_name: str,
     agent_display_name: str,
-    deployment_name: str,
     description: str,
     tool_ids: Sequence[str],
     llm: str,
@@ -177,7 +176,7 @@ def build_agent_payload_from_values(
     return {
         "name": agent_name,
         "display_name": agent_display_name,
-        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
+        "description": str(description).strip() or f"Langflow deployment {agent_display_name}",
         "tools": list(tool_ids),
         "style": "default",
         "llm": str(llm).strip(),

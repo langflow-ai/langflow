@@ -9,11 +9,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response, status
 from fastapi_pagination import Params
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.exceptions import (
-    DeploymentNotFoundError,
-    DeploymentServiceError,
-    http_status_for_deployment_error,
-)
 from lfx.services.adapters.deployment.schema import (
     DeploymentListTypesResult,
     DeploymentType,
@@ -29,6 +24,7 @@ from langflow.api.v1.mappers.deployments.helpers import (
     deployment_pagination_params,
     flow_version_ids_for_flows,
     get_deployment_row_or_404,
+    get_deployment_synced,
     get_owned_provider_account_or_404,
     handle_adapter_errors,
     list_deployment_flow_versions_synced,
@@ -109,6 +105,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     delete_unbound_attachments,
     list_attachments_by_provider_snapshot_id,
     list_deployment_attachments,
+    get_attachment_by_provider_snapshot_id,
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
@@ -1452,90 +1449,14 @@ async def get_deployment(
     # plane (stale rows, attachments) lives in the owner's namespace.
     owner_id = deployment_row.user_id
     with deployment_provider_scope(deployment_row.deployment_provider_account_id):
-        # Deployment-level sync: if the provider no longer has this deployment,
-        # delete the stale DB row (FK CASCADE handles attachments) and return 404.
-        try:
-            deployment = await deployment_adapter.get(
-                user_id=owner_id,
-                deployment_id=deployment_row.resource_key,
-                db=session,
-            )
-        except DeploymentNotFoundError:
-            logger.warning(
-                "Deployment %s (resource_key=%s) not found on provider — deleting stale row",
-                deployment_row.id,
-                deployment_row.resource_key,
-            )
-            try:
-                # Stale-row delete is owner-scoped — a shared-deployment
-                # reader must be able to clean up the owner's stale row.
-                await delete_deployment_by_id(session, user_id=owner_id, deployment_id=deployment_row.id)
-                await session.commit()
-            except Exception:  # noqa: BLE001
-                logger.warning(
-                    "Failed to delete stale deployment row %s; returning 404 anyway",
-                    deployment_row.id,
-                    exc_info=True,
-                )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.") from None
-        except DeploymentServiceError as exc:
-            raise HTTPException(
-                status_code=http_status_for_deployment_error(exc),
-                detail=exc.message,
-            ) from exc
-
-        # Snapshot-level sync: reconcile tracked attachments against provider
-        # binding state for this deployment.
-        try:
-            try:
-                bindings = deployment_mapper.extract_snapshot_bindings_for_get(
-                    deployment,
-                    resource_key=deployment_row.resource_key,
-                )
-            except NotImplementedError:
-                logger.debug(
-                    "Mapper for provider %s does not support binding-aware GET sync; "
-                    "returning unverified attachment count for deployment %s",
-                    provider_key,
-                    deployment_row.id,
-                )
-                bindings = None
-
-            if bindings is not None:
-                async with session.begin_nested():
-                    # Unbound-attachment prune operates on the owner's rows.
-                    await delete_unbound_attachments(
-                        db=session,
-                        user_id=owner_id,
-                        provider_account_id=deployment_row.deployment_provider_account_id,
-                        deployment_ids=[deployment_row.id],
-                        bindings=bindings,
-                    )
-
-            attachments = await list_deployment_attachments(session, user_id=owner_id, deployment_id=deployment_row.id)
-            attached_count = len(attachments)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Binding-aware sync failed for deployment %s; returning unverified attachment count",
-                deployment_row.id,
-                exc_info=True,
-            )
-            await session.rollback()  # clean up potentially dirty session
-            try:
-                # Degraded fallback after binding-sync failure — still
-                # owner-scoped so shared reads return the right
-                # ``attached_count`` instead of the actor's empty set.
-                attachments = await list_deployment_attachments(
-                    session, user_id=owner_id, deployment_id=deployment_row.id
-                )
-                attached_count = len(attachments)
-            except Exception:  # noqa: BLE001
-                logger.warning(
-                    "Fallback attachment count query also failed for deployment %s; defaulting to 0",
-                    deployment_row.id,
-                    exc_info=True,
-                )
-                attached_count = 0
+        deployment_row, deployment, attached_count = await get_deployment_synced(
+            deployment_adapter=deployment_adapter,
+            deployment_mapper=deployment_mapper,
+            deployment=deployment_row,
+            provider_key=provider_key,
+            user_id=owner_id,
+            db=session,
+        )
 
     payload = deployment.model_dump(exclude_unset=True)
     raw_provider_data = payload.get("provider_data")

@@ -447,11 +447,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         if not agent:
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
-        return get_deployment_detail_metadata(
-            data=agent,
-            deployment_type=DeploymentType.AGENT,
-            provider_data=self._validate_deployment_item_provider_data(agent, for_detail=True),
-        )
+        try:
+            return get_deployment_detail_metadata(
+                data=agent,
+                deployment_type=DeploymentType.AGENT,
+                provider_data=self._validate_deployment_item_provider_data(agent, for_detail=True),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise_as_deployment_error(
+                exc,
+                error_prefix=ErrorPrefix.GET,
+                log_msg="Unexpected error validating wxO deployment",
+                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError),
+            )
 
     async def update(
         self,

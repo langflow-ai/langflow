@@ -341,7 +341,7 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
 class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
-    name: str = Field(description="The name of the deployment")
+    name: NormalizedStr = Field(description="The name of the deployment")
     description: str = Field(
         default="",
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -546,7 +546,7 @@ def get_deployment_create_schema() -> str:
 class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
-    name: str | None = Field(None, description="The name of the deployment")
+    name: NormalizedStr | None = Field(None, description="The name of the deployment")
     description: str | None = Field(
         None,
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,

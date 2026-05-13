@@ -6,6 +6,7 @@ import asyncio
 import copy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
@@ -52,7 +53,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
     raise_as_deployment_error,
-    validate_wxo_name,
 )
 
 if TYPE_CHECKING:
@@ -71,6 +71,7 @@ if TYPE_CHECKING:
 @dataclass(slots=True)
 class ProviderCreatePlan:
     deployment_name: str
+    display_name: str
     llm: str
     existing_tool_ids: list[str]
     existing_tool_bindings: dict[str, list[str]]
@@ -96,7 +97,7 @@ def build_provider_create_plan(
     provider_create: WatsonxDeploymentCreatePayload,
 ) -> ProviderCreatePlan:
     """Build a deterministic CPU-only plan for provider_data create operations."""
-    normalized_deployment_name = validate_wxo_name(deployment_name)
+    normalized_deployment_name = _build_wxo_agent_name()
 
     # existing_tool_ids: provider tool ids from bind operations that reference
     #   pre-existing tools (via tool_id_with_ref); included in the final agent.
@@ -152,6 +153,7 @@ def build_provider_create_plan(
 
     return ProviderCreatePlan(
         deployment_name=normalized_deployment_name,
+        display_name=deployment_name,
         llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
@@ -160,6 +162,11 @@ def build_provider_create_plan(
         raw_tools_to_create=raw_tools_to_create,
         selected_operation_app_ids=selected_operation_app_ids.to_list(),
     )
+
+
+def _build_wxo_agent_name() -> str:
+    """Build a unique wxO technical agent name decoupled from the human readable display name."""
+    return f"langflow_agent_{uuid4().hex[:8]}"
 
 
 async def apply_provider_create_plan_with_rollback(
@@ -270,8 +277,7 @@ async def apply_provider_create_plan_with_rollback(
             create_agent_deployment,
             clients=clients,
             agent_name=plan.deployment_name,
-            agent_display_name=deployment_spec.name,
-            deployment_name=deployment_spec.name,
+            agent_display_name=plan.display_name,
             description=deployment_spec.description,
             tool_ids=final_tool_ids,
             llm=plan.llm,
@@ -315,7 +321,7 @@ async def apply_provider_create_plan_with_rollback(
         tools_with_refs=created_snapshot_bindings,
         tool_app_bindings=created_tool_app_bindings,
         deployment_name=plan.deployment_name,
-        display_name=deployment_spec.name,
+        display_name=plan.display_name,
     )
 
 
@@ -416,7 +422,6 @@ async def create_agent_deployment(
     tool_ids: list[str],
     agent_name: str,
     agent_display_name: str,
-    deployment_name: str,
     description: str,
     llm: str,
 ):
@@ -424,7 +429,6 @@ async def create_agent_deployment(
     payload = build_agent_payload_from_values(
         agent_name=agent_name,
         agent_display_name=agent_display_name,
-        deployment_name=deployment_name,
         description=description,
         tool_ids=tool_ids,
         llm=llm,
