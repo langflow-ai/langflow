@@ -106,8 +106,14 @@ class RegoloModelComponent(LCModelComponent):
                 api_key_value = str(self.api_key)
         logger.debug(f"Final api_key_value type: {type(api_key_value)}, value: {'***' if api_key_value else None}")
 
-        # Handle model_kwargs
-        model_kwargs = self.model_kwargs or {}
+        model_kwargs = {}
+        if self.model_kwargs:
+            import json
+            try:
+                model_kwargs = json.loads(self.model_kwargs)
+            except json.JSONDecodeError:
+                logger.warning(f"Invalid JSON in model_kwargs: {self.model_kwargs}")
+                model_kwargs = {}
 
         parameters = {
             "api_key": api_key_value,
