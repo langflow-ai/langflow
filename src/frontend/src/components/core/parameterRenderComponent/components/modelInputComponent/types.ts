@@ -14,4 +14,6 @@ export interface ModelInputComponentType {
   externalOptions?: any;
   /** When true and options are empty, shows "No models enabled" in a clickable dropdown instead of loading state */
   showEmptyState?: boolean;
+  /** Explicitly set the model type filter ("llm" or "embeddings"). Overrides the nodeClass-derived default. */
+  modelType?: "llm" | "embeddings";
 }

@@ -109,13 +109,7 @@ export function useMemoriesData({
       }),
   });
 
-  const updateMemoryMutation = useUpdateMemory({
-    onError: (error: unknown) =>
-      setErrorData({
-        title: "Failed to update memory",
-        list: extractApiErrorMessages(error),
-      }),
-  });
+  const updateMemoryMutation = useUpdateMemory();
 
   const { autoCaptureDraft, handleToggleActive } =
     useAutoCaptureDebouncedToggle({
@@ -166,10 +160,8 @@ export function useMemoriesData({
     return nextMemory;
   }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
-  const onRefresh = useCallback(() => {
-    refetchMemories();
-    refetchMemorySessions();
-    refetchMessages();
+  const onRefresh = useCallback(async () => {
+    await Promise.all([refetchMemories(), refetchMemorySessions(), refetchMessages()]);
   }, [refetchMemories, refetchMemorySessions, refetchMessages]);
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {

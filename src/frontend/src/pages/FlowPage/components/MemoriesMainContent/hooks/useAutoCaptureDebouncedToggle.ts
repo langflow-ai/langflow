@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import useAlertStore from "@/stores/alertStore";
 import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 import type {
   MemoryInfo,
@@ -25,6 +26,9 @@ export const useAutoCaptureDebouncedToggle = ({
   updateMemoryMutation,
   debounceMs = AUTO_CAPTURE_DEBOUNCE_MS,
 }: UseAutoCaptureDebouncedToggleArgs) => {
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -112,9 +116,21 @@ export const useAutoCaptureDebouncedToggle = ({
           auto_capture: nextIsActive,
         },
         {
-          onSuccess: clearDraft,
-          // On failure the draft never resolved — reset so UI reflects server state.
-          onError: clearDraft,
+          onSuccess: () => {
+            clearDraft();
+            setSuccessData({
+              title: nextIsActive
+                ? `Auto-capture enabled for memory "${memory.name}"`
+                : `Auto-capture disabled for memory "${memory.name}"`,
+            });
+          },
+          onError: () => {
+            clearDraft();
+            setErrorData({
+              title: "Failed to update auto-capture",
+              list: ["Please try again."],
+            });
+          },
         },
       );
       autoCaptureTimerRef.current = null;
