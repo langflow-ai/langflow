@@ -206,7 +206,12 @@ export function AssistantMessageItem({
     // Show validation failure after all retries (only after animation completes)
     const canShowResult = validationAnimationComplete || !message.progress;
     if (hasValidationError && message.result && canShowResult) {
-      return <AssistantValidationFailed result={message.result} />;
+      return (
+        <AssistantValidationFailed
+          result={message.result}
+          onRetry={onRetry ? () => onRetry(message.id) : undefined}
+        />
+      );
     }
 
     // Show successful component result (only after validation animation completes, or if no animation was needed)
