@@ -3,7 +3,7 @@ name = "langflow-sdk"
 version = "0.1.2"
 description = "Python SDK for the Langflow REST API"
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["langflow", "sdk", "ai", "workflow"]
 
