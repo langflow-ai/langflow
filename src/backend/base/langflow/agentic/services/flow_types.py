@@ -22,6 +22,13 @@ LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
 FLOW_BUILDER_ASSISTANT_FLOW = "flow_builder_assistant"
 TRANSLATION_FLOW = "translation_flow.py"
 
+# Verbatim text the frontend sends when the user clicks Continue on a
+# proposed plan (manual approve or skip-all auto-approve). Used to switch
+# the "Generating plan..." indicator into "Generating flow..." on the
+# follow-up turn. Must stay in sync with `SKIP_ALL_APPROVAL_TEXT` in
+# src/frontend/.../hooks/use-assistant-chat.ts.
+PLAN_APPROVAL_INPUT = "User approved the plan. Proceed with the build."
+
 OFF_TOPIC_REFUSAL_MESSAGE = (
     "I appreciate your interest, but I'm the Langflow Assistant and can only help with "
     "Langflow-related topics such as building components, creating flows, configuring "

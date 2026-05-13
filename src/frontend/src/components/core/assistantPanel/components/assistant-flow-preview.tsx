@@ -9,6 +9,10 @@ import { ArrowRight, Check, GitBranch, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowProposalStatus } from "../assistant-panel.types";
+import {
+  GHOST_PRIMARY_BUTTON,
+  GHOST_SECONDARY_BUTTON,
+} from "../helpers/button-styles";
 
 const APPROVED_DISPLAY_DURATION_MS = 3000;
 
@@ -135,12 +139,10 @@ export function AssistantFlowPreview({
   }, [flowPreview.flow, paste]);
 
   return (
-    <div className="max-w-[80%] rounded-lg border border-border bg-muted/30 p-4">
+    <div className="max-w-[80%] py-1">
       {/* Flow header */}
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#8B5CF6]">
-          <GitBranch className="h-4 w-4 text-white" />
-        </div>
+      <div className="mb-2 flex items-center gap-2">
+        <GitBranch className="h-4 w-4 text-foreground/80" />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-foreground">
             {flowPreview.name || "Untitled Flow"}
@@ -154,7 +156,7 @@ export function AssistantFlowPreview({
 
       {/* Mini flow canvas */}
       {nodes.length > 0 && (
-        <div className="mb-4 h-[120px] w-full overflow-hidden rounded-md border border-border bg-background">
+        <div className="mb-3 h-[120px] w-full overflow-hidden rounded-md bg-muted/30">
           <ReactFlowProvider>
             <ReactFlow
               nodes={nodes}
@@ -178,7 +180,7 @@ export function AssistantFlowPreview({
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-2">{renderActions()}</div>
+      <div className="flex items-center gap-1">{renderActions()}</div>
     </div>
   );
 
@@ -186,30 +188,25 @@ export function AssistantFlowPreview({
     if (status === "pending") {
       return (
         <>
-          {/* Primary action: ADD to canvas. Non-destructive, keeps
-              existing nodes/edges intact. The legacy
-              `assistant-flow-continue-button` testid is reused on this
-              button: it's the "primary acceptance" action and E2E
-              specs that pinned the old name still find it. The new
-              tests use `assistant-flow-add-button` for the more
-              precise semantic. */}
+          {/* Primary action: ADD to canvas. Non-destructive, keeps existing
+              nodes/edges intact. Keeps the legacy `assistant-flow-continue-button`
+              alias so older E2E specs still find it. */}
           <button
             type="button"
             data-testid="assistant-flow-add-button"
             data-add-button-alias="assistant-flow-continue-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-accent-emerald-foreground/10 px-3 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
+            className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApply?.("add")}
           >
             <span>Add to canvas</span>
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
-          {/* Secondary action: REPLACE canvas. Destructive — uses a
-              warning/neutral palette so the consequence reads at a
-              glance. */}
+          {/* Secondary action: REPLACE canvas. Destructive — same muted ghost
+              styling as Dismiss; tooltip carries the destructive intent. */}
           <button
             type="button"
             data-testid="assistant-flow-replace-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] border border-border bg-transparent px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+            className={GHOST_SECONDARY_BUTTON}
             onClick={() => onApply?.("replace")}
             title="Discard the current canvas and replace it with this flow"
           >
@@ -218,10 +215,10 @@ export function AssistantFlowPreview({
           <button
             type="button"
             data-testid="assistant-flow-dismiss-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+            className={GHOST_SECONDARY_BUTTON}
             onClick={() => onDismiss?.()}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
             <span>Dismiss</span>
           </button>
         </>
@@ -229,15 +226,15 @@ export function AssistantFlowPreview({
     }
     if (status === "applied") {
       return (
-        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
-          <Check className="h-4 w-4" />
+        <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
+          <Check className="h-3.5 w-3.5" />
           <span>Added to canvas</span>
         </div>
       );
     }
     if (status === "dismissed") {
       return (
-        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-muted-foreground line-through">
+        <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-muted-foreground line-through">
           <span>Dismissed</span>
         </div>
       );
@@ -245,8 +242,8 @@ export function AssistantFlowPreview({
     // Legacy "Add to Flow" path — no status prop provided
     if (showApproved) {
       return (
-        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
-          <Check className="h-4 w-4" />
+        <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
+          <Check className="h-3.5 w-3.5" />
           <span>Added to flow</span>
         </div>
       );
@@ -254,10 +251,11 @@ export function AssistantFlowPreview({
     return (
       <button
         type="button"
-        className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+        className={GHOST_PRIMARY_BUTTON}
         onClick={handleAddToFlow}
       >
-        Add to Flow
+        <span>Add to Flow</span>
+        <ArrowRight className="h-3.5 w-3.5" />
       </button>
     );
   }

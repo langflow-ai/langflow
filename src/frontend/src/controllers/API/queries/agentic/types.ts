@@ -1,6 +1,7 @@
 export type AgenticStepType =
   | "generating"
   | "generating_component"
+  | "generating_plan"
   | "generating_flow"
   | "generation_complete"
   | "extracting_code"

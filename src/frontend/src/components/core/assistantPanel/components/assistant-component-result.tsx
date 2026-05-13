@@ -2,6 +2,10 @@ import { Check, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
+import {
+  GHOST_PRIMARY_BUTTON,
+  GHOST_SECONDARY_BUTTON,
+} from "../helpers/button-styles";
 
 const APPROVED_DISPLAY_DURATION_MS = 3000;
 
@@ -103,19 +107,17 @@ export function AssistantComponentResult({
   };
 
   return (
-    <div className="max-w-[80%] rounded-lg border border-border bg-muted/30 p-4">
+    <div className="max-w-[80%] rounded-md bg-muted/30 px-3 py-3">
       {/* Component header */}
-      <div className="mb-3 flex items-center gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[#0EA5E9]">
-          <FileText className="h-4 w-4 text-white" />
-        </div>
+      <div className="mb-2 flex items-center gap-2">
+        <FileText className="h-4 w-4 text-foreground/80" />
         <span className="text-sm font-semibold text-foreground">
           {componentName}
         </span>
       </div>
 
       {/* Component info */}
-      <div className="mb-5 flex flex-col gap-3">
+      <div className="mb-3 flex flex-col gap-3">
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}
@@ -128,7 +130,7 @@ export function AssistantComponentResult({
               {inputs.map((input) => (
                 <span
                   key={input.name}
-                  className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+                  className="rounded bg-muted/40 px-1.5 py-0.5 text-xs text-muted-foreground"
                 >
                   {input.name}{" "}
                   <span className="text-muted-foreground/60">
@@ -148,7 +150,7 @@ export function AssistantComponentResult({
               {outputs.map((output) => (
                 <span
                   key={output.name}
-                  className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+                  className="rounded bg-muted/40 px-1.5 py-0.5 text-xs text-muted-foreground"
                 >
                   {output.name}{" "}
                   <span className="text-muted-foreground/60">
@@ -162,27 +164,28 @@ export function AssistantComponentResult({
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         {showApproved ? (
-          <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
-            <Check className="h-4 w-4" />
+          <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
+            <Check className="h-3.5 w-3.5" />
             <span>Approved</span>
           </div>
         ) : (
           <button
             type="button"
-            className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+            className={GHOST_PRIMARY_BUTTON}
             onClick={handleApprove}
           >
-            Approve
+            <span>Approve</span>
+            <Check className="h-3.5 w-3.5" />
           </button>
         )}
         <button
           type="button"
-          className="h-8 rounded-[10px] bg-zinc-700 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+          className={GHOST_SECONDARY_BUTTON}
           onClick={() => setIsViewCodeOpen(true)}
         >
-          View Code
+          <span>View Code</span>
         </button>
       </div>
 

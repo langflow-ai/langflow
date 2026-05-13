@@ -16,6 +16,7 @@ import { ModelSelector } from "./model-selector";
 const GENERATING_STEPS: AgenticStepType[] = [
   "generating",
   "generating_component",
+  "generating_plan",
   "generating_flow",
   "generating_document",
 ];
@@ -26,6 +27,7 @@ const GENERATING_STEPS: AgenticStepType[] = [
 const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
   generating: "Generating response...",
   generating_component: "Generating component...",
+  generating_plan: "Generating plan...",
   generating_flow: "Generating flow...",
   generating_document: "Generating document...",
 };

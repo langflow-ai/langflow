@@ -130,6 +130,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     handleApprovePlan,
     handleDismissPlan,
     handleResetPlan,
+    handleAcknowledgeValidation,
     isRefiningPlan,
     skipAll,
     handleRetry,
@@ -164,6 +165,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const hasMessages = messages.length > 0;
   const [hasExpandedOnce, setHasExpandedOnce] = useState(false);
+  const [hasUserResized, setHasUserResized] = useState(false);
 
   // Track if panel has ever shown messages (to keep expanded size after new session)
   useEffect(() => {
@@ -172,10 +174,16 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   // Reset when panel is closed
   useEffect(() => {
-    if (!isOpen) setHasExpandedOnce(false);
+    if (!isOpen) {
+      setHasExpandedOnce(false);
+      setHasUserResized(false);
+    }
   }, [isOpen]);
 
-  const useExpandedSize = hasMessages || hasExpandedOnce;
+  // Once the user grabs a handle in the empty state, treat the panel as
+  // expanded so its dimensions become driven by panelSize (instead of
+  // auto-fitting to the input height).
+  const useExpandedSize = hasMessages || hasExpandedOnce || hasUserResized;
   const [panelSize, setPanelSize] = useState(getStoredSize);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
 
@@ -190,6 +198,12 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     (e: React.MouseEvent, edges: { x?: "left" | "right"; y?: "top" }) => {
       e.preventDefault();
       e.stopPropagation();
+      // Only vertical drags transition the empty panel into expanded mode
+      // (height becomes panelSize-driven, input is pushed to the bottom).
+      // Horizontal-only drags should just widen the auto-height panel.
+      if (edges.y === "top") {
+        setHasUserResized(true);
+      }
       const startX = e.clientX;
       const startY = e.clientY;
       const startW = panelSize.width;
@@ -303,6 +317,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   onResetPlan={handleResetPlan}
                   onRetry={hasEnabledModels ? handleRetry : undefined}
                   skipApprovalGate={skipAll}
+                  onAcknowledgeValidation={handleAcknowledgeValidation}
                 />
               ))}
             </StickToBottom.Content>
@@ -322,7 +337,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           </StickToBottom>
         ) : (
           <>
-            {hasExpandedOnce && <div className="flex-1" />}
+            {useExpandedSize && <div className="flex-1" />}
             <AssistantInput
               onSend={handleSend}
               onStop={handleStopGeneration}
@@ -341,41 +356,43 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         )}
       </div>
 
-      {/* Edge resize handles — invisible hitboxes with hover highlight */}
-      {useExpandedSize && (
-        <>
-          {/* Left edge */}
-          <div
-            data-resize-handle
-            className="absolute top-3 bottom-3 -left-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "left" })}
-          />
-          {/* Right edge */}
-          <div
-            data-resize-handle
-            className="absolute top-3 bottom-3 -right-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "right" })}
-          />
-          {/* Top edge */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] right-3 left-3 z-30 h-[10px] cursor-ns-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { y: "top" })}
-          />
-          {/* Top-left corner */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] -left-[5px] z-30 h-[14px] w-[14px] cursor-nw-resize rounded-full transition-colors hover:bg-primary/30"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "left", y: "top" })}
-          />
-          {/* Top-right corner */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] -right-[5px] z-30 h-[14px] w-[14px] cursor-ne-resize rounded-full transition-colors hover:bg-primary/30"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "right", y: "top" })}
-          />
-        </>
-      )}
+      {/* Edge resize handles — invisible hitboxes with hover highlight.
+          Always rendered: the empty state needs them too so the user can
+          widen the panel before sending the first message. First drag flips
+          hasUserResized → panel transitions from auto-height to
+          panelSize-driven dimensions. */}
+      <>
+        {/* Left edge */}
+        <div
+          data-resize-handle
+          className="absolute top-3 bottom-3 -left-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "left" })}
+        />
+        {/* Right edge */}
+        <div
+          data-resize-handle
+          className="absolute top-3 bottom-3 -right-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "right" })}
+        />
+        {/* Top edge */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] right-3 left-3 z-30 h-[10px] cursor-ns-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { y: "top" })}
+        />
+        {/* Top-left corner */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] -left-[5px] z-30 h-[14px] w-[14px] cursor-nw-resize rounded-full transition-colors hover:bg-primary/30"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "left", y: "top" })}
+        />
+        {/* Top-right corner */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] -right-[5px] z-30 h-[14px] w-[14px] cursor-ne-resize rounded-full transition-colors hover:bg-primary/30"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "right", y: "top" })}
+        />
+      </>
     </div>
   );
 }

@@ -43,6 +43,7 @@ from langflow.agentic.services.flow_types import (
     FLOW_BUILDER_ASSISTANT_FLOW,
     MAX_VALIDATION_RETRIES,
     OFF_TOPIC_REFUSAL_MESSAGE,
+    PLAN_APPROVAL_INPUT,
     VALIDATION_RETRY_TEMPLATE,
     VALIDATION_UI_DELAY_SECONDS,
     FlowExecutionError,
@@ -382,6 +383,13 @@ async def execute_flow_with_validation_streaming(
             # intent so the frontend can show "Generating component..." vs
             # "Generating flow..." instead of a generic "Generating response..."
             # while the LLM is producing the answer.
+            #
+            # Flow requests have two distinct phases when in plan mode:
+            #   - planning: empty canvas + no prior approval → agent will call
+            #     propose_plan before build_flow. Surface this as
+            #     "Generating plan...".
+            #   - building: post-approval (user clicked Continue) or live edit
+            #     on a non-empty canvas → "Generating flow...".
             if is_component_request:
                 step_name: StepType = "generating_component"
                 step_message = "Generating component..."
@@ -389,8 +397,21 @@ async def execute_flow_with_validation_streaming(
                 step_name = "generating_document"
                 step_message = "Generating document..."
             elif is_flow_request:
-                step_name = "generating_flow"
-                step_message = "Generating flow..."
+                # The only fully reliable signal we have at this point is the
+                # plan-approval text the frontend sends when the user clicks
+                # Continue on a proposed plan. Before that, the agent may be
+                # planning OR live-editing — but for both UX is better served
+                # by "Generating plan..." than the previous catch-all
+                # "Generating flow...". Live-edit only shows the plan label
+                # for the brief window before the first tool event arrives
+                # and the inline build tasklist takes over.
+                is_plan_approval = original_user_input.strip() == PLAN_APPROVAL_INPUT
+                if is_plan_approval:
+                    step_name = "generating_flow"
+                    step_message = "Generating flow..."
+                else:
+                    step_name = "generating_plan"
+                    step_message = "Generating plan..."
             else:
                 step_name = "generating"
                 step_message = "Generating response..."

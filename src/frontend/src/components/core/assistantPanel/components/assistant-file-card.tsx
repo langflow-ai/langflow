@@ -23,6 +23,7 @@ import {
 import { useCallback } from "react";
 
 import type { WrittenFile } from "../assistant-panel.types";
+import { GHOST_SECONDARY_BUTTON } from "../helpers/button-styles";
 
 interface AssistantFileCardProps {
   file: WrittenFile;
@@ -74,11 +75,9 @@ export function AssistantFileCard({ file, onOpen }: AssistantFileCardProps) {
     <div
       data-testid={`assistant-file-card-${file.path}`}
       data-action={file.action}
-      className="flex max-w-[80%] items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
+      className="flex max-w-[80%] items-center gap-3 rounded-md bg-muted/30 px-3 py-2"
     >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#10B981]">
-        <IconForAction className="h-4 w-4 text-white" />
-      </div>
+      <IconForAction className="h-4 w-4 shrink-0 text-foreground/80" />
       <div className="flex min-w-0 flex-1 flex-col">
         <span
           className="truncate text-sm font-semibold text-foreground"
@@ -91,12 +90,12 @@ export function AssistantFileCard({ file, onOpen }: AssistantFileCardProps) {
           {formatSize(file.size)}
         </span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1">
         <button
           type="button"
           data-testid={`assistant-file-open-button-${file.path}`}
           onClick={handleOpen}
-          className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+          className={GHOST_SECONDARY_BUTTON}
         >
           <ExternalLink className="h-3.5 w-3.5" />
           <span>Open</span>
@@ -105,7 +104,7 @@ export function AssistantFileCard({ file, onOpen }: AssistantFileCardProps) {
           type="button"
           data-testid={`assistant-file-download-button-${file.path}`}
           onClick={handleDownload}
-          className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+          className={GHOST_SECONDARY_BUTTON}
         >
           <DownloadIcon className="h-3.5 w-3.5" />
           <span>Download</span>

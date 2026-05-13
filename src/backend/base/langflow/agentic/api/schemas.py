@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 StepType = Literal[
     "generating",  # LLM is generating response
     "generating_component",  # LLM is generating component code
+    "generating_plan",  # LLM is drafting a plan (precedes propose_plan / build_flow)
     "generating_flow",  # LLM is building a flow
     "generation_complete",  # LLM finished generating
     "extracting_code",  # Extracting Python code from response

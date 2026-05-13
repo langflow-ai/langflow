@@ -3,6 +3,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/utils/utils";
 import type { PlanProposalStatus } from "../assistant-panel.types";
+import {
+  GHOST_PRIMARY_BUTTON,
+  GHOST_SECONDARY_BUTTON,
+} from "../helpers/button-styles";
 
 interface AssistantPlanCardProps {
   /** Raw markdown body of the plan as emitted by the agent's propose_plan tool. */
@@ -35,26 +39,17 @@ export function AssistantPlanCard({
   return (
     <div
       className={cn(
-        "max-w-[80%] rounded-lg border p-4 transition-colors",
-        isRefining
-          ? "border-dashed border-muted-foreground/40 bg-muted/20"
-          : "border-border bg-muted/30",
+        "max-w-[80%] py-1 transition-opacity",
+        isRefining && "opacity-70",
       )}
     >
-      <div className="mb-3 flex items-center gap-3">
-        <div
+      <div className="mb-2 flex items-center gap-2">
+        <ClipboardList
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-[10px]",
-            isRefining ? "bg-muted-foreground/20" : "bg-[#8B5CF6]",
+            "h-4 w-4",
+            isRefining ? "text-muted-foreground" : "text-foreground/80",
           )}
-        >
-          <ClipboardList
-            className={cn(
-              "h-4 w-4",
-              isRefining ? "text-muted-foreground" : "text-white",
-            )}
-          />
-        </div>
+        />
         <span
           className={cn(
             "text-sm font-semibold",
@@ -64,13 +59,13 @@ export function AssistantPlanCard({
           {isRefining ? "Refining plan" : "Proposed plan"}
         </span>
         {isRefining && (
-          <span className="text-xs font-medium text-muted-foreground/80">
+          <span className="text-xs text-muted-foreground/70">
             Send your changes…
           </span>
         )}
       </div>
 
-      <div className="mb-4 max-h-[240px] overflow-y-auto rounded-md border border-border bg-background p-3">
+      <div className="custom-scroll mb-3 max-h-[280px] overflow-y-auto rounded-md bg-muted/30 px-3 py-2">
         <Markdown
           remarkPlugins={[remarkGfm]}
           className={cn(
@@ -91,7 +86,7 @@ export function AssistantPlanCard({
         </Markdown>
       </div>
 
-      <div className="flex items-center gap-2">{renderActions()}</div>
+      <div className="flex items-center gap-1">{renderActions()}</div>
     </div>
   );
 
@@ -102,19 +97,19 @@ export function AssistantPlanCard({
           <button
             type="button"
             data-testid="assistant-plan-continue-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-accent-emerald-foreground/10 px-3 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
+            className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApprove?.()}
           >
             <span>Continue</span>
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
             data-testid="assistant-plan-reset-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+            className={GHOST_SECONDARY_BUTTON}
             onClick={() => onReset?.()}
           >
-            <RotateCcw className="h-4 w-4" />
+            <RotateCcw className="h-3.5 w-3.5" />
             <span>Reset</span>
           </button>
         </>
@@ -126,19 +121,19 @@ export function AssistantPlanCard({
           <button
             type="button"
             data-testid="assistant-plan-continue-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-accent-emerald-foreground/10 px-3 text-sm font-medium text-accent-emerald-foreground transition-colors hover:bg-accent-emerald-foreground/20"
+            className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApprove?.()}
           >
             <span>Continue</span>
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
             data-testid="assistant-plan-dismiss-button"
-            className="flex h-8 items-center gap-1.5 rounded-[10px] bg-zinc-700 px-3 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+            className={GHOST_SECONDARY_BUTTON}
             onClick={() => onDismiss?.()}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
             <span>Dismiss</span>
           </button>
         </>
@@ -146,14 +141,14 @@ export function AssistantPlanCard({
     }
     if (status === "approved") {
       return (
-        <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
-          <ArrowRight className="h-4 w-4" />
+        <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
+          <ArrowRight className="h-3.5 w-3.5" />
           <span>Plan approved</span>
         </div>
       );
     }
     return (
-      <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-muted-foreground line-through">
+      <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-muted-foreground line-through">
         <span>Dismissed</span>
       </div>
     );

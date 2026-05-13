@@ -51,6 +51,15 @@ export interface AssistantMessage {
    * the tool call.
    */
   hidden?: boolean;
+  /**
+   * True once the user has acknowledged the "Component ready" / validation
+   * gate — either by clicking Continue or by the 30s auto-dismiss timer
+   * firing. Persisted on the message so panel close/reopen (which
+   * remounts the item) doesn't bring the gate back. Without this, local
+   * state would reset and the user would see the loading card again on
+   * every reopen.
+   */
+  validationAcknowledged?: boolean;
 }
 
 /** A single incremental canvas operation surfaced to the user as a task. */
