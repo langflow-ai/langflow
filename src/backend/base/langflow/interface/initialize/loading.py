@@ -156,6 +156,7 @@ async def build_component(
 
 
 async def build_custom_component(params: dict, custom_component: CustomComponent):
+    params.pop("code", None)
     if "retriever" in params and hasattr(params["retriever"], "as_retriever"):
         params["retriever"] = params["retriever"].as_retriever()
 

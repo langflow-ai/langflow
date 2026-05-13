@@ -502,6 +502,48 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert tools == []
 
+    async def test_should_register_calculator_tool_only_once_when_external_calculator_connected_and_toggle_enabled(
+        self, component_class, default_kwargs
+    ):
+        """Internal toggle must not register a tool whose name already comes from an external connection.
+
+        Bug: Agent has add_calculator_tool=True (default). When a Calculator component is also
+        wired into the external Tools input, the StructuredTool 'evaluate_expression' is registered
+        twice. Anthropic and Gemini reject duplicate tool names with HTTP 400
+        ('Tool names must be unique' / 'Duplicate function declaration found: evaluate_expression').
+
+        Given add_calculator_tool=True AND an external Calculator-derived tool already in self.tools,
+        When get_agent_requirements runs,
+        Then the resulting tools list contains 'evaluate_expression' exactly once.
+        """
+        from unittest.mock import AsyncMock
+
+        from lfx.components.utilities.calculator_core import CalculatorComponent
+
+        # An external connection delivers exactly the StructuredTool that
+        # CalculatorComponent.to_toolkit() produces — re-use the same path here.
+        external_calc_tool = (await CalculatorComponent().to_toolkit()).pop(0)
+        assert external_calc_tool.name == "evaluate_expression"
+
+        default_kwargs["add_calculator_tool"] = True
+        default_kwargs["add_current_date_tool"] = False
+        default_kwargs["tools"] = [external_calc_tool]
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        tool_names = [t.name for t in tools]
+        assert tool_names.count("evaluate_expression") == 1, (
+            f"'evaluate_expression' must be registered exactly once; got {tool_names!r}. "
+            "Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400."
+        )
+
     def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
         """Unit test: helper replaces both placeholders with concrete values."""
         component = component_class()

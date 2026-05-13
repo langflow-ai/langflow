@@ -1,6 +1,6 @@
 import { ExternalLink } from "lucide-react";
-import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useShallow } from "zustand/react/shallow";
 import logoDarkPng from "@/assets/logo_dark.png";
 import logoLightPng from "@/assets/logo_light.png";
