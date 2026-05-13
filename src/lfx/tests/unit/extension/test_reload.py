@@ -20,6 +20,7 @@ HTTP / CLI layers stay out of scope.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
 import threading
@@ -393,6 +394,7 @@ def test_reload_in_progress_error_carries_bundle_name() -> None:
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        "reload-post-swap-hook-failed",
     ],
 )
 def test_reload_error_codes_have_branch(code: str) -> None:
@@ -452,3 +454,113 @@ def test_extra_slot_reload_uses_bundle_directory(tmp_path: Path) -> None:
     assert result.components_added == ("RenamedLocalThing",)
     assert result.components_removed == ("LocalThing",)
     assert registry.get_bundle("local_bundle").class_names == frozenset({"RenamedLocalThing"})
+
+
+# ---------------------------------------------------------------------------
+# klass.__module__ retag after the atomic swap
+# ---------------------------------------------------------------------------
+
+
+def test_swap_retags_class_module_to_prod_namespace(tmp_path: Path) -> None:
+    """After Stage 3, every component class's __module__ must point at the
+    production ``_lfx_ext.*`` key in ``sys.modules``, not at the dropped
+    ``__reload_staging__.<id>.*`` key it was stamped with at class-definition
+    time.  Without this retag, ``inspect.getmodule(cls)`` returns ``None``
+    and :func:`Component.set_class_code` raises -- silently breaking the
+    post-swap component-cache rebuild (the empty-palette-after-reload bug).
+    """
+    import inspect as inspect_mod
+
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    initial = _initial_install(registry, root)
+    assert initial.ok, initial.errors
+
+    record = registry.get_bundle("pilot")
+    component = record.by_class_name()["PilotThing"]
+
+    # The retagged class lives at the production namespace, not at the
+    # staging namespace the loader originally imported it under.
+    assert component.klass.__module__.startswith("_lfx_ext.")
+    assert "__reload_staging__" not in component.klass.__module__
+    # And the production name resolves through sys.modules so
+    # inspect.getmodule(cls) succeeds.
+    assert component.module_name in sys.modules
+    assert inspect_mod.getmodule(component.klass) is sys.modules[component.module_name]
+
+
+def test_swap_retag_survives_subsequent_reload(tmp_path: Path) -> None:
+    """A second reload must also leave ``klass.__module__`` at the prod name.
+
+    Regression guard against a regression that only updates ``klass.__module__``
+    on the *initial* install path (e.g. if someone moves the retag into
+    ``import_extension_components`` instead of ``_swap_sys_modules``).
+    """
+    import inspect as inspect_mod
+
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    # Edit on disk and reload again.
+    (root / "components" / "thing.py").write_text(_component_source("RenamedThing"), encoding="utf-8")
+    result = reload_bundle(registry, "pilot")
+    assert result.ok, result.errors
+
+    record = registry.get_bundle("pilot")
+    component = record.by_class_name()["RenamedThing"]
+    assert component.klass.__module__.startswith("_lfx_ext.")
+    assert "__reload_staging__" not in component.klass.__module__
+    assert inspect_mod.getmodule(component.klass) is sys.modules[component.module_name]
+
+
+# ---------------------------------------------------------------------------
+# Post-swap hook failures surface on ReloadResult.warnings
+# ---------------------------------------------------------------------------
+
+
+def test_post_swap_hook_failure_surfaces_as_warning(tmp_path: Path) -> None:
+    """A raising post-swap hook must not roll back the swap, but its failure
+    must appear on ``ReloadResult.warnings`` with the
+    ``reload-post-swap-hook-failed`` code so HTTP callers see "swap committed
+    but downstream side-effects broke" instead of silent 200 OK.
+    """
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    def _always_raises(_record):
+        msg = "synthetic hook failure"
+        raise RuntimeError(msg)
+
+    reload_mod.register_post_swap_hook(_always_raises)
+    try:
+        (root / "components" / "thing.py").write_text(_component_source("RenamedThing"), encoding="utf-8")
+        result = reload_bundle(registry, "pilot")
+    finally:
+        with contextlib.suppress(ValueError):
+            reload_mod._POST_SWAP_HOOKS.remove(_always_raises)  # noqa: SLF001
+
+    # Swap committed despite the hook failure.
+    assert result.ok, result.errors
+    assert registry.get_bundle("pilot").class_names == frozenset({"RenamedThing"})
+
+    # The failure is surfaced as a typed warning, not an error.
+    hook_warnings = [w for w in result.warnings if w.code == "reload-post-swap-hook-failed"]
+    assert len(hook_warnings) == 1, result.warnings
+    assert "synthetic hook failure" in hook_warnings[0].message
+
+
+def test_post_swap_hook_success_adds_no_warnings(tmp_path: Path) -> None:
+    """The happy path must not emit a stray ``reload-post-swap-hook-failed``
+    warning -- a regression guard against accidentally appending an error to
+    the warnings list on every reload.
+    """
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    (root / "components" / "thing.py").write_text(_component_source("RenamedThing"), encoding="utf-8")
+    result = reload_bundle(registry, "pilot")
+    assert result.ok, result.errors
+    assert not [w for w in result.warnings if w.code == "reload-post-swap-hook-failed"]

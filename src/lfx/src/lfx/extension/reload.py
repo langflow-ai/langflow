@@ -121,14 +121,42 @@ def register_post_swap_hook(hook: Callable[[BundleRecord], None]) -> None:
         _POST_SWAP_HOOKS.append(hook)
 
 
-def _fire_post_swap_hooks(record: BundleRecord) -> None:
+def _fire_post_swap_hooks(record: BundleRecord) -> tuple[ExtensionError, ...]:
+    """Fire every post-swap hook; return one warning per hook that raised.
+
+    Hook failures must not roll back the swap (the registry mutation is
+    already committed) and must not abort iteration over remaining hooks,
+    but they are surfaced as warnings on :class:`ReloadResult` so the
+    HTTP response can carry a "swap succeeded but cache rebuild failed"
+    signal instead of silently returning 200 OK with empty deltas.
+    """
+    warnings: list[ExtensionError] = []
     for hook in _POST_SWAP_HOOKS:
         try:
             hook(record)
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
             # A failing hook (cache rebuild error, etc.) must not roll back
-            # the swap or block the next hook.  Log and continue.
+            # the swap or block the next hook.  Log and record the failure
+            # so the caller can attach it to ReloadResult.warnings.
             logger.exception("post-swap reload hook %r failed for bundle %r", hook, record.bundle)
+            warnings.append(
+                ExtensionError(
+                    code="reload-post-swap-hook-failed",
+                    message=(
+                        f"Post-swap hook {getattr(hook, '__qualname__', repr(hook))} "
+                        f"raised for bundle {record.bundle!r}: {exc!r}"
+                    ),
+                    location=record.bundle,
+                    content=record.bundle,
+                    hint=(
+                        "The bundle swap committed but a post-swap side-effect "
+                        "(e.g. component cache rebuild) failed.  Check server logs "
+                        "at WARNING/ERROR level; a full server restart may be needed "
+                        "to recover the palette."
+                    ),
+                )
+            )
+    return tuple(warnings)
 
 
 # ---------------------------------------------------------------------------
@@ -428,9 +456,10 @@ def _run_pipeline_body(
 
     # Fire post-swap hooks (component cache rebuild, etc.) BEFORE we emit
     # the result so callers blocking on the HTTP response see a consistent
-    # registry + cache state.  Hook failures are logged but do not roll back
-    # the swap.
-    _fire_post_swap_hooks(new_record)
+    # registry + cache state.  Hook failures do not roll back the swap,
+    # but are surfaced on ReloadResult.warnings so the API caller can
+    # detect "swap committed but cache rebuild broke".
+    hook_warnings = _fire_post_swap_hooks(new_record)
 
     # ---------- Stage 5: emit bundle_reloaded ----------
     added, removed = _diff(previous, new_record)
@@ -440,7 +469,7 @@ def _run_pipeline_body(
         record=new_record,
         components_added=added,
         components_removed=removed,
-        warnings=tuple(staging.warnings),
+        warnings=tuple(staging.warnings) + hook_warnings,
         reload_id=reload_id,
     )
     _emit_bundle_reload_event(result)
@@ -507,15 +536,25 @@ def _swap_sys_modules(
     new module, not a stale one.
 
     Module ``__name__`` attributes are also rewritten so ``inspect`` /
-    pickling treat the module as living at its production name.
+    pickling treat the module as living at its production name.  Each
+    component class's ``__module__`` is retagged in lockstep so
+    ``inspect.getmodule(cls)`` resolves against ``sys.modules`` under the
+    production name; without this, post-swap consumers (notably
+    :func:`Component.set_class_code`) see ``cls.__module__`` pointing at
+    a staging key that has just been dropped and silently fail.
     """
+    # Materialize the iterables so we can walk them twice (once to build
+    # the rename map, once to retag each class's __module__).
+    staging_list: list[LoadedComponent] = list(staging_components)
+    new_list: list[LoadedComponent] = list(new_components)
+
     if previous is not None:
         for old in previous.components:
             sys.modules.pop(old.module_name, None)
 
     # Map staging name -> new prod name for the swap.
     rename_map: dict[str, str] = {
-        staged.module_name: new.module_name for staged, new in zip(staging_components, new_components, strict=True)
+        staged.module_name: new.module_name for staged, new in zip(staging_list, new_list, strict=True)
     }
 
     for staging_name, prod_name in rename_map.items():
@@ -527,6 +566,19 @@ def _swap_sys_modules(
         with contextlib.suppress(AttributeError, TypeError):
             module.__name__ = prod_name
         sys.modules[prod_name] = module
+
+    # Retag each component class's __module__ to the production name.
+    # The class was defined while its module was registered under the
+    # staging namespace, so cls.__module__ was stamped at class-definition
+    # time to "__reload_staging__.<reload_id>....".  Renaming the
+    # sys.modules entry above does not propagate to the class objects.
+    # Without this fixup, inspect.getmodule(cls) returns None (the
+    # staging key has been dropped from sys.modules) and downstream
+    # consumers like Component.set_class_code raise -- silently breaking
+    # the post-swap cache rebuild (the empty-palette-after-reload bug).
+    for new in new_list:
+        with contextlib.suppress(AttributeError, TypeError):
+            new.klass.__module__ = new.module_name
 
 
 def _drop_staging_modules(staging_namespace: str) -> None:

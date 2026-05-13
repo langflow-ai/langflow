@@ -502,6 +502,142 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
     assert component_cache.all_known_hashes is None
 
 
+def test_refresh_cache_preserves_entry_on_total_failure(tmp_path: Path) -> None:
+    """When every component fails to template, refuse to overwrite the
+    previous cache entry with ``{}`` and raise so the hook layer can surface
+    the failure on ``ReloadResult.warnings``.
+
+    Regression guard for the empty-palette-after-reload bug: the prior code
+    silently logged a warning per failed component, then unconditionally
+    wrote an empty dict to ``component_cache.all_types_dict[bundle]``.
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface.components import (
+        component_cache,
+        refresh_bundle_cache_from_record,
+    )
+
+    pre_existing = {"ext:zeta:OldThing@official": {"display_name": "old", "extension": "lfx-zeta"}}
+    component_cache.all_types_dict = {"zeta": dict(pre_existing)}
+
+    class _Component:
+        pass
+
+    class _ZetaThing(_Component):
+        display_name = "Zeta"
+
+        def build(self) -> None:
+            return None
+
+    loaded = LoadedComponent(
+        extension_id="lfx-zeta",
+        extension_version="1.0.0",
+        bundle="zeta",
+        class_name="ZetaThing",
+        slot="official",
+        klass=_ZetaThing,
+        module_name="_lfx_ext.official.zeta.thing",
+        file_path=tmp_path / "thing.py",
+        distribution=None,
+    )
+    record = BundleRecord(
+        bundle="zeta",
+        extension_id="lfx-zeta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(loaded,),
+    )
+
+    def _always_raises(*_args, **_kwargs):
+        msg = "synthetic template failure"
+        raise RuntimeError(msg)
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_always_raises),
+        pytest.raises(RuntimeError, match="every component in bundle 'zeta' failed to template"),
+    ):
+        refresh_bundle_cache_from_record(record)
+
+    # Pre-existing cache entry untouched -- the palette continues to show
+    # the pre-reload component set instead of going dark.
+    assert component_cache.all_types_dict["zeta"] == pre_existing
+
+
+def test_refresh_cache_writes_partial_on_partial_failure(tmp_path: Path) -> None:
+    """A bundle with one passing and one failing component must commit the
+    partial cache entry (palette is "less broken" than pre-reload), but the
+    bundle dict must not be empty -- otherwise the total-failure guard
+    would have raised.
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface.components import (
+        component_cache,
+        refresh_bundle_cache_from_record,
+    )
+
+    component_cache.all_types_dict = {"eta": {}}
+
+    class _Component:
+        pass
+
+    class _Good(_Component):
+        display_name = "Good"
+
+        def build(self) -> None:
+            return None
+
+    class _Bad(_Component):
+        display_name = "Bad"
+
+        def build(self) -> None:
+            return None
+
+    good = LoadedComponent(
+        extension_id="lfx-eta",
+        extension_version="1.0.0",
+        bundle="eta",
+        class_name="Good",
+        slot="official",
+        klass=_Good,
+        module_name="_lfx_ext.official.eta.good",
+        file_path=tmp_path / "good.py",
+        distribution=None,
+    )
+    bad = LoadedComponent(
+        extension_id="lfx-eta",
+        extension_version="1.0.0",
+        bundle="eta",
+        class_name="Bad",
+        slot="official",
+        klass=_Bad,
+        module_name="_lfx_ext.official.eta.bad",
+        file_path=tmp_path / "bad.py",
+        distribution=None,
+    )
+    record = BundleRecord(
+        bundle="eta",
+        extension_id="lfx-eta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(good, bad),
+    )
+
+    def _template(component_extractor, module_name=None):  # noqa: ARG001
+        if isinstance(component_extractor, _Bad):
+            msg = "synthetic per-component failure"
+            raise RuntimeError(msg)
+        return _stub_template()
+
+    with patch("lfx.interface.components.create_component_template", side_effect=_template):
+        refresh_bundle_cache_from_record(record)
+
+    bundle_dict = component_cache.all_types_dict["eta"]
+    assert "ext:eta:Good@official" in bundle_dict
+    assert "ext:eta:Bad@official" not in bundle_dict
+
+
 @pytest.mark.asyncio
 async def test_dev_extension_components_loaded_via_official_slot(
     tmp_path: Path,

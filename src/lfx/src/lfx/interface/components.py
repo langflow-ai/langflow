@@ -865,6 +865,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
         # entry and pick up the post-reload class set.
         return
     bundle_dict: dict[str, Any] = {}
+    failures: list[tuple[str, str]] = []
     for loaded in record.components:
         try:
             instance = loaded.klass()
@@ -873,6 +874,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
                 module_name=loaded.module_name,
             )
         except Exception as exc:  # noqa: BLE001
+            failures.append((loaded.class_name, repr(exc)))
             logger.warning(
                 "Could not build template for %s in bundle %r during reload (skipped): %s",
                 loaded.class_name,
@@ -887,6 +889,38 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             extension_version=loaded.extension_version,
             namespaced_id=loaded.namespaced_id,
         )
+
+    expected = len(record.components)
+    succeeded = len(bundle_dict)
+    # Total failure: every component raised.  Never overwrite an existing
+    # cache entry with {} -- that turns the palette black and masks the
+    # real problem.  Raise so the post-swap hook layer can surface this
+    # as a typed warning on ReloadResult.
+    if expected > 0 and succeeded == 0:
+        logger.error(
+            "Cache rebuild for bundle %r produced zero templates from %d components; "
+            "preserving previous cache entry.  Failures: %s",
+            record.bundle,
+            expected,
+            failures,
+        )
+        first_failure = failures[0][1] if failures else "<none>"
+        msg = (
+            f"refresh_bundle_cache_from_record: every component in bundle "
+            f"{record.bundle!r} failed to template ({expected} attempted, 0 "
+            f"succeeded).  First failure: {first_failure}"
+        )
+        raise RuntimeError(msg)
+    if failures:
+        logger.error(
+            "Partial cache rebuild for bundle %r: %d of %d components failed (succeeded=%d).  Failures: %s",
+            record.bundle,
+            len(failures),
+            expected,
+            succeeded,
+            failures,
+        )
+
     component_cache.all_types_dict[record.bundle] = bundle_dict
 
     # Invalidate the precomputed code-hash lookups so flow validation

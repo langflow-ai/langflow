@@ -88,6 +88,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        # Post-swap hook failures: the registry swap committed but a
+        # downstream side-effect (e.g. component cache rebuild) raised.
+        # Surfaced on ReloadResult.warnings so the API caller knows the
+        # palette may be stale even though ok=True.
+        "reload-post-swap-hook-failed",
         # HTTP route gate (Mode A only): the runtime guard that hides the
         # reload route on Mode B/C deployments returns this code so the
         # client gets the same typed envelope as every other reload error.
@@ -269,6 +274,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "reload-source-missing": (
         "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
+    ),
+    "reload-post-swap-hook-failed": (
+        "Post-swap hook failed for bundle {content!r}; the bundle swap committed but a "
+        "downstream side-effect (e.g. component cache rebuild) raised."
     ),
     "extension-reload-disabled": (
         "Extension reload is disabled on this server.  "
