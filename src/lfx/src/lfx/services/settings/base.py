@@ -320,6 +320,32 @@ class Settings(BaseSettings):
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
+    telemetry_writer_enabled: bool = True
+    """Route transaction and vertex_build writes through an async batched writer backed by a
+    disk-persisted outbox and a dedicated database connection. Eliminates SQLite
+    'database is locked' errors and Postgres pool-timeouts under heavy load by keeping
+    telemetry traffic off the request-handling connection pool.
+    Set to False to fall back to the legacy direct-write path."""
+    telemetry_writer_batch_size: int = 200
+    """Maximum rows per batched INSERT executed by the telemetry writer."""
+    telemetry_writer_flush_interval_s: float = 0.5
+    """Maximum seconds the writer waits before flushing a partial batch."""
+    telemetry_writer_cleanup_interval_s: int = 60
+    """Cadence (seconds) of the retention sweeper that enforces max_transactions_to_keep
+    and max_vertex_builds_to_keep. Retention is amortized rather than per-row to avoid
+    inflating per-write cost."""
+    telemetry_writer_max_queue: int = 100_000
+    """Per-outbox cap. When exceeded, oldest entries are dropped and a counter is
+    incremented. Bounds disk usage in pathological backlog scenarios."""
+    telemetry_writer_outbox_dir: str | None = None
+    """Directory for the disk-backed outbox. Defaults to
+    <tempdir>/langflow_telemetry_outbox. Each worker process uses an isolated
+    subdirectory keyed by PID; sibling subdirectories from crashed workers are
+    automatically adopted on startup."""
+    telemetry_writer_shutdown_drain_s: float = 5.0
+    """Maximum seconds the writer waits to drain in-flight batches on shutdown
+    before disposing the dedicated engine."""
+
     # Config
     host: str = "localhost"
     """The host on which Langflow will run."""

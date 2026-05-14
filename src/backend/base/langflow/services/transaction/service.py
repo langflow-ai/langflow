@@ -11,7 +11,7 @@ from lfx.services.interfaces import TransactionServiceProtocol
 
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
-from langflow.services.database.models.transactions.model import TransactionBase
+from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -70,6 +70,20 @@ class TransactionService(Service, TransactionServiceProtocol):
                 error=error,
                 flow_id=flow_uuid,
             )
+
+            # When the telemetry writer is enabled and started, hand the row off
+            # to its disk-backed outbox and return immediately — no DB connection
+            # is acquired from the request pool. Falls through to the legacy
+            # direct-write path when the writer isn't ready (e.g. very early in
+            # lifespan) or has been disabled.
+            if getattr(self.settings_service.settings, "telemetry_writer_enabled", False):
+                from langflow.services.deps import get_telemetry_writer_service
+
+                writer = get_telemetry_writer_service()
+                if writer is not None and writer.is_running():
+                    table = TransactionTable(**transaction.model_dump())
+                    if writer.enqueue_transaction(table.model_dump(mode="python")):
+                        return
 
             async with session_scope() as session:
                 await crud_log_transaction(session, transaction)

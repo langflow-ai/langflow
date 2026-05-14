@@ -197,6 +197,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
+            try:
+                from langflow.services.deps import get_telemetry_writer_service
+
+                telemetry_writer = get_telemetry_writer_service()
+                if telemetry_writer is not None and telemetry_writer.is_enabled():
+                    await telemetry_writer.start()
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Failed to start telemetry writer: {exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()

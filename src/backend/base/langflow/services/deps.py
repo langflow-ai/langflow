@@ -276,3 +276,10 @@ def get_memory_base_service():
     from langflow.services.memory_base.factory import MemoryBaseServiceFactory
 
     return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
+
+
+def get_telemetry_writer_service():
+    """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
+    from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
+
+    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())

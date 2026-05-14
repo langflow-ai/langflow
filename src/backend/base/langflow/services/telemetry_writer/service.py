@@ -1,0 +1,479 @@
+"""Telemetry writer service implementation.
+
+Decouples ``transaction`` and ``vertex_build`` writes from the request-handling
+database pool. Producers call :py:meth:`TelemetryWriterService.enqueue_transaction`
+or :py:meth:`TelemetryWriterService.enqueue_vertex_build`, which append the row
+to an in-memory :class:`collections.deque`. A single background writer task
+drains the buffer into the database in batched ``INSERT`` statements using a
+dedicated :class:`AsyncEngine` with a tiny pool (1 connection for SQLite, 2 for
+Postgres) so telemetry traffic cannot starve request traffic. A second
+background task amortizes retention pruning (max-N-per-flow, max-per-vertex,
+global cap) so it no longer runs inside every insert.
+
+Durability across process restart is provided by a disk-backed
+:class:`diskcache.Deque`: rows still in memory at shutdown spill to disk, and
+rows from any orphan PID directory (left by a crashed worker) are adopted into
+the in-memory buffer on startup.
+
+The trade-off: hard process kills (SIGKILL, OOM) lose whatever is in memory at
+the moment of death. Telemetry visibility is eventually-consistent rather than
+transactional, which matches the operational character of these tables (debug
+logs and execution history; queried interactively, not on the hot path).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import collections
+import os
+import tempfile
+from contextlib import suppress
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from diskcache import Deque
+from lfx.log.logger import logger
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlmodel import col
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
+
+from langflow.services.base import Service
+from langflow.services.database.models.transactions.model import TransactionTable
+from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+
+if TYPE_CHECKING:
+    from langflow.services.settings.service import SettingsService
+
+
+_DEFAULT_OUTBOX_ROOT = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"
+
+
+def _pid_alive(pid: int) -> bool:
+    """Return True if ``pid`` corresponds to a live process."""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+class TelemetryWriterService(Service):
+    """Batched, off-pool writer for transaction + vertex_build rows."""
+
+    name = "telemetry_writer_service"
+
+    def __init__(self, settings_service: SettingsService) -> None:
+        self.settings_service = settings_service
+        self._started: bool = False
+        self._shutdown_event: asyncio.Event | None = None
+        self._writer_task: asyncio.Task | None = None
+        self._sweeper_task: asyncio.Task | None = None
+        self._engine: AsyncEngine | None = None
+        self._session_maker: async_sessionmaker | None = None
+        # In-memory hot path. deque.append / popleft are O(1) and don't touch disk.
+        self._tx_buffer: collections.deque[dict[str, Any]] = collections.deque()
+        self._vb_buffer: collections.deque[dict[str, Any]] = collections.deque()
+        # PID directory used for shutdown spill + startup recovery.
+        self._own_outbox_dir: Path | None = None
+        self._dirty_tx_flows: set[str] = set()
+        self._dirty_vb_flows: set[str] = set()
+        # Metrics.
+        self.dropped_transactions: int = 0
+        self.dropped_vertex_builds: int = 0
+        self.failed_batches: int = 0
+        self.flushed_rows: int = 0
+        self.enqueued_transactions: int = 0
+        self.enqueued_vertex_builds: int = 0
+
+    # ------------------------------------------------------------------ public
+
+    def is_enabled(self) -> bool:
+        return getattr(self.settings_service.settings, "telemetry_writer_enabled", False)
+
+    def is_running(self) -> bool:
+        return self._started
+
+    def enqueue_transaction(self, payload: dict[str, Any]) -> bool:
+        """Append a transaction row to the in-memory buffer.
+
+        Returns ``True`` if the row was accepted (caller should not write
+        directly). Returns ``False`` if the writer isn't running — caller may
+        fall back to the legacy direct-write path.
+        """
+        if not self._started:
+            return False
+        self._enqueue(self._tx_buffer, payload, kind="transactions")
+        self.enqueued_transactions += 1
+        return True
+
+    def enqueue_vertex_build(self, payload: dict[str, Any]) -> bool:
+        """Append a vertex_build row. See :py:meth:`enqueue_transaction`."""
+        if not self._started:
+            return False
+        self._enqueue(self._vb_buffer, payload, kind="vertex_builds")
+        self.enqueued_vertex_builds += 1
+        return True
+
+    # ----------------------------------------------------------------- start/stop
+
+    async def start(self) -> None:
+        """Recover pending rows from disk, create the dedicated engine, spawn tasks."""
+        if self._started:
+            return
+        if not self.is_enabled():
+            logger.debug("telemetry_writer: disabled by settings; skipping start")
+            return
+
+        outbox_root = self._outbox_root()
+        outbox_root.mkdir(parents=True, exist_ok=True)
+        own_dir = outbox_root / str(os.getpid())
+        own_dir.mkdir(parents=True, exist_ok=True)
+        self._own_outbox_dir = own_dir
+
+        # Drain any rows that were spilled by a previous run of *this* PID and
+        # adopt the contents of any orphan (dead-PID) directories.
+        self._restore_from_disk(own_dir, kind="transactions", buffer=self._tx_buffer)
+        self._restore_from_disk(own_dir, kind="vertex_builds", buffer=self._vb_buffer)
+        self._adopt_orphan_outboxes(outbox_root, own_pid=os.getpid())
+
+        self._engine = self._create_dedicated_engine()
+        self._session_maker = async_sessionmaker(self._engine, class_=SQLModelAsyncSession, expire_on_commit=False)
+        self._shutdown_event = asyncio.Event()
+        self._writer_task = asyncio.create_task(self._run_writer(), name="telemetry-writer")
+        self._sweeper_task = asyncio.create_task(self._run_sweeper(), name="telemetry-sweeper")
+        self._started = True
+        logger.info(
+            f"telemetry_writer started (outbox={own_dir}, tx_pending={len(self._tx_buffer)}, "
+            f"vb_pending={len(self._vb_buffer)})"
+        )
+
+    async def teardown(self) -> None:
+        """Drain in-flight rows, persist remaining buffer, dispose engine. Idempotent."""
+        if not self._started:
+            return
+        self._started = False
+        if self._shutdown_event is not None:
+            self._shutdown_event.set()
+
+        drain_timeout = float(getattr(self.settings_service.settings, "telemetry_writer_shutdown_drain_s", 5.0))
+        if self._writer_task is not None:
+            with suppress(asyncio.CancelledError, asyncio.TimeoutError):
+                await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
+            if not self._writer_task.done():
+                self._writer_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._writer_task
+        if self._sweeper_task is not None:
+            self._sweeper_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._sweeper_task
+
+        # Spill anything still in memory to disk so a future process picks it up.
+        if self._own_outbox_dir is not None:
+            self._spill_to_disk(self._own_outbox_dir, kind="transactions", buffer=self._tx_buffer)
+            self._spill_to_disk(self._own_outbox_dir, kind="vertex_builds", buffer=self._vb_buffer)
+
+        if self._engine is not None:
+            await self._engine.dispose()
+            self._engine = None
+        logger.info("telemetry_writer stopped")
+
+    # ------------------------------------------------------------------ internals
+
+    def _outbox_root(self) -> Path:
+        configured = getattr(self.settings_service.settings, "telemetry_writer_outbox_dir", None)
+        return Path(configured) if configured else _DEFAULT_OUTBOX_ROOT
+
+    def _create_dedicated_engine(self) -> AsyncEngine:
+        from langflow.services.deps import get_db_service
+
+        db_service = get_db_service()
+        url = db_service.database_url
+        pool_size = 1 if url.startswith("sqlite") else 2
+        connect_args = db_service._get_connect_args()  # noqa: SLF001
+        return create_async_engine(
+            url,
+            connect_args=connect_args,
+            pool_size=pool_size,
+            max_overflow=0,
+            pool_pre_ping=True,
+        )
+
+    def _enqueue(
+        self,
+        buffer: collections.deque[dict[str, Any]],
+        payload: dict[str, Any],
+        *,
+        kind: str,
+    ) -> None:
+        max_q = int(getattr(self.settings_service.settings, "telemetry_writer_max_queue", 100_000))
+        # Drop oldest on overflow — bounds memory, biases retention toward newest.
+        while len(buffer) >= max_q:
+            try:
+                buffer.popleft()
+            except IndexError:
+                break
+            if kind == "transactions":
+                self.dropped_transactions += 1
+            else:
+                self.dropped_vertex_builds += 1
+        buffer.append(payload)
+
+    @staticmethod
+    def _drain(buffer: collections.deque[dict[str, Any]], max_n: int) -> list[dict]:
+        batch: list[dict] = []
+        for _ in range(max_n):
+            try:
+                batch.append(buffer.popleft())
+            except IndexError:
+                break
+        return batch
+
+    @staticmethod
+    def _spill_to_disk(own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
+        """Append remaining in-memory rows to a disk-backed Deque for replay."""
+        if not buffer:
+            return
+        spill_dir = own_dir / kind
+        spill_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            disk = Deque(directory=str(spill_dir))
+            try:
+                count = 0
+                while buffer:
+                    disk.append(buffer.popleft())
+                    count += 1
+                if count:
+                    logger.info(f"telemetry_writer: spilled {count} {kind} rows to disk at shutdown")
+            finally:
+                with suppress(Exception):
+                    disk._cache.close()  # noqa: SLF001
+        except Exception:  # noqa: BLE001
+            logger.exception(f"telemetry_writer: failed to spill {kind} buffer to disk")
+
+    @staticmethod
+    def _restore_from_disk(own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
+        """Load any disk-spilled rows from the previous run of this PID."""
+        spill_dir = own_dir / kind
+        if not spill_dir.exists():
+            return
+        try:
+            disk = Deque(directory=str(spill_dir))
+            try:
+                count = 0
+                while True:
+                    try:
+                        buffer.append(disk.popleft())
+                    except IndexError:
+                        break
+                    count += 1
+                if count:
+                    logger.info(f"telemetry_writer: restored {count} {kind} rows from disk")
+            finally:
+                with suppress(Exception):
+                    disk._cache.close()  # noqa: SLF001
+        except Exception:  # noqa: BLE001
+            logger.exception(f"telemetry_writer: failed to restore {kind} spill from disk")
+
+    def _adopt_orphan_outboxes(self, outbox_root: Path, *, own_pid: int) -> None:
+        """Replay outboxes from dead workers into the current in-memory buffer."""
+        try:
+            entries = list(outbox_root.iterdir())
+        except FileNotFoundError:
+            return
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            try:
+                pid = int(entry.name)
+            except ValueError:
+                continue
+            if pid == own_pid or _pid_alive(pid):
+                continue
+            for kind, buffer in (("transactions", self._tx_buffer), ("vertex_builds", self._vb_buffer)):
+                sub = entry / kind
+                if not sub.exists():
+                    continue
+                try:
+                    orphan = Deque(directory=str(sub))
+                    adopted = 0
+                    try:
+                        while True:
+                            try:
+                                buffer.append(orphan.popleft())
+                            except IndexError:
+                                break
+                            adopted += 1
+                    finally:
+                        with suppress(Exception):
+                            orphan._cache.close()  # noqa: SLF001
+                    if adopted:
+                        logger.info(f"telemetry_writer: adopted {adopted} orphan {kind} from pid={pid}")
+                except Exception:  # noqa: BLE001
+                    logger.exception(f"telemetry_writer: failed to adopt orphan outbox {sub}")
+            # Best-effort cleanup of the dead-PID directory.
+            with suppress(OSError):
+                for child in sorted(entry.rglob("*"), reverse=True):
+                    if child.is_file():
+                        child.unlink(missing_ok=True)
+                    elif child.is_dir():
+                        child.rmdir()
+                entry.rmdir()
+
+    async def _run_writer(self) -> None:
+        if self._shutdown_event is None:
+            return  # not started
+        batch_size = int(getattr(self.settings_service.settings, "telemetry_writer_batch_size", 200))
+        flush_interval = float(getattr(self.settings_service.settings, "telemetry_writer_flush_interval_s", 0.5))
+        consecutive_failures = 0
+        while True:
+            should_stop = self._shutdown_event.is_set()
+            tx_batch = self._drain(self._tx_buffer, batch_size)
+            vb_batch = self._drain(self._vb_buffer, batch_size)
+
+            if not tx_batch and not vb_batch:
+                if should_stop:
+                    return
+                with suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=flush_interval)
+                continue
+
+            try:
+                await self._flush(tx_batch, vb_batch)
+                consecutive_failures = 0
+                self.flushed_rows += len(tx_batch) + len(vb_batch)
+            except Exception:  # noqa: BLE001
+                self.failed_batches += 1
+                consecutive_failures += 1
+                logger.exception("telemetry_writer: batch flush failed; will retry")
+                # Put rows back at the front so the next iteration retries.
+                for row in reversed(tx_batch):
+                    self._tx_buffer.appendleft(row)
+                for row in reversed(vb_batch):
+                    self._vb_buffer.appendleft(row)
+                # Exponential-ish backoff capped at 30s. Avoids hot-looping on a
+                # broken DB while still preserving telemetry across the failure.
+                backoff = min(30.0, 0.5 * (2 ** min(consecutive_failures, 6)))
+                with suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=backoff)
+
+    async def _flush(self, tx_batch: list[dict], vb_batch: list[dict]) -> None:
+        if not tx_batch and not vb_batch:
+            return
+        if self._session_maker is None:
+            return
+        async with self._session_maker() as session:
+            if tx_batch:
+                await session.execute(TransactionTable.__table__.insert(), tx_batch)
+                for row in tx_batch:
+                    flow_id = row.get("flow_id")
+                    if flow_id is not None:
+                        self._dirty_tx_flows.add(str(flow_id))
+            if vb_batch:
+                await session.execute(VertexBuildTable.__table__.insert(), vb_batch)
+                for row in vb_batch:
+                    flow_id = row.get("flow_id")
+                    if flow_id is not None:
+                        self._dirty_vb_flows.add(str(flow_id))
+            await session.commit()
+
+    async def _run_sweeper(self) -> None:
+        """Amortized retention sweep."""
+        if self._shutdown_event is None:
+            return
+        while not self._shutdown_event.is_set():
+            interval = float(getattr(self.settings_service.settings, "telemetry_writer_cleanup_interval_s", 60))
+            try:
+                await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
+            except asyncio.TimeoutError:
+                pass
+            else:
+                return  # shutdown requested
+            try:
+                await self._run_retention_pass()
+            except Exception:  # noqa: BLE001
+                logger.exception("telemetry_writer: retention sweep failed")
+
+    async def _run_retention_pass(self) -> None:
+        if self._session_maker is None:
+            return
+        from uuid import UUID
+
+        settings = self.settings_service.settings
+        max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
+        max_vertex_builds = int(getattr(settings, "max_vertex_builds_to_keep", 3000))
+        max_per_vertex = int(getattr(settings, "max_vertex_builds_per_vertex", 50))
+
+        # Dirty flow ids were stringified at flush time for set hashing; convert
+        # back to UUID for SQLAlchemy parameter binding.
+        def _as_uuid(value: str) -> UUID:
+            return value if isinstance(value, UUID) else UUID(value)
+
+        tx_flows = [_as_uuid(f) for f in self._dirty_tx_flows]
+        self._dirty_tx_flows.clear()
+        vb_flows = [_as_uuid(f) for f in self._dirty_vb_flows]
+        self._dirty_vb_flows.clear()
+
+        async with self._session_maker() as session:
+            for flow_id in tx_flows:
+                keep_subq = (
+                    select(TransactionTable.id)
+                    .where(TransactionTable.flow_id == flow_id)
+                    .order_by(col(TransactionTable.timestamp).desc())
+                    .limit(max_transactions)
+                )
+                await session.execute(
+                    delete(TransactionTable).where(
+                        TransactionTable.flow_id == flow_id,
+                        col(TransactionTable.id).not_in(keep_subq),
+                    )
+                )
+
+            for flow_id in vb_flows:
+                vertex_ids = (
+                    (
+                        await session.execute(
+                            select(VertexBuildTable.id).where(VertexBuildTable.flow_id == flow_id).distinct()
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                for vertex_id in vertex_ids:
+                    keep_vertex_subq = (
+                        select(VertexBuildTable.build_id)
+                        .where(
+                            VertexBuildTable.flow_id == flow_id,
+                            VertexBuildTable.id == vertex_id,
+                        )
+                        .order_by(
+                            col(VertexBuildTable.timestamp).desc(),
+                            col(VertexBuildTable.build_id).desc(),
+                        )
+                        .limit(max_per_vertex)
+                    )
+                    await session.execute(
+                        delete(VertexBuildTable).where(
+                            VertexBuildTable.flow_id == flow_id,
+                            VertexBuildTable.id == vertex_id,
+                            col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
+                        )
+                    )
+
+            keep_global_subq = (
+                select(VertexBuildTable.build_id)
+                .order_by(
+                    col(VertexBuildTable.timestamp).desc(),
+                    col(VertexBuildTable.build_id).desc(),
+                )
+                .limit(max_vertex_builds)
+            )
+            await session.execute(
+                delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
+            )
+            await session.commit()
