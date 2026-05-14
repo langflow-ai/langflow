@@ -25,7 +25,8 @@ docker run --rm -d --name langflow-pg-test -p 55432:5432 \
     -e POSTGRES_PASSWORD=langflow -e POSTGRES_USER=langflow \
     -e POSTGRES_DB=langflow postgres:16
 
-export DB_URL="$LANGFLOW_DATABASE_URL"  # any standard postgres DSN works
+export DB_URL="postgresql+psycopg://langflow:langflow@localhost:55432/langflow"  # pragma: allowlist secret
+# (or any standard postgres DSN, e.g. "$LANGFLOW_DATABASE_URL" if set)
 uv run python src/backend/tests/stress/stress_telemetry_writes.py \
     --concurrency 200 --seconds 15
 ```

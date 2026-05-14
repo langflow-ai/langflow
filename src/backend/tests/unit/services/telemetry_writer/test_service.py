@@ -238,15 +238,21 @@ def test_spill_and_restore_round_trip(tmp_path: Path) -> None:
     assert list(writer2._vb_buffer) == [{"j": 1}]
 
 
+def _find_dead_pid(start: int = 99_999, max_checks: int = 50_000) -> int:
+    from langflow.services.telemetry_writer.service import _pid_alive
+
+    pid = start
+    for _ in range(max_checks):
+        if not _pid_alive(pid):
+            return pid
+        pid += 1
+    pytest.fail("Unable to find an unused PID for orphan outbox setup")
+    return 0  # unreachable, for type-checkers
+
+
 def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
     # Simulate a dead worker that left rows in a sibling outbox.
-    dead_pid = 99999
-    while dead_pid > 0:
-        from langflow.services.telemetry_writer.service import _pid_alive
-
-        if not _pid_alive(dead_pid):
-            break
-        dead_pid += 1
+    dead_pid = _find_dead_pid()
     dead_dir = tmp_path / str(dead_pid)
     dead_dir.mkdir()
     spill_writer = _build_writer()
@@ -270,11 +276,7 @@ def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
     ``_adopt_orphan_outboxes`` appended directly to the deque, bypassing the
     queue cap.
     """
-    from langflow.services.telemetry_writer.service import _pid_alive
-
-    dead_pid = 99999
-    while _pid_alive(dead_pid):
-        dead_pid += 1
+    dead_pid = _find_dead_pid()
     dead_dir = tmp_path / str(dead_pid)
     dead_dir.mkdir()
     spill_writer = _build_writer()

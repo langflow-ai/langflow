@@ -453,8 +453,10 @@ class TelemetryWriterService(Service):
         max_vertex_builds = int(getattr(settings, "max_vertex_builds_to_keep", 3000))
         max_per_vertex = int(getattr(settings, "max_vertex_builds_per_vertex", 50))
 
-        # Snapshot the dirty sets so a failed sweep doesn't drop the flows on
-        # the floor — only clear after the commit lands. Dirty flow ids were
+        # Hand off ownership of the current dirty sets to this sweep. New
+        # flush activity during the sweep accumulates into the now-empty live
+        # sets and gets picked up on the next pass. On failure we restore the
+        # snapshot so the next sweep retries these flows. Dirty flow ids were
         # stringified at flush time for set hashing; convert back to UUID for
         # SQLAlchemy parameter binding.
         def _as_uuid(value: str) -> UUID:
@@ -462,6 +464,8 @@ class TelemetryWriterService(Service):
 
         tx_flow_snapshot = set(self._dirty_tx_flows)
         vb_flow_snapshot = set(self._dirty_vb_flows)
+        self._dirty_tx_flows -= tx_flow_snapshot
+        self._dirty_vb_flows -= vb_flow_snapshot
         tx_flows = [_as_uuid(f) for f in tx_flow_snapshot]
         vb_flows = [_as_uuid(f) for f in vb_flow_snapshot]
 
@@ -525,12 +529,10 @@ class TelemetryWriterService(Service):
                 )
                 await session.commit()
         except Exception:
-            # Sweep failed before commit — re-mark the snapshot as dirty so the
-            # next sweep retries these flows. Without this the per-flow caps
-            # could overshoot indefinitely until those flows see new writes.
+            # Sweep failed before commit — restore the handed-off snapshot so
+            # the next sweep retries these flows. Without this the per-flow
+            # caps could overshoot indefinitely until those flows see new
+            # writes.
             self._dirty_tx_flows |= tx_flow_snapshot
             self._dirty_vb_flows |= vb_flow_snapshot
             raise
-        else:
-            self._dirty_tx_flows -= tx_flow_snapshot
-            self._dirty_vb_flows -= vb_flow_snapshot
