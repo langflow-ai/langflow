@@ -4293,7 +4293,7 @@
   "components.jsontodata.inputs.json_string.info.5786aa41": "Enter a valid JSON string (object or array) to convert to a Data object or list of Data objects",
   "components.jsontodata.outputs.data.display_name.db1a21a0": "JSON",
   "components.knowledge.description.a1a10675": "Ingest into or retrieve from a Langflow knowledge base.",
-  "components.knowledge.display_name.dcb3e1c0": "Knowledge",
+  "components.knowledge.display_name.12bbbbf8": "Knowledge Base",
   "components.knowledge.inputs.allow_duplicates.display_name.c5507652": "Allow Duplicates",
   "components.knowledge.inputs.allow_duplicates.info.4f0b36ee": "Allow duplicate rows in the knowledge base",
   "components.knowledge.inputs.api_key.display_name.3aa7ec80": "Embedding Provider API Key",
