@@ -478,6 +478,12 @@ class MCPToolsComponent(ComponentWithCache):
                 # Get timeout from component input or use None (will default to global setting)
                 # Convert to float and treat 0 as None (use global default)
                 timeout_value = getattr(self, "tool_execution_timeout", 0.0)
+
+                # Validate timeout is non-negative
+                if timeout_value < 0:
+                    msg = "tool_execution_timeout must be non-negative"
+                    raise ValueError(msg)
+
                 timeout = float(timeout_value) if timeout_value else None
 
                 _, tool_list, tool_cache = await update_tools(

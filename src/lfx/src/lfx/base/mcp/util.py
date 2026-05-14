@@ -2091,19 +2091,21 @@ async def update_tools(
 
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient(tool_execution_timeout=tool_execution_timeout)
-    else:
-        # Update timeout on existing client (read at execution time)
+    # Update timeout on existing client only if a new timeout is provided
+    elif tool_execution_timeout is not None:
         mcp_stdio_client._tool_execution_timeout = tool_execution_timeout
 
     # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
-        mcp_streamable_http_client = (
-            mcp_sse_client
-            if mcp_sse_client is not None
-            else MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
-        )
-    else:
-        # Update timeout on existing client (read at execution time)
+        if mcp_sse_client is not None:
+            mcp_streamable_http_client = mcp_sse_client
+            # Set timeout on the aliased client if provided
+            if tool_execution_timeout is not None:
+                mcp_streamable_http_client._tool_execution_timeout = tool_execution_timeout
+        else:
+            mcp_streamable_http_client = MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
+    # Update timeout on existing client only if a new timeout is provided
+    elif tool_execution_timeout is not None:
         mcp_streamable_http_client._tool_execution_timeout = tool_execution_timeout
 
     # Fetch server config from backend
