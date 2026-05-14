@@ -110,6 +110,7 @@ export const SanitizedMarkdown = ({
                 </div>
               );
             },
+            // biome-ignore lint/suspicious/noExplicitAny: pre-existing react-markdown override; proper type cleanup out of scope for this PR
             code: ({ node, inline, className, children, ...props }: any) => {
               let content = children as string;
               if (
