@@ -263,6 +263,35 @@ def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
     assert not dead_dir.exists()
 
 
+def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
+    """A pathologically large orphan spill must not OOM the current worker.
+
+    Regression for the case where ``_restore_from_disk`` and
+    ``_adopt_orphan_outboxes`` appended directly to the deque, bypassing the
+    queue cap.
+    """
+    from langflow.services.telemetry_writer.service import _pid_alive
+
+    dead_pid = 99999
+    while _pid_alive(dead_pid):
+        dead_pid += 1
+    dead_dir = tmp_path / str(dead_pid)
+    dead_dir.mkdir()
+    spill_writer = _build_writer()
+    # Spill more rows than the receiving writer's cap.
+    spill_writer._tx_buffer.extend([{"i": i} for i in range(100)])
+    spill_writer._spill_to_disk(dead_dir, kind="transactions", buffer=spill_writer._tx_buffer)
+
+    own_writer = _build_writer({"telemetry_writer_max_queue": 10})
+    own_writer._adopt_orphan_outboxes(tmp_path, own_pid=1)
+
+    # Buffer capped at 10; older rows dropped, drop counter reflects loss.
+    assert len(own_writer._tx_buffer) == 10
+    assert own_writer.dropped_transactions == 90
+    # The newest rows (90..99) survive.
+    assert [r["i"] for r in own_writer._tx_buffer] == list(range(90, 100))
+
+
 async def test_sanitization_survives_writer_round_trip(writer_with_engine) -> None:
     """A sensitive value passed through the producer must land redacted in the DB."""
     writer, engine = writer_with_engine

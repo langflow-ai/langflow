@@ -136,6 +136,12 @@ class TelemetryWriterService(Service):
         outbox_root.mkdir(parents=True, exist_ok=True)
         own_dir = outbox_root / str(os.getpid())
         own_dir.mkdir(parents=True, exist_ok=True)
+        # Outbox payloads contain sanitized but still-sensitive run history.
+        # Restrict access to the owner so a multi-tenant host can't expose
+        # them cross-user. chmod is a no-op on Windows but harmless.
+        with suppress(OSError):
+            outbox_root.chmod(0o700)
+            own_dir.chmod(0o700)
         self._own_outbox_dir = own_dir
 
         # Drain any rows that were spilled by a previous run of *this* PID and
@@ -272,9 +278,13 @@ class TelemetryWriterService(Service):
         except Exception:  # noqa: BLE001
             logger.exception(f"telemetry_writer: failed to spill {kind} buffer to disk")
 
-    @staticmethod
-    def _restore_from_disk(own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
-        """Load any disk-spilled rows from the previous run of this PID."""
+    def _restore_from_disk(self, own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
+        """Load any disk-spilled rows from the previous run of this PID.
+
+        Honors ``telemetry_writer_max_queue`` so a pathologically large spill
+        from a previous run cannot OOM the new process — older rows beyond the
+        cap are dropped and counted.
+        """
         spill_dir = own_dir / kind
         if not spill_dir.exists():
             return
@@ -284,9 +294,10 @@ class TelemetryWriterService(Service):
                 count = 0
                 while True:
                     try:
-                        buffer.append(disk.popleft())
+                        payload = disk.popleft()
                     except IndexError:
                         break
+                    self._enqueue(buffer, payload, kind=kind)
                     count += 1
                 if count:
                     logger.info(f"telemetry_writer: restored {count} {kind} rows from disk")
@@ -321,9 +332,13 @@ class TelemetryWriterService(Service):
                     try:
                         while True:
                             try:
-                                buffer.append(orphan.popleft())
+                                payload = orphan.popleft()
                             except IndexError:
                                 break
+                            # Route through _enqueue so a huge orphan spill
+                            # can't blow past telemetry_writer_max_queue and
+                            # OOM the process.
+                            self._enqueue(buffer, payload, kind=kind)
                             adopted += 1
                     finally:
                         with suppress(Exception):
