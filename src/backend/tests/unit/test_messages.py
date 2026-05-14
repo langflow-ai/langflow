@@ -474,6 +474,62 @@ async def test_aupdate_message_with_nested_properties(created_message):
     assert updated[0].properties.targets == []
 
 
+@pytest.mark.usefixtures("client")
+async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
+    """Regression test: a Table/DataFrame leaked into a ContentBlock should not break persistence.
+
+    When a flow wires a Memory Base (or any component that emits a Table) through
+    a Parser into an Agent, the raw Table can be captured by message tracking
+    and reach the SQL UPDATE before the consumer converts it to text. The
+    persistence layer must coerce the Table — and the numpy scalars it carries
+    — to JSON-native types rather than failing the message save.
+    """
+    import json
+
+    import numpy as np
+    import pandas as pd
+
+    table = pd.DataFrame([{"chunk": "hello world", "_score": 0.9}, {"chunk": "another row", "_score": 0.8}])
+
+    tool_content = ToolContent(
+        type="tool_use",
+        name="MemoryBase",
+        tool_input={"search_query": "hello"},
+        output=table,
+        duration=12,
+    )
+    content_block = ContentBlock(title="Agent Steps", contents=[tool_content])
+
+    created_message.content_blocks = [content_block]
+    created_message.text = "Agent response after Memory Base retrieval"
+
+    updated = await aupdate_messages(created_message)
+
+    assert len(updated) == 1
+    assert updated[0].text == "Agent response after Memory Base retrieval"
+    assert len(updated[0].content_blocks) == 1
+
+    stored_tool = updated[0].content_blocks[0].contents[0]
+    assert stored_tool.type == "tool_use"
+    assert stored_tool.name == "MemoryBase"
+
+    # The output must be free of pandas / numpy types and fully JSON-encodable.
+    def _assert_json_native(value):
+        if isinstance(value, dict):
+            for v in value.values():
+                _assert_json_native(v)
+        elif isinstance(value, list):
+            for v in value:
+                _assert_json_native(v)
+        else:
+            assert not isinstance(value, np.generic), f"numpy scalar leaked: {value!r}"
+            assert not isinstance(value, pd.DataFrame), "DataFrame leaked into persisted output"
+
+    _assert_json_native(stored_tool.output)
+    # Strict JSON dump must succeed without a fallback encoder.
+    json.dumps(stored_tool.output)
+
+
 # =============================================================================
 # Tests for MessageBase.from_message file path handling
 # =============================================================================
@@ -1343,21 +1399,18 @@ class TestSanitizeJson:
         assert MessageTable._sanitize_json(None) is None
 
     def test_sanitize_decimal_nan(self):
-        """Decimal('NaN') should be handled gracefully.
+        """Decimal('NaN') is normalized to None via the JSON-encoder fallback.
 
-        Decimal NaN is neither a float nor passes math.isnan/isinf, so the
-        current implementation passes it through as-is (it is not a float).
-        This test documents the current behaviour; if Decimal support is added
-        later (as suggested in review), update this test accordingly.
+        Decimal NaN is not directly JSON-encodable and would otherwise reach
+        the jsonb column unchanged. The fallback path converts it to a float
+        NaN, which is then sanitized to None like any other non-finite float.
         """
         import decimal
 
         from langflow.services.database.models.message.model import MessageTable
 
         d = decimal.Decimal("NaN")
-        # Current implementation: non-float types are returned unchanged
-        result = MessageTable._sanitize_json(d)
-        assert result is d  # passed through unchanged
+        assert MessageTable._sanitize_json(d) is None
 
     # ------------------------------------------------------------------
     # Integration: validator strips NaN before reaching the DB layer
