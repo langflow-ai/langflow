@@ -36,7 +36,7 @@ export function MemoriesSidebar({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <IconComponent
-              name="Brain"
+              name="BrainCog"
               className="h-4 w-4 text-muted-foreground"
             />
             <h2 className="text-sm font-semibold">Memories</h2>
@@ -71,7 +71,7 @@ export function MemoriesSidebar({
         {!filteredMemories.length ? (
           <div className="px-3 py-6 text-center">
             <IconComponent
-              name="Brain"
+              name="BrainCog"
               className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
             <p className="text-xs text-muted-foreground">

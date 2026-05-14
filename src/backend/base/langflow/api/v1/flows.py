@@ -13,6 +13,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
+from pydantic import ValidationError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -470,11 +471,32 @@ async def upload_file(
 
     # Normalise code fields: if exported with code-as-lines format, rejoin to
     # strings before creating the Pydantic models so the DB always stores strings.
-    if "flows" in data:
-        data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid JSON: expected an object with 'flows' or a single flow object",
+        )
+    try:
+        if "flows" in data:
+            if not isinstance(data["flows"], list):
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid JSON: 'flows' must be a list of flow objects",
+                )
+            non_dict = [i for i, f in enumerate(data["flows"]) if not isinstance(f, dict)]
+            if non_dict:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
+                )
+            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
+            flow_list = FlowListCreate(**data)
+        else:
+            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    except HTTPException:
+        raise
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

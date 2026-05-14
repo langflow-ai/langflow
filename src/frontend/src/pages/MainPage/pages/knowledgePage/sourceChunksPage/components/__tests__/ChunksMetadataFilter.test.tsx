@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
 
@@ -29,11 +29,22 @@ const setHookData = (data: any, isLoading = false) => {
   });
 };
 
+beforeAll(() => {
+  // cmdk calls scrollIntoView on selection; jsdom does not implement it.
+  Element.prototype.scrollIntoView = jest.fn();
+});
+
 beforeEach(() => {
   mockUseGetKbMetadataKeys.mockReset();
   mockRefetch.mockReset();
   setHookData({ keys: {}, truncated: false });
 });
+
+const openFilterPopover = async () => {
+  const user = userEvent.setup();
+  await user.click(screen.getByTestId("chunks-metadata-add-filter"));
+  return user;
+};
 
 describe("ChunksMetadataFilter", () => {
   it("renders the popover trigger labelled 'Filter by metadata'", () => {
@@ -43,62 +54,49 @@ describe("ChunksMetadataFilter", () => {
     );
   });
 
-  it("populates the key datalist with available keys when popover opens", async () => {
+  it("renders key combobox options when the key combobox opens", async () => {
     setHookData({
       keys: { year: ["2020", "2021"], dept: ["eng", "qa"] },
       truncated: false,
     });
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={jest.fn()} />);
+    const user = await openFilterPopover();
+    await user.click(screen.getByTestId("chunks-metadata-filter-key"));
 
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
-
-    await waitFor(() =>
-      expect(
-        screen.getByTestId("chunks-metadata-filter-key-options"),
-      ).toBeInTheDocument(),
-    );
-    const options = screen
-      .getByTestId("chunks-metadata-filter-key-options")
-      .querySelectorAll("option");
     expect(
-      Array.from(options)
-        .map((o) => o.value)
-        .sort(),
-    ).toEqual(["dept", "year"]);
+      await screen.findByTestId("chunks-metadata-filter-key-option-year"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("chunks-metadata-filter-key-option-dept"),
+    ).toBeInTheDocument();
   });
 
-  it("populates the value datalist with distinct values for the typed key", async () => {
+  it("renders value combobox options for the selected key", async () => {
     setHookData({
       keys: { year: ["2020", "2021"], dept: ["eng"] },
       truncated: false,
     });
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={jest.fn()} />);
+    const user = await openFilterPopover();
 
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
-    await user.type(screen.getByTestId("chunks-metadata-filter-key"), "year");
-
-    await waitFor(() =>
-      expect(
-        screen
-          .getByTestId("chunks-metadata-filter-value-options")
-          .querySelectorAll("option").length,
-      ).toBe(2),
+    await user.click(screen.getByTestId("chunks-metadata-filter-key"));
+    await user.click(
+      await screen.findByTestId("chunks-metadata-filter-key-option-year"),
     );
-    const values = Array.from(
-      screen
-        .getByTestId("chunks-metadata-filter-value-options")
-        .querySelectorAll("option"),
-    ).map((o) => o.value);
-    expect(values).toEqual(["2020", "2021"]);
+    await user.click(screen.getByTestId("chunks-metadata-filter-value"));
+
+    expect(
+      await screen.findByTestId("chunks-metadata-filter-value-option-2020"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("chunks-metadata-filter-value-option-2021"),
+    ).toBeInTheDocument();
   });
 
   it("renders the empty-state hint when no keys are available", async () => {
     setHookData({ keys: {}, truncated: false });
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={jest.fn()} />);
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
+    await openFilterPopover();
     expect(
       await screen.findByTestId("chunks-metadata-filter-empty"),
     ).toBeInTheDocument();
@@ -106,21 +104,37 @@ describe("ChunksMetadataFilter", () => {
 
   it("renders the truncated hint when the server caps any value list", async () => {
     setHookData({ keys: { tag: ["a"] }, truncated: true });
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={jest.fn()} />);
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
+    await openFilterPopover();
     expect(
       await screen.findByTestId("chunks-metadata-filter-truncated"),
     ).toBeInTheDocument();
   });
 
-  it("rejects an uppercase key with the validation message", async () => {
+  it("rejects an uppercase key (typed as custom) with the validation message", async () => {
+    setHookData({ keys: {}, truncated: false });
     const onAdd = jest.fn();
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={onAdd} />);
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
-    await user.type(screen.getByTestId("chunks-metadata-filter-key"), "Year");
-    await user.type(screen.getByTestId("chunks-metadata-filter-value"), "2020");
+    const user = await openFilterPopover();
+
+    await user.click(screen.getByTestId("chunks-metadata-filter-key"));
+    await user.type(
+      screen.getByTestId("chunks-metadata-filter-key-input"),
+      "Year",
+    );
+    await user.click(
+      await screen.findByTestId("chunks-metadata-filter-key-custom"),
+    );
+
+    await user.click(screen.getByTestId("chunks-metadata-filter-value"));
+    await user.type(
+      screen.getByTestId("chunks-metadata-filter-value-input"),
+      "2020",
+    );
+    await user.click(
+      await screen.findByTestId("chunks-metadata-filter-value-custom"),
+    );
+
     await user.click(screen.getByTestId("chunks-metadata-filter-submit"));
     expect(onAdd).not.toHaveBeenCalled();
     expect(
@@ -130,24 +144,34 @@ describe("ChunksMetadataFilter", () => {
 
   it("refetches metadata keys every time the popover is opened", async () => {
     setHookData({ keys: { year: ["2020"] }, truncated: false });
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={jest.fn()} />);
-
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
+    const user = await openFilterPopover();
     expect(mockRefetch).toHaveBeenCalledTimes(1);
-    // Close the popover by triggering the trigger again.
+
     await user.keyboard("{Escape}");
     await user.click(screen.getByTestId("chunks-metadata-add-filter"));
     expect(mockRefetch).toHaveBeenCalledTimes(2);
   });
 
-  it("calls onAdd with trimmed key/value on valid submit and clears inputs", async () => {
+  it("calls onAdd with selected key/value on valid submit", async () => {
+    setHookData({
+      keys: { year: ["2020", "2021"] },
+      truncated: false,
+    });
     const onAdd = jest.fn();
-    const user = userEvent.setup();
     render(<ChunksMetadataFilter kbName="kb1" onAdd={onAdd} />);
-    await user.click(screen.getByTestId("chunks-metadata-add-filter"));
-    await user.type(screen.getByTestId("chunks-metadata-filter-key"), "year");
-    await user.type(screen.getByTestId("chunks-metadata-filter-value"), "2020");
+    const user = await openFilterPopover();
+
+    await user.click(screen.getByTestId("chunks-metadata-filter-key"));
+    await user.click(
+      await screen.findByTestId("chunks-metadata-filter-key-option-year"),
+    );
+
+    await user.click(screen.getByTestId("chunks-metadata-filter-value"));
+    await user.click(
+      await screen.findByTestId("chunks-metadata-filter-value-option-2020"),
+    );
+
     await user.click(screen.getByTestId("chunks-metadata-filter-submit"));
     expect(onAdd).toHaveBeenCalledWith("year", "2020");
   });
