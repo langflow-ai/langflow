@@ -1,0 +1,256 @@
+"""Regression tests for find_existing_flow / upsert_flow_from_file.
+
+Covers the CI/CD upgrade scenario where a flow file's id differs from the DB
+row's id but the flow name is the same. Before the fix the loader hit the
+``unique_flow_name`` UniqueConstraint on INSERT and Langflow failed to start.
+"""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+import orjson
+import pytest
+from langflow.initial_setup.setup import (
+    find_existing_flow,
+    get_or_create_default_folder,
+    session_scope,
+    upsert_flow_from_file,
+)
+from langflow.services.database.models.flow.model import Flow
+from sqlmodel import select
+
+
+async def _create_flow(
+    *,
+    name: str,
+    user_id,
+    flow_id=None,
+    endpoint_name=None,
+    data=None,
+) -> Flow:
+    """Insert a minimal Flow row and return it."""
+    async with session_scope() as session:
+        folder = await get_or_create_default_folder(session, user_id)
+        flow = Flow(
+            id=flow_id or uuid4(),
+            name=name,
+            description="initial",
+            data=data or {"nodes": [], "edges": []},
+            user_id=user_id,
+            folder_id=folder.id,
+            endpoint_name=endpoint_name,
+        )
+        session.add(flow)
+        await session.flush()
+        await session.refresh(flow)
+        return flow
+
+
+@pytest.mark.usefixtures("client")
+async def test_find_existing_flow_by_name_when_id_differs() -> None:
+    """Match by (user_id, name) when the file's id doesn't exist in the DB."""
+    user_id = uuid4()
+    original = await _create_flow(name="MyFlow", user_id=user_id)
+
+    async with session_scope() as session:
+        result = await find_existing_flow(
+            session,
+            flow_id=uuid4(),  # different from the one in the DB
+            flow_endpoint_name=None,
+            user_id=user_id,
+            name="MyFlow",
+        )
+        assert result is not None
+        assert result.id == original.id
+
+
+@pytest.mark.usefixtures("client")
+async def test_find_existing_flow_returns_none_for_unmatched_name() -> None:
+    user_id = uuid4()
+    await _create_flow(name="MyFlow", user_id=user_id)
+
+    async with session_scope() as session:
+        result = await find_existing_flow(
+            session,
+            flow_id=uuid4(),
+            flow_endpoint_name=None,
+            user_id=user_id,
+            name="OtherFlow",
+        )
+        assert result is None
+
+
+@pytest.mark.usefixtures("client")
+async def test_find_existing_flow_id_match_still_wins() -> None:
+    """The id branch still runs first; name fallback only fires on no id match."""
+    user_id = uuid4()
+    original = await _create_flow(name="N1", user_id=user_id)
+
+    async with session_scope() as session:
+        # Mismatched name -- should still match by id and return the original.
+        result = await find_existing_flow(
+            session,
+            flow_id=original.id,
+            flow_endpoint_name=None,
+            user_id=user_id,
+            name="N2",
+        )
+        assert result is not None
+        assert result.id == original.id
+        assert result.name == "N1"
+
+
+@pytest.mark.usefixtures("client")
+async def test_find_existing_flow_endpoint_name_scoped_by_user() -> None:
+    """Endpoint-name lookup must not return another user's flow when user_id is supplied."""
+    user_a = uuid4()
+    user_b = uuid4()
+    flow_a = await _create_flow(name="A", user_id=user_a, endpoint_name="shared")
+
+    # user_b doesn't have any flow at all -- but unscoped lookup would still match flow_a.
+    async with session_scope() as session:
+        result = await find_existing_flow(
+            session,
+            flow_id=uuid4(),
+            flow_endpoint_name="shared",
+            user_id=user_b,
+        )
+        assert result is None, "endpoint_name lookup must be scoped by user_id"
+
+        # Scoping to flow_a's user returns it.
+        result = await find_existing_flow(
+            session,
+            flow_id=uuid4(),
+            flow_endpoint_name="shared",
+            user_id=user_a,
+        )
+        assert result is not None
+        assert result.id == flow_a.id
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
+    """Reporter's scenario: same name, different id -> update existing, no IntegrityError."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="MyFlow",
+        user_id=user_id,
+        data={"nodes": [], "edges": []},
+    )
+
+    file_id = uuid4()
+    file_content = orjson.dumps(
+        {
+            "id": str(file_id),
+            "name": "MyFlow",
+            "description": "updated from file",
+            "data": {"nodes": [{"id": "n1"}], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        # Must not raise IntegrityError on the unique_flow_name constraint.
+        await upsert_flow_from_file(file_content, "MyFlow", session, user_id)
+        await session.commit()
+
+    # Confirm: exactly one row, DB id preserved, content updated.
+    async with session_scope() as session:
+        flows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(flows) == 1
+        updated = flows[0]
+        assert updated.id == original.id, "DB id must be preserved on name-matched update"
+        assert updated.description == "updated from file"
+        assert updated.data == {"nodes": [{"id": "n1"}], "edges": []}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_creates_when_no_match() -> None:
+    """Empty DB -> upsert creates the row with the file's id."""
+    user_id = uuid4()
+    # Need a default folder for the user so upsert can assign folder_id.
+    async with session_scope() as session:
+        await get_or_create_default_folder(session, user_id)
+
+    file_id = uuid4()
+    file_content = orjson.dumps(
+        {
+            "id": str(file_id),
+            "name": "FreshFlow",
+            "description": "brand new",
+            "data": {"nodes": [], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "FreshFlow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        result = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(result) == 1
+        assert result[0].id == file_id
+        assert result[0].name == "FreshFlow"
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_no_unique_violation_on_repeat() -> None:
+    """Calling upsert twice with different file ids and the same name must not raise."""
+    user_id = uuid4()
+    async with session_scope() as session:
+        await get_or_create_default_folder(session, user_id)
+
+    def make_payload(flow_id, description: str) -> bytes:
+        return orjson.dumps(
+            {
+                "id": str(flow_id),
+                "name": "Recurring",
+                "description": description,
+                "data": {"nodes": [], "edges": []},
+            }
+        )
+
+    # First import: row inserted with id=A.
+    id_a = uuid4()
+    async with session_scope() as session:
+        await upsert_flow_from_file(make_payload(id_a, "first"), "Recurring", session, user_id)
+        await session.commit()
+
+    # Second import (e.g. nightly upgrade with regenerated UUIDs): same name, id=B.
+    # Must update the existing row, not raise IntegrityError.
+    id_b = uuid4()
+    async with session_scope() as session:
+        await upsert_flow_from_file(make_payload(id_b, "second"), "Recurring", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].id == id_a, "DB id from first import is preserved"
+        assert rows[0].description == "second"
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_id_match_still_overwrites_id_field() -> None:
+    """When matched by id, the existing setattr loop is unchanged (no regression)."""
+    user_id = uuid4()
+    original = await _create_flow(name="IdMatch", user_id=user_id)
+
+    file_content = orjson.dumps(
+        {
+            "id": str(original.id),  # same id -> matched_by_id is True
+            "name": "IdMatch",
+            "description": "updated",
+            "data": {"nodes": [], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        await upsert_flow_from_file(file_content, "IdMatch", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].id == original.id
+        assert rows[0].description == "updated"

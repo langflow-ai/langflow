@@ -1077,11 +1077,24 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             await logger.aerror(f"Invalid UUID string: {flow_id}")
             return
 
-    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    flow_name = flow.get("name")
+    existing = await find_existing_flow(
+        session,
+        flow_id,
+        flow_endpoint_name,
+        user_id=user_id,
+        name=flow_name,
+    )
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
         await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
+        # If we matched the existing row by (user_id, name) or endpoint_name -- not by id --
+        # the file's id differs from the DB id. Preserve the DB id; rewriting it from under
+        # any FK referrers is unsafe and was never intended by the original upsert logic.
+        matched_by_id = flow_id is not None and existing.id == flow_id
         for key, value in flow.items():
+            if key == "id" and not matched_by_id:
+                continue
             if hasattr(existing, key):
                 # flow dict from json and db representation are not 100% the same
                 setattr(existing, key, value)
@@ -1114,18 +1127,39 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         session.add(flow)
 
 
-async def find_existing_flow(session, flow_id, flow_endpoint_name):
+async def find_existing_flow(session, flow_id, flow_endpoint_name, *, user_id=None, name=None):
+    """Look up an existing flow row by endpoint_name, id, or (user_id, name).
+
+    The ``(user_id, name)`` fallback is required so that flows loaded from
+    ``LANGFLOW_LOAD_FLOWS_PATH`` can upsert against a DB row that shares the
+    user-visible name but has a different ``id`` (e.g. CI/CD re-import,
+    regenerated UUIDs, fresh database). Without it the loader hits the
+    ``unique_flow_name`` ``UniqueConstraint("user_id", "name")`` on INSERT
+    and Langflow fails to start.
+    """
     if flow_endpoint_name:
         await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
+        # ``unique_flow_endpoint_name`` is scoped per user; scope the lookup too
+        # when a user_id is supplied so we don't return another user's flow.
+        if user_id is not None:
+            stmt = stmt.where(Flow.user_id == user_id)
         if existing := (await session.exec(stmt)).first():
             await logger.adebug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if existing := (await session.exec(stmt)).first():
-        await logger.adebug(f"Found existing flow by id: {flow_id}")
-        return existing
+    if flow_id is not None:
+        stmt = select(Flow).where(Flow.id == flow_id)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by id: {flow_id}")
+            return existing
+
+    if user_id is not None and name:
+        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == name)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by (user_id, name): {name}")
+            return existing
+
     return None
 
 
