@@ -24,6 +24,15 @@ interface GetKnowledgeBaseChunksParams {
   page?: number;
   limit?: number;
   search?: string;
+  source_type?: string;
+  file_name?: string;
+  job_id?: string;
+  /**
+   * User-metadata filter as a {key: [values]} map. Each entry serializes
+   * to one or more ``meta_<key>=<value>`` query params; the backend
+   * AND-s across keys and OR-s across values for the same key.
+   */
+  metadata_filter?: Record<string, string[]>;
 }
 
 export const useGetKnowledgeBaseChunks: useQueryFunctionType<
@@ -43,6 +52,22 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     if (params?.search) {
       queryParams.append("search", params.search);
     }
+    if (params?.source_type) {
+      queryParams.append("source_type", params.source_type);
+    }
+    if (params?.file_name) {
+      queryParams.append("file_name", params.file_name);
+    }
+    if (params?.job_id) {
+      queryParams.append("job_id", params.job_id);
+    }
+    if (params?.metadata_filter) {
+      for (const [key, values] of Object.entries(params.metadata_filter)) {
+        for (const value of values) {
+          queryParams.append(`meta_${key}`, value);
+        }
+      }
+    }
 
     const url = `${getURL("KNOWLEDGE_BASES")}/${params?.kb_name}/chunks${
       queryParams.toString() ? `?${queryParams.toString()}` : ""
@@ -52,19 +77,24 @@ export const useGetKnowledgeBaseChunks: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult: UseQueryResult<PaginatedChunkResponse, any> = query(
+  const queryResult: UseQueryResult<PaginatedChunkResponse, Error> = query(
     [
       "useGetKnowledgeBaseChunks",
       params?.kb_name,
       params?.page,
       params?.limit,
       params?.search,
+      params?.source_type,
+      params?.file_name,
+      params?.job_id,
+      params?.metadata_filter,
     ],
     getChunksFn,
     {
       enabled: !!params?.kb_name,
-      retry: (failureCount, error: any) => {
-        const status = error?.response?.status;
+      retry: (failureCount, error: unknown) => {
+        const status = (error as { response?: { status?: unknown } })?.response
+          ?.status;
         if (typeof status === "number") {
           return status >= 500 && failureCount < 3;
         }

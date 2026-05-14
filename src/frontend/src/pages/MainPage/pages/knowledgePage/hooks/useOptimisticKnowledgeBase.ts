@@ -55,6 +55,8 @@ export const useOptimisticKnowledgeBase = () => {
             avg_chunk_size: 0,
             status: newStatus,
             column_config: submitted.columnConfig,
+            backend_type: submitted.backendType || "chroma",
+            backend_config: submitted.backendConfig || {},
           },
         ];
       },

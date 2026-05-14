@@ -226,6 +226,79 @@ To resolve this error, do the following:
 
 3. Restart Langflow Desktop.
 
+## Uninstall Langflow
+
+Uninstalling Langflow depends on how it was installed, and on which operating system.
+
+If you reinstall Langflow after uninstalling, any data you didn't delete will be picked up automatically by the new installation. Delete the data directories listed below if you want a completely fresh start.
+
+### Uninstall the Langflow OSS Python package
+
+1. To uninstall the Langflow OSS Python package, run the following command in the virtual environment where Langflow is installed:
+
+    ```bash
+    uv pip uninstall langflow
+    ```
+
+2. To remove the Langflow data directory, which contains your flows, settings, and cache, run:
+
+    <Tabs>
+    <TabItem value="mac-linux" label="macOS / Linux" default>
+
+    ```bash
+    rm -rf ~/.langflow
+    ```
+
+    </TabItem>
+    <TabItem value="windows" label="Windows">
+
+    ```powershell
+    Remove-Item -Recurse -Force "$env:USERPROFILE\.langflow"
+    ```
+
+    </TabItem>
+    </Tabs>
+
+### Uninstall Langflow Desktop
+
+To uninstall Langflow Desktop, uninstall the application with your OS package manager, and then manually delete the remaining data directories.
+
+<Tabs>
+<TabItem value="macos" label="macOS" default>
+
+1. Drag `Langflow.app` from `/Applications` to the Trash, or right-click and select **Move to Trash**.
+2. Empty the **Trash** to remove the application file.
+3. To remove the Langflow data directory, run the following command:
+
+    ```bash
+    rm -rf ~/.langflow
+    ```
+
+4. To remove the Desktop app support files, run the following commands:
+
+    ```bash
+    rm -rf ~/Library/Application\ Support/com.LangflowDesktop
+    rm -rf ~/Library/Caches/com.LangflowDesktop
+    rm -rf ~/Library/Logs/com.LangflowDesktop
+    rm -f  ~/Library/Preferences/com.LangflowDesktop.plist
+    rm -rf ~/Library/WebKit/com.LangflowDesktop
+    ```
+
+</TabItem>
+<TabItem value="windows" label="Windows">
+
+1. Open **Settings** > **Apps** > **Installed apps**.
+2. Find **Langflow** in the list, click the menu (**...**), and select **Uninstall**.
+3. Follow the on-screen prompts to complete the uninstallation.
+4. To remove the Langflow data directory, run the following command:
+
+    ```powershell
+    Remove-Item -Recurse -Force "$env:LOCALAPPDATA\com.LangflowDesktop"
+    ```
+
+</TabItem>
+</Tabs>
+
 ## Langflow startup issues
 
 The following issues can occur when attempting to start Langflow.
@@ -385,22 +458,6 @@ If you're experiencing this issue, update your Langflow installation to version 
 ```bash
 uv pip install langflow -U
 ```
-
-## Langflow uninstall issues
-
-The following issues can occur when uninstalling Langflow.
-
-### Dot directory isn't deleted when uninstalling Langflow Desktop on macOS
-
-On macOS, uninstalling Langflow Desktop deletes the `.app` file but doesn't delete files in `~/.langflow`, which includes files generated during usage like cache and settings.
-
-If you reinstall Langflow Desktop, it starts with the existing data from the previous installation.
-
-To fully remove a Langflow Desktop macOS installation, you must also delete `~/.langflow`:
-
-    ```bash
-    rm -rf .langflow
-    ```
 
 ## Langflow MCP issues {#mcp}
 

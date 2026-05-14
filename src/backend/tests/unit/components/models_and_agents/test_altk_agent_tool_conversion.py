@@ -1,3 +1,11 @@
+import pytest
+
+try:
+    import altk  # noqa: F401
+except ImportError:
+    # agent-lifecycle-toolkit is gated to python_version<'3.14' upstream.
+    pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
+
 from langchain_core.tools import BaseTool
 from lfx.base.agents.altk_tool_wrappers import PreToolValidationWrapper
 from lfx.log.logger import logger

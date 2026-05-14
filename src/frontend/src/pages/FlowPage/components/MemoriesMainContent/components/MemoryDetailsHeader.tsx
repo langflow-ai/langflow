@@ -39,7 +39,10 @@ export function MemoryDetailsHeader({
   return (
     <div className="flex items-center justify-between border-b border-border bg-background px-6 py-3">
       <div className="flex items-center gap-3">
-        <IconComponent name="Brain" className="h-5 w-5 text-muted-foreground" />
+        <IconComponent
+          name="BrainCog"
+          className="h-5 w-5 text-muted-foreground"
+        />
         <div>
           <h2 className="text-sm font-semibold">{memory.name}</h2>
           {memory.description && (
