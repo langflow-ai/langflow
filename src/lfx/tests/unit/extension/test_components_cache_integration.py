@@ -320,6 +320,121 @@ async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: P
 
 
 @pytest.mark.asyncio
+async def test_seed_bundle_shadows_dev_emits_generic_bundle_shadowed(tmp_path: Path, monkeypatch) -> None:
+    """A seed bundle silently shadowed a dev registration -- regression for the empty-deltas reload bug.
+
+    Reload reads ``live.source_path`` from the registry and walks that path on
+    every call.  Before the cross-source dedup, the registry-population loop in
+    :func:`import_extension_components` would silently overwrite earlier records
+    with later ones (last-wins iteration order), so a stale dev registration
+    pointing at a different filesystem location could clobber the seed record's
+    ``source_path``.  Reload would then walk the dev path while the operator
+    edits the seed copy on disk: 200 OK with empty deltas every time.
+
+    This test asserts both halves: the seed copy wins in the BundleRegistry
+    AND the dev copy gets a typed ``bundle-shadowed`` warning naming both paths.
+    """
+    import json
+
+    from lfx.extension.bundle_registry import BundleRegistry
+    from lfx.extension.loader._types import LoadedComponent, LoadResult
+
+    # Real seed bundle on disk.
+    seed_root = tmp_path / "seed-bundles"
+    seed_extension_root = seed_root / "lfx-pilot"
+    seed_bundle_dir = seed_extension_root / "components"
+    seed_bundle_dir.mkdir(parents=True)
+    manifest = {
+        "id": "lfx-pilot",
+        "version": "1.0.0-seed",
+        "name": "Pilot (seed)",
+        "lfx": {"compat": ["1"]},
+        "bundles": [{"name": "pilot", "path": "components"}],
+    }
+    (seed_extension_root / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    (seed_bundle_dir / "thing.py").write_text(
+        "class Component:\n    pass\n"
+        "class PilotThing(Component):\n"
+        "    display_name = 'Seed'\n"
+        "    def build(self):\n        return None\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("LANGFLOW_SEED_DIR", str(seed_root))
+
+    # Faked dev result for the same bundle name pointing at a totally
+    # different path -- the stale registration that used to silently win.
+    dev_path = tmp_path / "stale-dev-checkout"
+    dev_path.mkdir()
+
+    class _Component:
+        pass
+
+    class _DevPilotThing(_Component):
+        display_name = "Dev"
+
+        def build(self) -> None:
+            return None
+
+    dev_loaded = LoadedComponent(
+        extension_id="lfx-pilot",
+        extension_version="9.9.9-dev",
+        bundle="pilot",
+        class_name="PilotThing",
+        slot="official",
+        klass=_DevPilotThing,
+        module_name="_lfx_ext.official.pilot.thing",
+        file_path=dev_path / "thing.py",
+        distribution=None,
+    )
+    dev_result = LoadResult(slot="official", source_path=dev_path)
+    dev_result.extension_id = "lfx-pilot"
+    dev_result.extension_version = "9.9.9-dev"
+    dev_result.bundle = "pilot"
+    dev_result.components = [dev_loaded]
+
+    fresh_registry = BundleRegistry()
+    settings_service = _FakeSettingsService(components_path=[])
+
+    captured_diagnostics: list[list] = []
+
+    def _capture_diagnostics(results) -> None:
+        captured_diagnostics.append(list(results))
+
+    with (
+        patch("lfx.interface.components.create_component_template", side_effect=_stub_template),
+        patch("lfx.interface.components.get_default_registry", return_value=fresh_registry),
+        patch("lfx.interface.components.load_dev_extensions", return_value=[dev_result]),
+        patch("lfx.interface.components._emit_extension_diagnostics", side_effect=_capture_diagnostics),
+    ):
+        await import_extension_components(settings_service)
+
+    # Seed wins (higher precedence than dev).  The crucial assertion: the
+    # registry's source_path is the seed path, NOT the stale dev path -- so
+    # reload will walk the right directory and pick up on-disk edits.
+    record = fresh_registry.get_bundle("pilot")
+    assert record is not None
+    assert record.extension_version == "1.0.0-seed", "seed bundle must win over dev shadow"
+    assert record.source_path is not None
+    assert record.source_path.resolve() == seed_extension_root.resolve(), (
+        f"registry source_path={record.source_path} must point at the seed copy "
+        f"at {seed_extension_root}, not the stale dev path {dev_path}; otherwise "
+        "POST /reload silently no-ops on edits to the seed copy"
+    )
+
+    # The dev result that ran through the diagnostics emitter carries the
+    # generic typed shadow warning naming both paths.
+    assert captured_diagnostics, "diagnostics emitter was never called"
+    all_results = captured_diagnostics[0]
+    shadow_errors = [err for r in all_results for err in r.errors if err.code == "bundle-shadowed"]
+    assert len(shadow_errors) == 1, (
+        f"expected exactly one bundle-shadowed warning; got {[e.code for r in all_results for e in r.errors]}"
+    )
+    msg = shadow_errors[0].message
+    assert str(dev_path) in msg, msg
+    assert str(seed_extension_root) in msg, msg
+
+
+@pytest.mark.asyncio
 async def test_import_extension_components_populates_bundle_registry(tmp_path: Path) -> None:
     """Startup wiring: discovered bundles must be installed in the BundleRegistry.
 
@@ -464,8 +579,8 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
     )
 
     component_cache.all_types_dict = {"delta": {"old": {"display_name": "old"}}}
-    component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}
-    component_cache.all_known_hashes = {"abc123def456"}
+    component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}  # pragma: allowlist secret
+    component_cache.all_known_hashes = {"abc123def456"}  # pragma: allowlist secret
 
     class _Component:
         pass

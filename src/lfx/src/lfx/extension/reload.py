@@ -372,6 +372,24 @@ def _run_pipeline_body(
     # respond with manifest-not-found.  Route those through the inline
     # loader, which derives identity from the directory name + optional
     # bundle.json the same way startup discovery does.
+    #
+    # Log the resolved source before the load so a "200 OK with empty
+    # deltas" repro can be triaged from the server log alone: if the
+    # path here is not the path the operator was editing, the bug is
+    # cross-source bundle-name shadowing in the registry-population
+    # pass, not the loader itself.  Logged at INFO so it shows up under
+    # the default langflow verbosity.
+    logger.info(
+        "extension.reload.stage1_load",
+        extra={
+            "event": "reload_stage1_load",
+            "bundle": bundle,
+            "slot": effective_slot,
+            "source_path": str(effective_source),
+            "reload_id": reload_id,
+            "staging_namespace": staging_namespace,
+        },
+    )
     if effective_slot == SLOT_EXTRA:
         staging: LoadResult = load_inline_bundle(
             effective_source,

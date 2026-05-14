@@ -82,6 +82,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "seed-directory-immutable",
         "seed-directory-not-found",
         "seed-bundle-shadowed",
+        "bundle-shadowed",
         "duplicate-extension-id",
         # Reload-specific codes (LE-1018)
         "reload-in-progress",
@@ -259,6 +260,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "seed-bundle-shadowed": (
         "Seed-directory bundle {content!r} at {location} is shadowed by an installed Extension "
         "of the same name; the seed copy is being skipped."
+    ),
+    "bundle-shadowed": (
+        "Bundle {content!r} is registered from multiple discovery sources; the lower-precedence copy "
+        "at {location} is being skipped in favor of the higher-precedence one."
     ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (

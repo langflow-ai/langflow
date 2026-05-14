@@ -705,6 +705,125 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
             logger.warning("Extension load warning: %s", format_extension_error(warn))
 
 
+# Discovery-source precedence for cross-source bundle-name collisions.
+# Higher in the list wins.  Ordered from most-authoritative (pip-installed
+# distribution = explicit, packaged install) to least (LANGFLOW_COMPONENTS_PATH
+# = loose, legacy custom-components path).  Operators who stage a bundle in
+# multiple places almost always *want* the more-authoritative copy to win;
+# the typed warning is what catches the unintentional case.
+_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "dev", "inline")
+
+
+def _resolve_bundle_shadowing(
+    *,
+    extension_results: list[LoadResult],
+    seed_results: list[LoadResult],
+    dev_results: list[LoadResult],
+    inline_results: list[LoadResult],
+) -> tuple[list[LoadResult], list[LoadResult], list[LoadResult], list[LoadResult]]:
+    """Drop loser components and emit typed shadow warnings on lower-precedence dups.
+
+    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > dev > inline).
+    For each bundle name claimed by more than one source, the highest-precedence
+    source keeps its components; every other source has its ``components`` cleared
+    AND gains a typed warning naming the winning source's path so the operator can
+    diagnose without grepping.
+
+    Two distinct codes get emitted depending on which pair collided:
+
+      - ``seed-bundle-shadowed`` (the original code): emitted when an installed
+        Extension shadows a seed-directory bundle.  Preserved verbatim so the
+        existing CLI warn-only set, snapshot tests, and operator runbooks keep
+        working.
+      - ``bundle-shadowed`` (new generic code): emitted for every other shadow
+        pair (seed-shadows-dev, seed-shadows-inline, dev-shadows-inline,
+        installed-shadows-dev/inline).  Carries the loser's source_path as
+        ``location`` and the winner's source_path in the message body.
+
+    The returned tuple has the same shape and order as the inputs so the caller
+    can splice it back into ``all_results`` without re-ordering.
+
+    Within a single source list, duplicates are not handled here -- the
+    per-source loaders surface their own typed errors (``duplicate-distribution``,
+    ``duplicate-inline-bundle``) and that diagnostic stays on the result it
+    came from.
+    """
+    sources: dict[str, list[LoadResult]] = {
+        "installed": extension_results,
+        "seed": seed_results,
+        "dev": dev_results,
+        "inline": inline_results,
+    }
+
+    # First pass: pick the winning source per bundle name.
+    # Records the source-kind label so the second pass knows whether to mint a
+    # `seed-bundle-shadowed` (existing code) or the new generic `bundle-shadowed`.
+    winner_for_bundle: dict[str, tuple[str, LoadResult]] = {}
+    for kind in _DISCOVERY_PRECEDENCE:
+        for result in sources[kind]:
+            if not result.bundle or not result.components:
+                # Either the loader never identified a bundle (path-error sentinels)
+                # or the source already produced no components -- nothing to shadow.
+                continue
+            winner_for_bundle.setdefault(result.bundle, (kind, result))
+
+    # Second pass: for each result that is NOT the winner, drop its components
+    # and append the typed warning to the result's errors list (mirroring the
+    # original ``seed-bundle-shadowed`` flow so CLI exit-code logic keeps
+    # treating it as a non-fatal diagnostic that stays attached to the loser).
+    for kind in _DISCOVERY_PRECEDENCE:
+        for result in sources[kind]:
+            if not result.bundle or not result.components:
+                continue
+            winner_kind, winner_result = winner_for_bundle[result.bundle]
+            if winner_result is result:
+                continue
+            loser_path = str(result.source_path) if result.source_path else result.bundle
+            winner_path = str(winner_result.source_path) if winner_result.source_path else winner_result.bundle
+            if winner_kind == "installed" and kind == "seed":
+                # Preserve the documented code for the documented pair so the
+                # existing CLI warn-only set and snapshot tests keep working.
+                result.errors.append(
+                    ExtensionError(
+                        code="seed-bundle-shadowed",
+                        message=(
+                            f"Seed bundle {result.bundle!r} at {loser_path} is shadowed by an "
+                            f"installed Extension of the same name at {winner_path}; "
+                            "the seed copy is being skipped."
+                        ),
+                        location=loser_path,
+                        content=result.bundle,
+                        hint=(
+                            "Remove the seed-directory subdirectory or uninstall the conflicting "
+                            "pip distribution so each @official-slot bundle name has exactly one source."
+                        ),
+                    )
+                )
+            else:
+                result.errors.append(
+                    ExtensionError(
+                        code="bundle-shadowed",
+                        message=(
+                            f"Bundle {result.bundle!r} at {loser_path} (source: {kind}) is shadowed "
+                            f"by a higher-precedence source at {winner_path} (source: {winner_kind}); "
+                            "the lower-precedence copy is being skipped."
+                        ),
+                        location=loser_path,
+                        content=result.bundle,
+                        hint=(
+                            "Discovery precedence is installed > seed > dev > inline. "
+                            f"Either remove the {kind} copy of this bundle or rename it so each "
+                            "bundle name comes from exactly one source."
+                        ),
+                    )
+                )
+            # Drop components so the registry-population and palette-construction
+            # loops naturally skip this result; the typed warning still emits.
+            result.components = []
+
+    return extension_results, seed_results, dev_results, inline_results
+
+
 async def import_extension_components(
     settings_service: "SettingsService",
 ) -> dict[str, dict[str, Any]]:
@@ -752,39 +871,29 @@ async def import_extension_components(
     dev_results = load_dev_extensions()
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
 
-    # Installed pip distributions take precedence over seed-directory bundles
-    # of the same name: an operator who pip-installs ``lfx-foo`` AND copies
-    # an ``foo/`` subdirectory into ``/opt/langflow/bundles/`` has shadowed
-    # the install, and the safe behaviour is "installed wins, surface a
-    # typed warning so the operator notices".  Compute the shadowing here
-    # rather than after registry population so the diagnostics emit before
-    # the install_bundle calls and the operator sees one well-formed event
-    # per shadow rather than a silent overwrite.
-    installed_bundles = {r.bundle for r in extension_results if r.bundle}
-    deduped_seed_results: list[LoadResult] = []
-    for seed in seed_results:
-        if seed.bundle and seed.bundle in installed_bundles:
-            seed.errors.append(
-                ExtensionError(
-                    code="seed-bundle-shadowed",
-                    message=(
-                        f"Seed bundle {seed.bundle!r} at {seed.source_path} is shadowed by an "
-                        "installed Extension of the same name; the seed copy is being skipped."
-                    ),
-                    location=str(seed.source_path) if seed.source_path else seed.bundle,
-                    content=seed.bundle,
-                    hint=(
-                        "Remove the seed-directory subdirectory or uninstall the conflicting "
-                        "pip distribution so each @official-slot bundle name has exactly one source."
-                    ),
-                )
-            )
-            # Drop the components so the registry population loop skips it,
-            # but keep the result in the diagnostics list so the warning surfaces.
-            seed.components = []
-        deduped_seed_results.append(seed)
+    # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
+    # surfaces four sources -- installed (pip) > seed (filesystem-staged) >
+    # dev (`lfx extension dev`) > inline (LANGFLOW_COMPONENTS_PATH) -- and the
+    # registry is keyed by bundle name.  Without an explicit precedence the
+    # registry-population loop would silently overwrite earlier records with
+    # later ones (last-wins by iteration order), and the reload endpoint would
+    # then walk the *winner's* source path while the operator edits a different
+    # copy on disk: the empty-deltas reload bug.  Drop loser components AND
+    # surface the typed warning before either the registry or the palette
+    # mapping is built so the operator sees the shadow once with the actual
+    # paths involved.
+    deduped_extension_results, deduped_seed_results, deduped_dev_results, deduped_inline_results = (
+        _resolve_bundle_shadowing(
+            extension_results=extension_results,
+            seed_results=seed_results,
+            dev_results=dev_results,
+            inline_results=inline_results,
+        )
+    )
 
-    _emit_extension_diagnostics([*extension_results, *deduped_seed_results, *dev_results, *inline_results])
+    _emit_extension_diagnostics(
+        [*deduped_extension_results, *deduped_seed_results, *deduped_dev_results, *deduped_inline_results]
+    )
 
     # Populate the process-default BundleRegistry so the reload endpoint
     # (POST /api/v1/extensions/{id}/bundles/{name}/reload) can find a
@@ -793,9 +902,16 @@ async def import_extension_components(
     # palette, because the registry is never primed at startup.  Reload
     # later updates the registry directly; the cache hook in
     # :func:`refresh_extension_components_cache` keeps ``component_cache``
-    # in sync after a swap.
+    # in sync after a swap.  ``all_results`` is the deduped list so both
+    # the registry record and the palette template come from the same
+    # winning source path.
     registry = get_default_registry()
-    all_results = [*extension_results, *deduped_seed_results, *dev_results, *inline_results]
+    all_results = [
+        *deduped_extension_results,
+        *deduped_seed_results,
+        *deduped_dev_results,
+        *deduped_inline_results,
+    ]
     for result in all_results:
         if not result.bundle or not result.components or result.slot is None:
             continue

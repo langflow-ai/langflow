@@ -180,7 +180,7 @@ def list_command(
     # stderr where humans see it.  Configuration errors that point at a
     # missing seed dir stay as hard failures: that's an operator misconfig,
     # not a runtime warning.
-    warn_only_codes = frozenset({"seed-bundle-shadowed"})
+    warn_only_codes = frozenset({"seed-bundle-shadowed", "bundle-shadowed"})
     hard_errors = [err for err in all_errors if err.code not in warn_only_codes]
 
     if output_format == "json":
