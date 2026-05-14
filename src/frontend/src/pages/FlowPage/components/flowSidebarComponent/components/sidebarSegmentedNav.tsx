@@ -60,7 +60,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "memories",
-    icon: "Brain",
+    icon: "BrainCog",
     label: "Memories",
     tooltip: "Memories",
   },
