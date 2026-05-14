@@ -140,6 +140,25 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        self._add_metric(
+            name="langflow_job_queue_cancel_events_total",
+            description=(
+                "Job queue cancel-channel and watchdog events. event_type is one of: "
+                "published, marker_hit, dispatched_owned, dispatched_foreign, publish_errors, "
+                "dispatcher_reconnects, dispatcher_internal_errors, polling_watchdog_kills, "
+                "activity_touch_errors, activity_get_errors, activity_parse_errors."
+            ),
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"event_type": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_job_queue_active_jobs",
+            description="Active jobs tracked by the job queue on this worker.",
+            unit="",
+            metric_type=MetricType.UP_DOWN_COUNTER,
+            labels={"backend": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once
