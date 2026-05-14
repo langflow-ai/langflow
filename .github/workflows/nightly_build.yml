@@ -258,7 +258,7 @@ jobs:
     needs: [resolve-release-branch, create-nightly-tag]
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       runs-on: ${{ inputs['runs_on'] || github.event.inputs['runs_on'] || 'ubuntu-latest' }}
       ref: ${{ needs.resolve-release-branch.outputs.branch }}
     secrets:
