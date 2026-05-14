@@ -2,15 +2,13 @@
 
 import asyncio
 import hashlib
-import tempfile
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from lfx.cli.serve_app import FlowMeta, StreamRequest, create_multi_serve_app
+from lfx.cli.serve_app import FlowMeta, FlowRegistry, StreamRequest, create_multi_serve_app
 from lfx.interface.components import component_cache
 
 
@@ -124,24 +122,24 @@ def multi_serve_app(mock_graphs, mock_metas, monkeypatch):
             "Execution completed successfully",
         )
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            app = create_multi_serve_app(
-                root_dir=Path(temp_dir), graphs=mock_graphs, metas=mock_metas, verbose_print=lambda _: None
-            )
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
 
-            # Override the dependency after app creation
-            def mock_verify_api_key(query_param: str | None = None, header_param: str | None = None) -> str:  # noqa: ARG001
-                return "test-api-key"
+        # Override the dependency after app creation
+        def mock_verify_api_key(query_param: str | None = None, header_param: str | None = None) -> str:  # noqa: ARG001
+            return "test-api-key"
 
-            # Import the original dependency
-            from lfx.cli.serve_app import verify_api_key
+        # Import the original dependency
+        from lfx.cli.serve_app import verify_api_key
 
-            app.dependency_overrides[verify_api_key] = mock_verify_api_key
+        app.dependency_overrides[verify_api_key] = mock_verify_api_key
 
-            yield app
+        yield app
 
-            # Clean up
-            app.dependency_overrides.clear()
+        # Clean up
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -431,12 +429,10 @@ class TestMultiServeStreaming:
         monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
         mock_graphs["flow1"].raw_graph_data = _blocked_raw_graph()
 
-        app = create_multi_serve_app(
-            root_dir=Path("/tmp"),
-            graphs=mock_graphs,
-            metas=mock_metas,
-            verbose_print=lambda _: None,
-        )
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
 
         from lfx.cli.serve_app import verify_api_key
 
