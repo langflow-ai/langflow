@@ -111,10 +111,16 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         dialog_inputs = component.inputs[0].dialog_inputs["fields"]["data"]["node"]
         embedding_model_input = dialog_inputs["template"]["02_embedding_model"]
+        backend_input = dialog_inputs["template"]["03_knowledge_backend"]
 
-        assert dialog_inputs["field_order"] == ["01_new_kb_name", "02_embedding_model"]
+        assert dialog_inputs["field_order"] == ["01_new_kb_name", "02_embedding_model", "03_knowledge_backend"]
         assert "03_api_key" not in dialog_inputs["template"]
         assert "configured credentials" in embedding_model_input.info
+        assert backend_input.field_type.value == "knowledge_backend"
+        assert backend_input.display_name == "DB Provider"
+        # Default is empty so the frontend can populate it from the user's
+        # configured active DB Provider on first render.
+        assert backend_input.value == {}
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")
     @patch("lfx.components.files_and_knowledge.ingestion.encrypt_api_key")
@@ -319,6 +325,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "new_test_kb",
             "02_embedding_model": model_selection,
+            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
         }
 
         # Mock embedding validation
@@ -333,6 +340,48 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "new_test_kb" in result["knowledge_base"]["options"]
         assert "api_key" not in mock_get_embeddings.call_args.kwargs
         assert "api_key" not in mock_save_metadata.call_args.kwargs
+        assert mock_save_metadata.call_args.kwargs["backend_type"] == "chroma"
+        assert mock_save_metadata.call_args.kwargs["backend_config"] == {}
+
+    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    async def test_update_build_config_new_kb_persists_backend_selection(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """Test creating knowledge from the component dialog preserves the selected backend."""
+        component = component_class(**default_kwargs)
+
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+        model_selection = [
+            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+        ]
+        field_value = {
+            "01_new_kb_name": "opensearch_test_kb",
+            "02_embedding_model": model_selection,
+            "03_knowledge_backend": {
+                "backend_type": "opensearch",
+                "backend_config": {
+                    "url_variable": "OPENSEARCH_URL",
+                    "index_name": "kb-index",
+                    "vector_field": "embedding",
+                    "text_field": "content",
+                },
+            },
+        }
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
+        mock_get_embeddings.return_value = mock_embeddings
+
+        with (
+            patch.object(component, "_save_embedding_metadata") as mock_save_metadata,
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+        ):
+            await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        assert mock_save_metadata.call_args.kwargs["backend_type"] == "opensearch"
+        assert mock_save_metadata.call_args.kwargs["backend_config"]["index_name"] == "kb-index"
+        assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"
+        assert mock_create_record.call_args.kwargs["backend_config"]["text_field"] == "content"
 
     @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
     async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
@@ -362,6 +411,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         field_value = {
             "01_new_kb_name": "invalid@name",  # Invalid character
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+            "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
         }
 
         with pytest.raises(ValueError, match="Invalid knowledge base name"):

@@ -1,5 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-import i18n from "../../../../../i18n";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   useGetFlowsMCP,
@@ -17,6 +16,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import type { InputFieldType } from "@/types/api";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
+import i18n from "../../../../../i18n";
 import {
   buildMcpServerJson,
   extractInstalledClientNames,

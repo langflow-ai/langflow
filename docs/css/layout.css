@@ -1,0 +1,167 @@
+/* Content area - breathing room */
+[class*="docMainContainer"] {
+  padding: 0 0 0 3rem;
+}
+
+[class*="docItemWrapper"] {
+  margin: 0 auto;
+}
+
+/* Prev/Next nav — fills the full content column width */
+.pagination-nav {
+  max-width: 100%;
+}
+
+/* Overall layout - centered across all screen sizes */
+.main-wrapper {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Mobile layout fixes — all at the Docusaurus mobile breakpoint (996px) */
+@media (max-width: 996px) {
+  /* docsWrapper has flex:1 0 auto (flex-shrink:0), preventing it from
+     shrinking below content width. Constrain it to the viewport. */
+  [class*="docsWrapper"] {
+    max-width: 100vw;
+    min-width: 0;
+  }
+
+  [class*="docRoot"] {
+    min-width: 0;
+  }
+
+  [class*="docMainContainer"] {
+    min-width: 0;
+    padding: 0 1rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  .main-wrapper {
+    max-width: 1760px;
+    margin: 0 auto;
+  }
+
+  .menu__link {
+    font-size: 0.9375rem !important; /* 15px */
+    padding: 0.35rem var(--ifm-menu-link-padding-horizontal);
+  }
+
+  .menu__list .menu__list .menu__link {
+    font-size: 0.9rem !important;
+  }
+
+  .sidebar-group-label {
+    font-size: 0.75rem !important;
+  }
+}
+
+[class^="announcementBar"] {
+  z-index: 10;
+}
+
+.diagonal-box {
+  transform: skewY(-6deg);
+}
+
+.diagonal-content {
+  transform: skewY(6deg);
+}
+
+.showcase {
+  background-color: #fff;
+}
+
+.showcase-border {
+  border-color: rgba(243, 244, 246, 1);
+}
+
+.text-description {
+  color: rgba(107, 114, 128, 1);
+}
+
+/* apply */
+#hero-apply {
+  z-index: -1;
+  background-image: linear-gradient(
+    var(--ifm-footer-background-color),
+    var(--ifm-navbar-background-color)
+  );
+}
+
+.apply-form {
+  background-image: linear-gradient(#fff, #f5f5fa);
+  max-width: 600px;
+}
+
+.apply-text {
+  color: #36395a;
+}
+
+/* index */
+#hero {
+  background-image: linear-gradient(
+    var(--ifm-footer-background-color),
+    var(--ifm-navbar-background-color)
+  );
+}
+
+/* Hero component title overrides to match other heading styles */
+.hero-title {
+  color: rgb(28, 30, 33);
+  font-family: var(--ifm-heading-font-family);
+}
+
+/* Footer Styles */
+.footer {
+  padding: 1rem 0 0;
+  background-color: var(--ifm-background-color);
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme="light"] .footer {
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 var(--ifm-navbar-padding-horizontal);
+  max-width: var(--ifm-container-width);
+  margin: 0 auto;
+  font-size: 12px;
+}
+
+.footer__copyright {
+  color: var(--ifm-toc-link-color);
+}
+
+.footer-links {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.footer-links a {
+  color: var(--ifm-toc-link-color);
+  text-decoration: none;
+}
+
+.footer-links a:hover {
+  text-decoration: underline;
+}
+
+.footer .container {
+  padding: 0 1.25rem;
+  display: flex;
+  justify-content: left;
+  align-items: center;
+  flex-direction: row-reverse;
+  max-width: 100%;
+}
+
+.footer__title {
+  margin-bottom: 0;
+}
