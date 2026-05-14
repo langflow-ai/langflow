@@ -98,27 +98,23 @@ def test_flow_meta():
 
 
 def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
-    """Test creating app for single flow."""
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
-        app = create_multi_serve_app(
-            root_dir=Path("/tmp"),
-            graphs={"test-flow-id": mock_graph},
-            metas={"test-flow-id": test_flow_meta},
-            verbose_print=lambda x: None,  # noqa: ARG005
-        )
+    from lfx.cli.serve_app import FlowRegistry
+    registry = FlowRegistry()
+    registry.add(mock_graph, test_flow_meta)
 
+    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
         client = TestClient(app)
 
-        # Test health endpoint
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy", "flow_count": 1}
+        assert response.json()["flow_count"] == 1
 
-        # Test run endpoint without auth
+        # No auth → 401
         response = client.post("/flows/test-flow-id/run", json={"input_value": "test"})
         assert response.status_code == 401
 
-        # Test run endpoint with auth
+        # With auth → 200
         response = client.post(
             "/flows/test-flow-id/run",
             json={"input_value": "test"},
@@ -128,25 +124,16 @@ def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
 
 
 def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
-    """Test creating app for multiple flows."""
-    meta2 = FlowMeta(
-        id="flow-2",
-        relative_path="flow2.json",
-        title="Flow 2",
-        description="Second flow",
-    )
+    from lfx.cli.serve_app import FlowRegistry
+    meta2 = FlowMeta(id="flow-2", relative_path="flow2.json", title="Flow 2", description="Second flow")
+    registry = FlowRegistry()
+    registry.add(mock_graph, test_flow_meta)
+    registry.add(mock_graph, meta2)
 
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
-        app = create_multi_serve_app(
-            root_dir=Path("/tmp"),
-            graphs={"test-flow-id": mock_graph, "flow-2": mock_graph},
-            metas={"test-flow-id": test_flow_meta, "flow-2": meta2},
-            verbose_print=lambda x: None,  # noqa: ARG005
-        )
-
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
         client = TestClient(app)
 
-        # Test flows listing
         response = client.get("/flows")
         assert response.status_code == 200
         flows = response.json()
@@ -154,21 +141,29 @@ def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
         assert any(f["id"] == "test-flow-id" for f in flows)
         assert any(f["id"] == "flow-2" for f in flows)
 
-        # Test individual flow run
+        response = client.get("/flows/test-flow-id/info", headers={"x-api-key": "test-key"})
+        assert response.status_code == 200
+        assert response.json()["id"] == "test-flow-id"
+
+
+def test_create_multi_serve_app_unknown_flow_id_returns_404(mock_graph, test_flow_meta):
+    from lfx.cli.serve_app import FlowRegistry
+    registry = FlowRegistry()
+    registry.add(mock_graph, test_flow_meta)
+
+    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
+        client = TestClient(app)
+
+        response = client.get("/flows/does-not-exist/info", headers={"x-api-key": "test-key"})
+        assert response.status_code == 404
+
         response = client.post(
-            "/flows/test-flow-id/run",
+            "/flows/does-not-exist/run",
             json={"input_value": "test"},
             headers={"x-api-key": "test-key"},
         )
-        assert response.status_code == 200
-
-        # Test flow info
-        response = client.get(
-            "/flows/test-flow-id/info",
-            headers={"x-api-key": "test-key"},
-        )
-        assert response.status_code == 200
-        assert response.json()["id"] == "test-flow-id"
+        assert response.status_code == 404
 
 
 def test_serve_command_json_file():
@@ -277,3 +272,110 @@ def test_serve_command_inline_json():
         assert args[1] == ".json"
         assert "verbose" in kwargs
         assert kwargs["verbose"] is True
+
+
+class TestBuildRegistryFromDirectory:
+    def test_loads_all_json_files(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_directory
+
+        flow_data = {"nodes": [], "edges": []}
+        (tmp_path / "a.json").write_text(json.dumps(flow_data))
+        (tmp_path / "b.json").write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+
+        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+            registry = asyncio.get_event_loop().run_until_complete(
+                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
+            )
+
+        assert len(registry) == 2
+
+    def test_empty_directory_raises(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_directory
+
+        with pytest.raises(ValueError, match=r"No \.json files found"):
+            asyncio.get_event_loop().run_until_complete(
+                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
+            )
+
+    def test_non_json_files_ignored(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_directory
+
+        (tmp_path / "notes.txt").write_text("ignore me")
+        flow_data = {"nodes": [], "edges": []}
+        (tmp_path / "flow.json").write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+
+        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+            registry = asyncio.get_event_loop().run_until_complete(
+                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
+            )
+
+        assert len(registry) == 1
+
+    def test_failed_file_raises_with_filename(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_directory
+
+        (tmp_path / "bad.json").write_text('{"nodes": [], "edges": []}')
+
+        with (
+            patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("corrupt")),
+            pytest.raises(ValueError, match=r"bad\.json"),
+        ):
+            asyncio.get_event_loop().run_until_complete(
+                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
+            )
+
+
+class TestBuildRegistryFromPaths:
+    def test_loads_explicit_paths(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_paths
+
+        flow_data = {"nodes": [], "edges": []}
+        p1 = tmp_path / "flow1.json"
+        p2 = tmp_path / "flow2.json"
+        p1.write_text(json.dumps(flow_data))
+        p2.write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+
+        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+            registry = asyncio.get_event_loop().run_until_complete(
+                build_registry_from_paths([p1, p2], lambda _: None, check_variables=False)
+            )
+
+        assert len(registry) == 2
+
+    def test_failed_path_raises_with_filename(self, tmp_path):
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_paths
+
+        p = tmp_path / "bad.json"
+        p.write_text('{"nodes": [], "edges": []}')
+
+        with (
+            patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("oops")),
+            pytest.raises(ValueError, match=r"bad\.json"),
+        ):
+            asyncio.get_event_loop().run_until_complete(
+                build_registry_from_paths([p], lambda _: None, check_variables=False)
+            )

@@ -25,7 +25,7 @@ from lfx.cli.common import (
     is_port_in_use,
     load_graph_from_path,
 )
-from lfx.cli.serve_app import FlowMeta, create_multi_serve_app
+from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 
 # Initialize console
 console = Console()
@@ -253,24 +253,21 @@ async def serve_command(
         title = resolved_path.stem
         description = None
 
-        metas = {
-            flow_id: FlowMeta(
-                id=flow_id,
-                relative_path=str(resolved_path.name),
-                title=title,
-                description=description,
-            )
-        }
-        graphs = {flow_id: graph}
+        meta = FlowMeta(
+            id=flow_id,
+            relative_path=str(resolved_path.name),
+            title=title,
+            description=description,
+        )
+        registry = FlowRegistry()
+        registry.add(graph, meta)
 
         source_display = "inline JSON" if flow_json else "stdin" if stdin else str(resolved_path)
         verbose_print(f"✓ Prepared single flow '{title}' from {source_display} (id={flow_id})")
 
         # Create FastAPI app
         serve_app = create_multi_serve_app(
-            root_dir=resolved_path.parent,
-            graphs=graphs,
-            metas=metas,
+            registry=registry,
             verbose_print=verbose_print,
         )
 
@@ -330,3 +327,84 @@ async def serve_command(
                 verbose_print(f"✓ Cleaned up temporary file: {temp_file_to_cleanup}")
             except OSError as e:
                 verbose_print(f"Warning: Failed to clean up temporary file {temp_file_to_cleanup}: {e}")
+
+
+async def _load_graph_and_meta(
+    path: Path,
+    root_dir: Path,
+    verbose_print,
+    *,
+    check_variables: bool,
+) -> tuple:
+    """Load and prepare one graph, returning (graph, FlowMeta)."""
+    graph = await load_graph_from_path(path, path.suffix, verbose_print, verbose=False)
+    graph.prepare()
+    if check_variables:
+        from lfx.cli.validation import validate_global_variables_for_env
+
+        errors = validate_global_variables_for_env(graph)
+        if errors:
+            msg = f"Global variable validation failed for {path.name}: {'; '.join(errors)}"
+            raise ValueError(msg)
+    flow_id = flow_id_from_path(path, root_dir)
+    graph.flow_id = flow_id
+    meta = FlowMeta(
+        id=flow_id,
+        relative_path=str(path.relative_to(root_dir)),
+        title=path.stem,
+        description=None,
+    )
+    return graph, meta
+
+
+async def build_registry_from_directory(
+    dir_path: Path,
+    verbose_print,
+    *,
+    check_variables: bool,
+) -> FlowRegistry:
+    """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive)."""
+    json_files = sorted(dir_path.glob("*.json"))
+    if not json_files:
+        msg = f"No .json files found in directory: {dir_path}"
+        raise ValueError(msg)
+
+    registry = FlowRegistry()
+    errors: list[str] = []
+    for path in json_files:
+        try:
+            graph, meta = await _load_graph_and_meta(path, dir_path, verbose_print, check_variables=check_variables)
+            registry.add(graph, meta)
+            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{path.name}: {exc}")
+
+    if errors:
+        msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise ValueError(msg)
+
+    return registry
+
+
+async def build_registry_from_paths(
+    paths: list[Path],
+    verbose_print,
+    *,
+    check_variables: bool,
+) -> FlowRegistry:
+    """Build a FlowRegistry from an explicit list of ``*.json`` paths."""
+    registry = FlowRegistry()
+    errors: list[str] = []
+    for path in paths:
+        try:
+            graph, meta = await _load_graph_and_meta(path, path.parent, verbose_print, check_variables=check_variables)
+            registry.add(graph, meta)
+            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{path.name}: {exc}")
+
+    if errors:
+        msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise ValueError(msg)
+
+    return registry
