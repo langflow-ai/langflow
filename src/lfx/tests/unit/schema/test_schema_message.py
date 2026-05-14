@@ -2,6 +2,7 @@ import base64
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -76,6 +77,13 @@ def test_message_from_ai_text():
 
     assert isinstance(lc_message, AIMessage)
     assert lc_message.content == text
+
+
+def test_message_serializes_run_id_as_string():
+    run_id = uuid4()
+    message = Message(text="hello", run_id=run_id)
+    dumped = message.model_dump()
+    assert dumped["run_id"] == str(run_id)
 
 
 def test_message_with_single_image(sample_image):
