@@ -477,3 +477,48 @@ class TestMultiServeStreaming:
         assert response.status_code == 200
         assert "custom components are not allowed" in response.text
         mock_run_flow.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stream_setup_error_returns_valid_json(self, mock_graphs, mock_metas, monkeypatch):
+        """Error messages with special characters must not break the SSE JSON payload."""
+        monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
+
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
+
+        from lfx.cli.serve_app import verify_api_key
+
+        app.dependency_overrides[verify_api_key] = lambda: "test-api-key"
+
+        # Exception message contains characters that would break hand-crafted JSON
+        nasty_message = 'failed: "quotes" and\nnewlines'
+
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(
+                transport=ASGITransport(app=manager.app),
+                base_url="http://testserver/",
+                http2=True,
+            ) as client,
+        ):
+            with patch(
+                "lfx.cli.serve_app.validate_flow_for_current_settings",
+                side_effect=RuntimeError(nasty_message),
+            ):
+                response = await client.post(
+                    "/flows/flow1/stream",
+                    json={"input_value": "test"},
+                    headers={"x-api-key": "test-api-key"},
+                )
+
+        assert response.status_code == 200
+        # Strip the SSE framing and parse as JSON — must not raise
+        for line in response.text.splitlines():
+            if line.startswith("data: "):
+                import json
+
+                payload = json.loads(line[len("data: "):])
+                assert payload["success"] is False
+                assert nasty_message in payload["error"]
