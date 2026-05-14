@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
@@ -24,6 +25,7 @@ export function MemoryDetailsHeader({
   isFetchingNextSessionsPage,
 }: MemoryDetailsHeaderProps) {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -31,7 +33,12 @@ export function MemoryDetailsHeader({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      setSuccessData({ title: `Memory "${memory.name}" synced successfully` });
+      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+    } catch (error) {
+      setErrorData({
+        title: "Failed to refresh memory",
+        list: extractApiErrorMessages(error),
+      });
     } finally {
       setIsRefreshing(false);
     }

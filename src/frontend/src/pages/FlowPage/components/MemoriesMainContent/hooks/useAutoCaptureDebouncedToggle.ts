@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 import type {
   MemoryInfo,
@@ -9,7 +10,7 @@ import type {
 type UpdateMemoryMutation = {
   mutate: (
     variables: UpdateMemoryParams,
-    options?: { onSuccess?: () => void; onError?: () => void },
+    options?: { onSuccess?: () => void; onError?: (error: unknown) => void },
   ) => void;
 };
 
@@ -128,11 +129,11 @@ export const useAutoCaptureDebouncedToggle = ({
                 : `Auto-capture disabled for memory "${capturedName}"`,
             });
           },
-          onError: () => {
+          onError: (error: unknown) => {
             clearDraft();
             setErrorData({
               title: "Failed to update auto-capture",
-              list: ["Please try again."],
+              list: extractApiErrorMessages(error),
             });
           },
         },

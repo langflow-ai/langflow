@@ -200,7 +200,7 @@ describe("useAutoCaptureDebouncedToggle", () => {
     });
 
     it("shows error toast when mutation fails", () => {
-      const mutate = jest.fn((_, opts) => opts?.onError?.());
+      const mutate = jest.fn((_, opts) => opts?.onError?.(new Error("api error")));
       const memory = makeMemory({ is_active: false });
       const { result } = renderHook(() =>
         useAutoCaptureDebouncedToggle(makeProps(memory, mutate)),
@@ -209,12 +209,12 @@ describe("useAutoCaptureDebouncedToggle", () => {
       act(() => jest.runAllTimers());
       expect(mockSetErrorData).toHaveBeenCalledWith({
         title: "Failed to update auto-capture",
-        list: ["Please try again."],
+        list: ["api error"],
       });
     });
 
     it("shows exactly one error toast on failure — no duplicate from mutation level", () => {
-      const mutate = jest.fn((_, opts) => opts?.onError?.());
+      const mutate = jest.fn((_, opts) => opts?.onError?.(new Error("api error")));
       const memory = makeMemory({ is_active: false });
       const { result } = renderHook(() =>
         useAutoCaptureDebouncedToggle(makeProps(memory, mutate)),
@@ -238,7 +238,7 @@ describe("useAutoCaptureDebouncedToggle", () => {
     });
 
     it("clears draft on mutation error", () => {
-      const mutate = jest.fn((_, opts) => opts?.onError?.());
+      const mutate = jest.fn((_, opts) => opts?.onError?.(new Error("api error")));
       const memory = makeMemory({ is_active: false });
       const { result } = renderHook(() =>
         useAutoCaptureDebouncedToggle(makeProps(memory, mutate)),
@@ -249,7 +249,7 @@ describe("useAutoCaptureDebouncedToggle", () => {
     });
 
     it("snaps back to original memory.is_active after mutation failure", () => {
-      const mutate = jest.fn((_, opts) => opts?.onError?.());
+      const mutate = jest.fn((_, opts) => opts?.onError?.(new Error("api error")));
       // Start with is_active = false, toggle to true, then fail
       const memory = makeMemory({ is_active: false });
       const { result } = renderHook(() =>
@@ -267,7 +267,7 @@ describe("useAutoCaptureDebouncedToggle", () => {
     });
 
     it("snaps back correctly when toggling an active memory to inactive and failing", () => {
-      const mutate = jest.fn((_, opts) => opts?.onError?.());
+      const mutate = jest.fn((_, opts) => opts?.onError?.(new Error("api error")));
       const memory = makeMemory({ is_active: true });
       const { result } = renderHook(() =>
         useAutoCaptureDebouncedToggle(makeProps(memory, mutate)),
