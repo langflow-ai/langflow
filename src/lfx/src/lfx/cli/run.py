@@ -65,6 +65,8 @@ def _register_torch_exit_guard() -> list[int]:
 
     def _guard() -> None:
         if "torch._C" in sys.modules:
+            sys.stdout.flush()
+            sys.stderr.flush()
             os._exit(code[0])
 
     atexit.register(_guard)
@@ -248,6 +250,8 @@ async def run(
             _torch_exit_code[0] = code if isinstance(code, int) else (0 if code is None else 1)
         elif isinstance(exc, typer.Exit):
             _torch_exit_code[0] = int(exc.exit_code) if exc.exit_code is not None else 0
+        elif isinstance(exc, KeyboardInterrupt):
+            _torch_exit_code[0] = 130
         else:
             _torch_exit_code[0] = 1
         raise
