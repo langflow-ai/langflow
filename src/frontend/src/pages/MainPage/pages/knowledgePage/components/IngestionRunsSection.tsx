@@ -24,7 +24,8 @@ const STATUS_STYLES: Record<string, string> = {
   partial: "bg-warning text-warning-foreground border-warning",
   failed: "bg-error-red text-accent-red-foreground border-error-red-border",
   cancelled: "bg-muted text-muted-foreground border-border",
-  running: "bg-accent-indigo text-accent-indigo-foreground border-accent-indigo",
+  running:
+    "bg-accent-indigo text-accent-indigo-foreground border-accent-indigo",
   pending: "bg-muted text-muted-foreground border-border",
 };
 
