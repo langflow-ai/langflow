@@ -7731,7 +7731,7 @@ requires-dist = [
     { name = "grandalf", specifier = ">=0.8.0,<1.0.0" },
     { name = "graph-retriever", marker = "extra == 'graph-retriever'", specifier = "==0.8.0" },
     { name = "greenlet", specifier = ">=3.1.1,<4.0.0" },
-    { name = "gunicorn", specifier = ">=25.3.0,<26.0.0" },
+    { name = "gunicorn", specifier = ">=25.3.0,<27.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.27,<1.0.0" },
     { name = "huggingface-hub", extras = ["inference"], marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "ibm-cloud-sdk-core", marker = "extra == 'ibm-watsonx-clients'", specifier = "~=3.24.4" },
