@@ -15,6 +15,7 @@ import { cn } from "@/utils/utils";
 import type { ChunkPreview } from "../types";
 import { ChunkPreviewCard } from "./ChunkPreviewCard";
 import type { MetadataPair } from "./MetadataEditor";
+import { filterValidMetadataPairs } from "./metadataValidation";
 import { SummaryItem } from "./SummaryItem";
 
 interface StepReviewProps {
@@ -55,11 +56,11 @@ export function StepReview({
   perFileMetadata = {},
 }: StepReviewProps) {
   const selectedBackend = getDBProviderOption(backendType);
-  const populatedRunPairs = metadataPairs.filter(
-    (pair) => pair.key.trim() && pair.value.trim(),
-  );
-  const filesWithOverrides = Object.values(perFileMetadata).filter((pairs) =>
-    pairs.some((pair) => pair.key.trim() && pair.value.trim()),
+  // Use the same validator that gates "Next Step" so the summary only
+  // shows pairs the backend will actually accept.
+  const populatedRunPairs = filterValidMetadataPairs(metadataPairs);
+  const filesWithOverrides = Object.values(perFileMetadata).filter(
+    (pairs) => filterValidMetadataPairs(pairs).length > 0,
   ).length;
 
   return (
