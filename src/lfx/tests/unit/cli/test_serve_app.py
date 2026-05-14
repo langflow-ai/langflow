@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from lfx.cli.serve_app import (
     FlowMeta,
+    FlowRegistry,
     create_multi_serve_app,
     verify_api_key,
 )
@@ -56,6 +57,59 @@ def allow_custom_components_by_default(monkeypatch):
     from lfx.services.deps import get_settings_service
 
     monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+
+class TestFlowRegistry:
+    def _make_meta(self, flow_id: str) -> FlowMeta:
+        return FlowMeta(id=flow_id, relative_path=f"{flow_id}.json", title=flow_id, description=None)
+
+    def test_add_and_get(self):
+        registry = FlowRegistry()
+        graph = MagicMock()
+        meta = self._make_meta("flow-1")
+        registry.add(graph, meta)
+        result = registry.get("flow-1")
+        assert result is not None
+        assert result[0] is graph
+        assert result[1] == meta
+
+    def test_get_missing_returns_none(self):
+        assert FlowRegistry().get("nonexistent") is None
+
+    def test_list_metas_empty(self):
+        assert FlowRegistry().list_metas() == []
+
+    def test_list_metas_multiple(self):
+        registry = FlowRegistry()
+        graph = MagicMock()
+        registry.add(graph, self._make_meta("a"))
+        registry.add(graph, self._make_meta("b"))
+        ids = {m.id for m in registry.list_metas()}
+        assert ids == {"a", "b"}
+
+    def test_duplicate_add_replaces_graph(self):
+        registry = FlowRegistry()
+        g1, g2 = MagicMock(), MagicMock()
+        meta = self._make_meta("flow-1")
+        registry.add(g1, meta)
+        registry.add(g2, meta)
+        assert registry.get("flow-1")[0] is g2
+
+    def test_len(self):
+        registry = FlowRegistry()
+        assert len(registry) == 0
+        registry.add(MagicMock(), self._make_meta("x"))
+        assert len(registry) == 1
+
+    def test_remove_existing(self):
+        registry = FlowRegistry()
+        meta = self._make_meta("flow-1")
+        registry.add(MagicMock(), meta)
+        assert registry.remove("flow-1") is True
+        assert registry.get("flow-1") is None
+
+    def test_remove_nonexistent(self):
+        assert FlowRegistry().remove("ghost") is False
 
 
 class TestSecurityFunctions:

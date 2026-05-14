@@ -255,6 +255,31 @@ class ErrorResponse(BaseModel):
     success: bool = Field(default=False, description="Always false for errors")
 
 
+class FlowRegistry:
+    """Mutable in-process registry of loaded flows."""
+
+    def __init__(self) -> None:
+        self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
+
+    def add(self, graph: Graph, meta: FlowMeta) -> None:
+        self._flows[meta.id] = (graph, meta)
+
+    def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
+        return self._flows.get(flow_id)
+
+    def list_metas(self) -> list[FlowMeta]:
+        return [meta for _, meta in self._flows.values()]
+
+    def remove(self, flow_id: str) -> bool:
+        if flow_id in self._flows:
+            del self._flows[flow_id]
+            return True
+        return False
+
+    def __len__(self) -> int:
+        return len(self._flows)
+
+
 # -----------------------------------------------------------------------------
 # Streaming helper functions
 # -----------------------------------------------------------------------------
