@@ -35,6 +35,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
+from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -185,6 +186,13 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        # Mirror the Playground's one-time fix in-memory: bind empty fields whose
+        # display_name matches a user global variable's default_fields. Without
+        # this, API-only workflows never trigger the frontend hook that persists
+        # load_from_db=true, so variables with "Apply to Fields" silently fail.
+        # See: https://github.com/langflow-ai/langflow/issues/11781
+        if user_id is not None:
+            graph_data = await apply_global_variable_defaults(graph_data, user_id)
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
