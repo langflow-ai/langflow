@@ -1,8 +1,11 @@
 import asyncio
+import atexit
 import json
+import os
 import shutil
 
 # we need to import tmpdir
+import sys
 import tempfile
 from collections.abc import AsyncGenerator
 from contextlib import suppress
@@ -39,6 +42,27 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+# Guard against pybind11 SIGSEGV on process exit when torch has been loaded.
+# langchain/transformers imports transitively pull in torch._C; its C-level
+# Py_AtExit() handler crashes (exit 139 / make exit 2) after asyncio teardown.
+# Calling os._exit() from a Python atexit preempts that handler.
+# pytest_sessionfinish captures the real exit code so failures still propagate.
+_exit_code: list[int] = [0]
+
+
+def pytest_sessionfinish(session, exitstatus: int) -> None:  # noqa: ARG001
+    _exit_code[0] = int(exitstatus)
+
+
+def _torch_guard() -> None:
+    if "torch._C" in sys.modules:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(_exit_code[0])
+
+
+atexit.register(_torch_guard)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
