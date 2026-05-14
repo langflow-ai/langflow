@@ -116,15 +116,17 @@ However, the description mentions it's for "Emily's resume" not Alex's. I don't 
 
 ### Configure tool execution timeouts
 
+There are three ways to set tool execution timeouts: the MCP Tools component timeout setting, a global environment variable, and Langflow's minimum enforced timeout. How you configure these determines their effect in resolving the actual timeout limit for each tool call.
+
 Langflow times are evaluated in the following order:
 
-1. Per-component timeout is set directly on an MCP Tools component in your flow. To configure per-component timeout in the [**MCP Server** component](/mcp-server), open the advanced settings tab and enter a value in the **Tool Execution Timeout (seconds)** field. A value of `0` disables the per-component override and falls back to the global setting.
+1. Per-component timeout is set directly on an MCP Tools component in your flow. To configure per-component timeout in the [**MCP Tools** component](/mcp-tools), open the advanced settings tab and enter a value in the **Tool Execution Timeout (seconds)** field. A value of `0` disables the per-component override and falls back to the global setting.
 
 2. Global timeout is set with the `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` environment variable. The default is 180 seconds.
 
 3. Langflow enforces a minimum of 180 seconds for tool execution, regardless of lower values set at the component or global level.
 
-To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` or the per-component **Tool Execution Timeout (seconds)** field to a value greater than `180`.
+To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` to a value greater than `180` to raise the global limit, or set the **Tool Execution Timeout (seconds)** field on a specific MCP Tools component to a value greater than `180` to raise the limit for that component only.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to your Langflow MCP server {#connect-clients-to-use-the-servers-actions}
