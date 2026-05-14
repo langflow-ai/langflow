@@ -296,10 +296,8 @@ async def handle_call_tool(
                 progress_token=progress_token, progress=0.0, total=1.0
             )
 
-        conversation_id = str(uuid4())
-        input_request = SimplifiedAPIRequest(
-            input_value=processed_inputs.get("input_value", ""), session_id=conversation_id
-        )
+        session_id = processed_inputs.pop("session_id", None) or str(uuid4())
+        input_request = SimplifiedAPIRequest(input_value=processed_inputs.get("input_value", ""), session_id=session_id)
 
         async def send_progress_updates(progress_token):
             try:
