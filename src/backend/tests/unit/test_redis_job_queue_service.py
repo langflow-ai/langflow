@@ -1795,3 +1795,138 @@ async def test_get_flow_events_response_rejects_unknown_event_delivery():
             assert known in detail
     finally:
         service._queues.pop(job_id, None)
+
+
+@pytest.mark.asyncio
+async def test_task_service_launch_does_not_trigger_polling_watchdog(monkeypatch):
+    """TaskService.fire_and_forget_task must not trip the polling watchdog.
+
+    Integration check via the real entrypoint: a server-internal task launched
+    through TaskService never registers an owner and never calls
+    touch_activity, so the watchdog must leave it alone.  Surfaced by locust
+    load testing on the /api/v1/run path where every internal task was being
+    reclaimed.
+    """
+    from langflow.services.task.service import TaskService
+
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.2,
+        polling_watchdog_interval_s=0.05,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+
+    # Patch get_queue_service so TaskService.fire_and_forget_task wires through
+    # to our test instance instead of the global one.
+    monkeypatch.setattr("langflow.services.task.service.get_queue_service", lambda: svc)
+
+    # Minimal settings_service stub: TaskService only needs .settings.celery_enabled.
+    class _StubSettings:
+        celery_enabled = False
+
+    class _StubSettingsService:
+        settings = _StubSettings()
+
+    task_service = TaskService(_StubSettingsService())  # type: ignore[arg-type]
+
+    work_started = asyncio.Event()
+    cancelled_event = asyncio.Event()
+
+    async def _internal_work():
+        work_started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            cancelled_event.set()
+            raise
+
+    try:
+        task_id = await task_service.fire_and_forget_task(_internal_work)
+        await asyncio.wait_for(work_started.wait(), timeout=1.0)
+        # No register_job_owner was called by TaskService.
+        assert task_id not in svc._job_owners
+
+        # Wait well past the threshold + a few watchdog ticks.  An owned job
+        # would have been killed by now; this one must survive.
+        await asyncio.sleep(0.8)
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0, "watchdog killed an internal TaskService task"
+        assert not cancelled_event.is_set(), "watchdog cancelled an internal TaskService task"
+        assert task_id in svc._queues
+    finally:
+        # Cancel the long-running task manually so the test teardown doesn't hang.
+        entry = svc._queues.get(task_id)
+        if entry and entry[2] is not None and not entry[2].done():
+            entry[2].cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await entry[2]
+        svc._closed = True
+        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_buffer_applies_backpressure(monkeypatch):
+    """The bounded buffer must actually cap in-flight events, not just expose a maxsize.
+
+    Floods the fill task with more events than the buffer can hold while the
+    consumer drains slowly, and verifies the buffer size never exceeds the
+    declared maxsize.  Without backpressure the buffer would grow unbounded
+    as the fill task races ahead of the consumer.
+    """
+    # Use a tiny maxsize so the test is fast and the bound is exercised after
+    # a handful of events instead of 10,000.
+    monkeypatch.setattr(RedisQueueWrapper, "_BUFFER_MAXSIZE", 5)
+
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    stream_key = f"{RedisQueueWrapper.STREAM_PREFIX}{job_id}"
+
+    # Pre-populate the stream with 20 events BEFORE starting the wrapper so
+    # the fill task immediately hits the maxsize ceiling.
+    total_events = 20
+    for i in range(total_events):
+        await fake_client.xadd(stream_key, {b"event_id": f"e{i}".encode(), b"data": b"x", b"ts": b"0"})
+
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60, startup_grace_s=10.0)
+    try:
+        # Sample the buffer size repeatedly while the fill task races.  With
+        # backpressure, qsize() must never exceed _BUFFER_MAXSIZE.
+        observed_sizes: list[int] = []
+        for _ in range(20):
+            observed_sizes.append(wrapper._buffer.qsize())
+            await asyncio.sleep(0.01)
+        assert max(observed_sizes) <= RedisQueueWrapper._BUFFER_MAXSIZE, (
+            f"buffer grew past maxsize={RedisQueueWrapper._BUFFER_MAXSIZE}: peak={max(observed_sizes)}"
+        )
+
+        # Drain the buffer; backpressure should release and the fill task should
+        # be able to make forward progress so all events eventually arrive.
+        drained = 0
+        while drained < total_events:
+            await asyncio.wait_for(wrapper.get(), timeout=1.0)
+            drained += 1
+        assert drained == total_events
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
