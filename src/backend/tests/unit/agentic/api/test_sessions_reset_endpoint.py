@@ -110,6 +110,7 @@ class TestResetSessionEndpointWipesComponents:
         fresh_conversation_buffer: ConversationBuffer,
     ) -> None:
         fresh_conversation_buffer.push(
+            "user-alice",
             "agentic_xxx",
             ConversationTurn(user="hi", assistant="hello"),
         )
@@ -121,7 +122,7 @@ class TestResetSessionEndpointWipesComponents:
             session_id="agentic_xxx",
         )
 
-        assert fresh_conversation_buffer.get_recent("agentic_xxx") == []
+        assert fresh_conversation_buffer.get_recent("user-alice", "agentic_xxx") == []
 
     async def test_should_not_touch_other_users_components(
         self,
@@ -155,10 +156,12 @@ class TestResetSessionEndpointWipesComponents:
         fresh_conversation_buffer: ConversationBuffer,
     ) -> None:
         fresh_conversation_buffer.push(
+            "user-alice",
             "agentic_xxx",
             ConversationTurn(user="hi", assistant="ack"),
         )
         fresh_conversation_buffer.push(
+            "user-alice",
             "agentic_yyy",
             ConversationTurn(user="other", assistant="other-ack"),
         )
@@ -171,7 +174,7 @@ class TestResetSessionEndpointWipesComponents:
         )
 
         # The other session is preserved.
-        assert len(fresh_conversation_buffer.get_recent("agentic_yyy")) == 1
+        assert len(fresh_conversation_buffer.get_recent("user-alice", "agentic_yyy")) == 1
 
 
 class TestResetSessionEndpointShape:

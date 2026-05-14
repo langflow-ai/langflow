@@ -159,13 +159,14 @@ function AssistantLoadingStateComponent({
   return (
     <div className="w-full max-w-[600px] py-1">
       {/* Header — status line, flat (no surrounding card). Uses the same
-          LangflowDrawingIcon as the flow-build steps for a unified loading
-          experience across component generation and flow building. */}
+          LangflowDrawingIcon (size 24) as the flow-build minimal mode so the
+          loading glyph is visually identical across component generation and
+          flow building. */}
       <div className="mb-2 flex items-center gap-2 text-sm font-medium">
         {isReady ? (
           <Check className="h-4 w-4 text-accent-emerald-foreground" />
         ) : (
-          <LangflowDrawingIcon size={20} />
+          <LangflowDrawingIcon size={24} />
         )}
         <span
           className={

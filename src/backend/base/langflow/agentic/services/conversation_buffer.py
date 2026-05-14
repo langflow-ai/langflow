@@ -52,31 +52,43 @@ class ConversationTurn:
 
 
 class ConversationBuffer:
-    """In-memory per-session ring buffer with cross-session LRU eviction."""
+    """In-memory per-user per-session ring buffer with cross-key LRU eviction.
+
+    The buffer is partitioned by the composite key ``(user_id, session_id)``
+    rather than by ``session_id`` alone. This prevents a class of
+    cross-tenant data-leak attacks where one user's frontend-generated
+    ``session_id`` (which routinely appears in logs, observability traces,
+    request headers, and operational hooks) could be POSTed by another
+    tenant to extract the original user's conversation history into their
+    own prompt.
+    """
 
     def __init__(self) -> None:
         # OrderedDict preserves insertion-order, and ``move_to_end`` lets us
-        # bump a session to the most-recently-used slot on every push.
-        self._sessions: OrderedDict[str, deque[ConversationTurn]] = OrderedDict()
+        # bump a (user, session) pair to the most-recently-used slot on
+        # every push. Keying by tuple is the security boundary — never key
+        # by session_id alone, or you reintroduce the cross-tenant leak.
+        self._sessions: OrderedDict[tuple[str, str], deque[ConversationTurn]] = OrderedDict()
         self._lock = asyncio.Lock()
 
-    def push(self, session_id: str, turn: ConversationTurn) -> None:
-        """Append ``turn`` to the named session's buffer.
+    def push(self, user_id: str, session_id: str, turn: ConversationTurn) -> None:
+        """Append ``turn`` to ``(user_id, session_id)``'s buffer.
 
-        - Creates a new bounded deque if the session is unknown.
-        - Refreshes the session's LRU slot.
-        - Evicts the oldest session if we exceed ``MAX_SESSIONS``.
+        - Creates a new bounded deque if the (user, session) pair is unknown.
+        - Refreshes the pair's LRU slot.
+        - Evicts the oldest pair if we exceed ``MAX_SESSIONS``.
         """
-        buf = self._sessions.get(session_id)
+        key = (user_id, session_id)
+        buf = self._sessions.get(key)
         if buf is None:
             buf = deque(maxlen=MAX_TURNS_PER_SESSION)
-            self._sessions[session_id] = buf
+            self._sessions[key] = buf
         buf.append(turn)
-        self._sessions.move_to_end(session_id)
+        self._sessions.move_to_end(key)
         while len(self._sessions) > MAX_SESSIONS:
             self._sessions.popitem(last=False)
 
-    async def push_async(self, session_id: str, turn: ConversationTurn) -> None:
+    async def push_async(self, user_id: str, session_id: str, turn: ConversationTurn) -> None:
         """Lock-protected variant for concurrent callers (asyncio.gather).
 
         ``push`` itself uses bounded deque + OrderedDict which are CPython
@@ -84,15 +96,17 @@ class ConversationBuffer:
         after append) need the lock to stay atomic from the caller's POV.
         """
         async with self._lock:
-            self.push(session_id, turn)
+            self.push(user_id, session_id, turn)
 
-    def get_recent(self, session_id: str, limit: int | None = None) -> list[ConversationTurn]:
-        """Return up to ``limit`` most recent turns, oldest-first.
+    def get_recent(self, user_id: str, session_id: str, limit: int | None = None) -> list[ConversationTurn]:
+        """Return up to ``limit`` most recent turns for ``(user_id, session_id)``, oldest-first.
 
-        Unknown session → empty list. ``limit=None`` returns the entire
-        buffer for the session.
+        Unknown ``(user_id, session_id)`` → empty list. ``limit=None`` returns
+        the entire buffer for that pair. A different ``user_id`` reusing the
+        same ``session_id`` MUST receive an empty list — that is the
+        cross-tenant isolation contract this method guarantees.
         """
-        buf = self._sessions.get(session_id)
+        buf = self._sessions.get((user_id, session_id))
         if buf is None:
             return []
         turns = list(buf)
@@ -100,9 +114,9 @@ class ConversationBuffer:
             return turns
         return turns[-limit:]
 
-    def clear(self, session_id: str) -> None:
-        """Drop just the named session. Idempotent."""
-        self._sessions.pop(session_id, None)
+    def clear(self, user_id: str, session_id: str) -> None:
+        """Drop just the ``(user_id, session_id)`` pair. Idempotent."""
+        self._sessions.pop((user_id, session_id), None)
 
 
 # Process-local singleton accessor. The buffer is intentionally not in

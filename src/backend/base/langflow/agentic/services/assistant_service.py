@@ -61,8 +61,8 @@ if TYPE_CHECKING:
     from langflow.agentic.api.schemas import StepType
 
 
-def inject_conversation_history(*, session_id: str | None, input_value: str) -> str:
-    """Prepend any recent turns from the session buffer onto ``input_value``.
+def inject_conversation_history(*, user_id: str | None, session_id: str | None, input_value: str) -> str:
+    """Prepend any recent turns from the (user, session) buffer onto ``input_value``.
 
     The agent has no server-side knowledge of prior turns (the request
     schema carries only ``input_value`` + ``session_id``), so we prefix
@@ -71,13 +71,19 @@ def inject_conversation_history(*, session_id: str | None, input_value: str) -> 
     to read as quoted prior context — same pattern as the dismissed-plan
     refinement injection on the frontend.
 
+    Partitions by ``(user_id, session_id)`` so a frontend-generated
+    ``session_id`` posted by a different tenant cannot pull in the
+    original owner's history.
+
     No-op (returns the input unchanged) when:
         - ``session_id`` is absent → anonymous turn, no shared history.
-        - the buffer holds no turns for this session yet.
+        - ``user_id`` is absent → no tenant boundary to enforce; refuse
+          to read shared state and treat as anonymous.
+        - the buffer holds no turns for this ``(user_id, session_id)`` yet.
     """
-    if not session_id:
+    if not session_id or not user_id:
         return input_value
-    turns = get_conversation_buffer().get_recent(session_id)
+    turns = get_conversation_buffer().get_recent(user_id, session_id)
     if not turns:
         return input_value
     history_block = "\n\n".join(t.format_for_prompt() for t in turns)
@@ -90,30 +96,35 @@ def inject_conversation_history(*, session_id: str | None, input_value: str) -> 
     )
 
 
-def clear_session_history(session_id: str | None) -> None:
-    """Drop the named session's buffer entry. No-op when ``session_id`` is None.
+def clear_session_history(user_id: str | None, session_id: str | None) -> None:
+    """Drop the ``(user_id, session_id)`` buffer entry. No-op when either is None.
 
     Called by the API router (or any caller wiring a "new session" UX)
     so the prior conversation's turns don't leak into the new one.
-    Idempotent for unknown sessions.
+    Idempotent for unknown pairs.
     """
-    if not session_id:
+    if not session_id or not user_id:
         return
-    get_conversation_buffer().clear(session_id)
+    get_conversation_buffer().clear(user_id, session_id)
 
 
-def record_conversation_turn(*, session_id: str | None, user_input: str, assistant_response: str) -> None:
-    """Persist a completed exchange into the session buffer.
+def record_conversation_turn(
+    *, user_id: str | None, session_id: str | None, user_input: str, assistant_response: str
+) -> None:
+    """Persist a completed exchange into the ``(user_id, session_id)`` buffer.
 
-    Skips when ``session_id`` is missing (anonymous) or when the
-    assistant response is empty (cancelled / errored run — those would
-    only pollute the next turn's context).
+    Skips when:
+        - ``session_id`` is missing (anonymous run),
+        - ``user_id`` is missing (no tenant boundary — refuse to write),
+        - ``assistant_response`` is empty (cancelled / errored run — would
+          only pollute the next turn's context).
     """
-    if not session_id:
+    if not session_id or not user_id:
         return
     if not assistant_response:
         return
     get_conversation_buffer().push(
+        user_id,
         session_id,
         ConversationTurn(user=user_input, assistant=assistant_response),
     )
@@ -326,10 +337,6 @@ async def execute_flow_with_validation_streaming(
     reset_working_flow()
     reset_file_events()
     reset_tool_cache()
-    # Bind the caller's user_id into the ContextVar that the MCP tools'
-    # registry overlay reads, so search_components / describe_component /
-    # add_component / build_flow see the user's registered Components.
-    set_current_user_id(user_id)
 
     # Inject current flow context for all intents so the agent
     # can answer questions about or modify the user's canvas
@@ -342,7 +349,7 @@ async def execute_flow_with_validation_streaming(
     # input is what the LLM sees; the recorded user message is what the
     # user typed.
     original_user_input = sanitization.sanitized_input
-    current_input = inject_conversation_history(session_id=session_id, input_value=current_input)
+    current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 
     # Build-flow and manage_files both route to the FlowBuilderAssistant —
     # they share the same toolkit (canvas tools + filesystem). The step label
@@ -367,6 +374,14 @@ async def execute_flow_with_validation_streaming(
     final_response_text = ""
 
     try:
+        # Bind the caller's user_id into the ContextVar that the MCP tools'
+        # registry overlay reads (search_components / describe_component /
+        # add_component / build_flow see the user's registered Components).
+        # Lives INSIDE the try so any exception in this block is balanced by
+        # ``reset_current_user_id`` in the ``finally`` — otherwise a stale id
+        # would leak to the next request on the same asyncio task.
+        set_current_user_id(user_id)
+
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1
 
@@ -776,6 +791,7 @@ async def execute_flow_with_validation_streaming(
         # request can inject it as context. Skips cancelled/errored runs
         # (final_response_text stays empty) and anonymous sessions.
         record_conversation_turn(
+            user_id=user_id,
             session_id=session_id,
             user_input=original_user_input,
             assistant_response=final_response_text,

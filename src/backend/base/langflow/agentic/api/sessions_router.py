@@ -60,7 +60,7 @@ async def reset_session(
     """
     user_id = str(current_user.id)
     components_cleared = clear_user_components(user_id=user_id)
-    clear_session_history(session_id)
+    clear_session_history(user_id, session_id)
     logger.info(
         "agentic.session.reset user_id=%s session_id=%s components_cleared=%d",
         user_id,

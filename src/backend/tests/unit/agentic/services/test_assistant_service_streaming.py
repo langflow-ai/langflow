@@ -667,3 +667,53 @@ class TestFlowProposalReady:
             assert proposal_idx < complete_idx, (
                 f"flow_proposal_ready (idx {proposal_idx}) must come before complete (idx {complete_idx})"
             )
+
+
+class TestCurrentUserIdContextVarIsolation:
+    """SECURITY regression — ``_current_user_id_var`` MUST stay clean across requests.
+
+    Bug shape: ``set_current_user_id`` was called above the ``try:`` block,
+    leaving a 37-line gap in which an exception (e.g. inside
+    ``inject_conversation_history`` or any pre-try helper) would bypass
+    the matching ``reset_current_user_id`` in the ``finally`` clause. The
+    next request reusing the same asyncio task would inherit the stale
+    user_id and resolve the wrong user's components / registry overlay.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_not_leak_current_user_id_when_pre_try_setup_raises(self):
+        from langflow.agentic.services.user_components_context import (
+            current_user_id,
+            reset_current_user_id,
+        )
+
+        # Start from a known-clean state so the post-raise assertion is
+        # unambiguous (this is also how a freshly spawned asyncio task arrives).
+        reset_current_user_id()
+        assert current_user_id() is None
+
+        def boom(*_args, **_kwargs):
+            msg = "simulated mid-handler exception in the pre-try setup gap"
+            raise RuntimeError(msg)
+
+        with (
+            patch(f"{MODULE}.classify_intent", AsyncMock(return_value=_make_intent())),
+            # inject_conversation_history runs in the gap between set_current_user_id
+            # and the main try block — forcing it to raise reproduces the leak.
+            patch(f"{MODULE}.inject_conversation_history", boom),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="hello",
+                global_variables={},
+                session_id="session-leak-test",
+                user_id="user-alice",
+            )
+            with pytest.raises(RuntimeError, match="simulated mid-handler exception"):
+                await _collect_events(gen)
+
+        assert current_user_id() is None, (
+            "ContextVar leaked: next request on this asyncio task would inherit "
+            "'user-alice' as the current_user_id. set_current_user_id must live "
+            "inside the same try/finally that resets it."
+        )
