@@ -93,7 +93,9 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
       </div>
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">{t("knowledge.loadingRuns")}</div>
+        <div className="text-sm text-muted-foreground">
+          {t("knowledge.loadingRuns")}
+        </div>
       )}
       {isError && (
         <div className="text-sm text-rose-600">

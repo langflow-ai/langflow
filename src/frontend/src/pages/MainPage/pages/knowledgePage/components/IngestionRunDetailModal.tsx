@@ -45,7 +45,9 @@ const IngestionRunDetailModal = ({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <div className="text-sm font-semibold">{t("knowledge.ingestionRunDetail")}</div>
+            <div className="text-sm font-semibold">
+              {t("knowledge.ingestionRunDetail")}
+            </div>
             {data && (
               <div className="text-xs text-muted-foreground">
                 {kbName} · {data.source_type} ·{" "}
@@ -60,7 +62,9 @@ const IngestionRunDetailModal = ({
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading && (
-            <div className="text-sm text-muted-foreground">{t("knowledge.loadingRun")}</div>
+            <div className="text-sm text-muted-foreground">
+              {t("knowledge.loadingRun")}
+            </div>
           )}
           {isError && (
             <div className="text-sm text-rose-600">

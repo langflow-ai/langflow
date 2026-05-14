@@ -66,7 +66,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             name="History"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">{t("knowledge.previouslyIngested")}</span>
+          <span className="text-sm font-medium">
+            {t("knowledge.previouslyIngested")}
+          </span>
           {total > 0 && (
             <span className="text-xs text-muted-foreground">({total})</span>
           )}

@@ -48,11 +48,15 @@ export function MemoryDocumentPanel({
             <div className="flex-1 overflow-auto p-4">
               <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <span>
-                  <span className="font-medium text-foreground">{t("memory.sessionLabel")}</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {t("memory.sessionLabel")}
+                  </span>{" "}
                   {selectedDocument.session_id || "(no session)"}
                 </span>
                 <span>
-                  <span className="font-medium text-foreground">{t("memory.senderLabel")}</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {t("memory.senderLabel")}
+                  </span>{" "}
                   {selectedDocument.sender || "-"}
                 </span>
                 <span>

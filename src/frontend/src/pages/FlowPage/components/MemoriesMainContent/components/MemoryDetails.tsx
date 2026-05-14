@@ -63,14 +63,18 @@ export function MemoryDetails({
 
         <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <span>
-            <span className="font-medium text-foreground">{t("memory.modelLabel")}</span>{" "}
+            <span className="font-medium text-foreground">
+              {t("memory.modelLabel")}
+            </span>{" "}
             {memory.embedding_model}
           </span>
           {memory.embedding_provider && (
             <>
               <span>&middot;</span>
               <span>
-                <span className="font-medium text-foreground">{t("memory.providerLabel")}</span>{" "}
+                <span className="font-medium text-foreground">
+                  {t("memory.providerLabel")}
+                </span>{" "}
                 {memory.embedding_provider}
               </span>
             </>

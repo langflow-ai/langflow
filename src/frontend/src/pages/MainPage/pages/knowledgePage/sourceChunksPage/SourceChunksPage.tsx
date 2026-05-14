@@ -184,10 +184,16 @@ export const SourceChunksPage = () => {
                   <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t("knowledge.allSources")}</SelectItem>
-                  <SelectItem value="file_upload">{t("knowledge.fileUpload")}</SelectItem>
+                  <SelectItem value="all">
+                    {t("knowledge.allSources")}
+                  </SelectItem>
+                  <SelectItem value="file_upload">
+                    {t("knowledge.fileUpload")}
+                  </SelectItem>
                   <SelectItem value="folder">Folder</SelectItem>
-                  <SelectItem value="template">{t("knowledge.flowTemplate")}</SelectItem>
+                  <SelectItem value="template">
+                    {t("knowledge.flowTemplate")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <ChunksMetadataFilter
