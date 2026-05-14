@@ -22,18 +22,18 @@ import time
 from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
+from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
 
-from lfx.cli.common import execute_graph_with_capture, extract_result_data, get_api_key
+from lfx.cli.common import execute_graph_with_capture, extract_result_data, flow_id_from_content, get_api_key
+from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
-    from pathlib import Path
 
     from lfx.graph import Graph
 
@@ -60,157 +60,6 @@ def verify_api_key(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return provided_key
-
-
-def _analyze_graph_structure(graph: Graph) -> dict[str, Any]:
-    """Analyze the graph structure to extract dynamic documentation information.
-
-    Args:
-        graph: The LFX graph to analyze
-
-    Returns:
-        dict: Graph analysis including components, input/output types, and flow details
-    """
-    analysis: dict[str, Any] = {
-        "components": [],
-        "input_types": set(),
-        "output_types": set(),
-        "node_count": 0,
-        "edge_count": 0,
-        "entry_points": [],
-        "exit_points": [],
-    }
-
-    try:
-        # Analyze nodes
-        for node_id, node in graph.nodes.items():
-            analysis["node_count"] += 1
-            component_info = {
-                "id": node_id,
-                "type": node.data.get("type", "Unknown"),
-                "name": node.data.get("display_name", node.data.get("type", "Unknown")),
-                "description": node.data.get("description", ""),
-                "template": node.data.get("template", {}),
-            }
-            analysis["components"].append(component_info)
-
-            # Identify entry points (nodes with no incoming edges)
-            if not any(edge.source == node_id for edge in graph.edges):
-                analysis["entry_points"].append(component_info)
-
-            # Identify exit points (nodes with no outgoing edges)
-            if not any(edge.target == node_id for edge in graph.edges):
-                analysis["exit_points"].append(component_info)
-
-        # Analyze edges
-        analysis["edge_count"] = len(graph.edges)
-
-        # Try to determine input/output types from entry/exit points
-        for entry in analysis["entry_points"]:
-            template = entry.get("template", {})
-            for field_config in template.values():
-                if field_config.get("type") in ["str", "text", "string"]:
-                    analysis["input_types"].add("text")
-                elif field_config.get("type") in ["int", "float", "number"]:
-                    analysis["input_types"].add("numeric")
-                elif field_config.get("type") in ["file", "path"]:
-                    analysis["input_types"].add("file")
-
-        for exit_point in analysis["exit_points"]:
-            template = exit_point.get("template", {})
-            for field_config in template.values():
-                if field_config.get("type") in ["str", "text", "string"]:
-                    analysis["output_types"].add("text")
-                elif field_config.get("type") in ["int", "float", "number"]:
-                    analysis["output_types"].add("numeric")
-                elif field_config.get("type") in ["file", "path"]:
-                    analysis["output_types"].add("file")
-
-    except (KeyError, AttributeError):
-        # If analysis fails, provide basic info
-        analysis["components"] = [{"type": "Unknown", "name": "Graph Component"}]
-        analysis["input_types"] = {"text"}
-        analysis["output_types"] = {"text"}
-
-    # Convert sets to lists for JSON serialization
-    analysis["input_types"] = list(analysis["input_types"])
-    analysis["output_types"] = list(analysis["output_types"])
-
-    return analysis
-
-
-def _generate_dynamic_run_description(graph: Graph) -> str:
-    """Generate dynamic description for the /run endpoint based on graph analysis.
-
-    Args:
-        graph: The LFX graph
-
-    Returns:
-        str: Dynamic description for the /run endpoint
-    """
-    analysis = _analyze_graph_structure(graph)
-
-    # Determine input examples based on entry points
-    input_examples = []
-    for entry in analysis["entry_points"]:
-        template = entry.get("template", {})
-        for field_name, field_config in template.items():
-            if field_config.get("type") in ["str", "text", "string"]:
-                input_examples.append(f'"{field_name}": "Your input text here"')
-            elif field_config.get("type") in ["int", "float", "number"]:
-                input_examples.append(f'"{field_name}": 42')
-            elif field_config.get("type") in ["file", "path"]:
-                input_examples.append(f'"{field_name}": "/path/to/file.txt"')
-
-    if not input_examples:
-        input_examples = ['"input_value": "Your input text here"']
-
-    # Determine output examples based on exit points
-    output_examples = []
-    for exit_point in analysis["exit_points"]:
-        template = exit_point.get("template", {})
-        for field_name, field_config in template.items():
-            if field_config.get("type") in ["str", "text", "string"]:
-                output_examples.append(f'"{field_name}": "Processed result"')
-            elif field_config.get("type") in ["int", "float", "number"]:
-                output_examples.append(f'"{field_name}": 123')
-            elif field_config.get("type") in ["file", "path"]:
-                output_examples.append(f'"{field_name}": "/path/to/output.txt"')
-
-    if not output_examples:
-        output_examples = ['"result": "Processed result"']
-
-    description_parts = [
-        f"Execute the deployed LFX graph with {analysis['node_count']} components.",
-        "",
-        "**Graph Analysis**:",
-        f"- Entry points: {len(analysis['entry_points'])}",
-        f"- Exit points: {len(analysis['exit_points'])}",
-        f"- Input types: {', '.join(analysis['input_types']) if analysis['input_types'] else 'text'}",
-        f"- Output types: {', '.join(analysis['output_types']) if analysis['output_types'] else 'text'}",
-        "",
-        "**Authentication Required**: Include your API key in the `x-api-key` header or as a query parameter.",
-        "",
-        "**Example Request**:",
-        "```json",
-        "{",
-        f"  {', '.join(input_examples)}",
-        "}",
-        "```",
-        "",
-        "**Example Response**:",
-        "```json",
-        "{",
-        f"  {', '.join(output_examples)},",
-        '  "success": true,',
-        '  "logs": "Graph execution completed successfully",',
-        '  "type": "message",',
-        '  "component": "FinalComponent"',
-        "}",
-        "```",
-    ]
-
-    return "\n".join(description_parts)
 
 
 class FlowMeta(BaseModel):
@@ -278,6 +127,19 @@ class FlowRegistry:
 
     def __len__(self) -> int:
         return len(self._flows)
+
+
+class UploadFlowRequest(BaseModel):
+    name: str = Field(..., description="Human-readable name for the flow (matches FlowBase.name)")
+    data: dict = Field(..., description="Raw flow JSON — nodes and edges (matches FlowBase.data)")
+    description: str | None = Field(default=None, description="Optional flow description")
+
+
+class UploadFlowResponse(BaseModel):
+    id: str = Field(..., description="Deterministic UUID5 of flow content")
+    name: str
+    description: str | None
+    run_url: str = Field(..., description="Endpoint to POST run requests, e.g. /flows/{id}/run")
 
 
 # -----------------------------------------------------------------------------
@@ -377,37 +239,24 @@ async def run_flow_generator_for_serve(
 
 def create_multi_serve_app(
     *,
-    root_dir: Path,  # noqa: ARG001
-    graphs: dict[str, Graph],
-    metas: dict[str, FlowMeta],
+    registry: FlowRegistry,
     verbose_print: Callable[[str], None],  # noqa: ARG001
 ) -> FastAPI:
-    """Create a FastAPI app exposing multiple LFX flows.
+    """Create a FastAPI app exposing LFX flows via a mutable registry.
 
-    Parameters
-    ----------
-    root_dir
-        Folder originally supplied to the serve command.  All *relative_path*
-        values are relative to this directory.
-    graphs
-        Mapping ``flow_id -> Graph`` containing prepared graph objects.
-    metas
-        Mapping ``flow_id -> FlowMeta`` containing metadata for each flow.
-    verbose_print
-        Diagnostic printer inherited from the CLI (unused, kept for backward compatibility).
+    Routes dispatch to ``registry`` at request time, so flows added after
+    startup (via ``POST /flows/upload/``) are immediately reachable.
     """
-    if set(graphs) != set(metas):  # pragma: no cover - sanity check
-        msg = "graphs and metas must contain the same keys"
-        raise ValueError(msg)
-
     app = FastAPI(
-        title=f"LFX Multi-Flow Server ({len(graphs)})",
+        title=f"LFX Multi-Flow Server ({len(registry)})",
         description=(
-            "This server hosts multiple LFX graphs under the `/flows/{id}` prefix. "
-            "Use `/flows` to list available IDs then POST your input to `/flows/{id}/run`."
+            "Hosts LFX graphs under the `/flows/{{id}}` prefix. "
+            "Use `/flows` to list available IDs then POST your input to `/flows/{{id}}/run`. "
+            "Use `POST /flows/upload/` to register new flows at runtime."
         ),
         version="1.0.0",
     )
+    app.state.registry = registry
 
     # ------------------------------------------------------------------
     # Global endpoints
@@ -415,166 +264,167 @@ def create_multi_serve_app(
 
     @app.get("/flows", response_model=list[FlowMeta], tags=["info"], summary="List available flows")
     async def list_flows():
-        """Return metadata for all flows hosted in this server."""
-        return list(metas.values())
+        return registry.list_metas()
 
     @app.get("/health", tags=["info"], summary="Global health check")
     async def global_health():
-        return {"status": "healthy", "flow_count": len(graphs)}
+        return {"status": "healthy", "flow_count": len(registry)}
 
     # ------------------------------------------------------------------
-    # Per-flow routers
+    # Upload endpoint — registered BEFORE /{flow_id} to avoid shadowing
     # ------------------------------------------------------------------
 
-    def create_flow_router(flow_id: str, graph: Graph, meta: FlowMeta) -> APIRouter:
-        """Create a router for a specific flow to avoid loop variable binding issues."""
-        analysis = _analyze_graph_structure(graph)
-        run_description = _generate_dynamic_run_description(graph)
+    @app.post(
+        "/flows/upload/",
+        response_model=UploadFlowResponse,
+        status_code=201,
+        tags=["upload"],
+        summary="Upload and register a new flow",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def upload_flow(body: UploadFlowRequest) -> UploadFlowResponse:
+        try:
+            graph = load_flow_from_json(body.data)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid flow data: {exc}") from exc
 
-        router = APIRouter(
-            prefix=f"/flows/{flow_id}",
-            tags=[meta.title or flow_id],
-            dependencies=[Depends(verify_api_key)],  # Auth for all routes inside
+        try:
+            graph.prepare()
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
+
+        flow_id = flow_id_from_content(body.data)
+        meta = FlowMeta(
+            id=flow_id,
+            relative_path="<uploaded>",
+            title=body.name,
+            description=body.description,
+        )
+        registry.add(graph, meta)
+        return UploadFlowResponse(
+            id=flow_id,
+            name=body.name,
+            description=body.description,
+            run_url=f"/flows/{flow_id}/run",
         )
 
-        @router.post(
-            "/run",
-            response_model=RunResponse,
-            responses={500: {"model": ErrorResponse}},
-            summary="Execute flow",
-            description=run_description,
-        )
-        async def run_flow(
-            request: RunRequest,
-        ) -> RunResponse:
-            try:
-                validate_flow_for_current_settings(graph)
-                graph_copy = deepcopy(graph)
-                results, logs = await execute_graph_with_capture(
-                    graph_copy, request.input_value, session_id=request.session_id
-                )
-                result_data = extract_result_data(results, logs)
+    # ------------------------------------------------------------------
+    # Per-flow dispatch routes
+    # ------------------------------------------------------------------
 
-                # Debug logging
-                logger.debug(f"Flow {flow_id} execution completed: {len(results)} results, {len(logs)} log chars")
-                logger.debug(f"Flow {flow_id} result data: {result_data}")
+    def _get_flow_or_404(flow_id: str) -> tuple[Graph, FlowMeta]:
+        result = registry.get(flow_id)
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "flow not found", "flow_id": flow_id},
+            )
+        return result
 
-                # Check if the execution was successful
-                if not result_data.get("success", True):
-                    # If the flow execution failed, return error details in the response
-                    error_message = result_data.get("result", result_data.get("text", "No response generated"))
+    @app.get(
+        "/flows/{flow_id}/info",
+        response_model=FlowMeta,
+        tags=["flows"],
+        summary="Flow metadata",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def flow_info(flow_id: str) -> FlowMeta:
+        _, meta = _get_flow_or_404(flow_id)
+        return meta
 
-                    # Add more context to the logs when there's an error
-                    error_logs = logs
-                    if not error_logs.strip():
-                        error_logs = (
-                            f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"
-                        )
+    @app.post(
+        "/flows/{flow_id}/run",
+        response_model=RunResponse,
+        responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+        tags=["flows"],
+        summary="Execute flow",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def run_flow(flow_id: str, request: RunRequest) -> RunResponse:
+        graph, _ = _get_flow_or_404(flow_id)
+        try:
+            validate_flow_for_current_settings(graph)
+            graph_copy = deepcopy(graph)
+            results, logs = await execute_graph_with_capture(
+                graph_copy, request.input_value, session_id=request.session_id
+            )
+            result_data = extract_result_data(results, logs)
 
-                    return RunResponse(
-                        result=error_message,
-                        success=False,
-                        logs=error_logs,
-                        type="error",
-                        component=result_data.get("component", ""),
-                    )
-
-                return RunResponse(
-                    result=result_data.get("result", result_data.get("text", "")),
-                    success=result_data.get("success", True),
-                    logs=logs,
-                    type=result_data.get("type", "message"),
-                    component=result_data.get("component", ""),
-                )
-            except Exception as exc:  # noqa: BLE001
-                import traceback
-
-                # Capture the full traceback for debugging
-                error_traceback = traceback.format_exc()
-                error_message = f"Flow execution failed: {exc!s}"
-
-                # Log to server console for debugging
-                logger.error(f"Error running flow {flow_id}: {exc}")
-                logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
-
-                # Return error details in the API response instead of raising HTTPException
+            if not result_data.get("success", True):
+                error_message = result_data.get("result", result_data.get("text", "No response generated"))
                 return RunResponse(
                     result=error_message,
                     success=False,
-                    logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
+                    logs=logs or (
+                        f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"
+                    ),
                     type="error",
-                    component="",
+                    component=result_data.get("component", ""),
                 )
+            return RunResponse(
+                result=result_data.get("result", result_data.get("text", "")),
+                success=result_data.get("success", True),
+                logs=logs,
+                type=result_data.get("type", "message"),
+                component=result_data.get("component", ""),
+            )
+        except Exception as exc:  # noqa: BLE001
+            import traceback
+            error_traceback = traceback.format_exc()
+            error_message = f"Flow execution failed: {exc!s}"
+            logger.error(f"Error running flow {flow_id}: {exc}")
+            logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
+            return RunResponse(
+                result=error_message,
+                success=False,
+                logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
+                type="error",
+                component="",
+            )
 
-        @router.post(
-            "/stream",
-            response_model=None,
-            summary="Stream flow execution",
-            description=f"Stream the execution of {meta.title or flow_id} with real-time events and token streaming.",
-        )
-        async def stream_flow(
-            request: StreamRequest,
-        ) -> StreamingResponse:
-            """Stream the execution of the flow with real-time events."""
-            try:
-                validate_flow_for_current_settings(graph)
+    @app.post(
+        "/flows/{flow_id}/stream",
+        response_model=None,
+        tags=["flows"],
+        summary="Stream flow execution",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def stream_flow(flow_id: str, request: StreamRequest) -> StreamingResponse:
+        graph, _ = _get_flow_or_404(flow_id)
+        try:
+            validate_flow_for_current_settings(graph)
+            from lfx.events.event_manager import create_stream_tokens_event_manager
 
-                # Import here to avoid potential circular imports
-                from lfx.events.event_manager import create_stream_tokens_event_manager
+            asyncio_queue: asyncio.Queue = asyncio.Queue()
+            asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
+            event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
 
-                asyncio_queue: asyncio.Queue = asyncio.Queue()
-                asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
-                event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
-
-                main_task = asyncio.create_task(
-                    run_flow_generator_for_serve(
-                        graph=graph,
-                        input_request=request,
-                        flow_id=flow_id,
-                        event_manager=event_manager,
-                        client_consumed_queue=asyncio_queue_client_consumed,
-                    )
+            main_task = asyncio.create_task(
+                run_flow_generator_for_serve(
+                    graph=graph,
+                    input_request=request,
+                    flow_id=flow_id,
+                    event_manager=event_manager,
+                    client_consumed_queue=asyncio_queue_client_consumed,
                 )
+            )
 
-                async def on_disconnect() -> None:
-                    logger.debug(f"Client disconnected from flow {flow_id}, closing tasks")
-                    main_task.cancel()
+            async def on_disconnect() -> None:
+                logger.debug(f"Client disconnected from flow {flow_id}, closing tasks")
+                main_task.cancel()
 
-                return StreamingResponse(
-                    consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
-                    background=on_disconnect,
-                    media_type="text/event-stream",
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
-                # Return a simple error stream
-                error_message = f"Failed to start streaming: {exc!s}"
+            return StreamingResponse(
+                consume_and_yield(asyncio_queue, asyncio_queue_client_consumed),
+                background=on_disconnect,
+                media_type="text/event-stream",
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
+            error_message = f"Failed to start streaming: {exc!s}"
 
-                async def error_stream():
-                    yield f'data: {{"error": "{error_message}", "success": false}}\n\n'
+            async def error_stream():
+                yield f'data: {{"error": "{error_message}", "success": false}}\n\n'
 
-                return StreamingResponse(
-                    error_stream(),
-                    media_type="text/event-stream",
-                )
-
-        @router.get("/info", summary="Flow metadata", response_model=FlowMeta)
-        async def flow_info():
-            """Return metadata and basic analysis for this flow."""
-            # Enrich meta with analysis data for convenience
-            return {
-                **meta.model_dump(),
-                "components": analysis["node_count"],
-                "connections": analysis["edge_count"],
-                "input_types": analysis["input_types"],
-                "output_types": analysis["output_types"],
-            }
-
-        return router
-
-    for flow_id, graph in graphs.items():
-        meta = metas[flow_id]
-        router = create_flow_router(flow_id, graph, meta)
-        app.include_router(router)
+            return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     return app
