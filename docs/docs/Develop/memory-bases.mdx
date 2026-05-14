@@ -5,25 +5,26 @@ slug: /memory-bases
 
 import Icon from "@site/src/components/icon";
 
-A memory base is a vector database for message history.
+A memory base stores the long-term chat history for a Langflow agent in a vectorized format, enabling semantic retrieval of past conversations across sessions.
 
 Unlike the [Message History component](/message-history), which retrieves messages in chronological order from the `messages` table, a memory base embeds messages into a vector store and retrieves by semantic similarity to returning the _most relevant context_ instead of the _most recent messages_.
 
 Unlike a [knowledge base](/knowledge), which you populate manually with files, a memory base fills itself from a flow's chat sessions, which are stored in Langflow's [messages](/memory#store-chat-memory) table.
 
-Each memory base is backed by a local [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector store.
+By default, each memory base is backed by a local [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector store, but ChromaDB cloud, OpenSearch, and other providers are available.
 
 After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](../Components/memory-base.mdx).
 
-### How memory bases ingest messages
+### Configure memory bases ingestion
 
-One memory base is attached to a single flow.
+Each memory base can only be attached to one flow, but a single flow can have multiple memory bases attached to it by including multiple [**Memory Base** components](/memory-base).
 Each time the flow completes a run, the captured messages are counted toward a configurable **threshold**.
-When the number of unprocessed runs reaches the threshold, an asynchronous ingestion job writes the messages to the ChromaDB vector store.
+When the number of unprocessed runs reaches the threshold, an asynchronous ingestion job writes the messages to the vector store.
 
 **Auto-capture** controls whether this counting and triggering happens automatically.
 Auto-capture is enabled by default, so the memory base tracks every flow run and fires an ingestion job when the batch threshold is reached.
 When auto-capture is disabled, the counter never increments and no ingestion job fires automatically.
+If auto-capture is re-enabled after being disabled, the memory base catches up to the current state by processing all messages that accumulated while it was disabled.
 
 :::tip
 The flow must contain a **Chat Input** or a **Chat Output** component to write messages to the `messages` table.
@@ -32,9 +33,25 @@ The flow must contain a **Chat Input** or a **Chat Output** component to write m
 By default, the [**Memory Base** component](../Components/memory-base.mdx) retrieves only chunks that match the current `session_id`.
 Disable **Filter by Session** to search across all sessions that have been ingested into the memory base.
 
-When optional LLM preprocessing is enabled, messages are passed through an LLM before they are embedded.
-The LLM distills the raw conversation into a compact summary, and the summary is written to the vector store, instead of the messages.
+When optional **LLM preprocessing** is enabled, messages are passed through an LLM before they are embedded.
+The LLM distills the raw conversation into a compact summary, and the summary is written to the vector store instead of the raw messages.
 Preprocessing requires an embedding model.
+
+Configure a **kill phrase** to gate ingestion.
+If the LLM's response contains the configured kill phrase, the batch is skipped, with no data written to the vector store. The ingestion cursor still advances so the same batch is not re-evaluated.
+The default kill phrase is `NO_INGEST`: if the LLM response contains `NO_INGEST`, the batch is skipped.
+
+To use the kill phrase, instruct the LLM to return it when the conversation contains nothing worth storing.For example:
+
+```
+Summarize the key facts from this conversation: the issue the user reported,
+any troubleshooting steps taken, and the outcome or resolution.
+Focus on information a support agent would need in a future session.
+If the conversation contains no meaningful facts (for example, it is only
+greetings or filler), respond with exactly: NO_INGEST
+```
+
+When the LLM returns `NO_INGEST`, the batch is skipped.
 
 ## Create a memory base
 
