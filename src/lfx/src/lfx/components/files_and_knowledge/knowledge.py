@@ -143,7 +143,7 @@ class KnowledgeComponent(Component):
     node stays focused.
     """
 
-    display_name = "Knowledge"
+    display_name = "Knowledge Base"
     description = "Ingest into or retrieve from a Langflow knowledge base."
     icon = "database"
     name = "Knowledge"
