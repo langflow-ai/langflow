@@ -241,7 +241,7 @@ def test_code_parser_parse_callable_details_no_args():
 def test_code_parser_parse_assign():
     """Test the parse_assign method of the CodeParser class."""
     parser = CodeParser("")
-    stmt = ast.Assign(targets=[ast.Name(id="x", ctx=ast.Store())], value=ast.Num(n=1))
+    stmt = ast.Assign(targets=[ast.Name(id="x", ctx=ast.Store())], value=ast.Constant(value=1))
     result = parser.parse_assign(stmt)
     assert result["name"] == "x"
     assert result["value"] == "1"
@@ -253,7 +253,7 @@ def test_code_parser_parse_ann_assign():
     stmt = ast.AnnAssign(
         target=ast.Name(id="x", ctx=ast.Store()),
         annotation=ast.Name(id="int", ctx=ast.Load()),
-        value=ast.Num(n=1),
+        value=ast.Constant(value=1),
         simple=1,
     )
     result = parser.parse_ann_assign(stmt)

@@ -206,6 +206,17 @@ class TestArizePhoenixHttpInstrumentation:
                 mock_urllib3_inst.return_value.uninstrument.assert_called_once()
 
 
+_langwatch_available = False
+try:
+    import langwatch  # noqa: F401
+
+    _langwatch_available = True
+except ImportError:
+    # langwatch is gated to python_version<'3.14' upstream.
+    pass
+
+
+@pytest.mark.skipif(not _langwatch_available, reason="langwatch not available on Python 3.14+")
 class TestLangWatchHttpInstrumentation:
     """Test HTTP client instrumentation in LangWatchTracer."""
 
