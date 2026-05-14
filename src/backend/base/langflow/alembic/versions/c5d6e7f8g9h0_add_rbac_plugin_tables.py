@@ -30,7 +30,7 @@ def upgrade() -> None:
             sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("description", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("is_system", sa.Boolean(), nullable=False),
-            sa.Column("permissions", sa.JSON(), nullable=False),
+            sa.Column("permissions", sa.JSON(), nullable=False),  # Stores list[str]
             sa.Column("created_at", sa.DateTime(), nullable=False),
             sa.Column("updated_at", sa.DateTime(), nullable=False),
             sa.PrimaryKeyConstraint("id"),

@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from typing import Any
 from uuid import uuid4
 
 import sqlalchemy as sa
@@ -16,7 +15,7 @@ class Role(SQLModel, table=True):  # type: ignore[call-arg]
     name: str = Field(unique=True, index=True)
     description: str | None = Field(default=None)
     is_system: bool = Field(default=False)
-    permissions: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
+    permissions: list[str] = Field(sa_column=Column(JSON, nullable=False))
     parent_role_id: UUIDstr | None = Field(
         default=None,
         sa_column=Column(
