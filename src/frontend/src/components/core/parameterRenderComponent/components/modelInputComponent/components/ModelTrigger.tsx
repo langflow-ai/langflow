@@ -57,7 +57,7 @@ const ModelTrigger = ({
         onClick={onOpenManageProviders}
       >
         <ForwardedIconComponent
-          name="Brain"
+          name="BrainCircuit"
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
         <div className="text-[13px] text-muted-foreground">

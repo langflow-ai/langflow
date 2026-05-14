@@ -8,7 +8,7 @@
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:python3.12-trixie-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 # RUNTIME
 ################################
-FROM python:3.12-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \

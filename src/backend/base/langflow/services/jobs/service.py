@@ -160,6 +160,51 @@ class JobService(Service):
                 await session.flush()
             return job
 
+    async def update_job_metadata(
+        self,
+        job_id: UUID,
+        patch: dict,
+        *,
+        replace: bool = False,
+    ) -> Job | None:
+        """Merge ``patch`` into ``job.job_metadata`` (or replace it).
+
+        Domain-owned per-job context lives here — KB ingestion writes
+        counters and per-item outcomes, workflow runs can record their
+        own keys, etc. The wrapped coroutine inside
+        ``execute_with_status`` calls this as it makes progress so the
+        UI can read partial state without waiting for the job to
+        finish.
+
+        Args:
+            job_id: The job ID to update.
+            patch: Top-level keys to merge into the existing dict. Keys
+                in ``patch`` overwrite same-named keys on the existing
+                row; nested dicts are NOT deep-merged — callers that
+                want deep-merge semantics should read, merge, and pass
+                the full result.
+            replace: When ``True``, replace ``job_metadata`` outright
+                instead of merging. Use when the caller is the sole
+                writer and wants a known-shape blob (e.g. KB ingestion
+                finalize).
+
+        Returns:
+            The updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            if replace or job.job_metadata is None:
+                job.job_metadata = dict(patch)
+            else:
+                # Shallow merge — callers wanting deep-merge own the
+                # composition. This keeps the helper predictable.
+                job.job_metadata = {**job.job_metadata, **patch}
+            session.add(job)
+            await session.flush()
+            return job
+
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 
@@ -174,6 +219,45 @@ class JobService(Service):
 
         async with session_scope() as session:
             return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
+
+    async def cancel_in_flight_jobs_by_asset(
+        self,
+        asset_id: UUID | str,
+        asset_type: str,
+        *,
+        user_id: UUID | None = None,
+    ) -> list[UUID]:
+        """Mark every queued / in-progress job for ``asset_id`` CANCELLED.
+
+        Used by the asset-delete flows (KB, Memory Base, …) so an
+        in-flight ingestion stops writing to (and thereby recreating)
+        the asset's storage. The ingestion's own ``is_job_cancelled``
+        poll picks up the new status and bails out via the cancelled
+        handler.
+
+        Returns the ids of the jobs transitioned. Empty list when
+        nothing is in flight.
+        """
+        normalized_id = UUID(asset_id) if isinstance(asset_id, str) else asset_id
+        async with session_scope() as session:
+            stmt = select(Job).where(
+                Job.asset_id == normalized_id,
+                Job.asset_type == asset_type,
+                col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS]),
+            )
+            if user_id is not None:
+                stmt = stmt.where((Job.user_id == user_id) | (col(Job.user_id).is_(None)))
+            result = await session.exec(stmt)
+            jobs = list(result.all())
+            if not jobs:
+                return []
+            now = datetime.now(timezone.utc)
+            for job in jobs:
+                job.status = JobStatus.CANCELLED
+                job.finished_timestamp = now
+                session.add(job)
+            await session.flush()
+            return [job.job_id for job in jobs]
 
     async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
