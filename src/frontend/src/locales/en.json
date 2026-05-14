@@ -837,5 +837,12 @@
   "nodeToolbar.download": "Download",
   "nodeToolbar.delete": "Delete",
   "nodeToolbar.showMore": "Show More",
-  "noteNode.emptyPlaceholder": "Double-click to start typing or enter Markdown..."
+  "noteNode.emptyPlaceholder": "Double-click to start typing or enter Markdown...",
+  "memories.autoCapture.label": "Auto-capture",
+  "memories.autoCapture.stateOn": "ON",
+  "memories.autoCapture.stateOff": "OFF",
+  "memories.autoCapture.ariaEnable": "Enable auto-capture",
+  "memories.autoCapture.ariaDisable": "Disable auto-capture",
+  "memories.autoCapture.toastEnabled": "Auto-capture enabled",
+  "memories.autoCapture.toastDisabled": "Auto-capture disabled"
 }

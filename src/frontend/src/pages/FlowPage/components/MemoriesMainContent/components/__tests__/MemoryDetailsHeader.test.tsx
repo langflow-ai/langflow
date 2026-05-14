@@ -93,7 +93,7 @@ describe("MemoryDetailsHeader", () => {
     return { ...base, ...(overrides ?? {}) };
   };
 
-  it("renders memory information with explicit auto-capture state label", () => {
+  it("renders memory information with the ON state badge when active", () => {
     const props = makeProps({
       memory: { ...makeProps().memory, is_active: true },
     });
@@ -104,12 +104,12 @@ describe("MemoryDetailsHeader", () => {
     });
     expect(toggleButton).toHaveTextContent("Auto-capture");
     expect(toggleButton).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("memory-auto-capture-state")).toHaveTextContent(
-      "ON",
-    );
+    expect(
+      screen.getByTestId("memory-auto-capture-toggle-state"),
+    ).toHaveTextContent("ON");
   });
 
-  it("shows OFF and the enable aria-label when auto-capture is inactive", () => {
+  it("renders the OFF state badge and enable aria-label when inactive", () => {
     const props = makeProps({
       memory: { ...makeProps().memory, is_active: false },
     });
@@ -118,9 +118,9 @@ describe("MemoryDetailsHeader", () => {
       name: "Enable auto-capture",
     });
     expect(toggleButton).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByTestId("memory-auto-capture-state")).toHaveTextContent(
-      "OFF",
-    );
+    expect(
+      screen.getByTestId("memory-auto-capture-toggle-state"),
+    ).toHaveTextContent("OFF");
   });
 
   it("calls mutate handlers for actions", () => {

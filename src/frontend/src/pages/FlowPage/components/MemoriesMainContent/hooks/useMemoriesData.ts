@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
@@ -22,6 +23,7 @@ export function useMemoriesData({
   onSelectMemory,
 }: UseMemoriesDataProps) {
   const { setErrorData, setSuccessData } = useAlertStore();
+  const { t } = useTranslation();
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -124,11 +126,10 @@ export function useMemoriesData({
       onToggleSuccess: (nextIsActive) =>
         setSuccessData({
           title: nextIsActive
-            ? "Auto-capture enabled"
-            : "Auto-capture disabled",
+            ? t("memories.autoCapture.toastEnabled")
+            : t("memories.autoCapture.toastDisabled"),
         }),
-      // updateMemoryMutation's own onError already surfaces an error toast;
-      // skip a second one here.
+      // updateMemoryMutation's own onError already surfaces an error toast.
     });
 
   const {

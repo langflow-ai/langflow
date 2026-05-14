@@ -23,10 +23,11 @@ type UseAutoCaptureDebouncedToggleArgs = {
    * debounce window).
    */
   onToggleSuccess?: (nextIsActive: boolean) => void;
+  /** Fires when the resolved mutation fails. */
   onToggleError?: (nextIsActive: boolean) => void;
 };
 
-type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
+export type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
 
 export const useAutoCaptureDebouncedToggle = ({
   memory,
