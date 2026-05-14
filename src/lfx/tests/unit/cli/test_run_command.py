@@ -474,18 +474,18 @@ chat_input = ChatInput(
         with (
             patch("lfx.cli.run._register_torch_exit_guard", return_value=captured_code),
             patch("lfx.cli.run.run_flow", new=AsyncMock(side_effect=fake_run_flow)),
+            pytest.raises(typer.Exit),
         ):
-            with pytest.raises(typer.Exit):
-                run(
-                    script_path=simple_chat_script,
-                    input_value="hi",
-                    input_value_option=None,
-                    verbose=False,
-                    output_format="json",
-                    flow_json=None,
-                    stdin=False,
-                    session_id=None,
-                )
+            run(
+                script_path=simple_chat_script,
+                input_value="hi",
+                input_value_option=None,
+                verbose=False,
+                output_format="json",
+                flow_json=None,
+                stdin=False,
+                session_id=None,
+            )
 
         assert captured_code[0] == 0
 
