@@ -468,7 +468,7 @@ chat_input = ChatInput(
         """typer.Exit(0) from run_flow sets _torch_exit_code[0] to 0, not 1."""
         captured_code: list[int] = [999]
 
-        async def fake_run_flow(**kwargs):
+        async def fake_run_flow(**_kwargs):
             raise typer.Exit(0)
 
         with (

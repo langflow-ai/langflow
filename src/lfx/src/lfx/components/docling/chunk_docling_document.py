@@ -1,8 +1,6 @@
 import json
 
 import tiktoken
-from docling_core.transforms.chunker import BaseChunker, DocMeta
-from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
 
 from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.custom import Component
@@ -140,6 +138,10 @@ class ChunkDoclingDocumentComponent(Component):
         return [Data(text=doc.page_content, data=doc.metadata) for doc in docs]
 
     def chunk_documents(self) -> DataFrame:
+        # docling_core.transforms.chunker raises RuntimeError when the 'chunking' extra is absent;
+        # import lazily so the module itself loads without the extra installed.
+        from docling_core.transforms.chunker import BaseChunker, DocMeta
+
         documents, warning = extract_docling_documents(self.data_inputs, self.doc_key)
         if warning:
             self.status = warning
@@ -190,6 +192,8 @@ class ChunkDoclingDocumentComponent(Component):
             )
 
         elif self.chunker == "HierarchicalChunker":
+            from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+
             chunker = HierarchicalChunker()
         else:
             msg = f"Unknown chunker: {self.chunker}"
