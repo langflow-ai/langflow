@@ -657,7 +657,10 @@ async def generate_flow_events(
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
-            background_tasks.add_task(graph.end_all_traces_in_context())
+            # background_tasks is already drained after the POST /build response
+            # is sent; add_task() is silently dropped here.  Use create_task()
+            # so the trace cleanup runs independently of background_tasks lifecycle.
+            asyncio.create_task(graph.end_all_traces_in_context()())
             raise
         except Exception as e:
             await logger.aerror(f"Error building vertices: {e}")

@@ -1930,3 +1930,136 @@ async def test_redis_queue_wrapper_buffer_applies_backpressure(monkeypatch):
     finally:
         await wrapper.cancel()
         await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
+    """When a flow build is cancelled, graph.end_all_traces must be called.
+
+    Regression: the cancel handler in _run_vertex_build previously used
+    background_tasks.add_task(), which is silently dropped after FastAPI drains
+    the POST /build response queue.  The fix uses asyncio.create_task() so
+    trace cleanup runs regardless of the background_tasks lifecycle.
+
+    Setup: _blocking_build_vertex blocks until the task is cancelled, which
+    triggers the CancelledError handler in _run_vertex_build.  The test then
+    asserts that end_all_traces is eventually called via the independent task.
+    """
+    from collections import defaultdict
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import BackgroundTasks
+    from lfx.schema.schema import InputValueRequest
+
+    from langflow.api.build import generate_flow_events
+    from langflow.events.event_manager import EventManager
+
+    # ── trace spy ────────────────────────────────────────────────────────────
+    traces_ended = asyncio.Event()
+
+    async def _fake_end_all_traces(outputs=None, error=None):
+        traces_ended.set()
+
+    def _fake_end_all_traces_in_context(outputs=None, error=None):
+        # Mirror the real signature: returns a callable, not a coroutine.
+        async def _run():
+            await _fake_end_all_traces()
+
+        return _run
+
+    # ── mock vertex that blocks so we can observe the cancel path ─────────────
+    vertex_started = asyncio.Event()
+
+    async def _blocking_build_vertex(**kwargs):
+        vertex_started.set()
+        await asyncio.Event().wait()  # hangs until the task is cancelled
+
+    mock_vertex = MagicMock()
+    mock_vertex.outputs = [{"name": "output"}]
+    mock_vertex.will_stream = False
+
+    # ── mock graph ────────────────────────────────────────────────────────────
+    mock_graph = MagicMock()
+    mock_graph.run_id = str(uuid.uuid4())
+    mock_graph.session_id = "test-session"
+    mock_graph.flow_id = str(uuid.uuid4())
+    mock_graph.inactivated_vertices = set()
+    mock_graph.conditionally_excluded_vertices = set()
+    mock_graph.stop_vertex = None
+    mock_graph.vertices_to_run = {"v1"}
+    mock_graph.vertices = [mock_vertex]
+    mock_graph.sort_vertices = MagicMock(return_value=["v1"])
+    mock_graph.get_vertex = MagicMock(return_value=mock_vertex)
+    mock_graph.run_manager = MagicMock()
+    mock_graph.run_manager.vertices_being_run = set()
+    mock_graph.build_vertex = _blocking_build_vertex
+    mock_graph.end_all_traces = _fake_end_all_traces
+    mock_graph.end_all_traces_in_context = _fake_end_all_traces_in_context
+
+    # ── mock services ─────────────────────────────────────────────────────────
+    mock_chat = MagicMock()
+    mock_chat.async_cache_locks = defaultdict(asyncio.Lock)
+    mock_chat.get_cache = AsyncMock(return_value=None)
+    mock_chat.set_cache = AsyncMock()
+
+    mock_telemetry = MagicMock()
+    mock_telemetry.log_package_playground = MagicMock()
+
+    @asynccontextmanager
+    async def _fake_session_scope():
+        yield MagicMock()
+
+    # Raise in create_job so _build_job_svc is set to None — the simpler
+    # code path that calls _run_vertex_build() directly without execute_with_status.
+    mock_job_svc = MagicMock()
+    mock_job_svc.create_job = AsyncMock(side_effect=Exception("skip in test"))
+
+    monkeypatch.setattr("langflow.api.build.get_chat_service", lambda: mock_chat)
+    monkeypatch.setattr("langflow.api.build.get_telemetry_service", lambda: mock_telemetry)
+    monkeypatch.setattr("langflow.api.build.session_scope", _fake_session_scope)
+    monkeypatch.setattr(
+        "langflow.api.build.build_graph_from_db",
+        AsyncMock(return_value=mock_graph),
+    )
+    monkeypatch.setattr("langflow.api.build.get_job_service", lambda: mock_job_svc)
+    monkeypatch.setattr("langflow.api.build.get_task_service", lambda: MagicMock())
+    monkeypatch.setattr("langflow.api.build.get_memory_base_service", lambda: MagicMock())
+    monkeypatch.setattr("langflow.api.build.get_top_level_vertices", lambda *_: [])
+
+    # ── wire up the event manager ─────────────────────────────────────────────
+    main_queue: asyncio.Queue = asyncio.Queue()
+    flow_id = uuid.uuid4()
+    current_user = MagicMock()
+    current_user.id = uuid.uuid4()
+
+    build_task = asyncio.create_task(
+        generate_flow_events(
+            flow_id=flow_id,
+            background_tasks=BackgroundTasks(),
+            event_manager=EventManager(main_queue),
+            inputs=InputValueRequest(session=str(flow_id)),
+            data=None,
+            files=None,
+            stop_component_id=None,
+            start_component_id=None,
+            log_builds=False,
+            current_user=current_user,
+        )
+    )
+
+    # Wait until the blocking vertex is actually running, then cancel.
+    await asyncio.wait_for(vertex_started.wait(), timeout=2.0)
+    build_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await build_task
+
+    # Give the spawned end_all_traces task a beat to complete.
+    await asyncio.sleep(0.1)
+
+    assert traces_ended.is_set(), (
+        "graph.end_all_traces was not called after the build was cancelled. "
+        "The cancel handler in _run_vertex_build must use asyncio.create_task() "
+        "not background_tasks.add_task(), which is silently dropped once FastAPI "
+        "drains the POST /build response queue."
+    )
