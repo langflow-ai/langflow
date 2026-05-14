@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
 import type { MemoryDetailsHeaderProps } from "../../types";
 import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
@@ -299,16 +305,23 @@ describe("MemoryDetailsHeader", () => {
     it("disables the refresh button while refreshing", async () => {
       let resolve!: () => void;
       const onRefresh = jest.fn(
-        () => new Promise<void>((res) => { resolve = res; }),
+        () =>
+          new Promise<void>((res) => {
+            resolve = res;
+          }),
       );
       const props = makeProps({ onRefresh });
       render(<MemoryDetailsHeader {...props} />);
 
-      const btn = screen.getByRole("button", { name: "Reload sessions and messages" });
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
       fireEvent.click(btn);
       expect(btn).toBeDisabled();
 
-      await act(async () => { resolve(); });
+      await act(async () => {
+        resolve();
+      });
     });
 
     it("shows success toast after onRefresh resolves", async () => {
@@ -316,7 +329,9 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ onRefresh });
       render(<MemoryDetailsHeader {...props} />);
 
-      fireEvent.click(screen.getByRole("button", { name: "Reload sessions and messages" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
 
       await waitFor(() => {
         expect(mockSetSuccessData).toHaveBeenCalledWith({
@@ -330,7 +345,9 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ onRefresh });
       render(<MemoryDetailsHeader {...props} />);
 
-      fireEvent.click(screen.getByRole("button", { name: "Reload sessions and messages" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
 
       await waitFor(() => {
         expect(mockSetErrorData).toHaveBeenCalled();
@@ -343,7 +360,9 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ onRefresh });
       render(<MemoryDetailsHeader {...props} />);
 
-      fireEvent.click(screen.getByRole("button", { name: "Reload sessions and messages" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
 
       await waitFor(() => {
         expect(mockSetErrorData).toHaveBeenCalledWith({
@@ -358,7 +377,9 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ onRefresh });
       render(<MemoryDetailsHeader {...props} />);
 
-      const btn = screen.getByRole("button", { name: "Reload sessions and messages" });
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
       fireEvent.click(btn);
 
       await waitFor(() => expect(btn).not.toBeDisabled());
