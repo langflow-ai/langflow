@@ -162,7 +162,6 @@ class TestCreateServeApp:
 
     @pytest.fixture
     def simple_chat_json(self):
-        """Load the simple chat JSON test data."""
         test_data_dir = Path(__file__).parent.parent.parent / "data"
         json_path = test_data_dir / "simple_chat_no_llm.json"
         with json_path.open() as f:
@@ -170,13 +169,10 @@ class TestCreateServeApp:
 
     @pytest.fixture
     def real_graph(self, simple_chat_json):
-        """Create a real graph using Graph.from_payload to match serve_app expectations."""
-        # Create graph using from_payload with real test data
         return Graph.from_payload(simple_chat_json, flow_id="00000000-0000-0000-0000-000000000001")
 
     @pytest.fixture
     def mock_meta(self):
-        """Create mock flow metadata."""
         return FlowMeta(
             id="00000000-0000-0000-0000-000000000001",
             relative_path="test.json",
@@ -185,75 +181,36 @@ class TestCreateServeApp:
         )
 
     def test_create_multi_serve_app_single_flow(self, real_graph, mock_meta):
-        """Test creating app with single flow."""
-        graphs = {"00000000-0000-0000-0000-000000000001": real_graph}
-        metas = {"00000000-0000-0000-0000-000000000001": mock_meta}
-        verbose_print = Mock()
+        from lfx.cli.serve_app import FlowRegistry
+        registry = FlowRegistry()
+        registry.add(real_graph, mock_meta)
 
-        app = create_multi_serve_app(
-            root_dir=Path("/test"),
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
-        )
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
 
-        assert app.title == "LFX Multi-Flow Server (1)"
-        assert "Use `/flows` to list available IDs" in app.description
-
-        # Check routes
-        routes = [route.path for route in app.routes]
-        assert "/health" in routes
-        assert "/flows" in routes  # Multi-flow always has this
-        assert "/flows/00000000-0000-0000-0000-000000000001/run" in routes  # Flow-specific endpoint
-
-    def test_create_multi_serve_app_multiple_flows(self, real_graph, mock_meta, simple_chat_json):
-        """Test creating app with multiple flows."""
-        # Create second real graph using from_payload
-        graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
-
-        meta2 = FlowMeta(
-            id="flow-2",
-            relative_path="flow2.json",
-            title="Flow 2",
-            description="Second flow",
-        )
-
-        graphs = {"00000000-0000-0000-0000-000000000001": real_graph, "flow-2": graph2}
-        metas = {"00000000-0000-0000-0000-000000000001": mock_meta, "flow-2": meta2}
-        verbose_print = Mock()
-
-        app = create_multi_serve_app(
-            root_dir=Path("/test"),
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
-        )
-
-        assert app.title == "LFX Multi-Flow Server (2)"
-        assert "Use `/flows` to list available IDs" in app.description
-
-        # Check routes
         routes = [route.path for route in app.routes]
         assert "/health" in routes
         assert "/flows" in routes
-        assert "/flows/00000000-0000-0000-0000-000000000001/run" in routes
-        assert "/flows/00000000-0000-0000-0000-000000000001/info" in routes
-        assert "/flows/flow-2/run" in routes
-        assert "/flows/flow-2/info" in routes
+        assert "/flows/{flow_id}/run" in routes
+        assert "/flows/{flow_id}/info" in routes
+        assert "/flows/upload/" in routes
 
-    def test_create_multi_serve_app_mismatched_keys(self, real_graph, mock_meta):
-        """Test error when graphs and metas have different keys."""
-        graphs = {"00000000-0000-0000-0000-000000000001": real_graph}
-        metas = {"different-id": mock_meta}
-        verbose_print = Mock()
+    def test_create_multi_serve_app_multiple_flows(self, real_graph, mock_meta, simple_chat_json):
+        from lfx.cli.serve_app import FlowRegistry
+        graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
+        meta2 = FlowMeta(id="flow-2", relative_path="flow2.json", title="Flow 2", description=None)
 
-        with pytest.raises(ValueError, match="graphs and metas must contain the same keys"):
-            create_multi_serve_app(
-                root_dir=Path("/test"),
-                graphs=graphs,
-                metas=metas,
-                verbose_print=verbose_print,
-            )
+        registry = FlowRegistry()
+        registry.add(real_graph, mock_meta)
+        registry.add(graph2, meta2)
+
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+
+        routes = [route.path for route in app.routes]
+        assert "/flows/{flow_id}/run" in routes
+        assert "/flows/{flow_id}/info" in routes
+        # Single dispatch route covers all flow IDs — no per-flow routes
+        assert "/flows/00000000-0000-0000-0000-000000000001/run" not in routes
+        assert "/flows/flow-2/run" not in routes
 
 
 class TestServeAppEndpoints:
@@ -311,15 +268,12 @@ class TestServeAppEndpoints:
             description="A test flow",
         )
 
-        graphs = {"00000000-0000-0000-0000-000000000001": real_graph_with_async}
-        metas = {"00000000-0000-0000-0000-000000000001": meta}
-        verbose_print = Mock()
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
 
         app = create_multi_serve_app(
-            root_dir=Path("/test"),
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
+            registry=registry,
+            verbose_print=Mock(),
         )
 
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
@@ -355,15 +309,13 @@ class TestServeAppEndpoints:
             description="Second flow",
         )
 
-        graphs = {"00000000-0000-0000-0000-000000000001": real_graph_with_async, "flow-2": graph2}
-        metas = {"00000000-0000-0000-0000-000000000001": meta1, "flow-2": meta2}
-        verbose_print = Mock()
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta1)
+        registry.add(graph2, meta2)
 
         app = create_multi_serve_app(
-            root_dir=Path("/test"),
-            graphs=graphs,
-            metas=metas,
-            verbose_print=verbose_print,
+            registry=registry,
+            verbose_print=Mock(),
         )
 
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
@@ -439,10 +391,10 @@ class TestServeAppEndpoints:
             title="Test Flow",
             description="A test flow",
         )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
         app = create_multi_serve_app(
-            root_dir=Path("/test"),
-            graphs={"00000000-0000-0000-0000-000000000001": real_graph_with_async},
-            metas={"00000000-0000-0000-0000-000000000001": meta},
+            registry=registry,
             verbose_print=Mock(),
         )
         headers = {"x-api-key": "test-api-key"}
@@ -697,3 +649,103 @@ class TestServeAppEndpoints:
         data = response.json()
         assert data["result"] == "Message output"
         assert data["success"] is True
+
+
+class TestUploadEndpoint:
+    """Tests for POST /flows/upload/."""
+
+    @pytest.fixture
+    def app_with_empty_registry(self):
+        from lfx.cli.serve_app import FlowRegistry
+        registry = FlowRegistry()
+        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
+            yield TestClient(app)
+
+    @pytest.fixture
+    def valid_flow_data(self):
+        test_data_dir = Path(__file__).parent.parent.parent / "data"
+        json_path = test_data_dir / "simple_chat_no_llm.json"
+        with json_path.open() as f:
+            return json.load(f)
+
+    def test_upload_valid_flow(self, app_with_empty_registry, valid_flow_data):
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "My Uploaded Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert response.status_code == 201
+        body = response.json()
+        assert body["name"] == "My Uploaded Flow"
+        assert body["run_url"].startswith("/flows/")
+        assert body["run_url"].endswith("/run")
+        assert "id" in body
+
+    def test_upload_requires_auth(self, app_with_empty_registry, valid_flow_data):
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow", "data": valid_flow_data},
+        )
+        assert response.status_code == 401
+
+    def test_upload_invalid_flow_data_returns_422(self, app_with_empty_registry):
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=ValueError("bad flow")):
+            response = app_with_empty_registry.post(
+                "/flows/upload/",
+                json={"name": "Bad Flow", "data": {"nodes": [], "edges": []}},
+                headers={"x-api-key": "test-key"},
+            )
+        assert response.status_code == 422
+        assert "bad flow" in response.json()["detail"]
+
+    def test_upload_prepare_failure_returns_422(self, app_with_empty_registry):
+        mock_graph = MagicMock()
+        mock_graph.prepare.side_effect = RuntimeError("prepare failed")
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            response = app_with_empty_registry.post(
+                "/flows/upload/",
+                json={"name": "Bad Flow", "data": {"nodes": [], "edges": []}},
+                headers={"x-api-key": "test-key"},
+            )
+        assert response.status_code == 422
+        assert "prepare failed" in response.json()["detail"]
+
+    def test_upload_flow_is_immediately_listed(self, app_with_empty_registry, valid_flow_data):
+        upload_resp = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Runnable Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert upload_resp.status_code == 201
+        flow_id = upload_resp.json()["id"]
+
+        list_resp = app_with_empty_registry.get("/flows")
+        assert any(f["id"] == flow_id for f in list_resp.json())
+
+    def test_upload_idempotent_same_data(self, app_with_empty_registry, valid_flow_data):
+        r1 = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow A", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        r2 = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow B", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert r1.status_code == 201
+        assert r2.status_code == 201
+        assert r1.json()["id"] == r2.json()["id"]
+        flows = app_with_empty_registry.get("/flows").json()
+        ids = [f["id"] for f in flows]
+        assert ids.count(r1.json()["id"]) == 1
+
+    def test_upload_with_description(self, app_with_empty_registry, valid_flow_data):
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow", "data": valid_flow_data, "description": "my desc"},
+            headers={"x-api-key": "test-key"},
+        )
+        assert response.status_code == 201
+        assert response.json()["description"] == "my desc"
