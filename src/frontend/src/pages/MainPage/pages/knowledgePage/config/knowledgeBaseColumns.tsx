@@ -1,4 +1,5 @@
 import type { ColDef } from "ag-grid-community";
+import enTranslations from "@/locales/en.json";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,8 @@ export interface KnowledgeBaseColumnsCallbacks {
 
 export const createKnowledgeBaseColumns = (
   callbacks?: KnowledgeBaseColumnsCallbacks,
-  t: (key: string) => string = (key) => key,
+  t: (key: string) => string = (key) =>
+    enTranslations[key as keyof typeof enTranslations] ?? key,
 ): ColDef[] => {
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";

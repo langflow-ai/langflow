@@ -70,6 +70,7 @@ export default function PaginatorComponent({
           <>
             {rangeStart}-{rangeEnd}{" "}
             <span className="text-muted-foreground">
+              of{" "}
               {isComponent === undefined
                 ? t("paginator.ofItems", { total: totalRowsCount })
                 : isComponent
