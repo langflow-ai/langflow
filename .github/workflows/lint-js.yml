@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch || github.ref }}
+          # Need full history so `biome check --changed` can diff against main
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

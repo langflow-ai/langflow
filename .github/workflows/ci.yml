@@ -252,6 +252,20 @@ jobs:
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
+  lint-frontend:
+    needs: [path-filter, set-ci-condition]
+    name: Lint Frontend
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-ci == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.frontend == 'true')
+      )
+    uses: ./.github/workflows/lint-js.yml
+
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
@@ -409,6 +423,7 @@ jobs:
     needs:
       [
         test-backend,
+        lint-frontend,
         test-frontend-unit,
         test-frontend,
         test-docs-build,
@@ -458,6 +473,8 @@ jobs:
               | .key as $job
               | if $job == "test-backend" then
                   "  - Backend Tests: Check Python code, tests, and dependencies"
+                elif $job == "lint-frontend" then
+                  "  - Frontend Lint: Biome found violations (e.g. hardcoded Tailwind palette colors). Run `npm run lint` in src/frontend to reproduce locally"
                 elif $job == "test-frontend-unit" then
                   "  - Frontend Unit Tests: Check React components and unit test logic"
                 elif $job == "test-frontend" then
