@@ -1,410 +1,65 @@
-"""Knowledge Base retrieval component.
+"""Knowledge Base retrieval component — backward-compat shim.
 
-Delegates to the same two abstractions ingestion uses:
+The full implementation now lives in
+:mod:`lfx.components.files_and_knowledge.knowledge` as the mode-driven
+:class:`KnowledgeComponent`. ``KnowledgeBaseComponent`` remains as a thin
+subclass so saved flows referencing the legacy node id (``KnowledgeBase``)
+and the legacy module path keep loading and running unchanged.
 
-* ``get_embeddings`` from ``lfx.base.models.unified_models`` resolves
-  the embedding provider + API key via the user's provider settings,
-  so the component stays credential-free.
-* ``create_backend`` from ``lfx.base.knowledge_bases.backends`` opens
-  the configured vector store through the backend registry, so Chroma,
-  MongoDB, Astra, Postgres, and OpenSearch share the same retrieval path.
+The module-level ``_parse_metadata_filter`` / ``_chunk_matches_filter``
+helpers are re-exported here because existing unit tests import them
+from this module path — see
+``src/backend/tests/unit/components/files_and_knowledge/test_retrieval.py``.
 """
 
 from __future__ import annotations
 
-import json
-import uuid
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from lfx.base.knowledge_bases.backends import BackendType, create_backend
-from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
-from lfx.components.files_and_knowledge._kb_paths import (
-    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+from lfx.components.files_and_knowledge.knowledge import (
+    MODE_RETRIEVE,
+    KnowledgeComponent,
+    _chunk_matches_filter,
+    _inputs_for_mode,
+    _parse_metadata_filter,
 )
-from lfx.components.files_and_knowledge._kb_paths import (
-    load_kb_metadata,
-)
-from lfx.custom import Component
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
-from lfx.log.logger import logger
-from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import session_scope
-from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
+from lfx.io import Output
 
-if TYPE_CHECKING:
-    from pathlib import Path
+__all__ = [
+    "KnowledgeBaseComponent",
+    "_chunk_matches_filter",
+    "_parse_metadata_filter",
+]
 
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
 
 
-class KnowledgeBaseComponent(Component):
+class KnowledgeBaseComponent(KnowledgeComponent):
+    """Search and retrieve data from knowledge.
+
+    Pins the merged :class:`KnowledgeComponent` to retrieve mode. All
+    behavior is inherited unchanged.
+    """
+
     display_name = "Knowledge Base"
     description = "Search and retrieve data from knowledge."
     icon = "download"
     name = "KnowledgeBase"
 
-    inputs = [
-        DropdownInput(
-            name="knowledge_base",
-            display_name="Knowledge",
-            info="Select the knowledge to load data from.",
-            required=True,
-            options=[],
-            refresh_button=True,
-            real_time_refresh=True,
-        ),
-        MessageTextInput(
-            name="search_query",
-            display_name="Search Query",
-            info="Optional search query to filter knowledge base data.",
-            tool_mode=True,
-        ),
-        IntInput(
-            name="top_k",
-            display_name="Top K Results",
-            info="Number of top results to return from the knowledge base.",
-            value=5,
-            advanced=True,
-            required=False,
-        ),
-        BoolInput(
-            name="include_metadata",
-            display_name="Include Metadata",
-            info="Whether to include all metadata in the output. If false, only content is returned.",
-            value=True,
-            advanced=False,
-        ),
-        BoolInput(
-            name="include_embeddings",
-            display_name="Include Embeddings",
-            info="Whether to include embeddings in the output. Only applicable if 'Include Metadata' is enabled.",
-            value=False,
-            advanced=True,
-        ),
-        MessageTextInput(
-            name="metadata_filter",
-            display_name="Metadata Filter",
-            info=(
-                "Optional JSON object of user-metadata key/value pairs. Only chunks "
-                'whose source_metadata matches every key are returned (e.g. {"tag": "invoice"} '
-                'or {"tag": ["invoice", "audit"]} for OR-of-values). Backends without '
-                "native filtering apply the match client-side after retrieval."
-            ),
-            advanced=True,
-        ),
-    ]
-
+    # Pin the mode-default visibility at the class level so the canvas
+    # renders the legacy "retrieve-only" shape on first load.
+    inputs = _inputs_for_mode(MODE_RETRIEVE)
     outputs = [
         Output(
-            name="retrieve_data",
             display_name="Results",
+            name="retrieve_data",
             method="retrieve_data",
             info="Returns the data from the selected knowledge base.",
+            types=["Table"],
+            selected="Table",
         ),
     ]
 
-    async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
-        raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        if field_name == "knowledge_base":
-            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
-                _get_knowledge_bases_root_path(),
-                user_id=self.user_id,
-            )
-            if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
-                build_config["knowledge_base"]["value"] = None
-
-        return build_config
-
-    @property
-    def _user_uuid(self) -> uuid.UUID | None:
-        """Return self.user_id as a UUID, converting from str if necessary."""
-        if not self.user_id:
-            return None
-        return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
-
-    def _get_kb_metadata(self, kb_path: Path) -> dict:
-        """Load the knowledge base's embedding metadata file.
-
-        The metadata file is the source of truth for which embedding
-        model was used at ingestion time — retrieval must use the same
-        model, otherwise queries are embedded into a different vector
-        space.
-
-        Legacy key material that may be present in older metadata
-        files (``api_key``) is loaded by ``load_kb_metadata`` but
-        intentionally ignored downstream; credential resolution is now
-        owned by the unified-models layer via provider settings.
-        """
-        raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
-
-    async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002 — reserved for path-scoped fallback
-        """Return ``(backend_type, backend_config)`` for this KB.
-
-        Prefers the DB row written at create time (Phase 1.5) so the
-        configured backend (Chroma / Mongo / Astra / Postgres) is
-        honored. Falls back to Chroma for legacy KBs that only exist
-        on disk — those ingestions still work because the Chroma
-        files live next to ``embedding_metadata.json``.
-        """
-        try:
-            from langflow.api.utils import knowledge_base_service
-
-            user_uuid = self._user_uuid
-            if user_uuid is None:
-                return BackendType.CHROMA.value, {}
-            record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
-        except Exception as exc:  # noqa: BLE001 — service hiccups fall through to Chroma
-            logger.debug("KB record lookup failed: %s", exc)
-            return BackendType.CHROMA.value, {}
-
-        if record is None:
-            return BackendType.CHROMA.value, {}
-        return (
-            record.backend_type or BackendType.CHROMA.value,
-            record.backend_config or {},
-        )
-
-    def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
-        """Resolve the ``get_embeddings``-compatible model selection from metadata.
-
-        New KBs persist the full ``model_selection`` dict at ingest
-        time so we can pass it straight through. Older KBs — and KBs
-        whose persisted ``model_selection`` was serialized without the
-        nested ``metadata`` block (e.g. third-party API clients, or
-        older frontend builds that dropped unknown fields) — fall
-        through to the catalog lookup.
-
-        The catalog lookup is also used as a *hydration* step when
-        ``model_selection`` is present but missing
-        ``metadata.embedding_class`` / ``metadata.param_mapping``, which
-        ``get_embeddings`` needs to instantiate the provider SDK.
-        Without this hydration the retrieval would fail with
-        ``No embedding class defined in metadata for <model>`` even
-        though the model is fully supported by the current runtime.
-        """
-        model_selection = metadata.get("model_selection")
-        if model_selection:
-            selection_list = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
-            return [self._hydrate_model_metadata(entry) for entry in selection_list]
-
-        embedding_model_name = metadata.get("embedding_model")
-        embedding_provider = metadata.get("embedding_provider", "Unknown")
-        if not embedding_model_name:
-            msg = (
-                f"Knowledge base '{self.knowledge_base}' has no embedding model recorded; "
-                "re-create it with a supported embedding model."
-            )
-            raise ValueError(msg)
-
-        match = self._find_catalog_entry(embedding_model_name)
-        if match is None:
-            msg = (
-                f"Embedding model '{embedding_model_name}' (provider '{embedding_provider}') "
-                "recorded for this knowledge base is no longer available in the model registry. "
-                "Please re-create the knowledge base with a supported embedding model."
-            )
-            raise ValueError(msg)
-        return [match]
-
-    def _hydrate_model_metadata(self, entry: dict[str, Any]) -> dict[str, Any]:
-        """Fill in ``metadata.embedding_class`` / ``param_mapping`` if missing.
-
-        Preserves existing keys — the catalog is only used to fill
-        gaps. Returns a shallow copy so the persisted metadata on disk
-        is not mutated in place.
-        """
-        entry_metadata = entry.get("metadata") or {}
-        has_class = bool(entry_metadata.get("embedding_class"))
-        has_mapping = bool(entry_metadata.get("param_mapping"))
-        if has_class and has_mapping:
-            return entry
-
-        model_name = entry.get("name")
-        if not model_name:
-            return entry
-
-        catalog_entry = self._find_catalog_entry(model_name)
-        if catalog_entry is None:
-            return entry
-
-        catalog_metadata = catalog_entry.get("metadata") or {}
-        merged_metadata = {**catalog_metadata, **entry_metadata}
-        return {**entry, "metadata": merged_metadata}
-
-    def _find_catalog_entry(self, model_name: str) -> dict[str, Any] | None:
-        """Look up an embedding model by name in the unified-models catalog."""
-        options = get_embedding_model_options(user_id=self.user_id)
-        return next((o for o in options if o.get("name") == model_name), None)
-
-    async def retrieve_data(self) -> DataFrame:
-        """Retrieve data from the selected knowledge base.
-
-        Shape of the call:
-
-        1. Resolve the KB directory on disk (scoped to the current user).
-        2. Read ``embedding_metadata.json`` to learn which embedding
-           model was used at ingest time.
-        3. Hand that model_selection to ``get_embeddings`` so the
-           unified-models layer instantiates the right provider + pulls
-           the API key from the user's provider settings.
-        4. Open the configured vector-store backend and run the query.
-        """
-        raise_error_if_astra_cloud_disable_component(astra_error_msg)
-
-        # Lazy import: langflow's user/DB models aren't part of lfx's
-        # standalone install, so ``lfx run <starter>.json`` can't
-        # resolve this symbol at module import time. Deferring to use
-        # keeps the component importable in both environments.
-        from langflow.services.database.models.user.crud import get_user_by_id
-
-        async with session_scope() as db:
-            if not self.user_id:
-                msg = "User ID is required for fetching Knowledge Base data."
-                raise ValueError(msg)
-            current_user = await get_user_by_id(db, self.user_id)
-            if not current_user:
-                msg = f"User with ID {self.user_id} not found."
-                raise ValueError(msg)
-            kb_user = current_user.username
-        kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
-
-        metadata = self._get_kb_metadata(kb_path)
-        if not metadata:
-            msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
-            raise ValueError(msg)
-
-        # Unified-models owns credential resolution: the API key, base
-        # URL, and any provider-specific variables come from the
-        # user's provider settings, so retrieval uses the exact same
-        # code path as ingestion.
-        model_selection = self._resolve_model_selection(metadata)
-        chunk_size = metadata.get("chunk_size")
-        embedding_function = get_embeddings(
-            model=model_selection,
-            user_id=self.user_id,
-            chunk_size=chunk_size,
-        )
-
-        backend_type, backend_config = await self._resolve_backend(kb_user=kb_user)
-        backend = create_backend(
-            backend_type,
-            kb_name=self.knowledge_base,
-            kb_path=kb_path,
-            backend_config=backend_config,
-            embedding_function=embedding_function,
-            # Forward for variable_service-based credential resolution on
-            # remote backends. Chroma ignores this.
-            user_id=self.user_id,
-        )
-        try:
-            user_metadata_filter = _parse_metadata_filter(getattr(self, "metadata_filter", None))
-            use_scores = bool(self.search_query)
-            # similarity_search runs first without a backend filter — every
-            # supported backend has a different DSL, so a uniform Python
-            # post-filter on ``source_metadata`` keeps behaviour consistent
-            # while we wait on per-backend translators (P3 work).
-            #
-            # Retrieve a wider window when a filter is active so the post-
-            # filter doesn't starve the result set; the original ``top_k``
-            # is enforced after filtering.
-            search_k = self.top_k * 4 if user_metadata_filter else self.top_k
-            results = await backend.similarity_search(
-                query=self.search_query or "",
-                k=search_k,
-                with_scores=use_scores,
-            )
-            if user_metadata_filter:
-                results = [
-                    (doc, score) for doc, score in results if _chunk_matches_filter(doc.metadata, user_metadata_filter)
-                ]
-                results = results[: self.top_k]
-
-            # Build an id → embedding map via the backend-agnostic iterator
-            # rather than reaching into backend-specific private APIs.
-            # Scoped to the KB's doc ids so the pass stays bounded.
-            id_to_embedding: dict[str, list[float]] = {}
-            if self.include_embeddings and results:
-                doc_ids = {doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")}
-                if doc_ids:
-                    async for batch in backend.iter_documents(include_embeddings=True):
-                        for entry in batch:
-                            doc_id = entry.metadata.get("_id")
-                            if doc_id in doc_ids and entry.embedding is not None:
-                                id_to_embedding[doc_id] = entry.embedding
-                        if len(id_to_embedding) == len(doc_ids):
-                            break
-
-            data_list: list[Data] = []
-            for doc, score in results:
-                kwargs: dict[str, Any] = {"content": doc.page_content}
-                if use_scores:
-                    kwargs["_score"] = -1 * score
-                if self.include_metadata:
-                    kwargs.update(doc.metadata)
-                if self.include_embeddings:
-                    kwargs["_embeddings"] = id_to_embedding.get(doc.metadata.get("_id"))
-                data_list.append(Data(**kwargs))
-
-            return DataFrame(data=data_list)
-        finally:
-            await backend.teardown()
-
-
-def _parse_metadata_filter(raw: str | None) -> dict[str, list[str]]:
-    """Decode the ``metadata_filter`` input into a {key: [values]} map.
-
-    Empty or malformed input maps to an empty filter so retrieval falls back
-    to the unfiltered path. We intentionally swallow JSON errors here rather
-    than raise: surfacing component-config errors at the canvas node would
-    break a flow run for what is meant to be an optional refinement.
-    """
-    if not raw:
-        return {}
-    text = raw.strip() if isinstance(raw, str) else raw
-    if not text:
-        return {}
-    try:
-        decoded = json.loads(text)
-    except (TypeError, json.JSONDecodeError):
-        logger.warning("KnowledgeBaseComponent: metadata_filter is not valid JSON; ignoring filter.")
-        return {}
-    if not isinstance(decoded, dict):
-        logger.warning("KnowledgeBaseComponent: metadata_filter must be a JSON object; ignoring filter.")
-        return {}
-    result: dict[str, list[str]] = {}
-    for key, value in decoded.items():
-        if not isinstance(key, str):
-            continue
-        if isinstance(value, list):
-            result[key] = [str(entry) for entry in value]
-        else:
-            result[key] = [str(value)]
-    return result
-
-
-def _chunk_matches_filter(metadata: dict[str, Any] | None, filt: dict[str, list[str]]) -> bool:
-    """AND across keys, OR within key values, mirroring the chunks endpoint."""
-    if not filt:
-        return True
-    if not metadata:
-        return False
-    raw = metadata.get("source_metadata")
-    if not raw:
-        return False
-    try:
-        stored = json.loads(raw) if isinstance(raw, str) else raw
-    except json.JSONDecodeError:
-        return False
-    if not isinstance(stored, dict):
-        return False
-    for key, expected_values in filt.items():
-        actual = stored.get(key)
-        if actual is None:
-            return False
-        actual_set = {str(entry) for entry in actual} if isinstance(actual, list) else {str(actual)}
-        if not actual_set & set(expected_values):
-            return False
-    return True
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.mode = MODE_RETRIEVE
