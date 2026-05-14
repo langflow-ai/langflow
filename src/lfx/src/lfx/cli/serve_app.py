@@ -44,12 +44,8 @@ if TYPE_CHECKING:
 
 # Security - use the same pattern as Langflow main API
 API_KEY_NAME = "x-api-key"
-api_key_query = APIKeyQuery(
-    name=API_KEY_NAME, scheme_name="API key query", auto_error=False
-)
-api_key_header = APIKeyHeader(
-    name=API_KEY_NAME, scheme_name="API key header", auto_error=False
-)
+api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
+api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
 
 def verify_api_key(
@@ -75,12 +71,8 @@ class FlowMeta(BaseModel):
     """Metadata returned by the ``/flows`` endpoint."""
 
     id: str = Field(..., description="Deterministic flow identifier (UUIDv5)")
-    relative_path: str = Field(
-        ..., description="Path of the flow JSON relative to the deployed folder"
-    )
-    title: str = Field(
-        ..., description="Human-readable title (filename stem if unknown)"
-    )
+    relative_path: str = Field(..., description="Path of the flow JSON relative to the deployed folder")
+    title: str = Field(..., description="Human-readable title (filename stem if unknown)")
     description: str | None = Field(None, description="Optional flow description")
 
 
@@ -88,9 +80,7 @@ class RunRequest(BaseModel):
     """Request model for executing a LFX flow."""
 
     input_value: str = Field(..., description="Input value passed to the flow")
-    session_id: str | None = Field(
-        default=None, description="Session ID for maintaining conversation state"
-    )
+    session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
 
 
 class StreamRequest(BaseModel):
@@ -98,18 +88,10 @@ class StreamRequest(BaseModel):
 
     input_value: str = Field(..., description="Input value passed to the flow")
     input_type: str = Field(default="chat", description="Type of input (chat, text)")
-    output_type: str = Field(
-        default="chat", description="Type of output (chat, text, debug, any)"
-    )
-    output_component: str | None = Field(
-        default=None, description="Specific output component to stream from"
-    )
-    session_id: str | None = Field(
-        default=None, description="Session ID for maintaining conversation state"
-    )
-    tweaks: dict[str, Any] | None = Field(
-        default=None, description="Optional tweaks to modify flow behavior"
-    )
+    output_type: str = Field(default="chat", description="Type of output (chat, text, debug, any)")
+    output_component: str | None = Field(default=None, description="Specific output component to stream from")
+    session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
+    tweaks: dict[str, Any] | None = Field(default=None, description="Optional tweaks to modify flow behavior")
 
 
 class RunResponse(BaseModel):
@@ -153,24 +135,16 @@ class FlowRegistry:
 
 
 class UploadFlowRequest(BaseModel):
-    name: str = Field(
-        ..., description="Human-readable name for the flow (matches FlowBase.name)"
-    )
-    data: dict = Field(
-        ..., description="Raw flow JSON — nodes and edges (matches FlowBase.data)"
-    )
-    description: str | None = Field(
-        default=None, description="Optional flow description"
-    )
+    name: str = Field(..., description="Human-readable name for the flow (matches FlowBase.name)")
+    data: dict = Field(..., description="Raw flow JSON — nodes and edges (matches FlowBase.data)")
+    description: str | None = Field(default=None, description="Optional flow description")
 
 
 class UploadFlowResponse(BaseModel):
     id: str = Field(..., description="Deterministic UUID5 of flow content")
     name: str
     description: str | None
-    run_url: str = Field(
-        ..., description="Endpoint to POST run requests, e.g. /flows/{id}/run"
-    )
+    run_url: str = Field(..., description="Endpoint to POST run requests, e.g. /flows/{id}/run")
 
 
 # -----------------------------------------------------------------------------
@@ -178,9 +152,7 @@ class UploadFlowResponse(BaseModel):
 # -----------------------------------------------------------------------------
 
 
-async def consume_and_yield(
-    queue: asyncio.Queue, client_consumed_queue: asyncio.Queue
-) -> AsyncGenerator:
+async def consume_and_yield(queue: asyncio.Queue, client_consumed_queue: asyncio.Queue) -> AsyncGenerator:
     """Consumes events from a queue and yields them to the client while tracking timing metrics.
 
     This coroutine continuously pulls events from the input queue and yields them to the client.
@@ -324,16 +296,12 @@ def create_multi_serve_app(
         try:
             graph = load_flow_from_json(body.data)
         except Exception as exc:
-            raise HTTPException(
-                status_code=422, detail=f"Invalid flow data: {exc}"
-            ) from exc
+            raise HTTPException(status_code=422, detail=f"Invalid flow data: {exc}") from exc
 
         try:
             graph.prepare()
         except Exception as exc:
-            raise HTTPException(
-                status_code=422, detail=f"Flow preparation failed: {exc}"
-            ) from exc
+            raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
 
         flow_id = flow_id_from_content(body.data)
         meta = FlowMeta(
@@ -393,16 +361,12 @@ def create_multi_serve_app(
             result_data = extract_result_data(results, logs)
 
             if not result_data.get("success", True):
-                error_message = result_data.get(
-                    "result", result_data.get("text", "No response generated")
-                )
+                error_message = result_data.get("result", result_data.get("text", "No response generated"))
                 return RunResponse(
                     result=error_message,
                     success=False,
                     logs=logs
-                    or (
-                        f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"
-                    ),
+                    or (f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"),
                     type="error",
                     component=result_data.get("component", ""),
                 )
