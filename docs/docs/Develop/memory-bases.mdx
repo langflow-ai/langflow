@@ -17,7 +17,7 @@ After a memory base is created, you can include its knowledge in a flow by addin
 
 ### Configure memory bases ingestion
 
-Each memory base can only be attached to one flow, but a single flow can have multiple memory bases attached to it by including multiple [**Memory Base** components](/memory-base).
+Each memory base can only be attached to one flow, but a single flow can have multiple memory bases attached to it by including multiple [**Memory Base** components](../Components/memory-base.mdx).
 Each time the flow completes a run, the captured messages are counted toward a configurable **threshold**.
 When the number of unprocessed runs reaches the threshold, an asynchronous ingestion job writes the messages to the vector store.
 
