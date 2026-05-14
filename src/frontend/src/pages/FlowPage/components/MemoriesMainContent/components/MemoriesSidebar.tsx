@@ -68,17 +68,16 @@ export function MemoriesSidebar({
       </div>
 
       <div className="flex-1 overflow-auto px-2 pb-4" onScroll={handleScroll}>
-        {!filteredMemories.length ? (
-          memoriesSearch.trim() ? (
-            <div className="px-3 py-6 text-center">
-              <IconComponent
-                name="Brain"
-                className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
-              />
-              <p className="text-xs text-muted-foreground">No memories found</p>
-            </div>
-          ) : null
-        ) : (
+        {!filteredMemories.length && memoriesSearch.trim() && (
+          <div className="px-3 py-6 text-center">
+            <IconComponent
+              name="Brain"
+              className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
+            />
+            <p className="text-xs text-muted-foreground">No memories found</p>
+          </div>
+        )}
+        {filteredMemories.length > 0 && (
           <div className="flex flex-col gap-1">
             {filteredMemories.map((memoryItem) => {
               const isSelected = selectedMemoryId === memoryItem.id;

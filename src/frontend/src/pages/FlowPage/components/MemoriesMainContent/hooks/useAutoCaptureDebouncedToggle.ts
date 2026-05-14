@@ -98,7 +98,6 @@ export const useAutoCaptureDebouncedToggle = ({
     }
 
     const capturedId = memory.id;
-    const capturedName = memory.name;
     const capturedIsActive = memory.is_active;
 
     autoCaptureTimerRef.current = setTimeout(() => {
@@ -115,6 +114,8 @@ export const useAutoCaptureDebouncedToggle = ({
         draftIsActiveRef.current = null;
       };
 
+      const currentName = memory?.name ?? capturedId;
+
       updateMemoryMutation.mutate(
         {
           memoryId: capturedId,
@@ -125,8 +126,8 @@ export const useAutoCaptureDebouncedToggle = ({
             clearDraft();
             setSuccessData({
               title: nextIsActive
-                ? `Auto-capture enabled for memory "${capturedName}"`
-                : `Auto-capture disabled for memory "${capturedName}"`,
+                ? `Auto-capture enabled for memory "${currentName}"`
+                : `Auto-capture disabled for memory "${currentName}"`,
             });
           },
           onError: (error: unknown) => {

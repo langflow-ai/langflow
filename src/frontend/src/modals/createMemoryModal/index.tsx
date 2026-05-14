@@ -108,12 +108,17 @@ export default function CreateMemoryModal({
               content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
               side="right"
             >
-              <span className="cursor-help">
+              <button
+                type="button"
+                tabIndex={0}
+                aria-label="Batch size help"
+                className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
                 <ForwardedIconComponent
                   name="Info"
                   className="h-3.5 w-3.5 text-muted-foreground"
                 />
-              </span>
+              </button>
             </ShadTooltip>
           </div>
           <Input
