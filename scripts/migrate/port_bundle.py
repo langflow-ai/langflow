@@ -76,7 +76,7 @@ name = "lfx-{bundle}"
 version = "0.1.0"
 description = "{display_name} component(s) as a standalone Langflow Extension Bundle."
 readme = "README.md"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = {{ text = "MIT" }}
 authors = [
     {{ name = "Langflow", email = "contact@langflow.org" }},
