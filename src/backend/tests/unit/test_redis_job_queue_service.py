@@ -1950,10 +1950,9 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     from unittest.mock import AsyncMock, MagicMock
 
     from fastapi import BackgroundTasks
-    from lfx.schema.schema import InputValueRequest
-
     from langflow.api.build import generate_flow_events
     from langflow.events.event_manager import EventManager
+    from lfx.schema.schema import InputValueRequest
 
     # ── trace spy ────────────────────────────────────────────────────────────
     traces_ended = asyncio.Event()
