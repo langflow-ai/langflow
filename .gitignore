@@ -280,8 +280,7 @@ src/frontend/temp
 *.mcp.json
 
 news-aggregated.json
-.claude/*
-!.claude/skills/
+.claude
 member_servers.json
 # Component index cache (user-specific)
 **/.cache/lfx/

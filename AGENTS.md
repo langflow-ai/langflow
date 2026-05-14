@@ -8,7 +8,7 @@ Langflow is a visual workflow builder for AI-powered agents. It has a Python/Fas
 
 ## Contributor Guardrail Skills
 
-Author-time skills under `.claude/skills/` auto-fire when contributors edit specific surfaces. They surface the engineering practices an experienced contributor would apply by reflex — tests, formatting, identifier stability, the consult-a-maintainer expectation on user-visible changes. Most are advisory; the breaking-change gate halts work until explicit agreement is confirmed.
+Author-time skills under `.agents/skills/` (the cross-tool [Agent Skills](https://agentskills.io/) convention — read by Claude Code, Codex CLI, Gemini CLI, Copilot, and others) auto-fire when contributors edit specific surfaces. They surface the engineering practices an experienced contributor would apply by reflex — tests, formatting, identifier stability, the consult-a-maintainer expectation on user-visible changes. Most are advisory; the breaking-change gate halts work until explicit agreement is confirmed.
 
 - `langflow-component-edit` — components under `src/backend/base/langflow/components/`.
 - `langflow-ux-change` — user-visible changes under `src/frontend/` or to component `display_name`/`description`/`icon`.
