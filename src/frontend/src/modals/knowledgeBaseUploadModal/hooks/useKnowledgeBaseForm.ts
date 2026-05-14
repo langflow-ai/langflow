@@ -22,6 +22,7 @@ import {
   type MetadataPair,
   metadataPairsToFormValue,
 } from "../components/MetadataEditor";
+import { validateMetadataPairs } from "../components/metadataValidation";
 import {
   DEFAULT_CHUNK_OVERLAP,
   DEFAULT_CHUNK_SIZE,
@@ -421,6 +422,18 @@ export function useKnowledgeBaseForm({
     if (totalBytes > MAX_TOTAL_FILE_SIZE) {
       errors.files = t("knowledge.validationFileSizeLimit");
     }
+    const runMetadataValidation = validateMetadataPairs(metadataPairs);
+    if (!runMetadataValidation.ok) {
+      errors.metadata =
+        "Fix metadata fields before continuing. Keys must be 1-32 lowercase letters, digits, or underscores and must be unique.";
+    }
+    for (const [fileName, pairs] of Object.entries(perFileMetadata)) {
+      const perFileValidation = validateMetadataPairs(pairs);
+      if (!perFileValidation.ok) {
+        errors.metadata = `Fix metadata fields for "${fileName}" before continuing.`;
+        break;
+      }
+    }
     return errors;
   }, [
     t,
@@ -432,6 +445,8 @@ export function useKnowledgeBaseForm({
     globalVariables,
     files,
     existingKnowledgeBaseNames,
+    metadataPairs,
+    perFileMetadata,
   ]);
 
   const clearValidationErrors = useCallback(() => {
