@@ -134,8 +134,7 @@ class TestAvianIntegration:
         mock_get.assert_not_called()
 
     @pytest.mark.asyncio
-    @patch("langchain_openai.ChatOpenAI")
-    async def test_build_config_update_refreshes_models(self, mock_chat_openai):
+    async def test_build_config_update_refreshes_models(self):
         """Test that updating api_key or model_name in build config triggers model list refresh."""
         component = AvianModelComponent()
         component.api_key = None
