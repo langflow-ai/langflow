@@ -523,6 +523,45 @@ async def test_upload_file(client: AsyncClient, json_flow: str, logged_in_header
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_file_flows_not_a_list_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": <non-list> } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": "oops"})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_item_not_a_dict_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [1] } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": [1]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_mixed_items_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [{}, 42] } must return 422 at the bad item."""
+    file_contents = orjson.dumps({"flows": [{}, 42]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows[1]" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
 async def test_download_file(
     client: AsyncClient,
     json_flow,
@@ -1026,9 +1065,11 @@ async def test_download_project_zip_sanitizes_flow_names(client: AsyncClient, js
 @pytest.mark.usefixtures("session")
 async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_headers):
     """Uploading a corrupt/invalid ZIP file returns 400 with a descriptive error."""
-    # Build a payload that passes zipfile.is_zipfile() but fails ZipFile() construction.
-    # We keep only the end-of-central-directory record (last 22 bytes of a real ZIP)
-    # prepended with garbage, so the EOCD signature is found but the central directory is invalid.
+    # Payload with an EOCD signature prepended by garbage. Python 3.10-3.13 treat
+    # this as a ZIP and fail in ZipFile() construction ("not a valid ZIP archive");
+    # Python 3.14's stricter zipfile.is_zipfile() rejects it and the route falls
+    # through to the JSON branch ("Invalid JSON file"). Both paths return 400 with
+    # a descriptive detail, which is the user-facing contract under test.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("dummy.json", '{"name":"x"}')
@@ -1042,7 +1083,8 @@ async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_he
         headers=logged_in_headers,
     )
     assert response.status_code == 400
-    assert "not a valid ZIP" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "not a valid ZIP" in detail or "Invalid JSON file" in detail
 
 
 @pytest.mark.usefixtures("session")
