@@ -159,9 +159,22 @@ class TestModeDrivenInputVisibility:
 
 
 # ---------------------------------------------------------------------------
-# update_outputs — output swap on mode change
+# Class-level outputs + update_outputs filtering
 # ---------------------------------------------------------------------------
 class TestModeDrivenOutputSwap:
+    def test_class_level_declares_both_outputs_for_runtime_dispatch(self) -> None:
+        """Both output methods are declared at the class level so the runtime can dispatch correctly.
+
+        Without this, the runtime falls back to the only declared output and
+        crashes when the wrong-mode method runs against missing inputs (e.g.
+        ``build_kb_info`` calling ``convert_to_dataframe(None)`` in retrieve
+        mode).
+        """
+        output_names = {o.name for o in KnowledgeComponent.outputs}
+        assert output_names == {"dataframe_output", "retrieve_data"}
+        method_names = {o.method for o in KnowledgeComponent.outputs}
+        assert method_names == {"build_kb_info", "retrieve_data"}
+
     def test_retrieve_mode_replaces_output_with_retrieve_result(self) -> None:
         component = KnowledgeComponent()
         frontend_node: dict = {"outputs": list(component.outputs)}

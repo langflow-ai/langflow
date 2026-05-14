@@ -383,28 +383,54 @@ class KnowledgeComponent(Component):
     ]
 
     # ------ Outputs -------------------------------------------------------
-    # Two outputs declared up front. ``update_outputs`` swaps the visible
-    # list per mode (see MemoryComponent in models_and_agents/memory.py for
-    # the same pattern).
+    # Both outputs are declared at the class level so the runtime can
+    # dispatch to either method depending on which one the saved flow has
+    # wired up. ``update_outputs`` filters the canvas-visible output per
+    # selected mode; see ``TypeConverterComponent`` and ``MemoryComponent``
+    # for the same pattern.
     #
-    # Output names are intentionally the legacy names from
-    # ``KnowledgeIngestionComponent`` (``dataframe_output``) and
-    # ``KnowledgeBaseComponent`` (``retrieve_data``) so saved flow edges
-    # keyed on those names resolve cleanly against the merged component.
+    # Output names match the legacy ``KnowledgeIngestionComponent``
+    # (``dataframe_output``) and ``KnowledgeBaseComponent``
+    # (``retrieve_data``) so saved flow edges keyed on those names resolve
+    # cleanly against the merged component.
     outputs = [
         Output(
             display_name="Results",
             name="dataframe_output",
             method="build_kb_info",
+            types=["JSON"],
+            selected="JSON",
+        ),
+        Output(
+            display_name="Results",
+            name="retrieve_data",
+            method="retrieve_data",
+            info="Returns the data from the selected knowledge base.",
+            types=["Table"],
+            selected="Table",
         ),
     ]
 
     # ------ Mode-driven UI updates ---------------------------------------
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):
+        """Sync the visible output with the current ``mode`` value on canvas load.
+
+        Saved flows hit this path: ``update_outputs`` is normally only triggered
+        by ``real_time_refresh`` field edits, so without this re-sync the
+        canvas could land with both outputs visible.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        mode_value = new_frontend_node.get("template", {}).get("mode", {}).get("value", MODE_INGEST)
+        self.update_outputs(new_frontend_node, "mode", mode_value)
+        return new_frontend_node
+
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
-        """Swap the visible output to match the selected mode.
+        """Filter visible outputs to match the selected mode.
 
         Triggered by the ``mode`` ``TabInput`` ``real_time_refresh`` flag.
-        Returns the frontend node payload that the canvas re-renders.
+        The class-level ``outputs`` list always carries both entries so the
+        runtime can resolve either ``build_kb_info`` or ``retrieve_data``
+        regardless of canvas visibility — we just hide the unused one here.
         """
         if field_name != "mode":
             return frontend_node
@@ -415,6 +441,8 @@ class KnowledgeComponent(Component):
                     name="retrieve_data",
                     method="retrieve_data",
                     info="Returns the data from the selected knowledge base.",
+                    types=["Table"],
+                    selected="Table",
                 )
             ]
         else:
@@ -423,6 +451,8 @@ class KnowledgeComponent(Component):
                     display_name="Results",
                     name="dataframe_output",
                     method="build_kb_info",
+                    types=["JSON"],
+                    selected="JSON",
                 )
             ]
         return frontend_node
