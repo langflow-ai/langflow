@@ -182,6 +182,7 @@ class TestCreateServeApp:
 
     def test_create_multi_serve_app_single_flow(self, real_graph, mock_meta):
         from lfx.cli.serve_app import FlowRegistry
+
         registry = FlowRegistry()
         registry.add(real_graph, mock_meta)
 
@@ -196,6 +197,7 @@ class TestCreateServeApp:
 
     def test_create_multi_serve_app_multiple_flows(self, real_graph, mock_meta, simple_chat_json):
         from lfx.cli.serve_app import FlowRegistry
+
         graph2 = Graph.from_payload(simple_chat_json, flow_id="flow-2")
         meta2 = FlowMeta(id="flow-2", relative_path="flow2.json", title="Flow 2", description=None)
 
@@ -657,6 +659,7 @@ class TestUploadEndpoint:
     @pytest.fixture
     def app_with_empty_registry(self):
         from lfx.cli.serve_app import FlowRegistry
+
         registry = FlowRegistry()
         app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret

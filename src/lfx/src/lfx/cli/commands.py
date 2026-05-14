@@ -188,9 +188,7 @@ async def serve_command(
 
         if paths:
             try:
-                registry = await build_registry_from_paths(
-                    paths, verbose_print, check_variables=check_variables
-                )
+                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1) from e

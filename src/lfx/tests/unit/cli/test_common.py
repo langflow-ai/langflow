@@ -526,5 +526,6 @@ class TestFlowIdFromContent:
 
     def test_returns_uuid_string(self):
         import uuid
+
         result = flow_id_from_content({"nodes": [], "edges": []})
         uuid.UUID(result)  # raises ValueError if not a valid UUID string

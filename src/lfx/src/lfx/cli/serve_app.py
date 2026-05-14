@@ -355,9 +355,8 @@ def create_multi_serve_app(
                 return RunResponse(
                     result=error_message,
                     success=False,
-                    logs=logs or (
-                        f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"
-                    ),
+                    logs=logs
+                    or (f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"),
                     type="error",
                     component=result_data.get("component", ""),
                 )
@@ -370,6 +369,7 @@ def create_multi_serve_app(
             )
         except Exception as exc:  # noqa: BLE001
             import traceback
+
             error_traceback = traceback.format_exc()
             error_message = f"Flow execution failed: {exc!s}"
             logger.error(f"Error running flow {flow_id}: {exc}")

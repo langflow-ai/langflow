@@ -205,9 +205,7 @@ class TestFastAPIEndpoints:
     def setup_method(self, tmp_path=None):  # noqa: ARG002
         """Set up test client with mock data."""
         self.real_graph = create_real_graph()
-        meta = FlowMeta(
-            id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow"
-        )
+        meta = FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow")
 
         def verbose_print(msg):
             pass  # Real function

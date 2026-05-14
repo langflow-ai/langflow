@@ -99,6 +99,7 @@ def test_flow_meta():
 
 def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
     from lfx.cli.serve_app import FlowRegistry
+
     registry = FlowRegistry()
     registry.add(mock_graph, test_flow_meta)
 
@@ -125,6 +126,7 @@ def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
 
 def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
     from lfx.cli.serve_app import FlowRegistry
+
     meta2 = FlowMeta(id="flow-2", relative_path="flow2.json", title="Flow 2", description="Second flow")
     registry = FlowRegistry()
     registry.add(mock_graph, test_flow_meta)
@@ -148,6 +150,7 @@ def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
 
 def test_create_multi_serve_app_unknown_flow_id_returns_404(mock_graph, test_flow_meta):
     from lfx.cli.serve_app import FlowRegistry
+
     registry = FlowRegistry()
     registry.add(mock_graph, test_flow_meta)
 
@@ -284,9 +287,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.run(
-                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
-            )
+            registry = asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
         assert len(registry) == 2
 
@@ -296,9 +297,7 @@ class TestBuildRegistryFromDirectory:
         from lfx.cli.commands import build_registry_from_directory
 
         with pytest.raises(ValueError, match=r"No \.json files found"):
-            asyncio.run(
-                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
-            )
+            asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
     def test_non_json_files_ignored(self, tmp_path):
         import asyncio
@@ -314,9 +313,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.run(
-                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
-            )
+            registry = asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
         assert len(registry) == 1
 
@@ -331,9 +328,7 @@ class TestBuildRegistryFromDirectory:
             patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("corrupt")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
-            asyncio.run(
-                build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
-            )
+            asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
 
 class TestBuildRegistryFromPaths:
@@ -353,9 +348,7 @@ class TestBuildRegistryFromPaths:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.run(
-                build_registry_from_paths([p1, p2], lambda _: None, check_variables=False)
-            )
+            registry = asyncio.run(build_registry_from_paths([p1, p2], lambda _: None, check_variables=False))
 
         assert len(registry) == 2
 
@@ -371,9 +364,7 @@ class TestBuildRegistryFromPaths:
             patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("oops")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
-            asyncio.run(
-                build_registry_from_paths([p], lambda _: None, check_variables=False)
-            )
+            asyncio.run(build_registry_from_paths([p], lambda _: None, check_variables=False))
 
 
 class TestServeCommandMultiFlow:
