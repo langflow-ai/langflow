@@ -45,6 +45,9 @@ class KnowledgeBaseComponent(KnowledgeComponent):
     description = "Search and retrieve data from knowledge."
     icon = "download"
     name = "KnowledgeBase"
+    # Hidden from the default palette — surfaces only when a saved flow
+    # already references it. New flows should pick ``Knowledge`` instead.
+    legacy = True
 
     # Pin the mode-default visibility at the class level so the canvas
     # renders the legacy "retrieve-only" shape on first load.

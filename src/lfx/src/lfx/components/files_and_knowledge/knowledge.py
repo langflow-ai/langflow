@@ -97,10 +97,10 @@ def _inputs_for_mode(default_mode: str) -> list:
 if TYPE_CHECKING:
     from pathlib import Path
 
-# Mode constants — mirror the Policies component's MODE_GENERATE / MODE_GUARD
-# pattern so the UI tab labels are immediately recognizable.
-MODE_INGEST = "📥 Ingest"
-MODE_RETRIEVE = "🔍 Retrieve"
+# Mode constants. Plain-text labels (no emoji) for consistency with the rest of
+# Langflow's TabInput palette — see ``MemoryComponent`` for the same convention.
+MODE_INGEST = "Ingest"
+MODE_RETRIEVE = "Retrieve"
 
 # Error message used by both the ingest and retrieve paths when the user is
 # running against an Astra cloud environment that disables these flows.

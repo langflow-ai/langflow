@@ -34,6 +34,9 @@ class KnowledgeIngestionComponent(KnowledgeComponent):
     description = "Create or update knowledge in Langflow."
     icon = "upload"
     name = "KnowledgeIngestion"
+    # Hidden from the default palette — surfaces only when a saved flow
+    # already references it. New flows should pick ``Knowledge`` instead.
+    legacy = True
 
     # Pin the mode-default visibility at the class level so the canvas
     # renders the legacy "ingest-only" shape on first load.

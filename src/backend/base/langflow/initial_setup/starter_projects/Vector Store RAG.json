@@ -1608,10 +1608,10 @@
             "frozen": false,
             "icon": "download",
             "last_updated": "2026-05-07T00:31:35.158Z",
-            "legacy": false,
+            "legacy": true,
             "lf_version": "1.9.0",
             "metadata": {
-              "code_hash": "c4b2f8a68c7c",
+              "code_hash": "ff1babe42256",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1719,7 +1719,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "\"\"\"Knowledge Base retrieval component — backward-compat shim.\n\nThe full implementation now lives in\n:mod:`lfx.components.files_and_knowledge.knowledge` as the mode-driven\n:class:`KnowledgeComponent`. ``KnowledgeBaseComponent`` remains as a thin\nsubclass so saved flows referencing the legacy node id (``KnowledgeBase``)\nand the legacy module path keep loading and running unchanged.\n\nThe module-level ``_parse_metadata_filter`` / ``_chunk_matches_filter``\nhelpers are re-exported here because existing unit tests import them\nfrom this module path — see\n``src/backend/tests/unit/components/files_and_knowledge/test_retrieval.py``.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom lfx.components.files_and_knowledge.knowledge import (\n    MODE_RETRIEVE,\n    KnowledgeComponent,\n    _chunk_matches_filter,\n    _inputs_for_mode,\n    _parse_metadata_filter,\n)\nfrom lfx.io import Output\n\n__all__ = [\n    \"KnowledgeBaseComponent\",\n    \"_chunk_matches_filter\",\n    \"_parse_metadata_filter\",\n]\n\nastra_error_msg = \"Knowledge retrieval is not supported in Astra cloud environment.\"\n\n\nclass KnowledgeBaseComponent(KnowledgeComponent):\n    \"\"\"Search and retrieve data from knowledge.\n\n    Pins the merged :class:`KnowledgeComponent` to retrieve mode. All\n    behavior is inherited unchanged.\n    \"\"\"\n\n    display_name = \"Knowledge Base\"\n    description = \"Search and retrieve data from knowledge.\"\n    icon = \"download\"\n    name = \"KnowledgeBase\"\n\n    # Pin the mode-default visibility at the class level so the canvas\n    # renders the legacy \"retrieve-only\" shape on first load.\n    inputs = _inputs_for_mode(MODE_RETRIEVE)\n    outputs = [\n        Output(\n            display_name=\"Results\",\n            name=\"retrieve_data\",\n            method=\"retrieve_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n            types=[\"Table\"],\n            selected=\"Table\",\n        ),\n    ]\n\n    def __init__(self, *args: Any, **kwargs: Any) -> None:\n        super().__init__(*args, **kwargs)\n        self.mode = MODE_RETRIEVE\n"
+                "value": "\"\"\"Knowledge Base retrieval component — backward-compat shim.\n\nThe full implementation now lives in\n:mod:`lfx.components.files_and_knowledge.knowledge` as the mode-driven\n:class:`KnowledgeComponent`. ``KnowledgeBaseComponent`` remains as a thin\nsubclass so saved flows referencing the legacy node id (``KnowledgeBase``)\nand the legacy module path keep loading and running unchanged.\n\nThe module-level ``_parse_metadata_filter`` / ``_chunk_matches_filter``\nhelpers are re-exported here because existing unit tests import them\nfrom this module path — see\n``src/backend/tests/unit/components/files_and_knowledge/test_retrieval.py``.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom lfx.components.files_and_knowledge.knowledge import (\n    MODE_RETRIEVE,\n    KnowledgeComponent,\n    _chunk_matches_filter,\n    _inputs_for_mode,\n    _parse_metadata_filter,\n)\nfrom lfx.io import Output\n\n__all__ = [\n    \"KnowledgeBaseComponent\",\n    \"_chunk_matches_filter\",\n    \"_parse_metadata_filter\",\n]\n\nastra_error_msg = \"Knowledge retrieval is not supported in Astra cloud environment.\"\n\n\nclass KnowledgeBaseComponent(KnowledgeComponent):\n    \"\"\"Search and retrieve data from knowledge.\n\n    Pins the merged :class:`KnowledgeComponent` to retrieve mode. All\n    behavior is inherited unchanged.\n    \"\"\"\n\n    display_name = \"Knowledge Base\"\n    description = \"Search and retrieve data from knowledge.\"\n    icon = \"download\"\n    name = \"KnowledgeBase\"\n    # Hidden from the default palette — surfaces only when a saved flow\n    # already references it. New flows should pick ``Knowledge`` instead.\n    legacy = True\n\n    # Pin the mode-default visibility at the class level so the canvas\n    # renders the legacy \"retrieve-only\" shape on first load.\n    inputs = _inputs_for_mode(MODE_RETRIEVE)\n    outputs = [\n        Output(\n            display_name=\"Results\",\n            name=\"retrieve_data\",\n            method=\"retrieve_data\",\n            info=\"Returns the data from the selected knowledge base.\",\n            types=[\"Table\"],\n            selected=\"Table\",\n        ),\n    ]\n\n    def __init__(self, *args: Any, **kwargs: Any) -> None:\n        super().__init__(*args, **kwargs)\n        self.mode = MODE_RETRIEVE\n"
               },
               "column_config": {
                 "_input_type": "TableInput",
@@ -1925,8 +1925,8 @@
                 "info": "Switch between writing new data into the knowledge base and querying it.",
                 "name": "mode",
                 "options": [
-                  "📥 Ingest",
-                  "🔍 Retrieve"
+                  "Ingest",
+                  "Retrieve"
                 ],
                 "override_skip": false,
                 "placeholder": "",
