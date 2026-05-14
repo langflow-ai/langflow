@@ -4321,6 +4321,8 @@
   "components.knowledge.inputs.top_k.display_name.9bfd228f": "Top K Results",
   "components.knowledge.inputs.top_k.info.dc908edc": "Number of top results to return from the knowledge base.",
   "components.knowledge.outputs.dataframe_output.display_name.219c4a6c": "Results",
+  "components.knowledge.outputs.retrieve_data.display_name.219c4a6c": "Results",
+  "components.knowledge.outputs.retrieve_data.info.791a5874": "Returns the data from the selected knowledge base.",
   "components.knowledgebase.description.632c6f30": "Search and retrieve data from knowledge.",
   "components.knowledgebase.display_name.12bbbbf8": "Knowledge Base",
   "components.knowledgebase.inputs.allow_duplicates.display_name.c5507652": "Allow Duplicates",
