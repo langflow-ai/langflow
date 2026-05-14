@@ -60,10 +60,6 @@ class MemoryBaseUpdate(SQLModel):
     name: str | None = None
     threshold: int | None = None
     auto_capture: bool | None = None
-    preprocessing: bool | None = None
-    preproc_model: str | None = None
-    preproc_instructions: str | None = None
-    preproc_kill_phrase: str | None = None
 
 
 class MemoryBaseRead(MemoryBaseBase):
