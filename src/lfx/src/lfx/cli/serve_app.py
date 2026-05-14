@@ -18,7 +18,9 @@ endpoints require the ``x-api-key`` header (or query parameter) validated by
 from __future__ import annotations
 
 import asyncio
+import json
 import time
+import traceback
 from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
@@ -378,8 +380,6 @@ def create_multi_serve_app(
                 component=result_data.get("component", ""),
             )
         except Exception as exc:  # noqa: BLE001
-            import traceback
-
             error_traceback = traceback.format_exc()
             error_message = f"Flow execution failed: {exc!s}"
             logger.error(f"Error running flow {flow_id}: {exc}")
@@ -411,7 +411,7 @@ def create_multi_serve_app(
 
             main_task = asyncio.create_task(
                 run_flow_generator_for_serve(
-                    graph=graph,
+                    graph=deepcopy(graph),
                     input_request=request,
                     flow_id=flow_id,
                     event_manager=event_manager,
@@ -430,10 +430,10 @@ def create_multi_serve_app(
             )
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Error setting up streaming for flow {flow_id}: {exc}")
-            error_message = f"Failed to start streaming: {exc!s}"
+            error_payload = json.dumps({"error": str(exc), "success": False})
 
             async def error_stream():
-                yield f'data: {{"error": "{error_message}", "success": false}}\n\n'
+                yield f"data: {error_payload}\n\n"
 
             return StreamingResponse(error_stream(), media_type="text/event-stream")
 
