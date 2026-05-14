@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 from pydantic import Field as PydanticField
 from pydantic.alias_generators import to_camel
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import types as sa_types
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel, Text
 
 from langflow.serialization.serialization import serialize
@@ -21,6 +22,43 @@ def _enum_values(enum_cls: type[Enum]) -> list[str]:
     rejects with ``invalid input value for enum spanstatus: "OK"``.
     """
     return [member.value for member in enum_cls]
+
+
+class _LegacyCaseEnum(sa_types.TypeDecorator):
+    """SQLAlchemy column type that normalises legacy uppercase enum names on read.
+
+    Before ``values_callable=_enum_values`` was added, SQLAlchemy stored enum
+    *names* (e.g. ``'OK'``) rather than enum *values* (e.g. ``'ok'``).
+    The result_processor introduced by that fix validates the raw DB string
+    against the values list, so old rows with uppercase names raise LookupError.
+
+    This decorator intercepts the raw DB string and tries a case-insensitive
+    match against both enum values and enum names so old and new rows both
+    round-trip cleanly.
+    """
+
+    impl = SQLEnum
+    cache_ok = True
+
+    def __init__(self, enum_cls: type[Enum], *, name: str) -> None:
+        self._enum_cls = enum_cls
+        self._by_value: dict[str, Enum] = {m.value: m for m in enum_cls}
+        self._by_name: dict[str, Enum] = {m.name: m for m in enum_cls}
+        super().__init__(enum_cls, name=name, values_callable=_enum_values)
+
+    def process_result_value(self, value: str | None, _dialect) -> Enum | None:
+        if value is None:
+            return None
+        if isinstance(value, self._enum_cls):
+            return value
+        member = self._by_value.get(value) or self._by_name.get(value)
+        if member is None:
+            lower = value.lower()
+            member = self._by_value.get(lower) or self._by_name.get(lower)
+        if member is None:
+            msg = f"{value!r} is not a valid {self._enum_cls.__name__} value"
+            raise LookupError(msg)
+        return member
 
 
 class SpanKind(str, Enum):
@@ -75,7 +113,7 @@ class TraceBase(SQLModel):
     status: SpanStatus = Field(
         default=SpanStatus.UNSET,
         sa_column=Column(
-            SQLEnum(SpanStatus, name="spanstatus", values_callable=_enum_values),
+            _LegacyCaseEnum(SpanStatus, name="spanstatus"),
             nullable=False,
         ),
         description="Overall trace status",
@@ -173,8 +211,8 @@ class TraceRead(BaseModel):
     total_tokens: int
     flow_id: UUID
     session_id: str
-    input: dict[str, Any] | None = None
-    output: dict[str, Any] | None = None
+    input: dict[str, Any] | str | None = None
+    output: dict[str, Any] | str | None = None
     spans: list[SpanReadResponse] = PydanticField(default_factory=list)
 
 
@@ -198,8 +236,8 @@ class TraceSummaryRead(BaseModel):
     total_tokens: int
     flow_id: UUID
     session_id: str
-    input: dict[str, Any] | None = None
-    output: dict[str, Any] | None = None
+    input: dict[str, Any] | str | None = None
+    output: dict[str, Any] | str | None = None
 
 
 class TraceListResponse(BaseModel):
@@ -225,7 +263,7 @@ class SpanBase(SQLModel):
     span_type: SpanType = Field(
         default=SpanType.CHAIN,
         sa_column=Column(
-            SQLEnum(SpanType, name="spantype", values_callable=_enum_values),
+            _LegacyCaseEnum(SpanType, name="spantype"),
             nullable=False,
         ),
         description="Type of operation",
@@ -233,7 +271,7 @@ class SpanBase(SQLModel):
     status: SpanStatus = Field(
         default=SpanStatus.UNSET,
         sa_column=Column(
-            SQLEnum(SpanStatus, name="spanstatus", values_callable=_enum_values),
+            _LegacyCaseEnum(SpanStatus, name="spanstatus"),
             nullable=False,
         ),
         description="Execution status",
