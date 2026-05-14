@@ -94,10 +94,10 @@ def register(app: typer.Typer) -> None:
 
     @app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True, rich_help_panel="Running")
     def serve_command_wrapper(
-        script_path: str | None = typer.Argument(
-            None,
+        script_paths: list[str] | None = typer.Argument(
+            default=None,
             help=(
-                "Path to JSON flow (.json) or Python script (.py) file or stdin input. "
+                "Path(s) to JSON flow file(s) (.json) or a directory containing .json files. "
                 "Optional when using --flow-json or --stdin."
             ),
         ),
@@ -117,13 +117,13 @@ def register(app: typer.Typer) -> None:
         flow_json: str | None = typer.Option(
             None,
             "--flow-json",
-            help="Inline JSON flow content as a string (alternative to script_path)",
+            help="Inline JSON flow content as a string (alternative to script_paths)",
         ),
         *,
         stdin: bool = typer.Option(
             False,
             "--stdin",
-            help="Read JSON flow content from stdin (alternative to script_path)",
+            help="Read JSON flow content from stdin (alternative to script_paths)",
         ),
         check_variables: bool = typer.Option(
             True,
@@ -136,11 +136,10 @@ def register(app: typer.Typer) -> None:
 
         from lfx.cli.commands import serve_command
 
-        # Convert env_file string to Path if provided
         env_file_path = Path(env_file) if env_file else None
 
         serve_command(
-            script_path=script_path,
+            script_paths=script_paths,
             host=host,
             port=port,
             verbose=verbose,

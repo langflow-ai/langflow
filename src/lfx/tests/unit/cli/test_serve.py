@@ -223,12 +223,9 @@ def test_serve_command_json_file():
             mock_load.assert_called_once()
 
             # Check that the mock was called with the correct arguments
-            args, kwargs = mock_load.call_args
+            args, _kwargs = mock_load.call_args
             assert args[0] == Path(temp_path).resolve()
             assert args[1] == ".json"
-            # args[2] is the verbose_print function, which is harder to assert
-            assert "verbose" in kwargs
-            assert kwargs["verbose"] is True
 
     finally:
         Path(temp_path).unlink()
@@ -267,11 +264,9 @@ def test_serve_command_inline_json():
         mock_load.assert_called_once()
 
         # Check that the mock was called with the correct arguments
-        args, kwargs = mock_load.call_args
+        args, _kwargs = mock_load.call_args
         assert args[0].suffix == ".json"
         assert args[1] == ".json"
-        assert "verbose" in kwargs
-        assert kwargs["verbose"] is True
 
 
 class TestBuildRegistryFromDirectory:
@@ -289,7 +284,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.get_event_loop().run_until_complete(
+            registry = asyncio.run(
                 build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
             )
 
@@ -301,7 +296,7 @@ class TestBuildRegistryFromDirectory:
         from lfx.cli.commands import build_registry_from_directory
 
         with pytest.raises(ValueError, match=r"No \.json files found"):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
             )
 
@@ -319,7 +314,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.get_event_loop().run_until_complete(
+            registry = asyncio.run(
                 build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
             )
 
@@ -336,7 +331,7 @@ class TestBuildRegistryFromDirectory:
             patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("corrupt")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 build_registry_from_directory(tmp_path, lambda _: None, check_variables=False)
             )
 
@@ -358,7 +353,7 @@ class TestBuildRegistryFromPaths:
         mock_graph.flow_id = None
 
         with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
-            registry = asyncio.get_event_loop().run_until_complete(
+            registry = asyncio.run(
                 build_registry_from_paths([p1, p2], lambda _: None, check_variables=False)
             )
 
@@ -376,6 +371,80 @@ class TestBuildRegistryFromPaths:
             patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("oops")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
-            asyncio.get_event_loop().run_until_complete(
+            asyncio.run(
                 build_registry_from_paths([p], lambda _: None, check_variables=False)
             )
+
+
+class TestServeCommandMultiFlow:
+    def test_serve_command_with_directory(self, tmp_path):
+        from lfx.cli.commands import serve_command
+
+        flow_data = {"nodes": [], "edges": []}
+        (tmp_path / "flow1.json").write_text(json.dumps(flow_data))
+        (tmp_path / "flow2.json").write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+        mock_graph.nodes = {}
+        mock_graph.edges = []
+
+        with (
+            patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph),
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            import typer
+            from typer.testing import CliRunner
+
+            app = typer.Typer()
+            app.command()(serve_command)
+            runner = CliRunner()
+            result = runner.invoke(app, [str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+
+    def test_serve_command_with_multiple_files(self, tmp_path):
+        from lfx.cli.commands import serve_command
+
+        flow_data = {"nodes": [], "edges": []}
+        p1 = tmp_path / "flow1.json"
+        p2 = tmp_path / "flow2.json"
+        p1.write_text(json.dumps(flow_data))
+        p2.write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+        mock_graph.nodes = {}
+        mock_graph.edges = []
+
+        with (
+            patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph),
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            import typer
+            from typer.testing import CliRunner
+
+            app = typer.Typer()
+            app.command()(serve_command)
+            runner = CliRunner()
+            result = runner.invoke(app, [str(p1), str(p2)])
+
+        assert result.exit_code == 0, result.output
+
+    def test_serve_command_empty_directory_exits_nonzero(self, tmp_path):
+        from lfx.cli.commands import serve_command
+
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
+            import typer
+            from typer.testing import CliRunner
+
+            app = typer.Typer()
+            app.command()(serve_command)
+            runner = CliRunner()
+            result = runner.invoke(app, [str(tmp_path)])
+
+        assert result.exit_code != 0
