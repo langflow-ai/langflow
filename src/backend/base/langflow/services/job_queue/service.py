@@ -1051,9 +1051,20 @@ class RedisJobQueueService(JobQueueService):
     async def _run_polling_watchdog(self) -> None:
         """Periodically reclaim owned jobs whose activity heartbeat has gone stale.
 
-        Each tick scans :attr:`_queues` (jobs this worker owns) and pulls the
-        activity timestamp from Redis.  Missing-or-older-than
-        :attr:`_polling_stale_threshold_s` means the client gave up.
+        Each tick scans :attr:`_queues` (jobs this worker owns), filters to
+        jobs that have a registered owner (i.e. user-facing flow builds that
+        expect client polling/streaming), and pulls their activity timestamp
+        from Redis.  Missing-or-older-than :attr:`_polling_stale_threshold_s`
+        means the client gave up.
+
+        **Why the owner filter:** The :class:`TaskService` also uses
+        :meth:`start_job` for server-internal tasks that have no polling client
+        and never call :meth:`touch_activity`.  Without the filter, every such
+        task would trip the start-time fallback at the threshold and get
+        cancelled mid-flight if it ran longer than the threshold — even though
+        no client was ever waiting on it.  Registered ownership is the
+        existing signal for "user-facing build with an expected client", so
+        scope the watchdog to that set.
 
         Brand-new jobs are protected by a start-time grace window: if the
         activity key is missing (e.g. the background ``touch_activity`` from
@@ -1081,6 +1092,12 @@ class RedisJobQueueService(JobQueueService):
             now_mono = time.monotonic()
             # Iterate a snapshot so concurrent inserts don't disturb the scan.
             for job_id in list(self._queues.keys()):
+                # Only watch jobs with a registered owner — TaskService and
+                # other server-internal callers use start_job without
+                # registering ownership, and they never refresh activity
+                # heartbeats.  See the docstring for rationale.
+                if job_id not in self._job_owners:
+                    continue
                 try:
                     raw = await self._client.get(self._activity_key(job_id))
                 except Exception as exc:  # noqa: BLE001

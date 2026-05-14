@@ -893,6 +893,9 @@ async def test_polling_watchdog_cancels_stale_owned_job():
     try:
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one to
+        # simulate a real user-facing build.
+        await producer.register_job_owner(job_id, uuid.uuid4())
         cancelled_event = asyncio.Event()
 
         async def _long_running():
@@ -991,6 +994,71 @@ async def test_polling_watchdog_skips_fresh_activity():
 
 
 @pytest.mark.asyncio
+async def test_polling_watchdog_ignores_jobs_without_registered_owner():
+    """Jobs without a registered owner (TaskService internal tasks) are not watched.
+
+    TaskService and other server-internal callers use start_job without
+    registering an owner.  They never refresh the activity heartbeat because
+    no polling client is involved.  The watchdog must leave them alone so a
+    long-running internal task is not killed mid-flight at the threshold.
+    Surfaced by load testing: 1:1 ratio of start_job to watchdog kills under
+    the /api/v1/run path because every TaskService task was being reclaimed.
+    """
+    shared_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=True,
+        polling_stale_threshold_s=0.2,
+        polling_watchdog_interval_s=0.05,
+    )
+    svc._client = shared_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    svc._cancel_dispatcher_task = asyncio.create_task(svc._run_cancel_dispatcher())
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+    await asyncio.sleep(0.05)
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+        # Intentionally NO register_job_owner — this mimics a TaskService task.
+        cancelled_event = asyncio.Event()
+
+        async def _alive():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc.start_job(job_id, _alive())
+        # Wait well past the threshold + a few watchdog ticks.  The kill must
+        # never fire because the job has no registered owner.
+        await asyncio.sleep(0.8)
+        assert not cancelled_event.is_set(), "watchdog killed an unowned (internal) task"
+        assert svc._cancel_stats["polling_watchdog_kills"] == 0
+        assert job_id in svc._queues
+    finally:
+        svc._closed = True
+        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+
+
+@pytest.mark.asyncio
 async def test_polling_watchdog_disabled_when_threshold_nonpositive():
     """polling_stale_threshold_s <= 0 disables the watchdog entirely."""
     svc = RedisJobQueueService(polling_stale_threshold_s=0.0)
@@ -1039,6 +1107,9 @@ async def test_polling_watchdog_grants_start_grace_window():
     try:
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one so
+        # this test exercises the start-time grace branch.
+        await svc.register_job_owner(job_id, uuid.uuid4())
 
         async def _alive():
             await asyncio.Event().wait()
@@ -1098,6 +1169,9 @@ async def test_polling_watchdog_skips_malformed_activity_value():
     try:
         job_id = str(uuid.uuid4())
         svc.create_queue(job_id)
+        # Watchdog only scans jobs with a registered owner — register one so
+        # this test exercises the malformed-value parse branch.
+        await svc.register_job_owner(job_id, uuid.uuid4())
 
         async def _alive():
             await asyncio.Event().wait()
