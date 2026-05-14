@@ -363,6 +363,71 @@ describe("useMemoriesData", () => {
     jest.useRealTimers();
   });
 
+  it("surfaces an 'Auto-capture disabled' toast when the toggled-off mutation resolves", () => {
+    jest.useFakeTimers();
+    // Default memoryQueryData has is_active: true → toggling to false hits the mutation.
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.handleToggleActive(false);
+    });
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    const lastCall = updateMemoryMutation.mutate.mock.calls.at(-1);
+    expect(lastCall?.[0]).toEqual({ memoryId: "m1", auto_capture: false });
+    act(() => {
+      lastCall?.[1]?.onSuccess?.();
+    });
+
+    expect(mockSetSuccessData).toHaveBeenCalledWith({
+      title: "Auto-capture disabled",
+    });
+    jest.useRealTimers();
+  });
+
+  it("surfaces an 'Auto-capture enabled' toast when the toggled-on mutation resolves", () => {
+    jest.useFakeTimers();
+    memoryQueryData = makeMemoryInfo({
+      id: "m1",
+      name: "First",
+      is_active: false,
+    });
+
+    const { result } = renderHook(() =>
+      useMemoriesData({
+        currentFlowId: "flow-1",
+        selectedMemoryId: "m1",
+        onSelectMemory: jest.fn(),
+      }),
+    );
+
+    act(() => {
+      result.current.handleToggleActive(true);
+    });
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    const lastCall = updateMemoryMutation.mutate.mock.calls.at(-1);
+    expect(lastCall?.[0]).toEqual({ memoryId: "m1", auto_capture: true });
+    act(() => {
+      lastCall?.[1]?.onSuccess?.();
+    });
+
+    expect(mockSetSuccessData).toHaveBeenCalledWith({
+      title: "Auto-capture enabled",
+    });
+    jest.useRealTimers();
+  });
+
   it("does not call update when toggled back within debounce", () => {
     jest.useFakeTimers();
     const { result } = renderHook(() =>

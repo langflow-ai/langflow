@@ -125,18 +125,34 @@ export function MemoryDetailsHeader({
         )}
 
         <Button
-          variant={memory.is_active ? "primary" : "outline"}
+          variant="outline"
           size="sm"
           onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
           aria-pressed={memory.is_active}
-          aria-label="Toggle auto-capture"
+          aria-label={
+            memory.is_active ? "Disable auto-capture" : "Enable auto-capture"
+          }
           className="gap-2"
         >
           <IconComponent
             name={memory.is_active ? "ToggleRight" : "ToggleLeft"}
-            className="h-4 w-4"
+            className={
+              memory.is_active
+                ? "h-4 w-4 text-emerald-600 dark:text-emerald-400"
+                : "h-4 w-4 text-muted-foreground"
+            }
           />
-          Auto-capture
+          <span>Auto-capture</span>
+          <span
+            data-testid="memory-auto-capture-state"
+            className={
+              memory.is_active
+                ? "rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300"
+                : "rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+            }
+          >
+            {memory.is_active ? "ON" : "OFF"}
+          </span>
         </Button>
 
         <DeleteConfirmationModal

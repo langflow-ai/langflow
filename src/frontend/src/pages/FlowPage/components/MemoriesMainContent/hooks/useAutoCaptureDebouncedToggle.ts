@@ -16,6 +16,14 @@ type UseAutoCaptureDebouncedToggleArgs = {
   memory: MemoryInfo | undefined;
   updateMemoryMutation: UpdateMemoryMutation;
   debounceMs?: number;
+  /**
+   * Fires when the debounced auto-capture mutation actually resolves so
+   * the caller can announce the state change (e.g. push a toast). Not
+   * called for collapsed no-op toggles (rapid on→off→on within the
+   * debounce window).
+   */
+  onToggleSuccess?: (nextIsActive: boolean) => void;
+  onToggleError?: (nextIsActive: boolean) => void;
 };
 
 type NextIsActive = boolean | ((prevIsActive: boolean) => boolean);
@@ -24,6 +32,8 @@ export const useAutoCaptureDebouncedToggle = ({
   memory,
   updateMemoryMutation,
   debounceMs = AUTO_CAPTURE_DEBOUNCE_MS,
+  onToggleSuccess,
+  onToggleError,
 }: UseAutoCaptureDebouncedToggleArgs) => {
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -112,9 +122,15 @@ export const useAutoCaptureDebouncedToggle = ({
           auto_capture: nextIsActive,
         },
         {
-          onSuccess: clearDraft,
+          onSuccess: () => {
+            clearDraft();
+            onToggleSuccess?.(nextIsActive);
+          },
           // On failure the draft never resolved — reset so UI reflects server state.
-          onError: clearDraft,
+          onError: () => {
+            clearDraft();
+            onToggleError?.(nextIsActive);
+          },
         },
       );
       autoCaptureTimerRef.current = null;

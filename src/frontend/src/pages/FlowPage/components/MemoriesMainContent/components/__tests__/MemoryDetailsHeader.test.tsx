@@ -93,15 +93,34 @@ describe("MemoryDetailsHeader", () => {
     return { ...base, ...(overrides ?? {}) };
   };
 
-  it("renders memory information", () => {
+  it("renders memory information with explicit auto-capture state label", () => {
     const props = makeProps({
       memory: { ...makeProps().memory, is_active: true },
     });
     render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
-    ).toHaveTextContent("Auto-capture");
+    const toggleButton = screen.getByRole("button", {
+      name: "Disable auto-capture",
+    });
+    expect(toggleButton).toHaveTextContent("Auto-capture");
+    expect(toggleButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId("memory-auto-capture-state")).toHaveTextContent(
+      "ON",
+    );
+  });
+
+  it("shows OFF and the enable aria-label when auto-capture is inactive", () => {
+    const props = makeProps({
+      memory: { ...makeProps().memory, is_active: false },
+    });
+    render(<MemoryDetailsHeader {...props} />);
+    const toggleButton = screen.getByRole("button", {
+      name: "Enable auto-capture",
+    });
+    expect(toggleButton).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId("memory-auto-capture-state")).toHaveTextContent(
+      "OFF",
+    );
   });
 
   it("calls mutate handlers for actions", () => {
@@ -115,10 +134,12 @@ describe("MemoryDetailsHeader", () => {
   });
 
   it("toggles auto-capture", () => {
-    const props = makeProps();
+    const props = makeProps({
+      memory: { ...makeProps().memory, is_active: false },
+    });
     render(<MemoryDetailsHeader {...props} />);
     fireEvent.click(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
+      screen.getByRole("button", { name: "Enable auto-capture" }),
     );
 
     const firstCallArg = (props.handleToggleActive as jest.Mock).mock

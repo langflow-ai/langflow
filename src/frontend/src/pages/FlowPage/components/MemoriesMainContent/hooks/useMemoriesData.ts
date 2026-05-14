@@ -121,6 +121,14 @@ export function useMemoriesData({
     useAutoCaptureDebouncedToggle({
       memory,
       updateMemoryMutation,
+      onToggleSuccess: (nextIsActive) =>
+        setSuccessData({
+          title: nextIsActive
+            ? "Auto-capture enabled"
+            : "Auto-capture disabled",
+        }),
+      // updateMemoryMutation's own onError already surfaces an error toast;
+      // skip a second one here.
     });
 
   const {
