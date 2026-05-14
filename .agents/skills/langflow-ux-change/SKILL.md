@@ -22,7 +22,7 @@ If no agreement yet, help the contributor frame the question (what's changing, w
 
 ## When making the change
 
-- **Design philosophy** (Ultrahand, from CLAUDE.md): simple primitives with one clear purpose, visible connections, consistent predictable behavior, emergent complexity from composition — not from complex parts. Pre-built "vehicles" are fine as examples but users should be able to break them apart.
+- **Design philosophy** (Ultrahand): simple primitives with one clear purpose, visible connections, consistent predictable behavior, emergent complexity from composition — not from complex parts. Pre-built "vehicles" are fine as examples but users should be able to break them apart.
 - **Tests** — run and update Playwright e2e tests: `make tests_frontend`. Jest unit tests: `make test_frontend`.
 - **Formatting** — `make format_frontend` before staging.
 - **Custom icons** — create the SVG in `src/frontend/src/icons/YourIcon/`, export with `forwardRef` and `isDark` prop support, register in `lazyIconImports.ts`, then set `icon = "YourIcon"` in the Python component.
