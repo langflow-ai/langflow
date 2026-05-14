@@ -48,6 +48,7 @@ class KnowledgeBaseComponent(KnowledgeComponent):
     # Hidden from the default palette — surfaces only when a saved flow
     # already references it. New flows should pick ``Knowledge`` instead.
     legacy = True
+    replacement = ["files_and_knowledge.Knowledge"]
 
     # Pin the mode-default visibility at the class level so the canvas
     # renders the legacy "retrieve-only" shape on first load.
