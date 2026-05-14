@@ -6,6 +6,7 @@ import ast
 import contextlib
 import importlib.metadata as importlib_metadata
 import io
+import json
 import os
 import re
 import socket
@@ -536,6 +537,22 @@ def flow_id_from_path(file_path: Path, root_dir: Path) -> str:
     """
     relative = file_path.relative_to(root_dir).as_posix()
     return str(uuid.uuid5(_LANGFLOW_NAMESPACE_UUID, relative))
+
+
+def flow_id_from_content(data: dict) -> str:
+    """Generate a deterministic UUID-5 from flow content.
+
+    Uses JSON-serialized content with sorted keys so key-ordering differences
+    in the same logical flow map to the same ID.
+
+    Args:
+        data: The flow dict (nodes + edges).
+
+    Returns:
+        Canonical UUID string (36 chars, including hyphens).
+    """
+    serialized = json.dumps(data, sort_keys=True)
+    return str(uuid.uuid5(_LANGFLOW_NAMESPACE_UUID, serialized))
 
 
 # ---------------------------------------------------------------------------
