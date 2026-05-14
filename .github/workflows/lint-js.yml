@@ -25,8 +25,23 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch || github.ref }}
-          # Need full history so `biome check --changed` can diff against main
+          # Need full history so biome can diff against the PR base
           fetch-depth: 0
+
+      - name: Point local `main` ref at the PR fork point
+        run: |
+          # biome.json sets vcs.defaultBranch=main, so `biome check --changed`
+          # diffs against the local `main` ref. To lint ONLY the files this PR
+          # modified (not unrelated upstream changes in the base branch since
+          # the PR was opened), point local `main` at the merge-base — the
+          # commit where this branch forked off its target.
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          echo "PR base branch: $BASE_REF"
+          MERGE_BASE=$(git merge-base HEAD "origin/$BASE_REF")
+          echo "Fork point (merge-base): $MERGE_BASE"
+          git update-ref refs/heads/main "$MERGE_BASE"
+          echo "Files biome will check:"
+          git diff --name-only "$MERGE_BASE"...HEAD
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
