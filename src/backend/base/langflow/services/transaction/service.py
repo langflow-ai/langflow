@@ -33,6 +33,9 @@ class TransactionService(Service, TransactionServiceProtocol):
             settings_service: The settings service for checking if transactions are enabled.
         """
         self.settings_service = settings_service
+        # Latch so the "writer enabled but not running, using legacy path" log
+        # fires once per process instead of spamming on every transaction.
+        self._legacy_fallback_logged: bool = False
 
     async def log_transaction(
         self,
@@ -84,6 +87,12 @@ class TransactionService(Service, TransactionServiceProtocol):
                     table = TransactionTable(**transaction.model_dump())
                     if writer.enqueue_transaction(table.model_dump(mode="python")):
                         return
+                elif not self._legacy_fallback_logged:
+                    self._legacy_fallback_logged = True
+                    logger.warning(
+                        "telemetry_writer_enabled=True but writer is not running; "
+                        "falling back to legacy direct-write path for transactions"
+                    )
 
             async with session_scope() as session:
                 await crud_log_transaction(session, transaction)

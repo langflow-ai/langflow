@@ -263,6 +263,126 @@ def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
     assert not dead_dir.exists()
 
 
+async def test_sanitization_survives_writer_round_trip(writer_with_engine) -> None:
+    """A sensitive value passed through the producer must land redacted in the DB."""
+    writer, engine = writer_with_engine
+    flow_id = uuid4()
+    # TransactionBase.__init__ runs sanitize_data on inputs/outputs. The
+    # writer path serializes via model_dump and bulk-inserts; verify the
+    # sanitization isn't lost along the way.
+    base = TransactionBase(
+        vertex_id="v1",
+        target_id=None,
+        inputs={"api_key": "sk-very-secret-token-12345"},  # pragma: allowlist secret
+        outputs={"password": "hunter2"},  # pragma: allowlist secret
+        status="success",
+        error=None,
+        flow_id=flow_id,
+    )
+    row = TransactionTable(**base.model_dump()).model_dump(mode="python")
+    await writer._flush([row], [])
+
+    async with AsyncSession(engine) as session:
+        result = await session.execute(select(TransactionTable.inputs, TransactionTable.outputs))
+        inputs, outputs = result.one()
+    assert "sk-very-secret-token-12345" not in str(inputs)
+    assert "hunter2" not in str(outputs)
+    assert "api_key" in inputs
+    assert "password" in outputs
+
+
+async def test_retention_failure_preserves_dirty_flows(writer_with_engine) -> None:
+    """A sweep that crashes before commit must leave the dirty-flow set intact."""
+    writer, _ = writer_with_engine
+    tx_flow = uuid4()
+    vb_flow = uuid4()
+    writer._dirty_tx_flows.add(str(tx_flow))
+    writer._dirty_vb_flows.add(str(vb_flow))
+
+    # Wrap the real session_maker so commit raises but execute() works
+    # normally — this drives the retention pass through every query and only
+    # fails at the commit boundary, which is exactly the scenario the snapshot/
+    # restore logic guards against.
+    real_session_maker = writer._session_maker
+
+    class _CommitFailsSessionMaker:
+        def __call__(self_inner):  # noqa: N805
+            session = real_session_maker()
+
+            class _CommitFailsCM:
+                async def __aenter__(self):
+                    self._session = await session.__aenter__()
+                    original_commit = self._session.commit
+
+                    async def _raise_on_commit():
+                        await original_commit()  # exercise the path
+                        msg = "boom"
+                        raise RuntimeError(msg)
+
+                    self._session.commit = _raise_on_commit
+                    return self._session
+
+                async def __aexit__(self, *args):
+                    return await session.__aexit__(*args)
+
+            return _CommitFailsCM()
+
+    writer._session_maker = _CommitFailsSessionMaker()
+    with pytest.raises(RuntimeError, match="boom"):
+        await writer._run_retention_pass()
+
+    # Dirty set must still hold both ids since the commit never landed.
+    assert str(tx_flow) in writer._dirty_tx_flows
+    assert str(vb_flow) in writer._dirty_vb_flows
+
+
+async def test_in_flight_batch_returned_on_cancel(writer_with_engine) -> None:
+    """If the writer is cancelled mid-flush, popped rows must go back to the buffer."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_batch_size = 100
+    writer.settings_service.settings.telemetry_writer_flush_interval_s = 0.01
+    flow_id = uuid4()
+    for _ in range(20):
+        writer.enqueue_transaction(_make_transaction_row(flow_id))
+    assert len(writer._tx_buffer) == 20
+
+    # Replace the session_maker with one that hangs forever inside execute,
+    # so the writer is guaranteed to be blocked mid-flush when we cancel.
+    hang = asyncio.Event()  # never set
+
+    class _HangingSessionMaker:
+        def __call__(self):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            return False
+
+        async def execute(self, *_):
+            await hang.wait()
+
+        async def commit(self):
+            pass
+
+    writer._session_maker = _HangingSessionMaker()
+    task = asyncio.create_task(writer._run_writer())
+    # Give the writer a tick to drain into a batch and start the flush.
+    for _ in range(20):
+        await asyncio.sleep(0.02)
+        if len(writer._tx_buffer) == 0:
+            break
+    assert len(writer._tx_buffer) == 0  # the batch is in-flight
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    # Cancelled mid-flush — the 20 rows should be back in the buffer.
+    assert len(writer._tx_buffer) == 20
+
+
 async def test_lifecycle_idempotent_when_disabled() -> None:
     writer = _build_writer({"telemetry_writer_enabled": False})
     # start() is a no-op when disabled.

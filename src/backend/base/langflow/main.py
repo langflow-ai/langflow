@@ -205,7 +205,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                 if telemetry_writer is not None and telemetry_writer.is_enabled():
                     await telemetry_writer.start()
             except Exception as exc:  # noqa: BLE001
-                await logger.awarning(f"Failed to start telemetry writer: {exc}")
+                # If the user explicitly opted in (telemetry_writer_enabled=True)
+                # but startup failed, this is an error not a warning — every
+                # subsequent write will silently fall back to the legacy direct-
+                # write path that this feature was built to replace.
+                await logger.aerror(
+                    f"Failed to start telemetry writer; transactions and vertex_build "
+                    f"writes will use the legacy direct-write path: {exc}"
+                )
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")

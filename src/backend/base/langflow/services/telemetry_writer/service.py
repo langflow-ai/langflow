@@ -47,6 +47,9 @@ if TYPE_CHECKING:
 
 
 _DEFAULT_OUTBOX_ROOT = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"
+# After this many consecutive batch failures, escalate from per-batch logging
+# to a loud error so operators see sustained data-loss risk.
+_FAILURE_ESCALATION_THRESHOLD = 6
 
 
 def _pid_alive(pid: int) -> bool:
@@ -162,10 +165,23 @@ class TelemetryWriterService(Service):
 
         drain_timeout = float(getattr(self.settings_service.settings, "telemetry_writer_shutdown_drain_s", 5.0))
         if self._writer_task is not None:
-            with suppress(asyncio.CancelledError, asyncio.TimeoutError):
+            try:
                 await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
-            if not self._writer_task.done():
+            except asyncio.TimeoutError:
+                # Drain budget exceeded. Whatever's still in the in-memory
+                # buffer survives via the disk spill below; rows that were
+                # popped into the in-flight batch are pushed back by the
+                # writer's CancelledError handler before it exits.
+                pending = len(self._tx_buffer) + len(self._vb_buffer)
+                logger.warning(
+                    f"telemetry_writer: shutdown drain exceeded {drain_timeout}s with "
+                    f"{pending} rows still pending — spilling to disk. Consider raising "
+                    f"telemetry_writer_shutdown_drain_s."
+                )
                 self._writer_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await self._writer_task
+            except asyncio.CancelledError:
                 with suppress(asyncio.CancelledError):
                     await self._writer_task
         if self._sweeper_task is not None:
@@ -347,6 +363,14 @@ class TelemetryWriterService(Service):
                 await self._flush(tx_batch, vb_batch)
                 consecutive_failures = 0
                 self.flushed_rows += len(tx_batch) + len(vb_batch)
+            except asyncio.CancelledError:
+                # Shutdown cancelled us mid-flush. Put the in-flight batch back
+                # in the buffer so teardown's spill_to_disk catches it.
+                for row in reversed(tx_batch):
+                    self._tx_buffer.appendleft(row)
+                for row in reversed(vb_batch):
+                    self._vb_buffer.appendleft(row)
+                raise
             except Exception:  # noqa: BLE001
                 self.failed_batches += 1
                 consecutive_failures += 1
@@ -359,6 +383,11 @@ class TelemetryWriterService(Service):
                 # Exponential-ish backoff capped at 30s. Avoids hot-looping on a
                 # broken DB while still preserving telemetry across the failure.
                 backoff = min(30.0, 0.5 * (2 ** min(consecutive_failures, 6)))
+                if consecutive_failures == _FAILURE_ESCALATION_THRESHOLD:
+                    logger.error(
+                        f"telemetry_writer: {consecutive_failures} consecutive batch failures, "
+                        f"buffer depth tx={len(self._tx_buffer)} vb={len(self._vb_buffer)}"
+                    )
                 with suppress(asyncio.TimeoutError):
                     await asyncio.wait_for(self._shutdown_event.wait(), timeout=backoff)
 
@@ -409,71 +438,84 @@ class TelemetryWriterService(Service):
         max_vertex_builds = int(getattr(settings, "max_vertex_builds_to_keep", 3000))
         max_per_vertex = int(getattr(settings, "max_vertex_builds_per_vertex", 50))
 
-        # Dirty flow ids were stringified at flush time for set hashing; convert
-        # back to UUID for SQLAlchemy parameter binding.
+        # Snapshot the dirty sets so a failed sweep doesn't drop the flows on
+        # the floor — only clear after the commit lands. Dirty flow ids were
+        # stringified at flush time for set hashing; convert back to UUID for
+        # SQLAlchemy parameter binding.
         def _as_uuid(value: str) -> UUID:
             return value if isinstance(value, UUID) else UUID(value)
 
-        tx_flows = [_as_uuid(f) for f in self._dirty_tx_flows]
-        self._dirty_tx_flows.clear()
-        vb_flows = [_as_uuid(f) for f in self._dirty_vb_flows]
-        self._dirty_vb_flows.clear()
+        tx_flow_snapshot = set(self._dirty_tx_flows)
+        vb_flow_snapshot = set(self._dirty_vb_flows)
+        tx_flows = [_as_uuid(f) for f in tx_flow_snapshot]
+        vb_flows = [_as_uuid(f) for f in vb_flow_snapshot]
 
-        async with self._session_maker() as session:
-            for flow_id in tx_flows:
-                keep_subq = (
-                    select(TransactionTable.id)
-                    .where(TransactionTable.flow_id == flow_id)
-                    .order_by(col(TransactionTable.timestamp).desc())
-                    .limit(max_transactions)
-                )
-                await session.execute(
-                    delete(TransactionTable).where(
-                        TransactionTable.flow_id == flow_id,
-                        col(TransactionTable.id).not_in(keep_subq),
-                    )
-                )
-
-            for flow_id in vb_flows:
-                vertex_ids = (
-                    (
-                        await session.execute(
-                            select(VertexBuildTable.id).where(VertexBuildTable.flow_id == flow_id).distinct()
-                        )
-                    )
-                    .scalars()
-                    .all()
-                )
-                for vertex_id in vertex_ids:
-                    keep_vertex_subq = (
-                        select(VertexBuildTable.build_id)
-                        .where(
-                            VertexBuildTable.flow_id == flow_id,
-                            VertexBuildTable.id == vertex_id,
-                        )
-                        .order_by(
-                            col(VertexBuildTable.timestamp).desc(),
-                            col(VertexBuildTable.build_id).desc(),
-                        )
-                        .limit(max_per_vertex)
+        try:
+            async with self._session_maker() as session:
+                for flow_id in tx_flows:
+                    keep_subq = (
+                        select(TransactionTable.id)
+                        .where(TransactionTable.flow_id == flow_id)
+                        .order_by(col(TransactionTable.timestamp).desc())
+                        .limit(max_transactions)
                     )
                     await session.execute(
-                        delete(VertexBuildTable).where(
-                            VertexBuildTable.flow_id == flow_id,
-                            VertexBuildTable.id == vertex_id,
-                            col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
+                        delete(TransactionTable).where(
+                            TransactionTable.flow_id == flow_id,
+                            col(TransactionTable.id).not_in(keep_subq),
                         )
                     )
 
-            keep_global_subq = (
-                select(VertexBuildTable.build_id)
-                .order_by(
-                    col(VertexBuildTable.timestamp).desc(),
-                    col(VertexBuildTable.build_id).desc(),
+                for flow_id in vb_flows:
+                    vertex_ids = (
+                        (
+                            await session.execute(
+                                select(VertexBuildTable.id).where(VertexBuildTable.flow_id == flow_id).distinct()
+                            )
+                        )
+                        .scalars()
+                        .all()
+                    )
+                    for vertex_id in vertex_ids:
+                        keep_vertex_subq = (
+                            select(VertexBuildTable.build_id)
+                            .where(
+                                VertexBuildTable.flow_id == flow_id,
+                                VertexBuildTable.id == vertex_id,
+                            )
+                            .order_by(
+                                col(VertexBuildTable.timestamp).desc(),
+                                col(VertexBuildTable.build_id).desc(),
+                            )
+                            .limit(max_per_vertex)
+                        )
+                        await session.execute(
+                            delete(VertexBuildTable).where(
+                                VertexBuildTable.flow_id == flow_id,
+                                VertexBuildTable.id == vertex_id,
+                                col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
+                            )
+                        )
+
+                keep_global_subq = (
+                    select(VertexBuildTable.build_id)
+                    .order_by(
+                        col(VertexBuildTable.timestamp).desc(),
+                        col(VertexBuildTable.build_id).desc(),
+                    )
+                    .limit(max_vertex_builds)
                 )
-                .limit(max_vertex_builds)
-            )
-            await session.execute(
-                delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
-            )
-            await session.commit()
+                await session.execute(
+                    delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
+                )
+                await session.commit()
+        except Exception:
+            # Sweep failed before commit — re-mark the snapshot as dirty so the
+            # next sweep retries these flows. Without this the per-flow caps
+            # could overshoot indefinitely until those flows see new writes.
+            self._dirty_tx_flows |= tx_flow_snapshot
+            self._dirty_vb_flows |= vb_flow_snapshot
+            raise
+        else:
+            self._dirty_tx_flows -= tx_flow_snapshot
+            self._dirty_vb_flows -= vb_flow_snapshot
