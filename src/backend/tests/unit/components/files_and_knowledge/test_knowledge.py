@@ -18,7 +18,7 @@ This file covers the *new* surface area introduced by the merge:
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
@@ -26,6 +26,7 @@ from lfx.components.files_and_knowledge.knowledge import (
     MODE_INGEST,
     MODE_RETRIEVE,
     KnowledgeComponent,
+    _is_retrieve_mode,
 )
 from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
 
@@ -214,6 +215,53 @@ class TestModeDrivenOutputSwap:
         result = component.update_outputs(frontend_node, "top_k", 10)
 
         assert result["outputs"] == original
+
+
+# ---------------------------------------------------------------------------
+# Output-method mode dispatch (stale edges + legacy labels)
+# ---------------------------------------------------------------------------
+class TestOutputMethodModeDispatch:
+    """Output methods dispatch by mode so saved flows survive edge staleness.
+
+    If a user wires the ingest output, then switches to retrieve mode, the
+    saved edge still references ``build_kb_info``. Without dispatch, the
+    runtime would call the wrong method against the (now-None) ingest
+    inputs and crash with ``NoneType.to_dataframe``.
+    """
+
+    def test_is_retrieve_mode_matches_canonical_and_legacy_labels(self) -> None:
+        assert _is_retrieve_mode(MODE_RETRIEVE) is True
+        # Legacy emoji label from the original PR version of this component
+        # — saved flows may still carry it.
+        assert _is_retrieve_mode("🔍 Retrieve") is True
+        assert _is_retrieve_mode(MODE_INGEST) is False
+        assert _is_retrieve_mode("📥 Ingest") is False
+        assert _is_retrieve_mode(None) is False
+        assert _is_retrieve_mode(42) is False
+
+    async def test_build_kb_info_delegates_to_retrieve_when_mode_is_retrieve(self) -> None:
+        """Stale-edge safety net: wiring the ingest output should not crash a retrieve flow."""
+        component = KnowledgeComponent()
+        component.mode = MODE_RETRIEVE
+        sentinel = object()
+        component.retrieve_data = AsyncMock(return_value=sentinel)
+
+        result = await component.build_kb_info()
+
+        assert result is sentinel
+        component.retrieve_data.assert_awaited_once()
+
+    async def test_retrieve_data_delegates_to_ingest_when_mode_is_ingest(self) -> None:
+        """Symmetric safety net for the inverse stale-edge case."""
+        component = KnowledgeComponent()
+        component.mode = MODE_INGEST
+        sentinel = object()
+        component.build_kb_info = AsyncMock(return_value=sentinel)
+
+        result = await component.retrieve_data()
+
+        assert result is sentinel
+        component.build_kb_info.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

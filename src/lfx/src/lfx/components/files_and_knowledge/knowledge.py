@@ -102,6 +102,17 @@ if TYPE_CHECKING:
 MODE_INGEST = "Ingest"
 MODE_RETRIEVE = "Retrieve"
 
+
+def _is_retrieve_mode(value: Any) -> bool:
+    """Lenient mode check: treats any label containing 'Retrieve' as retrieve mode.
+
+    Older saved flows may carry the emoji-prefixed labels ("📥 Ingest" /
+    "🔍 Retrieve") this component used to ship with; substring matching
+    keeps those loading without forcing a flow rewrite.
+    """
+    return isinstance(value, str) and "Retrieve" in value
+
+
 # Error message used by both the ingest and retrieve paths when the user is
 # running against an Astra cloud environment that disables these flows.
 astra_error_msg = "Knowledge ingestion and retrieval are not supported in Astra cloud environment."
@@ -434,7 +445,7 @@ class KnowledgeComponent(Component):
         """
         if field_name != "mode":
             return frontend_node
-        if field_value == MODE_RETRIEVE:
+        if _is_retrieve_mode(field_value):
             frontend_node["outputs"] = [
                 Output(
                     display_name="Results",
@@ -561,7 +572,11 @@ class KnowledgeComponent(Component):
         current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
         if field_name == "mode":
             current_mode = field_value
-        if current_mode not in self.mode_config:
+        # Map legacy/emoji-prefixed labels onto the current canonical values so
+        # flows saved before the label change still toggle visibility correctly.
+        if _is_retrieve_mode(current_mode):
+            current_mode = MODE_RETRIEVE
+        elif current_mode not in self.mode_config:
             current_mode = MODE_INGEST
         return set_current_fields(
             build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
@@ -1013,8 +1028,17 @@ class KnowledgeComponent(Component):
             return ""
         return json.dumps(decoded, sort_keys=True)
 
-    async def build_kb_info(self) -> Data:
-        """Main ingestion routine → returns a dict with KB metadata."""
+    async def build_kb_info(self) -> Data | DataFrame:
+        """Main ingestion routine → returns a dict with KB metadata.
+
+        Defensive: if a saved flow has the ingest output wired but the
+        user has since switched to retrieve mode, the runtime still hits
+        this method. Dispatch to ``retrieve_data`` in that case so the
+        flow keeps working instead of crashing on the (now-None)
+        ``input_df``.
+        """
+        if _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)):
+            return await self.retrieve_data()
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
 
         run_id: uuid.UUID | None = None
@@ -1446,8 +1470,15 @@ class KnowledgeComponent(Component):
         options = get_embedding_model_options(user_id=self.user_id)
         return next((o for o in options if o.get("name") == model_name), None)
 
-    async def retrieve_data(self) -> DataFrame:
-        """Retrieve data from the selected knowledge base."""
+    async def retrieve_data(self) -> DataFrame | Data:
+        """Retrieve data from the selected knowledge base.
+
+        Defensive: if the saved flow has the retrieve output wired but
+        the user has since switched to ingest mode, delegate to
+        ``build_kb_info`` so the flow keeps working.
+        """
+        if not _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)):
+            return await self.build_kb_info()
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
 
         # Lazy import: langflow's user/DB models aren't part of lfx's

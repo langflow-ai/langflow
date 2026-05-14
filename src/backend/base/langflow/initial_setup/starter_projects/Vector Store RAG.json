@@ -1636,7 +1636,8 @@
                 "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "Table"
+                  "Table",
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               }
