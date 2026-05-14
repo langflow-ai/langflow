@@ -488,6 +488,10 @@ class RedisQueueWrapper:
     # Protects against the early-poll race where the consumer wrapper is created
     # before the producer worker has issued its first XADD.
     _STARTUP_GRACE_S = 30.0
+    # Hard cap on in-process buffered events per consumer.  Bounds memory when a
+    # slow client falls behind a fast producer; without it, the buffer can grow
+    # without limit until the consumer drains it.
+    _BUFFER_MAXSIZE = 10_000
 
     def __init__(self, job_id: str, client: Any, ttl: int, startup_grace_s: float | None = None) -> None:
         self._job_id = job_id
@@ -496,7 +500,7 @@ class RedisQueueWrapper:
         # Allow callers to override the class-level grace period (driven by settings).
         if startup_grace_s is not None:
             self._STARTUP_GRACE_S = startup_grace_s
-        self._buffer: asyncio.Queue = asyncio.Queue()
+        self._buffer: asyncio.Queue = asyncio.Queue(maxsize=self._BUFFER_MAXSIZE)
         self._last_id = "0-0"  # read from the beginning of the stream
         # Flips to True the first time XREAD returns messages for this stream.
         # Until then, "stream key does not exist" is NOT treated as end-of-stream
@@ -509,6 +513,40 @@ class RedisQueueWrapper:
         # and lets the fill task populate the buffer before the loop exits.
         self._first_read_done: bool = False
         self._fill_task: asyncio.Task = asyncio.create_task(self._fill_from_redis())
+        # Defense-in-depth: if the fill task is cancelled or crashes with an
+        # unhandled exception, deliver an end-of-stream sentinel into the buffer
+        # so consumers waiting on ``await get()`` are unblocked.  The clean exit
+        # paths inside ``_fill_from_redis`` already put the sentinel themselves;
+        # this callback only fires when those paths are bypassed.
+        self._fill_task.add_done_callback(self._on_fill_done)
+
+    def _on_fill_done(self, task: asyncio.Task) -> None:
+        """Ensure the consumer is unblocked if the fill task exits unexpectedly.
+
+        A clean exit (sentinel received, stream cleaned up, grace exhausted)
+        already puts the sentinel into the buffer.  Cancellation and unhandled
+        exceptions skip that path — this callback catches both gaps so the
+        consumer's ``await queue.get()`` never blocks forever.
+
+        Done callbacks run synchronously, so we use the non-blocking
+        ``put_nowait``.  If the buffer happens to be at capacity (slow consumer
+        + bounded buffer), evict the oldest item to make room: losing one event
+        is strictly preferable to leaving the consumer stuck.
+        """
+        if not task.cancelled() and task.exception() is None:
+            # Clean exit: _fill_from_redis already put the sentinel.
+            return
+        if not task.cancelled():
+            exc = task.exception()
+            logger.error(
+                f"RedisQueueWrapper fill task raised for job {self._job_id}: {exc!r} "
+                "— delivering end-of-stream sentinel so the consumer is not left hanging."
+            )
+        if self._buffer.full():
+            with contextlib.suppress(asyncio.QueueEmpty):
+                self._buffer.get_nowait()
+        with contextlib.suppress(asyncio.QueueFull):
+            self._buffer.put_nowait((None, None, time.time()))
 
     @property
     def _stream_key(self) -> str:

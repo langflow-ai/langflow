@@ -148,6 +148,24 @@ async def get_flow_events_response(
                 job_id=job_id,
             )
 
+        if event_delivery != EventDeliveryType.POLLING:
+            # Defensive exhaustiveness check: if a new EventDeliveryType is added
+            # without wiring it up here, surface a clear error instead of silently
+            # treating it as polling.  Each delivery mode has different cross-worker
+            # guarantees (DIRECT/STREAMING use signal_cancel + heartbeat; POLLING
+            # uses the watchdog), so silent fallthrough hides real configuration
+            # bugs in multi-worker Redis setups.
+            supported = ", ".join(sorted(t.value for t in EventDeliveryType))
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unsupported event_delivery {event_delivery!r}. "
+                    f"Use one of: {supported}. "
+                    "For multi-worker Redis deployments, all three values are supported; "
+                    "set LANGFLOW_EVENT_DELIVERY to override the default."
+                ),
+            )
+
         # Polling mode - get all available events
         try:
             events: list = []

@@ -1594,3 +1594,130 @@ async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
     finally:
         await _stop_service(producer)
         await _stop_service(publisher)
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_buffer_is_bounded():
+    """The internal buffer respects _BUFFER_MAXSIZE.
+
+    A slow consumer cannot let the fill task consume unbounded memory.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        assert wrapper._buffer.maxsize == RedisQueueWrapper._BUFFER_MAXSIZE
+        assert wrapper._buffer.maxsize > 0
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_on_fill_done_delivers_sentinel_on_crash():
+    """A crash in the fill task must still unblock consumers.
+
+    The done-callback delivers the end-of-stream sentinel into the buffer
+    so consumers waiting on ``await get()`` never hang.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        await wrapper.cancel()
+        # Drain anything already in the buffer so the simulated-crash sentinel
+        # is the next item delivered.
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        class _FailedTask:
+            def cancelled(self) -> bool:
+                return False
+
+            def exception(self) -> BaseException:
+                return RuntimeError("simulated fill crash")
+
+        wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+        sentinel = wrapper._buffer.get_nowait()
+        assert sentinel[0] is None
+        assert sentinel[1] is None
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_redis_queue_wrapper_on_fill_done_evicts_to_make_room_for_sentinel():
+    """A full buffer at crash time must not prevent sentinel delivery.
+
+    The oldest item is evicted so the sentinel still reaches the consumer.
+    Losing one event is strictly better than leaving the consumer stuck on
+    ``await get()`` indefinitely.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        await wrapper.cancel()
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        for i in range(wrapper._buffer.maxsize):
+            wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))
+        assert wrapper._buffer.full()
+
+        class _FailedTask:
+            def cancelled(self) -> bool:
+                return False
+
+            def exception(self) -> BaseException:
+                return RuntimeError("simulated fill crash")
+
+        wrapper._on_fill_done(_FailedTask())  # type: ignore[arg-type]
+
+        # Buffer is still at capacity (one evicted, one sentinel added).
+        assert wrapper._buffer.full()
+
+        items: list = []
+        while not wrapper._buffer.empty():
+            items.append(wrapper._buffer.get_nowait())
+        sentinels = [item for item in items if item[0] is None and item[1] is None]
+        assert len(sentinels) == 1, "Exactly one sentinel must reach the consumer"
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_get_flow_events_response_rejects_unknown_event_delivery():
+    """Unknown EventDeliveryType values produce a clear 4xx with instructions.
+
+    Without this guard, unknown values silently fall through to the polling
+    code path, masking real misconfigurations in multi-worker setups.
+    """
+    from enum import Enum
+
+    from fastapi import HTTPException
+    from langflow.services.job_queue.service import JobQueueService
+
+    service = JobQueueService()
+    job_id = str(uuid.uuid4())
+    service._queues[job_id] = (asyncio.Queue(), EventManager(asyncio.Queue()), None, None)
+
+    class _BogusDelivery(str, Enum):
+        WEBSOCKET = "websocket"
+
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_flow_events_response(
+                job_id=job_id,
+                queue_service=service,
+                event_delivery=_BogusDelivery.WEBSOCKET,  # type: ignore[arg-type]
+            )
+        assert exc_info.value.status_code == 400
+        detail = str(exc_info.value.detail)
+        assert "Unsupported event_delivery" in detail
+        assert "LANGFLOW_EVENT_DELIVERY" in detail
+        for known in ("streaming", "direct", "polling"):
+            assert known in detail
+    finally:
+        service._queues.pop(job_id, None)

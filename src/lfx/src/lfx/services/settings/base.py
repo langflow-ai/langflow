@@ -504,12 +504,25 @@ class Settings(BaseSettings):
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
-        # If workers > 1, we need to use direct delivery
-        # because polling and streaming are not supported
-        # in multi-worker environments — unless a Redis-backed job queue is configured,
-        # which shares state across workers and supports all delivery modes.
+        # Multi-worker deployments with the in-memory job queue cannot route
+        # ``polling`` or ``streaming`` responses correctly: build events live in
+        # the in-process queue of whichever worker started the job, and a later
+        # poll/stream request may land on a different worker.  Switch to Redis
+        # (LANGFLOW_JOB_QUEUE_TYPE=redis) to share state across workers, or
+        # accept ``direct`` delivery which keeps the whole exchange on one
+        # worker.  The override below preserves backwards compatibility for
+        # deployments that haven't set this explicitly; new explicit values are
+        # logged loudly so the cause is easy to diagnose if the UI loses events.
         if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
-            logger.warning("Multi-worker environment detected, using direct event delivery")
+            requested = value or "polling"
+            if requested != "direct":
+                logger.warning(
+                    "Multi-worker mode without a Redis-backed job queue cannot deliver "
+                    "'%s' events across workers; forcing event_delivery='direct'. "
+                    "Set LANGFLOW_JOB_QUEUE_TYPE=redis to keep '%s' delivery in multi-worker setups.",
+                    requested,
+                    requested,
+                )
             return "direct"
         return value
 
