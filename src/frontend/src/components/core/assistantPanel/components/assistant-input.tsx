@@ -235,17 +235,18 @@ export function AssistantInput({
 
   return (
     <div className="relative px-2 pb-2">
-      {/* Glow effect below input */}
+      {/* Glow effect below input — uses the assistant brand tokens so the glow
+          color survives a theme swap and a brand re-skin in one place. */}
       <div
         className="pointer-events-none absolute -bottom-2 left-1/2 h-16 w-3/4 -translate-x-1/2 rounded-full opacity-60 blur-2xl"
         style={{
           background:
-            "linear-gradient(90deg, rgba(186,117,255,0.4) 0%, rgba(255,50,118,0.5) 50%, rgba(186,117,255,0.4) 100%)",
+            "linear-gradient(90deg, hsl(var(--accent-assistant-purple) / 0.4) 0%, hsl(var(--accent-assistant-brand) / 0.5) 50%, hsl(var(--accent-assistant-purple) / 0.4) 100%)",
         }}
       />
       <div
         className={cn(
-          "relative flex cursor-text flex-col rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_rgba(186,117,255,0.12),0_0_30px_rgba(255,50,118,0.08)]",
+          "relative flex cursor-text flex-col rounded-md border border-border bg-background pb-2.5 transition-colors focus-within:border-muted-foreground shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]",
           compact ? "gap-1" : "gap-4",
         )}
         onClick={() => textareaRef.current?.focus()}

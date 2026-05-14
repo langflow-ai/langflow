@@ -2,6 +2,10 @@ import { Check, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { FlowAction } from "@/controllers/API/queries/agentic";
 import useFlowStore from "@/stores/flowStore";
+import {
+  SOLID_PRIMARY_BUTTON,
+  SOLID_SECONDARY_BUTTON,
+} from "../helpers/button-styles";
 
 interface FlowEditCarouselProps {
   actions: FlowAction[];
@@ -44,7 +48,7 @@ function FlowEditCard({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="flex h-7 items-center gap-1 rounded-md bg-white px-3 text-xs font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+            className={SOLID_PRIMARY_BUTTON}
             onClick={onAccept}
           >
             <Check className="h-3 w-3" />
@@ -52,7 +56,7 @@ function FlowEditCard({
           </button>
           <button
             type="button"
-            className="flex h-7 items-center gap-1 rounded-md bg-zinc-700 px-3 text-xs font-medium text-white transition-colors hover:bg-zinc-600"
+            className={SOLID_SECONDARY_BUTTON}
             onClick={onDismiss}
           >
             <X className="h-3 w-3" />
@@ -196,7 +200,7 @@ export function FlowEditCarousel({
           {pendingCount > 1 && (
             <button
               type="button"
-              className="ml-2 rounded-md bg-white px-2 py-0.5 text-xs font-medium text-zinc-900 hover:bg-zinc-100"
+              className="ml-2 rounded-md bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               onClick={handleAcceptAll}
             >
               Accept All ({pendingCount})

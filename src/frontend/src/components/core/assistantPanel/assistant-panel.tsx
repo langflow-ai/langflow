@@ -201,13 +201,39 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       // Only vertical drags transition the empty panel into expanded mode
       // (height becomes panelSize-driven, input is pushed to the bottom).
       // Horizontal-only drags should just widen the auto-height panel.
-      if (edges.y === "top") {
-        setHasUserResized(true);
-      }
+      //
+      // Seed startH from the actual rendered height (not panelSize.height)
+      // when promoting from compact mode. The compact panel is auto-sized to
+      // the input (~200px) while panelSize.height carries the *expanded*
+      // default/stored value (~600px). Without this seed, the first pixel of
+      // drag flips useExpandedSize and snaps the panel from ~200px to 600px
+      // in one frame — visible as a "glitch" jump on first resize after open.
       const startX = e.clientX;
       const startY = e.clientY;
       const startW = panelSize.width;
-      const startH = panelSize.height;
+      let startH = panelSize.height;
+
+      if (edges.y === "top") {
+        if (!useExpandedSize && panelRef.current) {
+          const measuredH = panelRef.current.getBoundingClientRect().height;
+          if (measuredH > 0) {
+            startH = measuredH;
+            // Push the measured height into state before the flip so the
+            // very first frame after useExpandedSize becomes true renders at
+            // the measured height instead of the stored expanded default.
+            setPanelSize((prev) => ({ ...prev, height: measuredH }));
+          }
+        }
+        setHasUserResized(true);
+      }
+
+      // When the user starts dragging the compact panel taller, the measured
+      // start height is below ``MIN_SIZE.height``. Clamping to MIN_SIZE.height
+      // on the very first mousemove would snap the panel from ~200px to 400px
+      // in one frame. The per-drag effective floor lets the panel grow
+      // smoothly from its current size while still preventing the user from
+      // shrinking BELOW where they started.
+      const effectiveMinH = Math.min(MIN_SIZE.height, startH);
 
       const handleMouseMove = (ev: MouseEvent) => {
         let newW = startW;
@@ -225,7 +251,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
         setPanelSize({
           width: Math.min(MAX_SIZE.width, Math.max(MIN_SIZE.width, newW)),
-          height: Math.min(MAX_SIZE.height, Math.max(MIN_SIZE.height, newH)),
+          height: Math.min(MAX_SIZE.height, Math.max(effectiveMinH, newH)),
         });
       };
 
@@ -238,12 +264,24 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       const handleMouseUp = () => {
         cleanup();
         setPanelSize((prev) => {
+          // Clamp to the absolute floor in BOTH in-memory state and the
+          // persisted localStorage value. The per-drag ``effectiveMinH``
+          // intentionally lets a compact-promoted drag stay below
+          // ``MIN_SIZE.height`` while the mouse is held; once the user
+          // releases, the panel commits to at least the floor so a later
+          // transition (e.g. loaded session messages flipping
+          // ``useExpandedSize`` to true) doesn't render the panel
+          // uncomfortably small.
+          const committed = {
+            ...prev,
+            height: Math.max(MIN_SIZE.height, prev.height),
+          };
           try {
-            localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(prev));
+            localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(committed));
           } catch {
             // localStorage may be unavailable (private browsing)
           }
-          return prev;
+          return committed;
         });
       };
 
@@ -251,7 +289,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       document.addEventListener("mouseup", handleMouseUp);
       resizeCleanupRef.current = cleanup;
     },
-    [panelSize],
+    [panelSize, useExpandedSize],
   );
 
   if (!isOpen) return null;
@@ -267,7 +305,11 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
         width: panelSize.width,
         height: panelSize.height,
         minWidth: "28.5rem",
-        minHeight: MIN_SIZE.height,
+        // No inline ``minHeight`` here — that would clamp the rendered height
+        // BEFORE the resize handler runs, snapping a freshly-promoted compact
+        // panel from its measured ~200px straight to MIN_SIZE.height in one
+        // frame. The mousemove clamp (``effectiveMinH``) enforces the floor
+        // for actual user drags instead.
       }
     : {
         width: panelSize.width,

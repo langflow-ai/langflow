@@ -92,7 +92,7 @@ function LangflowDrawingIcon({ size = 24 }: { size?: number }) {
         <path
           ref={pathRef}
           d={LANGFLOW_ASSISTANT_PATH_D}
-          stroke="#FF3276"
+          stroke="hsl(var(--accent-assistant-brand))"
           strokeWidth="1.11111"
           strokeLinecap="round"
           strokeLinejoin="round"

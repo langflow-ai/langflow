@@ -225,6 +225,18 @@ describe("AssistantInput", () => {
     });
 
     it("should be enabled when message has content and not disabled", async () => {
+      // canSend requires a selectedModel — pre-populate localStorage so the
+      // input boots with a model and matches the production contract that
+      // ModelSelector's auto-select effect normally satisfies.
+      localStorage.setItem(
+        "langflow-assistant-selected-model",
+        JSON.stringify({
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "GPT-4o",
+        }),
+      );
       render(<AssistantInput {...defaultProps} />);
 
       await userEvent.type(screen.getByRole("textbox"), "hello");
@@ -232,6 +244,21 @@ describe("AssistantInput", () => {
       expect(
         screen.getByRole("button", { name: /send message/i }),
       ).toBeEnabled();
+    });
+
+    it("should stay disabled when message has content but no model is selected", async () => {
+      // Regression guard for the canSend gate (assistant-input.tsx:231): the
+      // send button MUST stay disabled until a model is selected, even if the
+      // user has typed text. Without this, the click can fire before
+      // ModelSelector's auto-select propagates and use-assistant-chat
+      // early-returns silently — see the Playwright assistant-panel race fix.
+      render(<AssistantInput {...defaultProps} />);
+
+      await userEvent.type(screen.getByRole("textbox"), "hello");
+
+      expect(
+        screen.getByRole("button", { name: /send message/i }),
+      ).toBeDisabled();
     });
   });
 
