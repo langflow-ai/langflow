@@ -304,6 +304,7 @@ class TelemetryWriterService(Service):
         self._restore_from_disk(own_dir, kind="transactions", buffer=self._tx_buffer)
         self._restore_from_disk(own_dir, kind="vertex_builds", buffer=self._vb_buffer)
         self._adopt_orphan_outboxes(outbox_root, own_pid=os.getpid())
+        self._prune_stale_foreign_outboxes(outbox_root)
 
         self._engine = self._create_dedicated_engine()
         self._session_maker = async_sessionmaker(self._engine, class_=SQLModelAsyncSession, expire_on_commit=False)
@@ -519,6 +520,56 @@ class TelemetryWriterService(Service):
                         child.rmdir()
                 entry.rmdir()
 
+    def _prune_stale_foreign_outboxes(self, outbox_root: Path) -> None:
+        """Delete cross-host orphan dirs whose owner file has gone stale.
+
+        Same-host orphans go through :py:meth:`_adopt_orphan_outboxes` and have
+        their rows replayed before the dir is removed. Cross-host orphans (e.g.
+        dead pods on a shared volume) are not safely adoptable because the rows
+        carry the dead host's identity, so they would otherwise leak forever.
+        We rely on :py:meth:`_heartbeat_owner_file` to keep the owner file's
+        mtime fresh while the writer is alive; once the mtime ages past
+        ``telemetry_writer_orphan_max_age_s`` the dir is treated as abandoned.
+        """
+        max_age = float(getattr(self.settings_service.settings, "telemetry_writer_orphan_max_age_s", 3600.0))
+        current_host, _ = _host_boot_identity()
+        now = time.time()
+        try:
+            entries = list(outbox_root.iterdir())
+        except FileNotFoundError:
+            return
+        for entry in entries:
+            if not entry.is_dir():
+                continue
+            owner = _read_owner_file(entry)
+            if owner is None or owner.get("host") == current_host:
+                continue
+            owner_file = entry / _OWNER_FILE_NAME
+            try:
+                age = now - owner_file.stat().st_mtime
+            except OSError:
+                continue
+            if age < max_age:
+                continue
+            logger.info(
+                f"telemetry_writer: pruning stale cross-host outbox {entry} "
+                f"(host={owner.get('host')!r}, age={age:.0f}s)"
+            )
+            with suppress(OSError):
+                for child in sorted(entry.rglob("*"), reverse=True):
+                    if child.is_file():
+                        child.unlink(missing_ok=True)
+                    elif child.is_dir():
+                        child.rmdir()
+                entry.rmdir()
+
+    def _heartbeat_owner_file(self) -> None:
+        """Refresh the owner file's mtime so foreign hosts can age us out cleanly."""
+        if self._own_outbox_dir is None:
+            return
+        with suppress(OSError):
+            (self._own_outbox_dir / _OWNER_FILE_NAME).touch()
+
     async def _run_writer(self) -> None:
         if self._shutdown_event is None:
             return  # not started
@@ -588,7 +639,7 @@ class TelemetryWriterService(Service):
             await session.commit()
 
     async def _run_sweeper(self) -> None:
-        """Amortized retention sweep."""
+        """Amortized retention sweep + cross-host orphan janitor + own-dir heartbeat."""
         if self._shutdown_event is None:
             return
         while not self._shutdown_event.is_set():
@@ -596,10 +647,15 @@ class TelemetryWriterService(Service):
             await self._wait_or_shutdown(interval, name="telemetry-sweeper-tick")
             if self._shutdown_event.is_set():
                 return
+            self._heartbeat_owner_file()
             try:
                 await self._run_retention_pass()
             except Exception:  # noqa: BLE001
                 logger.exception("telemetry_writer: retention sweep failed")
+            try:
+                self._prune_stale_foreign_outboxes(self._outbox_root())
+            except Exception:  # noqa: BLE001
+                logger.exception("telemetry_writer: cross-host orphan prune failed")
 
     async def _run_retention_pass(self) -> None:
         if self._session_maker is None:

@@ -345,6 +345,10 @@ class Settings(BaseSettings):
     telemetry_writer_shutdown_drain_s: float = 5.0
     """Maximum seconds the writer waits to drain in-flight batches on shutdown
     before disposing the dedicated engine."""
+    telemetry_writer_orphan_max_age_s: float = 3600.0
+    """Cross-host orphan outboxes (e.g. dead pods on a shared volume) are pruned
+    when their owner file hasn't been heartbeated within this many seconds.
+    Same-host orphans are adopted regardless of age via owner-file identity."""
 
     # Config
     host: str = "localhost"

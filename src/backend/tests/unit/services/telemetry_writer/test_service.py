@@ -373,6 +373,80 @@ def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
     assert [r["i"] for r in own_writer._tx_buffer] == list(range(90, 100))
 
 
+def test_prune_stale_foreign_outboxes_deletes_aged_cross_host_dirs(tmp_path: Path) -> None:
+    """Cross-host orphan dirs older than max_age must be deleted from a shared volume."""
+    import json as _json
+    import os as _os
+    import time as _time
+
+    foreign_dir = tmp_path / "9999"
+    foreign_dir.mkdir()
+    owner_file = foreign_dir / "owner.json"
+    owner_file.write_text(
+        _json.dumps({"host": "some-other-host", "boot": "unrelated-boot", "pid": 9999, "started_at": 0})
+    )
+    # Backdate the owner file beyond the prune threshold.
+    aged = _time.time() - 7200  # 2h ago, default max_age is 1h
+    _os.utime(owner_file, (aged, aged))
+
+    writer = _build_writer({"telemetry_writer_orphan_max_age_s": 3600.0})
+    writer._prune_stale_foreign_outboxes(tmp_path)
+    assert not foreign_dir.exists()
+
+
+def test_prune_stale_foreign_outboxes_preserves_fresh_cross_host_dirs(tmp_path: Path) -> None:
+    """A live foreign pod's outbox must not be deleted while it's actively heartbeating."""
+    import json as _json
+
+    foreign_dir = tmp_path / "1234"
+    foreign_dir.mkdir()
+    (foreign_dir / "owner.json").write_text(
+        _json.dumps({"host": "live-foreign-pod", "boot": "unrelated-boot", "pid": 1234, "started_at": 0})
+    )
+    # Owner file mtime is "now" — pod is actively heartbeating.
+
+    writer = _build_writer({"telemetry_writer_orphan_max_age_s": 3600.0})
+    writer._prune_stale_foreign_outboxes(tmp_path)
+    assert foreign_dir.exists()
+
+
+def test_prune_stale_foreign_outboxes_leaves_same_host_dirs_alone(tmp_path: Path) -> None:
+    """Same-host orphans are the adoption path's job, not the pruner's — even when aged."""
+    import os as _os
+    import time as _time
+
+    own_dir = tmp_path / "5555"
+    own_dir.mkdir()
+    _write_owner_file(own_dir)
+    owner_file = own_dir / "owner.json"
+    aged = _time.time() - 7200
+    _os.utime(owner_file, (aged, aged))
+
+    writer = _build_writer({"telemetry_writer_orphan_max_age_s": 3600.0})
+    writer._prune_stale_foreign_outboxes(tmp_path)
+    assert own_dir.exists()
+
+
+def test_heartbeat_owner_file_refreshes_mtime(tmp_path: Path) -> None:
+    """The heartbeat must bump the owner file's mtime so foreign hosts can age us out."""
+    import os as _os
+    import time as _time
+
+    own_dir = tmp_path / "1"
+    own_dir.mkdir()
+    _write_owner_file(own_dir)
+    owner_file = own_dir / "owner.json"
+    aged = _time.time() - 7200
+    _os.utime(owner_file, (aged, aged))
+    before = owner_file.stat().st_mtime
+
+    writer = _build_writer()
+    writer._own_outbox_dir = own_dir
+    writer._heartbeat_owner_file()
+    after = owner_file.stat().st_mtime
+    assert after > before
+
+
 def test_spill_caps_at_max_queue(tmp_path: Path) -> None:
     """A backlogged buffer at shutdown must not spill unbounded rows to disk.
 
