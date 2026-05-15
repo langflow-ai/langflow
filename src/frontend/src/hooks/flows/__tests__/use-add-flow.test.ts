@@ -27,7 +27,10 @@ jest.mock("@/controllers/API/queries/folders", () => ({
 
 jest.mock("@/stores/alertStore", () => {
   const store: any = (selector: any) =>
-    selector({ setErrorData: mockSetErrorData, setNoticeData: mockSetNoticeData });
+    selector({
+      setErrorData: mockSetErrorData,
+      setNoticeData: mockSetNoticeData,
+    });
   store.getState = () => ({
     setErrorData: mockSetErrorData,
     setNoticeData: mockSetNoticeData,
@@ -78,14 +81,20 @@ jest.mock("@/hooks/flows/use-delete-flow", () => ({
 
 jest.mock("@/utils/reactflowUtils", () => ({
   processDataFromFlow: jest.fn((flow) =>
-    Promise.resolve(flow?.data ?? { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } }),
+    Promise.resolve(
+      flow?.data ?? { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+    ),
   ),
   createNewFlow: jest.fn((_data, folderId, flow) => ({
     ...(flow ?? {}),
     id: "new-flow-id",
     name: flow?.name ?? "New Flow",
     folder_id: folderId,
-    data: flow?.data ?? { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+    data: flow?.data ?? {
+      nodes: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    },
   })),
   addVersionToDuplicates: jest.fn((flow) => flow.name),
   updateGroupRecursion: jest.fn(),
@@ -122,10 +131,14 @@ describe("useAddFlow — onError display", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("shows the plain string detail from a backend 422 as a readable message", async () => {
-    rejectAddFlow({ response: { data: { detail: "Endpoint name cannot contain dots" } } });
+    rejectAddFlow({
+      response: { data: { detail: "Endpoint name cannot contain dots" } },
+    });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).rejects.toBeDefined();
+    await expect(
+      result.current({ flow: FLOW_STUB as any }),
+    ).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -138,14 +151,20 @@ describe("useAddFlow — onError display", () => {
       response: {
         data: {
           detail: [
-            { loc: ["body", "endpoint_name"], msg: "Endpoint name cannot contain dots", type: "value_error" },
+            {
+              loc: ["body", "endpoint_name"],
+              msg: "Endpoint name cannot contain dots",
+              type: "value_error",
+            },
           ],
         },
       },
     });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).rejects.toBeDefined();
+    await expect(
+      result.current({ flow: FLOW_STUB as any }),
+    ).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -158,15 +177,25 @@ describe("useAddFlow — onError display", () => {
       response: {
         data: {
           detail: [
-            { loc: ["body", "endpoint_name"], msg: "Endpoint cannot contain dots", type: "value_error" },
-            { loc: ["body", "name"], msg: "Name is required", type: "value_error" },
+            {
+              loc: ["body", "endpoint_name"],
+              msg: "Endpoint cannot contain dots",
+              type: "value_error",
+            },
+            {
+              loc: ["body", "name"],
+              msg: "Name is required",
+              type: "value_error",
+            },
           ],
         },
       },
     });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).rejects.toBeDefined();
+    await expect(
+      result.current({ flow: FLOW_STUB as any }),
+    ).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -178,7 +207,9 @@ describe("useAddFlow — onError display", () => {
     rejectAddFlow(new Error("Network Error"));
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).rejects.toBeDefined();
+    await expect(
+      result.current({ flow: FLOW_STUB as any }),
+    ).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -190,7 +221,9 @@ describe("useAddFlow — onError display", () => {
     rejectAddFlow({ weird: "shape" });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).rejects.toBeDefined();
+    await expect(
+      result.current({ flow: FLOW_STUB as any }),
+    ).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -206,7 +239,9 @@ describe("useAddFlow — success path", () => {
     resolveAddFlow({ ...FLOW_STUB, id: "created-id" });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).resolves.toBe("created-id");
+    await expect(result.current({ flow: FLOW_STUB as any })).resolves.toBe(
+      "created-id",
+    );
 
     expect(mockSetErrorData).not.toHaveBeenCalled();
   });
