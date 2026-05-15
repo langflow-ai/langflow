@@ -1,0 +1,54 @@
+[project]
+name = "lfx-aiml"
+version = "0.1.0"
+description = "Aiml component(s) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "aiml"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
+# the bundle's components rely on.  REVIEW THIS LIST -- the script ports
+# only ``lfx``; add any other deps the moved component(s) import.
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "langchain-openai>=1.1.6",
+    "openai>=1.68.2,<3.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-aiml = "lfx_aiml"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_aiml package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_aiml"]
+include = [
+    "src/lfx_aiml/extension.json",
+    "src/lfx_aiml/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_aiml",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

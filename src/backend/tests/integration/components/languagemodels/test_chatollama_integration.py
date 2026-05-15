@@ -1,10 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from lfx.components.ollama.ollama import ChatOllamaComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx_ollama.components.ollama.ollama import ChatOllamaComponent
 
 
 @pytest.mark.integration
@@ -12,7 +12,7 @@ class TestChatOllamaIntegration:
     """Integration tests for ChatOllama structured output flow."""
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx_ollama.components.ollama.ollama.ChatOllama")
     async def test_end_to_end_structured_output_to_data(self, mock_chat_ollama):
         """Test complete flow from model response to Data output with JSON schema."""
         # Mock the model and its response
@@ -62,7 +62,7 @@ class TestChatOllamaIntegration:
         assert call_args["format"] == json_schema
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx_ollama.components.ollama.ollama.ChatOllama")
     async def test_end_to_end_structured_output_to_dataframe(self, mock_chat_ollama):
         """Test complete flow from model response to DataFrame output with list of dicts."""
         # Mock the model
@@ -102,7 +102,7 @@ class TestChatOllamaIntegration:
             assert df_output.iloc[2]["name"] == "Charlie"
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx_ollama.components.ollama.ollama.ChatOllama")
     async def test_end_to_end_with_pydantic_schema(self, mock_chat_ollama):
         """Test end-to-end flow using Pydantic model schema (addresses issue #7122)."""
         from pydantic import BaseModel, Field
@@ -155,7 +155,7 @@ class TestChatOllamaIntegration:
         assert call_args["format"]["type"] == "object"
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch("lfx_ollama.components.ollama.ollama.ChatOllama")
     async def test_json_parsing_error_handling(self, mock_chat_ollama):
         """Test that invalid JSON responses are handled gracefully."""
         # Mock the model

@@ -182,7 +182,7 @@ class TestComponentDynamicImports:
         import lfx.components.notdiamond as notdiamond_components
 
         # Patch the import_mod function directly
-        with patch("lfx.components.notdiamond.import_mod") as mock_import_mod:
+        with patch("lfx_notdiamond.components.notdiamond.import_mod") as mock_import_mod:
             # Mock import_mod to raise ImportError
             mock_import_mod.side_effect = ImportError("Module not found")
 

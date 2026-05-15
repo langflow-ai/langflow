@@ -1,9 +1,9 @@
 from unittest.mock import MagicMock
 
 import pytest
-from lfx.components.deepseek.deepseek import DeepSeekModelComponent
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
+from lfx_deepseek.components.deepseek.deepseek import DeepSeekModelComponent
 
 
 def test_deepseek_initialization():

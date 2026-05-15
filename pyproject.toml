@@ -49,6 +49,31 @@ dependencies = [
     "lfx-searchapi>=0.1.0",
     "lfx-jigsawstack>=0.1.0",
     "lfx-needle>=0.1.0",
+    "lfx-openai>=0.1.0",
+    "lfx-aiml>=0.1.0",
+    "lfx-amazon>=0.1.0",
+    "lfx-anthropic>=0.1.0",
+    "lfx-azure>=0.1.0",
+    "lfx-cohere>=0.1.0",
+    "lfx-deepseek>=0.1.0",
+    "lfx-groq>=0.1.0",
+    "lfx-huggingface>=0.1.0",
+    "lfx-ibm>=0.1.0",
+    "lfx-litellm>=0.1.0",
+    "lfx-lmstudio>=0.1.0",
+    "lfx-maritalk>=0.1.0",
+    "lfx-mistral>=0.1.0",
+    "lfx-notdiamond>=0.1.0",
+    "lfx-novita>=0.1.0",
+    "lfx-nvidia>=0.1.0",
+    "lfx-ollama>=0.1.0",
+    "lfx-openrouter>=0.1.0",
+    "lfx-perplexity>=0.1.0",
+    "lfx-sambanova>=0.1.0",
+    "lfx-vertexai>=0.1.0",
+    "lfx-xai>=0.1.0",
+    "lfx-cometapi>=0.1.0",
+    "lfx-vllm>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -123,6 +148,31 @@ lfx-scrapegraph = { workspace = true }
 lfx-searchapi = { workspace = true }
 lfx-jigsawstack = { workspace = true }
 lfx-needle = { workspace = true }
+lfx-openai = { workspace = true }
+lfx-aiml = { workspace = true }
+lfx-amazon = { workspace = true }
+lfx-anthropic = { workspace = true }
+lfx-azure = { workspace = true }
+lfx-cohere = { workspace = true }
+lfx-deepseek = { workspace = true }
+lfx-groq = { workspace = true }
+lfx-huggingface = { workspace = true }
+lfx-ibm = { workspace = true }
+lfx-litellm = { workspace = true }
+lfx-lmstudio = { workspace = true }
+lfx-maritalk = { workspace = true }
+lfx-mistral = { workspace = true }
+lfx-notdiamond = { workspace = true }
+lfx-novita = { workspace = true }
+lfx-nvidia = { workspace = true }
+lfx-ollama = { workspace = true }
+lfx-openrouter = { workspace = true }
+lfx-perplexity = { workspace = true }
+lfx-sambanova = { workspace = true }
+lfx-vertexai = { workspace = true }
+lfx-xai = { workspace = true }
+lfx-cometapi = { workspace = true }
+lfx-vllm = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -151,6 +201,31 @@ members = [
     "src/bundles/searchapi",
     "src/bundles/jigsawstack",
     "src/bundles/needle",
+    "src/bundles/openai",
+    "src/bundles/aiml",
+    "src/bundles/amazon",
+    "src/bundles/anthropic",
+    "src/bundles/azure",
+    "src/bundles/cohere",
+    "src/bundles/deepseek",
+    "src/bundles/groq",
+    "src/bundles/huggingface",
+    "src/bundles/ibm",
+    "src/bundles/litellm",
+    "src/bundles/lmstudio",
+    "src/bundles/maritalk",
+    "src/bundles/mistral",
+    "src/bundles/notdiamond",
+    "src/bundles/novita",
+    "src/bundles/nvidia",
+    "src/bundles/ollama",
+    "src/bundles/openrouter",
+    "src/bundles/perplexity",
+    "src/bundles/sambanova",
+    "src/bundles/vertexai",
+    "src/bundles/xai",
+    "src/bundles/cometapi",
+    "src/bundles/vllm",
     # langflow-extensions:bundle-members-end
 ]
 

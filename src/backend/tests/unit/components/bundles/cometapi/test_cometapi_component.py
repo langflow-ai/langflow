@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from langchain_openai import ChatOpenAI
-from lfx.components.cometapi.cometapi import CometAPIComponent
+from lfx_cometapi.components.cometapi.cometapi import CometAPIComponent
 from pydantic.v1 import SecretStr
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -48,7 +48,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert component.json_mode is False
         assert component.app_name == "test-app"
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_build_model_success(self, mock_chat_openai, component_class, default_kwargs):
         """Test successful model building."""
         mock_instance = MagicMock()
@@ -70,7 +70,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_instance
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_build_model_with_json_mode(self, mock_chat_openai, component_class, default_kwargs):
         """Test model building with JSON mode enabled."""
         mock_instance = MagicMock()
@@ -87,7 +87,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         mock_instance.bind.assert_called_once_with(response_format={"type": "json_object"})
         assert model == mock_bound_instance
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_build_model_with_streaming(self, mock_chat_openai, component_class, default_kwargs):
         """Test model building with streaming enabled."""
         mock_instance = MagicMock()
@@ -110,7 +110,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Please select a valid CometAPI model"):
             component.build_model()
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_build_model_exception_handling(self, mock_chat_openai, component_class, default_kwargs):
         """Test that build_model handles exceptions properly."""
         mock_chat_openai.side_effect = ValueError("Invalid API key")

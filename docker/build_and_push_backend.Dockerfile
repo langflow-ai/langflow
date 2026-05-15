@@ -67,6 +67,31 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/searchapi \
         ./src/bundles/jigsawstack \
         ./src/bundles/needle \
+        ./src/bundles/openai \
+        ./src/bundles/aiml \
+        ./src/bundles/amazon \
+        ./src/bundles/anthropic \
+        ./src/bundles/azure \
+        ./src/bundles/cohere \
+        ./src/bundles/deepseek \
+        ./src/bundles/groq \
+        ./src/bundles/huggingface \
+        ./src/bundles/ibm \
+        ./src/bundles/litellm \
+        ./src/bundles/lmstudio \
+        ./src/bundles/maritalk \
+        ./src/bundles/mistral \
+        ./src/bundles/notdiamond \
+        ./src/bundles/novita \
+        ./src/bundles/nvidia \
+        ./src/bundles/ollama \
+        ./src/bundles/openrouter \
+        ./src/bundles/perplexity \
+        ./src/bundles/sambanova \
+        ./src/bundles/vertexai \
+        ./src/bundles/xai \
+        ./src/bundles/cometapi \
+        ./src/bundles/vllm \
         "./src/backend/base[complete,postgresql]"
 
 ################################

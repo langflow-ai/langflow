@@ -236,6 +236,231 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/needle
 
+# Bundle re-attach: ``lfx-openai`` ships the OpenAI
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/openai
+
+# Bundle re-attach: ``lfx-aiml`` ships the Aiml
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/aiml
+
+# Bundle re-attach: ``lfx-amazon`` ships the Amazon
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/amazon
+
+# Bundle re-attach: ``lfx-anthropic`` ships the Anthropic
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/anthropic
+
+# Bundle re-attach: ``lfx-azure`` ships the Azure
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/azure
+
+# Bundle re-attach: ``lfx-cohere`` ships the Cohere
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/cohere
+
+# Bundle re-attach: ``lfx-deepseek`` ships the Deepseek
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/deepseek
+
+# Bundle re-attach: ``lfx-groq`` ships the Groq
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/groq
+
+# Bundle re-attach: ``lfx-huggingface`` ships the Huggingface
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/huggingface
+
+# Bundle re-attach: ``lfx-ibm`` ships the Ibm
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/ibm
+
+# Bundle re-attach: ``lfx-litellm`` ships the Litellm
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/litellm
+
+# Bundle re-attach: ``lfx-lmstudio`` ships the Lmstudio
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/lmstudio
+
+# Bundle re-attach: ``lfx-maritalk`` ships the Maritalk
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/maritalk
+
+# Bundle re-attach: ``lfx-mistral`` ships the Mistral
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/mistral
+
+# Bundle re-attach: ``lfx-notdiamond`` ships the Notdiamond
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/notdiamond
+
+# Bundle re-attach: ``lfx-novita`` ships the Novita
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/novita
+
+# Bundle re-attach: ``lfx-nvidia`` ships the Nvidia
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/nvidia
+
+# Bundle re-attach: ``lfx-ollama`` ships the Ollama
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/ollama
+
+# Bundle re-attach: ``lfx-openrouter`` ships the Openrouter
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/openrouter
+
+# Bundle re-attach: ``lfx-perplexity`` ships the Perplexity
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/perplexity
+
+# Bundle re-attach: ``lfx-sambanova`` ships the Sambanova
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/sambanova
+
+# Bundle re-attach: ``lfx-vertexai`` ships the Vertexai
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/vertexai
+
+# Bundle re-attach: ``lfx-xai`` ships the Xai
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/xai
+
+# Bundle re-attach: ``lfx-cometapi`` ships the Cometapi
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/cometapi
+
+# Bundle re-attach: ``lfx-vllm`` ships the Vllm
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/vllm
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

@@ -988,12 +988,13 @@ def _patch_components_init(plan: PortPlan, *, apply: bool) -> list[str]:
     for pattern in patterns:
         new_text = re.sub(pattern, "", new_text, count=1, flags=re.MULTILINE)
     if new_text == text:
-        msg = (
-            f"No occurrences of {plan.bundle!r} found in {target.relative_to(REPO_ROOT)}.  "
-            "The script's regex pattern may be out of date with the file's "
-            "current shape.  Edit by hand and re-run with --skip-init-patch."
-        )
-        raise SystemExit(msg)
+        # Some bundles were never registered in the central
+        # ``components.__init__.py`` -- e.g. ``cometapi`` and ``vllm``
+        # ship in-tree component directories but the parent init does
+        # not list them.  Treat as a no-op so the rest of the port
+        # (workspace patch, migration entries, etc.) still completes.
+        actions[-1] = f"  (no {plan.bundle!r} refs in {target.relative_to(REPO_ROOT)}; nothing to strip)"
+        return actions
     target.write_text(new_text, encoding="utf-8")
     return actions
 

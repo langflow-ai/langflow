@@ -88,7 +88,7 @@ def create_input_fields_dict(inputs: list[Input], prefix: str) -> dict[str, Inpu
 
 def _get_ollama_inputs_and_fields():
     try:
-        from lfx.components.ollama.ollama import ChatOllamaComponent
+        from lfx_ollama.components.ollama.ollama import ChatOllamaComponent
 
         ollama_inputs = get_filtered_inputs(ChatOllamaComponent, provider_name="Ollama")
     except ImportError as e:
@@ -99,7 +99,7 @@ def _get_ollama_inputs_and_fields():
 
 def _get_watsonx_inputs_and_fields():
     try:
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         watsonx_inputs = get_filtered_inputs(WatsonxAIComponent, provider_name="IBM watsonx.ai")
     except ImportError as e:
@@ -124,7 +124,7 @@ def _get_google_generative_ai_inputs_and_fields():
 
 def _get_openai_inputs_and_fields():
     try:
-        from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+        from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -135,7 +135,7 @@ def _get_openai_inputs_and_fields():
 
 def _get_azure_inputs_and_fields():
     try:
-        from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+        from lfx_azure.components.azure.azure_openai import AzureChatOpenAIComponent
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
@@ -146,7 +146,7 @@ def _get_azure_inputs_and_fields():
 
 def _get_groq_inputs_and_fields():
     try:
-        from lfx.components.groq.groq import GroqModel
+        from lfx_groq.components.groq.groq import GroqModel
 
         groq_inputs = get_filtered_inputs(GroqModel)
     except ImportError as e:
@@ -157,7 +157,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from lfx.components.anthropic.anthropic import AnthropicModelComponent
+        from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -168,7 +168,7 @@ def _get_anthropic_inputs_and_fields():
 
 def _get_nvidia_inputs_and_fields():
     try:
-        from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+        from lfx_nvidia.components.nvidia.nvidia import NVIDIAModelComponent
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
@@ -179,7 +179,7 @@ def _get_nvidia_inputs_and_fields():
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+        from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
@@ -190,7 +190,7 @@ def _get_amazon_bedrock_inputs_and_fields():
 
 def _get_sambanova_inputs_and_fields():
     try:
-        from lfx.components.sambanova.sambanova import SambaNovaComponent
+        from lfx_sambanova.components.sambanova.sambanova import SambaNovaComponent
 
         sambanova_inputs = get_filtered_inputs(SambaNovaComponent)
     except ImportError as e:
@@ -203,7 +203,7 @@ MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
 try:
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
     openai_inputs, openai_fields = _get_openai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["OpenAI"] = {
@@ -218,7 +218,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.azure.azure_openai import AzureChatOpenAIComponent
+    from lfx_azure.components.azure.azure_openai import AzureChatOpenAIComponent
 
     azure_inputs, azure_fields = _get_azure_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Azure OpenAI"] = {
@@ -233,7 +233,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.groq.groq import GroqModel
+    from lfx_groq.components.groq.groq import GroqModel
 
     groq_inputs, groq_fields = _get_groq_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Groq"] = {
@@ -248,7 +248,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.anthropic.anthropic import AnthropicModelComponent
+    from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
     anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Anthropic"] = {
@@ -263,7 +263,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.nvidia.nvidia import NVIDIAModelComponent
+    from lfx_nvidia.components.nvidia.nvidia import NVIDIAModelComponent
 
     nvidia_inputs, nvidia_fields = _get_nvidia_inputs_and_fields()
     MODEL_PROVIDERS_DICT["NVIDIA"] = {
@@ -278,7 +278,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+    from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
     bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {
@@ -308,7 +308,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.sambanova.sambanova import SambaNovaComponent
+    from lfx_sambanova.components.sambanova.sambanova import SambaNovaComponent
 
     sambanova_inputs, sambanova_fields = _get_sambanova_inputs_and_fields()
     MODEL_PROVIDERS_DICT["SambaNova"] = {
@@ -323,7 +323,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.ibm.watsonx import WatsonxAIComponent
+    from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
     watsonx_inputs, watsonx_fields = _get_watsonx_inputs_and_fields()
     MODEL_PROVIDERS_DICT["IBM watsonx.ai"] = {
@@ -338,7 +338,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.ollama.ollama import ChatOllamaComponent
+    from lfx_ollama.components.ollama.ollama import ChatOllamaComponent
 
     ollama_inputs, ollama_fields = _get_ollama_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Ollama"] = {

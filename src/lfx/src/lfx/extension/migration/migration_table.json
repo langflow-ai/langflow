@@ -1000,6 +1000,886 @@
       "legacy_slot": "ext:needle:NeedleComponent@official-pre-a",
       "target": "ext:needle:NeedleComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openai.openai.OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openai.OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:openai:OpenAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openai.openai_chat_model.OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openai.OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:openai:OpenAIModelComponent@official-pre-a",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.aiml.AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:aiml:AIMLModelComponent@official-pre-a",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.aiml_embeddings.AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:aiml:AIMLEmbeddingsComponent@official-pre-a",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_embedding.AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockEmbeddingsComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_model.AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.s3_bucket_uploader.S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:S3BucketUploaderComponent@official-pre-a",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_converse.AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockConverseComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.anthropic.anthropic.AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.anthropic.AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:anthropic:AnthropicModelComponent@official-pre-a",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.azure.azure_openai.AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.azure.AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:azure:AzureChatOpenAIComponent@official-pre-a",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.azure.azure_openai_embeddings.AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.azure.AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:azure:AzureOpenAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_models.CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereComponent@official-pre-a",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_embeddings.CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereEmbeddingsComponent@official-pre-a",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_rerank.CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereRerankComponent@official-pre-a",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.deepseek.deepseek.DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.deepseek.DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:deepseek:DeepSeekModelComponent@official-pre-a",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GroqModel",
+      "target": "ext:groq:GroqModel@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.groq.groq.GroqModel",
+      "target": "ext:groq:GroqModel@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.groq.GroqModel",
+      "target": "ext:groq:GroqModel@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:groq:GroqModel@official-pre-a",
+      "target": "ext:groq:GroqModel@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HuggingFaceEndpointsComponent",
+      "target": "ext:huggingface:HuggingFaceEndpointsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.huggingface.huggingface.HuggingFaceEndpointsComponent",
+      "target": "ext:huggingface:HuggingFaceEndpointsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.huggingface.HuggingFaceEndpointsComponent",
+      "target": "ext:huggingface:HuggingFaceEndpointsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:huggingface:HuggingFaceEndpointsComponent@official-pre-a",
+      "target": "ext:huggingface:HuggingFaceEndpointsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HuggingFaceInferenceAPIEmbeddingsComponent",
+      "target": "ext:huggingface:HuggingFaceInferenceAPIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.huggingface.huggingface_inference_api.HuggingFaceInferenceAPIEmbeddingsComponent",
+      "target": "ext:huggingface:HuggingFaceInferenceAPIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.huggingface.HuggingFaceInferenceAPIEmbeddingsComponent",
+      "target": "ext:huggingface:HuggingFaceInferenceAPIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:huggingface:HuggingFaceInferenceAPIEmbeddingsComponent@official-pre-a",
+      "target": "ext:huggingface:HuggingFaceInferenceAPIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxAIComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxEmbeddingsComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.litellm.litellm_proxy.LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.litellm.LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:litellm:LiteLLMProxyComponent@official-pre-a",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.lmstudioembeddings.LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:lmstudio:LMStudioEmbeddingsComponent@official-pre-a",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.lmstudiomodel.LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:lmstudio:LMStudioModelComponent@official-pre-a",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.maritalk.maritalk.MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.maritalk.MaritalkModelComponent",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:maritalk:MaritalkModelComponent@official-pre-a",
+      "target": "ext:maritalk:MaritalkModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "MistralAIModelComponent",
+      "target": "ext:mistral:MistralAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mistral.mistral.MistralAIModelComponent",
+      "target": "ext:mistral:MistralAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mistral.MistralAIModelComponent",
+      "target": "ext:mistral:MistralAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:mistral:MistralAIModelComponent@official-pre-a",
+      "target": "ext:mistral:MistralAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "MistralAIEmbeddingsComponent",
+      "target": "ext:mistral:MistralAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mistral.mistral_embeddings.MistralAIEmbeddingsComponent",
+      "target": "ext:mistral:MistralAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mistral.MistralAIEmbeddingsComponent",
+      "target": "ext:mistral:MistralAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:mistral:MistralAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:mistral:MistralAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notdiamond.notdiamond.NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notdiamond.NotDiamondComponent",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notdiamond:NotDiamondComponent@official-pre-a",
+      "target": "ext:notdiamond:NotDiamondComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.novita.novita.NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.novita.NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:novita:NovitaModelComponent@official-pre-a",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NVIDIAModelComponent",
+      "target": "ext:nvidia:NVIDIAModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.nvidia.NVIDIAModelComponent",
+      "target": "ext:nvidia:NVIDIAModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.NVIDIAModelComponent",
+      "target": "ext:nvidia:NVIDIAModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:nvidia:NVIDIAModelComponent@official-pre-a",
+      "target": "ext:nvidia:NVIDIAModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NVIDIAEmbeddingsComponent",
+      "target": "ext:nvidia:NVIDIAEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.nvidia_embedding.NVIDIAEmbeddingsComponent",
+      "target": "ext:nvidia:NVIDIAEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.NVIDIAEmbeddingsComponent",
+      "target": "ext:nvidia:NVIDIAEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:nvidia:NVIDIAEmbeddingsComponent@official-pre-a",
+      "target": "ext:nvidia:NVIDIAEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NvidiaIngestComponent",
+      "target": "ext:nvidia:NvidiaIngestComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.nvidia_ingest.NvidiaIngestComponent",
+      "target": "ext:nvidia:NvidiaIngestComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.NvidiaIngestComponent",
+      "target": "ext:nvidia:NvidiaIngestComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:nvidia:NvidiaIngestComponent@official-pre-a",
+      "target": "ext:nvidia:NvidiaIngestComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NvidiaRerankComponent",
+      "target": "ext:nvidia:NvidiaRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.nvidia_rerank.NvidiaRerankComponent",
+      "target": "ext:nvidia:NvidiaRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.NvidiaRerankComponent",
+      "target": "ext:nvidia:NvidiaRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:nvidia:NvidiaRerankComponent@official-pre-a",
+      "target": "ext:nvidia:NvidiaRerankComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NvidiaSystemAssistComponent",
+      "target": "ext:nvidia:NvidiaSystemAssistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.system_assist.NvidiaSystemAssistComponent",
+      "target": "ext:nvidia:NvidiaSystemAssistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.nvidia.NvidiaSystemAssistComponent",
+      "target": "ext:nvidia:NvidiaSystemAssistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:nvidia:NvidiaSystemAssistComponent@official-pre-a",
+      "target": "ext:nvidia:NvidiaSystemAssistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ChatOllamaComponent",
+      "target": "ext:ollama:ChatOllamaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ollama.ollama.ChatOllamaComponent",
+      "target": "ext:ollama:ChatOllamaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ollama.ChatOllamaComponent",
+      "target": "ext:ollama:ChatOllamaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ollama:ChatOllamaComponent@official-pre-a",
+      "target": "ext:ollama:ChatOllamaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OllamaEmbeddingsComponent",
+      "target": "ext:ollama:OllamaEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ollama.ollama_embeddings.OllamaEmbeddingsComponent",
+      "target": "ext:ollama:OllamaEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ollama.OllamaEmbeddingsComponent",
+      "target": "ext:ollama:OllamaEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ollama:OllamaEmbeddingsComponent@official-pre-a",
+      "target": "ext:ollama:OllamaEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openrouter.openrouter.OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.openrouter.OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:openrouter:OpenRouterComponent@official-pre-a",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "PerplexityComponent",
+      "target": "ext:perplexity:PerplexityComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.perplexity.perplexity.PerplexityComponent",
+      "target": "ext:perplexity:PerplexityComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.perplexity.PerplexityComponent",
+      "target": "ext:perplexity:PerplexityComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:perplexity:PerplexityComponent@official-pre-a",
+      "target": "ext:perplexity:PerplexityComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SambaNovaComponent",
+      "target": "ext:sambanova:SambaNovaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.sambanova.sambanova.SambaNovaComponent",
+      "target": "ext:sambanova:SambaNovaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.sambanova.SambaNovaComponent",
+      "target": "ext:sambanova:SambaNovaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:sambanova:SambaNovaComponent@official-pre-a",
+      "target": "ext:sambanova:SambaNovaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.vertexai.ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.ChatVertexAIComponent",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vertexai:ChatVertexAIComponent@official-pre-a",
+      "target": "ext:vertexai:ChatVertexAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.vertexai_embeddings.VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vertexai.VertexAIEmbeddingsComponent",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vertexai:VertexAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:vertexai:VertexAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.xai.xai.XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.xai.XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:xai:XAIModelComponent@official-pre-a",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cometapi.cometapi.CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cometapi.CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cometapi:CometAPIComponent@official-pre-a",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.vllm.VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vllm:VllmComponent@official-pre-a",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.vllm_embeddings.VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vllm:VllmEmbeddingsComponent@official-pre-a",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

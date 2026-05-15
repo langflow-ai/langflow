@@ -17,7 +17,7 @@ class TestGroqModelIntegration:
     @pytest.fixture
     def groq_model_instance(self):
         """Create a GroqModel instance for testing."""
-        from lfx.components.groq.groq import GroqModel
+        from lfx_groq.components.groq.groq import GroqModel
 
         return GroqModel()
 
@@ -39,7 +39,7 @@ class TestGroqModelIntegration:
         assert "model_name" in input_names
         assert "tool_model_enabled" in input_names
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_api_key(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models() with valid API key."""
         mock_get_groq_models.return_value = {
@@ -62,7 +62,7 @@ class TestGroqModelIntegration:
         # Verify get_groq_models was called with api_key
         mock_get_groq_models.assert_called_once_with(api_key=mock_api_key)
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_without_api_key(self, mock_get_groq_models, groq_model_instance):
         """Test get_models() without API key."""
         mock_get_groq_models.return_value = {
@@ -76,7 +76,7 @@ class TestGroqModelIntegration:
         # Verify get_groq_models was called with None
         mock_get_groq_models.assert_called_once_with(api_key=None)
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_tool_model_enabled(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models() with tool_model_enabled=True filters correctly."""
         mock_get_groq_models.return_value = {
@@ -96,7 +96,7 @@ class TestGroqModelIntegration:
         assert "mixtral-8x7b-32768" in models
         assert "gemma-7b-it" not in models
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_tool_model_disabled(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models() with tool_model_enabled=False returns all models."""
         mock_get_groq_models.return_value = {
@@ -112,7 +112,7 @@ class TestGroqModelIntegration:
         assert "llama-3.1-8b-instant" in models
         assert "gemma-7b-it" in models
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_error_falls_back_to_constants(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test that get_models() falls back to GROQ_MODELS on error."""
         # Simulate error in get_groq_models
@@ -126,7 +126,7 @@ class TestGroqModelIntegration:
         assert isinstance(models, list)
         assert len(models) > 0
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_update_build_config_with_api_key(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test update_build_config updates model list when API key is provided."""
         mock_get_groq_models.return_value = {
@@ -146,7 +146,7 @@ class TestGroqModelIntegration:
         assert "llama-3.3-70b-versatile" in result["model_name"]["options"]
         assert "value" in result["model_name"]
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_update_build_config_with_tool_model_enabled(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test update_build_config filters models when tool_model_enabled changes."""
         mock_get_groq_models.return_value = {
@@ -166,7 +166,7 @@ class TestGroqModelIntegration:
         # Note: The actual filtering happens in get_models(), so we need to check that too
         assert len(models) > 0
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_update_build_config_with_model_name(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test update_build_config when model_name field is updated."""
         mock_get_groq_models.return_value = {
@@ -183,7 +183,7 @@ class TestGroqModelIntegration:
         assert "model_name" in result
         assert "options" in result["model_name"]
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_update_build_config_with_base_url(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test update_build_config when base_url field is updated."""
         mock_get_groq_models.return_value = {
@@ -208,7 +208,7 @@ class TestGroqModelIntegration:
         # Should not update model_name when api_key is empty
         assert result == build_config
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_update_build_config_error_handling(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test update_build_config handles errors gracefully."""
         # Simulate error
@@ -268,11 +268,11 @@ class TestGroqModelEdgeCases:
     @pytest.fixture
     def groq_model_instance(self):
         """Create a GroqModel instance for testing."""
-        from lfx.components.groq.groq import GroqModel
+        from lfx_groq.components.groq.groq import GroqModel
 
         return GroqModel()
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_all_models_filtered_out(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models when all models are filtered out by tool_model_enabled."""
         mock_get_groq_models.return_value = {
@@ -287,7 +287,7 @@ class TestGroqModelEdgeCases:
         # Should return empty list when all models are filtered
         assert len(models) == 0
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_only_unsupported_models(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models when only unsupported models are returned."""
         mock_get_groq_models.return_value = {
@@ -302,7 +302,7 @@ class TestGroqModelEdgeCases:
         # Should filter out all not_supported models
         assert len(models) == 0
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_mixed_metadata(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models with mixed metadata (some fields missing)."""
         mock_get_groq_models.return_value = {
@@ -320,7 +320,7 @@ class TestGroqModelEdgeCases:
         assert "gemma-7b-it" in models
         assert "mixtral-8x7b-32768" in models
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_with_none_tool_model_enabled(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models with tool_model_enabled=None (default)."""
         mock_get_groq_models.return_value = {
@@ -346,7 +346,7 @@ class TestGroqModelEdgeCases:
         # Should return unchanged build_config for unrelated fields
         assert result == build_config
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_key_error_falls_back(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models handles KeyError and falls back."""
         mock_get_groq_models.side_effect = KeyError("Missing key")
@@ -358,7 +358,7 @@ class TestGroqModelEdgeCases:
         # Should fall back to GROQ_MODELS
         assert isinstance(models, list)
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_type_error_falls_back(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models handles TypeError and falls back."""
         mock_get_groq_models.side_effect = TypeError("Type error")
@@ -370,7 +370,7 @@ class TestGroqModelEdgeCases:
         # Should fall back to GROQ_MODELS
         assert isinstance(models, list)
 
-    @patch("lfx.components.groq.groq.get_groq_models")
+    @patch("lfx_groq.components.groq.groq.get_groq_models")
     def test_get_models_import_error_falls_back(self, mock_get_groq_models, groq_model_instance, mock_api_key):
         """Test get_models handles ImportError and falls back."""
         mock_get_groq_models.side_effect = ImportError("Import error")
@@ -406,7 +406,7 @@ class TestGroqModelBackwardCompatibility:
     @pytest.fixture
     def groq_model_instance(self):
         """Create a GroqModel instance for testing."""
-        from lfx.components.groq.groq import GroqModel
+        from lfx_groq.components.groq.groq import GroqModel
 
         return GroqModel()
 
@@ -424,7 +424,7 @@ class TestGroqModelBackwardCompatibility:
         groq_model_instance.api_key = mock_api_key
 
         # ValueError is one of the exceptions that's caught and triggers fallback
-        with patch("lfx.components.groq.groq.get_groq_models", side_effect=ValueError("API error")):
+        with patch("lfx_groq.components.groq.groq.get_groq_models", side_effect=ValueError("API error")):
             models = groq_model_instance.get_models()
 
             # Should return GROQ_MODELS

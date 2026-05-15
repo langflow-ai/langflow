@@ -2,7 +2,7 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.cometapi.cometapi import CometAPIComponent
+from lfx_cometapi.components.cometapi.cometapi import CometAPIComponent
 
 
 class TestCometAPIIntegration:
@@ -20,7 +20,7 @@ class TestCometAPIIntegration:
 
     def test_component_import(self):
         """Test that the CometAPI component can be imported."""
-        from lfx.components.cometapi.cometapi import CometAPIComponent
+        from lfx_cometapi.components.cometapi.cometapi import CometAPIComponent
 
         assert CometAPIComponent is not None
 
@@ -69,7 +69,7 @@ class TestCometAPIIntegration:
         assert models == ["gpt-4o-mini", "claude-3-5-haiku-latest", "gemini-2.5-flash"]
         mock_get.assert_called_once()
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_model_building_integration(self, mock_chat_openai, component, mock_api_key):
         """Test the complete model building flow."""
         # Mock ChatOpenAI
@@ -105,7 +105,7 @@ class TestCometAPIIntegration:
         assert kwargs["base_url"] == "https://api.cometapi.com/v1"
         assert model == mock_instance
 
-    @patch("lfx.components.cometapi.cometapi.ChatOpenAI")
+    @patch("lfx_cometapi.components.cometapi.cometapi.ChatOpenAI")
     def test_json_mode_integration(self, mock_chat_openai, component, mock_api_key):
         """Test JSON mode integration."""
         # Mock ChatOpenAI and bind method

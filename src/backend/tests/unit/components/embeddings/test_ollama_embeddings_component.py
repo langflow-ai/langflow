@@ -13,7 +13,7 @@ import re
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
-from lfx.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
+from lfx_ollama.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -82,7 +82,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # Build Embeddings Tests
     # =========================================================================
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_basic(self, mock_ollama_embeddings, component_class, default_kwargs):
         """Test build_embeddings with basic parameters."""
         mock_instance = MagicMock()
@@ -97,7 +97,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         )
         assert result == mock_instance
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_with_api_key(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings passes headers via client_kwargs when API key is set."""
         mock_instance = MagicMock()
@@ -117,7 +117,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         )
         assert result == mock_instance
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_without_api_key_no_client_kwargs(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings doesn't pass client_kwargs when no API key."""
         mock_instance = MagicMock()
@@ -134,7 +134,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         call_kwargs = mock_ollama_embeddings.call_args[1]
         assert "client_kwargs" not in call_kwargs
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_connection_error(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings raises ValueError on connection error."""
         mock_ollama_embeddings.side_effect = Exception("connection error")
@@ -151,8 +151,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # URL Handling Tests - /v1 Suffix Stripping
     # =========================================================================
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
-    @patch("lfx.components.ollama.ollama_embeddings.logger")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.logger")
     def test_build_embeddings_strips_v1_suffix_and_logs_warning(
         self, mock_logger, mock_ollama_embeddings, component_class
     ):
@@ -177,8 +177,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         call_kwargs = mock_ollama_embeddings.call_args[1]
         assert call_kwargs["base_url"] == "http://localhost:11434"
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
-    @patch("lfx.components.ollama.ollama_embeddings.logger")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.logger")
     def test_build_embeddings_strips_v1_trailing_slash(self, mock_logger, mock_ollama_embeddings, component_class):
         """Test that /v1/ suffix is also automatically stripped."""
         mock_instance = MagicMock()
@@ -204,7 +204,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_localhost_in_docker_container(
         self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
     ):
@@ -240,7 +240,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == mock_model
 
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_no_transform_outside_container(
         self, mock_ollama_embeddings, mock_path_class, component_class
     ):
@@ -267,7 +267,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_localhost_in_podman_container(
         self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
     ):
@@ -309,7 +309,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_127_0_0_1_in_container(
         self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
     ):
@@ -349,8 +349,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # =========================================================================
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_success_filters_embedding_capability(self, mock_get, mock_post, component_class):
         """Test get_model returns only models with embedding capability."""
         component = component_class()
@@ -385,7 +385,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 3
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_failure(self, mock_get, component_class):
         """Test get_model raises ValueError on connection error."""
         import httpx
@@ -398,8 +398,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
             await component.get_model(base_url)
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_with_v1_suffix_stripped(self, mock_get, mock_post, component_class):
         """Test that get_model strips /v1 suffix when fetching models."""
         component = component_class()
@@ -428,8 +428,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == ["nomic-embed-text"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_with_api_key_passes_headers(self, mock_get, mock_post, component_class):
         """Test that get_model passes headers when API key is set."""
         component = component_class()
@@ -462,7 +462,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == ["nomic-embed-text"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_empty_model_list(self, mock_get, component_class):
         """Test get_model returns empty list when no models are available."""
         component = component_class()
@@ -479,8 +479,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert mock_get.call_count == 1
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_missing_capabilities_key(self, mock_get, mock_post, component_class):
         """Test get_model handles models with missing capabilities key (defaults to empty list)."""
         component = component_class()
@@ -512,8 +512,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_without_api_key_no_headers(self, mock_get, mock_post, component_class):
         """Test that get_model passes None headers when no API key is set."""
         component = component_class()
@@ -546,8 +546,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == ["nomic-embed-text"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_url_normalization_trailing_slash(self, mock_get, mock_post, component_class):
         """Test that get_model normalizes URLs with trailing slashes."""
         component = component_class()
@@ -577,8 +577,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == ["nomic-embed-text"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_url_normalization_v1_trailing_slash(self, mock_get, mock_post, component_class):
         """Test that get_model normalizes URLs with /v1/ (trailing slash after v1)."""
         component = component_class()
@@ -608,8 +608,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == ["nomic-embed-text"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_all_models_non_embedding(self, mock_get, mock_post, component_class):
         """Test get_model returns empty list when no models have embedding capability."""
         component = component_class()
@@ -641,8 +641,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_get_model_post_request_failure(self, mock_get, mock_post, component_class):
         """Test get_model raises ValueError when POST request to get capabilities fails."""
         import httpx
@@ -670,7 +670,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # =========================================================================
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_success(self, mock_get, component_class):
         """Test is_valid_ollama_url returns True for valid URL."""
         component = component_class()
@@ -685,7 +685,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         mock_get.assert_called_once()
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_failure(self, mock_get, component_class):
         """Test is_valid_ollama_url returns False on connection error."""
         import httpx
@@ -698,7 +698,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result is False
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_with_v1_suffix(self, mock_get, component_class):
         """Test that is_valid_ollama_url strips /v1 suffix when validating."""
         component = component_class()
@@ -716,7 +716,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_with_api_key_passes_headers(self, mock_get, component_class):
         """Test that is_valid_ollama_url passes headers when API key is set."""
         component = component_class()
@@ -734,7 +734,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_without_api_key_no_headers(self, mock_get, component_class):
         """Test that is_valid_ollama_url doesn't pass headers when no API key."""
         component = component_class()
@@ -772,8 +772,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # =========================================================================
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.post")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_update_build_config_model_name_field(self, mock_get, mock_post, component_class):
         """Test update_build_config populates model options when model_name field is updated."""
         component = component_class()
@@ -811,7 +811,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert "mxbai-embed-large" in updated_config["model_name"]["options"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_update_build_config_base_url_field(self, mock_get, component_class):
         """Test update_build_config populates model options when base_url field is updated."""
         component = component_class()
@@ -845,7 +845,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert "mxbai-embed-large" in updated_config["model_name"]["options"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
+    @patch("lfx_ollama.components.ollama.ollama_embeddings.httpx.AsyncClient.get")
     async def test_update_build_config_when_ollama_not_running(self, mock_get, component_class):
         """Test update_build_config raises error when Ollama isn't running."""
         import httpx
