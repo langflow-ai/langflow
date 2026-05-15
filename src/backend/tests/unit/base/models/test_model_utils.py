@@ -6,7 +6,15 @@ by Akash Joshi / Anderson Filho: ``get_model_name`` returns ``"Custom"`` for
 is set on a different attribute than the one ``next()`` happens to find first.
 """
 
-from langchain_ibm import ChatWatsonx
+import pytest
+
+try:
+    from langchain_ibm import ChatWatsonx
+except (ImportError, TypeError):
+    # langchain-ibm is gated to python_version<'3.14' because ibm-watsonx-ai
+    # has not yet adapted to Python 3.14's StrEnum initialization changes.
+    pytest.skip("langchain-ibm not available on Python 3.14+", allow_module_level=True)
+
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from lfx.base.models.model_utils import get_model_name
 
