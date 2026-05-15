@@ -59,7 +59,7 @@ export const SanitizedMarkdown = ({
   return (
     <div ref={markdownRef} className={className}>
       {showWarning && (
-        <div className="text-muted-foreground text-sm p-2 border border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 rounded mb-2">
+        <div className="text-muted-foreground text-sm p-2 border border-warning bg-warning/30 rounded mb-2">
           ⚠️ The response was filtered by security sanitization and cannot be
           displayed.
         </div>
@@ -110,6 +110,7 @@ export const SanitizedMarkdown = ({
                 </div>
               );
             },
+            // biome-ignore lint/suspicious/noExplicitAny: pre-existing react-markdown override; proper type cleanup out of scope for this PR
             code: ({ node, inline, className, children, ...props }: any) => {
               let content = children as string;
               if (
