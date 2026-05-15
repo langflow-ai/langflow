@@ -7,6 +7,7 @@ row's id but the flow name is the same. Before the fix the loader hit the
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from uuid import uuid4
 
 import orjson
@@ -20,6 +21,18 @@ from langflow.initial_setup.setup import (
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
+
+
+@contextmanager
+def _overwrite_on_name_match(value: bool):
+    """Temporarily override the load_flows_overwrite_on_name_match setting."""
+    settings = get_settings_service().settings
+    original = settings.load_flows_overwrite_on_name_match
+    settings.load_flows_overwrite_on_name_match = value
+    try:
+        yield
+    finally:
+        settings.load_flows_overwrite_on_name_match = original
 
 
 async def _create_flow(
@@ -132,7 +145,7 @@ async def test_find_existing_flow_endpoint_name_scoped_by_user() -> None:
 
 @pytest.mark.usefixtures("client")
 async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
-    """Reporter's scenario: same name, different id -> update existing, no IntegrityError."""
+    """Reporter's CI/CD scenario with overwrite enabled: name match updates existing row."""
     user_id = uuid4()
     original = await _create_flow(
         name="MyFlow",
@@ -150,10 +163,11 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
         }
     )
 
-    async with session_scope() as session:
-        # Must not raise IntegrityError on the unique_flow_name constraint.
-        await upsert_flow_from_file(file_content, "MyFlow", session, user_id)
-        await session.commit()
+    with _overwrite_on_name_match(True):
+        async with session_scope() as session:
+            # Must not raise IntegrityError on the unique_flow_name constraint.
+            await upsert_flow_from_file(file_content, "MyFlow", session, user_id)
+            await session.commit()
 
     # Confirm: exactly one row, DB id preserved, content updated.
     async with session_scope() as session:
@@ -163,6 +177,40 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
         assert updated.id == original.id, "DB id must be preserved on name-matched update"
         assert updated.description == "updated from file"
         assert updated.data == {"nodes": [{"id": "n1"}], "edges": []}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_default_skips_name_match() -> None:
+    """Default (overwrite=False): name match with differing id does NOT crash and does NOT overwrite."""
+    user_id = uuid4()
+    original = await _create_flow(
+        name="MyFlow",
+        user_id=user_id,
+        data={"nodes": [{"id": "user-node"}], "edges": []},
+    )
+
+    file_id = uuid4()
+    file_content = orjson.dumps(
+        {
+            "id": str(file_id),
+            "name": "MyFlow",
+            "description": "would overwrite",
+            "data": {"nodes": [], "edges": []},
+        }
+    )
+
+    async with session_scope() as session:
+        # Must not raise IntegrityError; must not overwrite.
+        await upsert_flow_from_file(file_content, "MyFlow", session, user_id)
+        await session.commit()
+
+    async with session_scope() as session:
+        flows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(flows) == 1
+        preserved = flows[0]
+        assert preserved.id == original.id
+        assert preserved.description == "initial"
+        assert preserved.data == {"nodes": [{"id": "user-node"}], "edges": []}
 
 
 @pytest.mark.usefixtures("client")
@@ -196,7 +244,10 @@ async def test_upsert_flow_from_file_creates_when_no_match() -> None:
 
 @pytest.mark.usefixtures("client")
 async def test_upsert_flow_from_file_no_unique_violation_on_repeat() -> None:
-    """Calling upsert twice with different file ids and the same name must not raise."""
+    """Calling upsert twice with different file ids and the same name must not raise.
+
+    With overwrite enabled this is the CI/CD nightly-rebuild path: second import updates.
+    """
     user_id = uuid4()
     async with session_scope() as session:
         await get_or_create_default_folder(session, user_id)
@@ -211,18 +262,19 @@ async def test_upsert_flow_from_file_no_unique_violation_on_repeat() -> None:
             }
         )
 
-    # First import: row inserted with id=A.
-    id_a = uuid4()
-    async with session_scope() as session:
-        await upsert_flow_from_file(make_payload(id_a, "first"), "Recurring", session, user_id)
-        await session.commit()
+    with _overwrite_on_name_match(True):
+        # First import: row inserted with id=A.
+        id_a = uuid4()
+        async with session_scope() as session:
+            await upsert_flow_from_file(make_payload(id_a, "first"), "Recurring", session, user_id)
+            await session.commit()
 
-    # Second import (e.g. nightly upgrade with regenerated UUIDs): same name, id=B.
-    # Must update the existing row, not raise IntegrityError.
-    id_b = uuid4()
-    async with session_scope() as session:
-        await upsert_flow_from_file(make_payload(id_b, "second"), "Recurring", session, user_id)
-        await session.commit()
+        # Second import (e.g. nightly upgrade with regenerated UUIDs): same name, id=B.
+        # Must update the existing row, not raise IntegrityError.
+        id_b = uuid4()
+        async with session_scope() as session:
+            await upsert_flow_from_file(make_payload(id_b, "second"), "Recurring", session, user_id)
+            await session.commit()
 
     async with session_scope() as session:
         rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
@@ -271,10 +323,7 @@ async def test_upsert_flow_from_file_skips_name_match_when_overwrite_disabled() 
         data={"nodes": [{"id": "user-node"}], "edges": []},
     )
 
-    settings = get_settings_service().settings
-    original_flag = settings.load_flows_overwrite_on_name_match
-    settings.load_flows_overwrite_on_name_match = False
-    try:
+    with _overwrite_on_name_match(False):
         file_content = orjson.dumps(
             {
                 "id": str(uuid4()),  # regenerated id -> name match only
@@ -286,8 +335,6 @@ async def test_upsert_flow_from_file_skips_name_match_when_overwrite_disabled() 
         async with session_scope() as session:
             await upsert_flow_from_file(file_content, "UserEdited", session, user_id)
             await session.commit()
-    finally:
-        settings.load_flows_overwrite_on_name_match = original_flag
 
     async with session_scope() as session:
         rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
@@ -304,10 +351,7 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disable
     user_id = uuid4()
     original = await _create_flow(name="IdMatchFlag", user_id=user_id)
 
-    settings = get_settings_service().settings
-    original_flag = settings.load_flows_overwrite_on_name_match
-    settings.load_flows_overwrite_on_name_match = False
-    try:
+    with _overwrite_on_name_match(False):
         file_content = orjson.dumps(
             {
                 "id": str(original.id),  # same id -> matched_by_id is True
@@ -319,8 +363,6 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disable
         async with session_scope() as session:
             await upsert_flow_from_file(file_content, "IdMatchFlag", session, user_id)
             await session.commit()
-    finally:
-        settings.load_flows_overwrite_on_name_match = original_flag
 
     async with session_scope() as session:
         rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
