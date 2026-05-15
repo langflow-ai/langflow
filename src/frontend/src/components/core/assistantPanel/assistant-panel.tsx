@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { useSidebar } from "@/components/ui/sidebar";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { cn } from "@/utils/utils";
 import type {
   AssistantModel,
@@ -83,6 +85,12 @@ function AssistantInputWithScroll({
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const { hasEnabledModels } = useEnabledModels();
   const panelRef = useRef<HTMLDivElement>(null);
+  // Mirror the FlowPage sidebar's open state. When the sidebar is expanded
+  // the canvas is offset 280px from the viewport's left edge, so the panel
+  // shifts right by half that (140px) to align with the canvas center. When
+  // collapsed (offcanvas slid off), the canvas takes the full viewport and
+  // the panel sits at plain ``left-1/2``.
+  const isSidebarOpen = useSidebar().open;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -147,6 +155,54 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     setAssistantProcessing(isProcessing);
     return () => setAssistantProcessing(false);
   }, [isProcessing, setAssistantProcessing]);
+
+  // Welcome → Assistant hand-off: when the user submits text from the
+  // FlowBuilderWelcome overlay, the typed prompt is stashed as
+  // ``pendingMessage`` and the panel is told to open. Once the panel is
+  // visible AND a model is available (read from localStorage so we don't
+  // race the ModelSelector's auto-select effect), fire a single
+  // ``handleSend`` with the pending text, then clear so a remount or
+  // re-open doesn't replay it.
+  const pendingMessage = useFlowBuilderWelcomeStore(
+    (state) => state.pendingMessage,
+  );
+  const clearPendingMessage = useFlowBuilderWelcomeStore(
+    (state) => state.clearPendingMessage,
+  );
+  useEffect(() => {
+    if (!isOpen || !pendingMessage) return;
+    let saved: AssistantModel | null = null;
+    try {
+      const raw = localStorage.getItem("langflow-assistant-selected-model");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.provider && parsed.name) {
+          saved = parsed as AssistantModel;
+        }
+      }
+    } catch {
+      // localStorage may be unavailable (private browsing) — fall through;
+      // handleSend will early-return on null model and the welcome's pending
+      // message stays around for a manual retry.
+    }
+    if (!saved) return;
+    void handleSend(pendingMessage, saved);
+    clearPendingMessage();
+  }, [isOpen, pendingMessage, handleSend, clearPendingMessage]);
+
+  // When the panel opens with a pendingMessage in the store, the user just
+  // submitted from the welcome overlay. Capture that and lock a min-height
+  // so the panel doesn't open in its tiny compact form — the user has just
+  // committed an intent and needs vertical room for their auto-sent message
+  // + the assistant's reply to render without feeling cramped.
+  const [openedWithPending, setOpenedWithPending] = useState(false);
+  useEffect(() => {
+    if (isOpen && pendingMessage) {
+      setOpenedWithPending(true);
+    } else if (!isOpen) {
+      setOpenedWithPending(false);
+    }
+  }, [isOpen, pendingMessage]);
 
   const { sessions, saveCurrentSession, switchSession, deleteSession } =
     useSessionHistory(sessionId, messages, loadSession);
@@ -296,24 +352,34 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const containerClasses = cn(
     "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",
-    "z-50 bottom-16 left-[calc(50%+140px)] -translate-x-1/2 rounded-2xl border border-border",
+    "z-50 bottom-16 -translate-x-1/2 rounded-2xl border border-border",
+    isSidebarOpen ? "left-[calc(50%+140px)]" : "left-1/2",
     "opacity-100 translate-y-0 max-w-[calc(100vw-2rem)]",
   );
+
+  // When the panel was opened from a welcome submit, enforce a 18.75rem
+  // (300px) floor so the auto-sent message + assistant reply have room to
+  // breathe. Compact-mode (no messages yet) would otherwise render at the
+  // input height (~200px) — too short for the user to see what's happening.
+  const pendingMinHeight = openedWithPending ? "18.75rem" : undefined;
 
   const containerStyle = useExpandedSize
     ? {
         width: panelSize.width,
         height: panelSize.height,
         minWidth: "28.5rem",
+        minHeight: pendingMinHeight,
         // No inline ``minHeight`` here — that would clamp the rendered height
         // BEFORE the resize handler runs, snapping a freshly-promoted compact
         // panel from its measured ~200px straight to MIN_SIZE.height in one
         // frame. The mousemove clamp (``effectiveMinH``) enforces the floor
-        // for actual user drags instead.
+        // for actual user drags instead. (Exception: the welcome-submit
+        // override above intentionally clamps.)
       }
     : {
         width: panelSize.width,
         minWidth: "28.5rem",
+        minHeight: pendingMinHeight,
       };
 
   return (

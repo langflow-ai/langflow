@@ -20,6 +20,7 @@ import {
 import { useHotkeys } from "react-hotkeys-hook";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -33,7 +34,6 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
@@ -1042,6 +1042,11 @@ export default function Page({
               </div>
             )}
             {isPreviewActive && <VersionPreviewOverlay />}
+            {/* Welcome overlay surfaces on freshly-created empty flows —
+                its visibility is driven entirely by the
+                ``flowBuilderWelcomeStore`` which is primed by the
+                "New Flow" button on the home page. */}
+            <FlowBuilderWelcomeMount />
           </div>
           <div
             id="shadow-box"

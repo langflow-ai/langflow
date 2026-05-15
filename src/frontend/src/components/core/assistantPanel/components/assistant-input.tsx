@@ -7,6 +7,7 @@ import { cn } from "@/utils/utils";
 import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
+import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
 import { useInputHistory } from "../hooks/use-input-history";
 import { ModelSelector } from "./model-selector";
 
@@ -60,7 +61,6 @@ function useAnimatedPlaceholder(
   return currentMessage;
 }
 
-const ASSISTANT_MODEL_STORAGE_KEY = "langflow-assistant-selected-model";
 const MAX_MESSAGE_LENGTH = 500;
 
 interface AssistantInputProps {
@@ -107,28 +107,7 @@ export function AssistantInput({
     currentStep !== null &&
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
-  const [selectedModel, setSelectedModel] = useState<AssistantModel | null>(
-    () => {
-      // Load from localStorage on init
-      try {
-        const saved = localStorage.getItem(ASSISTANT_MODEL_STORAGE_KEY);
-        if (!saved) return null;
-
-        const parsed = JSON.parse(saved);
-        // Validate that model has required fields
-        if (parsed && parsed.provider && parsed.name) {
-          return parsed as AssistantModel;
-        }
-        // Invalid model format, clear it
-        localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
-        return null;
-      } catch {
-        // localStorage may be unavailable (private browsing) or corrupted
-        localStorage.removeItem(ASSISTANT_MODEL_STORAGE_KEY);
-        return null;
-      }
-    },
-  );
+  const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
 
@@ -138,16 +117,6 @@ export function AssistantInput({
       textareaRef.current.focus();
     }
   }, [autoFocus, disabled, isProcessing]);
-
-  // Save to localStorage when model changes
-  useEffect(() => {
-    if (selectedModel) {
-      localStorage.setItem(
-        ASSISTANT_MODEL_STORAGE_KEY,
-        JSON.stringify(selectedModel),
-      );
-    }
-  }, [selectedModel]);
 
   const updateMessage = (value: string) => {
     setMessage(value);

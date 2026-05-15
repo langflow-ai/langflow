@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowStore from "@/stores/flowStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
@@ -45,6 +46,9 @@ const CanvasControls = ({
   const inspectionPanelVisible = useFlowStore(
     (state) => state.inspectionPanelVisible,
   );
+  // While the FlowBuilderWelcome overlay is open, suppress the onboarding
+  // tooltip — it renders via Portal and would float over the welcome.
+  const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
   const setInspectionPanelVisible = useFlowStore(
     (state) => state.setInspectionPanelVisible,
   );
@@ -103,6 +107,11 @@ const CanvasControls = ({
 
   const locked = effectiveLocked ?? isFlowLocked;
 
+  // Single source of truth for the onboarding moment — both the popover
+  // tooltip and the "New" pill key off this so they appear together.
+  const onboardingActive =
+    !discovered && !assistantSidebarOpen && !isWelcomeOpen && tooltipVisible;
+
   useEffect(() => {
     reactFlowStoreApi.setState({
       nodesDraggable: !locked,
@@ -115,7 +124,7 @@ const CanvasControls = ({
     <>
       <Panel
         data-testid="main_canvas_controls"
-        className="react-flow__controls flex !flex-row items-center gap-1 !overflow-visible rounded-lg bg-background px-2 py-1 fill-foreground stroke-foreground text-primary [&>button]:border-0"
+        className="react-flow__controls flex !flex-row items-center gap-1 !overflow-visible rounded-lg bg-background p-1 fill-foreground stroke-foreground text-primary [&>button]:border-0"
         position="bottom-center"
       >
         {/* Wrap the assistant button + "New" pill in a Radix Popover so the
@@ -124,10 +133,7 @@ const CanvasControls = ({
             ReactFlow Panel and gets clipped or stacked under the workspace
             sidebar (z-index races, overflow contexts). The portal lifts it
             above every sibling surface. */}
-        <PopoverPrimitive.Root
-          open={!discovered && !assistantSidebarOpen && tooltipVisible}
-          modal={false}
-        >
+        <PopoverPrimitive.Root open={onboardingActive} modal={false}>
           <PopoverPrimitive.Anchor asChild>
             <div className="group relative">
               {/* "New" discovery pill — surfaces ONLY on hover, hidden when
@@ -138,7 +144,16 @@ const CanvasControls = ({
               {!assistantSidebarOpen && (
                 <span
                   data-testid="assistant-button-new-pill"
-                  className="absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white opacity-0 scale-90 transition-all duration-200 group-hover:opacity-100 group-hover:scale-100"
+                  // Visibility logic: stays in lock-step with the onboarding
+                  // tooltip — when ``onboardingActive`` is true the pill is
+                  // pinned open; otherwise it falls back to the hover-only
+                  // behavior so power users still see it as a hint without
+                  // it being intrusive.
+                  className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-assistant-brand px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${
+                    onboardingActive
+                      ? "opacity-100 scale-100"
+                      : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"
+                  }`}
                 >
                   <ForwardedIconComponent
                     name="Sparkles"
