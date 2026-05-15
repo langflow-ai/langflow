@@ -1,4 +1,5 @@
 import { renderHook } from "@testing-library/react";
+import type { FlowType } from "@/types/flow";
 import useAddFlow from "../use-add-flow";
 
 // ---------------------------------------------------------------------------
@@ -25,28 +26,35 @@ jest.mock("@/controllers/API/queries/folders", () => ({
   usePostFolders: () => ({ mutateAsync: mockPostAddFolder }),
 }));
 
+type Selector<T> = (state: T) => unknown;
+
+type AlertState = { setErrorData: jest.Mock; setNoticeData: jest.Mock };
+type FlowsManagerState = { flows: never[]; setFlows: jest.Mock };
+type FolderState = { myCollectionId: string; folders: { id: string }[]; setMyCollectionId: jest.Mock };
+type AuthState = { userData: { optins: { dialog_dismissed: boolean } } };
+type UtilityState = { hideGettingStartedProgress: boolean };
+type GlobalVariablesState = { unavailableFields: never[]; globalVariablesEntries: never[] };
+
 jest.mock("@/stores/alertStore", () => {
-  const store: any = (selector: any) =>
-    selector({
-      setErrorData: mockSetErrorData,
-      setNoticeData: mockSetNoticeData,
-    });
-  store.getState = () => ({
-    setErrorData: mockSetErrorData,
-    setNoticeData: mockSetNoticeData,
-  });
+  const store = Object.assign(
+    (selector: Selector<AlertState>) =>
+      selector({ setErrorData: mockSetErrorData, setNoticeData: mockSetNoticeData }),
+    { getState: () => ({ setErrorData: mockSetErrorData, setNoticeData: mockSetNoticeData }) },
+  );
   return { __esModule: true, default: store };
 });
 
 jest.mock("@/stores/flowsManagerStore", () => {
-  const store: any = (selector: any) =>
-    selector({ flows: [], setFlows: mockSetFlows });
-  store.getState = () => ({ flows: [], setFlows: mockSetFlows });
+  const store = Object.assign(
+    (selector: Selector<FlowsManagerState>) =>
+      selector({ flows: [], setFlows: mockSetFlows }),
+    { getState: () => ({ flows: [], setFlows: mockSetFlows }) },
+  );
   return { __esModule: true, default: store };
 });
 
 jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: (selector: any) =>
+  useFolderStore: (selector: Selector<FolderState>) =>
     selector({
       myCollectionId: "folder-1",
       folders: [{ id: "folder-1" }],
@@ -56,17 +64,17 @@ jest.mock("@/stores/foldersStore", () => ({
 
 jest.mock("@/stores/authStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (selector: Selector<AuthState>) =>
     selector({ userData: { optins: { dialog_dismissed: true } } }),
 }));
 
 jest.mock("@/stores/utilityStore", () => ({
-  useUtilityStore: (selector: any) =>
+  useUtilityStore: (selector: Selector<UtilityState>) =>
     selector({ hideGettingStartedProgress: true }),
 }));
 
 jest.mock("@/stores/globalVariablesStore/globalVariables", () => ({
-  useGlobalVariablesStore: (selector: any) =>
+  useGlobalVariablesStore: (selector: Selector<GlobalVariablesState>) =>
     selector({ unavailableFields: [], globalVariablesEntries: [] }),
 }));
 
@@ -106,9 +114,10 @@ jest.mock("@/utils/reactflowUtils", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-const FLOW_STUB = {
+const FLOW_STUB: FlowType = {
   id: "flow-1",
   name: "My Flow",
+  description: "",
   data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
   folder_id: "folder-1",
 };
@@ -136,9 +145,7 @@ describe("useAddFlow — onError display", () => {
     });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(
-      result.current({ flow: FLOW_STUB as any }),
-    ).rejects.toBeDefined();
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -162,9 +169,7 @@ describe("useAddFlow — onError display", () => {
     });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(
-      result.current({ flow: FLOW_STUB as any }),
-    ).rejects.toBeDefined();
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -193,9 +198,7 @@ describe("useAddFlow — onError display", () => {
     });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(
-      result.current({ flow: FLOW_STUB as any }),
-    ).rejects.toBeDefined();
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -207,9 +210,7 @@ describe("useAddFlow — onError display", () => {
     rejectAddFlow(new Error("Network Error"));
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(
-      result.current({ flow: FLOW_STUB as any }),
-    ).rejects.toBeDefined();
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -221,9 +222,7 @@ describe("useAddFlow — onError display", () => {
     rejectAddFlow({ weird: "shape" });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(
-      result.current({ flow: FLOW_STUB as any }),
-    ).rejects.toBeDefined();
+    await expect(result.current({ flow: FLOW_STUB })).rejects.toBeDefined();
 
     expect(mockSetErrorData).toHaveBeenCalledWith({
       title: "Flow creation error",
@@ -239,9 +238,7 @@ describe("useAddFlow — success path", () => {
     resolveAddFlow({ ...FLOW_STUB, id: "created-id" });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB as any })).resolves.toBe(
-      "created-id",
-    );
+    await expect(result.current({ flow: FLOW_STUB })).resolves.toBe("created-id");
 
     expect(mockSetErrorData).not.toHaveBeenCalled();
   });
@@ -250,7 +247,7 @@ describe("useAddFlow — success path", () => {
     resolveAddFlow(FLOW_STUB);
 
     const { result } = renderHook(() => useAddFlow());
-    await result.current({ flow: FLOW_STUB as any });
+    await result.current({ flow: FLOW_STUB });
 
     expect(mockSetFlows).toHaveBeenCalledTimes(1);
   });
