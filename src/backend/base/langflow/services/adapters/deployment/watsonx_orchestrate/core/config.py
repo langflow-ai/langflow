@@ -69,7 +69,7 @@ async def create_config(
     immediately after provider connection creation succeeds so rollback can
     clean up partially completed creates.
     """
-    app_id = validate_wxo_name(config.name)
+    app_id = validate_wxo_name(config.name, field_label="Connection app id")
     env_var_keys = list((config.environment_variables or {}).keys())
     logger.debug("create_config: app_id='%s', env_var_keys=%s", app_id, env_var_keys)
 
@@ -158,7 +158,7 @@ def resolve_create_app_id(
     if config is None or config.raw_payload is None:
         return f"{deployment_name}_app_id"
 
-    normalized_config_name = validate_wxo_name(config.raw_payload.name)
+    normalized_config_name = validate_wxo_name(config.raw_payload.name, field_label="Connection app id")
     return f"{deployment_name}_{normalized_config_name}_app_id"
 
 

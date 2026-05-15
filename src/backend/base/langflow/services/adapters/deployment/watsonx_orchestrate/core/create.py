@@ -6,7 +6,6 @@ import asyncio
 import copy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import (
@@ -51,6 +50,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
+    build_langflow_wxo_resource_name,
     dedupe_list,
     raise_as_deployment_error,
 )
@@ -97,7 +97,7 @@ def build_provider_create_plan(
     provider_create: WatsonxDeploymentCreatePayload,
 ) -> ProviderCreatePlan:
     """Build a deterministic CPU-only plan for provider_data create operations."""
-    normalized_deployment_name = _build_wxo_agent_name()
+    normalized_deployment_name = build_langflow_wxo_resource_name(deployment_name, resource="Agent")
 
     # existing_tool_ids: provider tool ids from bind operations that reference
     #   pre-existing tools (via tool_id_with_ref); included in the final agent.
@@ -162,11 +162,6 @@ def build_provider_create_plan(
         raw_tools_to_create=raw_tools_to_create,
         selected_operation_app_ids=selected_operation_app_ids.to_list(),
     )
-
-
-def _build_wxo_agent_name() -> str:
-    """Build a unique wxO technical agent name decoupled from the human readable display name."""
-    return f"langflow_agent_{uuid4().hex[:8]}"
 
 
 async def apply_provider_create_plan_with_rollback(

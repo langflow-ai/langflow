@@ -80,7 +80,7 @@ class RawConnectionCreatePlan:
         # operations[*].app_ids use operation_app_id as the caller-visible key.
         # provider_app_id is used for provider calls and must follow wxO rules.
         # Normalizing here keeps create/validate/rollback on one canonical id.
-        self.provider_app_id = validate_wxo_name(self.provider_app_id)
+        self.provider_app_id = validate_wxo_name(self.provider_app_id, field_label="Connection app id")
 
 
 @dataclass(slots=True)

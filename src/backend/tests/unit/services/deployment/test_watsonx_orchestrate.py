@@ -81,16 +81,20 @@ TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
 def _normalized_provider_app_id(app_id: str) -> str:
-    return utils_module.validate_wxo_name(app_id)
+    return utils_module.validate_wxo_name(app_id, field_label="Connection app id")
 
 
-def _assert_langflow_agent_name(agent_name: str) -> None:
-    prefix = "langflow_agent_"
-    uuid_segment = agent_name.removeprefix(prefix)
+def _assert_langflow_agent_name(agent_name: str, *, display_name: str | None = None) -> None:
+    prefix = "lf_"
     assert agent_name.startswith(prefix)
+    if display_name is not None:
+        normalized_display_name = utils_module.normalize_wxo_name(display_name).strip("_")
+        assert normalized_display_name
+        assert agent_name.startswith(f"{prefix}{normalized_display_name}_")
+    uuid_segment = agent_name.rsplit("_", maxsplit=1)[-1]
     assert len(uuid_segment) == 8
     assert all(char in "0123456789abcdef" for char in uuid_segment)
-    assert utils_module.validate_wxo_name(agent_name) == agent_name
+    assert utils_module.validate_wxo_name(agent_name, field_label="Agent name") == agent_name
 
 
 def _reload_wxo_auth_modules():
@@ -1458,8 +1462,6 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
 @pytest.mark.parametrize(
     "display_name",
     [
-        "!!!",
-        "🔥🔥",
         "123 starts with digits",
         "a" * 500,
     ],
@@ -1489,8 +1491,39 @@ def test_build_provider_create_plan_decouples_technical_name_from_display_name_e
         provider_create=provider_create,
     )
 
-    _assert_langflow_agent_name(plan.deployment_name)
+    _assert_langflow_agent_name(plan.deployment_name, display_name=display_name)
     assert plan.display_name == display_name
+
+
+@pytest.mark.parametrize("display_name", ["!!!", "🔥🔥"])
+def test_build_provider_create_plan_rejects_display_name_without_normalized_segment(display_name):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000072")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+
+    with pytest.raises(
+        InvalidContentError,
+        match="Agent display name must include at least one alphanumeric character",
+    ):
+        create_core_module.build_provider_create_plan(
+            deployment_name=display_name,
+            provider_create=provider_create,
+        )
 
 
 def test_build_provider_create_plan_attaches_existing_tool_without_connection_updates():
@@ -1597,7 +1630,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    _assert_langflow_agent_name(fake_clients.agent.create_calls[0]["name"])
+    _assert_langflow_agent_name(fake_clients.agent.create_calls[0]["name"], display_name="my deployment")
     assert fake_clients.agent.create_calls[0]["name"] != "my deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
@@ -2325,7 +2358,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    _assert_langflow_agent_name(fake_clients.agent.create_calls[0]["name"])
+    _assert_langflow_agent_name(fake_clients.agent.create_calls[0]["name"], display_name="my deployment")
     assert fake_clients.agent.create_calls[0]["name"] != "my deployment"
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
     assert fake_clients.agent.create_calls[0]["description"] == "desc"
@@ -5336,9 +5369,42 @@ async def test_update_deployment_name_and_description(monkeypatch):
     assert len(fake_agent.update_calls) == 1
     agent_id, payload = fake_agent.update_calls[0]
     assert agent_id == "dep-1"
-    assert "name" not in payload
     assert payload["display_name"] == "new name"
+    _assert_langflow_agent_name(payload["name"], display_name="new name")
     assert payload["description"] == "new desc"
+    assert result.provider_result is not None
+    assert result.provider_result.deployment_name == payload["name"]
+
+
+@pytest.mark.anyio
+async def test_update_deployment_name_generates_technical_slug(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient({"id": "dep-1", "name": "provider_agent_name", "tools": []})
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(spec=BaseDeploymentDataUpdate(name="new name")),
+        db=object(),
+    )
+
+    assert len(fake_agent.update_calls) == 1
+    agent_id, payload = fake_agent.update_calls[0]
+    assert agent_id == "dep-1"
+    assert payload["display_name"] == "new name"
+    _assert_langflow_agent_name(payload["name"], display_name="new name")
+    assert result.provider_result is not None
+    assert result.provider_result.deployment_name == payload["name"]
 
 
 @pytest.mark.anyio
@@ -5930,22 +5996,22 @@ def test_normalize_wxo_name():
 def test_validate_wxo_name_valid():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
 
-    assert validate_wxo_name("my_deployment") == "my_deployment"
-    assert validate_wxo_name("My Deployment!") == "My_Deployment"
+    assert validate_wxo_name("my_deployment", field_label="Tool name") == "my_deployment"
+    assert validate_wxo_name("My Deployment!", field_label="Tool name") == "My_Deployment"
 
 
 def test_validate_wxo_name_empty():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
 
-    with pytest.raises(InvalidContentError, match="alphanumeric"):
-        validate_wxo_name("!!!")
+    with pytest.raises(InvalidContentError, match="Tool name must include at least one alphanumeric character"):
+        validate_wxo_name("!!!", field_label="Tool name")
 
 
 def test_validate_wxo_name_starts_with_digit():
     from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
 
-    with pytest.raises(InvalidContentError, match="start with a letter"):
-        validate_wxo_name("123abc")
+    with pytest.raises(InvalidContentError, match="Tool name must start with a letter"):
+        validate_wxo_name("123abc", field_label="Tool name")
 
 
 @pytest.mark.anyio

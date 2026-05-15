@@ -179,7 +179,7 @@ def _validate_name_filter(name: str, *, resource: str) -> str:
     filter to ``None`` and return unfiltered results.
     """
     try:
-        return validate_wxo_name(name)
+        return validate_wxo_name(name, field_label=f"{resource.capitalize()} name")
     except InvalidContentError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

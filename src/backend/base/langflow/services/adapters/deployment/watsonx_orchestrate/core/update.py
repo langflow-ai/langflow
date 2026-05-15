@@ -49,6 +49,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxUnbindOperation,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
+    build_langflow_wxo_resource_name,
     dedupe_list,
     extract_agent_tool_ids,
 )
@@ -604,11 +605,20 @@ def build_update_payload_from_spec(
     leaves it unchanged).
     """
     update_payload: dict[str, Any] = {}
-    if spec:
-        if "name" in spec.model_fields_set:
-            update_payload["display_name"] = spec.name
-        if "description" in spec.model_fields_set:
-            update_payload["description"] = spec.description
+
     if llm is not None:
         update_payload["llm"] = llm
+
+    if not spec:
+        return update_payload
+
+    if "description" in spec.model_fields_set:
+        update_payload["description"] = spec.description
+
+    if "name" in spec.model_fields_set:
+        if spec.name is None:
+            msg = "Agent 'name' cannot be set to null."
+            raise InvalidContentError(message=msg)
+        update_payload["display_name"] = spec.name
+        update_payload["name"] = build_langflow_wxo_resource_name(spec.name, resource="Agent")
     return update_payload
