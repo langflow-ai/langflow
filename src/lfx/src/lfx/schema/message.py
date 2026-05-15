@@ -65,6 +65,7 @@ class Message(Data):
     files: list[str | Image] | None = Field(default=[])
     session_id: str | UUID | None = Field(default="")
     context_id: str | UUID | None = Field(default="")
+    run_id: str | UUID | None = Field(default=None)
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
         default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
@@ -81,6 +82,13 @@ class Message(Data):
     @field_validator("flow_id", mode="before")
     @classmethod
     def validate_flow_id(cls, value):
+        if isinstance(value, UUID):
+            value = str(value)
+        return value
+
+    @field_validator("run_id", mode="before")
+    @classmethod
+    def validate_run_id(cls, value):
         if isinstance(value, UUID):
             value = str(value)
         return value
@@ -116,6 +124,12 @@ class Message(Data):
 
     @field_serializer("flow_id")
     def serialize_flow_id(self, value):
+        if isinstance(value, UUID):
+            return str(value)
+        return value
+
+    @field_serializer("run_id")
+    def serialize_run_id(self, value):
         if isinstance(value, UUID):
             return str(value)
         return value
@@ -234,6 +248,7 @@ class Message(Data):
             files=data.files,
             session_id=data.session_id,
             context_id=data.context_id,
+            run_id=data.run_id,
             timestamp=data.timestamp,
             flow_id=data.flow_id,
             error=data.error,

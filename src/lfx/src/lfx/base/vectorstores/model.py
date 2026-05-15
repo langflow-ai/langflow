@@ -85,8 +85,24 @@ class LCVectorStoreComponent(Component):
             display_name="Search Results",
             name="search_results",
             method="search_documents",
+            info=(
+                "Performs semantic similarity search in the vector store to find relevant documents/files. "
+                "Input: A natural language search query (str). "
+                "Returns: A list of Data objects (dicts). Each result has structure: {'data': {'text': '...', ...}}. "
+                "The 'text' field always contains the matched document content. "
+                "Other metadata fields depend on what was indexed "
+                "(may include: 'file_path', 'source', 'page', etc.). "
+                "IMPORTANT: To extract metadata like file_path, use: "
+                "result['data'].get('file_path') or result.data.get('file_path'). "
+                "Check what fields are available by inspecting result['data'].keys() or the first search result."
+            ),
+            tool_mode=True,
         ),
-        Output(display_name="Table", name="dataframe", method="as_dataframe"),
+        Output(
+            display_name="Table",
+            name="dataframe",
+            method="as_dataframe",
+        ),
     ]
 
     def _validate_outputs(self) -> None:

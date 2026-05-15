@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import asyncio
 import inspect
+import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from textwrap import dedent
@@ -58,6 +59,8 @@ if TYPE_CHECKING:
     from lfx.schema.log import LoggableType
 
 
+logger = logging.getLogger(__name__)
+
 _ComponentToolkit = None
 
 
@@ -112,6 +115,7 @@ class PlaceholderGraph(NamedTuple):
         flow_id (str | None): Unique identifier for the flow, if applicable.
         user_id (str | None): Identifier of the user associated with the flow, if any.
         session_id (str | None): Identifier for the current session, if applicable.
+        run_id (str | None): Identifier for the current graph run, if applicable.
         context (dict): Additional contextual information for the component's execution.
         flow_name (str | None): Name of the flow, if available.
     """
@@ -119,6 +123,7 @@ class PlaceholderGraph(NamedTuple):
     flow_id: str | None
     user_id: str | None
     session_id: str | None
+    run_id: str | None
     context: dict
     flow_name: str | None
 
@@ -434,13 +439,26 @@ class Component(CustomComponent):
                 # Attempt to deepcopy the entire input object
                 new_inputs[k] = deepcopy(v, memo)
             except Exception:  # noqa: BLE001
-                # If deepcopy fails (e.g. due to RLock), handle the value carefully
-                # Pydantic's model_copy(deep=False) creates a shallow copy
+                # If deepcopy fails (e.g. due to RLock), handle the value carefully.
+                # Pydantic's model_copy(deep=False) creates a shallow copy.
+                logger.warning(
+                    "deepcopy failed for input '%s' on %s — falling back to shallow copy",
+                    k,
+                    type(self).__name__,
+                    exc_info=True,
+                )
                 input_copy = v.model_copy()
                 try:
                     input_copy.value = deepcopy(v.value, memo)
                 except Exception:  # noqa: BLE001
-                    # Keep the original value (shallow copy) if it can't be deepcopied
+                    # Keep the original value (shallow copy) if it can't be deepcopied.
+                    # WARNING: this shares a mutable reference between original and copy.
+                    logger.warning(
+                        "deepcopy failed for input '%s'.value on %s — sharing mutable reference",
+                        k,
+                        type(self).__name__,
+                        exc_info=True,
+                    )
                     input_copy.value = v.value
                 new_inputs[k] = input_copy
 
@@ -996,8 +1014,14 @@ class Component(CustomComponent):
             user_id = self._user_id if hasattr(self, "_user_id") else None
             flow_name = self._flow_name if hasattr(self, "_flow_name") else None
             flow_id = self._flow_id if hasattr(self, "_flow_id") else None
+            run_id = self._run_id if hasattr(self, "_run_id") else None
             return PlaceholderGraph(
-                flow_id=flow_id, user_id=str(user_id), session_id=session_id, context={}, flow_name=flow_name
+                flow_id=flow_id,
+                user_id=str(user_id),
+                session_id=session_id,
+                run_id=run_id,
+                context={},
+                flow_name=flow_name,
             )
         msg = f"Attribute {name} not found in {self.__class__.__name__}"
         raise AttributeError(msg)
@@ -1624,11 +1648,27 @@ class Component(CustomComponent):
                         item["status"] = any(enabled_name in [item["name"], *item["tags"]] for enabled_name in enabled)
                 self.tools_metadata = tool_data
             else:
-                # Preserve existing status values
-                existing_status = {item["name"]: item.get("status", True) for item in self.tools_metadata}
+                # Merge: preserve user-editable fields from old metadata,
+                # update code-derived fields (args) from new tool data.
+                # For description: only preserve if the user actually edited it
+                # (detected by comparing description to display_description).
+                old_by_tag = {}
+                for item in self.tools_metadata:
+                    tags = item.get("tags", [])
+                    if tags:
+                        old_by_tag[tags[0]] = item
                 for item in tool_data:
-                    item["status"] = existing_status.get(item["name"], True)
-                tool_data = self.tools_metadata
+                    tags = item.get("tags", [])
+                    old = old_by_tag.get(tags[0]) if tags else None
+                    if old:
+                        item["status"] = old.get("status", True)
+                        item["name"] = old.get("name", item["name"])
+                        # Preserve description only if user customized it
+                        old_desc = old.get("description", "")
+                        old_display = old.get("display_description", "")
+                        if old_desc and old_desc != old_display:
+                            item["description"] = old_desc
+                self.tools_metadata = tool_data
         else:
             # If enabled tools are set, update status based on them
             enabled = self.enabled_tools
@@ -1663,7 +1703,17 @@ class Component(CustomComponent):
         log = Log(message=message, type=get_artifact_type(message), name=name)
         self._logs.append(log)
         if self.tracing_service and self._vertex:
-            self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            try:
+                self.tracing_service.add_log(trace_name=self.trace_name, log=log)
+            except RuntimeError as e:
+                # No component context available (e.g., when called as a tool outside normal execution)
+                # Logs are still stored in self._logs for later retrieval
+                from lfx.log.logger import logger
+
+                logger.warning(
+                    f"Component '{self.display_name}' logging outside execution context: {e}. "
+                    "Log stored locally but not sent to tracing service."
+                )
         if self._event_manager is not None and self._current_output:
             data = log.model_dump()
             data["output"] = self._current_output
@@ -1849,10 +1899,25 @@ class Component(CustomComponent):
 
     async def _store_message(self, message: Message) -> Message:
         flow_id: str | None = None
+        run_id: str | None = None
+        session_metadata = dict(message.session_metadata or {})
         if hasattr(self, "graph"):
             # Convert UUID to str if needed
             flow_id = str(self.graph.flow_id) if self.graph.flow_id else None
-        stored_messages = await astore_message(message, flow_id=flow_id)
+            graph_run_id = str(self.graph.run_id) if self.graph.run_id else None
+            run_id = graph_run_id
+            if self.tracing_service:
+                langfuse_tracer = self.tracing_service.get_tracer("langfuse")
+                langfuse_trace_id = getattr(langfuse_tracer, "langfuse_trace_id", None)
+                if langfuse_trace_id:
+                    session_metadata["langfuse_trace_id"] = langfuse_trace_id
+                if graph_run_id:
+                    session_metadata["graph_run_id"] = graph_run_id
+        if session_metadata:
+            message.session_metadata = session_metadata
+        if run_id and not getattr(message, "run_id", None):
+            message.run_id = run_id
+        stored_messages = await astore_message(message, flow_id=flow_id, run_id=run_id)
         if len(stored_messages) != 1:
             msg = "Only one message can be stored at a time."
             raise ValueError(msg)

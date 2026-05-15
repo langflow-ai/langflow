@@ -267,6 +267,23 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         return self
 
 
+class DBProviderInput(BaseInputMixin, InputTraceMixin, ToolModeMixin):
+    """Represents the DB Provider selector.
+
+    Value format:
+    - {"backend_type": "chroma", "backend_config": {}}
+    - {"backend_type": "opensearch", "backend_config": {...}}
+
+    Default is intentionally an empty dict so the frontend can populate
+    it from the user's configured DB Provider on first render. Falls
+    back to Chroma server-side via ``_normalize_backend_selection``.
+    """
+
+    field_type: SerializableFieldTypes = FieldTypes.DB_PROVIDER
+    value: dict = Field(default_factory=dict)
+    input_types: list[str] = Field(default_factory=list)
+
+
 # Applying mixins to a specific input type
 class StrInput(
     BaseInputMixin,

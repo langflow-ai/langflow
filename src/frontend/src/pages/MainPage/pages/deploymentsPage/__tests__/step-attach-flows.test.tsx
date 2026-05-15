@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ConnectionItem } from "../types";
+import type { ConnectionItem, SelectedFlowVersion } from "../types";
 
 // ---------------------------------------------------------------------------
 // Mocks — stepper context
@@ -11,10 +11,7 @@ let mockInitialFlowId: string | undefined;
 let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
 let mockConnections: ConnectionItem[] = [];
 const mockSetConnections = jest.fn();
-let mockSelectedVersionByFlow = new Map<
-  string,
-  { versionId: string; versionTag: string }
->();
+let mockSelectedVersionByFlow = new Map<string, SelectedFlowVersion>();
 const mockHandleSelectVersion = jest.fn();
 let mockToolNameByFlow = new Map<string, string>();
 const mockSetToolNameByFlow = jest.fn();
@@ -202,6 +199,8 @@ jest.mock(
 
 import StepAttachFlows from "../components/step-attach-flows";
 
+const selectedFlow1Version1Key = "flow-1:ver-1";
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockIsEditMode = false;
@@ -350,7 +349,15 @@ describe("Version panel", () => {
 
   it("shows ATTACHED badge for already-attached versions", () => {
     mockSelectedVersionByFlow = new Map([
-      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+      [
+        selectedFlow1Version1Key,
+        {
+          key: selectedFlow1Version1Key,
+          flowId: "flow-1",
+          versionId: "ver-1",
+          versionTag: "v1",
+        },
+      ],
     ]);
     render(<StepAttachFlows />);
     expect(screen.getAllByText("ATTACHED").length).toBeGreaterThanOrEqual(1);
@@ -445,7 +452,15 @@ describe("Edit mode features", () => {
   beforeEach(() => {
     mockIsEditMode = true;
     mockSelectedVersionByFlow = new Map([
-      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+      [
+        selectedFlow1Version1Key,
+        {
+          key: selectedFlow1Version1Key,
+          flowId: "flow-1",
+          versionId: "ver-1",
+          versionTag: "v1",
+        },
+      ],
     ]);
   });
 
@@ -456,36 +471,40 @@ describe("Edit mode features", () => {
 
   it("shows detach button for attached flows", () => {
     render(<StepAttachFlows />);
-    expect(screen.getByTestId("detach-flow-flow-1")).toBeInTheDocument();
+    expect(screen.getByTestId("detach-version-ver-1")).toBeInTheDocument();
   });
 
   it("calls handleRemoveAttachedFlow when detach is clicked", async () => {
     const user = userEvent.setup();
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("detach-flow-flow-1"));
-    expect(mockHandleRemoveAttachedFlow).toHaveBeenCalledWith("flow-1");
+    await user.click(screen.getByTestId("detach-version-ver-1"));
+    expect(mockHandleRemoveAttachedFlow).toHaveBeenCalledWith(
+      selectedFlow1Version1Key,
+    );
   });
 
   it("shows REMOVED badge for removed flows", () => {
-    mockRemovedFlowIds = new Set(["flow-1"]);
+    mockRemovedFlowIds = new Set([selectedFlow1Version1Key]);
     render(<StepAttachFlows />);
-    expect(screen.getByText("REMOVED")).toBeInTheDocument();
+    expect(screen.getAllByText("REMOVED").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows undo button for removed flows", () => {
-    mockRemovedFlowIds = new Set(["flow-1"]);
+    mockRemovedFlowIds = new Set([selectedFlow1Version1Key]);
     render(<StepAttachFlows />);
-    expect(screen.getByTestId("undo-remove-flow-flow-1")).toBeInTheDocument();
+    expect(screen.getByTestId("undo-version-ver-1")).toBeInTheDocument();
   });
 
   it("calls handleUndoRemoveFlow when undo is clicked", async () => {
     const user = userEvent.setup();
-    mockRemovedFlowIds = new Set(["flow-1"]);
+    mockRemovedFlowIds = new Set([selectedFlow1Version1Key]);
     render(<StepAttachFlows />);
 
-    await user.click(screen.getByTestId("undo-remove-flow-flow-1"));
-    expect(mockHandleUndoRemoveFlow).toHaveBeenCalledWith("flow-1");
+    await user.click(screen.getByTestId("undo-version-ver-1"));
+    expect(mockHandleUndoRemoveFlow).toHaveBeenCalledWith(
+      selectedFlow1Version1Key,
+    );
   });
 
   it("sorts attached flows to the top", () => {
@@ -557,7 +576,15 @@ describe("Detected env vars auto-population", () => {
     const user = userEvent.setup();
     mockInitialFlowId = "flow-1";
     mockSelectedVersionByFlow = new Map([
-      ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
+      [
+        selectedFlow1Version1Key,
+        {
+          key: selectedFlow1Version1Key,
+          flowId: "flow-1",
+          versionId: "ver-1",
+          versionTag: "v1",
+        },
+      ],
     ]);
     mockDetectEnvVars.mockResolvedValueOnce({
       variables: ["GLOBAL_SECRET"],

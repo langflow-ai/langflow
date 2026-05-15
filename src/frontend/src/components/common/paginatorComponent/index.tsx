@@ -26,35 +26,46 @@ export default function PaginatorComponent({
 }: PaginatorComponentType) {
   const [size, setPageSize] = useState(pageSize);
   const [maxIndex, setMaxPageIndex] = useState(
-    Math.ceil(totalRowsCount / pageSize),
+    Math.max(1, Math.ceil(totalRowsCount / pageSize)),
   );
 
   useEffect(() => {
-    setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / size));
+    setMaxPageIndex(pages ?? Math.max(1, Math.ceil(totalRowsCount / size)));
   }, [totalRowsCount]);
 
   const disableFirstPage = pageIndex <= 1;
-  const disableLastPage = pageIndex === maxIndex;
+  const disableLastPage = pageIndex >= maxIndex;
 
   const _handleValueChange = (pageSize: string) => {
     setPageSize(Number(pageSize));
-    setMaxPageIndex(pages ?? Math.ceil(totalRowsCount / Number(pageSize)));
+    setMaxPageIndex(
+      pages ?? Math.max(1, Math.ceil(totalRowsCount / Number(pageSize))),
+    );
     paginate(1, Number(pageSize));
   };
+
+  const itemLabel =
+    isComponent === undefined ? "items" : isComponent ? "components" : "flows";
+  const isEmpty = totalRowsCount === 0;
+  const rangeStart = (pageIndex - 1) * pageSize + 1;
+  const rangeEnd = Math.min(
+    totalRowsCount,
+    (pageIndex - 1) * pageSize + pageSize,
+  );
 
   return (
     <div className="flex flex-1 items-center justify-between px-6">
       <div className="flex items-center justify-end gap-1 text-mmd text-secondary-foreground">
-        {totalRowsCount === 0 ? 0 : (pageIndex - 1) * pageSize + 1}-
-        {Math.min(totalRowsCount, (pageIndex - 1) * pageSize + pageSize)}{" "}
-        <span className="text-muted-foreground">
-          of {totalRowsCount}{" "}
-          {isComponent === undefined
-            ? "items"
-            : isComponent
-              ? "components"
-              : "flows"}
-        </span>
+        {isEmpty ? (
+          <span className="text-muted-foreground">0 {itemLabel}</span>
+        ) : (
+          <>
+            {rangeStart}-{rangeEnd}{" "}
+            <span className="text-muted-foreground">
+              of {totalRowsCount} {itemLabel}
+            </span>
+          </>
+        )}
       </div>
       <div className={"flex items-center gap-2"}>
         <div className="flex items-center gap-1 text-mmd text-secondary-foreground">
