@@ -879,7 +879,11 @@ class BaseDeploymentMapper:
     def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
         """Shape provider_data for single-deployment GET responses."""
         _ = provider_data
-        msg = "This deployment provider is not configured for shaping provider data for a deployment."
+        msg = (
+            "BaseDeploymentMapper does not implement shape_deployment_get_data; "
+            "must be implemented by subclasses (e.g. watsonx_orchestrate). "
+            "GET provider_data shaping is unavailable for this provider."
+        )
         raise NotImplementedError(msg)
 
     @staticmethod
