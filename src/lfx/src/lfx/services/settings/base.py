@@ -349,6 +349,23 @@ class Settings(BaseSettings):
     """Cross-host orphan outboxes (e.g. dead pods on a shared volume) are pruned
     when their owner file hasn't been heartbeated within this many seconds.
     Same-host orphans are adopted regardless of age via owner-file identity."""
+    telemetry_writer_size_strategy: Literal["count", "bytes", "either"] = "count"
+    """How the writer bounds memory and flushes.
+
+    - 'count' (default): preserve legacy row-count semantics. ``batch_size`` and
+      ``max_queue`` are the only thresholds.
+    - 'bytes': bound by the byte thresholds below; row caps are ignored.
+    - 'either': whichever (rows or bytes) trips first wins. Recommended for
+      deployments with variable payload sizes (large vertex_build artifacts,
+      doc-loader outputs)."""
+    telemetry_writer_batch_size_bytes: int = 262_144
+    """Cap on per-flush batch size in bytes. Consulted when
+    ``telemetry_writer_size_strategy`` is 'bytes' or 'either'. Sized around a
+    single TCP frame so individual INSERTs stay below DB packet limits."""
+    telemetry_writer_max_queue_bytes: int = 209_715_200
+    """Per-outbox byte cap. When exceeded under 'bytes' or 'either' strategy,
+    oldest entries are dropped until the buffer fits. Defaults to ~200MB so a
+    single worker's telemetry buffer can't dominate container memory."""
 
     # Config
     host: str = "localhost"

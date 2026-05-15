@@ -46,6 +46,9 @@ class _FakeSettings:
             "telemetry_writer_max_queue": 100_000,
             "telemetry_writer_outbox_dir": None,
             "telemetry_writer_shutdown_drain_s": 5.0,
+            "telemetry_writer_size_strategy": "count",
+            "telemetry_writer_batch_size_bytes": 262_144,
+            "telemetry_writer_max_queue_bytes": 209_715_200,
             "max_transactions_to_keep": 3000,
             "max_vertex_builds_to_keep": 3000,
             "max_vertex_builds_per_vertex": 50,
@@ -142,6 +145,83 @@ def test_overflow_drops_oldest(writer_with_engine) -> None:
     assert len(writer._tx_buffer) == 3
     assert writer.dropped_transactions == 2
     assert [item["i"] for item in writer._tx_buffer] == [2, 3, 4]
+
+
+def test_count_strategy_ignores_byte_caps(writer_with_engine) -> None:
+    """Default 'count' strategy must not track or cap bytes — preserves legacy semantics."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "count"
+    writer.settings_service.settings.telemetry_writer_max_queue_bytes = 1  # tiny — would trip on bytes
+    for i in range(5):
+        writer.enqueue_transaction({"big": "x" * 1000, "i": i})
+    assert len(writer._tx_buffer) == 5
+    assert writer.dropped_transactions == 0
+    # Byte tracking is disabled under 'count'.
+    assert writer._tx_bytes == 0
+    assert len(writer._tx_sizes) == 0
+
+
+def test_bytes_strategy_drops_oldest_when_byte_cap_exceeded(writer_with_engine) -> None:
+    """'bytes' strategy bounds memory regardless of row count."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "bytes"
+    writer.settings_service.settings.telemetry_writer_max_queue = 10_000  # high — must not be the trigger
+    writer.settings_service.settings.telemetry_writer_max_queue_bytes = 200
+    # Each payload encodes to >100 bytes, so 3 of them busts the 200B cap.
+    for i in range(3):
+        writer.enqueue_transaction({"payload": "x" * 100, "i": i})
+    assert writer._tx_bytes < 200
+    assert writer.dropped_transactions >= 1
+    assert writer.dropped_transactions_bytes > 0
+
+
+def test_either_strategy_trips_on_first_threshold(writer_with_engine) -> None:
+    """'either' fires whichever cap (rows or bytes) is breached first."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "either"
+    writer.settings_service.settings.telemetry_writer_max_queue = 3
+    writer.settings_service.settings.telemetry_writer_max_queue_bytes = 10_000_000
+    for i in range(5):
+        writer.enqueue_transaction({"i": i})
+    # Row cap trips first.
+    assert len(writer._tx_buffer) == 3
+    assert writer.dropped_transactions == 2
+
+
+def test_drain_batch_respects_byte_budget(writer_with_engine) -> None:
+    """Writer flush must split batches by bytes when strategy uses bytes."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "bytes"
+    for i in range(10):
+        writer.enqueue_transaction({"payload": "x" * 100, "i": i})
+    # Budget of 250 bytes should grab ~2 rows (each is just over 100B encoded).
+    batch = writer._drain_batch("transactions", max_n=10, max_bytes=250)
+    assert 1 <= len(batch) <= 4
+    # Remainder still in buffer.
+    assert len(writer._tx_buffer) + len(batch) == 10
+
+
+def test_drain_batch_always_emits_one_row_even_when_oversized(writer_with_engine) -> None:
+    """A single row larger than the byte budget must still make progress."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "bytes"
+    writer.enqueue_transaction({"big": "x" * 10_000})
+    batch = writer._drain_batch("transactions", max_n=200, max_bytes=10)
+    assert len(batch) == 1
+
+
+def test_return_batch_to_buffer_restores_sizes(writer_with_engine) -> None:
+    """Cancel/retry path must put rows AND their sizes back so accounting stays consistent."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "either"
+    writer.enqueue_transaction({"a": 1})
+    writer.enqueue_transaction({"b": 2})
+    bytes_before = writer._tx_bytes
+    batch = writer._drain_batch("transactions", max_n=2, max_bytes=10_000)
+    assert writer._tx_bytes == 0
+    writer._return_batch_to_buffer("transactions", batch)
+    assert writer._tx_bytes == bytes_before
+    assert len(writer._tx_sizes) == len(writer._tx_buffer) == 2
 
 
 async def test_flush_inserts_transactions_and_vertex_builds(writer_with_engine) -> None:

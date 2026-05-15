@@ -231,6 +231,12 @@ class TelemetryWriterService(Service):
         # In-memory hot path. deque.append / popleft are O(1) and don't touch disk.
         self._tx_buffer: collections.deque[dict[str, Any]] = collections.deque()
         self._vb_buffer: collections.deque[dict[str, Any]] = collections.deque()
+        # Parallel byte-size deques. Populated only when size_strategy != "count" so
+        # the legacy hot path pays nothing. Sized in lockstep with the payload deques.
+        self._tx_sizes: collections.deque[int] = collections.deque()
+        self._vb_sizes: collections.deque[int] = collections.deque()
+        self._tx_bytes: int = 0
+        self._vb_bytes: int = 0
         # PID directory used for shutdown spill + startup recovery.
         self._own_outbox_dir: Path | None = None
         self._dirty_tx_flows: set[str] = set()
@@ -238,6 +244,8 @@ class TelemetryWriterService(Service):
         # Metrics.
         self.dropped_transactions: int = 0
         self.dropped_vertex_builds: int = 0
+        self.dropped_transactions_bytes: int = 0
+        self.dropped_vertex_builds_bytes: int = 0
         self.failed_batches: int = 0
         self.flushed_rows: int = 0
         self.enqueued_transactions: int = 0
@@ -389,18 +397,64 @@ class TelemetryWriterService(Service):
         *,
         kind: str,
     ) -> None:
-        max_q = int(getattr(self.settings_service.settings, "telemetry_writer_max_queue", 100_000))
+        settings = self.settings_service.settings
+        strategy = getattr(settings, "telemetry_writer_size_strategy", "count")
+        track_bytes = strategy in ("bytes", "either")
+        sizes = self._tx_sizes if kind == "transactions" else self._vb_sizes
+
+        size = len(json.dumps(payload, default=_json_default).encode()) if track_bytes else 0
+        max_q = int(getattr(settings, "telemetry_writer_max_queue", 100_000))
+        max_bytes = int(getattr(settings, "telemetry_writer_max_queue_bytes", 209_715_200))
+
         # Drop oldest on overflow — bounds memory, biases retention toward newest.
-        while len(buffer) >= max_q:
+        # Strategy decides which threshold(s) apply. Account for the incoming row
+        # so the post-append state stays under the byte cap, not just the
+        # pre-append state.
+        while self._should_drop_oldest(buffer, len(sizes), strategy, max_q, max_bytes, incoming_bytes=size):
             try:
                 buffer.popleft()
             except IndexError:
                 break
+            dropped_size = sizes.popleft() if track_bytes and sizes else 0
             if kind == "transactions":
                 self.dropped_transactions += 1
+                self.dropped_transactions_bytes += dropped_size
+                self._tx_bytes -= dropped_size
             else:
                 self.dropped_vertex_builds += 1
+                self.dropped_vertex_builds_bytes += dropped_size
+                self._vb_bytes -= dropped_size
         buffer.append(payload)
+        if track_bytes:
+            sizes.append(size)
+            if kind == "transactions":
+                self._tx_bytes += size
+            else:
+                self._vb_bytes += size
+
+    def _should_drop_oldest(
+        self,
+        buffer: collections.deque[dict[str, Any]],
+        sizes_len: int,
+        strategy: str,
+        max_q: int,
+        max_bytes: int,
+        incoming_bytes: int = 0,
+    ) -> bool:
+        # Snapshot byte totals after we updated them on the previous pop.
+        current_bytes = self._tx_bytes if buffer is self._tx_buffer else self._vb_bytes
+        count_exceeded = len(buffer) >= max_q
+        # Only enforce the byte cap when we've actually tracked sizes. Mixed-mode
+        # transitions (size_strategy flipped at runtime) would otherwise drop
+        # everything because sizes_len is 0. ``incoming_bytes`` lets the caller
+        # ensure post-append state stays under the cap, not just pre-append.
+        bytes_exceeded = sizes_len > 0 and (current_bytes + incoming_bytes) > max_bytes
+        if strategy == "count":
+            return count_exceeded
+        if strategy == "bytes":
+            return bytes_exceeded
+        # 'either': whichever trips first
+        return count_exceeded or bytes_exceeded
 
     async def _wait_or_shutdown(self, timeout: float, *, name: str) -> None:
         """Sleep up to ``timeout`` or return early if shutdown is signaled.
@@ -416,15 +470,62 @@ class TelemetryWriterService(Service):
         with suppress(asyncio.TimeoutError):
             await asyncio.wait_for(wait_task, timeout=timeout)
 
-    @staticmethod
-    def _drain(buffer: collections.deque[dict[str, Any]], max_n: int) -> list[dict]:
+    def _drain_batch(self, kind: str, max_n: int, max_bytes: int | None) -> list[dict]:
+        """Drain rows respecting both row count and (optional) byte budget.
+
+        Pops from the payload buffer and the parallel size deque in lockstep,
+        decrementing the running byte counter as rows leave. Stops when either
+        ``max_n`` rows or ``max_bytes`` worth of payload has been pulled — but
+        always emits at least one row to make progress when a single row
+        exceeds the byte budget.
+        """
+        if kind == "transactions":
+            buffer, sizes = self._tx_buffer, self._tx_sizes
+        else:
+            buffer, sizes = self._vb_buffer, self._vb_sizes
         batch: list[dict] = []
+        batch_bytes = 0
+        track_bytes = max_bytes is not None and sizes
         for _ in range(max_n):
             try:
-                batch.append(buffer.popleft())
+                row = buffer.popleft()
             except IndexError:
                 break
+            batch.append(row)
+            if track_bytes:
+                size = sizes.popleft()
+                if kind == "transactions":
+                    self._tx_bytes -= size
+                else:
+                    self._vb_bytes -= size
+                batch_bytes += size
+                if batch_bytes >= max_bytes:
+                    break
         return batch
+
+    def _return_batch_to_buffer(self, kind: str, batch: list[dict]) -> None:
+        """Push an in-flight batch back to the front of its buffer on cancel/retry.
+
+        Re-encodes sizes so the parallel size deque stays consistent. Skips
+        size accounting when the byte-tracking strategy isn't active.
+        """
+        if not batch:
+            return
+        if kind == "transactions":
+            buffer, sizes = self._tx_buffer, self._tx_sizes
+        else:
+            buffer, sizes = self._vb_buffer, self._vb_sizes
+        strategy = getattr(self.settings_service.settings, "telemetry_writer_size_strategy", "count")
+        track_bytes = strategy in ("bytes", "either")
+        for row in reversed(batch):
+            buffer.appendleft(row)
+            if track_bytes:
+                size = len(json.dumps(row, default=_json_default).encode())
+                sizes.appendleft(size)
+                if kind == "transactions":
+                    self._tx_bytes += size
+                else:
+                    self._vb_bytes += size
 
     def _spill_to_disk(self, own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
         """Append remaining in-memory rows to the on-disk SQLite outbox for replay.
@@ -448,6 +549,14 @@ class TelemetryWriterService(Service):
             logger.warning(f"telemetry_writer: dropped {dropped} oldest {kind} rows at shutdown (over {max_rows} cap)")
         if spilled:
             logger.info(f"telemetry_writer: spilled {spilled} {kind} rows to disk at shutdown")
+        # ``append_all`` drained the buffer; reset the parallel size tracking so
+        # a future enqueue under the same writer instance starts fresh.
+        if kind == "transactions":
+            self._tx_sizes.clear()
+            self._tx_bytes = 0
+        else:
+            self._vb_sizes.clear()
+            self._vb_bytes = 0
 
     def _restore_from_disk(self, own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
         """Load any disk-spilled rows from the previous run of this PID.
@@ -573,13 +682,20 @@ class TelemetryWriterService(Service):
     async def _run_writer(self) -> None:
         if self._shutdown_event is None:
             return  # not started
-        batch_size = int(getattr(self.settings_service.settings, "telemetry_writer_batch_size", 200))
-        flush_interval = float(getattr(self.settings_service.settings, "telemetry_writer_flush_interval_s", 0.5))
+        settings = self.settings_service.settings
+        batch_size = int(getattr(settings, "telemetry_writer_batch_size", 200))
+        flush_interval = float(getattr(settings, "telemetry_writer_flush_interval_s", 0.5))
+        strategy = getattr(settings, "telemetry_writer_size_strategy", "count")
+        batch_size_bytes: int | None = (
+            int(getattr(settings, "telemetry_writer_batch_size_bytes", 262_144))
+            if strategy in ("bytes", "either")
+            else None
+        )
         consecutive_failures = 0
         while True:
             should_stop = self._shutdown_event.is_set()
-            tx_batch = self._drain(self._tx_buffer, batch_size)
-            vb_batch = self._drain(self._vb_buffer, batch_size)
+            tx_batch = self._drain_batch("transactions", batch_size, batch_size_bytes)
+            vb_batch = self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
 
             if not tx_batch and not vb_batch:
                 if should_stop:
@@ -594,20 +710,16 @@ class TelemetryWriterService(Service):
             except asyncio.CancelledError:
                 # Shutdown cancelled us mid-flush. Put the in-flight batch back
                 # in the buffer so teardown's spill_to_disk catches it.
-                for row in reversed(tx_batch):
-                    self._tx_buffer.appendleft(row)
-                for row in reversed(vb_batch):
-                    self._vb_buffer.appendleft(row)
+                self._return_batch_to_buffer("transactions", tx_batch)
+                self._return_batch_to_buffer("vertex_builds", vb_batch)
                 raise
             except Exception:  # noqa: BLE001
                 self.failed_batches += 1
                 consecutive_failures += 1
                 logger.exception("telemetry_writer: batch flush failed; will retry")
                 # Put rows back at the front so the next iteration retries.
-                for row in reversed(tx_batch):
-                    self._tx_buffer.appendleft(row)
-                for row in reversed(vb_batch):
-                    self._vb_buffer.appendleft(row)
+                self._return_batch_to_buffer("transactions", tx_batch)
+                self._return_batch_to_buffer("vertex_builds", vb_batch)
                 # Exponential-ish backoff capped at 30s. Avoids hot-looping on a
                 # broken DB while still preserving telemetry across the failure.
                 backoff = min(30.0, 0.5 * (2 ** min(consecutive_failures, 6)))
