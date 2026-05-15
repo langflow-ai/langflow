@@ -93,6 +93,47 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
+    async def test_get_knowledge_bases_db_first_hides_stale_disk_dirs(self, tmp_path, active_user):
+        """DB-first listing hides on-disk dirs that have no matching DB row.
+
+        Regression for the dropdown showing entries (e.g. ``api_baseline_*``,
+        ``customer_sales_history_*``) that no longer exist on the Knowledge
+        management page. Before the fix, the lfx helper scanned the disk
+        unconditionally, so any directory left over from a delete that did
+        not write the ``.kb_deleted`` sentinel (legacy delete, direct
+        ``DELETE FROM knowledge_base``, DB reset, etc.) would re-surface in
+        the canvas dropdown but not on the management page (which is
+        DB-first). The two surfaces must agree.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        # Disk has both a "real" KB (with a DB row) and a leftover stale dir.
+        (tmp_path / active_user.username / "real_kb").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "stale_dir").mkdir(parents=True, exist_ok=True)
+        await knowledge_base_service.create_record(user_id=active_user.id, name="real_kb")
+
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+
+        assert "real_kb" in kb_list
+        # ``stale_dir`` has no DB row → it's a phantom and must not show up.
+        assert "stale_dir" not in kb_list
+
+    async def test_get_knowledge_bases_skips_memory_base_associated_kbs(self, tmp_path, active_user):
+        """Memory-base-associated KBs are filtered out of the generic KB list.
+
+        Matches the listing endpoint's behavior — those KBs are exposed
+        through the Memory Base APIs, not the generic KB dropdown.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        await knowledge_base_service.create_record(user_id=active_user.id, name="regular_kb")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="memory_kb", source_types=["memory"])
+
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+
+        assert "regular_kb" in kb_list
+        assert "memory_kb" not in kb_list
+
     async def test_update_build_config_populates_options(self, component_class, default_kwargs, tmp_path, active_user):
         component = component_class(**default_kwargs)
 

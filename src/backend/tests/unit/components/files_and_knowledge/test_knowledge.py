@@ -351,7 +351,7 @@ class TestExtractSourceTypesFromDataFrame:
     def test_extracts_pdf_from_file_path_column(self) -> None:
         import pandas as pd
 
-        df = pd.DataFrame({"file_path": ["/tmp/report.PDF", "/tmp/notes.txt"]})
+        df = pd.DataFrame({"file_path": ["docs/report.PDF", "docs/notes.txt"]})
         extensions = KnowledgeComponent._extract_source_types_from_df(df)
         assert extensions == {"pdf", "txt"}
 
@@ -387,6 +387,6 @@ class TestExtractSourceTypesFromDataFrame:
         import numpy as np
         import pandas as pd
 
-        df = pd.DataFrame({"file_path": ["/tmp/a.docx", np.nan, None]})
+        df = pd.DataFrame({"file_path": ["docs/a.docx", np.nan, None]})
         extensions = KnowledgeComponent._extract_source_types_from_df(df)
         assert extensions == {"docx"}
