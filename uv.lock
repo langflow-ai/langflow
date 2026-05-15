@@ -7140,7 +7140,7 @@ all = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
-    { name = "langfuse" },
+    { name = "langfuse", marker = "python_full_version < '3.14'" },
     { name = "langsmith" },
     { name = "langwatch", marker = "python_full_version < '3.14'" },
     { name = "lark" },
@@ -7307,7 +7307,7 @@ complete = [
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
-    { name = "langfuse" },
+    { name = "langfuse", marker = "python_full_version < '3.14'" },
     { name = "langsmith" },
     { name = "langwatch", marker = "python_full_version < '3.14'" },
     { name = "lark" },
@@ -7459,7 +7459,7 @@ langchain-unstructured = [
     { name = "langchain-unstructured" },
 ]
 langfuse = [
-    { name = "langfuse" },
+    { name = "langfuse", marker = "python_full_version < '3.14'" },
 ]
 langsmith = [
     { name = "langsmith" },
@@ -7875,7 +7875,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["youtube"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
+    { name = "langfuse", marker = "python_full_version < '3.14' and extra == 'langfuse'", specifier = "~=3.8" },
     { name = "langgraph-checkpoint", specifier = ">4.0.0,<5.0.0" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
     { name = "langwatch", marker = "python_full_version < '3.14' and extra == 'langwatch'", specifier = "~=0.10.0" },
@@ -8058,15 +8058,15 @@ name = "langfuse"
 version = "3.14.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "backoff" },
-    { name = "httpx" },
-    { name = "openai" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
-    { name = "packaging" },
-    { name = "pydantic" },
-    { name = "wrapt" },
+    { name = "backoff", marker = "python_full_version < '3.14'" },
+    { name = "httpx", marker = "python_full_version < '3.14'" },
+    { name = "openai", marker = "python_full_version < '3.14'" },
+    { name = "opentelemetry-api", marker = "python_full_version < '3.14'" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "python_full_version < '3.14'" },
+    { name = "opentelemetry-sdk", marker = "python_full_version < '3.14'" },
+    { name = "packaging", marker = "python_full_version < '3.14'" },
+    { name = "pydantic", marker = "python_full_version < '3.14'" },
+    { name = "wrapt", marker = "python_full_version < '3.14'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e5/e4/5bb96bc5f95f476c8f7c4e654a6420250938cc21645b914a1309c2dc3d49/langfuse-3.14.6.tar.gz", hash = "sha256:058f7b7caa9284b964feaee81c223542d78e9fb4daabf312269b9f903471b9c4", size = 236530, upload-time = "2026-04-01T17:27:55.057Z" }
 wheels = [
