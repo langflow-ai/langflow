@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from typing import TYPE_CHECKING, Any, NoReturn
+from uuid import uuid4
 
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -35,19 +36,36 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+LANGFLOW_WXO_RESOURCE_NAME_PREFIX = "lf_"
+
 
 def normalize_wxo_name(s: str) -> str:
     return WXO_SANITIZE_RE.sub("", s.translate(WXO_TRANSLATE))
 
 
-def validate_wxo_name(name: str) -> str:
+def normalize_wxo_display_name_segment(display_name: str, *, resource: str) -> str:
+    """Normalize the display label segment used in Langflow-managed wxO names."""
+    normalized_display_name = normalize_wxo_name(display_name).strip("_")
+    if not normalized_display_name:
+        msg = f"{resource} display name must include at least one alphanumeric character."
+        raise InvalidContentError(message=msg)
+    return normalized_display_name
+
+
+def build_langflow_wxo_resource_name(display_name: str, *, resource: str) -> str:
+    """Build a Langflow-managed wxO technical name from a display label."""
+    normalized_display_name = normalize_wxo_display_name_segment(display_name, resource=resource)
+    return f"{LANGFLOW_WXO_RESOURCE_NAME_PREFIX}{normalized_display_name}_{uuid4().hex[:8]}"
+
+
+def validate_wxo_name(name: str, *, field_label: str) -> str:
     """Normalize and validate a wxO resource name."""
     normalized_name = normalize_wxo_name(str(name))
     if not normalized_name:
-        msg = "Deployment name must include at least one alphanumeric character."
+        msg = f"{field_label} must include at least one alphanumeric character."
         raise InvalidContentError(message=msg)
     if not normalized_name[0].isalpha():
-        msg = "Deployment name must start with a letter."
+        msg = f"{field_label} must start with a letter."
         raise InvalidContentError(message=msg)
     return normalized_name
 

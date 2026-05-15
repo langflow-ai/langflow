@@ -83,7 +83,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.models impor
     fetch_models_adapter,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
-    retry_create,
+    retry_update,
     rollback_created_resources,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.status import (
@@ -494,12 +494,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 payload.spec,
                 llm=provider_update.llm if provider_update is not None else None,
             )
+            final_name = update_payload.get("name", agent["name"])
 
             if payload.provider_data is None or not (provider_update is not None and provider_update.has_tool_work):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
-                await retry_create(
+                await retry_update(
                     asyncio.to_thread,
                     clients.agent.update,
                     agent_id,
@@ -507,7 +508,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
                     id=deployment_id,
-                    provider_result=WatsonxDeploymentUpdateResultData(deployment_name=agent["name"]),
+                    provider_result=WatsonxDeploymentUpdateResultData(deployment_name=final_name),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -529,7 +530,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 id=deployment_id,
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
-                        deployment_name=agent["name"],
+                        deployment_name=final_name,
                         created_app_ids=apply_result.created_app_ids,
                         created_snapshot_ids=apply_result.created_snapshot_ids,
                         added_snapshot_ids=apply_result.added_snapshot_ids,
