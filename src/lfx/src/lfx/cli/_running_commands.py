@@ -140,6 +140,15 @@ def register(app: typer.Typer) -> None:
             "--check-variables/--no-check-variables",
             help="Check global variables for environment compatibility",
         ),
+        upgrade_flow: str | None = typer.Option(
+            None,
+            "--upgrade-flow",
+            help=(
+                "Component compatibility mode before serving. "
+                "'check' refuses to serve if any component is outdated or blocked. "
+                "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
+            ),
+        ),
     ) -> None:
         """Serve LFX flows as a web API (lazy-loaded)."""
         from pathlib import Path
@@ -159,4 +168,5 @@ def register(app: typer.Typer) -> None:
             flow_json=flow_json,
             stdin=stdin,
             check_variables=check_variables,
+            upgrade_flow=upgrade_flow,
         )

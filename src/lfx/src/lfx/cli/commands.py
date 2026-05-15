@@ -72,6 +72,7 @@ async def serve_command(
         "--check-variables/--no-check-variables",
         help="Check global variables for environment compatibility",
     ),
+    upgrade_flow: str | None = None,
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -140,6 +141,7 @@ async def serve_command(
     # Handle inline JSON content or stdin input
     # ------------------------------------------------------------------
     temp_file_to_cleanup = None
+    json_data: dict | None = None
 
     if flow_json is not None:
         logger.info("Processing inline JSON content...")
@@ -190,6 +192,40 @@ async def serve_command(
         except Exception as e:
             verbose_print(f"Error reading from stdin: {e}")
             raise typer.Exit(1) from e
+
+    # --- upgrade compatibility check ---
+    if upgrade_flow and json_data is not None:
+        from lfx.interface.components import component_cache
+        from lfx.upgrade.applier import apply_safe_upgrades
+        from lfx.upgrade.checker import check_flow_compatibility
+
+        all_types = component_cache.all_types_dict or {}
+        report = check_flow_compatibility(json_data, all_types)
+
+        if upgrade_flow == "check":
+            if not report.is_clean:
+                names = ", ".join(f"{n.display_name} ({n.status})" for n in report.nodes if n.status != "ok")
+                typer.echo(f"Error: flow has incompatible components (--upgrade-flow=check): {names}", err=True)
+                raise typer.Exit(1)
+
+        elif upgrade_flow == "safe":
+            if report.has_blocked or report.has_breaking:
+                names = ", ".join(
+                    f"{n.display_name} ({n.status})"
+                    for n in report.nodes
+                    if n.status in ("blocked", "outdated_breaking")
+                )
+                typer.echo(f"Error: flow has components that cannot be auto-upgraded: {names}", err=True)
+                raise typer.Exit(1)
+            if report.has_safe_updates:
+                json_data, count = apply_safe_upgrades(json_data, all_types, report, return_count=True)
+                if verbose:
+                    typer.echo(f"Applied {count} safe component upgrade(s).")
+
+        else:
+            typer.echo(f"Error: unknown --upgrade-flow value '{upgrade_flow}'. Use 'safe' or 'check'.", err=True)
+            raise typer.Exit(1)
+    # --- end upgrade check ---
 
     try:
         # Load the graph
