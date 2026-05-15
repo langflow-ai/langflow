@@ -57,6 +57,9 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_MCP_COMPOSER_ENABLED ?? "true",
       ),
+      "import.meta.env.LANGFLOW_WXO_UTM_SOURCE": JSON.stringify(
+        envLangflow.LANGFLOW_WXO_UTM_SOURCE ?? "langflow",
+      ),
     },
     plugins: [
       react(),

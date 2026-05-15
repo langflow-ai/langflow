@@ -9,9 +9,9 @@ interface IngestionRunDetailModalProps {
 }
 
 const ITEM_STATUS_STYLES: Record<string, string> = {
-  succeeded: "text-emerald-700",
-  failed: "text-rose-700",
-  skipped: "text-slate-500",
+  succeeded: "text-accent-emerald-foreground",
+  failed: "text-accent-red-foreground",
+  skipped: "text-muted-foreground",
 };
 
 const ITEM_STATUS_ICON: Record<string, string> = {
@@ -61,7 +61,7 @@ const IngestionRunDetailModal = ({
             <div className="text-sm text-muted-foreground">Loading run…</div>
           )}
           {isError && (
-            <div className="text-sm text-rose-600">
+            <div className="text-sm text-destructive">
               Unable to load run detail.
             </div>
           )}
@@ -80,7 +80,7 @@ const IngestionRunDetailModal = ({
               </div>
 
               {data.error_message && (
-                <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
+                <div className="rounded-md border border-error-red-border bg-error-red p-3 text-xs text-accent-red-foreground">
                   <span className="font-medium">Error:</span>{" "}
                   {data.error_message}
                 </div>
@@ -121,7 +121,7 @@ const IngestionRunDetailModal = ({
                           </span>
                         </div>
                         {item.error_message && (
-                          <div className="rounded-sm bg-rose-50 px-2 py-1 text-rose-700">
+                          <div className="rounded-sm bg-error-red px-2 py-1 text-accent-red-foreground">
                             {item.error_message}
                           </div>
                         )}
@@ -147,11 +147,11 @@ interface MetricProps {
 function Metric({ label, value, tone }: MetricProps) {
   const toneClass =
     tone === "success"
-      ? "text-emerald-700"
+      ? "text-accent-emerald-foreground"
       : tone === "error"
-        ? "text-rose-700"
+        ? "text-accent-red-foreground"
         : tone === "muted"
-          ? "text-slate-500"
+          ? "text-muted-foreground"
           : "text-foreground";
   return (
     <div className="flex flex-col gap-1 rounded-md border border-border bg-card p-2">
