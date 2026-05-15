@@ -196,8 +196,7 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
         # Service not yet initialized (e.g. preload_app=False path). The
         # hook must not crash gunicorn, but the failure is worth knowing about.
         server.log.warning(
-            "[post_fork] Failed to reset TelemetryService.client; "
-            "worker telemetry may fail on first use",
+            "[post_fork] Failed to reset TelemetryService.client; worker telemetry may fail on first use",
             exc_info=True,
         )
 
@@ -209,7 +208,6 @@ def _langflow_post_fork(server, worker) -> None:  # noqa: ARG001
         # Module not importable in this worker for any reason — non-fatal,
         # but log so operators can diagnose deployment issues.
         server.log.warning(
-            "[post_fork] Failed to reset component_cache._lock; "
-            "worker may inherit stale asyncio.Lock from master",
+            "[post_fork] Failed to reset component_cache._lock; worker may inherit stale asyncio.Lock from master",
             exc_info=True,
         )

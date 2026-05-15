@@ -385,8 +385,7 @@ async def _load_from_index_or_cache(
         cache_path = _get_cache_path()
     except Exception as e:  # noqa: BLE001
         await logger.awarning(
-            f"Could not determine component cache path ({type(e).__name__}: {e}); "
-            "falling through to dynamic rebuild"
+            f"Could not determine component cache path ({type(e).__name__}: {e}); falling through to dynamic rebuild"
         )
     else:
         if cache_path.exists():
