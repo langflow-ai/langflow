@@ -40,6 +40,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization.utils import ensure_flow_permission
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -97,6 +98,7 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
+        await ensure_flow_permission(current_user, "create")
         return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except HTTPException:
         raise
@@ -190,6 +192,12 @@ async def read_flow(
 ):
     """Read a flow."""
     if user_flow := await _read_flow(session, flow_id, current_user.id):
+        await ensure_flow_permission(
+            current_user,
+            "read",
+            flow_id=flow_id,
+            flow_user_id=user_flow.user_id,
+        )
         # Convert to FlowRead while session is still active to avoid detached instance errors
         return FlowRead.model_validate(user_flow, from_attributes=True)
     raise HTTPException(status_code=404, detail="Flow not found")
@@ -256,6 +264,13 @@ async def update_flow(
         db_flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
+
+        await ensure_flow_permission(
+            current_user,
+            "write",
+            flow_id=flow_id,
+            flow_user_id=db_flow.user_id,
+        )
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
@@ -390,6 +405,12 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
+    await ensure_flow_permission(
+        current_user,
+        "delete",
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+    )
     await retry_flow_operation_on_deployment_guard(
         db=session,
         user_id=current_user.id,
