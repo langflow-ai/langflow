@@ -132,6 +132,33 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
   * Duplicate tags (e.g., both `1.8.3` and `v1.8.3`) cause GitHub's release notes generation to use the wrong base comparison, resulting in incomplete changelogs.
   * The workflow automatically checks for and prevents duplicate tags.
 
+## LFX Compatibility
+
+Langflow and LFX share a **major.minor version line**. The compatibility contract is:
+
+> **LFX X.Y.N is guaranteed compatible with any Flow exported from Langflow X.Y.M.**
+
+Patch releases (`N` and `M`) are independent — a patch to LFX does not require a Langflow patch release, and vice versa.
+
+### Version management
+
+`make patch v=X.Y.Z` updates all four artifacts together:
+
+| Artifact | Version set |
+|---|---|
+| `langflow` | `X.Y.Z` |
+| `langflow-base` | `0.Y.Z` |
+| `lfx` | `X.Y.Z` |
+| frontend | `X.Y.Z` |
+
+### Cutting an LFX patch release
+
+Use `scripts/release-lfx.sh <version>`. The script warns if the LFX minor version does not match the current Langflow minor version, which would violate the compatibility contract. A warning is not a hard block — patch-only LFX releases within the same minor are expected and fine.
+
+### Implications for users
+
+Users can pin `lfx~=X.Y.0` in their `requirements.txt` to receive all compatible LFX patch releases for a given Langflow minor.
+
 ## Roles
 
 | Role                                    | Responsibility                                                    |
