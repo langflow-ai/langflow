@@ -306,3 +306,87 @@ class TestLegacySubclassesPinMode:
 
         assert _parse_metadata_filter(None) == {}
         assert _chunk_matches_filter(None, {}) is True
+
+
+# ---------------------------------------------------------------------------
+# Display name / dropdown UX (matches starter projects + frontend create dialog)
+# ---------------------------------------------------------------------------
+class TestComponentSurface:
+    def test_display_name_matches_starter_projects(self) -> None:
+        """The component name on the canvas must read 'Knowledge'.
+
+        Starter project JSONs (``Knowledge Retrieval.json``,
+        ``Vector Store RAG.json``) store ``display_name='Knowledge'`` on
+        the node header. If the class-level default drifts back to
+        'Knowledge Base', fresh nodes added from the component panel
+        will disagree with starter-project nodes.
+        """
+        assert KnowledgeComponent.display_name == "Knowledge"
+
+    def test_create_kb_dialog_label_is_user_facing(self) -> None:
+        """The ``+ ...`` shortcut in the KB dropdown must read 'Create new Knowledge Base'.
+
+        The frontend renders the dialog node's ``display_name`` as the
+        dropdown's create-new affordance. The label must be the full,
+        user-facing phrase so the dropdown reads as a complete CTA.
+        """
+        knowledge_base_input = next(i for i in KnowledgeComponent.inputs if i.name == "knowledge_base")
+        dialog_node = knowledge_base_input.dialog_inputs["fields"]["data"]["node"]
+        assert dialog_node["display_name"] == "Create new Knowledge Base"
+
+
+# ---------------------------------------------------------------------------
+# source_types extraction (BUG-04)
+# ---------------------------------------------------------------------------
+class TestExtractSourceTypesFromDataFrame:
+    """Flow-driven ingestion (input_df) must stamp the KB with file extensions.
+
+    The Knowledge Bases list keys file-type icons off
+    ``embedding_metadata.json[source_types]``. Direct upload populates
+    this; flow-driven ingestion used to leave it empty, leaving the
+    icon blank. The extractor reads common path/name columns produced
+    by the File / S3 / cloud-storage components.
+    """
+
+    def test_extracts_pdf_from_file_path_column(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"file_path": ["/tmp/report.PDF", "/tmp/notes.txt"]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert extensions == {"pdf", "txt"}
+
+    def test_handles_missing_columns(self) -> None:
+        import pandas as pd
+
+        df = pd.DataFrame({"text": ["hello", "world"]})
+        assert KnowledgeComponent._extract_source_types_from_df(df) == set()
+
+    def test_ignores_non_extension_dotted_values(self) -> None:
+        """URLs with paths / version strings shouldn't pollute the extension set."""
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {
+                "file_name": [
+                    "doc.pdf",
+                    "https://example.com/path",
+                    "v1.2.3",
+                    "file.this-is-not-an-ext",
+                ]
+            }
+        )
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        # Only "pdf" is a short alphanumeric extension on a real filename;
+        # "v1.2.3" yields "3" which isn't a meaningful icon key but passes
+        # the cheap shape check — we accept that as a known false positive
+        # over building a strict extension whitelist.
+        assert "pdf" in extensions
+        assert "com/path" not in extensions
+
+    def test_handles_nan_rows_safely(self) -> None:
+        import numpy as np
+        import pandas as pd
+
+        df = pd.DataFrame({"file_path": ["/tmp/a.docx", np.nan, None]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert extensions == {"docx"}

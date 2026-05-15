@@ -593,8 +593,7 @@
                 "selected": "JSON",
                 "tool_mode": true,
                 "types": [
-                  "JSON",
-                  "Table"
+                  "JSON"
                 ],
                 "value": "__UNDEFINED__"
               },
@@ -608,8 +607,7 @@
                 "selected": "Table",
                 "tool_mode": true,
                 "types": [
-                  "Table",
-                  "JSON"
+                  "Table"
                 ],
                 "value": "__UNDEFINED__"
               }

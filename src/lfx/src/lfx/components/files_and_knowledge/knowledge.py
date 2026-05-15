@@ -143,7 +143,7 @@ class KnowledgeComponent(Component):
     node stays focused.
     """
 
-    display_name = "Knowledge Base"
+    display_name = "Knowledge"
     description = "Ingest into or retrieve from a Langflow knowledge base."
     icon = "database"
     name = "Knowledge"
@@ -184,7 +184,7 @@ class KnowledgeComponent(Component):
                     "node": {
                         "name": "create_knowledge_base",
                         "description": "Create new knowledge in Langflow.",
-                        "display_name": "Create new knowledge",
+                        "display_name": "Create new Knowledge Base",
                         "field_order": [
                             "01_new_kb_name",
                             "02_embedding_model",
@@ -708,6 +708,55 @@ class KnowledgeComponent(Component):
         except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
             self.log(f"Warning: Could not update metadata metrics: {e}")
 
+    @staticmethod
+    def _extract_source_types_from_df(df_source: pd.DataFrame) -> set[str]:
+        """Pull file extensions out of common path/name columns on the source DataFrame.
+
+        The direct-upload ingestion path stores extensions in
+        ``embedding_metadata.json[source_types]`` so the KB list can render the
+        correct file-type icon. When ingestion happens via a connected
+        ``input_df`` (e.g. File → Knowledge) the same field stayed empty and
+        the icon defaulted to a blank tile. We look at the well-known columns
+        the File / S3 / cloud-storage components produce and collect any
+        plausible extension so the icon is consistent across both flows.
+        """
+        candidate_columns = ("file_path", "file_name", "filename", "source", "path")
+        extensions: set[str] = set()
+        for col in candidate_columns:
+            if col not in df_source.columns:
+                continue
+            for value in df_source[col].dropna():
+                text = str(value)
+                if "." not in text:
+                    continue
+                ext = text.rsplit(".", 1)[-1].strip().lower()
+                # Drop anything that doesn't look like an extension (URL
+                # query strings, version segments, etc.) — the icon palette
+                # keys off short alphanumeric tokens like "pdf"/"docx".
+                if ext and len(ext) <= 10 and ext.isalnum():
+                    extensions.add(ext)
+        return extensions
+
+    def _merge_source_types(self, kb_path: Path, extensions: set[str]) -> None:
+        """Merge newly observed extensions into the KB's ``source_types`` metadata.
+
+        Mirrors the direct-upload path in ``KBIngestionHelper`` so the icon
+        rendering on the Knowledge Bases list works regardless of which
+        ingestion route was used.
+        """
+        if not extensions:
+            return
+        metadata_path = kb_path / "embedding_metadata.json"
+        if not metadata_path.exists():
+            return
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            existing = set(metadata.get("source_types") or [])
+            metadata["source_types"] = sorted(existing | extensions)
+            metadata_path.write_text(json.dumps(metadata, indent=2))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
+            self.log(f"Warning: Could not update source_types metadata: {e}")
+
     async def _update_backend_metadata_metrics(self, kb_path: Path, backend: BaseVectorStoreBackend) -> None:
         """Update metadata metrics for non-Chroma backends."""
         metadata_path = kb_path / "embedding_metadata.json"
@@ -1150,6 +1199,10 @@ class KnowledgeComponent(Component):
                     self._update_metadata_metrics(kb_path, backend.raw_langchain_store())
                 else:
                     await self._update_backend_metadata_metrics(kb_path, backend)
+                # Stamp the KB with the file extensions we just ingested so
+                # the Knowledge Bases list renders the correct icon for
+                # flow-driven ingestion (input_df), matching direct upload.
+                self._merge_source_types(kb_path, self._extract_source_types_from_df(df_source))
             finally:
                 if isinstance(backend, BaseVectorStoreBackend):
                     await backend.teardown()
