@@ -2,8 +2,8 @@
 
 Computes a content hash over the starter-project JSON files plus the installed
 ``lfx`` package version, and persists it as plaintext under
-``${LANGFLOW_CONFIG_DIR}/starter_projects.hash``. ``main.py`` uses the hash to
-short-circuit the full starter-project re-sync on restarts where nothing
+``${LANGFLOW_CONFIG_DIR}/starter_projects.hash``. ``preload.py`` uses the hash
+to short-circuit the full starter-project re-sync on restarts where nothing
 changed.
 
 Failure modes: missing, unreadable, or corrupt hash files all fall

@@ -327,21 +327,29 @@ async def _run_master_preload() -> None:
         # usable: on first access in a worker it opens a fresh pool for that
         # process.
         #
-        # Guard: if initialize_services raised before registering the DB service
-        # we skip disposal (nothing to close). We check the service registry
-        # directly so that a real dispose() failure propagates instead of being
-        # swallowed — a failed dispose() is a fork-safety hazard.
+        # CRITICAL: both DB engine disposal and cache service teardown are
+        # fork-safety-critical — both must run even if one raises.  Use
+        # separate try/finally so a dispose() failure does not skip teardown()
+        # (and vice versa), then re-raise the first error.
         await logger.adebug("[preload] disposing master DB engine before fork")
         from langflow.services.manager import get_service_manager
         from langflow.services.schema import ServiceType as _ServiceType
 
-        if _ServiceType.DATABASE_SERVICE in get_service_manager().services:
-            _db_svc = get_db_service()
-            _engine = getattr(_db_svc, "engine", None)
-            if _engine is not None:
-                await _engine.dispose()
-        else:
-            await logger.adebug("[preload] DB engine dispose skipped (service not yet initialized)")
+        _db_dispose_err: BaseException | None = None
+        try:
+            # Guard: if initialize_services raised before registering the DB
+            # service we skip disposal (nothing to close).  We check the
+            # service registry directly so that a real dispose() failure
+            # propagates — a failed dispose() is a fork-safety hazard.
+            if _ServiceType.DATABASE_SERVICE in get_service_manager().services:
+                _db_svc = get_db_service()
+                _engine = getattr(_db_svc, "engine", None)
+                if _engine is not None:
+                    await _engine.dispose()
+            else:
+                await logger.adebug("[preload] DB engine dispose skipped (service not yet initialized)")
+        except BaseException as _exc:  # noqa: BLE001
+            _db_dispose_err = _exc
 
         # Close cache service socket (e.g. Redis) to prevent sharing across fork.
         # ExternalAsyncBaseCacheService declares teardown() abstract, so any
@@ -354,6 +362,9 @@ async def _run_master_preload() -> None:
         cache_service = get_service(ServiceType.CACHE_SERVICE)
         if isinstance(cache_service, ExternalAsyncBaseCacheService):
             await cache_service.teardown()
+
+        if _db_dispose_err is not None:
+            raise _db_dispose_err
 
 
 def preload_master() -> None:

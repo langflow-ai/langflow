@@ -48,18 +48,22 @@ class ComponentCache:
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
-        # Lazily created on first access from inside a running event loop.
-        # Constructing asyncio.Lock() at import time raises RuntimeError on
-        # Python 3.13+ because the singleton below runs at module import.
+        # Lazily created to avoid binding event-loop state at import time and
+        # to allow the post_fork hook to reset it to None so each worker
+        # creates a fresh Lock against its own event loop (see server.py
+        # _langflow_post_fork).
         self._lock: asyncio.Lock | None = None
 
     @property
     def lock(self) -> asyncio.Lock:
         """Return the asyncio.Lock, creating it lazily on first access.
 
-        Must be called from inside a running event loop: asyncio.Lock() requires
-        a running loop on Python 3.13+, and the singleton is instantiated at
-        module import time.
+        The lock is created on first use (not at import time) so that the
+        post_fork hook in server.py can reset it to None, causing each worker
+        to construct a fresh Lock bound to its own event loop on the next
+        access.  Creating it eagerly in __init__ would bind it to the master's
+        event loop, causing "Future attached to a different loop" errors in
+        workers.
         """
         if self._lock is None:
             self._lock = asyncio.Lock()
@@ -380,7 +384,10 @@ async def _load_from_index_or_cache(
     try:
         cache_path = _get_cache_path()
     except Exception as e:  # noqa: BLE001
-        await logger.adebug(f"Cache load failed: {e}")
+        await logger.awarning(
+            f"Could not determine component cache path ({type(e).__name__}: {e}); "
+            "falling through to dynamic rebuild"
+        )
     else:
         if cache_path.exists():
             await logger.adebug(f"Attempting to load from cache: {cache_path}")
@@ -763,7 +770,10 @@ async def get_and_cache_all_types_dict(
             try:
                 cache_path = _get_cache_path()
             except Exception as exc:  # noqa: BLE001
-                logger.debug(f"Could not resolve component cache path: {exc}")
+                logger.warning(
+                    f"Could not resolve component cache path ({type(exc).__name__}: {exc}); "
+                    "falling through to dynamic rebuild"
+                )
                 cache_path = None
             if cache_path is not None and cache_path.exists():
                 cached_blob: Any = None

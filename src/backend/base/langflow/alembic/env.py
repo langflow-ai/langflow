@@ -1,20 +1,24 @@
-# noqa: INP001
 import asyncio
 import hashlib
 import os
 from logging.config import fileConfig
 from typing import Any
 
-
-from alembic import context
+from lfx.log.logger import logger
 from sqlalchemy import pool, text
 from sqlalchemy.event import listen
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from lfx.log.logger import logger
-
+from alembic import context
+from langflow.services.database import models as _db_models
 from langflow.services.database.service import SQLModel
 
+# Eagerly import all SQLModel subclasses so they register in SQLModel.metadata
+# before Alembic reads target_metadata.  The models package uses a lazy
+# __getattr__ to avoid cold-start import cost, so without this call any
+# out-of-band `alembic upgrade head` (CLI, docker entrypoint, etc.) would
+# see an empty/partial metadata and generate spurious DROP TABLE operations.
+_db_models.import_all()
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

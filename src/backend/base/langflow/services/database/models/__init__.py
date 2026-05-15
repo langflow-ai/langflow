@@ -66,11 +66,13 @@ def import_all() -> None:
 
     Call this before running Alembic migrations or any code that iterates
     __dict__ to discover SQLModel subclasses (e.g. schema health checks).
-    Models are lazy by default to avoid loading pandas at package import time.
+    Models are lazy by default to reduce cold-start import cost (each submodule
+    pulls in SQLAlchemy validators, pydantic field definitions, etc.).
 
-    All call sites have been audited: only database/service.py iterates __dict__
-    for model discovery, and both call sites (migration and health-check paths)
-    call import_all() immediately before the iteration.
+    Call sites: database/service.py (migration + health-check paths) and
+    alembic/env.py (so out-of-band `alembic upgrade` sees complete metadata).
+    All call sites must call import_all() before iterating SQLModel.metadata
+    or __dict__ for model discovery.
     """
     for name in __all__:
         getattr(__import__(__name__, fromlist=[name]), name)
