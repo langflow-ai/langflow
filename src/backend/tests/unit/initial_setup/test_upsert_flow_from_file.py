@@ -24,11 +24,11 @@ from sqlmodel import select
 
 
 @contextmanager
-def _overwrite_on_name_match(value: bool):
+def _overwrite_on_name_match(*, enabled: bool):
     """Temporarily override the load_flows_overwrite_on_name_match setting."""
     settings = get_settings_service().settings
     original = settings.load_flows_overwrite_on_name_match
-    settings.load_flows_overwrite_on_name_match = value
+    settings.load_flows_overwrite_on_name_match = enabled
     try:
         yield
     finally:
@@ -163,7 +163,7 @@ async def test_upsert_flow_from_file_updates_existing_by_name() -> None:
         }
     )
 
-    with _overwrite_on_name_match(True):
+    with _overwrite_on_name_match(enabled=True):
         async with session_scope() as session:
             # Must not raise IntegrityError on the unique_flow_name constraint.
             await upsert_flow_from_file(file_content, "MyFlow", session, user_id)
@@ -262,7 +262,7 @@ async def test_upsert_flow_from_file_no_unique_violation_on_repeat() -> None:
             }
         )
 
-    with _overwrite_on_name_match(True):
+    with _overwrite_on_name_match(enabled=True):
         # First import: row inserted with id=A.
         id_a = uuid4()
         async with session_scope() as session:
@@ -323,7 +323,7 @@ async def test_upsert_flow_from_file_skips_name_match_when_overwrite_disabled() 
         data={"nodes": [{"id": "user-node"}], "edges": []},
     )
 
-    with _overwrite_on_name_match(False):
+    with _overwrite_on_name_match(enabled=False):
         file_content = orjson.dumps(
             {
                 "id": str(uuid4()),  # regenerated id -> name match only
@@ -351,7 +351,7 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disable
     user_id = uuid4()
     original = await _create_flow(name="IdMatchFlag", user_id=user_id)
 
-    with _overwrite_on_name_match(False):
+    with _overwrite_on_name_match(enabled=False):
         file_content = orjson.dumps(
             {
                 "id": str(original.id),  # same id -> matched_by_id is True
