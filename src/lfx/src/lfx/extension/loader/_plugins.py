@@ -184,7 +184,8 @@ def _manifest_via_direct_url(dist: importlib_metadata.Distribution) -> Path | No
         return None
     if not isinstance(payload, dict):
         return None
-    if not payload.get("dir_info", {}).get("editable"):
+    dir_info = payload.get("dir_info") or {}
+    if not isinstance(dir_info, dict) or not dir_info.get("editable"):
         return None
 
     url = payload.get("url")
