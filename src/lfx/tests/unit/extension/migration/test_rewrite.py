@@ -139,6 +139,7 @@ def test_unmapped_with_no_close_match_falls_back_to_generic_hint(table: Migratio
     assert record.error is not None
     assert "No close match" in record.error.hint
 
+
 @pytest.mark.unit
 def test_cross_bucket_ambiguity_emits_component_name_ambiguous() -> None:
     """Two buckets matching the same string -> ``component-name-ambiguous``."""
