@@ -8,11 +8,13 @@ Control-plane responsibilities:
 - spawn the worker subprocess
 - capture its outcome and verify the boundary held
 
-The lfx process runs as the worker subprocess. The orchestrator never imports lfx.
+The lfx execution process runs as the worker subprocess. The graph-aware
+split-worker mode imports lfx only to inspect graph metadata for planning.
 """
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import socket
@@ -22,6 +24,8 @@ import time
 from pathlib import Path
 
 import httpx
+
+from per_vertex_plan import VertexCapabilityPlan, build_vertex_capability_plan
 
 PROTOTYPE_ROOT = Path(__file__).resolve().parents[1]
 FLOW_PATH = PROTOTYPE_ROOT / "flows" / "basic_prompting.json"
@@ -66,18 +70,17 @@ def _start_runtime_api() -> subprocess.Popen:
     return proc
 
 
-def _seed_and_mint(client: httpx.Client, *, scopes: list[str]) -> tuple[str, str]:
-    """Seed OPENAI_API_KEY and mint a run token with the given scopes.
-
-    The caller controls scopes so we can also exercise the negative path
-    (empty scopes -> worker should be denied at variable lookup time).
-    """
+def _seed_variable(client: httpx.Client) -> str:
+    """Seed OPENAI_API_KEY and return whether it looks real or mocked."""
     openai_key = os.environ.get("OPENAI_API_KEY", "MOCK-not-a-real-key")
     client.post(
         "/admin/seed-variable",
         json={"tenant_id": "t1", "name": "OPENAI_API_KEY", "value": openai_key},
     ).raise_for_status()
+    return "openai" if not openai_key.startswith("MOCK") else "mock"
 
+
+def _mint_token(client: httpx.Client, *, component_id: str, scopes: list[str]) -> str:
     r = client.post(
         "/admin/mint-token",
         json={
@@ -85,17 +88,32 @@ def _seed_and_mint(client: httpx.Client, *, scopes: list[str]) -> tuple[str, str
             "user_id": "u1",
             "flow_id": "basic_prompting",
             "run_id": "run-1",
-            "component_id": "lfx-worker",
+            "component_id": component_id,
             "scopes": scopes,
             "ttl_seconds": 300,
         },
     )
     r.raise_for_status()
-    provider = "openai" if not openai_key.startswith("MOCK") else "mock"
-    return r.json()["token"], provider
+    return r.json()["token"]
 
 
-def _build_worker_env(token: str) -> dict[str, str]:
+def _seed_and_mint(client: httpx.Client, *, scopes: list[str]) -> tuple[str, str]:
+    """Seed OPENAI_API_KEY and mint a run token with the given scopes.
+
+    The caller controls scopes so we can also exercise the negative path
+    (empty scopes -> worker should be denied at variable lookup time).
+    """
+    provider = _seed_variable(client)
+    token = _mint_token(client, component_id="lfx-worker", scopes=scopes)
+    return token, provider
+
+
+def _build_worker_env(
+    token: str,
+    *,
+    attack_variable_name: str | None = None,
+    stop_vertex_id: str | None = None,
+) -> dict[str, str]:
     """Scrub everything the worker shouldn't see. Keep PATH + Python pieces."""
     keep_prefixes = ("PATH", "PYTHONPATH", "PYTHON", "HOME", "USER", "LANG", "LC_", "TZ")
     keep_exact = {"VIRTUAL_ENV"}
@@ -123,6 +141,10 @@ def _build_worker_env(token: str) -> dict[str, str]:
     env["MT_RUNTIME_API_URL"] = API_URL
     env["FLOW_PATH"] = str(FLOW_PATH)
     env["INPUT_TEXT"] = "Hi, who are you?"
+    if attack_variable_name:
+        env["MT_ATTACK_VARIABLE_NAME"] = attack_variable_name
+    if stop_vertex_id:
+        env["MT_STOP_VERTEX_ID"] = stop_vertex_id
     return env
 
 
@@ -147,20 +169,132 @@ def _run_worker(env: dict[str, str]) -> dict:
     return outcome
 
 
+def _format_plan(plan: VertexCapabilityPlan) -> str:
+    scopes = ", ".join(plan.scopes) if plan.scopes else "none"
+    return f"{plan.vertex_id} ({plan.display_name}, {plan.trust}, scopes={scopes})"
+
+
+def _synthetic_attacker_plan() -> VertexCapabilityPlan:
+    return VertexCapabilityPlan(
+        vertex_id="synthetic-custom-component-probe",
+        display_name="Synthetic Custom Component Probe",
+        component_type="CustomComponent",
+        trust="untrusted",
+        scopes=(),
+        reasons=("no custom component exists in Basic Prompting; probing the untrusted vertex boundary",),
+        predecessors=(),
+        upstream=(),
+        successors=(),
+    )
+
+
 def main() -> int:
     deny_mode = "--deny" in sys.argv
+    attack_mode = "--attack" in sys.argv
+    split_worker_mode = "--split-workers" in sys.argv or "--per-vertex" in sys.argv
     scopes: list[str] = [] if deny_mode else ["variables:read:OPENAI_API_KEY"]
+    attack_variable_name = "OPENAI_API_KEY" if attack_mode else None
     if deny_mode:
         print("==> --deny mode: minting token with NO scopes; expecting boundary refusal")
+    if attack_mode:
+        print("==> --attack mode: same-process code will call Runtime API directly with the worker token")
+    if split_worker_mode:
+        print("==> --split-workers mode: planning real graph vertices and minting per-vertex tokens")
 
     print(f"==> Starting Runtime API on {API_URL}")
     api_proc = _start_runtime_api()
     try:
         with httpx.Client(base_url=API_URL, timeout=5.0) as admin:
+            if split_worker_mode:
+                plans = asyncio.run(build_vertex_capability_plan(FLOW_PATH))
+                untrusted_plans = [plan for plan in plans if plan.is_untrusted] or [_synthetic_attacker_plan()]
+                scoped_plans = [plan for plan in plans if plan.scopes]
+                untrusted_vertex_ids = {plan.vertex_id for plan in plans if plan.is_untrusted}
+                unsafe_scoped_plans = [
+                    plan for plan in scoped_plans if untrusted_vertex_ids.intersection(plan.upstream)
+                ]
+
+                print(f"==> Planned {len(plans)} real flow vertices")
+                for plan in plans:
+                    print(f"PLAN  {_format_plan(plan)}")
+                if not scoped_plans:
+                    print("FAIL  no scoped vertices found; expected Basic Prompting to need OPENAI_API_KEY")
+                    return 1
+                if unsafe_scoped_plans:
+                    for plan in unsafe_scoped_plans:
+                        print(f"BLOCK {_format_plan(plan)} has untrusted upstream: {sorted(plan.upstream)}")
+                    print("FAIL  prototype cannot safely run scoped vertices with untrusted upstream in-process")
+                    return 1
+
+                provider = _seed_variable(admin)
+                print(f"==> Seeded OPENAI_API_KEY (provider={provider})")
+
+                for plan in untrusted_plans:
+                    token = _mint_token(admin, component_id=plan.vertex_id, scopes=[])
+                    print(f"==> Minted untrusted vertex token for {plan.vertex_id} (scopes=[])")
+                    env = _build_worker_env(token, attack_variable_name="OPENAI_API_KEY")
+                    outcome = _run_worker(env)
+                    print(f"==> Untrusted vertex probe outcome: {plan.vertex_id} status={outcome.get('status')}")
+
+                    if outcome.get("status") != "attack_blocked":
+                        print(json.dumps(outcome, indent=2)[:1500])
+                        print(f"FAIL  untrusted vertex {plan.vertex_id} should not read OPENAI_API_KEY")
+                        return 1
+
+                for plan in scoped_plans:
+                    token = _mint_token(admin, component_id=plan.vertex_id, scopes=list(plan.scopes))
+                    print(f"==> Minted scoped vertex token for {plan.vertex_id} (scopes={list(plan.scopes)})")
+                    env = _build_worker_env(token, stop_vertex_id=plan.vertex_id)
+                    outcome = _run_worker(env)
+                    print(f"==> Scoped vertex outcome: {plan.vertex_id} status={outcome.get('status')}")
+
+                    if outcome.get("status") != "ok" or outcome.get("stopped_at") != plan.vertex_id:
+                        print(json.dumps(outcome, indent=2)[:1500])
+                        print(f"FAIL  scoped vertex {plan.vertex_id} should complete with its own token")
+                        return 1
+
+                events = admin.get("/admin/events").json()
+                custom_denials = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_denied"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("component_id") in {plan.vertex_id for plan in untrusted_plans}
+                ]
+                custom_reads = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_read"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("component_id") in {plan.vertex_id for plan in untrusted_plans}
+                ]
+                model_reads = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_read"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("component_id") in {plan.vertex_id for plan in scoped_plans}
+                ]
+
+                if custom_reads:
+                    print("FAIL  untrusted vertex read OPENAI_API_KEY despite empty scopes")
+                    return 1
+                if len(custom_denials) < len(untrusted_plans):
+                    print("FAIL  untrusted vertex was blocked without a Runtime API denial event")
+                    return 1
+                print(f"OK    untrusted vertex token(s) denied ({len(custom_denials)} denial(s) logged)")
+
+                if len(model_reads) < len(scoped_plans):
+                    print("FAIL  scoped vertex completed without a Runtime API variable read")
+                    return 1
+                print(f"OK    scoped vertex token(s) read through Runtime API ({len(model_reads)} read(s))")
+                print("OK    graph-aware per-vertex token boundary validates the prototype direction")
+                return 0
+
             token, provider = _seed_and_mint(admin, scopes=scopes)
             print(f"==> Seeded OPENAI_API_KEY (provider={provider}) and minted run token (scopes={scopes})")
 
-            env = _build_worker_env(token)
+            env = _build_worker_env(token, attack_variable_name=attack_variable_name)
             # Defensive sanity check: confirm the worker env is scrubbed.
             leaked = [
                 k
@@ -184,6 +318,51 @@ def main() -> int:
             outcome = _run_worker(env)
             print(f"==> Worker outcome: status={outcome.get('status')}")
 
+            if attack_mode:
+                events = admin.get("/admin/events").json()
+                attack_reads = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_read"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("component_id") == "lfx-worker"
+                ]
+                attack_denials = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_denied"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("component_id") == "lfx-worker"
+                ]
+
+                if outcome.get("status") == "attack_succeeded":
+                    print(
+                        "FINDING same-process attacker reused the run token "
+                        "to read OPENAI_API_KEY "
+                        f"(len={outcome.get('value_len')}, sha256_12={outcome.get('value_sha256_12')})"
+                    )
+                    if attack_reads:
+                        print(f"OK    Runtime API logged the attacker variable read ({len(attack_reads)} read(s))")
+                    if deny_mode:
+                        print("FAIL  scope-less attacker should not have read the variable")
+                        return 1
+                    print("NOTE  process-level isolation is not enough for hostile custom components")
+                    return 0
+
+                if outcome.get("status") == "attack_blocked":
+                    print(
+                        "OK    same-process attacker was blocked "
+                        f"(http_status={outcome.get('http_status')})"
+                    )
+                    if attack_denials:
+                        print(f"OK    Runtime API logged the attacker denial ({len(attack_denials)} denial(s))")
+                        return 0
+                    print("FAIL  attack was blocked, but no Runtime API denial was logged")
+                    return 1
+
+                print(json.dumps(outcome, indent=2)[:1500])
+                return 1
+
             if deny_mode:
                 # The boundary should hold: worker should report denied (or
                 # propagate the PermissionError as a build error). Either way,
@@ -193,7 +372,19 @@ def main() -> int:
                 if ok_after_denial:
                     print(f"FAIL  scope-less token still produced ok: {error_blob}")
                     return 1
+                events = admin.get("/admin/events").json()
+                denials = [
+                    e
+                    for e in events
+                    if e.get("kind") == "variable_denied"
+                    and e.get("name") == "OPENAI_API_KEY"
+                    and e.get("tenant_id") == "t1"
+                ]
+                if not denials:
+                    print(f"FAIL  boundary refused without a Runtime API denial event: {error_blob}")
+                    return 1
                 print(f"OK    boundary refused: {error_blob}")
+                print(f"OK    Runtime API logged the denial ({len(denials)} denial(s))")
                 return 0
 
             if outcome.get("status") == "ok":

@@ -27,6 +27,14 @@ Design doc: `~/Projects/ideas/2026-05-14-langflow-multitenant-custom-components.
 - With a scope-less token, the capability shim returns `PermissionError`,
   lfx surfaces it as `ComponentBuildError: OpenAI API key is required`,
   the flow fails closed.
+- Same-process hostile code can still reuse the worker's run token when
+  that token carries the model's `variables:read:OPENAI_API_KEY` scope. Run
+  `--attack` to make that gap explicit without printing the secret value.
+- Split-worker validation shows the per-vertex direction: the prototype
+  loads the real lfx graph, derives variable scopes from each vertex's
+  `load_from_db` fields, mints per-vertex tokens, denies an untrusted
+  custom-component probe, and runs the scoped model worker only to the
+  Language Model vertex.
 
 ## Run
 
@@ -38,6 +46,15 @@ bash scripts/run.sh
 
 # Boundary refusal: empty-scope token, flow fails closed
 bash scripts/run.sh --deny
+
+# Adversarial validation: same-process code reuses the worker token directly
+bash scripts/run.sh --attack
+
+# Adversarial refusal: same attack with an empty-scope token is blocked
+bash scripts/run.sh --attack --deny
+
+# Graph-aware per-vertex direction: derive scopes and dispatch vertex workers
+bash scripts/run.sh --split-workers
 ```
 
 The orchestrator inherits your shell's `OPENAI_API_KEY` and seeds it into
@@ -69,7 +86,10 @@ scripts/
   orchestrator.py                  Control plane: starts the Runtime API,
                                    seeds the variable, mints the run token,
                                    builds a scrubbed env, spawns the worker.
-                                   Never imports lfx.
+                                   In split-worker mode, imports lfx only
+                                   to inspect graph metadata for planning.
+  per_vertex_plan.py               Loads the real lfx graph and derives
+                                   per-vertex scopes from load_from_db fields.
   worker.py                        Worker subprocess: refuses to boot under
                                    forbidden env, registers the capability
                                    shim, loads + runs the flow, emits a
@@ -94,7 +114,15 @@ hardening does not:
 - **One worker per flow.** Per-vertex isolation (a separate worker for
   each component) is the design's stronger story — useful when first-party
   components are trusted but user custom components in the same flow are
-  not. Out of scope here.
+  not. The `--attack` mode shows why this matters: process-level isolation
+  alone protects the control plane from the worker, but not trusted and
+  untrusted components from each other inside that worker. The
+  `--split-workers` mode exercises the next boundary by deriving per-vertex
+  scopes from the actual flow and giving workers different tokens.
+- **Graph partitioning.** The `--split-workers` mode uses lfx graph metadata
+  and `stop_component_id` to run the scoped model worker only as far as the
+  Language Model vertex. It still does not serialize arbitrary vertex outputs
+  between worker processes or replace lfx's core scheduler.
 - **Capability surface.** Only `variables:read:*` is exercised because
   Basic Prompting only needs the api_key. Memory / files / artifacts /
   events endpoints exist on the Runtime API and have the same shape.

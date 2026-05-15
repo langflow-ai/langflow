@@ -95,7 +95,20 @@ def list_events() -> list[dict[str, Any]]:
 
 @app.get("/runtime/variables/{name}")
 def get_variable(name: str, claims: auth.RunClaims = Depends(get_claims)) -> dict[str, str]:
-    require_scope(claims, f"variables:read:{name}")
+    required_scope = f"variables:read:{name}"
+    if not auth.has_scope(claims, required_scope):
+        store.write_event(
+            {
+                "kind": "variable_denied",
+                "tenant_id": claims.tenant_id,
+                "user_id": claims.user_id,
+                "run_id": claims.run_id,
+                "component_id": claims.component_id,
+                "name": name,
+                "required_scope": required_scope,
+            }
+        )
+        raise HTTPException(403, f"missing scope: {required_scope}")
     value = store.get_variable(claims.tenant_id, name)
     if value is None:
         raise HTTPException(404, f"variable not found: {name}")

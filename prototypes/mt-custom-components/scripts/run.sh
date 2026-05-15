@@ -10,6 +10,8 @@
 # Usage:
 #   bash scripts/run.sh           # happy path
 #   bash scripts/run.sh --deny    # mint with no scopes; expect refusal
+#   bash scripts/run.sh --attack  # prove same-process hostile code can reuse the run token
+#   bash scripts/run.sh --split-workers  # graph-aware per-vertex token/worker prototype
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
