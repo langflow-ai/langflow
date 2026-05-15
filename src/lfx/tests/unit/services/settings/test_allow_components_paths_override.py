@@ -62,3 +62,16 @@ def test_override_false_has_no_effect_when_custom_allowed(monkeypatch):
         settings = Settings()
         assert tmp in settings.components_path
         assert settings.components_index_path == "/nonexistent/index.json"
+
+
+def test_multi_path_env_var_stripped_when_override_false(monkeypatch):
+    """Comma-separated LANGFLOW_COMPONENTS_PATH entries are each stripped when override is off."""
+    _clear_env(monkeypatch)
+    with tempfile.TemporaryDirectory() as tmp1, tempfile.TemporaryDirectory() as tmp2:
+        monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
+        monkeypatch.setenv("LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE", "false")
+        monkeypatch.setenv("LANGFLOW_COMPONENTS_PATH", f"{tmp1},{tmp2}")
+
+        settings = Settings()
+        assert tmp1 not in settings.components_path
+        assert tmp2 not in settings.components_path

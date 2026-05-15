@@ -769,17 +769,25 @@ class Settings(BaseSettings):
             return self
 
         env_components_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-        if env_components_path and env_components_path in self.components_path:
-            logger.warning(
-                "Ignoring LANGFLOW_COMPONENTS_PATH=%s: "
-                "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
-                "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
-                env_components_path,
-            )
-            # In-place removal avoids re-triggering ``set_components_path``, which would
-            # re-read LANGFLOW_COMPONENTS_PATH and append it again.
-            while env_components_path in self.components_path:
-                self.components_path.remove(env_components_path)
+        if env_components_path:
+            # The env var may be a comma-separated list; CustomSource splits it
+            # before the field validator runs, so self.components_path contains
+            # individual entries rather than the raw comma-joined string.
+            # In-place removal avoids re-triggering ``set_components_path``, which
+            # would re-read LANGFLOW_COMPONENTS_PATH and append the paths again.
+            env_paths = [p.strip() for p in env_components_path.split(",") if p.strip()]
+            stripped_any = False
+            for env_path in env_paths:
+                while env_path in self.components_path:
+                    self.components_path.remove(env_path)
+                    stripped_any = True
+            if stripped_any:
+                logger.warning(
+                    "Ignoring LANGFLOW_COMPONENTS_PATH=%s: "
+                    "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                    "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                    env_components_path,
+                )
 
         if self.components_index_path:
             logger.warning(
