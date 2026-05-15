@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
+import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import type { DeploymentProvider, ProviderAccount } from "../types";
@@ -143,7 +144,10 @@ export default function StepProvider() {
         <p className="text-sm text-muted-foreground">
           Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
           <a
-            href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
+            href={decorateWxoUrl(
+              "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+              "signup-pricing",
+            )}
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
@@ -152,7 +156,10 @@ export default function StepProvider() {
           </a>
           . Already have an account?{" "}
           <a
-            href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
+            href={decorateWxoUrl(
+              "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+              "docs-credentials",
+            )}
             target="_blank"
             rel="noopener noreferrer"
             className="font-medium text-primary hover:underline"
