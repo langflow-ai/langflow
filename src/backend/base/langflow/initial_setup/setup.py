@@ -1095,15 +1095,16 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             except ValueError:
                 await logger.aerror(f"Invalid UUID string in DB row: {existing.id}")
                 return
-        # If we matched by (user_id, name) or endpoint_name the file's id may differ from
-        # the DB id. Preserve the DB id; rewriting it from under FK referrers is unsafe.
-        matched_by_id = flow_id is not None and existing.id == flow_id
         await logger.ainfo(
             f"Updating existing flow: db_id={existing.id} name={existing.name!r} "
             f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
         )
         for key, value in flow.items():
-            if key == "id" and not matched_by_id:
+            if key == "id":
+                # Preserve the DB id. When matched by name/endpoint it must not be
+                # rewritten (FK referrers); when matched by id the DB value already
+                # equals flow_id, and assigning the raw string would break the
+                # SQLAlchemy UUID type processor on SQLite.
                 continue
             if hasattr(existing, key):
                 # flow dict from json and db representation are not 100% the same
