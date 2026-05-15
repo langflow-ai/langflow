@@ -293,11 +293,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-extensions-production",
-          label: "Production install for extensions",
-        },
-        {
-          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },

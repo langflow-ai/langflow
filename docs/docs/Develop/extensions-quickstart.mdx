@@ -85,7 +85,7 @@ The scaffold ships a working `Component` subclass that prints `"Hello, {name}!"`
 5. Iterate with reload.
     Edit the component, save, then click the **Reload** action in the palette's bundle header (or run `lfx extension reload --bundle my_bundle`). The atomic-swap reload pipeline replaces the component in place; in-flight flows keep the pre-swap class so a running execution is never interrupted.
 
-    Reload only works in Mode A (local dev). Production deployments rebuild the Docker image — see [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx).
+    Reload only works in Mode A (local dev). Production deployments rebuild the Docker image.
 
 6. Ship the extension.
 
