@@ -981,9 +981,11 @@ async def test_download_project_zip_sanitizes_flow_names(client: AsyncClient, js
 @pytest.mark.usefixtures("session")
 async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_headers):
     """Uploading a corrupt/invalid ZIP file returns 400 with a descriptive error."""
-    # Build a payload that passes zipfile.is_zipfile() but fails ZipFile() construction.
-    # We keep only the end-of-central-directory record (last 22 bytes of a real ZIP)
-    # prepended with garbage, so the EOCD signature is found but the central directory is invalid.
+    # Payload with an EOCD signature prepended by garbage. Python 3.10-3.13 treat
+    # this as a ZIP and fail in ZipFile() construction ("not a valid ZIP archive");
+    # Python 3.14's stricter zipfile.is_zipfile() rejects it and the route falls
+    # through to the JSON branch ("Invalid JSON file"). Both paths return 400 with
+    # a descriptive detail, which is the user-facing contract under test.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("dummy.json", '{"name":"x"}')
@@ -997,7 +999,8 @@ async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_he
         headers=logged_in_headers,
     )
     assert response.status_code == 400
-    assert "not a valid ZIP" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "not a valid ZIP" in detail or "Invalid JSON file" in detail
 
 
 @pytest.mark.usefixtures("session")
