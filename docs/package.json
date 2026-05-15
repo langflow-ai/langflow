@@ -54,19 +54,21 @@
     "node": "22.22.0"
   },
   "overrides": {
-    "lodash": "4.18.0",
+    "brace-expansion": "^5.0.5",
+    "picomatch": "^4.0.4",
+    "lodash": "4.17.21",
     "fast-xml-parser": "4.5.4",
     "openapi-to-postmanv2": {
-      "lodash": "4.18.0"
+      "lodash": "4.17.21"
     },
     "postman-collection": {
-      "lodash": "4.18.0"
+      "lodash": "4.17.21"
     },
     "json-schema-resolve-allof": {
-      "lodash": "4.18.0"
+      "lodash": "4.17.21"
     },
     "json-refs": {
-      "lodash": "4.18.0"
+      "lodash": "4.17.21"
     }
   }
 }

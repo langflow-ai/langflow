@@ -48,8 +48,9 @@ class CalculatorToolComponent(LCToolComponent):
         )
 
     def _eval_expr(self, node):
-        if isinstance(node, ast.Num):
-            return node.n
+        # ast.Num was removed in Python 3.14; ast.Constant covers numeric literals since 3.8.
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
         if isinstance(node, ast.BinOp):
             left_val = self._eval_expr(node.left)
             right_val = self._eval_expr(node.right)

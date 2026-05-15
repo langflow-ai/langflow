@@ -69,6 +69,33 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    vector_store_backend: str = "chroma"
+    """Vector-store backend for Knowledge Bases.
+
+    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
+    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
+    of the KB DB-Connectors epic."""
+    vector_store_backend_config: dict = {}
+    """Backend-specific configuration for the selected ``vector_store_backend``.
+
+    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
+    connection URIs, index names, auth references) as additional backends land."""
+
+    kb_allowed_folder_roots: list[str] = []
+    """Directories the server-side ``FolderSource`` is permitted to walk.
+
+    Each entry is expanded (``~`` → user home) and resolved before use.
+    ``FolderSource`` refuses to ingest any folder whose resolved path is
+    not equal to or underneath one of these roots, which blocks both
+    arbitrary-path access and symlink escapes (``resolve()`` follows
+    symlinks before the containment check).
+
+    Defaults to an empty list — folder ingestion is disabled until an
+    operator opts in. Single-user desktop / self-hosted deployments can
+    set this to ``["~"]`` to allow ingestion from the user's home
+    directory; multi-tenant cloud deployments should configure
+    per-tenant roots (or leave empty to keep folder ingestion off)."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -219,6 +246,20 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Job Queue
+    job_queue_type: Literal["asyncio", "redis"] = "asyncio"
+    """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    redis_queue_host: str | None = None
+    """Redis host for the job queue. Falls back to redis_host if not set."""
+    redis_queue_port: int | None = None
+    """Redis port for the job queue. Falls back to redis_port if not set."""
+    redis_queue_db: int = 1
+    """Redis DB number for the job queue. Defaults to 1 to avoid conflict with the cache (DB 0)."""
+    redis_queue_url: str | None = None
+    """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
+    redis_queue_ttl: int = 3600
+    """TTL in seconds for job stream keys in Redis."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -402,12 +443,12 @@ class Settings(BaseSettings):
     use hardware-level isolation to restrict access."""
 
     # SSRF Protection
-    ssrf_protection_enabled: bool = False
+    ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
-    When False (default), no URL validation is performed, allowing requests to any destination
+    When False, no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    Default is True to protect against SSRF attacks including DNS rebinding.
 
     Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
@@ -448,7 +489,15 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed."""
+        """Convert comma-separated string to list if needed.
+
+        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
+        before this validator runs (the union list[str] | str resolves
+        differently). Collapse that back to the bare-string wildcard so
+        downstream consumers see the same shape on every Python version.
+        """
+        if isinstance(value, list) and value == ["*"]:
+            return "*"
         if isinstance(value, str) and value != "*":
             if "," in value:
                 # Convert comma-separated string to list
@@ -469,8 +518,9 @@ class Settings(BaseSettings):
     def set_event_delivery(cls, value, info):
         # If workers > 1, we need to use direct delivery
         # because polling and streaming are not supported
-        # in multi-worker environments
-        if info.data.get("workers", 1) > 1:
+        # in multi-worker environments — unless a Redis-backed job queue is configured,
+        # which shares state across workers and supports all delivery modes.
+        if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
             logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value

@@ -36,40 +36,63 @@ def mock_component(mock_tool):
         return component
 
 
+def _make_fake_tg(**overrides):
+    """Build a fake toolguard-imports dict for use with `_import_toolguard` patching.
+
+    Mirrors the keys returned by `PoliciesComponent._import_toolguard()`; tests
+    can override individual entries to assert specific call wiring.
+    """
+    fake = {
+        "PolicySpecOptions": MagicMock(),
+        "ToolGuardsCodeGenerationResult": MagicMock(),
+        "generate_guard_specs": MagicMock(),
+        "generate_guards_code": MagicMock(),
+        "langchain_tools_to_openapi": MagicMock(),
+        "load_toolguards": MagicMock(),
+        "load_toolguards_from_memory": MagicMock(),
+        "RESULTS_FILENAME": "results.json",
+        "sync_generated_guard_code_inputs": MagicMock(),
+        "GuardedTool": MagicMock(),
+        "LangchainModelWrapper": MagicMock(),
+    }
+    fake.update(overrides)
+    return fake
+
+
 @pytest.mark.asyncio
 async def test_cache_mode_success(mock_component, mock_tool):
     """Test PoliciesComponent in cache mode with valid cached guards."""
     code_dir = mock_component.work_dir / STEP2
 
+    fake_tg = _make_fake_tg()
+    mock_tg_result = MagicMock()
+    mock_tg_runtime = MagicMock()
+    fake_tg["load_toolguards_from_memory"].return_value = mock_tg_runtime
+    mock_guarded_instance = MagicMock()
+    fake_tg["GuardedTool"].return_value = mock_guarded_instance
+
     # Mock the cache directory exists and toolguard loading
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards") as mock_load_guards,
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
         patch.object(mock_component, "make_toolguard_result") as mock_make_result,
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards_from_memory") as mock_load_memory,
-        patch("lfx.components.models_and_agents.policies_component.GuardedTool") as mock_guarded_tool,
     ):
-        mock_tg_result = MagicMock()
         mock_make_result.return_value = mock_tg_result
-        mock_tg_runtime = MagicMock()
-        mock_load_memory.return_value = mock_tg_runtime
-        mock_guarded_instance = MagicMock()
-        mock_guarded_tool.return_value = mock_guarded_instance
 
         result = await mock_component.guard_tools()
 
         # Verify load_toolguards was called during validation
-        mock_load_guards.assert_called_once_with(code_dir)
+        fake_tg["load_toolguards"].assert_called_once_with(code_dir)
 
         # Verify make_toolguard_result was called
         mock_make_result.assert_called_once()
 
         # Verify load_toolguards_from_memory was called with the result
-        mock_load_memory.assert_called_once_with(mock_tg_result)
+        fake_tg["load_toolguards_from_memory"].assert_called_once_with(mock_tg_result)
 
         # Verify GuardedTool was created for each tool
-        assert mock_guarded_tool.call_count == len(mock_component.in_tools)
-        mock_guarded_tool.assert_called_with(mock_tool, mock_component.in_tools, mock_tg_runtime)
+        assert fake_tg["GuardedTool"].call_count == len(mock_component.in_tools)
+        fake_tg["GuardedTool"].assert_called_with(mock_tool, mock_component.in_tools, mock_tg_runtime)
 
         # Verify result contains guarded tools
         assert len(result) == 1
@@ -79,9 +102,11 @@ async def test_cache_mode_success(mock_component, mock_tool):
 @pytest.mark.asyncio
 async def test_cache_mode_directory_not_found(mock_component):
     """Test PoliciesComponent in cache mode when cache directory doesn't exist."""
+    fake_tg = _make_fake_tg()
     # Mock the cache directory does not exist
     with (
         patch.object(Path, "exists", return_value=False),
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
         pytest.raises(ValueError, match="Cache directory not found"),
     ):
         await mock_component.guard_tools()
@@ -90,29 +115,29 @@ async def test_cache_mode_directory_not_found(mock_component):
 @pytest.mark.asyncio
 async def test_cache_mode_file_not_found(mock_component):
     """Test PoliciesComponent in cache mode when required files are missing."""
+    fake_tg = _make_fake_tg()
+    fake_tg["load_toolguards"].side_effect = FileNotFoundError("Guard file not found")
     # Mock the cache directory exists but files are missing
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards") as mock_load_guards,
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+        pytest.raises(ValueError, match="Required guard code files missing"),
     ):
-        mock_load_guards.side_effect = FileNotFoundError("Guard file not found")
-
-        with pytest.raises(ValueError, match="Required guard code files missing"):
-            await mock_component.guard_tools()
+        await mock_component.guard_tools()
 
 
 @pytest.mark.asyncio
 async def test_cache_mode_corrupted_cache(mock_component):
     """Test PoliciesComponent in cache mode when cached code is corrupted."""
+    fake_tg = _make_fake_tg()
+    fake_tg["load_toolguards"].side_effect = Exception("Invalid Python syntax")
     # Mock the cache directory exists but code is corrupted
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards") as mock_load_guards,
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+        pytest.raises(ValueError, match="Failed to load guard code"),
     ):
-        mock_load_guards.side_effect = Exception("Invalid Python syntax")
-
-        with pytest.raises(ValueError, match="Failed to load guard code"):
-            await mock_component.guard_tools()
+        await mock_component.guard_tools()
 
 
 # @pytest.mark.asyncio
@@ -163,29 +188,31 @@ async def test_inenabled_returns_original_tools(mock_component, mock_tool):
 async def test_generate_mode_validation_errors(mock_component):
     """Test PoliciesComponent in generate mode with validation errors."""
     mock_component.mode = MODE_GENERATE
+    fake_tg = _make_fake_tg()
 
-    # Test empty project
-    mock_component.project = ""
-    with pytest.raises(ValueError):  # noqa: PT011
-        await mock_component.guard_tools()
+    with patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg):
+        # Test empty project
+        mock_component.project = ""
+        with pytest.raises(ValueError):  # noqa: PT011
+            await mock_component.guard_tools()
 
-    # Test empty policies
-    mock_component.project = "test_project"
-    mock_component.policies = []
-    with pytest.raises(ValueError, match="policies cannot be empty"):
-        await mock_component.guard_tools()
+        # Test empty policies
+        mock_component.project = "test_project"
+        mock_component.policies = []
+        with pytest.raises(ValueError, match="policies cannot be empty"):
+            await mock_component.guard_tools()
 
-    # Test empty tools
-    mock_component.policies = ["Policy 1"]
-    mock_component.in_tools = []
-    with pytest.raises(ValueError, match="in_tools cannot be empty"):
-        await mock_component.guard_tools()
+        # Test empty tools
+        mock_component.policies = ["Policy 1"]
+        mock_component.in_tools = []
+        with pytest.raises(ValueError, match="in_tools cannot be empty"):
+            await mock_component.guard_tools()
 
-    # Test missing model
-    mock_component.in_tools = [MagicMock()]
-    mock_component.model = None
-    with pytest.raises(ValueError, match="model or api_key cannot be empty"):
-        await mock_component.guard_tools()
+        # Test missing model
+        mock_component.in_tools = [MagicMock()]
+        mock_component.model = None
+        with pytest.raises(ValueError, match="model or api_key cannot be empty"):
+            await mock_component.guard_tools()
 
     # # Test non-recommended model
     # mock_component.model = [{"name": "gpt-3.5-turbo", "provider": "OpenAI"}]
@@ -250,7 +277,11 @@ async def test_verify_cached_guards_error_messages(mock_component):
     code_dir = mock_component.work_dir / STEP2
 
     # Test directory not found error message
-    with patch.object(Path, "exists", return_value=False):
+    fake_tg = _make_fake_tg()
+    with (
+        patch.object(Path, "exists", return_value=False),
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
+    ):
         with pytest.raises(ValueError, match="Cache directory not found") as exc_info:
             mock_component._verify_cached_guards(code_dir)
 
@@ -258,24 +289,24 @@ async def test_verify_cached_guards_error_messages(mock_component):
         assert str(code_dir) in str(exc_info.value)
 
     # Test file not found error message
+    fake_tg = _make_fake_tg()
+    fake_tg["load_toolguards"].side_effect = FileNotFoundError("Missing file")
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards") as mock_load,
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
     ):
-        mock_load.side_effect = FileNotFoundError("Missing file")
-
         with pytest.raises(ValueError, match="Required guard code files missing") as exc_info:
             mock_component._verify_cached_guards(code_dir)
 
         assert "Generate" in str(exc_info.value)
 
     # Test general error message
+    fake_tg = _make_fake_tg()
+    fake_tg["load_toolguards"].side_effect = RuntimeError("Unexpected error")
     with (
         patch.object(Path, "exists", return_value=True),
-        patch("lfx.components.models_and_agents.policies_component.load_toolguards") as mock_load,
+        patch.object(PoliciesComponent, "_import_toolguard", return_value=fake_tg),
     ):
-        mock_load.side_effect = RuntimeError("Unexpected error")
-
         with pytest.raises(ValueError, match="Failed to load guard code") as exc_info:
             mock_component._verify_cached_guards(code_dir)
 

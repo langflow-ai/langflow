@@ -724,7 +724,7 @@ async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, creat
 async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that a user cannot run another user's flow.
 
-    LE-639: post-fix behavior is 404 (not 403) so we don't leak flow existence
+    Post-fix behavior is 404 (not 403) so we don't leak flow existence
     via a 403-vs-404 oracle.  See ``get_flow_for_api_key_user`` in
     ``api/v1/endpoints.py``.
     """
@@ -741,7 +741,7 @@ async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow even with valid payload (LE-639)."""
+    """Test that a user cannot run another user's flow even with valid payload."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -774,7 +774,7 @@ async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow with streaming (LE-639)."""
+    """Test that a user cannot run another user's flow with streaming."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -813,7 +813,7 @@ async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simp
 async def test_user_cannot_run_other_users_flow_advanced_endpoint(
     client: AsyncClient, simple_api_test, user_two_api_key
 ):
-    """Test that a user cannot run another user's flow using the advanced endpoint (LE-639)."""
+    """Test that a user cannot run another user's flow using the advanced endpoint."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -833,7 +833,7 @@ async def test_user_cannot_run_other_users_flow_advanced_endpoint(
 async def test_user_cannot_run_other_users_flow_session_endpoint(
     client: AsyncClient, simple_api_test, logged_in_headers, monkeypatch
 ):
-    """LE-639 regression: cross-user access on /run/session/{flow_id} returns 404.
+    """Regression: cross-user access on /run/session/{flow_id} returns 404.
 
     ``simplified_run_flow_session`` is feature-flagged behind
     ``agentic_experience`` and uses session auth (``CurrentActiveUser``).
@@ -851,7 +851,7 @@ async def test_user_cannot_run_other_users_flow_session_endpoint(
     monkeypatch.setattr(settings_service.settings, "agentic_experience", True)
 
     # Create a second user with session credentials and log in.
-    other_username = "le639_session_user"
+    other_username = "cross_user_session_user"
     other_password = "testpassword"  # noqa: S105  # pragma: allowlist secret
     async with session_scope() as session:
         existing = (await session.exec(select(User).where(User.username == other_username))).first()
@@ -890,7 +890,7 @@ async def test_user_cannot_run_other_users_flow_session_endpoint(
 
 @pytest.mark.benchmark
 async def test_run_rejects_malformed_user_id_query_param(client: AsyncClient, simple_api_test, created_api_key):
-    """LE-639 regression: a malformed ``?user_id=`` query param returns 404, not 500.
+    """Regression: a malformed ``?user_id=`` query param returns 404, not 500.
 
     FastAPI exposes ``user_id`` as a free query parameter on routes that
     previously used ``Depends(get_flow_by_id_or_endpoint_name)``.  The auth-aware
@@ -941,7 +941,7 @@ async def test_permission_check_with_invalid_flow_id(client: AsyncClient, create
 async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that permission check happens before flow execution to prevent resource usage.
 
-    LE-639: post-fix behavior is 404 from the helper rather than 403 from
+    Post-fix behavior is 404 from the helper rather than 403 from
     ``check_flow_user_permission`` so we avoid the 403-vs-404 existence oracle.
     The "block before execution" guarantee still holds -- we short-circuit
     earlier now, not later.
@@ -1082,12 +1082,12 @@ async def test_openai_responses_rejects_cross_user_flow_access(
     simple_api_test,
     created_api_key,  # noqa: ARG001 - used only to establish the owner's API key
 ):
-    """Regression (LE-639): authenticated user cannot execute another user's flow.
+    """Regression: authenticated user cannot execute another user's flow.
 
-    Reproduces the IDOR PoC from the Jira ticket: a user with a valid API key
-    passes a flow UUID owned by a different user in the ``model`` field.  The
-    pre-fix behavior was that the endpoint executed the victim's flow and
-    returned 200 with real output; after the fix the helper resolves to
+    Reproduces the IDOR scenario: a user with a valid API key passes a flow
+    UUID owned by a different user in the ``model`` field.  The pre-fix
+    behavior was that the endpoint executed the victim's flow and returned
+    200 with real output; after the fix the helper resolves to
     flow_not_found because UUID lookups now enforce user scope.
     """
     from langflow.services.auth.utils import get_password_hash

@@ -30,8 +30,27 @@ async function setupDeploymentMocks(
     });
   });
 
-  // Snapshots (used for duplicate tool name check on review step)
+  // Snapshots (used for duplicate tool name check on review step).
+  // When snapshotsMock is SNAPSHOTS_DUPLICATE_MOCK, echo back the requested names
+  // as existing tools so the check works regardless of the scoped tool name format.
   await page.route("**/api/v1/deployments/snapshots**", (route) => {
+    if (snapshotsMock === SNAPSHOTS_DUPLICATE_MOCK) {
+      const url = new URL(route.request().url());
+      const names = url.searchParams.getAll("names");
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider_data: {
+            tools: names.map((name, i) => ({ id: `tool-${i}`, name })),
+            page: 1,
+            size: 50,
+            total: names.length,
+          },
+        }),
+      });
+      return;
+    }
     route.fulfill({
       status: 200,
       contentType: "application/json",

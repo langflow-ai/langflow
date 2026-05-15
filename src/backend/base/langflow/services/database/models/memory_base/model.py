@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from pydantic import model_validator
-from sqlalchemy import Column, DateTime, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Text, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -13,11 +13,11 @@ class MemoryBaseBase(SQLModel):
     user_id: UUID = Field(index=True)
     threshold: int = Field(default=50)
     auto_capture: bool = Field(default=True)
-    # Preprocessing config — accepted in payload but logic deferred to future scope
     embedding_model: str = Field(default="")
     preprocessing: bool = Field(default=False)
     preproc_model: str | None = Field(default=None)
     preproc_instructions: str | None = Field(default=None)
+    preproc_kill_phrase: str | None = Field(default=None)
 
 
 class MemoryBase(MemoryBaseBase, table=True):  # type: ignore[call-arg]
@@ -42,10 +42,17 @@ class MemoryBaseCreate(MemoryBaseBase):
     user_id: UUID | None = None  # Derived from auth token in the endpoint; not required in request body
 
     @model_validator(mode="after")
-    def preproc_model_required_when_preprocessing(self) -> "MemoryBaseCreate":
+    def preprocessing_defaults(self) -> "MemoryBaseCreate":
         if self.preprocessing and not self.preproc_model:
             msg = "preproc_model is required when preprocessing is enabled"
             raise ValueError(msg)
+        # Default the kill phrase so callers that enable preprocessing without
+        # supplying one still get the deterministic gate. Imported lazily so the
+        # model module stays free of service-layer deps.
+        if self.preprocessing and not self.preproc_kill_phrase:
+            from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE
+
+            self.preproc_kill_phrase = DEFAULT_KILL_PHRASE
         return self
 
 
@@ -53,9 +60,6 @@ class MemoryBaseUpdate(SQLModel):
     name: str | None = None
     threshold: int | None = None
     auto_capture: bool | None = None
-    preprocessing: bool | None = None
-    preproc_model: str | None = None
-    preproc_instructions: str | None = None
 
 
 class MemoryBaseRead(MemoryBaseBase):
@@ -197,3 +201,66 @@ class MessageIngestionRecord(SQLModel, table=True):  # type: ignore[call-arg]
     # Denormalized from MessageTable.session_id — immutable, avoids JOIN on the hot query path
     session_id: str = Field(sa_column=Column(sa.String(), nullable=False))
     ingested_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
+class MemoryBasePreprocessingOutput(SQLModel, table=True):  # type: ignore[call-arg]
+    """One row per preprocessing batch — captures the LLM-distilled output before KB write.
+
+    Status flow:
+      - ``processed``  — LLM produced output; Chroma write pending. Cursor NOT advanced.
+                         The next ingestion job for this session reuses this row and
+                         retries only the Chroma write (no LLM re-invocation).
+      - ``ingested``   — Chroma write confirmed; cursor advanced; visible in get-messages view.
+      - ``skipped``    — LLM emitted the kill phrase; no Chroma write, no output_text,
+                         but cursor advances so the same batch is not re-evaluated.
+    """
+
+    __tablename__ = "memory_base_preprocessing_output"
+    __table_args__ = (
+        Index(
+            "ix_mbpo_pending",
+            "memory_base_id",
+            "session_id",
+            "status",
+            "created_at",
+        ),
+        Index(
+            "ix_mbpo_listing",
+            "memory_base_id",
+            "session_id",
+            "created_at",
+        ),
+        Index("ix_mbpo_job_id", "job_id"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    memory_base_id: UUID = Field(
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("memory_base.id", ondelete="CASCADE"),
+            nullable=False,
+        )
+    )
+    # Denormalized — immutable for the row's lifetime
+    session_id: str = Field(sa_column=Column(sa.String(), nullable=False))
+    job_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(
+            sa.Uuid(),
+            ForeignKey("job.job_id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+    )
+    status: str = Field(sa_column=Column(sa.String(), nullable=False))
+    output_text: str | None = Field(default=None, sa_column=Column(Text(), nullable=True))
+    # Canonical batch identity — JSON list of message UUIDs as strings.
+    source_message_ids: list = Field(default_factory=list, sa_column=Column(JSON(), nullable=False))
+    model_used: str = Field(sa_column=Column(sa.String(), nullable=False))
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
