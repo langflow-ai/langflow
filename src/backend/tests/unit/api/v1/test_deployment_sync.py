@@ -18,12 +18,14 @@ from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
+    ProviderDeploymentMetadata,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
+    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     DeploymentCreateResult,
     DeploymentGetResult,
     DeploymentUpdateResult,
@@ -88,6 +90,19 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
         _ = provider_view
         return []
 
+    def extract_metadata_for_list(self, provider_view) -> dict[str, ProviderDeploymentMetadata]:
+        if provider_view is None:
+            return {}
+        return {
+            str(item.id): ProviderDeploymentMetadata(
+                display_name=(getattr(item, "provider_data", {}) or {}).get(
+                    "display_name", getattr(item, "name", str(item.id))
+                ),
+                description=(getattr(item, "provider_data", {}) or {}).get("description"),
+            )
+            for item in provider_view.deployments
+        }
+
 
 class _AsyncNoopSavepoint:
     async def __aenter__(self):
@@ -95,6 +110,34 @@ class _AsyncNoopSavepoint:
 
     async def __aexit__(self, exc_type, exc, tb):
         return False
+
+
+def _mock_async_db() -> MagicMock:
+    db = MagicMock()
+    db.begin_nested.return_value = _AsyncNoopSavepoint()
+    db.exec = AsyncMock(return_value=MagicMock(all=MagicMock(return_value=[])))
+    return db
+
+
+@pytest.mark.asyncio
+@patch(f"{MODULE}.update_deployment_metadata", new_callable=AsyncMock)
+async def test_sync_deployment_display_metadata_truncates_provider_description(mock_update_metadata):
+    from langflow.api.v1.mappers.deployments.helpers import sync_deployment_display_metadata
+
+    deployment = _mock_deployment_row("rk-1")
+    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+    mock_update_metadata.return_value = deployment
+
+    result = await sync_deployment_display_metadata(
+        MagicMock(),
+        deployment=deployment,
+        provider_metadata=ProviderDeploymentMetadata(display_name="Provider Name", description=long_description),
+        user_id=uuid4(),
+    )
+
+    assert result is deployment
+    mock_update_metadata.assert_awaited_once()
+    assert mock_update_metadata.call_args.kwargs["description"] == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 
 
 # ---------------------------------------------------------------------------
@@ -315,10 +358,12 @@ class TestListDeploymentsSynced:
         row2 = _mock_deployment_row("rk-2")
         fv_id = uuid4()
         mock_list.side_effect = [[(row1, 0, []), (row2, 1, [(fv_id, "snap-1")])], []]
-        mock_fetch.return_value = ({"rk-1", "rk-2"}, None)
+        mock_fetch.return_value = (
+            {"rk-1", "rk-2"},
+            _mock_provider_view([SimpleNamespace(id="rk-1"), SimpleNamespace(id="rk-2")]),
+        )
         mock_count_attachments.return_value = {row1.id: 0, row2.id: 1}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -361,15 +406,17 @@ class TestListDeploymentsSynced:
         stale_row = _mock_deployment_row("rk-stale")
         good_row = _mock_deployment_row("rk-good")
         uid = uuid4()
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         # First call returns stale + good; second call returns empty (all consumed)
         mock_list.side_effect = [
             [(stale_row, 0, []), (good_row, 1, [])],
             [],
         ]
-        mock_fetch.return_value = ({"rk-good"}, None)  # only rk-good is known
+        mock_fetch.return_value = (
+            {"rk-good"},
+            _mock_provider_view([SimpleNamespace(id="rk-good")]),
+        )  # only rk-good is known
         mock_count_attachments.return_value = {good_row.id: 1}
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -436,8 +483,7 @@ class TestListDeploymentsSynced:
             ),
         ]
         mock_count_attachments.return_value = {row1.id: 0, row2.id: 0}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -459,6 +505,62 @@ class TestListDeploymentsSynced:
             "rk-2": {"environments": ["live"]},
         }
         mock_delete.assert_awaited_once()
+        mock_delete_unbound.assert_awaited_once()
+        mock_count.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{MODULE}.count_deployments_by_provider", new_callable=AsyncMock, return_value=1)
+    @patch(f"{MODULE}.count_attachments_by_deployment_ids", new_callable=AsyncMock)
+    @patch(f"{MODULE}.delete_unbound_attachments", new_callable=AsyncMock, return_value=0)
+    @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
+    @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
+    @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
+    async def test_truncates_provider_description_before_batch_metadata_sync(
+        self,
+        mock_list,
+        mock_fetch,
+        mock_update_metadata_batch,
+        mock_delete_unbound,
+        mock_count_attachments,
+        mock_count,
+    ):
+        """Provider descriptions are truncated before local metadata batch sync."""
+        long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+
+        class _MetadataMapper(_NoSnapshotBindingMapper):
+            def extract_metadata_for_list(self, provider_view) -> dict[str, ProviderDeploymentMetadata]:
+                _ = provider_view
+                return {
+                    "rk-1": ProviderDeploymentMetadata(
+                        display_name="Provider Name",
+                        description=long_description,
+                    )
+                }
+
+        row = _mock_deployment_row("rk-1")
+        mock_list.return_value = [(row, 0, [])]
+        mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
+        mock_count_attachments.return_value = {row.id: 0}
+        db = _mock_async_db()
+
+        from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
+
+        accepted, total, _ = await list_deployments_synced(
+            deployment_adapter=AsyncMock(),
+            deployment_mapper=_MetadataMapper(),
+            user_id=uuid4(),
+            provider_id=uuid4(),
+            db=db,
+            page=1,
+            size=1,
+            deployment_type=None,
+        )
+
+        assert [row.resource_key for row, _, _ in accepted] == ["rk-1"]
+        assert total == 1
+        mock_update_metadata_batch.assert_awaited_once()
+        updates = mock_update_metadata_batch.call_args.kwargs["deployment_updates"]
+        assert updates[0].description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
 
@@ -517,10 +619,9 @@ class TestListDeploymentsSynced:
             [],
         ]
         # Provider filtered by "agent" — only rk-1 returned
-        mock_fetch.return_value = ({"rk-1"}, None)
+        mock_fetch.return_value = ({"rk-1"}, _mock_provider_view([SimpleNamespace(id="rk-1")]))
         mock_count_attachments.return_value = {row_match.id: 0}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import DeploymentType, list_deployments_synced
 
@@ -571,11 +672,10 @@ class TestListDeploymentsSynced:
         ]
         mock_fetch.side_effect = [
             (set(), None),  # stale not known
-            ({"rk-good"}, None),  # good is known
+            ({"rk-good"}, _mock_provider_view([SimpleNamespace(id="rk-good")])),  # good is known
         ]
         mock_count_attachments.return_value = {good.id: 0}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -801,10 +901,11 @@ class TestUpdateSnapshotMapping:
             result=DeploymentUpdateResult(
                 id="provider-id",
                 provider_result={
+                    "deployment_name": "agent_api_name",
                     "added_snapshot_bindings": [
                         {"source_ref": str(flow_version_ids[0]), "snapshot_id": "snap-1"},
                         {"source_ref": str(flow_version_ids[1]), "snapshot_id": "snap-2"},
-                    ]
+                    ],
                 },
             ),
         )
@@ -824,9 +925,10 @@ class TestUpdateSnapshotMapping:
                 result=DeploymentUpdateResult(
                     id="provider-id",
                     provider_result={
+                        "deployment_name": "agent_api_name",
                         "added_snapshot_bindings": [
                             {"source_ref": "other", "snapshot_id": "snap-extra"},
-                        ]
+                        ],
                     },
                 ),
             )
@@ -841,6 +943,7 @@ class TestUpdateSnapshotMapping:
                 result=DeploymentUpdateResult(
                     id="provider-id",
                     provider_result={
+                        "deployment_name": "agent_api_name",
                         "added_snapshot_bindings": [],
                     },
                 ),
@@ -864,7 +967,7 @@ def test_watsonx_mapper_util_created_snapshot_ids_uses_adapter_slot():
     created = WatsonxOrchestrateDeploymentMapper().util_created_snapshot_ids(
         result=DeploymentUpdateResult(
             id="provider-id",
-            provider_result={"created_snapshot_ids": ["snap-1", "snap-2"]},
+            provider_result={"deployment_name": "agent_api_name", "created_snapshot_ids": ["snap-1", "snap-2"]},
         ),
     )
 
@@ -1014,7 +1117,7 @@ def test_watsonx_mapper_shape_deployment_get_data_hides_internal_sync_fields():
         "llm": "my-llm",
         "name": "agent-name",
         "display_name": "Agent Name",
-        "description": "Provider description",
+        "environments": ["draft"],
     }
 
 
@@ -1047,7 +1150,7 @@ def test_base_mapper_extract_snapshot_bindings_for_get_raises_not_implemented():
         provider_data={"tool_ids": ["tool-1"]},
     )
 
-    with pytest.raises(NotImplementedError, match="extract_snapshot_bindings_for_get"):
+    with pytest.raises(NotImplementedError, match="not configured for syncing snapshots for a deployment"):
         mapper.extract_snapshot_bindings_for_get(get_result, resource_key="agent-1")
 
 
@@ -1068,7 +1171,7 @@ def test_base_mapper_extract_snapshot_bindings_raises_not_implemented():
         ]
     )
 
-    with pytest.raises(NotImplementedError, match="extract_snapshot_bindings"):
+    with pytest.raises(NotImplementedError, match="not configured for syncing snapshots for multiple deployments"):
         mapper.extract_snapshot_bindings(provider_view)
 
 
@@ -1397,8 +1500,7 @@ class TestSyncFlowVersionAttachments:
         mock_fetch_resource_keys.return_value = ({"rk-1"}, provider_view)
         mock_delete_unbound.side_effect = RuntimeError("delete failed")
 
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 
@@ -1455,8 +1557,7 @@ class TestSyncDeploymentsAndAttachmentsByProvider:
         mapper.extract_snapshot_bindings.return_value = ["binding-1"]
         mock_get_mapper.return_value = mapper
 
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.sync import _sync_deployments_and_attachments_by_provider
 
@@ -2036,8 +2137,7 @@ class TestListDeploymentsSyncedBindingPhase:
             ),
         )
         mock_count_attachments.return_value = {row.id: 2}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -2058,7 +2158,6 @@ class TestListDeploymentsSyncedBindingPhase:
             "rk-1": {
                 "name": "agent_api_name",
                 "display_name": "Agent One",
-                "description": "Provider description",
                 "environments": [],
             }
         }
@@ -2090,8 +2189,7 @@ class TestListDeploymentsSyncedBindingPhase:
             ),
         )
         mock_count_attachments.return_value = {row.id: 0}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
         provider_id = uuid4()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
@@ -2143,8 +2241,7 @@ class TestListDeploymentsSyncedBindingPhase:
             ),
         )
         mock_delete_unbound.side_effect = RuntimeError("cleanup failed")
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -2193,8 +2290,7 @@ class TestListDeploymentsSyncedBindingPhase:
             ),
         )
         mock_count_attachments.return_value = {row.id: 3}
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployments_synced
 
@@ -2252,8 +2348,7 @@ class TestListDeploymentFlowVersionsSynced:
                 )
             ]
         )
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
 
@@ -2348,8 +2443,7 @@ class TestListDeploymentFlowVersionsSynced:
             ]
         )
         mock_sync_snapshot_ids.side_effect = RuntimeError("savepoint failed")
-        db = MagicMock()
-        db.begin_nested.return_value = _AsyncNoopSavepoint()
+        db = _mock_async_db()
 
         from langflow.api.v1.mappers.deployments.helpers import list_deployment_flow_versions_synced
 

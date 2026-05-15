@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     CredentialResolutionError,
     DeploymentError,
+    DeploymentNotConfiguredError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
@@ -116,13 +117,15 @@ class DummySettingsService:
 class FakeAgentClient:
     def __init__(
         self,
-        deployment: dict,
+        deployment: dict | list | None,
         listed_agents: list[dict] | None = None,
         get_payloads: dict[str, dict | list[dict]] | None = None,
         create_response: object | None = None,
         create_exception: Exception | None = None,
     ):
-        self._deployment = deployment
+        self._deployment = {**deployment} if isinstance(deployment, dict) else deployment
+        if isinstance(self._deployment, dict) and self._deployment.get("id") and not self._deployment.get("name"):
+            self._deployment["name"] = f"agent-{self._deployment['id']}"
         self._listed_agents = listed_agents or []
         self._get_payloads = get_payloads or {}
         self._create_response = create_response or SimpleNamespace(id="dep-created")
@@ -3272,6 +3275,7 @@ async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch
         user_id="user-1",
         deployment_id="dep-created",
         provider_result={
+            "deployment_name": "agent_api_name",
             "app_ids": ["cfg"],
             "tools_with_refs": [
                 {"source_ref": "fv-1", "tool_id": "tool-1"},
@@ -5297,38 +5301,9 @@ async def test_delete_only_deletes_agent_not_tools_or_configs(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_get_status_connected(monkeypatch):
+async def test_get_status_not_configured():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(
-            {"id": "dep-1", "environments": [{"name": "draft", "id": "env-1"}]},
-        ),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
-    assert result.id == "dep-1"
-    assert result.provider_data["status"] == "connected"
-    assert result.provider_data["environments"] == ["draft"]
-
-
-@pytest.mark.anyio
-async def test_get_status_not_found(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(None),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentNotFoundError, match="dep-1"):
+    with pytest.raises(DeploymentNotConfiguredError, match="Deployment status is not configured"):
         await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
 
 
@@ -5453,7 +5428,7 @@ async def test_list_deployments_requires_provider_display_metadata(monkeypatch, 
 
 
 @pytest.mark.anyio
-async def test_list_deployments_with_names_filter(monkeypatch):
+async def test_list_deployments_ignores_removed_names_filter(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
@@ -5480,13 +5455,12 @@ async def test_list_deployments_with_names_filter(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    params = DeploymentListParams(deployment_names=["agent-1", "agent-2"])
+    params = DeploymentListParams()
     result = await service.list(user_id="user-1", db=object(), params=params)
     assert len(result.deployments) == 1
     assert result.deployments[0].id == "dep-1"
 
-    # Verify the names param was pushed to the underlying WXO client
-    assert fake_agent.last_list_params == {"names": ["agent-1", "agent-2"]}
+    assert fake_agent.last_list_params is None
 
 
 @pytest.mark.anyio
@@ -5590,30 +5564,6 @@ async def test_list_llms_invalid_payload_raises_deployment_error(monkeypatch):
 
     with pytest.raises(DeploymentError, match="listing deployment LLMs"):
         await service.list_llms(user_id="user-1", db=object())
-
-
-@pytest.mark.anyio
-async def test_get_status_handles_client_api_exception(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    class FailingAgentClient(FakeAgentClient):
-        def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
-            resp = SimpleNamespace(status_code=500, text='{"detail": "internal error"}')
-            from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
-
-            raise ClientAPIException(response=resp)
-
-    fake_clients = SimpleNamespace(
-        agent=FailingAgentClient(None),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentError, match="getting a deployment health"):
-        await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
 
 
 @pytest.mark.anyio

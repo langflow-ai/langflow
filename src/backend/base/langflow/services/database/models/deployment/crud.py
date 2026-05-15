@@ -90,6 +90,23 @@ async def create_deployment(
     return row
 
 
+async def create_deployment_from_model(
+    db: AsyncSession,
+    *,
+    deployment: Deployment,
+) -> Deployment:
+    return await create_deployment(
+        db,
+        user_id=deployment.user_id,
+        project_id=deployment.project_id,
+        deployment_provider_account_id=deployment.deployment_provider_account_id,
+        resource_key=deployment.resource_key,
+        display_name=deployment.display_name,
+        deployment_type=deployment.deployment_type,
+        description=deployment.description,
+    )
+
+
 async def get_deployment_by_resource_key(
     db: AsyncSession,
     *,
@@ -291,7 +308,6 @@ async def list_deployments_page(
     limit: int,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-    names: list[str] | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
@@ -305,9 +321,6 @@ async def list_deployments_page(
     if limit <= 0:
         msg = "limit must be greater than 0"
         raise ValueError(msg)
-    # ``names`` is provider-name-only after display names become non-unique.
-    _ = names
-
     attachment_counts_subquery = (
         select(
             col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
@@ -472,10 +485,7 @@ async def count_deployments_by_provider(
     deployment_provider_account_id: UUID,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-    names: list[str] | None = None,
 ) -> int:
-    # ``names`` is provider-name-only after display names become non-unique.
-    _ = names
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,

@@ -146,9 +146,8 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         min_length=1,
         description=(
             "Provider-specific credential/metadata payload. "
-            "Contents are opaque to the API schema; the deployment mapper "
-            "for the target provider_key validates and extracts credentials "
-            "and provider metadata (for example URL/region and tenant/account identifiers)."
+            "Contents are provider-defined and may include credentials "
+            "and metadata such as URL/region and tenant/account identifiers."
         ),
     )
 
@@ -222,7 +221,6 @@ class _DeploymentResponseCommon(BaseModel):
     id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     provider_key: str = Field(description="Provider identifier (e.g. 'watsonx-orchestrate').")
-    display_name: str = Field(description="Deployment name synced from the provider.")
     description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
@@ -373,10 +371,6 @@ class DeploymentUpdateResponse(_DeploymentResponseWithProviderData):
     resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
 
 
-class DeploymentStatusResponse(_DeploymentResponseWithProviderData):
-    """API response for deployment status/health."""
-
-
 # ---------------------------------------------------------------------------
 # Deployment create / update request schemas
 # ---------------------------------------------------------------------------
@@ -386,7 +380,6 @@ class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    display_name: NonEmptyStr = Field(description="Requested deployment name.")
     description: str = Field(
         default="",
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -406,7 +399,6 @@ class DeploymentCreateRequest(BaseModel):
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    display_name: NonEmptyStr | None = Field(default=None, description="Updated deployment name.")
     description: str | None = Field(
         default=None,
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -420,10 +412,7 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'display_name', 'description', or 'provider_data' must be provided."
-            raise ValueError(msg)
-        if self.display_name is None and self.description is None and self.provider_data is None:
-            msg = "At least one of 'display_name', 'description', or 'provider_data' must be provided."
+            msg = "At least one of 'description' or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

@@ -16,6 +16,7 @@ from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     AuthSchemeError,
     DeploymentError,
+    DeploymentNotConfiguredError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
@@ -272,6 +273,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         create_result_payload = WatsonxDeploymentCreateResultData(
+            deployment_name=apply_result.deployment_name,
             app_ids=apply_result.app_ids,
             tools_with_refs=apply_result.tools_with_refs,
             tool_app_bindings=apply_result.tool_app_bindings,
@@ -390,9 +392,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             if params and params.deployment_ids and "ids" not in query_params:
                 query_params["ids"] = [str(_id) for _id in params.deployment_ids]
 
-            if params and params.deployment_names and "names" not in query_params:
-                query_params["names"] = list(params.deployment_names)
-
             # if different deployment types
             # are distinct resources in wxO
             # then we should probably raise an error if
@@ -507,7 +506,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     update_payload,
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
-                    id=deployment_id, provider_result=WatsonxDeploymentUpdateResultData()
+                    id=deployment_id,
+                    provider_result=WatsonxDeploymentUpdateResultData(deployment_name=agent["name"]),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -529,6 +529,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 id=deployment_id,
                 provider_result=self.payload_schemas.deployment_update_result.apply(
                     WatsonxDeploymentUpdateResultData(
+                        deployment_name=agent["name"],
                         created_app_ids=apply_result.created_app_ids,
                         created_snapshot_ids=apply_result.created_snapshot_ids,
                         added_snapshot_ids=apply_result.added_snapshot_ids,
@@ -619,45 +620,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentDeleteResult(id=agent_id)
 
-    # TODO: get status normally if its a live agent
-    # if its draft, use the current 'exists' or raise not found logic
     async def get_status(
         self,
         *,
         user_id: IdLike,
         deployment_id: IdLike,
-        deployment_type: DeploymentType | None = None,  # noqa: ARG002
+        deployment_type: DeploymentType | None = None,
         db: AsyncSession,
     ) -> DeploymentStatusResult:
-        """Get deployment status from wxO agent metadata.
-
-        Note: wxO does not expose a dedicated health endpoint for draft Agents. Status is
-        inferred from agent existence and environment metadata -- "connected"
-        means the agent draft was found, not that it is healthy at runtime.
-        """
-        agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
-
-        clients = await self._get_provider_clients(user_id=user_id, db=db)
-
-        try:
-            agent = await asyncio.to_thread(clients.agent.get_draft_by_id, agent_id)
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.HEALTH,
-                log_msg="Unexpected error fetching wxO deployment status",
-            )
-
-        if not agent or isinstance(agent, str):  # the adk returns a string if not found
-            raise DeploymentNotFoundError(deployment_id=agent_id)
-
-        return DeploymentStatusResult(
-            id=agent_id,
-            provider_data={
-                "status": "connected",
-                "environments": get_agent_environments(agent),
-            },
-        )
+        _ = (user_id, deployment_id, deployment_type, db)
+        msg = "Deployment status is not configured for the Watsonx Orchestrate deployment adapter."
+        raise DeploymentNotConfiguredError(msg)
 
     async def create_execution(
         self,

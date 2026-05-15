@@ -113,6 +113,12 @@ class TestAdapterDescriptionValidation:
         with pytest.raises(ValidationError, match="at most"):
             BaseDeploymentDataUpdate(description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1))
 
+    def test_update_payload_accepts_explicit_null_description(self):
+        payload = BaseDeploymentDataUpdate(description=None)
+
+        assert payload.description is None
+        assert "description" in payload.model_fields_set
+
 
 # ---------------------------------------------------------------------------
 # shape_deployment_create_result tests

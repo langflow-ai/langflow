@@ -494,6 +494,13 @@ def test_base_deployment_data_update_requires_at_least_one_field() -> None:
         BaseDeploymentDataUpdate()
 
 
+def test_base_deployment_data_update_accepts_explicit_null_description() -> None:
+    payload = BaseDeploymentDataUpdate(description=None)
+
+    assert payload.description is None
+    assert "description" in payload.model_fields_set
+
+
 def test_base_deployment_data_normalizes_name() -> None:
     payload = BaseDeploymentData(name=" My Deployment ", type=DeploymentType.AGENT)
     assert payload.name == "My Deployment"
@@ -512,6 +519,11 @@ def test_base_deployment_data_update_normalizes_name() -> None:
 def test_base_deployment_data_update_rejects_blank_name() -> None:
     with pytest.raises(ValidationError):
         BaseDeploymentDataUpdate(name="   ")
+
+
+def test_base_deployment_data_update_rejects_explicit_null_name() -> None:
+    with pytest.raises(ValidationError, match="'name' cannot be set to null"):
+        BaseDeploymentDataUpdate(name=None)
 
 
 def test_deployment_update_requires_at_least_one_section() -> None:

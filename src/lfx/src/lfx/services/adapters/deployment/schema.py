@@ -50,6 +50,12 @@ IdLike = UUID | NormalizedId
 DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
+def truncate_deployment_description(description: str | None) -> str | None:
+    if description is None:
+        return None
+    return description[:DEPLOYMENT_DESCRIPTION_MAX_LENGTH]
+
+
 class DeploymentType(str, Enum):
     """Core deployment types recognized by LFX contracts.
 
@@ -472,11 +478,6 @@ class DeploymentListParams(_BaseListParams[T_DeploymentListParams]):
         None,
         description="Config ids to filter by.",
     )
-    deployment_names: list[NormalizedStr] | None = Field(
-        None,
-        min_length=1,
-        description="Deployment names to filter by.",
-    )
 
     @field_validator("deployment_types")
     @classmethod
@@ -555,7 +556,10 @@ class BaseDeploymentDataUpdate(BaseModel):
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
-        if self.name is None and self.description is None:
+        if "name" in self.model_fields_set and self.name is None:
+            msg = "'name' cannot be set to null."
+            raise ValueError(msg)
+        if "description" not in self.model_fields_set and self.name is None:
             msg = "At least one of 'name' or 'description' must be provided."
             raise ValueError(msg)
         return self
