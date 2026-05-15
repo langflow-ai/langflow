@@ -1,10 +1,28 @@
 import os
 
 import pytest
-from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from langchain_core.messages import HumanMessage
-from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
-from qianfan.errors import APIError
+
+# Skip the entire module if the optional Qianfan stack cannot be imported.
+# qianfan's GlobalConfig is a pydantic.v1 BaseSettings model and has been
+# observed to fail at class-construction time in some environments
+# (`pydantic.v1.errors.ConfigError: unable to infer type for attribute "AK"`),
+# which crashes collection. These tests are all `api_key_required` and are
+# skipped in normal CI anyway — guard the imports so collection never crashes.
+# NOTE: pytest.importorskip only catches ImportError; qianfan can raise
+# pydantic.v1.errors.ConfigError on Python 3.14+, so we catch broadly.
+try:
+    import qianfan
+    from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
+
+    APIError = qianfan.errors.APIError
+
+    from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+except Exception:
+    pytest.skip(
+        "qianfan stack is not importable (likely pydantic v1 incompatibility)",
+        allow_module_level=True,
+    )
 
 
 @pytest.fixture
