@@ -167,7 +167,7 @@ class Input(BaseModel):
             v = format_type(v)
         elif not isinstance(v, str):
             msg = f"type must be a string or a type, not {type(v)}"
-            raise ValueError(msg)  # noqa: TRY004
+            raise ValueError(msg)
         return v
 
 
