@@ -24,9 +24,9 @@ from lfx.cli.common import (
     get_best_access_host,
     get_free_port,
     is_port_in_use,
-    load_graph_from_path,
 )
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
+from lfx.load import load_flow_from_json
 
 # Initialize console
 console = Console()
@@ -247,12 +247,16 @@ async def serve_command(
 async def _load_graph_and_meta(
     path: Path,
     root_dir: Path,
-    verbose_print,
+    verbose_print,  # noqa: ARG001
     *,
     check_variables: bool,
 ) -> tuple:
     """Load and prepare one graph, returning (graph, FlowMeta)."""
-    graph = await load_graph_from_path(path, path.suffix, verbose_print, verbose=False)
+    try:
+        graph = load_flow_from_json(path)
+    except Exception as exc:
+        msg = f"Failed to load {path.name}: {exc}"
+        raise ValueError(msg) from exc
     graph.prepare()
     if check_variables:
         from lfx.cli.validation import validate_global_variables_for_env

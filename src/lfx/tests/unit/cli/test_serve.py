@@ -184,7 +184,7 @@ def test_serve_command_json_file():
     try:
         # Mock the necessary dependencies
         with (
-            patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+            patch("lfx.cli.commands.load_flow_from_json") as mock_load,
             patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
@@ -225,10 +225,9 @@ def test_serve_command_json_file():
             assert mock_uvicorn.called
             mock_load.assert_called_once()
 
-            # Check that the mock was called with the correct arguments
+            # Check that the mock was called with the resolved path
             args, _kwargs = mock_load.call_args
             assert args[0] == Path(temp_path).resolve()
-            assert args[1] == ".json"
 
     finally:
         Path(temp_path).unlink()
@@ -239,7 +238,7 @@ def test_serve_command_inline_json():
     flow_json = '{"nodes": [], "edges": []}'
 
     with (
-        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.load_flow_from_json") as mock_load,
         patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
@@ -266,10 +265,9 @@ def test_serve_command_inline_json():
         assert mock_uvicorn.called
         mock_load.assert_called_once()
 
-        # Check that the mock was called with the correct arguments
+        # Check that the mock was called with a .json temp file path
         args, _kwargs = mock_load.call_args
         assert args[0].suffix == ".json"
-        assert args[1] == ".json"
 
 
 class TestBuildRegistryFromDirectory:
@@ -286,7 +284,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.prepare = MagicMock()
         mock_graph.flow_id = None
 
-        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+        with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
             registry = asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
         assert len(registry) == 2
@@ -312,7 +310,7 @@ class TestBuildRegistryFromDirectory:
         mock_graph.prepare = MagicMock()
         mock_graph.flow_id = None
 
-        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+        with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
             registry = asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
 
         assert len(registry) == 1
@@ -325,7 +323,7 @@ class TestBuildRegistryFromDirectory:
         (tmp_path / "bad.json").write_text('{"nodes": [], "edges": []}')
 
         with (
-            patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("corrupt")),
+            patch("lfx.cli.commands.load_flow_from_json", side_effect=ValueError("corrupt")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
             asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
@@ -347,7 +345,7 @@ class TestBuildRegistryFromPaths:
         mock_graph.prepare = MagicMock()
         mock_graph.flow_id = None
 
-        with patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph):
+        with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
             registry = asyncio.run(build_registry_from_paths([p1, p2], lambda _: None, check_variables=False))
 
         assert len(registry) == 2
@@ -361,7 +359,7 @@ class TestBuildRegistryFromPaths:
         p.write_text('{"nodes": [], "edges": []}')
 
         with (
-            patch("lfx.cli.commands.load_graph_from_path", side_effect=ValueError("oops")),
+            patch("lfx.cli.commands.load_flow_from_json", side_effect=ValueError("oops")),
             pytest.raises(ValueError, match=r"bad\.json"),
         ):
             asyncio.run(build_registry_from_paths([p], lambda _: None, check_variables=False))
@@ -382,7 +380,7 @@ class TestServeCommandMultiFlow:
         mock_graph.edges = []
 
         with (
-            patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph),
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
             patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
@@ -412,7 +410,7 @@ class TestServeCommandMultiFlow:
         mock_graph.edges = []
 
         with (
-            patch("lfx.cli.commands.load_graph_from_path", return_value=mock_graph),
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
             patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
