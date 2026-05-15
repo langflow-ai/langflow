@@ -135,6 +135,8 @@ def _build_output_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        import pandas as pd
+
         if isinstance(result, pd.DataFrame):
             return result
         # removing the model_dump() call here because it is not serializable
@@ -190,6 +192,8 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        import pandas as pd
+
         if isinstance(result, pd.DataFrame):
             return result
         # removing the model_dump() call here because it is not serializable

@@ -616,6 +616,12 @@ class _LazyImportProxy:
     def __iter__(self):
         return iter(self._resolve())
 
+    def __or__(self, other):
+        return self._resolve() | other
+
+    def __ror__(self, other):
+        return other | self._resolve()
+
     def __repr__(self) -> str:
         # Intentionally does NOT resolve — useful for logging while debugging the lazy path
         # without forcing every `repr()` to import the underlying module.
