@@ -34,8 +34,62 @@ For each port, [`PORTING.md`](./PORTING.md) §1-§7 covers:
    and
    [`docker/build_and_push_base.Dockerfile`](../../docker/build_and_push_base.Dockerfile).
 
-`scripts/migrate/port_bundle.py --bundle <name> --apply` does steps 1-3
-mechanically; steps 4-8 still need human judgement.
+`scripts/migrate/port_bundle.py` (rewritten after the datastax port)
+now drives every step end-to-end. The five-phase mode is what the
+mass-extraction loop should use:
+
+```bash
+uv run python scripts/migrate/port_bundle.py \
+    --bundle <name> --display-name "<Display Name>" \
+    --migration-release 1.10.0 --apply \
+    --rewrite-consumers --update-index \
+    --update-dockerfiles --remove-base-extra
+```
+
+Phase coverage:
+
+* **A — bundle layout.** Skeleton + lazy-import `__init__.py` (preserves
+  the pre-extraction `_dynamic_imports`/`__getattr__` shape) + moves all
+  `*.py` files + auto-detects and moves any shared base under
+  `lfx.base.<bundle>` into `lfx_<bundle>.base/`, rewriting
+  intra-bundle imports.
+* **B — in-tree cleanup.** Deletes the in-tree provider dir, strips the
+  three references from `lfx.components.__init__.py`, and migrates the
+  matching `[tool.ruff.lint.per-file-ignores]` entries from the root
+  pyproject into the bundle's pyproject (so the lint exceptions travel
+  with the moved files).
+* **C — workspace + consumers.** Patches the root pyproject (dep,
+  `uv.sources`, members) and `rg`-greps the repo for external consumers
+  of `lfx.components.<bundle>` and `lfx.base.<bundle>`, rewriting them
+  in place. Backend test dirs at `src/backend/tests/unit/base/<bundle>/`
+  are auto-moved into the bundle's `tests/` with patch paths rewritten.
+* **D — artefacts.** With `--migration-release`, appends the
+  four-entry-per-class migration block directly to
+  `migration_table.json`; writes a parametrised
+  `test_pilot_<bundle>_upgrade.py`; with `--update-index`, surgically
+  removes the bundle's category from `component_index.json` and
+  recomputes its `sha256`; with `--update-dockerfiles`, patches both
+  non-uv-sync Dockerfiles.
+* **E — optional cleanup.** With `--remove-base-extra`, removes the
+  `<bundle>` extra from `langflow-base/pyproject.toml` and any
+  `langflow-base[<bundle>]` reference from `complete` (the bundle's
+  own pyproject now carries those deps).
+
+Dry-run by default; pass `--apply` to mutate the tree. The composio
+dry-run is a good stress test — 63 classes, 252 migration entries, a
+shared base, three consumers, and a base extra all handled by the
+script.
+
+What's left to the human:
+
+* Pinning runtime deps in the new bundle's `pyproject.toml` (the script
+  only emits `lfx>=0.5.0,<0.6.0`; the rest are bundle-specific and the
+  porter must check `langchain-*` constraints against `langflow-base`).
+* Reviewing the consumer-rewrite diff (the substitutions are plain
+  `str.replace`; rare false positives are possible in docstrings or
+  fixture strings).
+* Running the verification block (`uv lock`, `uv sync`, `pytest`,
+  `ruff`, `lfx extension validate`) before committing.
 
 ## What stays in core
 
