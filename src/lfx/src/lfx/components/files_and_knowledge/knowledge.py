@@ -721,6 +721,7 @@ class KnowledgeComponent(Component):
         plausible extension so the icon is consistent across both flows.
         """
         candidate_columns = ("file_path", "file_name", "filename", "source", "path")
+        extension_length_limit = 10
         extensions: set[str] = set()
         for col in candidate_columns:
             if col not in df_source.columns:
@@ -733,7 +734,7 @@ class KnowledgeComponent(Component):
                 # Drop anything that doesn't look like an extension (URL
                 # query strings, version segments, etc.) — the icon palette
                 # keys off short alphanumeric tokens like "pdf"/"docx".
-                if ext and len(ext) <= 10 and ext.isalnum():
+                if ext and len(ext) <= extension_length_limit and ext.isalnum():
                     extensions.add(ext)
         return extensions
 
