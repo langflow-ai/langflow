@@ -26,6 +26,8 @@ async def get_user_by_flow_id_or_endpoint_name(flow_id_or_name: str, user_id: st
             flow = await session.get(Flow, flow_id)
         except ValueError:
             stmt = select(Flow).where(Flow.endpoint_name == flow_id_or_name)
+            if uuid_user_id is not None:
+                stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
 
         # Enforce ownership check for both UUID and endpoint_name lookups
