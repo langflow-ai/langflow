@@ -527,7 +527,7 @@ async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
 
     _assert_json_native(stored_tool.output)
     # Strict JSON dump must succeed without a fallback encoder.
-    json.dumps(stored_tool.output)
+    json.dumps(stored_tool.output, allow_nan=False)
 
 
 # =============================================================================
