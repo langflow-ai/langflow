@@ -452,7 +452,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "1.3.2"
+                    "version": "1.4.0"
                   },
                   {
                     "name": "lfx",
@@ -1093,7 +1093,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.3.2"
+                    "version": "1.4.0"
                   },
                   {
                     "name": "pydantic",

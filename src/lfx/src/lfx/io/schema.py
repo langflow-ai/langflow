@@ -130,6 +130,29 @@ def _get_langflow_input_default(model_field: Any, input_cls: type[InputTypes]) -
     return default
 
 
+def _coerce_default_value(value: Any) -> Any:
+    """Coerce non-native scalars (e.g. numpy.int64) to native Python types.
+
+    Values may originate from a DB round-trip where integers/floats are
+    deserialized as numpy scalars. Pydantic's Field cannot introspect these
+    as defaults and raises TypeError. numpy/pandas scalars expose .item() which
+    returns the equivalent native Python value.
+    """
+    if value is None:
+        return value
+    cls = type(value)
+    module = getattr(cls, "__module__", "") or ""
+    if not module.startswith(("numpy", "pandas")):
+        return value
+    item = getattr(value, "item", None)
+    if not callable(item):
+        return value
+    try:
+        return item()
+    except (TypeError, ValueError, AttributeError):
+        return value
+
+
 def flatten_schema(root_schema: dict[str, Any]) -> dict[str, Any]:
     """Flatten a JSON RPC style schema into a single level JSON Schema.
 
@@ -302,7 +325,7 @@ def create_input_schema(inputs: list["InputTypes"]) -> type[BaseModel]:
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
+            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)
@@ -344,7 +367,7 @@ def create_input_schema_from_dict(inputs: list[dotdict], param_key: str | None =
             "description": input_model.info or "",
         }
         if input_model.required is False:
-            field_dict["default"] = input_model.value  # type: ignore[assignment]
+            field_dict["default"] = _coerce_default_value(input_model.value)  # type: ignore[assignment]
         pydantic_field = Field(**field_dict)
 
         fields[input_model.name] = (field_type, pydantic_field)
