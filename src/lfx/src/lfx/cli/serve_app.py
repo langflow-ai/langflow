@@ -112,7 +112,18 @@ class ErrorResponse(BaseModel):
 
 
 class FlowRegistry:
-    """Mutable in-process registry of loaded flows."""
+    """Mutable in-process registry of loaded flows.
+
+    Designed for a **single uvicorn worker**. With multiple OS-level workers
+    (processes), each worker holds its own independent copy of this registry:
+    flows uploaded to one worker are invisible to the others, and there is no
+    locking to guard concurrent writes. To support multi-worker deployments,
+    replace the in-memory dict with a shared backing store (e.g. Redis or a
+    database) and add appropriate locking around mutations.
+
+    Uploaded flows are also not persisted to disk. They exist only for the
+    lifetime of the server process; a restart will drop them.
+    """
 
     def __init__(self) -> None:
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
@@ -312,6 +323,8 @@ def create_multi_serve_app(
             title=body.name,
             description=body.description,
         )
+        # NOTE: in-memory only — not persisted to disk and not visible to other
+        # worker processes. See FlowRegistry docstring for multi-worker caveats.
         registry.add(graph, meta)
         return UploadFlowResponse(
             id=flow_id,
