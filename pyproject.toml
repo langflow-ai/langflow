@@ -40,6 +40,15 @@ dependencies = [
     "lfx-serpapi>=0.1.0",
     "lfx-tavily>=0.1.0",
     "lfx-youtube>=0.1.0",
+    "lfx-exa>=0.1.0",
+    "lfx-bing>=0.1.0",
+    "lfx-baidu>=0.1.0",
+    "lfx-firecrawl>=0.1.0",
+    "lfx-glean>=0.1.0",
+    "lfx-scrapegraph>=0.1.0",
+    "lfx-searchapi>=0.1.0",
+    "lfx-jigsawstack>=0.1.0",
+    "lfx-needle>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -105,6 +114,15 @@ lfx-wolframalpha = { workspace = true }
 lfx-serpapi = { workspace = true }
 lfx-tavily = { workspace = true }
 lfx-youtube = { workspace = true }
+lfx-exa = { workspace = true }
+lfx-bing = { workspace = true }
+lfx-baidu = { workspace = true }
+lfx-firecrawl = { workspace = true }
+lfx-glean = { workspace = true }
+lfx-scrapegraph = { workspace = true }
+lfx-searchapi = { workspace = true }
+lfx-jigsawstack = { workspace = true }
+lfx-needle = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -124,6 +142,15 @@ members = [
     "src/bundles/serpapi",
     "src/bundles/tavily",
     "src/bundles/youtube",
+    "src/bundles/exa",
+    "src/bundles/bing",
+    "src/bundles/baidu",
+    "src/bundles/firecrawl",
+    "src/bundles/glean",
+    "src/bundles/scrapegraph",
+    "src/bundles/searchapi",
+    "src/bundles/jigsawstack",
+    "src/bundles/needle",
     # langflow-extensions:bundle-members-end
 ]
 

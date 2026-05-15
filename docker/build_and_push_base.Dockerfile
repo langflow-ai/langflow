@@ -155,6 +155,87 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/youtube
 
+# Bundle re-attach: ``lfx-exa`` ships the Exa
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/exa
+
+# Bundle re-attach: ``lfx-bing`` ships the Bing
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/bing
+
+# Bundle re-attach: ``lfx-baidu`` ships the Baidu
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/baidu
+
+# Bundle re-attach: ``lfx-firecrawl`` ships the Firecrawl
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/firecrawl
+
+# Bundle re-attach: ``lfx-glean`` ships the Glean
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/glean
+
+# Bundle re-attach: ``lfx-scrapegraph`` ships the Scrapegraph
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/scrapegraph
+
+# Bundle re-attach: ``lfx-searchapi`` ships the Searchapi
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/searchapi
+
+# Bundle re-attach: ``lfx-jigsawstack`` ships the Jigsawstack
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/jigsawstack
+
+# Bundle re-attach: ``lfx-needle`` ships the Needle
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/needle
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

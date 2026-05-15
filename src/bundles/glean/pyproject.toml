@@ -1,0 +1,55 @@
+[project]
+name = "lfx-glean"
+version = "0.1.0"
+description = "Glean component(s) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "glean"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
+# the bundle's components rely on.  REVIEW THIS LIST -- the script ports
+# only ``lfx``; add any other deps the moved component(s) import.
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "langchain-core>=1.3.3,<2.0.0",
+    "httpx>=0.27,<1.0.0",
+    "pydantic>=2.10,<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-glean = "lfx_glean"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_glean package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_glean"]
+include = [
+    "src/lfx_glean/extension.json",
+    "src/lfx_glean/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_glean",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

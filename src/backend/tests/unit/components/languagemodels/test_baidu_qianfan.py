@@ -17,7 +17,7 @@ try:
 
     APIError = qianfan.errors.APIError
 
-    from lfx.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
+    from lfx_baidu.components.baidu.baidu_qianfan_chat import QianfanChatEndpointComponent
 except Exception:
     pytest.skip(
         "qianfan stack is not importable (likely pydantic v1 incompatibility)",

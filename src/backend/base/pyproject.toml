@@ -307,12 +307,10 @@ ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
 mem0 = ["mem0ai>=0.1.34"]
-needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
 mcp = ["mcp>=1.17.0,<2.0.0"]
 ag2 = ["ag2>=0.1.0"]
-scrapegraph = ["scrapegraph-py>=1.12.0"]
 apify = ["apify-client>=1.8.1"]
 spider = ["spider-client>=0.0.27,<1.0.0"]
 
@@ -347,7 +345,6 @@ easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine 
 # Additional tools
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 twelvelabs = ["twelvelabs>=0.4.7,<1.0.0"]
-jigsawstack = ["jigsawstack==0.2.7"]
 assemblyai = ["assemblyai==0.35.1"]
 
 # Data processing
@@ -447,12 +444,10 @@ complete = [
     "langflow-base[opensearch]",
     "langflow-base[atlassian]",
     "langflow-base[mem0]",
-    "langflow-base[needle]",
     "langflow-base[sseclient]",
     "langflow-base[openinference]",
     "langflow-base[mcp]",
     "langflow-base[ag2]",
-    "langflow-base[scrapegraph]",
     "langflow-base[apify]",
     "langflow-base[spider]",
     # ALTK
@@ -474,7 +469,6 @@ complete = [
     # Additional tools
     "langflow-base[cleanlab]",
     "langflow-base[twelvelabs]",
-    "langflow-base[jigsawstack]",
     "langflow-base[assemblyai]",
     # Data processing
     "langflow-base[datasets]",

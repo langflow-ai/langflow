@@ -58,6 +58,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/serpapi \
         ./src/bundles/tavily \
         ./src/bundles/youtube \
+        ./src/bundles/exa \
+        ./src/bundles/bing \
+        ./src/bundles/baidu \
+        ./src/bundles/firecrawl \
+        ./src/bundles/glean \
+        ./src/bundles/scrapegraph \
+        ./src/bundles/searchapi \
+        ./src/bundles/jigsawstack \
+        ./src/bundles/needle \
         "./src/backend/base[complete,postgresql]"
 
 ################################

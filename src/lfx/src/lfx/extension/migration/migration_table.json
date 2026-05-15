@@ -520,6 +520,486 @@
       "legacy_slot": "ext:youtube:YouTubeVideoDetailsComponent@official-pre-a",
       "target": "ext:youtube:YouTubeVideoDetailsComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.exa.exa_search.ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.exa.ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:exa:ExaSearchToolkit@official-pre-a",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.bing.bing_search_api.BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.bing.BingSearchAPIComponent",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:bing:BingSearchAPIComponent@official-pre-a",
+      "target": "ext:bing:BingSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.baidu.baidu_qianfan_chat.QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.baidu.QianfanChatEndpointComponent",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:baidu:QianfanChatEndpointComponent@official-pre-a",
+      "target": "ext:baidu:QianfanChatEndpointComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_crawl_api.FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlCrawlApi",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlCrawlApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlCrawlApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "FirecrawlExtractApi",
+      "target": "ext:firecrawl:FirecrawlExtractApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_extract_api.FirecrawlExtractApi",
+      "target": "ext:firecrawl:FirecrawlExtractApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlExtractApi",
+      "target": "ext:firecrawl:FirecrawlExtractApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlExtractApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlExtractApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_map_api.FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlMapApi",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlMapApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlMapApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.firecrawl_scrape_api.FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.firecrawl.FirecrawlScrapeApi",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:firecrawl:FirecrawlScrapeApi@official-pre-a",
+      "target": "ext:firecrawl:FirecrawlScrapeApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GleanSearchAPIComponent",
+      "target": "ext:glean:GleanSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.glean.glean_search_api.GleanSearchAPIComponent",
+      "target": "ext:glean:GleanSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.glean.GleanSearchAPIComponent",
+      "target": "ext:glean:GleanSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:glean:GleanSearchAPIComponent@official-pre-a",
+      "target": "ext:glean:GleanSearchAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ScrapeGraphMarkdownifyApi",
+      "target": "ext:scrapegraph:ScrapeGraphMarkdownifyApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.scrapegraph_markdownify_api.ScrapeGraphMarkdownifyApi",
+      "target": "ext:scrapegraph:ScrapeGraphMarkdownifyApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.ScrapeGraphMarkdownifyApi",
+      "target": "ext:scrapegraph:ScrapeGraphMarkdownifyApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:scrapegraph:ScrapeGraphMarkdownifyApi@official-pre-a",
+      "target": "ext:scrapegraph:ScrapeGraphMarkdownifyApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ScrapeGraphSearchApi",
+      "target": "ext:scrapegraph:ScrapeGraphSearchApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi",
+      "target": "ext:scrapegraph:ScrapeGraphSearchApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.ScrapeGraphSearchApi",
+      "target": "ext:scrapegraph:ScrapeGraphSearchApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:scrapegraph:ScrapeGraphSearchApi@official-pre-a",
+      "target": "ext:scrapegraph:ScrapeGraphSearchApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ScrapeGraphSmartScraperApi",
+      "target": "ext:scrapegraph:ScrapeGraphSmartScraperApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.scrapegraph_smart_scraper_api.ScrapeGraphSmartScraperApi",
+      "target": "ext:scrapegraph:ScrapeGraphSmartScraperApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.scrapegraph.ScrapeGraphSmartScraperApi",
+      "target": "ext:scrapegraph:ScrapeGraphSmartScraperApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:scrapegraph:ScrapeGraphSmartScraperApi@official-pre-a",
+      "target": "ext:scrapegraph:ScrapeGraphSmartScraperApi@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.searchapi.search.SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.searchapi.SearchComponent",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:searchapi:SearchComponent@official-pre-a",
+      "target": "ext:searchapi:SearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.ai_scrape.JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackAIScraperComponent",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackAIScraperComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackAIScraperComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.ai_web_search.JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackAIWebSearchComponent",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackAIWebSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.file_read.JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackFileReadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackFileReadComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackFileReadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.file_upload.JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackFileUploadComponent",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackFileUploadComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackFileUploadComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.image_generation.JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackImageGenerationComponent",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackImageGenerationComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackImageGenerationComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.nsfw.JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackNSFWComponent",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackNSFWComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackNSFWComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.object_detection.JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackObjectDetectionComponent",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackObjectDetectionComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.sentiment.JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackSentimentComponent",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackSentimentComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackSentimentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.text_to_sql.JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackTextToSQLComponent",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackTextToSQLComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackTextToSQLComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.text_translate.JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackTextTranslateComponent",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackTextTranslateComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackTextTranslateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.vocr.JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.jigsawstack.JigsawStackVOCRComponent",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:jigsawstack:JigsawStackVOCRComponent@official-pre-a",
+      "target": "ext:jigsawstack:JigsawStackVOCRComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NeedleComponent",
+      "target": "ext:needle:NeedleComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.needle.needle.NeedleComponent",
+      "target": "ext:needle:NeedleComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.needle.NeedleComponent",
+      "target": "ext:needle:NeedleComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:needle:NeedleComponent@official-pre-a",
+      "target": "ext:needle:NeedleComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [
