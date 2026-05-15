@@ -10,10 +10,10 @@ Postgres) so telemetry traffic cannot starve request traffic. A second
 background task amortizes retention pruning (max-N-per-flow, max-per-vertex,
 global cap) so it no longer runs inside every insert.
 
-Durability across process restart is provided by a disk-backed
-:class:`diskcache.Deque`: rows still in memory at shutdown spill to disk, and
-rows from any orphan PID directory (left by a crashed worker) are adopted into
-the in-memory buffer on startup.
+Durability across process restart is provided by a small SQLite outbox per PID
+(``outbox.sqlite`` in WAL mode, JSON payloads in a TEXT column): rows still in
+memory at shutdown spill to disk, and rows from any orphan PID directory (left
+by a crashed worker) are adopted into the in-memory buffer on startup.
 
 The trade-off: hard process kills (SIGKILL, OOM) lose whatever is in memory at
 the moment of death. Telemetry visibility is eventually-consistent rather than
@@ -25,13 +25,18 @@ from __future__ import annotations
 
 import asyncio
 import collections
+import json
 import os
+import socket
+import sqlite3
 import tempfile
-from contextlib import suppress
+import time
+from contextlib import contextmanager, suppress
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
-from diskcache import Deque
 from lfx.log.logger import logger
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
@@ -43,13 +48,158 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from langflow.services.settings.service import SettingsService
 
 
 _DEFAULT_OUTBOX_ROOT = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"
+_OUTBOX_DB_NAME = "outbox.sqlite"
+_OWNER_FILE_NAME = "owner.json"
+# Marker keys used to round-trip ``datetime`` and ``UUID`` through JSON
+# without losing type fidelity — SQLAlchemy's DateTime/Uuid columns reject
+# plain strings. Other types (Path, Decimal, ...) fall back to ``str`` since
+# they only appear inside JSON payload columns where strings are fine.
+_DATETIME_TAG = "__lftw_dt__"
+_UUID_TAG = "__lftw_uuid__"
 # After this many consecutive batch failures, escalate from per-batch logging
 # to a loud error so operators see sustained data-loss risk.
 _FAILURE_ESCALATION_THRESHOLD = 6
+
+
+def _host_boot_identity() -> tuple[str, str]:
+    """Return ``(hostname, boot_marker)`` for the current host.
+
+    The boot marker prevents adopting an orphan PID directory across host
+    reboots or container restarts, which would otherwise let a recycled PID
+    pull in a stranger's spill data. Linux exposes a kernel-provided boot
+    id; on platforms without one we fall back to ``time() - monotonic()``
+    rounded to seconds, which is identical across processes within a boot.
+    """
+    host = socket.gethostname()
+    try:
+        boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    except OSError:
+        try:
+            boot = str(int(time.time() - time.monotonic()))
+        except OSError:
+            boot = "unknown"
+    return host, boot
+
+
+def _write_owner_file(own_dir: Path) -> None:
+    host, boot = _host_boot_identity()
+    payload = {"host": host, "boot": boot, "pid": os.getpid(), "started_at": time.time()}
+    own_dir.mkdir(parents=True, exist_ok=True)
+    (own_dir / _OWNER_FILE_NAME).write_text(json.dumps(payload))
+
+
+def _read_owner_file(pid_dir: Path) -> dict[str, Any] | None:
+    try:
+        return json.loads((pid_dir / _OWNER_FILE_NAME).read_text())
+    except (OSError, ValueError):
+        return None
+
+
+def _json_default(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return {_DATETIME_TAG: value.isoformat()}
+    if isinstance(value, UUID):
+        return {_UUID_TAG: str(value)}
+    return str(value)
+
+
+def _json_object_hook(obj: dict[str, Any]) -> Any:
+    if len(obj) == 1:
+        if _DATETIME_TAG in obj:
+            try:
+                return datetime.fromisoformat(obj[_DATETIME_TAG])
+            except (TypeError, ValueError):
+                return obj
+        if _UUID_TAG in obj:
+            try:
+                return UUID(obj[_UUID_TAG])
+            except (TypeError, ValueError):
+                return obj
+    return obj
+
+
+class _Outbox:
+    """Append-only SQLite outbox for one ``kind`` (transactions/vertex_builds).
+
+    Encapsulates schema, connection lifecycle, and the JSON encode/decode so the
+    spill, restore, and orphan-adoption flows in :class:`TelemetryWriterService`
+    can share a single durable storage shape with no pickle path.
+    """
+
+    def __init__(self, spill_dir: Path) -> None:
+        self._spill_dir = spill_dir
+        self._db_path = spill_dir / _OUTBOX_DB_NAME
+
+    def exists(self) -> bool:
+        return self._db_path.exists()
+
+    @contextmanager
+    def _session(self) -> Iterator[sqlite3.Connection]:
+        """Open the outbox DB, ensure schema, commit on success, always close."""
+        self._spill_dir.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(self._db_path))
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            # FULL (rather than NORMAL) so the spill at shutdown and the
+            # delete on drain hit the platter before the connection closes —
+            # NORMAL only fsyncs on WAL checkpoint, which may never run if
+            # the process exits immediately after we commit.
+            conn.execute("PRAGMA synchronous=FULL")
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, payload TEXT NOT NULL)"
+            )
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
+
+    def append_all(self, buffer: collections.deque[dict[str, Any]], *, max_rows: int | None = None) -> tuple[int, int]:
+        """Drain ``buffer`` into the on-disk outbox in a single transaction.
+
+        Encodes every row up front so that a mid-flight SQLite failure cannot
+        leave the deque half-drained: the buffer is only cleared after the
+        transaction has committed. When ``max_rows`` is set and the buffer
+        exceeds it, the *oldest* rows are dropped before encoding — matching
+        the producer-side overflow policy and keeping shutdown bounded.
+
+        Returns ``(spilled, dropped)``.
+        """
+        if not buffer:
+            return 0, 0
+        dropped = 0
+        if max_rows is not None and len(buffer) > max_rows:
+            dropped = len(buffer) - max_rows
+            for _ in range(dropped):
+                buffer.popleft()
+        encoded = [(json.dumps(row, default=_json_default),) for row in buffer]
+        with self._session() as conn:
+            conn.executemany("INSERT INTO outbox(payload) VALUES (?)", encoded)
+        buffer.clear()
+        return len(encoded), dropped
+
+    def drain(self) -> list[dict[str, Any]]:
+        """Return all well-formed rows and delete every row from the outbox.
+
+        Rows whose JSON cannot be decoded are logged and discarded inside this
+        method so callers only ever see usable payloads.
+        """
+        if not self.exists():
+            return []
+        payloads: list[dict[str, Any]] = []
+        with self._session() as conn:
+            for row_id, raw in conn.execute("SELECT id, payload FROM outbox ORDER BY id").fetchall():
+                try:
+                    payloads.append(json.loads(raw, object_hook=_json_object_hook))
+                except (TypeError, ValueError):
+                    logger.warning(f"telemetry_writer: discarding malformed outbox row id={row_id}")
+            conn.execute("DELETE FROM outbox")
+        return payloads
 
 
 def _pid_alive(pid: int) -> bool:
@@ -143,6 +293,11 @@ class TelemetryWriterService(Service):
             outbox_root.chmod(0o700)
             own_dir.chmod(0o700)
         self._own_outbox_dir = own_dir
+        # Stamp host + boot identity so a future process on a different host
+        # (or after reboot) will not adopt this PID's spill data if the PID
+        # happens to be recycled.
+        with suppress(OSError):
+            _write_owner_file(own_dir)
 
         # Drain any rows that were spilled by a previous run of *this* PID and
         # adopt the contents of any orphan (dead-PID) directories.
@@ -256,27 +411,28 @@ class TelemetryWriterService(Service):
                 break
         return batch
 
-    @staticmethod
-    def _spill_to_disk(own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
-        """Append remaining in-memory rows to a disk-backed Deque for replay."""
-        if not buffer:
-            return
-        spill_dir = own_dir / kind
-        spill_dir.mkdir(parents=True, exist_ok=True)
+    def _spill_to_disk(self, own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
+        """Append remaining in-memory rows to the on-disk SQLite outbox for replay.
+
+        Honors ``telemetry_writer_max_queue`` so a pathological backlog at
+        shutdown cannot fill disk or stall teardown — older rows beyond the
+        cap are dropped and counted, matching the producer-side overflow
+        policy.
+        """
+        max_rows = int(getattr(self.settings_service.settings, "telemetry_writer_max_queue", 100_000))
         try:
-            disk = Deque(directory=str(spill_dir))
-            try:
-                count = 0
-                while buffer:
-                    disk.append(buffer.popleft())
-                    count += 1
-                if count:
-                    logger.info(f"telemetry_writer: spilled {count} {kind} rows to disk at shutdown")
-            finally:
-                with suppress(Exception):
-                    disk._cache.close()  # noqa: SLF001
-        except Exception:  # noqa: BLE001
+            spilled, dropped = _Outbox(own_dir / kind).append_all(buffer, max_rows=max_rows)
+        except (sqlite3.Error, OSError):
             logger.exception(f"telemetry_writer: failed to spill {kind} buffer to disk")
+            return
+        if dropped:
+            if kind == "transactions":
+                self.dropped_transactions += dropped
+            else:
+                self.dropped_vertex_builds += dropped
+            logger.warning(f"telemetry_writer: dropped {dropped} oldest {kind} rows at shutdown (over {max_rows} cap)")
+        if spilled:
+            logger.info(f"telemetry_writer: spilled {spilled} {kind} rows to disk at shutdown")
 
     def _restore_from_disk(self, own_dir: Path, *, kind: str, buffer: collections.deque[dict[str, Any]]) -> None:
         """Load any disk-spilled rows from the previous run of this PID.
@@ -285,34 +441,30 @@ class TelemetryWriterService(Service):
         from a previous run cannot OOM the new process — older rows beyond the
         cap are dropped and counted.
         """
-        spill_dir = own_dir / kind
-        if not spill_dir.exists():
-            return
         try:
-            disk = Deque(directory=str(spill_dir))
-            try:
-                count = 0
-                while True:
-                    try:
-                        payload = disk.popleft()
-                    except IndexError:
-                        break
-                    self._enqueue(buffer, payload, kind=kind)
-                    count += 1
-                if count:
-                    logger.info(f"telemetry_writer: restored {count} {kind} rows from disk")
-            finally:
-                with suppress(Exception):
-                    disk._cache.close()  # noqa: SLF001
-        except Exception:  # noqa: BLE001
+            payloads = _Outbox(own_dir / kind).drain()
+        except (sqlite3.Error, OSError):
             logger.exception(f"telemetry_writer: failed to restore {kind} spill from disk")
+            return
+        for payload in payloads:
+            self._enqueue(buffer, payload, kind=kind)
+        if payloads:
+            logger.info(f"telemetry_writer: restored {len(payloads)} {kind} rows from disk")
 
     def _adopt_orphan_outboxes(self, outbox_root: Path, *, own_pid: int) -> None:
-        """Replay outboxes from dead workers into the current in-memory buffer."""
+        """Replay outboxes from dead workers into the current in-memory buffer.
+
+        Only adopts directories whose ``owner.json`` matches the current host
+        and boot — a recycled PID on a different host (e.g. container restart
+        with reset low PIDs) must not pull in a stranger's spill data.
+        Pre-owner-file directories from older versions are skipped, not
+        silently adopted.
+        """
         try:
             entries = list(outbox_root.iterdir())
         except FileNotFoundError:
             return
+        current_host, current_boot = _host_boot_identity()
         for entry in entries:
             if not entry.is_dir():
                 continue
@@ -322,31 +474,28 @@ class TelemetryWriterService(Service):
                 continue
             if pid == own_pid or _pid_alive(pid):
                 continue
+            owner = _read_owner_file(entry)
+            if owner is None:
+                logger.info(f"telemetry_writer: skipping orphan outbox pid={pid} — no owner file")
+                continue
+            if owner.get("host") != current_host or owner.get("boot") != current_boot:
+                logger.info(
+                    f"telemetry_writer: skipping cross-host orphan outbox pid={pid} "
+                    f"(host={owner.get('host')!r} boot={owner.get('boot')!r})"
+                )
+                continue
             for kind, buffer in (("transactions", self._tx_buffer), ("vertex_builds", self._vb_buffer)):
-                sub = entry / kind
-                if not sub.exists():
-                    continue
                 try:
-                    orphan = Deque(directory=str(sub))
-                    adopted = 0
-                    try:
-                        while True:
-                            try:
-                                payload = orphan.popleft()
-                            except IndexError:
-                                break
-                            # Route through _enqueue so a huge orphan spill
-                            # can't blow past telemetry_writer_max_queue and
-                            # OOM the process.
-                            self._enqueue(buffer, payload, kind=kind)
-                            adopted += 1
-                    finally:
-                        with suppress(Exception):
-                            orphan._cache.close()  # noqa: SLF001
-                    if adopted:
-                        logger.info(f"telemetry_writer: adopted {adopted} orphan {kind} from pid={pid}")
-                except Exception:  # noqa: BLE001
-                    logger.exception(f"telemetry_writer: failed to adopt orphan outbox {sub}")
+                    payloads = _Outbox(entry / kind).drain()
+                except (sqlite3.Error, OSError):
+                    logger.exception(f"telemetry_writer: failed to adopt orphan outbox {entry / kind}")
+                    continue
+                # Route through _enqueue so a huge orphan spill can't blow
+                # past telemetry_writer_max_queue and OOM the process.
+                for payload in payloads:
+                    self._enqueue(buffer, payload, kind=kind)
+                if payloads:
+                    logger.info(f"telemetry_writer: adopted {len(payloads)} orphan {kind} from pid={pid}")
             # Best-effort cleanup of the dead-PID directory.
             with suppress(OSError):
                 for child in sorted(entry.rglob("*"), reverse=True):

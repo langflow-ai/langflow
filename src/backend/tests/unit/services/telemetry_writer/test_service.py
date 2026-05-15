@@ -18,7 +18,10 @@ from uuid import uuid4
 import pytest
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
-from langflow.services.telemetry_writer.service import TelemetryWriterService
+from langflow.services.telemetry_writer.service import (
+    TelemetryWriterService,
+    _write_owner_file,
+)
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -238,6 +241,38 @@ def test_spill_and_restore_round_trip(tmp_path: Path) -> None:
     assert list(writer2._vb_buffer) == [{"j": 1}]
 
 
+async def test_spill_restore_round_trip_writes_realistic_payload_to_db(writer_with_engine, tmp_path: Path) -> None:
+    """Realistic payloads (UUID, datetime) survive JSON spill/restore and INSERT.
+
+    Guards against the SQLite outbox's ``json.dumps(default=str)`` encoding
+    breaking SQLAlchemy core inserts on the UUID/datetime columns of
+    ``transaction`` / ``vertex_build`` once a row has been spilled to disk.
+    """
+    writer, engine = writer_with_engine
+    flow_id = uuid4()
+    writer._tx_buffer.append(_make_transaction_row(flow_id))
+    writer._vb_buffer.append(_make_vertex_build_row(flow_id))
+
+    own_dir = tmp_path / "pid"
+    own_dir.mkdir()
+    writer._spill_to_disk(own_dir, kind="transactions", buffer=writer._tx_buffer)
+    writer._spill_to_disk(own_dir, kind="vertex_builds", buffer=writer._vb_buffer)
+    writer._restore_from_disk(own_dir, kind="transactions", buffer=writer._tx_buffer)
+    writer._restore_from_disk(own_dir, kind="vertex_builds", buffer=writer._vb_buffer)
+
+    tx_batch = list(writer._tx_buffer)
+    vb_batch = list(writer._vb_buffer)
+    writer._tx_buffer.clear()
+    writer._vb_buffer.clear()
+    await writer._flush(tx_batch, vb_batch)
+
+    async with AsyncSession(engine) as session:
+        tx_count = await session.scalar(select(func.count()).select_from(TransactionTable))
+        vb_count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
+    assert tx_count == 1
+    assert vb_count == 1
+
+
 def _find_dead_pid(start: int = 99_999, max_checks: int = 50_000) -> int:
     from langflow.services.telemetry_writer.service import _pid_alive
 
@@ -255,6 +290,7 @@ def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
     dead_pid = _find_dead_pid()
     dead_dir = tmp_path / str(dead_pid)
     dead_dir.mkdir()
+    _write_owner_file(dead_dir)
     spill_writer = _build_writer()
     spill_writer._tx_buffer.extend([{"orphan": True}])
     spill_writer._vb_buffer.extend([{"orphan_vb": True}])
@@ -269,6 +305,48 @@ def test_adopt_orphan_outboxes(tmp_path: Path) -> None:
     assert not dead_dir.exists()
 
 
+def test_adopt_orphan_outboxes_skips_unknown_host(tmp_path: Path) -> None:
+    """Cross-host or pre-reboot orphan dirs must not be adopted.
+
+    Guards against PID reuse on container restart pulling in a stranger's
+    spill data — the spill on disk is only adopted when the owner file's
+    host + boot identity matches the current host.
+    """
+    import json as _json
+
+    dead_pid = _find_dead_pid()
+    dead_dir = tmp_path / str(dead_pid)
+    dead_dir.mkdir()
+    # Stamp a mismatched owner file.
+    (dead_dir / "owner.json").write_text(
+        _json.dumps({"host": "some-other-host", "boot": "unrelated-boot", "pid": dead_pid, "started_at": 0})
+    )
+    spill_writer = _build_writer()
+    spill_writer._tx_buffer.extend([{"orphan": True}])
+    spill_writer._spill_to_disk(dead_dir, kind="transactions", buffer=spill_writer._tx_buffer)
+
+    own_writer = _build_writer()
+    own_writer._adopt_orphan_outboxes(tmp_path, own_pid=1)
+    assert list(own_writer._tx_buffer) == []
+    # The orphan directory is left in place so a forensic operator can inspect it.
+    assert dead_dir.exists()
+
+
+def test_adopt_orphan_outboxes_skips_when_owner_missing(tmp_path: Path) -> None:
+    """Pre-owner-file directories from older runs must not be silently adopted."""
+    dead_pid = _find_dead_pid()
+    dead_dir = tmp_path / str(dead_pid)
+    dead_dir.mkdir()
+    # No owner.json on purpose.
+    spill_writer = _build_writer()
+    spill_writer._tx_buffer.extend([{"orphan": True}])
+    spill_writer._spill_to_disk(dead_dir, kind="transactions", buffer=spill_writer._tx_buffer)
+
+    own_writer = _build_writer()
+    own_writer._adopt_orphan_outboxes(tmp_path, own_pid=1)
+    assert list(own_writer._tx_buffer) == []
+
+
 def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
     """A pathologically large orphan spill must not OOM the current worker.
 
@@ -279,6 +357,7 @@ def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
     dead_pid = _find_dead_pid()
     dead_dir = tmp_path / str(dead_pid)
     dead_dir.mkdir()
+    _write_owner_file(dead_dir)
     spill_writer = _build_writer()
     # Spill more rows than the receiving writer's cap.
     spill_writer._tx_buffer.extend([{"i": i} for i in range(100)])
@@ -292,6 +371,25 @@ def test_adopt_orphan_outboxes_honors_max_queue(tmp_path: Path) -> None:
     assert own_writer.dropped_transactions == 90
     # The newest rows (90..99) survive.
     assert [r["i"] for r in own_writer._tx_buffer] == list(range(90, 100))
+
+
+def test_spill_caps_at_max_queue(tmp_path: Path) -> None:
+    """A backlogged buffer at shutdown must not spill unbounded rows to disk.
+
+    Older rows beyond ``telemetry_writer_max_queue`` are dropped (matching
+    the producer-side overflow policy) and the drop counter is incremented.
+    """
+    own_dir = tmp_path / "pid"
+    own_dir.mkdir()
+    writer = _build_writer({"telemetry_writer_max_queue": 20})
+    writer._tx_buffer.extend([{"i": i} for i in range(100)])
+    writer._spill_to_disk(own_dir, kind="transactions", buffer=writer._tx_buffer)
+
+    assert writer.dropped_transactions == 80
+    # Round-trip what hit disk: only the newest 20 rows survive.
+    restore = _build_writer({"telemetry_writer_max_queue": 1000})
+    restore._restore_from_disk(own_dir, kind="transactions", buffer=restore._tx_buffer)
+    assert [r["i"] for r in restore._tx_buffer] == list(range(80, 100))
 
 
 async def test_sanitization_survives_writer_round_trip(writer_with_engine) -> None:
@@ -446,7 +544,7 @@ async def test_teardown_spills_remaining_buffer(tmp_path: Path) -> None:
     writer2._restore_from_disk(outbox / "1", kind="transactions", buffer=writer2._tx_buffer)
     assert list(writer2._tx_buffer) == [{"to_disk": 1}]
 
-    # Clean up the diskcache directory tree.
+    # Clean up the outbox directory tree.
     shutil.rmtree(outbox, ignore_errors=True)
     # Also clean up our potential tempfile fallback if used.
     fallback = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"

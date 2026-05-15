@@ -1,7 +1,7 @@
 """Telemetry writer service.
 
 Async batched writer for transaction and vertex_build rows backed by a
-disk-persisted outbox (diskcache) and a dedicated database connection. Removes
+disk-persisted SQLite outbox and a dedicated database connection. Removes
 write-path contention from the request-handling connection pool so heavy load
 no longer triggers SQLite "database is locked" or PostgreSQL pool timeouts.
 """
