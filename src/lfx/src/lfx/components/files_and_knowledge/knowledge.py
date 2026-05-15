@@ -935,7 +935,7 @@ class KnowledgeComponent(Component):
 
             if vectorize:
                 content_cols.append(col_name)
-            elif identifier:
+            if identifier:
                 identifier_cols.append(col_name)
 
         for _, row in df_source.iterrows():
