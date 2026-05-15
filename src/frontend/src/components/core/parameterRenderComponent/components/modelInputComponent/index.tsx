@@ -124,8 +124,11 @@ export default function ModelInputComponent({
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
   } = useGetModelProviders({});
-  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
-    useGetEnabledModels();
+  const {
+    data: enabledModelsData,
+    isLoading: isLoadingEnabledModels,
+    isFetching: isFetchingEnabledModels,
+  } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
@@ -460,22 +463,27 @@ export default function ModelInputComponent({
     [],
   );
 
-  // Clear the refreshing indicator after the providers query completes a full
-  // refetch cycle (isFetchingProviders: false → true → false). We track whether
-  // we've seen the fetch start so we don't clear prematurely before the
-  // invalidation has even been triggered by refreshAllModelInputs.
+  // Clear the refreshing indicator only after BOTH the providers and the
+  // enabled-models queries have completed a full refetch cycle (isFetching:
+  // false -> true -> false). Watching only ``isFetchingProviders`` clears the
+  // loading state too early when the enabled-models refetch is slower,
+  // letting ``groupedOptions`` render against a stale ``enabledModelsData``
+  // cache; disabled models would briefly leak back into the dropdown after
+  // the user closes the provider modal. We track whether we've seen the
+  // fetch start so we don't clear prematurely before the invalidation has
+  // even been triggered by refreshAllModelInputs.
   const hasSeenFetchStartRef = useRef(false);
   useEffect(() => {
     if (!isRefreshingAfterClose) {
       hasSeenFetchStartRef.current = false;
       return;
     }
-    if (isFetchingProviders) {
+    if (isFetchingProviders || isFetchingEnabledModels) {
       hasSeenFetchStartRef.current = true;
     } else if (hasSeenFetchStartRef.current) {
       setIsRefreshingAfterClose(false);
     }
-  }, [isRefreshingAfterClose, isFetchingProviders]);
+  }, [isRefreshingAfterClose, isFetchingProviders, isFetchingEnabledModels]);
 
   // Safety timeout: clear loading even if no refetch cycle is detected
   // (e.g. no model nodes on canvas, or the refresh was a no-op)

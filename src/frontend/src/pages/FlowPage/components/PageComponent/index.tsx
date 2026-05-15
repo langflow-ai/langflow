@@ -88,6 +88,7 @@ import {
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
+import { useShiftDragSelectFix } from "./hooks/useShiftDragSelectFix";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -736,6 +737,8 @@ export default function Page({
     event.preventDefault();
     setSelectionEnded(false);
   }, []);
+
+  useShiftDragSelectFix(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {

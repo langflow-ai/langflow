@@ -34,8 +34,7 @@ export function parseComponentInfo(code: string | undefined) {
   // Extract inputs with type (e.g. MessageTextInput, IntInput, etc.)
   const inputRegex = /(\w+Input)\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/gs;
   const inputs: FieldInfo[] = [];
-  let match;
-  while ((match = inputRegex.exec(code)) !== null) {
+  for (const match of Array.from(code.matchAll(inputRegex))) {
     inputs.push({ name: match[2], type: formatType(match[1]) });
   }
 
@@ -43,7 +42,7 @@ export function parseComponentInfo(code: string | undefined) {
   if (inputs.length === 0) {
     const simpleInputRegex =
       /(MessageTextInput|StrInput|IntInput|FloatInput|BoolInput|FileInput|DropdownInput|MultilineInput|SecretStrInput|HandleInput|DataInput)\s*\([^)]*display_name\s*=\s*"([^"]+)"/g;
-    while ((match = simpleInputRegex.exec(code)) !== null) {
+    for (const match of Array.from(code.matchAll(simpleInputRegex))) {
       inputs.push({ name: match[2], type: formatType(match[1]) });
     }
   }
@@ -52,7 +51,7 @@ export function parseComponentInfo(code: string | undefined) {
   const outputRegex =
     /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"(?:[^)]*?)method\s*=\s*"(\w+)"/gs;
   const outputs: FieldInfo[] = [];
-  while ((match = outputRegex.exec(code)) !== null) {
+  for (const match of Array.from(code.matchAll(outputRegex))) {
     const methodName = match[2];
     // Look for the method's return type annotation: def method_name(self) -> ReturnType:
     const returnTypeRegex = new RegExp(
@@ -67,7 +66,7 @@ export function parseComponentInfo(code: string | undefined) {
   if (outputs.length === 0) {
     const simpleOutputRegex =
       /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/g;
-    while ((match = simpleOutputRegex.exec(code)) !== null) {
+    for (const match of Array.from(code.matchAll(simpleOutputRegex))) {
       outputs.push({ name: match[1], type: "Message" });
     }
   }
@@ -173,6 +172,7 @@ export function AssistantComponentResult({
         ) : (
           <button
             type="button"
+            data-testid="assistant-approve-button"
             className={GHOST_PRIMARY_BUTTON}
             onClick={handleApprove}
           >
@@ -182,6 +182,7 @@ export function AssistantComponentResult({
         )}
         <button
           type="button"
+          data-testid="assistant-view-code-button"
           className={GHOST_SECONDARY_BUTTON}
           onClick={() => setIsViewCodeOpen(true)}
         >

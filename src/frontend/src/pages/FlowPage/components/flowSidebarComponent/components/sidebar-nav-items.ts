@@ -20,12 +20,6 @@ export interface SidebarNavItem {
 
 export const NAV_ITEMS: SidebarNavItem[] = [
   {
-    id: "search",
-    icon: "search",
-    label: "sidebar.nav.search",
-    tooltip: "sidebar.nav.search",
-  },
-  {
     id: "components",
     icon: "component",
     label: "sidebar.nav.components",
@@ -57,7 +51,7 @@ export const NAV_ITEMS: SidebarNavItem[] = [
   },
   {
     id: "memories",
-    icon: "Brain",
+    icon: "BrainCog",
     label: "Memories",
     tooltip: "Memories",
   },
