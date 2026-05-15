@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-datastax",
+  "version": "0.1.0",
+  "name": "DataStax / AstraDB",
+  "description": "DataStax AstraDB vector store, Data API, CQL, Graph, chat memory, vectorize, and Graph RAG components.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "datastax",
+      "path": "components/datastax"
+    }
+  ]
+}

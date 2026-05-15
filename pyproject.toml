@@ -28,6 +28,13 @@ dependencies = [
     # ArXivComponent as a standalone Bundle.  Same regular-dep rationale --
     # ``pip install langflow`` keeps shipping the arxiv component as before.
     "lfx-arxiv>=0.1.0",
+    # Third pilot port: lfx-datastax ships the 11 DataStax / AstraDB
+    # components (vector store, Data API, CQL, Graph, chat memory,
+    # vectorize, Graph RAG, HCD, .env helpers) as a standalone bundle,
+    # along with the shared ``AstraDBBaseComponent`` mixin (was
+    # ``lfx.base.datastax.astradb_base`` pre-extraction).  Regular dep so
+    # ``pip install langflow`` keeps shipping the datastax components.
+    "lfx-datastax>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -87,6 +94,7 @@ langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
+lfx-datastax = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -100,6 +108,7 @@ members = [
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
+    "src/bundles/datastax",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -330,9 +339,6 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/components/data/save_file.py" = [
     "SLF001",  # Google API client private member access
-]
-"src/lfx/src/lfx/components/datastax/astradb_vectorstore.py" = [
-    "S110",  # Try-except-pass for optional metadata
 ]
 "src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
     "SLF001",  # Google AI library private member access

@@ -98,6 +98,18 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/duckduckgo
 
+# Pilot Bundle re-attach (LE-1023): ``lfx-datastax`` ships the 11
+# DataStax / AstraDB components plus the shared ``AstraDBBaseComponent``
+# mixin that used to live at ``lfx.base.datastax.astradb_base``.
+# ``--no-deps`` is intentional: ``langchain-astradb``, ``astrapy``,
+# ``langchain-graph-retriever``, and ``graph-retriever`` are already in
+# ``langflow-base[complete]`` (via the per-vendor extras the bundle's
+# pyproject duplicates) so installing them here would yank duplicates
+# that fight the locked versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/datastax
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

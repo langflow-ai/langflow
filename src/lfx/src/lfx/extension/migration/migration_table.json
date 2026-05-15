@@ -40,6 +40,226 @@
       "legacy_slot": "ext:arxiv:ArXivComponent@official-pre-a",
       "target": "ext:arxiv:ArXivComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_data_api.AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBDataAPIComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_graph.AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBGraphVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_cql.AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBCQLToolComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_tool.AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBToolComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_chatmemory.AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBChatMemory@official-pre-a",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_vectorize.AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraVectorizeComponent@official-pre-a",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.graph_rag.GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:GraphRAGComponent@official-pre-a",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.hcd.HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:HCDVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.dotenv.Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:Dotenv@official-pre-a",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GetEnvVar",
+      "target": "ext:datastax:GetEnvVar@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.getenvvar.GetEnvVar",
+      "target": "ext:datastax:GetEnvVar@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.GetEnvVar",
+      "target": "ext:datastax:GetEnvVar@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:GetEnvVar@official-pre-a",
+      "target": "ext:datastax:GetEnvVar@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

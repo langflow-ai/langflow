@@ -215,8 +215,6 @@ upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
 mongodb-vectors = ["langchain-mongodb==0.7.0"]
-astradb = ["langchain-astradb~=1.0.0"]
-
 # Individual LLM providers
 openai = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 anthropic = ["langchain-anthropic~=1.3.0"]
@@ -406,7 +404,6 @@ complete = [
     "langflow-base[pinecone]",
     "langflow-base[milvus]",
     "langflow-base[mongodb-vectors]",
-    "langflow-base[astradb]",
     "langflow-base[openai]",
     "langflow-base[anthropic]",
     "langflow-base[cohere]",

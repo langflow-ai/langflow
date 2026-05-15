@@ -4,7 +4,6 @@ from textwrap import dedent
 
 import pytest
 from lfx.components.data import FileComponent
-from lfx.components.datastax import AstraDBVectorStoreComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.openai.openai import OpenAIEmbeddingsComponent
@@ -16,6 +15,7 @@ from lfx.graph.graph.constants import Finish
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx_datastax import AstraDBVectorStoreComponent
 
 
 @pytest.fixture(autouse=True)

@@ -1,0 +1,83 @@
+[project]
+name = "lfx-datastax"
+version = "0.1.0"
+description = "DataStax / AstraDB components as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = [
+    "langflow",
+    "lfx",
+    "extension",
+    "bundle",
+    "datastax",
+    "astra",
+    "astradb",
+    "vectorstore",
+]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus the DataStax SDKs that
+# every astra-* component pulls in.  We pin lfx to the range that
+# includes the BUNDLE_API_VERSION=1 contract.  ``astrapy`` is the Data
+# API client, ``langchain-astradb`` carries the LangChain vectorstore /
+# collection-env helpers we re-use, ``langchain-graph-retriever`` powers
+# the Graph RAG component, and ``orjson`` is used by ``astradb_graph``
+# for vector store serialization.
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "astrapy>=2.1.0,<3.0.0",
+    "langchain-astradb~=1.0.0",
+    "langchain-graph-retriever==0.8.0",
+    "graph-retriever==0.8.0",
+    "langchain-core>=1.3.3,<2.0.0",
+    "orjson>=3.11.6,<4.0.0",
+    "requests>=2.32,<3.0",
+    "pydantic>=2.10,<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  The value is the dotted path to
+# the package containing ``extension.json`` -- the loader walks
+# ``importlib.metadata.files()`` from there to find the manifest, and
+# falls back to this entry-point for editable installs whose dist.files
+# only surfaces dist-info entries.
+[project.entry-points."langflow.extensions"]
+lfx-datastax = "lfx_datastax"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components + the shared AstraDB base live inside the
+# lfx_datastax package so ``importlib.metadata.files(dist)`` finds them
+# and the loader resolves bundles[].path relative to the manifest's
+# directory.  The shared base ships as a sibling ``base/`` subpackage
+# (was ``lfx.base.datastax`` pre-extraction).
+packages = ["src/lfx_datastax"]
+include = [
+    "src/lfx_datastax/extension.json",
+    "src/lfx_datastax/base/**/*.py",
+    "src/lfx_datastax/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_datastax",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Try-except-pass for optional metadata population on collection probe.
+# Was in the root pyproject's ``per-file-ignores`` pre-extraction.
+"src/lfx_datastax/components/datastax/astradb_vectorstore.py" = ["S110"]
