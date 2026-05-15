@@ -24,10 +24,7 @@ export function useApplyTemplateToCurrentFlow() {
   const examples = useFlowsManagerStore((state) => state.examples);
 
   return useCallback(
-    (
-      nameKey: StarterTemplateNameKey,
-      onFitted?: () => void,
-    ): boolean => {
+    (nameKey: StarterTemplateNameKey, onFitted?: () => void): boolean => {
       const template = findStarterTemplate(examples, nameKey);
       if (!template?.data) return false;
       setNodes(template.data.nodes ?? []);

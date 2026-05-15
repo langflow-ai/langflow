@@ -261,10 +261,7 @@ export function FlowBuilderWelcome({
               onClick={onBrowseMore}
               className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-[#3F3F46] bg-[#27272A] p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-[#3F3F46]"
             >
-              <ForwardedIconComponent
-                name="LayoutGrid"
-                className="h-4 w-4"
-              />
+              <ForwardedIconComponent name="LayoutGrid" className="h-4 w-4" />
               {WELCOME_BROWSE_MORE_LABEL}
             </button>
           </div>

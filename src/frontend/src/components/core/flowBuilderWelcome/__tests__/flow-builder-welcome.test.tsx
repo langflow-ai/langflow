@@ -34,12 +34,9 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 // ModelSelector pulls in React Query (useGetModelProviders) which needs a
 // QueryClientProvider wrapper. These tests focus on the welcome's own
 // callbacks/wiring, so replace the selector with a stub.
-jest.mock(
-  "@/components/core/assistantPanel/components/model-selector",
-  () => ({
-    ModelSelector: () => <div data-testid="mock-model-selector" />,
-  }),
-);
+jest.mock("@/components/core/assistantPanel/components/model-selector", () => ({
+  ModelSelector: () => <div data-testid="mock-model-selector" />,
+}));
 
 // The shared model state hook touches ``localStorage`` on init — keep that
 // path inert and predictable in tests.
@@ -58,12 +55,9 @@ const mockUseEnabledModels = jest.fn(() => ({
   filteredProviders: [],
   isLoading: false,
 }));
-jest.mock(
-  "@/components/core/assistantPanel/hooks/use-enabled-models",
-  () => ({
-    useEnabledModels: () => mockUseEnabledModels(),
-  }),
-);
+jest.mock("@/components/core/assistantPanel/hooks/use-enabled-models", () => ({
+  useEnabledModels: () => mockUseEnabledModels(),
+}));
 
 // ModelProviderModal is a heavy settings surface — stub it; we only assert
 // it mounts when the configure CTA is clicked.
