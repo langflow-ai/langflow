@@ -519,6 +519,6 @@ class TestMultiServeStreaming:
             if line.startswith("data: "):
                 import json
 
-                payload = json.loads(line[len("data: "):])
+                payload = json.loads(line[len("data: ") :])
                 assert payload["success"] is False
                 assert nasty_message in payload["error"]
