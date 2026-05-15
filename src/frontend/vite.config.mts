@@ -70,6 +70,9 @@ export default defineConfig(({ mode }) => {
       "import.meta.env.LANGFLOW_EXTENSION_RELOAD_ENABLED": JSON.stringify(
         envLangflow.LANGFLOW_EXTENSION_RELOAD_ENABLED ?? "true",
       ),
+      "import.meta.env.LANGFLOW_WXO_UTM_SOURCE": JSON.stringify(
+        envLangflow.LANGFLOW_WXO_UTM_SOURCE ?? "langflow",
+      ),
     },
     plugins: [
       react(),
