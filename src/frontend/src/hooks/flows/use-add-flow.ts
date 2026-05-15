@@ -11,6 +11,7 @@ import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVar
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import {
   addVersionToDuplicates,
   createNewFlow,
@@ -138,17 +139,10 @@ const useAddFlow = () => {
             return;
           }
 
-          if (error.response?.data?.detail) {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.response?.data?.detail],
-            });
-          } else {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.message ?? FLOW_CREATION_ERROR_MESSAGE],
-            });
-          }
+          useAlertStore.getState().setErrorData({
+            title: FLOW_CREATION_ERROR,
+            list: extractApiErrorMessages(error),
+          });
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
       });
