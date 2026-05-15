@@ -1601,7 +1601,7 @@ class TestMemoriesAPIHandlers:
         assert "API key" in exc_info.value.detail
 
     @pytest.mark.asyncio
-    async def test_update_missing_api_key_returns_422(self, mock_user):
+    async def test_update_missing_api_key_returns_403(self, mock_user):
         from fastapi import HTTPException
         from langflow.api.v1.memories import update_memory_base
         from langflow.services.memory_base.service import PreprocessingValidationError
@@ -1615,10 +1615,10 @@ class TestMemoriesAPIHandlers:
             await update_memory_base(
                 memory_base_id=uuid.uuid4(),
                 current_user=mock_user,
-                patch=MemoryBaseUpdate(preprocessing=True, preproc_model="gpt-4o"),
+                patch=MemoryBaseUpdate(threshold=10),
             )
 
-        assert exc_info.value.status_code == 422
+        assert exc_info.value.status_code == 403
         assert "API key" in exc_info.value.detail
 
     # ---------------------------------------------------------------- #
@@ -2073,7 +2073,10 @@ class TestPreprocessingApiKeyValidation:
 
     @pytest.mark.asyncio
     async def test_service_update_raises_preprocessing_validation_error_on_missing_key(self):
-        """update() raises PreprocessingValidationError when enabling preprocessing without a key."""
+        """update() raises PreprocessingValidationError.
+
+        When the existing MB uses preprocessing but the API key is gone.
+        """
         from langflow.services.memory_base.service import (
             MemoryBaseService,
             PreprocessingValidationError,
@@ -2082,8 +2085,8 @@ class TestPreprocessingApiKeyValidation:
         service = MemoryBaseService()
         user_id = uuid.uuid4()
         mb = _make_mb(user_id=user_id)
-        mb.preprocessing = False
-        mb.preproc_model = None
+        mb.preprocessing = True
+        mb.preproc_model = "gpt-4o"
 
         exec_result = MagicMock()
         exec_result.first.return_value = mb
@@ -2114,7 +2117,7 @@ class TestPreprocessingApiKeyValidation:
             await service.update(
                 mb.id,
                 user_id,
-                MemoryBaseUpdate(preprocessing=True, preproc_model="gpt-4o"),
+                MemoryBaseUpdate(threshold=10),
             )
 
 

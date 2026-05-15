@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from lfx.log.logger import logger
 from typing_extensions import override
@@ -12,7 +13,6 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
     from langfuse._client.span import LangfuseSpan
@@ -20,6 +20,99 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+
+
+LANGFUSE_FEEDBACK_SCORE_NAME = "user-feedback"
+
+
+def normalize_langfuse_trace_id(trace_id: UUID | str | None) -> str | None:
+    """Normalize a Langfuse trace identifier to 32-char hex format."""
+    if trace_id is None:
+        return None
+    if isinstance(trace_id, UUID):
+        return trace_id.hex
+    normalized = str(trace_id).replace("-", "").strip()
+    return normalized or None
+
+
+def feedback_score_id(message_id: UUID | str) -> str:
+    """Build a stable Langfuse score id from a message id."""
+    if isinstance(message_id, UUID):
+        return message_id.hex
+    return str(message_id).replace("-", "")
+
+
+def langfuse_is_configured() -> bool:
+    """Whether Langfuse credentials are set in the environment."""
+    return bool(LangFuseTracer._get_config())
+
+
+def _get_langfuse_client():
+    """Return a configured Langfuse client.
+
+    Callers must gate on `langfuse_is_configured()` being truthy; this raises
+    rather than silently no-opping so background-task failures don't
+    disappear into the void.
+    """
+    from langfuse import Langfuse
+
+    config = LangFuseTracer._get_config()
+    if not config:
+        msg = (
+            "Langfuse credentials missing — set LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, "
+            "and LANGFUSE_HOST (or LANGFUSE_BASE_URL)."
+        )
+        raise RuntimeError(msg)
+    return Langfuse(**config)
+
+
+def sync_feedback_score(
+    *,
+    message_id: UUID | str,
+    trace_id: UUID | str | None,
+    session_id: str,
+    flow_id: UUID | str | None,
+    sender: str,
+    positive_feedback: bool,
+) -> None:
+    """Send message feedback to Langfuse as a trace-linked score.
+
+    Callers must gate this on tracing being enabled and Langfuse being
+    configured; this function raises rather than silently no-opping so
+    background-task failures surface in logs.
+    """
+    normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+    if not normalized_trace_id:
+        msg = f"Cannot sync feedback score without a Langfuse trace id (message_id={message_id})."
+        raise ValueError(msg)
+
+    client = _get_langfuse_client()
+    client.create_score(
+        name=LANGFUSE_FEEDBACK_SCORE_NAME,
+        value=1.0 if positive_feedback else 0.0,
+        trace_id=normalized_trace_id,
+        score_id=feedback_score_id(message_id),
+        data_type="BOOLEAN",
+        comment="positive" if positive_feedback else "negative",
+        metadata={
+            "message_id": str(message_id),
+            "session_id": session_id,
+            "flow_id": str(flow_id) if flow_id else None,
+            "sender": sender,
+        },
+    )
+    client.flush()
+
+
+def delete_feedback_score(*, message_id: UUID | str) -> None:
+    """Delete the Langfuse feedback score previously synced for a message.
+
+    Used when a user clears their thumbs up/down so Langfuse stays in sync
+    with Langflow's UI state. Callers must gate on tracing being enabled
+    and Langfuse being configured.
+    """
+    client = _get_langfuse_client()
+    client.api.score.delete(score_id=feedback_score_id(message_id))
 
 
 class LangFuseTracer(BaseTracer):
@@ -31,6 +124,7 @@ class LangFuseTracer(BaseTracer):
 
     flow_id: str
     _trace_context: TraceContext
+    langfuse_trace_id: str | None
 
     def __init__(
         self,
@@ -49,6 +143,7 @@ class LangFuseTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        self.langfuse_trace_id = None
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -80,6 +175,7 @@ class LangFuseTracer(BaseTracer):
 
             # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
             langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
+            self.langfuse_trace_id = langfuse_trace_id
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 

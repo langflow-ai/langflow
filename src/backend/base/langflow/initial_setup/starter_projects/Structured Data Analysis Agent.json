@@ -452,7 +452,7 @@
                 "dependencies": [
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.4.0"
                   },
                   {
                     "name": "lfx",
@@ -1093,7 +1093,7 @@
                   },
                   {
                     "name": "langchain_core",
-                    "version": "1.2.29"
+                    "version": "1.4.0"
                   },
                   {
                     "name": "pydantic",
@@ -1101,7 +1101,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.195.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2101,7 +2101,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -2374,8 +2374,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b",
             "template": {
               "backgroundColor": "lime"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.3446a14b"
+            }
           },
           "type": "note"
         },
@@ -2405,8 +2404,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3",
             "template": {
               "backgroundColor": "blue"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.7b7d9bd3"
+            }
           },
           "type": "note"
         },
@@ -2436,8 +2434,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.92198b6b"
+            }
           },
           "type": "note"
         },
@@ -2467,8 +2464,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8",
             "template": {
               "backgroundColor": "rose"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.a04f95c8"
+            }
           },
           "type": "note"
         },
@@ -2498,8 +2494,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d",
             "template": {
               "backgroundColor": "amber"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.9dae882d"
+            }
           },
           "type": "note"
         },
@@ -2573,7 +2568,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.7"
+                    "version": "1.5.8"
                   },
                   {
                     "name": "langchain_community",
@@ -3034,7 +3029,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.7"
+                    "version": "1.5.8"
                   },
                   {
                     "name": "langchain_community",
@@ -5077,8 +5072,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.19ed76ef"
+            }
           },
           "type": "note"
         },
@@ -5108,8 +5102,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.15d8f11d"
+            }
           },
           "type": "note"
         },
@@ -5139,8 +5132,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.0eba650b"
+            }
           },
           "type": "note"
         },
@@ -5170,8 +5162,7 @@
             "i18n_key": "template_notes.structured_data_analysis_agent.338d3972",
             "template": {
               "backgroundColor": "neutral"
-            },
-            "i18n_key": "template_notes.structured_data_analysis_agent.338d3972"
+            }
           },
           "type": "note"
         },
@@ -5240,7 +5231,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",
@@ -5256,7 +5247,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.194.0"
+                    "version": "2.195.0"
                   }
                 ],
                 "total_dependencies": 7

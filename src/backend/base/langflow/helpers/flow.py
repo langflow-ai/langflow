@@ -500,4 +500,13 @@ def json_schema_from_flow(flow: Flow) -> dict:
                 if field_data.get("required", False):
                     required.append(field_name)
 
+    if "session_id" not in properties:
+        properties["session_id"] = {
+            "type": "string",
+            "description": (
+                "Optional session identifier used to persist conversation "
+                "history across tool calls. Omit to start a new session."
+            ),
+        }
+
     return {"type": "object", "properties": properties, "required": required}
