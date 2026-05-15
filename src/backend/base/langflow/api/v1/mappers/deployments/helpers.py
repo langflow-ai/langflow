@@ -437,8 +437,8 @@ async def resolve_adapter_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, str]:
-    """Returns ``(deployment_row, adapter, provider_key)``."""
+) -> tuple[Deployment, DeploymentServiceProtocol, str, str | None]:
+    """Returns ``(deployment_row, adapter, provider_key, provider_tenant_id)``."""
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
@@ -446,7 +446,7 @@ async def resolve_adapter_from_deployment(
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    return deployment_row, deployment_adapter, provider_account.provider_key
+    return deployment_row, deployment_adapter, provider_account.provider_key, provider_account.provider_tenant_id
 
 
 async def resolve_adapter_mapper_from_deployment(
@@ -454,8 +454,8 @@ async def resolve_adapter_mapper_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str]:
-    """Returns ``(deployment_row, adapter, mapper, provider_key)``."""
+) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str, str | None]:
+    """Returns ``(deployment_row, adapter, mapper, provider_key, provider_tenant_id)``."""
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
 
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
@@ -466,7 +466,13 @@ async def resolve_adapter_mapper_from_deployment(
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    return deployment_row, deployment_adapter, deployment_mapper, provider_account.provider_key
+    return (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_account.provider_key,
+        provider_account.provider_tenant_id,
+    )
 
 
 async def resolve_project_id_for_deployment_create(
@@ -698,7 +704,8 @@ async def list_deployments_synced(
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int]:
+    names: list[str] | None = None,
+) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
     Fetches DB rows in batches, sends each batch's resource keys to the
@@ -708,6 +715,7 @@ async def list_deployments_synced(
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
+    provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
     cursor = page_offset(page, size)
     max_sync_rounds = 2  # Initial pass + one refill pass.
     for _ in range(max_sync_rounds):
@@ -721,6 +729,7 @@ async def list_deployments_synced(
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
             project_id=project_id,
+            names=names,
         )
         if not batch:
             break
@@ -734,6 +743,7 @@ async def list_deployments_synced(
             deployment_type=deployment_type,
         )
         provider_bindings.extend(deployment_mapper.extract_snapshot_bindings(provider_view))
+        provider_data_by_resource_key.update(deployment_mapper.extract_list_item_provider_data(provider_view))
 
         for row, attached_count, matched_flow_versions in batch:
             if row.resource_key not in known:
@@ -785,8 +795,9 @@ async def list_deployments_synced(
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
+        names=names,
     )
-    return accepted, total
+    return accepted, total, provider_data_by_resource_key
 
 
 async def list_deployment_flow_versions_synced(

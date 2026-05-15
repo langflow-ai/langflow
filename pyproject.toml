@@ -2,7 +2,7 @@
 name = "langflow"
 version = "1.10.0"
 description = "A Python package with a built-in web application"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 license = "MIT"
 keywords = ["nlp", "langchain", "openai", "gpt", "gui"]
 readme = "README.md"
@@ -58,7 +58,9 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.26; python_version>='3.14'",
+    "fakeredis>=2.0.0",
 ]
 
 [[tool.uv.index]]
@@ -114,7 +116,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]
@@ -146,7 +147,7 @@ override-dependencies = [
     "Markdown>=3.8.0",
     "dynaconf>=3.2.13",
     "pillow>=12.1.1",  # Force Pillow 12.1.1+ to prevent CVE-vulnerable versions
-    "playwright>=1.58.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
+    "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
 ]
 
 [project.scripts]

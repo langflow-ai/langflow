@@ -224,6 +224,55 @@ describe("Attached flows section", () => {
     expect(versionLabels.length).toBeGreaterThanOrEqual(1);
   });
 
+  it("uses entry keys so all sidebar-attached flows appear in review", () => {
+    setup(
+      {
+        selectedVersionByFlow: new Map([
+          [
+            "legacy-basic",
+            {
+              key: "flow-basic:ver-2",
+              flowId: "flow-basic",
+              flowName: "Basic Prompting",
+              versionId: "ver-2",
+              versionTag: "v2",
+            },
+          ],
+          [
+            "legacy-blog",
+            {
+              key: "flow-blog:ver-1",
+              flowId: "flow-blog",
+              flowName: "Blog Writer",
+              versionId: "ver-1",
+              versionTag: "v1",
+            },
+          ],
+          [
+            "legacy-new",
+            {
+              key: "flow-new:ver-2",
+              flowId: "flow-new",
+              flowName: "New Flow",
+              versionId: "ver-2",
+              versionTag: "v2",
+            },
+          ],
+        ]),
+        removedFlowIds: new Set(["legacy-blog"]),
+      },
+      [
+        { id: "flow-basic", name: "Basic Prompting", folder_id: "folder-1" },
+        { id: "flow-blog", name: "Blog Writer", folder_id: "folder-1" },
+        { id: "flow-new", name: "New Flow", folder_id: "folder-1" },
+      ],
+    );
+
+    expect(screen.getAllByText("Basic Prompting").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Blog Writer").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("New Flow").length).toBeGreaterThan(0);
+  });
+
   it("shows 'Unknown' for flows not found in flowsData", () => {
     setup(
       {
@@ -234,7 +283,7 @@ describe("Attached flows section", () => {
       [], // no flows in data
     );
 
-    const unknowns = screen.getAllByText("Unknown");
+    const unknowns = screen.getAllByText("Unknown flow");
     expect(unknowns.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -280,16 +329,15 @@ describe("Flow configuration section", () => {
       [{ id: "flow-1", name: "Default Name Flow", folder_id: "folder-1" }],
     );
 
-    // The flow name appears in the attached column, in the EditableToolName
-    // (as placeholder fallback), and in the config sub-detail = 3 total
+    // The raw flow name appears in the attached column and the config sub-detail.
     const nameInstances = screen.getAllByText("Default Name Flow");
-    expect(nameInstances).toHaveLength(3);
+    expect(nameInstances).toHaveLength(2);
 
-    // Verify the EditableToolName specifically shows the flow name as placeholder
+    // Verify the tool-name row falls back to the generated default tool name
     const wrenchIcon = screen.getByTestId("icon-Wrench");
     const configRow = wrenchIcon.closest(".flex.items-center.gap-2")!;
     expect(
-      within(configRow as HTMLElement).getByText("Default Name Flow"),
+      within(configRow as HTMLElement).getByText("Default Name Flow 1"),
     ).toBeInTheDocument();
   });
 
@@ -313,7 +361,7 @@ describe("Connection details", () => {
         name: "New API Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { API_KEY: "my-secret-key" },
+        environmentVariables: { API_KEY: "my-secret-key" }, // pragma: allowlist secret
       },
     ];
 
@@ -341,7 +389,7 @@ describe("Connection details", () => {
         name: "New Connection",
         variableCount: 1,
         isNew: true,
-        environmentVariables: { SECRET_KEY: "actual-secret-value" },
+        environmentVariables: { SECRET_KEY: "actual-secret-value" }, // pragma: allowlist secret
       },
     ];
 
@@ -462,7 +510,16 @@ describe("Removal section (edit mode)", () => {
       {
         isEditMode: true,
         removedFlowIds: new Set(["flow-removed"]),
-        selectedVersionByFlow: new Map(),
+        selectedVersionByFlow: new Map([
+          [
+            "flow-removed",
+            {
+              flowId: "flow-removed",
+              versionId: "ver-removed",
+              versionTag: "v1",
+            },
+          ],
+        ]),
       },
       [{ id: "flow-removed", name: "Removed Flow", folder_id: "folder-1" }],
     );
@@ -482,7 +539,16 @@ describe("Removal section (edit mode)", () => {
       {
         isEditMode: true,
         removedFlowIds: new Set(["flow-unknown"]),
-        selectedVersionByFlow: new Map(),
+        selectedVersionByFlow: new Map([
+          [
+            "flow-unknown",
+            {
+              flowId: "flow-unknown",
+              versionId: "ver-unknown",
+              versionTag: "v1",
+            },
+          ],
+        ]),
       },
       [],
     );

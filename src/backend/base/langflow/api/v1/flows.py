@@ -8,11 +8,12 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
+from pydantic import ValidationError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -60,6 +61,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
+from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
 __all__ = [
@@ -191,6 +193,38 @@ async def read_flow(
         # Convert to FlowRead while session is still active to avoid detached instance errors
         return FlowRead.model_validate(user_flow, from_attributes=True)
     raise HTTPException(status_code=404, detail="Flow not found")
+
+
+@router.get("/{flow_id}/note_translations", dependencies=[Depends(get_current_active_user)], status_code=200)
+async def get_note_translations(
+    *,
+    session: DbSession,
+    flow_id: UUID,
+    request: Request,
+) -> dict[str, str]:
+    """Return translated note node descriptions for the current locale.
+
+    Returns a mapping of node_id → translated markdown text.  Only nodes
+    with a matching translation key are included; nodes without translations
+    are omitted so the caller can leave them unchanged.
+    """
+    from langflow.utils.i18n import translate
+
+    flow = await session.get(Flow, flow_id)
+    if not flow or not flow.data:
+        return {}
+
+    locale = getattr(request.state, "locale", "en")
+    nodes = flow.data.get("nodes", [])
+    result: dict[str, str] = {}
+    for node in nodes:
+        if node.get("type") == "noteNode":
+            i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
+            if i18n_key:
+                translated = translate(i18n_key, locale, "")
+                if translated:
+                    result[node.get("id")] = translated
+    return result
 
 
 @router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
@@ -437,11 +471,32 @@ async def upload_file(
 
     # Normalise code fields: if exported with code-as-lines format, rejoin to
     # strings before creating the Pydantic models so the DB always stores strings.
-    if "flows" in data:
-        data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid JSON: expected an object with 'flows' or a single flow object",
+        )
+    try:
+        if "flows" in data:
+            if not isinstance(data["flows"], list):
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid JSON: 'flows' must be a list of flow objects",
+                )
+            non_dict = [i for i, f in enumerate(data["flows"]) if not isinstance(f, dict)]
+            if non_dict:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
+                )
+            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
+            flow_list = FlowListCreate(**data)
+        else:
+            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    except HTTPException:
+        raise
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"
@@ -524,6 +579,10 @@ _starter_flows_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemor
     max_size=1,
     expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
 )
+_starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemoryCache(
+    max_size=16,  # Why: 16 > 7 current supported locales, leaves headroom for future additions
+    expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
+)
 _starter_flows_lock = asyncio.Lock()
 
 
@@ -531,38 +590,64 @@ _starter_flows_lock = asyncio.Lock()
 async def read_basic_examples(
     *,
     session: DbSession,
+    request: Request,
 ):
     """Retrieve a list of basic example flows."""
-    cached_response = _starter_flows_cache.get("starter_flows")
-    if cached_response is not CACHE_MISS:
-        return cached_response
+    locale = getattr(request.state, "locale", "en")
+    translated_cache_key = f"starter_flows_{locale}"
+
+    # Fast path: translated result already cached for this locale
+    cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+    if cached_translated is not CACHE_MISS:
+        return compress_response(cached_translated)
 
     async with _starter_flows_lock:
-        cached_response = _starter_flows_cache.get("starter_flows")
-        if cached_response is not CACHE_MISS:
-            return cached_response
+        # Double-check inside lock to prevent thundering herd
+        cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+        if cached_translated is not CACHE_MISS:
+            return compress_response(cached_translated)
 
-        try:
-            starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        # Ensure raw DB data is cached
+        cached_flow_reads = _starter_flows_cache.get("starter_flows")
+        if cached_flow_reads is CACHE_MISS:
+            try:
+                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
-            if not starter_folder:
-                return []
+                if not starter_folder:
+                    return compress_response([])
 
-            all_starter_folder_flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
-            ).all()
+                all_starter_folder_flows = (
+                    await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
+                ).all()
 
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
-            response = compress_response(flow_reads)
-            _starter_flows_cache.set("starter_flows", response)
+                cached_flow_reads = [
+                    FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows
+                ]
+                _starter_flows_cache.set("starter_flows", cached_flow_reads)
 
-        except Exception as e:
-            import logging as _logging
+            except Exception as e:
+                import logging as _logging
 
-            _logging.getLogger(__name__).exception("Error loading basic examples")
-            raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
-        else:
-            return response
+                _logging.getLogger(__name__).exception("Error loading basic examples")
+                raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
+
+        # Translate once per locale and cache the result
+        # Why: cached uncompressed so the same result can be re-compressed per
+        # response — keeps locale-switching working without storing per-locale
+        # compressed blobs.
+        translated = translate_starter_flows(cached_flow_reads, locale)
+        result = []
+        for flow in translated:
+            flow_copy = flow.model_copy()
+            if flow_copy.data and isinstance(flow_copy.data, dict):
+                nodes = flow_copy.data.get("nodes", [])
+                translated_nodes = translate_flow_notes(nodes, locale)
+                flow_copy.data = {**flow_copy.data, "nodes": translated_nodes}
+            result.append(flow_copy)
+
+        _starter_flows_translated_cache.set(translated_cache_key, result)
+
+    return compress_response(result)
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

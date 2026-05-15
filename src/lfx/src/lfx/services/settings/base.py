@@ -69,6 +69,33 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    vector_store_backend: str = "chroma"
+    """Vector-store backend for Knowledge Bases.
+
+    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
+    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
+    of the KB DB-Connectors epic."""
+    vector_store_backend_config: dict = {}
+    """Backend-specific configuration for the selected ``vector_store_backend``.
+
+    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
+    connection URIs, index names, auth references) as additional backends land."""
+
+    kb_allowed_folder_roots: list[str] = []
+    """Directories the server-side ``FolderSource`` is permitted to walk.
+
+    Each entry is expanded (``~`` → user home) and resolved before use.
+    ``FolderSource`` refuses to ingest any folder whose resolved path is
+    not equal to or underneath one of these roots, which blocks both
+    arbitrary-path access and symlink escapes (``resolve()`` follows
+    symlinks before the containment check).
+
+    Defaults to an empty list — folder ingestion is disabled until an
+    operator opts in. Single-user desktop / self-hosted deployments can
+    set this to ``["~"]`` to allow ingestion from the user's home
+    directory; multi-tenant cloud deployments should configure
+    per-tenant roots (or leave empty to keep folder ingestion off)."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -180,10 +207,12 @@ class Settings(BaseSettings):
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""
 
     # cache configuration
-    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    cache_type: Literal["async", "redis", "memory"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
+    cache_dir: str | None = None
+    """Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
 
@@ -217,6 +246,20 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Job Queue
+    job_queue_type: Literal["asyncio", "redis"] = "asyncio"
+    """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    redis_queue_host: str | None = None
+    """Redis host for the job queue. Falls back to redis_host if not set."""
+    redis_queue_port: int | None = None
+    """Redis port for the job queue. Falls back to redis_port if not set."""
+    redis_queue_db: int = 1
+    """Redis DB number for the job queue. Defaults to 1 to avoid conflict with the cache (DB 0)."""
+    redis_queue_url: str | None = None
+    """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
+    redis_queue_ttl: int = 3600
+    """TTL in seconds for job stream keys in Redis."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -319,6 +362,7 @@ class Settings(BaseSettings):
     max_flow_version_entries_per_flow: int = 50
     """Max version history entries per flow. Oldest entries pruned on next snapshot.
 
+
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
@@ -336,6 +380,7 @@ class Settings(BaseSettings):
     max_items_length: int = MAX_ITEMS_LENGTH
     """Maximum number of items to store and display in the UI. Lists longer than this
     will be truncated when displayed in the UI. Does not affect data passed between components nor outputs."""
+    max_ingestion_timeout_secs: int = 600
 
     # MCP Server
     mcp_server_enabled: bool = True
@@ -458,7 +503,15 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed."""
+        """Convert comma-separated string to list if needed.
+
+        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
+        before this validator runs (the union list[str] | str resolves
+        differently). Collapse that back to the bare-string wildcard so
+        downstream consumers see the same shape on every Python version.
+        """
+        if isinstance(value, list) and value == ["*"]:
+            return "*"
         if isinstance(value, str) and value != "*":
             if "," in value:
                 # Convert comma-separated string to list
@@ -479,8 +532,9 @@ class Settings(BaseSettings):
     def set_event_delivery(cls, value, info):
         # If workers > 1, we need to use direct delivery
         # because polling and streaming are not supported
-        # in multi-worker environments
-        if info.data.get("workers", 1) > 1:
+        # in multi-worker environments — unless a Redis-backed job queue is configured,
+        # which shares state across workers and supports all delivery modes.
+        if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
             logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value
@@ -564,6 +618,26 @@ class Settings(BaseSettings):
             # Create a .langflow directory inside the cache directory
             value = Path(cache_dir)
             value.mkdir(parents=True, exist_ok=True)
+
+        if isinstance(value, str):
+            value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
+        if not value.exists():
+            value.mkdir(parents=True, exist_ok=True)
+
+        return str(value)
+
+    @field_validator("cache_dir", mode="before")
+    @classmethod
+    def validate_cache_dir(cls, value):
+        """Validate and normalize cache_dir path.
+
+        If not set, returns None and the factory will fall back to config_dir.
+        If set, resolves to an absolute path and creates the directory if needed.
+        """
+        if not value:
+            return None
 
         if isinstance(value, str):
             value = Path(value)

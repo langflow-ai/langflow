@@ -58,6 +58,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: "sidebar.nav.traces",
     tooltip: "sidebar.nav.traces",
   },
+  {
+    id: "memories",
+    icon: "BrainCog",
+    label: "Memories",
+    tooltip: "Memories",
+  },
 ];
 
 const SidebarSegmentedNav = () => {
@@ -86,7 +92,7 @@ const SidebarSegmentedNav = () => {
 
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      if (item.id === "traces") {
+                      if (item.id === "traces" || item.id === "memories") {
                         setActiveSection("components");
                       } else {
                         toggleSidebar();

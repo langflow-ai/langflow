@@ -49,7 +49,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   currentSessionId: "",
   setCurrentSessionId: (sessionId: string) =>
     set({ currentSessionId: sessionId }),
-  eventDelivery: EventDeliveryType.POLLING,
+  eventDelivery: EventDeliveryType.STREAMING,
   setEventDelivery: (eventDelivery: EventDeliveryType) =>
     set({ eventDelivery }),
   webhookAuthEnable: true,

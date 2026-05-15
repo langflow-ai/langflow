@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 import traceback
 import uuid
@@ -31,6 +32,7 @@ from langflow.api.utils import (
     format_exception_message,
     get_top_level_vertices,
     parse_exception,
+    scope_session_to_namespace,
     verify_public_flow_and_get_user,
 )
 from langflow.api.v1.schemas import (
@@ -67,7 +69,7 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 
     Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
     """
-    job_owner = queue_service.get_job_owner(job_id)
+    job_owner = await queue_service.get_job_owner(job_id)
     if job_owner is not None and job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
@@ -239,7 +241,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    queue_service.register_job_owner(job_id, current_user.id)
+    await queue_service.register_job_owner(job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
@@ -636,6 +638,36 @@ async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user)
     )
 
 
+# Public flow file paths must be `{source_flow_id}/{safe_basename}` — uploads
+# under that namespace are the only legitimate inputs for an unauthenticated
+# build. Anything else (absolute paths, traversal, foreign flow_ids) is a
+# probe at the arbitrary-file-read class of bug.
+_PUBLIC_FILE_PATH_RE = re.compile(
+    r"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/([^/\\]+)$"
+)
+_PUBLIC_FILE_REJECTED_SUBSTRINGS = ("\x00", "..", "\\")
+
+
+def _validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) -> None:
+    """Reject file references that aren't `{source_flow_id}/{basename}`."""
+    if not files:
+        return
+    expected_flow_id = str(source_flow_id).lower()
+    for entry in files:
+        if not isinstance(entry, str) or not entry:
+            raise HTTPException(status_code=400, detail="Invalid file entry")
+        if any(token in entry for token in _PUBLIC_FILE_REJECTED_SUBSTRINGS):
+            raise HTTPException(status_code=400, detail="Invalid file path")
+        match = _PUBLIC_FILE_PATH_RE.match(entry)
+        if not match:
+            raise HTTPException(status_code=400, detail="Invalid file path format")
+        flow_id_segment, basename = match.group(1), match.group(2)
+        if flow_id_segment.lower() != expected_flow_id:
+            raise HTTPException(status_code=400, detail="File not in this flow's namespace")
+        if basename in (".", ".."):
+            raise HTTPException(status_code=400, detail="Invalid filename")
+
+
 @router.post("/build_public_tmp/{flow_id}/flow")
 async def build_public_tmp(
     *,
@@ -661,6 +693,9 @@ async def build_public_tmp(
     - The 'data' parameter is NOT accepted to prevent flow definition tampering
     - Public flows must execute the stored flow definition only
     - The flow definition is always loaded from the database
+    - Caller-supplied 'inputs.session' is namespaced under the (client_id,
+      flow_id) virtual flow ID so an unauthenticated caller cannot address a
+      session that lives outside its own namespace (CVE-2026-33017)
 
     The endpoint:
     1. Verifies the requested flow is marked as public in the database
@@ -690,6 +725,11 @@ async def build_public_tmp(
         Dict with job_id that can be used to poll for build status
     """
     try:
+        # Reject caller-supplied file references that aren't scoped to this
+        # public flow's own storage namespace. Done before any flow lookup so
+        # malformed requests fail fast and don't touch the DB.
+        _validate_public_files(files, flow_id)
+
         # Verify this is a public flow and get the associated user
         client_id = request.cookies.get("client_id")
         # Only use authenticated user_id when auto-login is disabled.
@@ -702,6 +742,12 @@ async def build_public_tmp(
             client_id=client_id,
             authenticated_user_id=authenticated_user_id,
         )
+
+        # Defends CVE-2026-33017: scope caller session into the (client_id, flow_id) namespace.
+        if inputs is not None and inputs.session is not None:
+            scoped_session = scope_session_to_namespace(inputs.session, str(new_flow_id))
+            if scoped_session != inputs.session:
+                inputs = inputs.model_copy(update={"session": scoped_session})
 
         # Validate the stored flow data after the public-access boundary.
         # Public flows never accept client-supplied data.

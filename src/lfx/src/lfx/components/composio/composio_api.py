@@ -3,10 +3,11 @@ from collections.abc import Sequence
 from typing import Any
 
 from composio import Composio
-from composio_langchain import LangchainProvider
 
 # Third-party imports
 from langchain_core.tools import Tool
+
+from lfx.base.composio.safe_provider import SafeLangchainProvider
 
 # Local imports
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -271,7 +272,7 @@ class ComposioAPIComponent(LCToolComponent):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return Composio(api_key=self.api_key, provider=LangchainProvider())
+            return Composio(api_key=self.api_key, provider=SafeLangchainProvider())
         except ValueError as e:
             self.log(f"Error building Composio wrapper: {e}")
             msg = "Please provide a valid Composio API Key in the component settings"

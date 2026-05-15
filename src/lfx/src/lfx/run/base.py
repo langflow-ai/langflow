@@ -16,6 +16,7 @@ from lfx.cli.script_loader import (
 )
 from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
+from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
 
 if TYPE_CHECKING:
@@ -115,6 +116,18 @@ async def run_flow(
     else:
         configure(log_level="CRITICAL", output_file=sys.stderr)
         verbosity = 0
+
+    # Validate caller-supplied IDs up-front so users get a clear error before any
+    # graph loading work happens. None means "auto-generate later"; "" / whitespace
+    # is rejected so a typo or empty env var doesn't silently produce a fresh
+    # session and break Memory continuity.
+    try:
+        validate_provided_id("session_id", session_id)
+        validate_provided_id("user_id", user_id)
+    except ValueError as e:
+        error_msg = str(e)
+        output_error(error_msg, verbose=verbose, exception=e)
+        raise RunError(error_msg, e) from e
 
     start_time = time.time() if timing else None
 
@@ -221,17 +234,14 @@ async def run_flow(
             error_msg = "No input source provided"
             raise ValueError(error_msg)
 
-        # Set user_id on graph if provided (required for some components like AgentComponent)
-        if user_id:
-            graph.user_id = user_id
-            if verbosity > 0:
-                logger.info(f"Set graph user_id: {user_id}")
-
-        # Set session_id on graph if provided (isolates memory between requests)
-        if session_id:
-            graph.session_id = session_id
-            if verbosity > 0:
-                logger.info(f"Set graph session_id: {session_id}")
+        # Apply session_id, user_id, and Memory-vertex propagation defaults. Both
+        # are auto-generated when not supplied so component prechecks (custom_component
+        # .get_variable for user_id) and astore_message validation (for session_id)
+        # don't fail. See lfx.run._defaults.apply_run_defaults for the full rationale.
+        session_id, user_id = apply_run_defaults(graph, session_id=session_id, user_id=user_id)
+        if verbosity > 0:
+            logger.info(f"Set graph user_id: {user_id}")
+            logger.info(f"Set graph session_id: {session_id}")
 
         # Inject global variables into graph context
         if global_variables:
@@ -348,7 +358,14 @@ async def run_flow(
 
         logger.info("Starting graph execution...", level="DEBUG")
 
-        async for result in graph.async_start(inputs, event_manager=event_manager):
+        # See lfx.run._defaults.resolve_fallback_to_env_vars for why this flag is
+        # plumbed through (mirrors langflow's API path so load_from_db variables
+        # fall through to os.environ on miss instead of erroring the build).
+        fallback_to_env_vars = resolve_fallback_to_env_vars()
+
+        async for result in graph.async_start(
+            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+        ):
             result_count += 1
             if verbosity > 0:
                 logger.debug(f"Processing result #{result_count}")

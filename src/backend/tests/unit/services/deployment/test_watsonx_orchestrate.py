@@ -122,6 +122,7 @@ class FakeAgentClient:
         self.post_calls: list[tuple[str, dict]] = []
         self.create_calls: list[dict] = []
         self.delete_calls: list[str] = []
+        self.last_list_params = None
 
     def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
         return self._deployment
@@ -161,6 +162,7 @@ class FakeAgentClient:
 
     def _get(self, path: str, params: dict | None = None):
         if path == "/agents":
+            self.last_list_params = params
             ids = params.get("ids", []) if isinstance(params, dict) else []
             names = params.get("names", []) if isinstance(params, dict) else []
             id_set = {str(item) for item in ids}
@@ -5305,6 +5307,36 @@ async def test_list_deployments_without_params(monkeypatch):
     result = await service.list(user_id="user-1", db=object(), params=None)
     assert len(result.deployments) == 1
     assert result.deployments[0].id == "dep-1"
+
+
+@pytest.mark.anyio
+async def test_list_deployments_with_names_filter(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        listed_agents=[
+            {"id": "dep-1", "name": "agent-1", "tools": [], "environments": [{"name": "draft"}]},
+        ],
+    )
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    params = DeploymentListParams(deployment_names=["agent-1", "agent-2"])
+    result = await service.list(user_id="user-1", db=object(), params=params)
+    assert len(result.deployments) == 1
+    assert result.deployments[0].id == "dep-1"
+
+    # Verify the names param was pushed to the underlying WXO client
+    assert fake_agent.last_list_params == {"names": ["agent-1", "agent-2"]}
 
 
 @pytest.mark.anyio

@@ -525,12 +525,15 @@ class MCPToolsComponent(ComponentWithCache):
     async def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Toggle the visibility of connection-specific fields based on the selected mode."""
         try:
+            is_refresh = bool(build_config.get("is_refresh", False))
             if field_name == "tool":
                 try:
                     # Always refresh tools when cache is disabled, or when tools list is empty
                     # This ensures database edits are reflected immediately when cache is disabled
                     use_cache = getattr(self, "use_cache", False)
-                    if len(self.tools) == 0 or not use_cache:
+                    if is_refresh:
+                        self.tools = []
+                    if is_refresh or len(self.tools) == 0 or not use_cache:
                         try:
                             self.tools, build_config["mcp_server"]["value"] = await self.update_tool_list()
                             build_config["tool"]["options"] = [tool.name for tool in self.tools]
@@ -542,15 +545,17 @@ class MCPToolsComponent(ComponentWithCache):
                                 build_config["tool"]["show"] = True
                                 build_config["tool"]["options"] = []
                                 build_config["tool"]["value"] = ""
-                                build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                                build_config["tool"]["placeholder"] = msg
                             else:
                                 build_config["tool"]["show"] = False
-                        except ValueError:
+                        except ValueError as e:
+                            msg = f"Error updating tool list: {e!s}"
+                            await logger.aexception(msg)
                             if not build_config["tools_metadata"]["show"]:
                                 build_config["tool"]["show"] = True
                                 build_config["tool"]["options"] = []
                                 build_config["tool"]["value"] = ""
-                                build_config["tool"]["placeholder"] = "Error on MCP Server"
+                                build_config["tool"]["placeholder"] = msg
                             else:
                                 build_config["tool"]["show"] = False
 
@@ -585,12 +590,21 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = field_value.get("name") if isinstance(field_value, dict) else field_value
+                build_config_server_value = build_config.get("mcp_server", {}).get("value")
+                build_config_server_name = (
+                    build_config_server_value.get("name")
+                    if isinstance(build_config_server_value, dict)
+                    else build_config_server_value
+                )
                 servers_cache_key_ui = self._mcp_servers_cache_key(current_server_name) if current_server_name else ""
                 _last_selected_server = safe_cache_get(self._shared_component_cache, "last_selected_server", "")
                 # Only treat as a server change if there was a previous server selection.
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
-                server_changed = bool(_last_selected_server and current_server_name != _last_selected_server)
+                server_changed = bool(
+                    (_last_selected_server and current_server_name != _last_selected_server)
+                    or (build_config_server_name and current_server_name != build_config_server_name)
+                )
 
                 # Determine if "Tool Mode" is active by checking if the tool dropdown is hidden.
                 is_in_tool_mode = build_config["tools_metadata"]["show"]
@@ -601,7 +615,7 @@ class MCPToolsComponent(ComponentWithCache):
                 # Fast path: if server didn't change and we already have options, keep them as-is
                 # BUT only if caching is enabled, we're in tool mode, or it's the initial load
                 existing_options = build_config.get("tool", {}).get("options") or []
-                if not server_changed and existing_options:
+                if not is_refresh and not server_changed and existing_options:
                     # In non-tool mode with cache disabled, skip the fast path to force refresh
                     # BUT on initial load (cold cache), always preserve saved options from the flow
                     if not is_in_tool_mode and not use_cache and _last_selected_server:
@@ -614,7 +628,12 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # To avoid unnecessary updates, only proceed if the server has actually changed
                 # OR if caching is disabled (to force refresh in non-tool mode)
-                if (_last_selected_server in (current_server_name, "")) and build_config["tool"]["show"] and use_cache:
+                if (
+                    not is_refresh
+                    and (_last_selected_server in (current_server_name, ""))
+                    and build_config["tool"]["show"]
+                    and use_cache
+                ):
                     if current_server_name:
                         servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                         if isinstance(servers_cache, dict):
@@ -630,7 +649,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # When cache is disabled, clear any cached data for this server
                 # This ensures we always fetch fresh data from the database
-                if not use_cache and current_server_name:
+                if (is_refresh or not use_cache) and current_server_name:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict) and servers_cache_key_ui in servers_cache:
                         servers_cache.pop(servers_cache_key_ui)
@@ -638,10 +657,10 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Check if tools are already cached for this server before clearing
                 cached_tools = None
-                if current_server_name and use_cache:
+                if current_server_name and use_cache and not is_refresh:
                     servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                     if isinstance(servers_cache, dict):
-                        cached = servers_cache.get(current_server_name)
+                        cached = servers_cache.get(servers_cache_key_ui)
                         if cached is not None:
                             try:
                                 cached_tools = cached["tools"]
@@ -656,13 +675,13 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Clear tools when cache is disabled OR when we don't have cached tools
                 # This ensures fresh tools are fetched after database edits
-                if not cached_tools or not use_cache:
+                if is_refresh or not cached_tools or not use_cache:
                     self.tools = []  # Clear previous tools to force refresh
 
                 # Clear previous tool inputs if:
                 # 1. Server actually changed
                 # 2. Cache is disabled (meaning tool list will be refreshed)
-                if server_changed or not use_cache:
+                if is_refresh or server_changed or not use_cache:
                     self.remove_non_default_keys(build_config)
 
                 # Only show the tool dropdown if not in tool_mode
@@ -685,14 +704,16 @@ class MCPToolsComponent(ComponentWithCache):
                             build_config["tool"]["placeholder"] = "Select a tool"
                         except (TimeoutError, asyncio.TimeoutError) as e:
                             msg = f"Timeout loading tools for MCP server: {e!s}"
-                            await logger.awarning(msg)
+                            await logger.aexception(msg)
                             build_config["tool"]["options"] = []
                             build_config["tool"]["placeholder"] = "Timeout on MCP server"
                         except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
                             msg = f"Error loading tools for MCP server: {e!s}"
-                            await logger.awarning(msg)
+                            await logger.aexception(msg)
                             build_config["tool"]["options"] = []
-                            build_config["tool"]["placeholder"] = "Error on MCP Server"
+                            build_config["tool"]["placeholder"] = (
+                                "Error on MCP Server" if "'NoneType' object has no attribute 'id'" in msg else msg
+                            )
                     # Force a value refresh only when the user genuinely switched servers.
                     # server_changed is only True for real user-initiated changes (not initial load).
                     if server_changed:
@@ -719,14 +740,14 @@ class MCPToolsComponent(ComponentWithCache):
                         build_config["tool"]["placeholder"] = "Select a tool"
                     except (TimeoutError, asyncio.TimeoutError) as e:
                         msg = f"Timeout loading tools when toggling tool mode: {e!s}"
-                        await logger.awarning(msg)
+                        await logger.aexception(msg)
                         build_config["tool"]["options"] = []
-                        build_config["tool"]["placeholder"] = "Timeout on MCP server"
+                        build_config["tool"]["placeholder"] = msg
                     except (ValueError, ImportError, ConnectionError, OSError, RuntimeError) as e:
                         msg = f"Error loading tools when toggling tool mode: {e!s}"
-                        await logger.awarning(msg)
+                        await logger.aexception(msg)
                         build_config["tool"]["options"] = []
-                        build_config["tool"]["placeholder"] = "Error on MCP Server"
+                        build_config["tool"]["placeholder"] = msg
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
 

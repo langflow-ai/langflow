@@ -666,6 +666,7 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.financial_report_parser.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
             }
@@ -695,6 +696,7 @@
             "description": "# 📖 README\nThis template extracts key financial metrics from a given financial report text. The extracted data is structured and formatted for chat consumption.\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground** to start the chat and run the flow.\nFor this example, the **Chat Input** component is pre-loaded with a sample financial report. The **Language Model** component identifies and retrieves the gross profit, EBITDA, net income, and operating expenses information from the financial report. Then, the **Structured Output** component formats extracted data into a structured format for better readability and further processing. Finally, the **Parser** component converts extracted data into a messages to be returned to the user.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.financial_report_parser.210fb161",
             "template": {}
           },
           "type": "note"
@@ -751,7 +753,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.4"
                   },
                   {
                     "name": "trustcall",

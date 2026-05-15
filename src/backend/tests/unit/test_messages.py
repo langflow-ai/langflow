@@ -58,7 +58,7 @@ def test_get_messages():
         ]
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = get_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -73,7 +73,7 @@ async def test_aget_messages():
         ]
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -93,6 +93,21 @@ async def test_aadd_messages():
     messages = await aadd_messages(message)
     assert len(messages) == 1
     assert messages[0].text == "New Test message"
+
+
+@pytest.mark.usefixtures("client")
+async def test_aadd_messages_persists_run_id():
+    run_id = uuid4()
+    message = Message(
+        text="New Test message",
+        sender="User",
+        sender_name="User",
+        session_id="new_session_id_run_id",
+        run_id=str(run_id),
+    )
+    messages = await aadd_messages(message)
+    assert len(messages) == 1
+    assert str(messages[0].run_id) == str(run_id)
 
 
 @pytest.mark.usefixtures("client")
@@ -1074,6 +1089,23 @@ class TestMessageEdgeCases:
         result = MessageTable.from_message(message, flow_id=flow_id_str)
 
         assert str(result.flow_id) == flow_id_str
+
+    def test_from_message_uses_message_run_id_when_explicit_run_id_missing(self):
+        """Test from_message falls back to message.run_id."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        run_id = uuid4()
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            run_id=str(run_id),
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.run_id == run_id
 
     def test_from_message_with_iterator_text(self):
         """Test from_message handles iterator text gracefully."""

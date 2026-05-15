@@ -26,6 +26,7 @@ from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
@@ -336,6 +337,13 @@ def _is_pydantic_model_type(annotation: Any) -> bool:
     return isinstance(ann, type) and issubclass(ann, BaseModel)
 
 
+def _unwrap_langflow_json_value(value: Any) -> Any:
+    """Return the payload dict from Langflow JSON/Data values wired into MCP object parameters."""
+    if isinstance(value, Data):
+        return value.data
+    return value
+
+
 def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_name: str) -> Any:
     """Try to convert value to expected type. Raise ValueError with clear message on failure."""
 
@@ -347,6 +355,9 @@ def _try_convert_value(value: Any, expected_type: type, field_name: str, tool_na
 
     if value is None and expected_type in (int, float, bool, dict, list):
         raise _err(expected_type_desc, "but received None.")
+
+    if expected_type in (dict, list):
+        value = _unwrap_langflow_json_value(value)
 
     # return correctly typed value, but handle the
     # special case of bool as this is a subclass of int
@@ -427,24 +438,25 @@ def _normalize_arguments_for_mcp(
         expected = _resolve_expected_type(model_field.annotation)
         if expected is None:
             # Nested Pydantic model (object with properties): UI/API often sends as JSON string
-            if _is_pydantic_model_type(model_field.annotation) and isinstance(value, str):
-                try:
-                    parsed = json.loads(value)
-                except json.JSONDecodeError as e:
-                    msg = (
-                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
-                        f"but received invalid JSON string {value!r}; {e}"
-                    )
-                    raise ValueError(msg) from e
-                if not isinstance(parsed, dict):
-                    msg = (
-                        f"Tool '{tool_name}': Parameter '{field_name}' expects object "
-                        f"but JSON parsed to {type(parsed).__name__}."
-                    )
-                    raise ValueError(msg)
-                result[field_name] = parsed
-            else:
-                result[field_name] = value
+            if _is_pydantic_model_type(model_field.annotation):
+                value = _unwrap_langflow_json_value(value)
+                if isinstance(value, str):
+                    try:
+                        parsed = json.loads(value)
+                    except json.JSONDecodeError as e:
+                        msg = (
+                            f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                            f"but received invalid JSON string {value!r}; {e}"
+                        )
+                        raise ValueError(msg) from e
+                    if not isinstance(parsed, dict):
+                        msg = (
+                            f"Tool '{tool_name}': Parameter '{field_name}' expects object "
+                            f"but JSON parsed to {type(parsed).__name__}."
+                        )
+                        raise ValueError(msg)  # noqa: TRY004
+                    value = parsed
+            result[field_name] = value
             continue
         if expected is str:
             result[field_name] = value
@@ -1660,6 +1672,9 @@ class MCPStdioClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_{param_hash}"
 
+        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
+        # floor so default deployments aren't shorter than the previous hardcoded 30s.
+        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
         max_retries = 2
         last_error_type = None
 
@@ -1671,7 +1686,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1940,6 +1955,9 @@ class MCPStreamableHttpClient:
             param_hash = uuid.uuid4().hex[:8]
             self._session_context = f"default_http_{param_hash}"
 
+        # Tool-call timeout: env LANGFLOW_MCP_SERVER_TIMEOUT (via settings), with a 180s
+        # floor so default deployments aren't shorter than the previous hardcoded 30s.
+        timeout = max(get_settings_service().settings.mcp_server_timeout, 180.0)
         max_retries = 2
         last_error_type = None
 
@@ -1951,7 +1969,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__

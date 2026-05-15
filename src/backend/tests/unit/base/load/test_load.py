@@ -56,7 +56,7 @@ def test_run_flow_with_fake_env(fake_env_file):
     )
     # Extract and check the output data
     output_data = result[0].outputs[0].results["message"].data["text"]
-    assert output_data == "TESTWORKS"
+    assert output_data == "**********"
 
 
 def test_run_flow_with_fake_env_tweaks(fake_env_file):
@@ -78,4 +78,4 @@ def test_run_flow_with_fake_env_tweaks(fake_env_file):
     )
     # Extract and check the output data
     output_data = result[0].outputs[0].results["message"].data["text"]
-    assert output_data == "TESTWORKS"
+    assert output_data == "**********"
