@@ -2350,6 +2350,2226 @@
       "legacy_slot": "ext:zep:ZepChatMemory@official-pre-a",
       "target": "ext:zep:ZepChatMemory@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.add_content_to_page.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:AddContentToPage@official-pre-a",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.create_page.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageCreator@official-pre-a",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.list_database_properties.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionDatabaseProperties@official-pre-a",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.list_pages.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionListPages@official-pre-a",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.list_users.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionUserList@official-pre-a",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.page_content_viewer.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageContent@official-pre-a",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.search.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionSearch@official-pre-a",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.update_page_property.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.notion.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:notion:NotionPageUpdate@official-pre-a",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.add_content_to_page.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.AddContentToPage",
+      "target": "ext:notion:AddContentToPage@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.create_page.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageCreator",
+      "target": "ext:notion:NotionPageCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_database_properties.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionDatabaseProperties",
+      "target": "ext:notion:NotionDatabaseProperties@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_pages.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionListPages",
+      "target": "ext:notion:NotionListPages@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.list_users.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionUserList",
+      "target": "ext:notion:NotionUserList@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.page_content_viewer.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageContent",
+      "target": "ext:notion:NotionPageContent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.search.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionSearch",
+      "target": "ext:notion:NotionSearch@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.update_page_property.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.Notion.NotionPageUpdate",
+      "target": "ext:notion:NotionPageUpdate@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentql.agentql_api.AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentql.AgentQL",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:agentql:AgentQL@official-pre-a",
+      "target": "ext:agentql:AgentQL@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ApifyActorsComponent",
+      "target": "ext:apify:ApifyActorsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.apify.apify_actor.ApifyActorsComponent",
+      "target": "ext:apify:ApifyActorsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.apify.ApifyActorsComponent",
+      "target": "ext:apify:ApifyActorsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:apify:ApifyActorsComponent@official-pre-a",
+      "target": "ext:apify:ApifyActorsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AssemblyAIGetSubtitles",
+      "target": "ext:assemblyai:AssemblyAIGetSubtitles@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.assemblyai_get_subtitles.AssemblyAIGetSubtitles",
+      "target": "ext:assemblyai:AssemblyAIGetSubtitles@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.AssemblyAIGetSubtitles",
+      "target": "ext:assemblyai:AssemblyAIGetSubtitles@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:assemblyai:AssemblyAIGetSubtitles@official-pre-a",
+      "target": "ext:assemblyai:AssemblyAIGetSubtitles@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AssemblyAILeMUR",
+      "target": "ext:assemblyai:AssemblyAILeMUR@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.assemblyai_lemur.AssemblyAILeMUR",
+      "target": "ext:assemblyai:AssemblyAILeMUR@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.AssemblyAILeMUR",
+      "target": "ext:assemblyai:AssemblyAILeMUR@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:assemblyai:AssemblyAILeMUR@official-pre-a",
+      "target": "ext:assemblyai:AssemblyAILeMUR@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AssemblyAIListTranscripts",
+      "target": "ext:assemblyai:AssemblyAIListTranscripts@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.assemblyai_list_transcripts.AssemblyAIListTranscripts",
+      "target": "ext:assemblyai:AssemblyAIListTranscripts@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.AssemblyAIListTranscripts",
+      "target": "ext:assemblyai:AssemblyAIListTranscripts@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:assemblyai:AssemblyAIListTranscripts@official-pre-a",
+      "target": "ext:assemblyai:AssemblyAIListTranscripts@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AssemblyAITranscriptionJobCreator",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.AssemblyAITranscriptionJobCreator",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:assemblyai:AssemblyAITranscriptionJobCreator@official-pre-a",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobCreator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AssemblyAITranscriptionJobPoller",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobPoller@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobPoller@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.assemblyai.AssemblyAITranscriptionJobPoller",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobPoller@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:assemblyai:AssemblyAITranscriptionJobPoller@official-pre-a",
+      "target": "ext:assemblyai:AssemblyAITranscriptionJobPoller@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_evaluator.CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabEvaluator",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabEvaluator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_rag_evaluator.CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabRAGEvaluator",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabRAGEvaluator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabRAGEvaluator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.cleanlab_remediator.CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cleanlab.CleanlabRemediator",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cleanlab:CleanlabRemediator@official-pre-a",
+      "target": "ext:cleanlab:CleanlabRemediator@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cloudflare.cloudflare.CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cloudflare.CloudflareWorkersAIEmbeddingsComponent",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:cloudflare:CloudflareWorkersAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAPIComponent",
+      "target": "ext:composio:ComposioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.composio_api.ComposioAPIComponent",
+      "target": "ext:composio:ComposioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAPIComponent",
+      "target": "ext:composio:ComposioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioCanvaAPIComponent",
+      "target": "ext:composio:ComposioCanvaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.canva_composio.ComposioCanvaAPIComponent",
+      "target": "ext:composio:ComposioCanvaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioCanvaAPIComponent",
+      "target": "ext:composio:ComposioCanvaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioCanvaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioCanvaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioCodaAPIComponent",
+      "target": "ext:composio:ComposioCodaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.coda_composio.ComposioCodaAPIComponent",
+      "target": "ext:composio:ComposioCodaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioCodaAPIComponent",
+      "target": "ext:composio:ComposioCodaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioCodaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioCodaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioSlackAPIComponent",
+      "target": "ext:composio:ComposioSlackAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.slack_composio.ComposioSlackAPIComponent",
+      "target": "ext:composio:ComposioSlackAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioSlackAPIComponent",
+      "target": "ext:composio:ComposioSlackAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioSlackAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioSlackAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioRedditAPIComponent",
+      "target": "ext:composio:ComposioRedditAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.reddit_composio.ComposioRedditAPIComponent",
+      "target": "ext:composio:ComposioRedditAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioRedditAPIComponent",
+      "target": "ext:composio:ComposioRedditAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioRedditAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioRedditAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioSlackbotAPIComponent",
+      "target": "ext:composio:ComposioSlackbotAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.slackbot_composio.ComposioSlackbotAPIComponent",
+      "target": "ext:composio:ComposioSlackbotAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioSlackbotAPIComponent",
+      "target": "ext:composio:ComposioSlackbotAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioSlackbotAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioSlackbotAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioPeopleDataLabsAPIComponent",
+      "target": "ext:composio:ComposioPeopleDataLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.peopledatalabs_composio.ComposioPeopleDataLabsAPIComponent",
+      "target": "ext:composio:ComposioPeopleDataLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioPeopleDataLabsAPIComponent",
+      "target": "ext:composio:ComposioPeopleDataLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioPeopleDataLabsAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioPeopleDataLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioPerplexityAIAPIComponent",
+      "target": "ext:composio:ComposioPerplexityAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.perplexityai_composio.ComposioPerplexityAIAPIComponent",
+      "target": "ext:composio:ComposioPerplexityAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioPerplexityAIAPIComponent",
+      "target": "ext:composio:ComposioPerplexityAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioPerplexityAIAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioPerplexityAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioSupabaseAPIComponent",
+      "target": "ext:composio:ComposioSupabaseAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.supabase_composio.ComposioSupabaseAPIComponent",
+      "target": "ext:composio:ComposioSupabaseAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioSupabaseAPIComponent",
+      "target": "ext:composio:ComposioSupabaseAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioSupabaseAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioSupabaseAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioSerpAPIComponent",
+      "target": "ext:composio:ComposioSerpAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.serpapi_composio.ComposioSerpAPIComponent",
+      "target": "ext:composio:ComposioSerpAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioSerpAPIComponent",
+      "target": "ext:composio:ComposioSerpAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioSerpAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioSerpAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioSnowflakeAPIComponent",
+      "target": "ext:composio:ComposioSnowflakeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.snowflake_composio.ComposioSnowflakeAPIComponent",
+      "target": "ext:composio:ComposioSnowflakeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioSnowflakeAPIComponent",
+      "target": "ext:composio:ComposioSnowflakeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioSnowflakeAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioSnowflakeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioTodoistAPIComponent",
+      "target": "ext:composio:ComposioTodoistAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.todoist_composio.ComposioTodoistAPIComponent",
+      "target": "ext:composio:ComposioTodoistAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioTodoistAPIComponent",
+      "target": "ext:composio:ComposioTodoistAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioTodoistAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioTodoistAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioTavilyAPIComponent",
+      "target": "ext:composio:ComposioTavilyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.tavily_composio.ComposioTavilyAPIComponent",
+      "target": "ext:composio:ComposioTavilyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioTavilyAPIComponent",
+      "target": "ext:composio:ComposioTavilyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioTavilyAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioTavilyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioYoutubeAPIComponent",
+      "target": "ext:composio:ComposioYoutubeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.youtube_composio.ComposioYoutubeAPIComponent",
+      "target": "ext:composio:ComposioYoutubeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioYoutubeAPIComponent",
+      "target": "ext:composio:ComposioYoutubeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioYoutubeAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioYoutubeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAgentQLAPIComponent",
+      "target": "ext:composio:ComposioAgentQLAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.agentql_composio.ComposioAgentQLAPIComponent",
+      "target": "ext:composio:ComposioAgentQLAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAgentQLAPIComponent",
+      "target": "ext:composio:ComposioAgentQLAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAgentQLAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAgentQLAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAgiledAPIComponent",
+      "target": "ext:composio:ComposioAgiledAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.agiled_composio.ComposioAgiledAPIComponent",
+      "target": "ext:composio:ComposioAgiledAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAgiledAPIComponent",
+      "target": "ext:composio:ComposioAgiledAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAgiledAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAgiledAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAirtableAPIComponent",
+      "target": "ext:composio:ComposioAirtableAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.airtable_composio.ComposioAirtableAPIComponent",
+      "target": "ext:composio:ComposioAirtableAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAirtableAPIComponent",
+      "target": "ext:composio:ComposioAirtableAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAirtableAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAirtableAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioApolloAPIComponent",
+      "target": "ext:composio:ComposioApolloAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.apollo_composio.ComposioApolloAPIComponent",
+      "target": "ext:composio:ComposioApolloAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioApolloAPIComponent",
+      "target": "ext:composio:ComposioApolloAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioApolloAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioApolloAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAsanaAPIComponent",
+      "target": "ext:composio:ComposioAsanaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.asana_composio.ComposioAsanaAPIComponent",
+      "target": "ext:composio:ComposioAsanaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAsanaAPIComponent",
+      "target": "ext:composio:ComposioAsanaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAsanaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAsanaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioAttioAPIComponent",
+      "target": "ext:composio:ComposioAttioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.attio_composio.ComposioAttioAPIComponent",
+      "target": "ext:composio:ComposioAttioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioAttioAPIComponent",
+      "target": "ext:composio:ComposioAttioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioAttioAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioAttioAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioBitbucketAPIComponent",
+      "target": "ext:composio:ComposioBitbucketAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.bitbucket_composio.ComposioBitbucketAPIComponent",
+      "target": "ext:composio:ComposioBitbucketAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioBitbucketAPIComponent",
+      "target": "ext:composio:ComposioBitbucketAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioBitbucketAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioBitbucketAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioBolnaAPIComponent",
+      "target": "ext:composio:ComposioBolnaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.bolna_composio.ComposioBolnaAPIComponent",
+      "target": "ext:composio:ComposioBolnaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioBolnaAPIComponent",
+      "target": "ext:composio:ComposioBolnaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioBolnaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioBolnaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioBrightdataAPIComponent",
+      "target": "ext:composio:ComposioBrightdataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.brightdata_composio.ComposioBrightdataAPIComponent",
+      "target": "ext:composio:ComposioBrightdataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioBrightdataAPIComponent",
+      "target": "ext:composio:ComposioBrightdataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioBrightdataAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioBrightdataAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioCalendlyAPIComponent",
+      "target": "ext:composio:ComposioCalendlyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.calendly_composio.ComposioCalendlyAPIComponent",
+      "target": "ext:composio:ComposioCalendlyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioCalendlyAPIComponent",
+      "target": "ext:composio:ComposioCalendlyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioCalendlyAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioCalendlyAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioCanvasAPIComponent",
+      "target": "ext:composio:ComposioCanvasAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.canvas_composio.ComposioCanvasAPIComponent",
+      "target": "ext:composio:ComposioCanvasAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioCanvasAPIComponent",
+      "target": "ext:composio:ComposioCanvasAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioCanvasAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioCanvasAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioContentfulAPIComponent",
+      "target": "ext:composio:ComposioContentfulAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.contentful_composio.ComposioContentfulAPIComponent",
+      "target": "ext:composio:ComposioContentfulAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioContentfulAPIComponent",
+      "target": "ext:composio:ComposioContentfulAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioContentfulAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioContentfulAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioDigicertAPIComponent",
+      "target": "ext:composio:ComposioDigicertAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.digicert_composio.ComposioDigicertAPIComponent",
+      "target": "ext:composio:ComposioDigicertAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioDigicertAPIComponent",
+      "target": "ext:composio:ComposioDigicertAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioDigicertAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioDigicertAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioDiscordAPIComponent",
+      "target": "ext:composio:ComposioDiscordAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.discord_composio.ComposioDiscordAPIComponent",
+      "target": "ext:composio:ComposioDiscordAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioDiscordAPIComponent",
+      "target": "ext:composio:ComposioDiscordAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioDiscordAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioDiscordAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioElevenLabsAPIComponent",
+      "target": "ext:composio:ComposioElevenLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.elevenlabs_composio.ComposioElevenLabsAPIComponent",
+      "target": "ext:composio:ComposioElevenLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioElevenLabsAPIComponent",
+      "target": "ext:composio:ComposioElevenLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioElevenLabsAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioElevenLabsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioExaAPIComponent",
+      "target": "ext:composio:ComposioExaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.exa_composio.ComposioExaAPIComponent",
+      "target": "ext:composio:ComposioExaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioExaAPIComponent",
+      "target": "ext:composio:ComposioExaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioExaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioExaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFigmaAPIComponent",
+      "target": "ext:composio:ComposioFigmaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.figma_composio.ComposioFigmaAPIComponent",
+      "target": "ext:composio:ComposioFigmaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFigmaAPIComponent",
+      "target": "ext:composio:ComposioFigmaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFigmaAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFigmaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFinageAPIComponent",
+      "target": "ext:composio:ComposioFinageAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.finage_composio.ComposioFinageAPIComponent",
+      "target": "ext:composio:ComposioFinageAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFinageAPIComponent",
+      "target": "ext:composio:ComposioFinageAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFinageAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFinageAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFirecrawlAPIComponent",
+      "target": "ext:composio:ComposioFirecrawlAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.firecrawl_composio.ComposioFirecrawlAPIComponent",
+      "target": "ext:composio:ComposioFirecrawlAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFirecrawlAPIComponent",
+      "target": "ext:composio:ComposioFirecrawlAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFirecrawlAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFirecrawlAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFirefliesAPIComponent",
+      "target": "ext:composio:ComposioFirefliesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.fireflies_composio.ComposioFirefliesAPIComponent",
+      "target": "ext:composio:ComposioFirefliesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFirefliesAPIComponent",
+      "target": "ext:composio:ComposioFirefliesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFirefliesAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFirefliesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFixerAPIComponent",
+      "target": "ext:composio:ComposioFixerAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.fixer_composio.ComposioFixerAPIComponent",
+      "target": "ext:composio:ComposioFixerAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFixerAPIComponent",
+      "target": "ext:composio:ComposioFixerAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFixerAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFixerAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFlexisignAPIComponent",
+      "target": "ext:composio:ComposioFlexisignAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.flexisign_composio.ComposioFlexisignAPIComponent",
+      "target": "ext:composio:ComposioFlexisignAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFlexisignAPIComponent",
+      "target": "ext:composio:ComposioFlexisignAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFlexisignAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFlexisignAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioFreshdeskAPIComponent",
+      "target": "ext:composio:ComposioFreshdeskAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.freshdesk_composio.ComposioFreshdeskAPIComponent",
+      "target": "ext:composio:ComposioFreshdeskAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioFreshdeskAPIComponent",
+      "target": "ext:composio:ComposioFreshdeskAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioFreshdeskAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioFreshdeskAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGitHubAPIComponent",
+      "target": "ext:composio:ComposioGitHubAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.github_composio.ComposioGitHubAPIComponent",
+      "target": "ext:composio:ComposioGitHubAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGitHubAPIComponent",
+      "target": "ext:composio:ComposioGitHubAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGitHubAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGitHubAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGmailAPIComponent",
+      "target": "ext:composio:ComposioGmailAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.gmail_composio.ComposioGmailAPIComponent",
+      "target": "ext:composio:ComposioGmailAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGmailAPIComponent",
+      "target": "ext:composio:ComposioGmailAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGmailAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGmailAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleBigQueryAPIComponent",
+      "target": "ext:composio:ComposioGoogleBigQueryAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googlebigquery_composio.ComposioGoogleBigQueryAPIComponent",
+      "target": "ext:composio:ComposioGoogleBigQueryAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleBigQueryAPIComponent",
+      "target": "ext:composio:ComposioGoogleBigQueryAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleBigQueryAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleBigQueryAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleCalendarAPIComponent",
+      "target": "ext:composio:ComposioGoogleCalendarAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googlecalendar_composio.ComposioGoogleCalendarAPIComponent",
+      "target": "ext:composio:ComposioGoogleCalendarAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleCalendarAPIComponent",
+      "target": "ext:composio:ComposioGoogleCalendarAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleCalendarAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleCalendarAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleclassroomAPIComponent",
+      "target": "ext:composio:ComposioGoogleclassroomAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googleclassroom_composio.ComposioGoogleclassroomAPIComponent",
+      "target": "ext:composio:ComposioGoogleclassroomAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleclassroomAPIComponent",
+      "target": "ext:composio:ComposioGoogleclassroomAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleclassroomAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleclassroomAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleDocsAPIComponent",
+      "target": "ext:composio:ComposioGoogleDocsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googledocs_composio.ComposioGoogleDocsAPIComponent",
+      "target": "ext:composio:ComposioGoogleDocsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleDocsAPIComponent",
+      "target": "ext:composio:ComposioGoogleDocsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleDocsAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleDocsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGooglemeetAPIComponent",
+      "target": "ext:composio:ComposioGooglemeetAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googlemeet_composio.ComposioGooglemeetAPIComponent",
+      "target": "ext:composio:ComposioGooglemeetAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGooglemeetAPIComponent",
+      "target": "ext:composio:ComposioGooglemeetAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGooglemeetAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGooglemeetAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleSheetsAPIComponent",
+      "target": "ext:composio:ComposioGoogleSheetsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googlesheets_composio.ComposioGoogleSheetsAPIComponent",
+      "target": "ext:composio:ComposioGoogleSheetsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleSheetsAPIComponent",
+      "target": "ext:composio:ComposioGoogleSheetsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleSheetsAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleSheetsAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioGoogleTasksAPIComponent",
+      "target": "ext:composio:ComposioGoogleTasksAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.googletasks_composio.ComposioGoogleTasksAPIComponent",
+      "target": "ext:composio:ComposioGoogleTasksAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioGoogleTasksAPIComponent",
+      "target": "ext:composio:ComposioGoogleTasksAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioGoogleTasksAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioGoogleTasksAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioHeygenAPIComponent",
+      "target": "ext:composio:ComposioHeygenAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.heygen_composio.ComposioHeygenAPIComponent",
+      "target": "ext:composio:ComposioHeygenAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioHeygenAPIComponent",
+      "target": "ext:composio:ComposioHeygenAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioHeygenAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioHeygenAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioInstagramAPIComponent",
+      "target": "ext:composio:ComposioInstagramAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.instagram_composio.ComposioInstagramAPIComponent",
+      "target": "ext:composio:ComposioInstagramAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioInstagramAPIComponent",
+      "target": "ext:composio:ComposioInstagramAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioInstagramAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioInstagramAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioJiraAPIComponent",
+      "target": "ext:composio:ComposioJiraAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.jira_composio.ComposioJiraAPIComponent",
+      "target": "ext:composio:ComposioJiraAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioJiraAPIComponent",
+      "target": "ext:composio:ComposioJiraAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioJiraAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioJiraAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioJotformAPIComponent",
+      "target": "ext:composio:ComposioJotformAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.jotform_composio.ComposioJotformAPIComponent",
+      "target": "ext:composio:ComposioJotformAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioJotformAPIComponent",
+      "target": "ext:composio:ComposioJotformAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioJotformAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioJotformAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioKlaviyoAPIComponent",
+      "target": "ext:composio:ComposioKlaviyoAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.klaviyo_composio.ComposioKlaviyoAPIComponent",
+      "target": "ext:composio:ComposioKlaviyoAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioKlaviyoAPIComponent",
+      "target": "ext:composio:ComposioKlaviyoAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioKlaviyoAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioKlaviyoAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioLinearAPIComponent",
+      "target": "ext:composio:ComposioLinearAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.linear_composio.ComposioLinearAPIComponent",
+      "target": "ext:composio:ComposioLinearAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioLinearAPIComponent",
+      "target": "ext:composio:ComposioLinearAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioLinearAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioLinearAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioListennotesAPIComponent",
+      "target": "ext:composio:ComposioListennotesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.listennotes_composio.ComposioListennotesAPIComponent",
+      "target": "ext:composio:ComposioListennotesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioListennotesAPIComponent",
+      "target": "ext:composio:ComposioListennotesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioListennotesAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioListennotesAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioMem0APIComponent",
+      "target": "ext:composio:ComposioMem0APIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.mem0_composio.ComposioMem0APIComponent",
+      "target": "ext:composio:ComposioMem0APIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioMem0APIComponent",
+      "target": "ext:composio:ComposioMem0APIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioMem0APIComponent@official-pre-a",
+      "target": "ext:composio:ComposioMem0APIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioMiroAPIComponent",
+      "target": "ext:composio:ComposioMiroAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.miro_composio.ComposioMiroAPIComponent",
+      "target": "ext:composio:ComposioMiroAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioMiroAPIComponent",
+      "target": "ext:composio:ComposioMiroAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioMiroAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioMiroAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioMissiveAPIComponent",
+      "target": "ext:composio:ComposioMissiveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.missive_composio.ComposioMissiveAPIComponent",
+      "target": "ext:composio:ComposioMissiveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioMissiveAPIComponent",
+      "target": "ext:composio:ComposioMissiveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioMissiveAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioMissiveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioNotionAPIComponent",
+      "target": "ext:composio:ComposioNotionAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.notion_composio.ComposioNotionAPIComponent",
+      "target": "ext:composio:ComposioNotionAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioNotionAPIComponent",
+      "target": "ext:composio:ComposioNotionAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioNotionAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioNotionAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioOneDriveAPIComponent",
+      "target": "ext:composio:ComposioOneDriveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.onedrive_composio.ComposioOneDriveAPIComponent",
+      "target": "ext:composio:ComposioOneDriveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioOneDriveAPIComponent",
+      "target": "ext:composio:ComposioOneDriveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioOneDriveAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioOneDriveAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioOutlookAPIComponent",
+      "target": "ext:composio:ComposioOutlookAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.outlook_composio.ComposioOutlookAPIComponent",
+      "target": "ext:composio:ComposioOutlookAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioOutlookAPIComponent",
+      "target": "ext:composio:ComposioOutlookAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioOutlookAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioOutlookAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioPandadocAPIComponent",
+      "target": "ext:composio:ComposioPandadocAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.pandadoc_composio.ComposioPandadocAPIComponent",
+      "target": "ext:composio:ComposioPandadocAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioPandadocAPIComponent",
+      "target": "ext:composio:ComposioPandadocAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioPandadocAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioPandadocAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioTimelinesAIAPIComponent",
+      "target": "ext:composio:ComposioTimelinesAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.timelinesai_composio.ComposioTimelinesAIAPIComponent",
+      "target": "ext:composio:ComposioTimelinesAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioTimelinesAIAPIComponent",
+      "target": "ext:composio:ComposioTimelinesAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioTimelinesAIAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioTimelinesAIAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioWrikeAPIComponent",
+      "target": "ext:composio:ComposioWrikeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.wrike_composio.ComposioWrikeAPIComponent",
+      "target": "ext:composio:ComposioWrikeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioWrikeAPIComponent",
+      "target": "ext:composio:ComposioWrikeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioWrikeAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioWrikeAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ComposioDropboxAPIComponent",
+      "target": "ext:composio:ComposioDropboxAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.dropbox_compnent.ComposioDropboxAPIComponent",
+      "target": "ext:composio:ComposioDropboxAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.composio.ComposioDropboxAPIComponent",
+      "target": "ext:composio:ComposioDropboxAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:composio:ComposioDropboxAPIComponent@official-pre-a",
+      "target": "ext:composio:ComposioDropboxAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ConfluenceComponent",
+      "target": "ext:confluence:ConfluenceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.confluence.confluence.ConfluenceComponent",
+      "target": "ext:confluence:ConfluenceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.confluence.ConfluenceComponent",
+      "target": "ext:confluence:ConfluenceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:confluence:ConfluenceComponent@official-pre-a",
+      "target": "ext:confluence:ConfluenceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.chunk_docling_document.ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:ChunkDoclingDocumentComponent@official-pre-a",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.docling_inline.DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:DoclingInlineComponent@official-pre-a",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.docling_remote.DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:DoclingRemoteComponent@official-pre-a",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.export_docling_document.ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:ExportDoclingDocumentComponent@official-pre-a",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GitLoaderComponent",
+      "target": "ext:git:GitLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.git.git.GitLoaderComponent",
+      "target": "ext:git:GitLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.git.GitLoaderComponent",
+      "target": "ext:git:GitLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:git:GitLoaderComponent@official-pre-a",
+      "target": "ext:git:GitLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GitExtractorComponent",
+      "target": "ext:git:GitExtractorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.git.gitextractor.GitExtractorComponent",
+      "target": "ext:git:GitExtractorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.git.GitExtractorComponent",
+      "target": "ext:git:GitExtractorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:git:GitExtractorComponent@official-pre-a",
+      "target": "ext:git:GitExtractorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.home_assistant_control.HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.HomeAssistantControl",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:homeassistant:HomeAssistantControl@official-pre-a",
+      "target": "ext:homeassistant:HomeAssistantControl@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.list_home_assistant_states.ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.homeassistant.ListHomeAssistantStates",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:homeassistant:ListHomeAssistantStates@official-pre-a",
+      "target": "ext:homeassistant:ListHomeAssistantStates@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CombinatorialReasonerComponent",
+      "target": "ext:icosacomputing:CombinatorialReasonerComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.icosacomputing.combinatorial_reasoner.CombinatorialReasonerComponent",
+      "target": "ext:icosacomputing:CombinatorialReasonerComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.icosacomputing.CombinatorialReasonerComponent",
+      "target": "ext:icosacomputing:CombinatorialReasonerComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:icosacomputing:CombinatorialReasonerComponent@official-pre-a",
+      "target": "ext:icosacomputing:CombinatorialReasonerComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.langwatch.langwatch.LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.langwatch.LangWatchComponent",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:langwatch:LangWatchComponent@official-pre-a",
+      "target": "ext:langwatch:LangWatchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "Mem0MemoryComponent",
+      "target": "ext:mem0:Mem0MemoryComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mem0.mem0_chat_memory.Mem0MemoryComponent",
+      "target": "ext:mem0:Mem0MemoryComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mem0.Mem0MemoryComponent",
+      "target": "ext:mem0:Mem0MemoryComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:mem0:Mem0MemoryComponent@official-pre-a",
+      "target": "ext:mem0:Mem0MemoryComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.convert_astra_results.ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.ConvertAstraToTwelveLabs",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:ConvertAstraToTwelveLabs@official-pre-a",
+      "target": "ext:twelvelabs:ConvertAstraToTwelveLabs@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.pegasus_index.PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.PegasusIndexVideo",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:PegasusIndexVideo@official-pre-a",
+      "target": "ext:twelvelabs:PegasusIndexVideo@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.split_video.SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.SplitVideoComponent",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:SplitVideoComponent@official-pre-a",
+      "target": "ext:twelvelabs:SplitVideoComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.twelvelabs_pegasus.TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsPegasus",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsPegasus@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsPegasus@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.text_embeddings.TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsTextEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_embeddings.TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsVideoEmbeddingsComponent",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_file.VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.VideoFileComponent",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:VideoFileComponent@official-pre-a",
+      "target": "ext:twelvelabs:VideoFileComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "IndexCreationError",
+      "target": "ext:twelvelabs:IndexCreationError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.pegasus_index.IndexCreationError",
+      "target": "ext:twelvelabs:IndexCreationError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.IndexCreationError",
+      "target": "ext:twelvelabs:IndexCreationError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:IndexCreationError@official-pre-a",
+      "target": "ext:twelvelabs:IndexCreationError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TaskError",
+      "target": "ext:twelvelabs:TaskError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.pegasus_index.TaskError",
+      "target": "ext:twelvelabs:TaskError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TaskError",
+      "target": "ext:twelvelabs:TaskError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TaskError@official-pre-a",
+      "target": "ext:twelvelabs:TaskError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TaskTimeoutError",
+      "target": "ext:twelvelabs:TaskTimeoutError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.pegasus_index.TaskTimeoutError",
+      "target": "ext:twelvelabs:TaskTimeoutError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TaskTimeoutError",
+      "target": "ext:twelvelabs:TaskTimeoutError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TaskTimeoutError@official-pre-a",
+      "target": "ext:twelvelabs:TaskTimeoutError@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsTextEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.text_embeddings.TwelveLabsTextEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsTextEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsTextEmbeddings@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsTextEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TwelveLabsVideoEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.video_embeddings.TwelveLabsVideoEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.twelvelabs.TwelveLabsVideoEmbeddings",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:twelvelabs:TwelveLabsVideoEmbeddings@official-pre-a",
+      "target": "ext:twelvelabs:TwelveLabsVideoEmbeddings@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "UnstructuredComponent",
+      "target": "ext:unstructured:UnstructuredComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.unstructured.unstructured.UnstructuredComponent",
+      "target": "ext:unstructured:UnstructuredComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.unstructured.UnstructuredComponent",
+      "target": "ext:unstructured:UnstructuredComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:unstructured:UnstructuredComponent@official-pre-a",
+      "target": "ext:unstructured:UnstructuredComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

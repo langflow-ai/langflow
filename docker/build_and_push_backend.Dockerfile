@@ -109,6 +109,22 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/vectara \
         ./src/bundles/weaviate \
         ./src/bundles/zep \
+        ./src/bundles/notion \
+        ./src/bundles/agentql \
+        ./src/bundles/apify \
+        ./src/bundles/assemblyai \
+        ./src/bundles/cleanlab \
+        ./src/bundles/cloudflare \
+        ./src/bundles/composio \
+        ./src/bundles/confluence \
+        ./src/bundles/docling \
+        ./src/bundles/git \
+        ./src/bundles/homeassistant \
+        ./src/bundles/icosacomputing \
+        ./src/bundles/langwatch \
+        ./src/bundles/mem0 \
+        ./src/bundles/twelvelabs \
+        ./src/bundles/unstructured \
         "./src/backend/base[complete,postgresql]"
 
 ################################

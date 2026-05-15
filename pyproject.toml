@@ -91,6 +91,22 @@ dependencies = [
     "lfx-vectara>=0.1.0",
     "lfx-weaviate>=0.1.0",
     "lfx-zep>=0.1.0",
+    "lfx-notion>=0.1.0",
+    "lfx-agentql>=0.1.0",
+    "lfx-apify>=0.1.0",
+    "lfx-assemblyai>=0.1.0",
+    "lfx-cleanlab>=0.1.0",
+    "lfx-cloudflare>=0.1.0",
+    "lfx-composio>=0.1.0",
+    "lfx-confluence>=0.1.0",
+    "lfx-docling>=0.1.0",
+    "lfx-git>=0.1.0",
+    "lfx-homeassistant>=0.1.0",
+    "lfx-icosacomputing>=0.1.0",
+    "lfx-langwatch>=0.1.0",
+    "lfx-mem0>=0.1.0",
+    "lfx-twelvelabs>=0.1.0",
+    "lfx-unstructured>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -207,6 +223,22 @@ lfx-upstash = { workspace = true }
 lfx-vectara = { workspace = true }
 lfx-weaviate = { workspace = true }
 lfx-zep = { workspace = true }
+lfx-notion = { workspace = true }
+lfx-agentql = { workspace = true }
+lfx-apify = { workspace = true }
+lfx-assemblyai = { workspace = true }
+lfx-cleanlab = { workspace = true }
+lfx-cloudflare = { workspace = true }
+lfx-composio = { workspace = true }
+lfx-confluence = { workspace = true }
+lfx-docling = { workspace = true }
+lfx-git = { workspace = true }
+lfx-homeassistant = { workspace = true }
+lfx-icosacomputing = { workspace = true }
+lfx-langwatch = { workspace = true }
+lfx-mem0 = { workspace = true }
+lfx-twelvelabs = { workspace = true }
+lfx-unstructured = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -277,6 +309,22 @@ members = [
     "src/bundles/vectara",
     "src/bundles/weaviate",
     "src/bundles/zep",
+    "src/bundles/notion",
+    "src/bundles/agentql",
+    "src/bundles/apify",
+    "src/bundles/assemblyai",
+    "src/bundles/cleanlab",
+    "src/bundles/cloudflare",
+    "src/bundles/composio",
+    "src/bundles/confluence",
+    "src/bundles/docling",
+    "src/bundles/git",
+    "src/bundles/homeassistant",
+    "src/bundles/icosacomputing",
+    "src/bundles/langwatch",
+    "src/bundles/mem0",
+    "src/bundles/twelvelabs",
+    "src/bundles/unstructured",
     # langflow-extensions:bundle-members-end
 ]
 

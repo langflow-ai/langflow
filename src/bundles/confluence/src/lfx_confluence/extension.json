@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-confluence",
+  "version": "0.1.0",
+  "name": "Confluence",
+  "description": "Confluence component(s) as a standalone Langflow Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "confluence",
+      "path": "components/confluence"
+    }
+  ]
+}

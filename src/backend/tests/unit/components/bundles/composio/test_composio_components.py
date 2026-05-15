@@ -4,8 +4,8 @@ import os
 from unittest.mock import patch
 
 import pytest
-from lfx.base.composio.composio_base import ComposioBaseComponent
-from lfx.components.composio.composio_api import ComposioAPIComponent
+from lfx_composio.base.composio_base import ComposioBaseComponent
+from lfx_composio.components.composio.composio_api import ComposioAPIComponent
 
 
 @pytest.mark.unit

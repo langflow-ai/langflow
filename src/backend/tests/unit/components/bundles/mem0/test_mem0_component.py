@@ -4,7 +4,7 @@ import os
 from unittest.mock import patch
 
 import pytest
-from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
+from lfx_mem0.components.mem0.mem0_chat_memory import Mem0MemoryComponent
 
 
 @pytest.mark.unit
@@ -22,7 +22,7 @@ class TestMem0CloudValidation:
             error_msg = str(exc_info.value).lower()
             assert "astra" in error_msg or "cloud" in error_msg
 
-    @patch("lfx.components.mem0.mem0_chat_memory.Memory")
+    @patch("lfx_mem0.components.mem0.mem0_chat_memory.Memory")
     def test_build_mem0_works_when_not_in_cloud(self, mock_memory):
         """Test that build_mem0 works when ASTRA_CLOUD_DISABLE_COMPONENT is false."""
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):

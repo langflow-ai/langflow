@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-cloudflare",
+  "version": "0.1.0",
+  "name": "Cloudflare",
+  "description": "Cloudflare component(s) as a standalone Langflow Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "cloudflare",
+      "path": "components/cloudflare"
+    }
+  ]
+}

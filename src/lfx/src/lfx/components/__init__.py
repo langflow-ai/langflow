@@ -7,37 +7,23 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     # These imports are only for type checking and match _dynamic_imports
     from lfx.components import (
-        Notion,
-        agentql,
         altk,
-        apify,
-        assemblyai,
         chains,
-        cleanlab,
-        cloudflare,
         codeagents,
-        composio,
-        confluence,
         crewai,
         cuga,
         custom_component,
         data,
         deactivated,
-        docling,
         documentloaders,
         embeddings,
         files_ingestion,
-        git,
         google,
         helpers,
-        homeassistant,
-        icosacomputing,
         input_output,
         langchain_utilities,
-        langwatch,
         link_extractors,
         logic,
-        mem0,
         models_and_agents,
         olivya,
         output_parsers,
@@ -46,8 +32,6 @@ if TYPE_CHECKING:
         textsplitters,
         toolkits,
         tools,
-        twelvelabs,
-        unstructured,
         vectorstores,
         vlmrun,
         yahoosearch,
@@ -57,38 +41,24 @@ if TYPE_CHECKING:
 # Dynamic imports mapping - maps both modules and individual components
 _dynamic_imports = {
     # Category modules (existing functionality)
-    "agentql": "__module__",
     "altk": "__module__",
-    "apify": "__module__",
-    "assemblyai": "__module__",
     "chains": "__module__",
-    "cleanlab": "__module__",
-    "cloudflare": "__module__",
-    "composio": "__module__",
-    "confluence": "__module__",
     "crewai": "__module__",
     "cuga": "__module__",
     "codeagents": "__module__",
     "custom_component": "__module__",
     "data": "__module__",
     "deactivated": "__module__",
-    "docling": "__module__",
     "documentloaders": "__module__",
     "embeddings": "__module__",
     "files_ingestion": "__module__",
-    "git": "__module__",
     "google": "__module__",
     "helpers": "__module__",
-    "homeassistant": "__module__",
-    "icosacomputing": "__module__",
     "input_output": "__module__",
     "langchain_utilities": "__module__",
-    "langwatch": "__module__",
     "link_extractors": "__module__",
     "logic": "__module__",
-    "mem0": "__module__",
     "models_and_agents": "__module__",
-    "Notion": "__module__",
     "olivya": "__module__",
     "output_parsers": "__module__",
     "processing": "__module__",
@@ -96,8 +66,6 @@ _dynamic_imports = {
     "textsplitters": "__module__",
     "toolkits": "__module__",
     "tools": "__module__",
-    "twelvelabs": "__module__",
-    "unstructured": "__module__",
     "vectorstores": "__module__",
     "vlmrun": "__module__",
     "yahoosearch": "__module__",
@@ -109,7 +77,7 @@ _discovered_modules = set()
 
 def _discover_components_from_module(module_name):
     """Discover individual components from a specific module on-demand."""
-    if module_name in _discovered_modules or module_name == "Notion":
+    if module_name in _discovered_modules or module_name == "notion":
         return
 
     try:
@@ -133,37 +101,23 @@ def _discover_components_from_module(module_name):
 
 # Static base __all__ with module names
 __all__ = [
-    "Notion",
-    "agentql",
     "altk",
-    "apify",
-    "assemblyai",
     "chains",
-    "cleanlab",
-    "cloudflare",
     "codeagents",
-    "composio",
-    "confluence",
     "crewai",
     "cuga",
     "custom_component",
     "data",
     "deactivated",
-    "docling",
     "documentloaders",
     "embeddings",
     "files_ingestion",
-    "git",
     "google",
     "helpers",
-    "homeassistant",
-    "icosacomputing",
     "input_output",
     "langchain_utilities",
-    "langwatch",
     "link_extractors",
     "logic",
-    "mem0",
     "models_and_agents",
     "olivya",
     "output_parsers",
@@ -172,8 +126,6 @@ __all__ = [
     "textsplitters",
     "toolkits",
     "tools",
-    "twelvelabs",
-    "unstructured",
     "vectorstores",
     "vlmrun",
     "yahoosearch",
@@ -196,7 +148,7 @@ def __getattr__(attr_name: str) -> Any:
         undiscovered_modules = [
             name
             for name in _dynamic_imports
-            if _dynamic_imports[name] == "__module__" and name not in _discovered_modules and name != "Notion"
+            if _dynamic_imports[name] == "__module__" and name not in _discovered_modules and name != "notion"
         ]
 
         # Discover components from undiscovered modules

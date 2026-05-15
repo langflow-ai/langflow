@@ -4,8 +4,8 @@ import os
 from unittest.mock import patch
 
 import pytest
-from lfx.components.twelvelabs.split_video import SplitVideoComponent
-from lfx.components.twelvelabs.video_file import VideoFileComponent
+from lfx_twelvelabs.components.twelvelabs.split_video import SplitVideoComponent
+from lfx_twelvelabs.components.twelvelabs.video_file import VideoFileComponent
 
 
 @pytest.mark.unit

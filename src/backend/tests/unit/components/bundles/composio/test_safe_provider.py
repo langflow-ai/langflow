@@ -13,7 +13,7 @@ import pytest
 composio = pytest.importorskip("composio", reason="composio extra not installed in this env")
 pytest.importorskip("composio_langchain", reason="composio extra not installed in this env")
 
-from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema  # noqa: E402
+from lfx_composio.base.safe_provider import SafeLangchainProvider, _sanitize_schema  # noqa: E402
 
 
 class TestSanitizeSchema:
