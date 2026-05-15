@@ -346,7 +346,7 @@ def load_extension(
     # Multi-bundle is rejected by the schema, but we re-check here because
     # the loader is the runtime gate; a forged manifest that bypassed the
     # schema layer would otherwise silently load only the first bundle.
-    if len(manifest.bundles) > 1:
+    if len(manifest.bundles) != 1:
         result.errors.append(
             ExtensionError(
                 code="multi-bundle-deferred-in-this-milestone",
