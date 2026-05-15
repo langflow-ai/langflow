@@ -461,6 +461,159 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/vllm
 
+# Bundle re-attach: ``lfx-cassandra`` ships the Cassandra
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/cassandra
+
+# Bundle re-attach: ``lfx-chroma`` ships the Chroma
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/chroma
+
+# Bundle re-attach: ``lfx-clickhouse`` ships the Clickhouse
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/clickhouse
+
+# Bundle re-attach: ``lfx-couchbase`` ships the Couchbase
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/couchbase
+
+# Bundle re-attach: ``lfx-elastic`` ships the Elastic
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/elastic
+
+# Bundle re-attach: ``lfx-faiss`` ships the Faiss
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/faiss
+
+# Bundle re-attach: ``lfx-milvus`` ships the Milvus
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/milvus
+
+# Bundle re-attach: ``lfx-mongodb`` ships the Mongodb
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/mongodb
+
+# Bundle re-attach: ``lfx-pgvector`` ships the Pgvector
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/pgvector
+
+# Bundle re-attach: ``lfx-pinecone`` ships the Pinecone
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/pinecone
+
+# Bundle re-attach: ``lfx-qdrant`` ships the Qdrant
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/qdrant
+
+# Bundle re-attach: ``lfx-redis`` ships the Redis
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/redis
+
+# Bundle re-attach: ``lfx-supabase`` ships the Supabase
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/supabase
+
+# Bundle re-attach: ``lfx-upstash`` ships the Upstash
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/upstash
+
+# Bundle re-attach: ``lfx-vectara`` ships the Vectara
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/vectara
+
+# Bundle re-attach: ``lfx-weaviate`` ships the Weaviate
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/weaviate
+
+# Bundle re-attach: ``lfx-zep`` ships the Zep
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/zep
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

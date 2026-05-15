@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.embeddings import Embeddings
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.components.elastic.opensearch_multimodal import (
+from lfx.schema.data import Data
+from lfx_elastic.components.elastic.opensearch_multimodal import (
     OpenSearchVectorStoreComponentMultimodalMultiEmbedding,
     get_embedding_field_name,
     normalize_model_name,
 )
-from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -317,7 +317,7 @@ class TestOpenSearchMultimodalComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Could not determine embedding model name"):
             component._get_embedding_model_name(embedding)
 
-    @patch("lfx.components.elastic.opensearch_multimodal.OpenSearch")
+    @patch("lfx_elastic.components.elastic.opensearch_multimodal.OpenSearch")
     def test_detect_available_models_from_index(
         self,
         mock_opensearch_class,

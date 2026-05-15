@@ -13,8 +13,8 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from lfx.components.qdrant import QdrantVectorStoreComponent
 from lfx.schema.data import Data
+from lfx_qdrant import QdrantVectorStoreComponent
 
 
 def _make_component(documents: list[Document]) -> QdrantVectorStoreComponent:
@@ -35,7 +35,7 @@ def _captured_ids(documents: list[Document]) -> list[str]:
         captured["ids"] = ids
         return MagicMock()
 
-    with patch("lfx.components.qdrant.qdrant.Qdrant.from_documents", side_effect=fake_from_documents):
+    with patch("lfx_qdrant.components.qdrant.qdrant.Qdrant.from_documents", side_effect=fake_from_documents):
         component.build_vector_store()
 
     return captured["ids"]

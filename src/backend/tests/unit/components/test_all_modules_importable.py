@@ -583,7 +583,7 @@ class TestDirectModuleImports:
         imported after fixing the deprecated langchain.embeddings.base import.
         """
         try:
-            from lfx.components.qdrant import QdrantVectorStoreComponent
+            from lfx_qdrant import QdrantVectorStoreComponent
 
             # Verify it's a class
             assert isinstance(QdrantVectorStoreComponent, type)

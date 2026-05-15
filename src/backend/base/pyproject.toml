@@ -190,14 +190,8 @@ local = [
 ]
 
 # Individual database providers
-couchbase = ["couchbase>=4.2.1"]
-cassandra = ["cassio>=0.1.7"]
-clickhouse = ["clickhouse-connect==0.7.19"]
 
 
-mongodb = ["pymongo==4.10.1"]
-supabase = ["supabase>=2.6.0,<3.0.0"]
-redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
 
 # Individual vector store providers
@@ -205,15 +199,6 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
-weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
-chroma = [
-    "chromadb>=1.0.0,<2.0.0",
-    "langchain-chroma~=0.2.6"
-]
-upstash = ["upstash-vector==0.6.0"]
-pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
-milvus = ["langchain-milvus~=0.3.2"]
 mongodb-vectors = ["langchain-mongodb==0.7.0"]
 # Individual LLM providers
 google = [
@@ -277,7 +262,6 @@ markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
-pgvector = ["pgvector>=0.4.2"]
 litellm = [
     "litellm>=1.83.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
@@ -287,7 +271,6 @@ litellm = [
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
 ]
-zep = ["zep-python==2.0.2"]
 markdown = ["Markdown>=3.8.0"]
 kubernetes = ["kubernetes==31.0.0"]
 json-repair = ["json_repair==0.30.3"]
@@ -374,20 +357,8 @@ ibm-watsonx-clients = [
 ]
 
 complete = [
-    "langflow-base[couchbase]",
-    "langflow-base[cassandra]",
-    "langflow-base[clickhouse]",
-    "langflow-base[mongodb]",
-    "langflow-base[supabase]",
-    "langflow-base[redis]",
     "langflow-base[elasticsearch]",
     "langflow-base[faiss]",
-    "langflow-base[qdrant]",
-    "langflow-base[weaviate]",
-    "langflow-base[chroma]",
-    "langflow-base[upstash]",
-    "langflow-base[pinecone]",
-    "langflow-base[milvus]",
     "langflow-base[mongodb-vectors]",
     "langflow-base[google]",
     "langflow-base[langfuse]",
@@ -416,8 +387,6 @@ complete = [
     "langflow-base[aws]",
     "langflow-base[numexpr]",
     "langflow-base[qianfan]",
-    "langflow-base[pgvector]",
-    "langflow-base[zep]",
     "langflow-base[markdown]",
     "langflow-base[kubernetes]",
     "langflow-base[json-repair]",

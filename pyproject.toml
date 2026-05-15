@@ -74,6 +74,23 @@ dependencies = [
     "lfx-xai>=0.1.0",
     "lfx-cometapi>=0.1.0",
     "lfx-vllm>=0.1.0",
+    "lfx-cassandra>=0.1.0",
+    "lfx-chroma>=0.1.0",
+    "lfx-clickhouse>=0.1.0",
+    "lfx-couchbase>=0.1.0",
+    "lfx-elastic>=0.1.0",
+    "lfx-faiss>=0.1.0",
+    "lfx-milvus>=0.1.0",
+    "lfx-mongodb>=0.1.0",
+    "lfx-pgvector>=0.1.0",
+    "lfx-pinecone>=0.1.0",
+    "lfx-qdrant>=0.1.0",
+    "lfx-redis>=0.1.0",
+    "lfx-supabase>=0.1.0",
+    "lfx-upstash>=0.1.0",
+    "lfx-vectara>=0.1.0",
+    "lfx-weaviate>=0.1.0",
+    "lfx-zep>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -173,6 +190,23 @@ lfx-vertexai = { workspace = true }
 lfx-xai = { workspace = true }
 lfx-cometapi = { workspace = true }
 lfx-vllm = { workspace = true }
+lfx-cassandra = { workspace = true }
+lfx-chroma = { workspace = true }
+lfx-clickhouse = { workspace = true }
+lfx-couchbase = { workspace = true }
+lfx-elastic = { workspace = true }
+lfx-faiss = { workspace = true }
+lfx-milvus = { workspace = true }
+lfx-mongodb = { workspace = true }
+lfx-pgvector = { workspace = true }
+lfx-pinecone = { workspace = true }
+lfx-qdrant = { workspace = true }
+lfx-redis = { workspace = true }
+lfx-supabase = { workspace = true }
+lfx-upstash = { workspace = true }
+lfx-vectara = { workspace = true }
+lfx-weaviate = { workspace = true }
+lfx-zep = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -226,6 +260,23 @@ members = [
     "src/bundles/xai",
     "src/bundles/cometapi",
     "src/bundles/vllm",
+    "src/bundles/cassandra",
+    "src/bundles/chroma",
+    "src/bundles/clickhouse",
+    "src/bundles/couchbase",
+    "src/bundles/elastic",
+    "src/bundles/faiss",
+    "src/bundles/milvus",
+    "src/bundles/mongodb",
+    "src/bundles/pgvector",
+    "src/bundles/pinecone",
+    "src/bundles/qdrant",
+    "src/bundles/redis",
+    "src/bundles/supabase",
+    "src/bundles/upstash",
+    "src/bundles/vectara",
+    "src/bundles/weaviate",
+    "src/bundles/zep",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -462,9 +513,6 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
     "SLF001",  # Chroma client private member access
-]
-"src/lfx/src/lfx/components/mongodb/mongodb_atlas.py" = [
-    "SLF001",  # MongoDB collection private member access
 ]
 "src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
     "S102",  # Use of exec/eval for dynamic code execution

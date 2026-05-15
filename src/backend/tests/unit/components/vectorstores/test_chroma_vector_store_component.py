@@ -3,8 +3,8 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
+from lfx_chroma import ChromaVectorStoreComponent
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 

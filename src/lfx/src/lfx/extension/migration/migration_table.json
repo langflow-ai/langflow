@@ -1880,6 +1880,476 @@
       "legacy_slot": "ext:vllm:VllmEmbeddingsComponent@official-pre-a",
       "target": "ext:vllm:VllmEmbeddingsComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CassandraVectorStoreComponent",
+      "target": "ext:cassandra:CassandraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.cassandra.CassandraVectorStoreComponent",
+      "target": "ext:cassandra:CassandraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.CassandraVectorStoreComponent",
+      "target": "ext:cassandra:CassandraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cassandra:CassandraVectorStoreComponent@official-pre-a",
+      "target": "ext:cassandra:CassandraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CassandraGraphVectorStoreComponent",
+      "target": "ext:cassandra:CassandraGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.cassandra_graph.CassandraGraphVectorStoreComponent",
+      "target": "ext:cassandra:CassandraGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.CassandraGraphVectorStoreComponent",
+      "target": "ext:cassandra:CassandraGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cassandra:CassandraGraphVectorStoreComponent@official-pre-a",
+      "target": "ext:cassandra:CassandraGraphVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CassandraChatMemory",
+      "target": "ext:cassandra:CassandraChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.cassandra_chat.CassandraChatMemory",
+      "target": "ext:cassandra:CassandraChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cassandra.CassandraChatMemory",
+      "target": "ext:cassandra:CassandraChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cassandra:CassandraChatMemory@official-pre-a",
+      "target": "ext:cassandra:CassandraChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ChromaVectorStoreComponent",
+      "target": "ext:chroma:ChromaVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.chroma.chroma.ChromaVectorStoreComponent",
+      "target": "ext:chroma:ChromaVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.chroma.ChromaVectorStoreComponent",
+      "target": "ext:chroma:ChromaVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:chroma:ChromaVectorStoreComponent@official-pre-a",
+      "target": "ext:chroma:ChromaVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ClickhouseVectorStoreComponent",
+      "target": "ext:clickhouse:ClickhouseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.clickhouse.clickhouse.ClickhouseVectorStoreComponent",
+      "target": "ext:clickhouse:ClickhouseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.clickhouse.ClickhouseVectorStoreComponent",
+      "target": "ext:clickhouse:ClickhouseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:clickhouse:ClickhouseVectorStoreComponent@official-pre-a",
+      "target": "ext:clickhouse:ClickhouseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CouchbaseVectorStoreComponent",
+      "target": "ext:couchbase:CouchbaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.couchbase.couchbase.CouchbaseVectorStoreComponent",
+      "target": "ext:couchbase:CouchbaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.couchbase.CouchbaseVectorStoreComponent",
+      "target": "ext:couchbase:CouchbaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:couchbase:CouchbaseVectorStoreComponent@official-pre-a",
+      "target": "ext:couchbase:CouchbaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.elasticsearch.ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.ElasticsearchVectorStoreComponent",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:ElasticsearchVectorStoreComponent@official-pre-a",
+      "target": "ext:elastic:ElasticsearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.opensearch.OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.OpenSearchVectorStoreComponent",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:OpenSearchVectorStoreComponent@official-pre-a",
+      "target": "ext:elastic:OpenSearchVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.opensearch_multimodal.OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.elastic.OpenSearchVectorStoreComponentMultimodalMultiEmbedding",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official-pre-a",
+      "target": "ext:elastic:OpenSearchVectorStoreComponentMultimodalMultiEmbedding@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.faiss.faiss.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.faiss.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:faiss:FaissVectorStoreComponent@official-pre-a",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.FAISS.faiss.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.FAISS.FaissVectorStoreComponent",
+      "target": "ext:faiss:FaissVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "MilvusVectorStoreComponent",
+      "target": "ext:milvus:MilvusVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.milvus.milvus.MilvusVectorStoreComponent",
+      "target": "ext:milvus:MilvusVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.milvus.MilvusVectorStoreComponent",
+      "target": "ext:milvus:MilvusVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:milvus:MilvusVectorStoreComponent@official-pre-a",
+      "target": "ext:milvus:MilvusVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "MongoVectorStoreComponent",
+      "target": "ext:mongodb:MongoVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mongodb.mongodb_atlas.MongoVectorStoreComponent",
+      "target": "ext:mongodb:MongoVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.mongodb.MongoVectorStoreComponent",
+      "target": "ext:mongodb:MongoVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:mongodb:MongoVectorStoreComponent@official-pre-a",
+      "target": "ext:mongodb:MongoVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "PGVectorStoreComponent",
+      "target": "ext:pgvector:PGVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.pgvector.pgvector.PGVectorStoreComponent",
+      "target": "ext:pgvector:PGVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.pgvector.PGVectorStoreComponent",
+      "target": "ext:pgvector:PGVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:pgvector:PGVectorStoreComponent@official-pre-a",
+      "target": "ext:pgvector:PGVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "PineconeVectorStoreComponent",
+      "target": "ext:pinecone:PineconeVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.pinecone.pinecone.PineconeVectorStoreComponent",
+      "target": "ext:pinecone:PineconeVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.pinecone.PineconeVectorStoreComponent",
+      "target": "ext:pinecone:PineconeVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:pinecone:PineconeVectorStoreComponent@official-pre-a",
+      "target": "ext:pinecone:PineconeVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "QdrantVectorStoreComponent",
+      "target": "ext:qdrant:QdrantVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.qdrant.qdrant.QdrantVectorStoreComponent",
+      "target": "ext:qdrant:QdrantVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.qdrant.QdrantVectorStoreComponent",
+      "target": "ext:qdrant:QdrantVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:qdrant:QdrantVectorStoreComponent@official-pre-a",
+      "target": "ext:qdrant:QdrantVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.redis.redis.RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.redis.RedisVectorStoreComponent",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:redis:RedisVectorStoreComponent@official-pre-a",
+      "target": "ext:redis:RedisVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.redis.redis_chat.RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.redis.RedisIndexChatMemory",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:redis:RedisIndexChatMemory@official-pre-a",
+      "target": "ext:redis:RedisIndexChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SupabaseVectorStoreComponent",
+      "target": "ext:supabase:SupabaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.supabase.supabase.SupabaseVectorStoreComponent",
+      "target": "ext:supabase:SupabaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.supabase.SupabaseVectorStoreComponent",
+      "target": "ext:supabase:SupabaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:supabase:SupabaseVectorStoreComponent@official-pre-a",
+      "target": "ext:supabase:SupabaseVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "UpstashVectorStoreComponent",
+      "target": "ext:upstash:UpstashVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.upstash.upstash.UpstashVectorStoreComponent",
+      "target": "ext:upstash:UpstashVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.upstash.UpstashVectorStoreComponent",
+      "target": "ext:upstash:UpstashVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:upstash:UpstashVectorStoreComponent@official-pre-a",
+      "target": "ext:upstash:UpstashVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.vectara.VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.VectaraVectorStoreComponent",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vectara:VectaraVectorStoreComponent@official-pre-a",
+      "target": "ext:vectara:VectaraVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.vectara_rag.VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vectara.VectaraRagComponent",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vectara:VectaraRagComponent@official-pre-a",
+      "target": "ext:vectara:VectaraRagComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WeaviateVectorStoreComponent",
+      "target": "ext:weaviate:WeaviateVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.weaviate.weaviate.WeaviateVectorStoreComponent",
+      "target": "ext:weaviate:WeaviateVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.weaviate.WeaviateVectorStoreComponent",
+      "target": "ext:weaviate:WeaviateVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:weaviate:WeaviateVectorStoreComponent@official-pre-a",
+      "target": "ext:weaviate:WeaviateVectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ZepChatMemory",
+      "target": "ext:zep:ZepChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.zep.zep.ZepChatMemory",
+      "target": "ext:zep:ZepChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.zep.ZepChatMemory",
+      "target": "ext:zep:ZepChatMemory@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:zep:ZepChatMemory@official-pre-a",
+      "target": "ext:zep:ZepChatMemory@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

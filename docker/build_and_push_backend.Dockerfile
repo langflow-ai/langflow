@@ -92,6 +92,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/xai \
         ./src/bundles/cometapi \
         ./src/bundles/vllm \
+        ./src/bundles/cassandra \
+        ./src/bundles/chroma \
+        ./src/bundles/clickhouse \
+        ./src/bundles/couchbase \
+        ./src/bundles/elastic \
+        ./src/bundles/faiss \
+        ./src/bundles/milvus \
+        ./src/bundles/mongodb \
+        ./src/bundles/pgvector \
+        ./src/bundles/pinecone \
+        ./src/bundles/qdrant \
+        ./src/bundles/redis \
+        ./src/bundles/supabase \
+        ./src/bundles/upstash \
+        ./src/bundles/vectara \
+        ./src/bundles/weaviate \
+        ./src/bundles/zep \
         "./src/backend/base[complete,postgresql]"
 
 ################################

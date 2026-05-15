@@ -37,12 +37,18 @@ members = [
     "lfx-azure",
     "lfx-baidu",
     "lfx-bing",
+    "lfx-cassandra",
+    "lfx-chroma",
+    "lfx-clickhouse",
     "lfx-cohere",
     "lfx-cometapi",
+    "lfx-couchbase",
     "lfx-datastax",
     "lfx-deepseek",
     "lfx-duckduckgo",
+    "lfx-elastic",
     "lfx-exa",
+    "lfx-faiss",
     "lfx-firecrawl",
     "lfx-glean",
     "lfx-groq",
@@ -52,7 +58,9 @@ members = [
     "lfx-litellm",
     "lfx-lmstudio",
     "lfx-maritalk",
+    "lfx-milvus",
     "lfx-mistral",
+    "lfx-mongodb",
     "lfx-needle",
     "lfx-notdiamond",
     "lfx-novita",
@@ -61,17 +69,26 @@ members = [
     "lfx-openai",
     "lfx-openrouter",
     "lfx-perplexity",
+    "lfx-pgvector",
+    "lfx-pinecone",
+    "lfx-qdrant",
+    "lfx-redis",
     "lfx-sambanova",
     "lfx-scrapegraph",
     "lfx-searchapi",
     "lfx-serpapi",
+    "lfx-supabase",
     "lfx-tavily",
+    "lfx-upstash",
+    "lfx-vectara",
     "lfx-vertexai",
     "lfx-vllm",
+    "lfx-weaviate",
     "lfx-wikipedia",
     "lfx-wolframalpha",
     "lfx-xai",
     "lfx-youtube",
+    "lfx-zep",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7225,12 +7242,18 @@ dependencies = [
     { name = "lfx-azure" },
     { name = "lfx-baidu" },
     { name = "lfx-bing" },
+    { name = "lfx-cassandra" },
+    { name = "lfx-chroma" },
+    { name = "lfx-clickhouse" },
     { name = "lfx-cohere" },
     { name = "lfx-cometapi" },
+    { name = "lfx-couchbase" },
     { name = "lfx-datastax" },
     { name = "lfx-deepseek" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-elastic" },
     { name = "lfx-exa" },
+    { name = "lfx-faiss" },
     { name = "lfx-firecrawl" },
     { name = "lfx-glean" },
     { name = "lfx-groq" },
@@ -7240,7 +7263,9 @@ dependencies = [
     { name = "lfx-litellm" },
     { name = "lfx-lmstudio" },
     { name = "lfx-maritalk" },
+    { name = "lfx-milvus" },
     { name = "lfx-mistral" },
+    { name = "lfx-mongodb" },
     { name = "lfx-needle" },
     { name = "lfx-notdiamond" },
     { name = "lfx-novita" },
@@ -7249,17 +7274,26 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-openrouter" },
     { name = "lfx-perplexity" },
+    { name = "lfx-pgvector" },
+    { name = "lfx-pinecone" },
+    { name = "lfx-qdrant" },
+    { name = "lfx-redis" },
     { name = "lfx-sambanova" },
     { name = "lfx-scrapegraph" },
     { name = "lfx-searchapi" },
     { name = "lfx-serpapi" },
+    { name = "lfx-supabase" },
     { name = "lfx-tavily" },
+    { name = "lfx-upstash" },
+    { name = "lfx-vectara" },
     { name = "lfx-vertexai" },
     { name = "lfx-vllm" },
+    { name = "lfx-weaviate" },
     { name = "lfx-wikipedia" },
     { name = "lfx-wolframalpha" },
     { name = "lfx-xai" },
     { name = "lfx-youtube" },
+    { name = "lfx-zep" },
 ]
 
 [package.optional-dependencies]
@@ -7355,12 +7389,18 @@ requires-dist = [
     { name = "lfx-azure", editable = "src/bundles/azure" },
     { name = "lfx-baidu", editable = "src/bundles/baidu" },
     { name = "lfx-bing", editable = "src/bundles/bing" },
+    { name = "lfx-cassandra", editable = "src/bundles/cassandra" },
+    { name = "lfx-chroma", editable = "src/bundles/chroma" },
+    { name = "lfx-clickhouse", editable = "src/bundles/clickhouse" },
     { name = "lfx-cohere", editable = "src/bundles/cohere" },
     { name = "lfx-cometapi", editable = "src/bundles/cometapi" },
+    { name = "lfx-couchbase", editable = "src/bundles/couchbase" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-deepseek", editable = "src/bundles/deepseek" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-elastic", editable = "src/bundles/elastic" },
     { name = "lfx-exa", editable = "src/bundles/exa" },
+    { name = "lfx-faiss", editable = "src/bundles/faiss" },
     { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-glean", editable = "src/bundles/glean" },
     { name = "lfx-groq", editable = "src/bundles/groq" },
@@ -7370,7 +7410,9 @@ requires-dist = [
     { name = "lfx-litellm", editable = "src/bundles/litellm" },
     { name = "lfx-lmstudio", editable = "src/bundles/lmstudio" },
     { name = "lfx-maritalk", editable = "src/bundles/maritalk" },
+    { name = "lfx-milvus", editable = "src/bundles/milvus" },
     { name = "lfx-mistral", editable = "src/bundles/mistral" },
+    { name = "lfx-mongodb", editable = "src/bundles/mongodb" },
     { name = "lfx-needle", editable = "src/bundles/needle" },
     { name = "lfx-notdiamond", editable = "src/bundles/notdiamond" },
     { name = "lfx-novita", editable = "src/bundles/novita" },
@@ -7379,17 +7421,26 @@ requires-dist = [
     { name = "lfx-openai", editable = "src/bundles/openai" },
     { name = "lfx-openrouter", editable = "src/bundles/openrouter" },
     { name = "lfx-perplexity", editable = "src/bundles/perplexity" },
+    { name = "lfx-pgvector", editable = "src/bundles/pgvector" },
+    { name = "lfx-pinecone", editable = "src/bundles/pinecone" },
+    { name = "lfx-qdrant", editable = "src/bundles/qdrant" },
+    { name = "lfx-redis", editable = "src/bundles/redis" },
     { name = "lfx-sambanova", editable = "src/bundles/sambanova" },
     { name = "lfx-scrapegraph", editable = "src/bundles/scrapegraph" },
     { name = "lfx-searchapi", editable = "src/bundles/searchapi" },
     { name = "lfx-serpapi", editable = "src/bundles/serpapi" },
+    { name = "lfx-supabase", editable = "src/bundles/supabase" },
     { name = "lfx-tavily", editable = "src/bundles/tavily" },
+    { name = "lfx-upstash", editable = "src/bundles/upstash" },
+    { name = "lfx-vectara", editable = "src/bundles/vectara" },
     { name = "lfx-vertexai", editable = "src/bundles/vertexai" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
+    { name = "lfx-weaviate", editable = "src/bundles/weaviate" },
     { name = "lfx-wikipedia", editable = "src/bundles/wikipedia" },
     { name = "lfx-wolframalpha", editable = "src/bundles/wolframalpha" },
     { name = "lfx-xai", editable = "src/bundles/xai" },
     { name = "lfx-youtube", editable = "src/bundles/youtube" },
+    { name = "lfx-zep", editable = "src/bundles/zep" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
@@ -7561,13 +7612,9 @@ all = [
     { name = "atlassian-python-api" },
     { name = "beautifulsoup4" },
     { name = "boto3" },
-    { name = "cassio" },
-    { name = "chromadb" },
     { name = "cleanlab-tlm" },
-    { name = "clickhouse-connect" },
     { name = "composio" },
     { name = "composio-langchain" },
-    { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "datasets" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -7591,7 +7638,6 @@ all = [
     { name = "json-repair" },
     { name = "kubernetes" },
     { name = "langchain-aws" },
-    { name = "langchain-chroma" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -7600,9 +7646,7 @@ all = [
     { name = "langchain-graph-retriever" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
-    { name = "langchain-milvus" },
     { name = "langchain-mongodb" },
-    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-unstructured" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -7622,28 +7666,20 @@ all = [
     { name = "openlayer" },
     { name = "opensearch-py" },
     { name = "opik" },
-    { name = "pgvector" },
     { name = "pyarrow" },
-    { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
     { name = "pytube" },
-    { name = "qdrant-client" },
     { name = "qianfan" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13'" },
-    { name = "redis" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sseclient-py" },
-    { name = "supabase" },
     { name = "toolguard" },
     { name = "traceloop-sdk" },
     { name = "twelvelabs" },
-    { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
-    { name = "weaviate-client" },
     { name = "yfinance" },
-    { name = "zep-python" },
 ]
 altk = [
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
@@ -7673,18 +7709,8 @@ aws = [
 beautifulsoup = [
     { name = "beautifulsoup4" },
 ]
-cassandra = [
-    { name = "cassio" },
-]
-chroma = [
-    { name = "chromadb" },
-    { name = "langchain-chroma" },
-]
 cleanlab = [
     { name = "cleanlab-tlm" },
-]
-clickhouse = [
-    { name = "clickhouse-connect" },
 ]
 complete = [
     { name = "ag2" },
@@ -7697,13 +7723,9 @@ complete = [
     { name = "atlassian-python-api" },
     { name = "beautifulsoup4" },
     { name = "boto3" },
-    { name = "cassio" },
-    { name = "chromadb" },
     { name = "cleanlab-tlm" },
-    { name = "clickhouse-connect" },
     { name = "composio" },
     { name = "composio-langchain" },
-    { name = "couchbase" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "datasets" },
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -7727,7 +7749,6 @@ complete = [
     { name = "json-repair" },
     { name = "kubernetes" },
     { name = "langchain-aws" },
-    { name = "langchain-chroma" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-calendar-tools" },
     { name = "langchain-google-community" },
@@ -7736,9 +7757,7 @@ complete = [
     { name = "langchain-graph-retriever" },
     { name = "langchain-huggingface", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "langchain-mcp-adapters" },
-    { name = "langchain-milvus" },
     { name = "langchain-mongodb" },
-    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-unstructured" },
     { name = "langfuse" },
     { name = "langsmith" },
@@ -7758,35 +7777,24 @@ complete = [
     { name = "openlayer" },
     { name = "opensearch-py" },
     { name = "opik" },
-    { name = "pgvector" },
     { name = "pyarrow" },
-    { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
     { name = "pytube" },
-    { name = "qdrant-client" },
     { name = "qianfan" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13'" },
-    { name = "redis" },
     { name = "smolagents" },
     { name = "spider-client" },
     { name = "sseclient-py" },
-    { name = "supabase" },
     { name = "toolguard" },
     { name = "traceloop-sdk" },
     { name = "twelvelabs" },
-    { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
-    { name = "weaviate-client" },
     { name = "yfinance" },
-    { name = "zep-python" },
 ]
 composio = [
     { name = "composio" },
     { name = "composio-langchain" },
-]
-couchbase = [
-    { name = "couchbase" },
 ]
 ctransformers = [
     { name = "ctransformers" },
@@ -7913,15 +7921,9 @@ metal = [
 metaphor = [
     { name = "metaphor-python" },
 ]
-milvus = [
-    { name = "langchain-milvus" },
-]
 mlx = [
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mlx-vlm", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin'" },
-]
-mongodb = [
-    { name = "pymongo" },
 ]
 mongodb-vectors = [
     { name = "langchain-mongodb" },
@@ -7944,12 +7946,6 @@ opensearch = [
 opik = [
     { name = "opik" },
 ]
-pgvector = [
-    { name = "pgvector" },
-]
-pinecone = [
-    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
-]
 postgresql = [
     { name = "sqlalchemy", extra = ["postgresql-psycopg", "postgresql-psycopg2binary"] },
 ]
@@ -7962,17 +7958,11 @@ pypdf = [
 pytube = [
     { name = "pytube" },
 ]
-qdrant = [
-    { name = "qdrant-client" },
-]
 qianfan = [
     { name = "qianfan" },
 ]
 ragstack = [
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13'" },
-]
-redis = [
-    { name = "redis" },
 ]
 sentence-transformers = [
     { name = "sentence-transformers" },
@@ -7986,9 +7976,6 @@ spider = [
 sseclient = [
     { name = "sseclient-py" },
 ]
-supabase = [
-    { name = "supabase" },
-]
 toolguard = [
     { name = "toolguard" },
 ]
@@ -7998,20 +7985,11 @@ traceloop = [
 twelvelabs = [
     { name = "twelvelabs" },
 ]
-upstash = [
-    { name = "upstash-vector" },
-]
 vlmrun = [
     { name = "vlmrun", extra = ["all"] },
 ]
-weaviate = [
-    { name = "weaviate-client" },
-]
 yfinance = [
     { name = "yfinance" },
-]
-zep = [
-    { name = "zep-python" },
 ]
 
 [package.dev-dependencies]
@@ -8063,15 +8041,11 @@ requires-dist = [
     { name = "beautifulsoup4", marker = "extra == 'beautifulsoup'", specifier = "==4.12.3" },
     { name = "boto3", marker = "extra == 'aws'", specifier = ">=1.34.162,<2.0.0" },
     { name = "cachetools", specifier = ">=6.0.0" },
-    { name = "cassio", marker = "extra == 'cassandra'", specifier = ">=0.1.7" },
     { name = "chardet", specifier = ">=7.3.0" },
-    { name = "chromadb", marker = "extra == 'chroma'", specifier = ">=1.0.0,<2.0.0" },
     { name = "cleanlab-tlm", marker = "extra == 'cleanlab'", specifier = ">=1.1.2,<2.0.0" },
     { name = "clickhouse-connect", specifier = "==0.7.19" },
-    { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = "==0.7.19" },
     { name = "composio", marker = "extra == 'composio'", specifier = "==0.9.2" },
     { name = "composio-langchain", marker = "extra == 'composio'", specifier = "==0.9.2" },
-    { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "cryptography", specifier = ">=46.0.7" },
     { name = "cryptography", marker = "extra == 'litellm'" },
     { name = "ctransformers", marker = "extra == 'ctransformers'", specifier = ">=0.2.10" },
@@ -8126,7 +8100,6 @@ requires-dist = [
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-aws", marker = "extra == 'aws'", specifier = "~=1.1.0" },
     { name = "langchain-chroma", specifier = "~=0.2.6" },
-    { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
     { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elasticsearch'", specifier = "~=1.0.0" },
@@ -8139,9 +8112,7 @@ requires-dist = [
     { name = "langchain-huggingface", marker = "(platform_machine != 'x86_64' and extra == 'langchain-huggingface') or (sys_platform != 'darwin' and extra == 'langchain-huggingface')", specifier = "~=1.2.0" },
     { name = "langchain-ibm", marker = "python_full_version < '3.14'", specifier = "~=1.0.2" },
     { name = "langchain-mcp-adapters", marker = "extra == 'langchain-mcp-adapters'", specifier = ">=0.1.14,<0.2.0" },
-    { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "~=0.3.2" },
     { name = "langchain-mongodb", marker = "extra == 'mongodb-vectors'", specifier = "==0.7.0" },
-    { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8154,13 +8125,9 @@ requires-dist = [
     { name = "langflow-base", extras = ["atlassian"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aws"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["beautifulsoup"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["cassandra"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["chroma"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cleanlab"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["clickhouse"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["complete"], marker = "extra == 'all'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["composio"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cuga"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["datasets"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8193,9 +8160,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["mem0"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["metal"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["metaphor"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["milvus"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mlx"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["mongodb"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["mongodb-vectors"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["nltk"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["numexpr"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8203,27 +8168,19 @@ requires-dist = [
     { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["qianfan"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["ragstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["smolagents"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["spider"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["sseclient"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["supabase"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["toolguard"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["traceloop"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["twelvelabs"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["upstash"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["vlmrun"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["weaviate"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["zep"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langfuse", marker = "extra == 'langfuse'", specifier = "~=3.8" },
     { name = "langgraph-checkpoint", specifier = ">4.0.0,<5.0.0" },
     { name = "langsmith", marker = "extra == 'langsmith'", specifier = ">=0.3.42,<1.0.0" },
@@ -8264,7 +8221,6 @@ requires-dist = [
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = "==2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
-    { name = "pgvector", marker = "extra == 'pgvector'", specifier = ">=0.4.2" },
     { name = "pillow", specifier = ">=12.1.1,<13.0.0" },
     { name = "pip", specifier = ">=26.0.0,<27.0.0" },
     { name = "platformdirs", specifier = ">=4.2.0,<5.0.0" },
@@ -8274,7 +8230,6 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
-    { name = "pymongo", marker = "extra == 'mongodb'", specifier = "==4.10.1" },
     { name = "pypdf", specifier = ">=6.10.0,<7.0.0" },
     { name = "pypdf", marker = "extra == 'pypdf'", specifier = ">=6.10.0,<7.0.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
@@ -8282,10 +8237,8 @@ requires-dist = [
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "pytube", marker = "extra == 'pytube'", specifier = "==15.0.0" },
-    { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = "==1.9.2" },
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "python_full_version < '3.13' and extra == 'ragstack'", specifier = "==0.2.1" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=7.4.0,<8.0.0" },
     { name = "rich", specifier = ">=13.7.0,<14.0.0" },
     { name = "scipy", specifier = ">=1.15.2,<2.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.0.0" },
@@ -8301,7 +8254,6 @@ requires-dist = [
     { name = "sqlmodel", specifier = "~=0.0.37" },
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
-    { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
     { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
@@ -8309,17 +8261,14 @@ requires-dist = [
     { name = "twelvelabs", marker = "extra == 'twelvelabs'", specifier = ">=0.4.7,<1.0.0" },
     { name = "typer", specifier = ">=0.13.0,<1.0.0" },
     { name = "uncurl", specifier = ">=0.0.11,<1.0.0" },
-    { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "uvicorn", specifier = ">=0.30.0,<1.0.0" },
     { name = "validators", specifier = ">=0.34.0,<1.0.0" },
     { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
-    { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
     { name = "yfinance", marker = "extra == 'yfinance'", specifier = "==0.2.50" },
-    { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "google", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "google-api", "fake-useragent", "duckduckgo", "yfinance", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "sseclient", "openinference", "mcp", "ag2", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "elasticsearch", "faiss", "mongodb-vectors", "google", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "google-api", "fake-useragent", "duckduckgo", "yfinance", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "litellm", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "sseclient", "openinference", "mcp", "ag2", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8806,6 +8755,57 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-cassandra"
+version = "0.1.0"
+source = { editable = "src/bundles/cassandra" }
+dependencies = [
+    { name = "cassio" },
+    { name = "langchain-community" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cassio", specifier = ">=0.1.7" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-chroma"
+version = "0.1.0"
+source = { editable = "src/bundles/chroma" }
+dependencies = [
+    { name = "chromadb" },
+    { name = "langchain-chroma" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "chromadb", specifier = ">=1.0.0,<2.0.0" },
+    { name = "langchain-chroma", specifier = "~=0.2.6" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-clickhouse"
+version = "0.1.0"
+source = { editable = "src/bundles/clickhouse" }
+dependencies = [
+    { name = "clickhouse-connect" },
+    { name = "langchain-community" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "clickhouse-connect", specifier = "==0.7.19" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-cohere"
 version = "0.1.0"
 source = { editable = "src/bundles/cohere" }
@@ -8834,6 +8834,23 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "langchain-openai", specifier = ">=1.1.6" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-couchbase"
+version = "0.1.0"
+source = { editable = "src/bundles/couchbase" }
+dependencies = [
+    { name = "couchbase" },
+    { name = "langchain-community" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "couchbase", specifier = ">=4.2.1" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
@@ -8903,6 +8920,27 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-elastic"
+version = "0.1.0"
+source = { editable = "src/bundles/elastic" }
+dependencies = [
+    { name = "elasticsearch" },
+    { name = "langchain-core" },
+    { name = "langchain-elasticsearch" },
+    { name = "lfx" },
+    { name = "opensearch-py" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "elasticsearch", specifier = "~=8.19" },
+    { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
+    { name = "langchain-elasticsearch", specifier = "~=1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "opensearch-py", specifier = ">=2.0.0,<3.0.0" },
+]
+
+[[package]]
 name = "lfx-exa"
 version = "0.1.0"
 source = { editable = "src/bundles/exa" }
@@ -8917,6 +8955,25 @@ requires-dist = [
     { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "metaphor-python", specifier = "==0.1.23" },
+]
+
+[[package]]
+name = "lfx-faiss"
+version = "0.1.0"
+source = { editable = "src/bundles/faiss" }
+dependencies = [
+    { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
+    { name = "faiss-cpu", version = "1.13.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "langchain-community" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "faiss-cpu", marker = "python_full_version < '3.14'", specifier = "==1.9.0.post1" },
+    { name = "faiss-cpu", marker = "python_full_version >= '3.14'", specifier = ">=1.13.2" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
 ]
 
 [[package]]
@@ -9068,6 +9125,21 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-milvus"
+version = "0.1.0"
+source = { editable = "src/bundles/milvus" }
+dependencies = [
+    { name = "langchain-milvus" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-milvus", specifier = "~=0.3.2" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
 name = "lfx-mistral"
 version = "0.1.0"
 source = { editable = "src/bundles/mistral" }
@@ -9080,6 +9152,27 @@ dependencies = [
 requires-dist = [
     { name = "langchain-mistralai", specifier = "~=1.1.1" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-mongodb"
+version = "0.1.0"
+source = { editable = "src/bundles/mongodb" }
+dependencies = [
+    { name = "certifi" },
+    { name = "langchain-community" },
+    { name = "langchain-mongodb" },
+    { name = "lfx" },
+    { name = "pymongo" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "certifi" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "langchain-mongodb", specifier = "==0.7.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pymongo", specifier = "==4.10.1" },
 ]
 
 [[package]]
@@ -9211,6 +9304,79 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-pgvector"
+version = "0.1.0"
+source = { editable = "src/bundles/pgvector" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "pgvector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pgvector", specifier = ">=0.4.2" },
+]
+
+[[package]]
+name = "lfx-pinecone"
+version = "0.1.0"
+source = { editable = "src/bundles/pinecone" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
+    { name = "lfx" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
+    { name = "langchain-pinecone", marker = "python_full_version < '3.14'", specifier = "~=0.2.13" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "numpy" },
+]
+
+[[package]]
+name = "lfx-qdrant"
+version = "0.1.0"
+source = { editable = "src/bundles/qdrant" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "qdrant-client" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "qdrant-client", specifier = "==1.9.2" },
+]
+
+[[package]]
+name = "lfx-redis"
+version = "0.1.0"
+source = { editable = "src/bundles/redis" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "langchain-text-splitters" },
+    { name = "lfx" },
+    { name = "redis" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "langchain-text-splitters" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "redis", specifier = ">=7.4.0,<8.0.0" },
+]
+
+[[package]]
 name = "lfx-sambanova"
 version = "0.1.0"
 source = { editable = "src/bundles/sambanova" }
@@ -9278,6 +9444,23 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-supabase"
+version = "0.1.0"
+source = { editable = "src/bundles/supabase" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "supabase" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "supabase", specifier = ">=2.6.0,<3.0.0" },
+]
+
+[[package]]
 name = "lfx-tavily"
 version = "0.1.0"
 source = { editable = "src/bundles/tavily" }
@@ -9289,6 +9472,38 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-upstash"
+version = "0.1.0"
+source = { editable = "src/bundles/upstash" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "upstash-vector" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "upstash-vector", specifier = "==0.6.0" },
+]
+
+[[package]]
+name = "lfx-vectara"
+version = "0.1.0"
+source = { editable = "src/bundles/vectara" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
@@ -9322,6 +9537,23 @@ dependencies = [
 requires-dist = [
     { name = "langchain-openai", specifier = ">=1.1.6" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-weaviate"
+version = "0.1.0"
+source = { editable = "src/bundles/weaviate" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "lfx" },
+    { name = "weaviate-client" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "weaviate-client", specifier = ">=4.10.2,<5.0.0" },
 ]
 
 [[package]]
@@ -9396,6 +9628,21 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.2.3,<3.0.0" },
     { name = "pytube", specifier = "==15.0.0" },
     { name = "youtube-transcript-api", specifier = ">=1.0.0,<2.0.0" },
+]
+
+[[package]]
+name = "lfx-zep"
+version = "0.1.0"
+source = { editable = "src/bundles/zep" }
+dependencies = [
+    { name = "lfx" },
+    { name = "zep-python" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "lfx", editable = "src/lfx" },
+    { name = "zep-python", specifier = "==2.0.2" },
 ]
 
 [[package]]
