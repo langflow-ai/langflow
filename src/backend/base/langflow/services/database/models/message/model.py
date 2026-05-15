@@ -99,6 +99,8 @@ class MessageBase(SQLModel):
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not run_id and getattr(message, "run_id", None):
+            run_id = message.run_id
 
         message_text = "" if not isinstance(message.text, str) else message.text
 
