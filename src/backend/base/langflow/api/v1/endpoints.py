@@ -88,11 +88,52 @@ router = APIRouter(tags=["Base"])
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
+_SIMPLIFIED_API_FORM_FIELDS = (
+    "input_value",
+    "input_type",
+    "output_type",
+    "output_component",
+    "session_id",
+)
+
+
+async def _parse_multipart_form_data(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest fields from a multipart/form-data request.
+
+    Reads the form via ``http_request.form()`` so uploaded file streams are not
+    consumed by an upstream JSON parse attempt. Only string-valued fields that
+    map to ``SimplifiedAPIRequest`` are extracted; any ``UploadFile`` entries
+    (e.g. inline file uploads) are intentionally ignored here and remain
+    available to downstream handlers.
+    """
+    form = await http_request.form()
+    data: dict = {}
+
+    for field in _SIMPLIFIED_API_FORM_FIELDS:
+        value = form.get(field)
+        if isinstance(value, str):
+            data[field] = value
+
+    raw_tweaks = form.get("tweaks")
+    if isinstance(raw_tweaks, (str, bytes)) and raw_tweaks:
+        try:
+            data["tweaks"] = orjson.loads(raw_tweaks)
+        except orjson.JSONDecodeError as exc:
+            logger.warning(f"Failed to parse 'tweaks' form field as JSON: {exc}")
+
+    return SimplifiedAPIRequest(**data)
+
+
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
     """Parse SimplifiedAPIRequest from HTTP request body.
 
     This function handles the case where FastAPI can't automatically parse the request body
     due to the presence of a Request parameter in the endpoint signature.
+
+    Supports both ``application/json`` and ``multipart/form-data`` bodies. For
+    multipart requests, form fields matching ``SimplifiedAPIRequest`` (including
+    ``session_id``) are extracted via ``request.form()`` rather than being lost
+    to a failing JSON parse.
 
     Args:
         http_request: The FastAPI Request object
@@ -100,7 +141,12 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
     Returns:
         SimplifiedAPIRequest: Parsed request or default instance if parsing fails
     """
+    content_type = (http_request.headers.get("content-type") or "").lower()
+
     try:
+        if content_type.startswith("multipart/form-data"):
+            return await _parse_multipart_form_data(http_request)
+
         body = await http_request.body()
         if body:
             body_data = orjson.loads(body)
