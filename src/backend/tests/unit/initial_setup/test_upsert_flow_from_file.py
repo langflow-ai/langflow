@@ -18,6 +18,7 @@ from langflow.initial_setup.setup import (
     upsert_flow_from_file,
 )
 from langflow.services.database.models.flow.model import Flow
+from lfx.services.deps import get_settings_service
 from sqlmodel import select
 
 
@@ -254,3 +255,74 @@ async def test_upsert_flow_from_file_id_match_still_overwrites_id_field() -> Non
         assert len(rows) == 1
         assert rows[0].id == original.id
         assert rows[0].description == "updated"
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_skips_name_match_when_overwrite_disabled() -> None:
+    """When load_flows_overwrite_on_name_match=False, name-matched rows are NOT overwritten.
+
+    Protects the case where a user edited a flow in the UI and Langflow restarts with a
+    regenerated file id; the on-disk JSON should not silently wipe the user's changes.
+    """
+    user_id = uuid4()
+    original = await _create_flow(
+        name="UserEdited",
+        user_id=user_id,
+        data={"nodes": [{"id": "user-node"}], "edges": []},
+    )
+
+    settings = get_settings_service().settings
+    original_flag = settings.load_flows_overwrite_on_name_match
+    settings.load_flows_overwrite_on_name_match = False
+    try:
+        file_content = orjson.dumps(
+            {
+                "id": str(uuid4()),  # regenerated id -> name match only
+                "name": "UserEdited",
+                "description": "from disk (should be ignored)",
+                "data": {"nodes": [], "edges": []},
+            }
+        )
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, "UserEdited", session, user_id)
+            await session.commit()
+    finally:
+        settings.load_flows_overwrite_on_name_match = original_flag
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].id == original.id
+        # User's UI edits preserved -- file contents did not overwrite them.
+        assert rows[0].description == "initial"
+        assert rows[0].data == {"nodes": [{"id": "user-node"}], "edges": []}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_id_match_still_overwrites_when_flag_disabled() -> None:
+    """The flag only gates name-matched overwrites; id-matched overwrites are unchanged."""
+    user_id = uuid4()
+    original = await _create_flow(name="IdMatchFlag", user_id=user_id)
+
+    settings = get_settings_service().settings
+    original_flag = settings.load_flows_overwrite_on_name_match
+    settings.load_flows_overwrite_on_name_match = False
+    try:
+        file_content = orjson.dumps(
+            {
+                "id": str(original.id),  # same id -> matched_by_id is True
+                "name": "IdMatchFlag",
+                "description": "updated via id-match",
+                "data": {"nodes": [], "edges": []},
+            }
+        )
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, "IdMatchFlag", session, user_id)
+            await session.commit()
+    finally:
+        settings.load_flows_overwrite_on_name_match = original_flag
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].description == "updated via id-match"

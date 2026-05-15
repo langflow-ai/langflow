@@ -1095,6 +1095,14 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             except ValueError:
                 await logger.aerror(f"Invalid UUID string in DB row: {existing.id}")
                 return
+        matched_by_id = flow_id is not None and existing.id == flow_id
+        if not matched_by_id and not get_settings_service().settings.load_flows_overwrite_on_name_match:
+            await logger.awarning(
+                f"Skipping flow update: db_id={existing.id} name={existing.name!r} matched by "
+                f"name/endpoint_name but file id differs (file id={flow_id}). "
+                "Set LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true to overwrite."
+            )
+            return
         await logger.ainfo(
             f"Updating existing flow: db_id={existing.id} name={existing.name!r} "
             f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
