@@ -1,5 +1,4 @@
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.openai_responses_schemas import (
@@ -21,3 +20,13 @@ __all__ = [
     "UUIDstr",
     "dotdict",
 ]
+
+
+def __getattr__(name: str):
+    if name == "DataFrame":
+        from lfx.schema.dataframe import DataFrame
+
+        globals()["DataFrame"] = DataFrame
+        return DataFrame
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)

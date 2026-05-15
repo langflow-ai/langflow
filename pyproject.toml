@@ -58,7 +58,8 @@ dev = [
     "pyyaml>=6.0.2",
     "pyleak>=0.1.14",
     "mcp-server-fetch>=2025.1.17",
-    "onnxruntime>=1.20,<1.24" # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "onnxruntime>=1.20,<1.24", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
+    "importtime-convert>=1.1.0",
 ]
 benchmarks = [
     # Cold-start measurement tooling. Installed only when `uv sync --group benchmarks`.

@@ -30,6 +30,49 @@ VERBOSITY_DETAILED = 2
 VERBOSITY_FULL = 3
 
 
+def _register_torch_exit_guard() -> list[int]:
+    """Register a Python atexit that calls os._exit() if torch's C extension loaded.
+
+    WHY THIS EXISTS
+    ---------------
+    Any non-trivial langchain import (langchain_core.language_models,
+    langchain_classic.agents, etc.) transitively imports ``transformers``, which
+    imports ``torch._C`` — a pybind11 C extension.  Loading ``torch._C``
+    registers a cleanup handler via ``Py_AtExit()``.  When torch is first imported
+    *inside* a running asyncio event loop, that C-level handler later runs after
+    interpreter state it references has already been freed, producing SIGSEGV
+    (exit 139).  On ``release-1.10.0`` torch was imported at process startup
+    (before asyncio) via eager top-level imports and shutdown was orderly.  The
+    cold-start work moved those imports inside the event loop, inadvertently
+    introducing the crash.
+
+    HOW THIS FIXES IT
+    -----------------
+    Python atexit functions run *before* C-level ``Py_AtExit()`` handlers in
+    CPython's shutdown sequence.  Calling ``os._exit()`` from a Python atexit
+    terminates the process before the dangerous C teardown runs.
+
+    The returned list ``[exit_code]`` lets the caller update the intended exit
+    code before the atexit fires, ensuring error exits are not masked as success.
+    The guard is keyed on ``torch._C`` (the C extension that registers the
+    pybind11 handler) rather than ``torch``, which CPython may clear earlier.
+    """
+    import atexit
+    import os
+    import sys
+
+    code: list[int] = [0]
+
+    def _guard() -> None:
+        if "torch._C" in sys.modules:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(code[0])
+
+    atexit.register(_guard)
+    return code
+
+
 def _check_langchain_version_compatibility(error_message: str) -> str | None:
     """Check if error is due to langchain-core version incompatibility.
 
@@ -149,6 +192,8 @@ async def run(
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
 
+    _torch_exit_code = _register_torch_exit_guard()
+
     try:
         checkpoint("before-run-flow")
         result = await run_flow(
@@ -188,4 +233,25 @@ async def run(
             error_response["exception_message"] = str(e)
         typer.echo(json.dumps(error_response))
         dump()
+        _torch_exit_code[0] = 1
         raise typer.Exit(1) from e
+
+    except BaseException as exc:
+        # Catch-all for anything that escapes the RunError handler: unhandled
+        # asyncio errors, KeyboardInterrupt, etc.  Re-raise immediately so
+        # normal error handling is unaffected; the only purpose here is to
+        # ensure the atexit guard uses the correct exit code before it fires.
+        #
+        # typer.Exit inherits from RuntimeError (not SystemExit), so it must
+        # be checked before the unconditional else-branch to avoid masking a
+        # clean typer.Exit(0) as exit code 1.
+        if isinstance(exc, SystemExit):
+            code = exc.code
+            _torch_exit_code[0] = code if isinstance(code, int) else (0 if code is None else 1)
+        elif isinstance(exc, typer.Exit):
+            _torch_exit_code[0] = int(exc.exit_code) if exc.exit_code is not None else 0
+        elif isinstance(exc, KeyboardInterrupt):
+            _torch_exit_code[0] = 130
+        else:
+            _torch_exit_code[0] = 1
+        raise

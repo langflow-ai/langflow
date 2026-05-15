@@ -11,6 +11,7 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
+from langflow.services.database import models as db_models
 from langflow.services.database.service import SQLModel
 from sqlalchemy import create_engine, text
 
@@ -357,6 +358,8 @@ def test_no_phantom_migrations(db_url):
     (e.g. pydantic, sqlmodel) change how column metadata is emitted,
     which would produce unintended migration diffs.
     """
+    db_models.import_all()
+
     alembic_cfg = _make_alembic_cfg(db_url)
     command.upgrade(alembic_cfg, "head")
 

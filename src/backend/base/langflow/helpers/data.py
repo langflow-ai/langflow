@@ -1,14 +1,16 @@
 import re
 from collections import defaultdict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import orjson
 from fastapi.encoders import jsonable_encoder
 from langchain_core.documents import Document
 from lfx.schema.data import Data
-from lfx.schema.dataframe import DataFrame
 
 from langflow.schema.message import Message
+
+if TYPE_CHECKING:
+    from lfx.schema.dataframe import DataFrame
 
 
 def docs_to_data(documents: list[Document]) -> list[Data]:
@@ -172,6 +174,8 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
             return data.get_text()
         if isinstance(data, Data):
             return clean_string(_serialize_data(data))
+        from lfx.schema.dataframe import DataFrame
+
         if isinstance(data, DataFrame):
             if clean_data:
                 # Remove empty rows
@@ -192,7 +196,7 @@ def safe_convert(data: Any, *, clean_data: bool = False) -> str:
         raise ValueError(msg) from e
 
 
-def data_to_dataframe(data: Data | list[Data]) -> DataFrame:
+def data_to_dataframe(data: Data | list[Data]) -> "DataFrame":
     """Converts a Data object or a list of Data objects to a DataFrame.
 
     Args:
@@ -201,6 +205,8 @@ def data_to_dataframe(data: Data | list[Data]) -> DataFrame:
     Returns:
         DataFrame: The converted DataFrame.
     """
+    from lfx.schema.dataframe import DataFrame
+
     if isinstance(data, Data):
         return DataFrame([data.data])
     return DataFrame(data=[d.data for d in data])

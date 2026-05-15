@@ -8,6 +8,16 @@ import pytest
 pytest.importorskip("tiktoken")
 pytest.importorskip("docling_core")
 
+# docling_core.transforms.chunker.__init__ (in some docling-core releases) imports
+# line_chunker, which imports tokenizer.huggingface.  That module raises RuntimeError
+# (not ImportError) when the [chunking] extra is absent.  pytest.importorskip only
+# catches ImportError, so we need an explicit try/except here.  The guard must be
+# at module level because the component import itself triggers the chain in CI.
+try:
+    from docling_core.transforms.chunker.tokenizer import huggingface as _hf  # noqa: F401
+except (ImportError, RuntimeError):
+    pytest.skip("docling-core[chunking] extra not installed", allow_module_level=True)
+
 from lfx.components.docling.chunk_docling_document import ChunkDoclingDocumentComponent
 
 

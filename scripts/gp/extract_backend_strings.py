@@ -213,4 +213,21 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import atexit
+    import os
+
+    _exit_code: list[int] = [0]
+
+    def _torch_guard() -> None:
+        if "torch._C" in sys.modules:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os._exit(_exit_code[0])
+
+    atexit.register(_torch_guard)
+
+    try:
+        main()
+    except SystemExit as _exc:
+        _exit_code[0] = int(_exc.code) if isinstance(_exc.code, int) else (0 if _exc.code is None else 1)
+        raise

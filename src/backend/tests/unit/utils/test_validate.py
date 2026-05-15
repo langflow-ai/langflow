@@ -424,7 +424,7 @@ class BrokenClass
 class Broken:
     inputs = [StrInput(name="x")]
 """
-        with pytest.raises(ValueError, match=r"Add `from lfx\.io import StrInput`"):
+        with pytest.raises(ValueError, match=r"add `from lfx\.io import StrInput`"):
             create_class(code, "Broken")
 
     def test_name_error_without_legacy_match_omits_hint(self):
@@ -449,7 +449,7 @@ class Broken:
 class Broken:
     tool: Tool = None
 """
-        with pytest.raises(ValueError, match=r"Add `from langchain_core\.tools import Tool`"):
+        with pytest.raises(ValueError, match=r"add `from langchain_core\.tools import Tool`"):
             create_class(code, "Broken")
 
     def test_handles_validation_error(self):

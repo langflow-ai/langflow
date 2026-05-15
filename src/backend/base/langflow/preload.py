@@ -197,13 +197,16 @@ async def _run_master_preload() -> None:
     always disposes it before returning — including on failure paths — so
     no connections / file descriptors leak into forked workers.
     """
+    import anyio
     from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
+    import langflow.initial_setup.setup as _setup_module
     from langflow.initial_setup.setup import (
         copy_profile_pictures,
         create_or_update_starter_projects,
         load_flows_from_directory,
     )
+    from langflow.initial_setup.starter_project_hash import HASH_FILENAME, run_starter_projects_hash_gate
     from langflow.main import load_bundles_with_error_handling
     from langflow.services.deps import (
         get_db_service,
@@ -216,14 +219,14 @@ async def _run_master_preload() -> None:
     settings_service = get_settings_service()
 
     await logger.ainfo("[preload] initializing services in master")
-    await initialize_services(fix_migration=False)
-
-    # Wrap all post-initialization work in try/finally so the DB engine and
-    # cache service are always torn down before returning, even on failure.
-    # Without this, any exception raised between here and the dispose() calls
-    # would leave an open connection pool in the master process, and that pool
-    # would be inherited (fork-unsafe) by every worker.
+    # initialize_services is inside the try block so that any failure after the
+    # DB engine is constructed still hits the finally dispose path.  Without this,
+    # an exception raised here would leave a live connection pool in the master,
+    # which every forked worker would inherit — exactly the fork-safety hazard
+    # this entire preload layer exists to prevent.
     try:
+        await initialize_services(fix_migration=False)
+
         # Wave 1: profile-picture copy and bundle download/extract are independent
         # (different filesystem subtrees, no shared state). Run them concurrently
         # so the master pays max(profile, bundles) instead of profile + bundles.
@@ -253,10 +256,27 @@ async def _run_master_preload() -> None:
         all_types_dict = component_cache.all_types_dict
         if all_types_dict is not None:
             await logger.adebug("[preload] creating/updating starter projects")
+
+            from pathlib import Path as _Path
+
+            _starter_folder = anyio.Path(_setup_module.__file__).parent / "starter_projects"
+            _config_dir = settings_service.settings.config_dir
+            _hash_path = _Path(_config_dir) / HASH_FILENAME if _config_dir else None
+
+            async def _do_starter_projects() -> None:
+                if _hash_path is not None:
+                    await run_starter_projects_hash_gate(
+                        starter_folder=_starter_folder,
+                        hash_path=_hash_path,
+                        sync_fn=lambda: create_or_update_starter_projects(all_types_dict),
+                    )
+                else:
+                    await create_or_update_starter_projects(all_types_dict)
+
             await _best_effort(
                 PreloadStep.STARTER_PROJECTS,
                 "starter projects init failed",
-                create_or_update_starter_projects(all_types_dict),
+                _do_starter_projects(),
             )
 
         if settings_service.settings.agentic_experience:
@@ -306,8 +326,22 @@ async def _run_master_preload() -> None:
         # behave unpredictably. After dispose(), the engine object is still
         # usable: on first access in a worker it opens a fresh pool for that
         # process.
+        #
+        # Guard: if initialize_services raised before registering the DB service
+        # we skip disposal (nothing to close). We check the service registry
+        # directly so that a real dispose() failure propagates instead of being
+        # swallowed — a failed dispose() is a fork-safety hazard.
         await logger.adebug("[preload] disposing master DB engine before fork")
-        await get_db_service().engine.dispose()
+        from langflow.services.manager import get_service_manager
+        from langflow.services.schema import ServiceType as _ServiceType
+
+        if _ServiceType.DATABASE_SERVICE in get_service_manager().services:
+            _db_svc = get_db_service()
+            _engine = getattr(_db_svc, "engine", None)
+            if _engine is not None:
+                await _engine.dispose()
+        else:
+            await logger.adebug("[preload] DB engine dispose skipped (service not yet initialized)")
 
         # Close cache service socket (e.g. Redis) to prevent sharing across fork.
         # ExternalAsyncBaseCacheService declares teardown() abstract, so any

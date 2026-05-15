@@ -441,6 +441,10 @@ class DatabaseService(Service):
             else:
                 logger.debug("Alembic initialized")
 
+            # Ensure every SQLModel class is imported so its table appears in
+            # SQLModel.metadata before Alembic compares the schema.
+            models.import_all()
+
             try:
                 buffer.write(f"{datetime.now(tz=timezone.utc).astimezone().isoformat()}: Checking migrations\n")
                 command.check(alembic_cfg)
@@ -495,6 +499,7 @@ class DatabaseService(Service):
         # We will check that all models are in the database
         # and that the database is up to date with all columns
         # get all models that are subclasses of SQLModel
+        models.import_all()
         sql_models = [
             model for model in models.__dict__.values() if isinstance(model, type) and issubclass(model, SQLModel)
         ]

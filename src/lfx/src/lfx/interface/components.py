@@ -823,7 +823,20 @@ async def get_and_cache_all_types_dict(
                             merged[top_level] = {}
                         merged[top_level].update(components)
                     merged = filter_disabled_components_from_dict(merged)
-                    component_cache.all_types_dict = merged
+
+                    # User custom components are not stored in the built-in cache
+                    # (they change independently of the installed lfx version and
+                    # may live at an arbitrary LANGFLOW_COMPONENTS_PATH). Always
+                    # load and merge them even on a cache hit so they are not
+                    # silently absent when the cache is warm.
+                    # _determine_loading_strategy returns {} immediately when
+                    # lazy_load_components=False and components_path is unset
+                    # (the default for most installs), so the cache-hit path
+                    # stays near-zero cost.
+                    custom_components_dict = await _determine_loading_strategy(settings_service)
+                    custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
+                    component_cache.all_types_dict = {**merged, **custom_flat}
+
                     component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
                     await logger.adebug(
                         f"Loaded {component_count} components from user cache (version={installed_version})"

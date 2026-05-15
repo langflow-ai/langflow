@@ -418,6 +418,7 @@ def test_custom_component_subclass_from_lctoolcomponent():
     code = dedent("""
     from lfx.base.langchain_utilities.model import LCToolComponent
     from langchain_core.tools import Tool
+    from lfx.schema import Data
     class MyComponent(LCToolComponent):
         name: str = "MyComponent"
         description: str = "MyComponent"

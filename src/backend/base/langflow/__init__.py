@@ -118,8 +118,28 @@ def _setup_compatibility_modules():
         "langflow.base.vectorstores": "lfx.base.vectorstores",
     }
 
+    # These langflow packages are real physical packages with unique submodules
+    # (e.g. langflow.schema.knowledge_base) that don't exist in their lfx counterparts.
+    # Proxying them via LangflowCompatibilityModule would hide those submodules because
+    # the proxy's __path__ points to the lfx directory, not langflow's.
+    _skip_proxy: frozenset[str] = frozenset(
+        {
+            "langflow.schema",
+            "langflow.schema.data",
+            "langflow.schema.serialize",
+            "langflow.inputs",
+            "langflow.inputs.inputs",
+            "langflow.template",
+            "langflow.template.field",
+            "langflow.template.field.base",
+        }
+    )
+
     # Create compatibility modules for each mapping
     for langflow_name, lfx_name in module_mappings.items():
+        if langflow_name in _skip_proxy:
+            continue
+
         if langflow_name not in sys.modules:
             # Check if the lfx module exists
             try:

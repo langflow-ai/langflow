@@ -2,122 +2,13 @@
 
 This module automatically chooses between the full langflow implementation
 (when available) and the lfx implementation (when standalone).
+
+Imports are deferred until first access to avoid loading heavy dependencies
+(pandas, torch, database models) at package import time.
 """
 
-from lfx.utils.langflow_utils import has_langflow_memory
+from __future__ import annotations
 
-# Import the appropriate implementation
-if has_langflow_memory():
-    try:
-        # Import full langflow implementation
-        # Base Model
-        from langflow.helpers.base_model import (
-            BaseModel,
-            SchemaField,
-            build_model_from_schema,
-            coalesce_bool,
-        )
-
-        # Custom
-        from langflow.helpers.custom import (
-            format_type,
-        )
-
-        # Data
-        from langflow.helpers.data import (
-            clean_string,
-            data_to_text,
-            data_to_text_list,
-            docs_to_data,
-            safe_convert,
-        )
-
-        # Flow
-        from langflow.helpers.flow import (
-            build_schema_from_inputs,
-            get_arg_names,
-            get_flow_by_id_or_name,
-            get_flow_inputs,
-            list_flows,
-            list_flows_by_flow_folder,
-            list_flows_by_folder_id,
-            load_flow,
-            run_flow,
-        )
-    except ImportError:
-        # Fallback to lfx implementation if langflow import fails
-        # Base Model
-        from lfx.helpers.base_model import (
-            BaseModel,
-            SchemaField,
-            build_model_from_schema,
-            coalesce_bool,
-        )
-
-        # Custom
-        from lfx.helpers.custom import (
-            format_type,
-        )
-
-        # Data
-        from lfx.helpers.data import (
-            clean_string,
-            data_to_text,
-            data_to_text_list,
-            docs_to_data,
-            safe_convert,
-        )
-
-        # Flow
-        from lfx.helpers.flow import (
-            build_schema_from_inputs,
-            get_arg_names,
-            get_flow_by_id_or_name,
-            get_flow_inputs,
-            list_flows,
-            list_flows_by_flow_folder,
-            list_flows_by_folder_id,
-            load_flow,
-            run_flow,
-        )
-else:
-    # Use lfx implementation
-    # Base Model
-    from lfx.helpers.base_model import (
-        BaseModel,
-        SchemaField,
-        build_model_from_schema,
-        coalesce_bool,
-    )
-
-    # Custom
-    from lfx.helpers.custom import (
-        format_type,
-    )
-
-    # Data
-    from lfx.helpers.data import (
-        clean_string,
-        data_to_text,
-        data_to_text_list,
-        docs_to_data,
-        safe_convert,
-    )
-
-    # Flow
-    from lfx.helpers.flow import (
-        build_schema_from_inputs,
-        get_arg_names,
-        get_flow_by_id_or_name,
-        get_flow_inputs,
-        list_flows,
-        list_flows_by_flow_folder,
-        list_flows_by_folder_id,
-        load_flow,
-        run_flow,
-    )
-
-# Export the available functions
 __all__ = [
     "BaseModel",
     "SchemaField",
@@ -139,3 +30,55 @@ __all__ = [
     "run_flow",
     "safe_convert",
 ]
+
+# Maps each export to (langflow_module, lfx_module)
+_SOURCE: dict[str, tuple[str, str]] = {
+    "BaseModel": ("langflow.helpers.base_model", "lfx.helpers.base_model"),
+    "SchemaField": ("langflow.helpers.base_model", "lfx.helpers.base_model"),
+    "build_model_from_schema": ("langflow.helpers.base_model", "lfx.helpers.base_model"),
+    "coalesce_bool": ("langflow.helpers.base_model", "lfx.helpers.base_model"),
+    "format_type": ("langflow.helpers.custom", "lfx.helpers.custom"),
+    "clean_string": ("langflow.helpers.data", "lfx.helpers.data"),
+    "data_to_text": ("langflow.helpers.data", "lfx.helpers.data"),
+    "data_to_text_list": ("langflow.helpers.data", "lfx.helpers.data"),
+    "docs_to_data": ("langflow.helpers.data", "lfx.helpers.data"),
+    "safe_convert": ("langflow.helpers.data", "lfx.helpers.data"),
+    "build_schema_from_inputs": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "get_arg_names": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "get_flow_by_id_or_name": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "get_flow_inputs": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "list_flows": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "list_flows_by_flow_folder": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "list_flows_by_folder_id": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "load_flow": ("langflow.helpers.flow", "lfx.helpers.flow"),
+    "run_flow": ("langflow.helpers.flow", "lfx.helpers.flow"),
+}
+
+_EXPORTS = frozenset(__all__)
+
+
+def __getattr__(name: str):
+    if name not in _EXPORTS:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
+
+    import importlib
+
+    from lfx.utils.langflow_utils import has_langflow_memory
+
+    langflow_mod, lfx_mod = _SOURCE[name]
+
+    if has_langflow_memory():
+        try:
+            mod = importlib.import_module(langflow_mod)
+            val = getattr(mod, name)
+        except (ImportError, AttributeError):
+            pass
+        else:
+            globals()[name] = val
+            return val
+
+    mod = importlib.import_module(lfx_mod)
+    val = getattr(mod, name)
+    globals()[name] = val
+    return val

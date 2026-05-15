@@ -464,6 +464,31 @@ chat_input = ChatInput(
         error_output = captured.out + captured.err
         assert "graph" in error_output.lower() or "variable" in error_output.lower()
 
+    def test_torch_exit_code_tracks_typer_exit_zero(self, simple_chat_script):
+        """typer.Exit(0) from run_flow sets _torch_exit_code[0] to 0, not 1."""
+        captured_code: list[int] = [999]
+
+        async def fake_run_flow(**_kwargs):
+            raise typer.Exit(0)
+
+        with (
+            patch("lfx.cli.run._register_torch_exit_guard", return_value=captured_code),
+            patch("lfx.cli.run.run_flow", new=AsyncMock(side_effect=fake_run_flow)),
+            pytest.raises(typer.Exit),
+        ):
+            run(
+                script_path=simple_chat_script,
+                input_value="hi",
+                input_value_option=None,
+                verbose=False,
+                output_format="json",
+                flow_json=None,
+                stdin=False,
+                session_id=None,
+            )
+
+        assert captured_code[0] == 0
+
     def test_session_id_cli_flag_plumbs_through_to_run_flow(self, simple_chat_script):
         """--session-id is wired from typer through `run` into `run_flow(session_id=...)`.
 

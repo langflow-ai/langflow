@@ -1,19 +1,4 @@
-from .api_key import ApiKey
-from .auth import SSOConfig, SSOUserProfile
-from .deployment import Deployment
-from .deployment_provider_account import DeploymentProviderAccount
-from .file import File
-from .flow import Flow
-from .flow_version import FlowVersion
-from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
-from .folder import Folder
-from .jobs import Job
-from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, MessageIngestionRecord
-from .message import MessageTable
-from .traces.model import SpanTable, TraceTable
-from .transactions import TransactionTable
-from .user import User
-from .variable import Variable
+from __future__ import annotations
 
 __all__ = [
     "ApiKey",
@@ -38,3 +23,54 @@ __all__ = [
     "User",
     "Variable",
 ]
+
+_SOURCE_MAP: dict[str, str] = {
+    "ApiKey": ".api_key",
+    "SSOConfig": ".auth",
+    "SSOUserProfile": ".auth",
+    "Deployment": ".deployment",
+    "DeploymentProviderAccount": ".deployment_provider_account",
+    "File": ".file",
+    "Flow": ".flow",
+    "FlowVersion": ".flow_version",
+    "FlowVersionDeploymentAttachment": ".flow_version_deployment_attachment",
+    "Folder": ".folder",
+    "Job": ".jobs",
+    "MemoryBase": ".memory_base",
+    "MemoryBaseSession": ".memory_base",
+    "MemoryBaseWorkflowRun": ".memory_base",
+    "MessageIngestionRecord": ".memory_base",
+    "MessageTable": ".message",
+    "SpanTable": ".traces.model",
+    "TraceTable": ".traces.model",
+    "TransactionTable": ".transactions",
+    "User": ".user",
+    "Variable": ".variable",
+}
+
+
+def __getattr__(name: str):
+    if name not in _SOURCE_MAP:
+        msg = f"module {__name__!r} has no attribute {name!r}"
+        raise AttributeError(msg)
+    import importlib
+
+    mod = importlib.import_module(_SOURCE_MAP[name], package=__spec__.parent)
+    val = getattr(mod, name)
+    globals()[name] = val
+    return val
+
+
+def import_all() -> None:
+    """Import every model class so they register in SQLModel.metadata.
+
+    Call this before running Alembic migrations or any code that iterates
+    __dict__ to discover SQLModel subclasses (e.g. schema health checks).
+    Models are lazy by default to avoid loading pandas at package import time.
+
+    All call sites have been audited: only database/service.py iterates __dict__
+    for model discovery, and both call sites (migration and health-check paths)
+    call import_all() immediately before the iteration.
+    """
+    for name in __all__:
+        getattr(__import__(__name__, fromlist=[name]), name)

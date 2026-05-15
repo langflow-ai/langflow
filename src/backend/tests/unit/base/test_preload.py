@@ -20,6 +20,7 @@ from langflow.preload import (
     mark_step_complete,
     preload_master,
 )
+from langflow.services.schema import ServiceType as _ServiceType
 
 
 @pytest.fixture(autouse=True)
@@ -140,6 +141,9 @@ def _preload_env(
         )
         stack.enter_context(patch("langflow.services.deps.get_db_service", return_value=db_service))
         stack.enter_context(patch("langflow.services.deps.get_service", return_value=cache_service))
+        mock_service_manager = MagicMock()
+        mock_service_manager.services = {_ServiceType.DATABASE_SERVICE: db_service}
+        stack.enter_context(patch("langflow.services.manager.get_service_manager", return_value=mock_service_manager))
         stack.enter_context(
             patch("langflow.services.deps.session_scope", return_value=_async_cm(AsyncMock())),
         )
