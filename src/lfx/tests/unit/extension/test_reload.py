@@ -108,6 +108,51 @@ def test_reload_replaces_component_set(tmp_path: Path) -> None:
     assert "PilotThing" not in record.by_class_name()
 
 
+def test_reload_reports_in_class_body_edit_via_components_changed(tmp_path: Path) -> None:
+    """Editing the body of an existing class must surface in components_changed.
+
+    Before the source_hash field, the diff compared only class-name sets, so
+    a body-only edit yielded ``components_added=()`` / ``components_removed=()``
+    and the UI showed ``no component changes`` for a real reload.  The diff
+    now compares :attr:`LoadedComponent.source_hash`; body edits change the
+    file hash and surface as ``components_changed``.
+    """
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    # Rewrite the same class with a different body (different build()).
+    edited = (
+        "class Component:\n    pass\n\n"
+        "class PilotThing(Component):\n"
+        "    display_name = 'X'\n"
+        "    def build(self):\n"
+        "        return 'edited'\n"
+    )
+    (root / "components" / "thing.py").write_text(edited, encoding="utf-8")
+
+    result = reload_bundle(registry, "pilot")
+
+    assert result.ok, result.errors
+    assert result.components_added == ()
+    assert result.components_removed == ()
+    assert result.components_changed == ("PilotThing",)
+
+
+def test_reload_reports_no_changes_when_source_is_identical(tmp_path: Path) -> None:
+    """An unchanged file produces empty added/removed/changed lists."""
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    result = reload_bundle(registry, "pilot")
+
+    assert result.ok, result.errors
+    assert result.components_added == ()
+    assert result.components_removed == ()
+    assert result.components_changed == ()
+
+
 def test_reload_publishes_namespaced_module_in_sys_modules(tmp_path: Path) -> None:
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()

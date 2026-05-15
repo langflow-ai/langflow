@@ -1,4 +1,10 @@
-import { memo, useCallback, useMemo } from "react";
+import {
+  type Dispatch,
+  memo,
+  type SetStateAction,
+  useCallback,
+  useMemo,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -10,10 +16,24 @@ import {
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { APIClassType } from "@/types/api";
+import type { APIClassType, APIDataType } from "@/types/api";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
+import type { NodeColors, SidebarBundle } from "../types";
 import BundleHeaderActions from "./bundleHeaderActions";
 import SidebarItemsList from "./sidebarItemsList";
+
+interface CategoryDisclosureProps {
+  item: SidebarBundle;
+  openCategories: string[];
+  setOpenCategories: Dispatch<SetStateAction<string[]>>;
+  dataFilter: APIDataType;
+  nodeColors: NodeColors;
+  onDragStart: (
+    event: React.DragEvent<HTMLDivElement>,
+    data: { type: string; node?: APIClassType },
+  ) => void;
+  sensitiveSort: (a: string, b: string) => number;
+}
 
 export const CategoryDisclosure = memo(function CategoryDisclosure({
   item,
@@ -23,18 +43,7 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
   nodeColors,
   onDragStart,
   sensitiveSort,
-}: {
-  item: any;
-  openCategories: string[];
-  setOpenCategories;
-  dataFilter: any;
-  nodeColors: any;
-  onDragStart: (
-    event: React.DragEvent<any>,
-    data: { type: string; node?: APIClassType },
-  ) => void;
-  sensitiveSort: (a: any, b: any) => number;
-}) {
+}: CategoryDisclosureProps) {
   const { t } = useTranslation();
   const handleKeyDownInput = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {

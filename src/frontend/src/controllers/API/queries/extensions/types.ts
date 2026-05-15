@@ -23,6 +23,12 @@ export interface ReloadBundleResponse {
   reload_id: string;
   components_added: string[];
   components_removed: string[];
+  /**
+   * Class names present in both pre- and post-reload records whose backing
+   * source file's SHA-256 changed.  Emitted by the backend so body-only
+   * edits are not misreported as "no component changes".
+   */
+  components_changed: string[];
   errors: ExtensionErrorPayload[];
   warnings: ExtensionErrorPayload[];
 }

@@ -155,6 +155,17 @@ def derive_display_name(extension_id: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _humanise_bundle_name(bundle_name: str) -> str:
+    """``my_bundle`` / ``my-bundle`` -> ``My Bundle`` for the sidebar header.
+
+    Kept tiny and deterministic so the scaffold output stays snapshot-stable;
+    the field is optional in the schema so authors can overwrite it after
+    init without invalidating the manifest.
+    """
+    parts = bundle_name.replace("-", "_").split("_")
+    return " ".join(word.capitalize() for word in parts if word) or bundle_name
+
+
 def _manifest_payload(options: InitOptions) -> dict:
     """Build the manifest dict that gets written to ``extension.json``."""
     return {
@@ -171,6 +182,12 @@ def _manifest_payload(options: InitOptions) -> dict:
             {
                 "name": options.bundle_name,
                 "path": f"components/{options.bundle_name}",
+                # display_name + icon let the sidebar render a polished header
+                # without the user having to manually edit the manifest; the
+                # frontend humanises the bundle name if these are dropped, so
+                # they're safe to delete once the author picks a real glyph.
+                "display_name": _humanise_bundle_name(options.bundle_name),
+                "icon": "Package",
             }
         ],
     }

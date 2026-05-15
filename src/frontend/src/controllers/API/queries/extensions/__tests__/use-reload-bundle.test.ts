@@ -59,6 +59,7 @@ describe("useReloadBundle", () => {
       reload_id: "abc",
       components_added: ["Foo"],
       components_removed: [],
+      components_changed: [],
       errors: [],
       warnings: [],
     };
@@ -102,6 +103,7 @@ describe("useReloadBundle", () => {
       reload_id: "abc",
       components_added: [],
       components_removed: [],
+      components_changed: [],
       errors: [
         {
           code: "module-import-failed",

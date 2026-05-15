@@ -17,6 +17,7 @@ easy to unit-test in isolation.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -53,6 +54,22 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _hash_file(path: Path) -> str:
+    """Return SHA-256 hex digest of ``path`` bytes, or ``""`` on failure.
+
+    Used to stamp :attr:`LoadedComponent.source_hash` so the reload diff can
+    detect in-class body edits where the class-name set is unchanged.
+    Read errors (permissions, race with deletion) degrade gracefully to an
+    empty hash; the diff treats empty hashes as "unknown" and never reports
+    them as changed, matching the prior behaviour for callers that bypass
+    the orchestrator.
+    """
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
 
 
 # ---------------------------------------------------------------------------
@@ -182,6 +199,11 @@ def _load_bundle_directory(
             call_local_errors_emitted += 1
             continue
 
+        # Hash the file once per module so multi-class files don't re-read
+        # disk for each class; failure to read leaves source_hash="" rather
+        # than aborting the load (the hash is advisory for the reload diff).
+        source_hash = _hash_file(file_path)
+
         for klass in collect_component_classes(module):
             class_name = klass.__name__
             loaded = LoadedComponent(
@@ -194,6 +216,7 @@ def _load_bundle_directory(
                 module_name=module.__name__,
                 file_path=file_path,
                 distribution=distribution,
+                source_hash=source_hash,
             )
             existing = seen_classes.get(class_name)
             if existing is not None:

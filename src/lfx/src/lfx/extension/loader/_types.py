@@ -71,6 +71,13 @@ class LoadedComponent:
     """Canonical PEP-503 distribution name when loaded from an installed
     package; ``None`` for inline LANGFLOW_COMPONENTS_PATH bundles AND for
     @official dev-mode loads against a not-yet-installed working tree."""
+    source_hash: str = ""
+    """SHA-256 hex digest of ``file_path`` bytes at load time.  Empty string
+    means the loader did not stamp a hash (test fixtures, legacy callers).
+    Used by :func:`lfx.extension.reload._diff` to detect in-class edits
+    where the class-name set is unchanged but the backing source changed --
+    without this, body edits surface to the API as ``components_added=[]``
+    / ``components_removed=[]`` and the UI shows ``no component changes``."""
 
     def __post_init__(self) -> None:
         if self.slot == SLOT_EXTRA and self.distribution is not None:

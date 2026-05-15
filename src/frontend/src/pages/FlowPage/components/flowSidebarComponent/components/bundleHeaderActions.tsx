@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, memo, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -14,6 +15,7 @@ import type {
 import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import useAlertStore from "@/stores/alertStore";
+import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 
 type AlertList = { title: string; list: string[] } | undefined;
@@ -69,10 +71,12 @@ const BundleHeaderActionsInner = ({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setTypes = useTypesStore((state) => state.setTypes);
+  const queryClient = useQueryClient();
   const { mutate: reloadBundle, isPending } = useReloadBundle({
     onSuccess: (data: ReloadBundleResponse) => {
       // Two onSuccess body shapes per the reload endpoint contract:
-      //   1) HTTP 200 + ok=true: clean reload, components_added/removed
+      //   1) HTTP 200 + ok=true: clean reload, components_added/removed/changed
       //      describe the delta.  Show a green toast.
       //   2) HTTP 422 + ok=false: the pipeline ran but rejected the new
       //      source (broken module, name mismatch, missing path).  The
@@ -80,20 +84,31 @@ const BundleHeaderActionsInner = ({
       //      a ReloadResult-shaped body; show a red toast with the typed
       //      errors + hints inline.
       if (data.ok) {
+        // Drop the cached types snapshot and invalidate the React Query
+        // entry so the palette + canvas re-fetch ``/all`` and pick up the
+        // post-swap class shapes.  Without this the backend has rebuilt
+        // its component cache but the frontend keeps serving stale
+        // templates until a hard refresh -- the visible symptom the
+        // user reports as "reload didn't work".
+        setTypes({});
+        queryClient.invalidateQueries({ queryKey: ["useGetTypes"] });
+
         const added = data.components_added.length;
         const removed = data.components_removed.length;
+        const changed = data.components_changed?.length ?? 0;
         const summary =
-          added === 0 && removed === 0
+          added === 0 && removed === 0 && changed === 0
             ? t("sidebar.bundles.reload.success.noChanges", {
                 bundle: displayName,
-                defaultValue: "Reloaded {{bundle}} (no component changes)",
+                defaultValue: "Reloaded {{bundle}} (no source changes detected)",
               })
             : t("sidebar.bundles.reload.success.withChanges", {
                 bundle: displayName,
                 added,
                 removed,
+                changed,
                 defaultValue:
-                  "Reloaded {{bundle}} (+{{added}} / -{{removed}} components)",
+                  "Reloaded {{bundle}} (+{{added}} / -{{removed}} / ~{{changed}} components)",
               });
         const list = renderTypedErrorList(data.warnings);
         setSuccessData({

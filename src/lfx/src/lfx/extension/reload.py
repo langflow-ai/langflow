@@ -185,6 +185,12 @@ class ReloadResult:
     record: BundleRecord | None = None
     components_added: tuple[str, ...] = ()
     components_removed: tuple[str, ...] = ()
+    components_changed: tuple[str, ...] = ()
+    """Class names present in both the previous and new records whose
+    backing source file's SHA-256 changed.  Lets the UI distinguish a true
+    no-op reload from an in-class body edit; before this field, body-only
+    edits surfaced as empty added/removed lists and the toast read
+    ``no component changes``."""
     reload_id: str = ""
 
     def to_dict(self) -> dict[str, object]:
@@ -195,6 +201,7 @@ class ReloadResult:
             "reload_id": self.reload_id,
             "components_added": list(self.components_added),
             "components_removed": list(self.components_removed),
+            "components_changed": list(self.components_changed),
             "errors": [e.to_dict() for e in self.errors],
             "warnings": [w.to_dict() for w in self.warnings],
         }
@@ -481,13 +488,14 @@ def _run_pipeline_body(
     hook_warnings = _fire_post_swap_hooks(new_record)
 
     # ---------- Stage 5: emit bundle_reloaded ----------
-    added, removed = _diff(previous, new_record)
+    added, removed, changed = _diff(previous, new_record)
     result = ReloadResult(
         ok=True,
         bundle=bundle,
         record=new_record,
         components_added=added,
         components_removed=removed,
+        components_changed=changed,
         warnings=tuple(staging.warnings) + hook_warnings,
         reload_id=reload_id,
     )
@@ -615,13 +623,33 @@ def _drop_staging_modules(staging_namespace: str) -> None:
 def _diff(
     previous: BundleRecord | None,
     new_record: BundleRecord,
-) -> tuple[tuple[str, ...], tuple[str, ...]]:
-    """Return (added, removed) class-name tuples, each sorted lexicographically."""
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    """Return (added, removed, changed) class-name tuples, lexicographically sorted.
+
+    ``changed`` are class names present in both records whose backing source
+    file's :attr:`LoadedComponent.source_hash` differs.  An empty hash on
+    either side is treated as ``unknown`` and never counted as changed, so
+    callers that bypass the orchestrator (e.g. test fixtures constructing
+    :class:`LoadedComponent` directly) keep the prior diff semantics.
+    """
     new_names = new_record.class_names
     old_names = previous.class_names if previous is not None else frozenset()
     added = tuple(sorted(new_names - old_names))
     removed = tuple(sorted(old_names - new_names))
-    return added, removed
+
+    if previous is None:
+        return added, removed, ()
+
+    old_hashes = {c.class_name: c.source_hash for c in previous.components}
+    new_hashes = {c.class_name: c.source_hash for c in new_record.components}
+    changed = tuple(
+        sorted(
+            name
+            for name in new_names & old_names
+            if old_hashes.get(name) and new_hashes.get(name) and old_hashes[name] != new_hashes[name]
+        )
+    )
+    return added, removed, changed
 
 
 def _failure(
@@ -670,6 +698,7 @@ def _emit_bundle_reload_event(result: ReloadResult) -> None:
                 "reload_id": result.reload_id,
                 "components_added": list(result.components_added),
                 "components_removed": list(result.components_removed),
+                "components_changed": list(result.components_changed),
             },
         )
     else:

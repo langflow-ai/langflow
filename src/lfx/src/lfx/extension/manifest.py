@@ -202,6 +202,26 @@ class BundleRef(BaseModel):
         min_length=1,
         description="Path to the bundle directory, relative to the manifest.",
     )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description=(
+            "Optional human-friendly label rendered in the sidebar header. "
+            "When omitted, the UI derives one by humanising ``name`` "
+            "(``my_bundle`` -> ``My Bundle``)."
+        ),
+    )
+    icon: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description=(
+            "Optional Lucide icon name used for the sidebar header glyph. "
+            "When omitted, the UI falls back to a generic ``Package`` icon "
+            "for installed extensions and ``folder`` otherwise."
+        ),
+    )
 
     @field_validator("path")
     @classmethod

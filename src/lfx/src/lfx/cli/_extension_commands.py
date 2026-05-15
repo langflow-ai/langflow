@@ -610,7 +610,7 @@ def dev_command(
     typer.echo(f"Registered dev extension: {entry.path}")
     typer.echo("Reload instructions:")
     typer.echo("  - Edit any file under components/ in the registered directory.")
-    typer.echo("  - Click 'Reload' on the bundle header in the Langflow palette (LE-1019).")
+    typer.echo("  - Click 'Reload' on the bundle header in the Langflow palette.")
 
     if skip_launch:
         return

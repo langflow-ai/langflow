@@ -40,6 +40,23 @@ jest.mock("@/stores/utilityStore", () => ({
     selector({ enableExtensionReload: runtimeReloadEnabled }),
 }));
 
+// The reload-success path clears the cached types snapshot and invalidates
+// the ``useGetTypes`` React Query entry so the palette re-fetches templates
+// without a hard refresh.  Capture both calls so the wiring is verifiable.
+const setTypes = jest.fn();
+interface TypesStoreSlice {
+  setTypes: typeof setTypes;
+}
+jest.mock("@/stores/typesStore", () => ({
+  useTypesStore: (selector: (state: TypesStoreSlice) => unknown) =>
+    selector({ setTypes }),
+}));
+
+const invalidateQueries = jest.fn();
+jest.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({ invalidateQueries }),
+}));
+
 // Captured between tests so we can poke the latest onSuccess / onError
 // directly without round-tripping through MSW.
 type ReloadVars = { extensionId: string; bundleName: string };
@@ -162,6 +179,7 @@ function makeResponse(
     reload_id: "abc",
     components_added: [],
     components_removed: [],
+    components_changed: [],
     errors: [],
     warnings: [],
     ...overrides,
@@ -188,6 +206,8 @@ describe("BundleHeaderActions", () => {
     setSuccessData.mockReset();
     setErrorData.mockReset();
     setNoticeData.mockReset();
+    setTypes.mockReset();
+    invalidateQueries.mockReset();
     lastOptions = {};
     pending = false;
     runtimeReloadEnabled = true;
@@ -230,6 +250,36 @@ describe("BundleHeaderActions", () => {
     expect(setSuccessData).toHaveBeenCalledTimes(1);
     expect(setSuccessData.mock.calls[0][0].title).toContain("OpenAI");
     expect(setSuccessData.mock.calls[0][0].title).toContain("+1");
+  });
+
+  it("counts components_changed when class names are unchanged but bodies edited", () => {
+    render(<BundleHeaderActions {...baseProps} />);
+    lastOptions.onSuccess?.(
+      makeResponse({ components_changed: ["HelloComponent"] }),
+    );
+    expect(setSuccessData).toHaveBeenCalledTimes(1);
+    const title = setSuccessData.mock.calls[0][0].title;
+    expect(title).toContain("OpenAI");
+    expect(title).toContain("~1");
+    expect(title).not.toMatch(/no.*changes/i);
+  });
+
+  it("invalidates the types query and clears the store on successful reload", () => {
+    render(<BundleHeaderActions {...baseProps} />);
+    lastOptions.onSuccess?.(makeResponse());
+    expect(setTypes).toHaveBeenCalledWith({});
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetTypes"],
+    });
+  });
+
+  it("does not invalidate types on a structural failure (ok=false)", () => {
+    render(<BundleHeaderActions {...baseProps} />);
+    lastOptions.onSuccess?.(
+      makeResponse({ ok: false, errors: [makeTypedError()] }),
+    );
+    expect(setTypes).not.toHaveBeenCalled();
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
   it("emits an error toast with typed-error hints on ok=false", () => {
