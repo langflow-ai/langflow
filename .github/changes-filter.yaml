@@ -23,6 +23,7 @@ frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
   - "**/jest_test.yml"
+  - "**/lint-js.yml"
   - ".github/workflows/ci.yml"
   - "src/lfx/src/lfx/_assets/component_index.json"
 docs:
@@ -110,3 +111,7 @@ database:
 
 mainpage:
   - "src/frontend/src/pages/MainPage/**"
+
+design-md:
+  - "DESIGN.md"
+  - ".github/workflows/ci.yml"

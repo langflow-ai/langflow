@@ -58,7 +58,7 @@ export default function CreateMemoryModal({
       onSubmit={handleSubmit}
     >
       <BaseModal.Header description={`Create a memory for \"${flowName}\"`}>
-        <ForwardedIconComponent name="Brain" className="mr-2 h-4 w-4" />
+        <ForwardedIconComponent name="BrainCog" className="mr-2 h-4 w-4" />
         Create Memory
       </BaseModal.Header>
       <BaseModal.Content className="flex flex-col gap-6 px-6 py-4">

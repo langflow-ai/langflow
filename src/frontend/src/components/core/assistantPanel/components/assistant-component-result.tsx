@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
 import { Check, FileText } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
 
@@ -30,8 +30,7 @@ export function parseComponentInfo(code: string | undefined) {
   // Extract inputs with type (e.g. MessageTextInput, IntInput, etc.)
   const inputRegex = /(\w+Input)\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/g;
   const inputs: FieldInfo[] = [];
-  let match;
-  while ((match = inputRegex.exec(code)) !== null) {
+  for (const match of Array.from(code.matchAll(inputRegex))) {
     inputs.push({ name: match[2], type: formatType(match[1]) });
   }
 
@@ -39,7 +38,7 @@ export function parseComponentInfo(code: string | undefined) {
   if (inputs.length === 0) {
     const simpleInputRegex =
       /(MessageTextInput|StrInput|IntInput|FloatInput|BoolInput|FileInput|DropdownInput|MultilineInput|SecretStrInput|HandleInput|DataInput)\s*\([^)]*display_name\s*=\s*"([^"]+)"/g;
-    while ((match = simpleInputRegex.exec(code)) !== null) {
+    for (const match of Array.from(code.matchAll(simpleInputRegex))) {
       inputs.push({ name: match[2], type: formatType(match[1]) });
     }
   }
@@ -48,7 +47,7 @@ export function parseComponentInfo(code: string | undefined) {
   const outputRegex =
     /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"(?:[^)]*?)method\s*=\s*"(\w+)"/g;
   const outputs: FieldInfo[] = [];
-  while ((match = outputRegex.exec(code)) !== null) {
+  for (const match of Array.from(code.matchAll(outputRegex))) {
     const methodName = match[2];
     // Look for the method's return type annotation: def method_name(self) -> ReturnType:
     const returnTypeRegex = new RegExp(
@@ -63,7 +62,7 @@ export function parseComponentInfo(code: string | undefined) {
   if (outputs.length === 0) {
     const simpleOutputRegex =
       /Output\(\s*(?:[^)]*?)display_name\s*=\s*"([^"]+)"/g;
-    while ((match = simpleOutputRegex.exec(code)) !== null) {
+    for (const match of Array.from(code.matchAll(simpleOutputRegex))) {
       outputs.push({ name: match[1], type: "Message" });
     }
   }
@@ -175,7 +174,7 @@ export function AssistantComponentResult({
           <button
             type="button"
             data-testid="assistant-approve-button"
-            className="h-8 rounded-[10px] bg-white px-4 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100"
+            className="h-8 rounded-[10px] bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             onClick={handleApprove}
           >
             Add to Canvas
@@ -184,7 +183,7 @@ export function AssistantComponentResult({
         <button
           type="button"
           data-testid="assistant-view-code-button"
-          className="h-8 rounded-[10px] bg-zinc-700 px-4 text-sm font-medium text-white transition-colors hover:bg-zinc-600"
+          className="h-8 rounded-[10px] bg-hard-zinc px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground"
           onClick={() => setIsViewCodeOpen(true)}
         >
           View Code

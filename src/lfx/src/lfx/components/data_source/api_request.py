@@ -27,7 +27,10 @@ from lfx.io import (
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
+
+# SSRF Protection imports - for preventing Server-Side Request Forgery attacks
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_and_resolve_url
+from lfx.utils.ssrf_transport import create_ssrf_protected_client
 
 # Define fields for each mode
 MODE_FIELDS = {
@@ -422,7 +425,22 @@ class APIRequestComponent(Component):
         return {}
 
     async def make_api_request(self) -> Data:
-        """Make HTTP request with optimized parameter handling."""
+        """Make HTTP request with SSRF protection and DNS pinning.
+
+        This method implements comprehensive SSRF (Server-Side Request Forgery) protection
+        using DNS pinning to prevent DNS rebinding attacks. The protection works by:
+        1. Validating the URL and resolving DNS during security check
+        2. Pinning the validated IP address
+        3. Forcing the HTTP client to use the pinned IP for the actual request
+        4. Ignoring any subsequent DNS changes (prevents rebinding attacks)
+
+        Returns:
+            Data: Response data from the HTTP request
+
+        Raises:
+            ValueError: If URL is invalid or blocked by SSRF protection
+        """
+        # Extract request parameters
         method = self.method
         url = self.url_input.strip() if isinstance(self.url_input, str) else ""
         headers = self.headers or {}
@@ -432,7 +450,8 @@ class APIRequestComponent(Component):
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
 
-        # Security warning when redirects are enabled
+        # Security warning: HTTP redirects can bypass SSRF protection
+        # A public URL could redirect to an internal resource
         if follow_redirects:
             self.log(
                 "Security Warning: HTTP redirects are enabled. This may allow SSRF bypass attacks "
@@ -440,51 +459,122 @@ class APIRequestComponent(Component):
                 "Only enable this if you trust the target server."
             )
 
-        # if self.mode == "cURL" and self.curl_input:
-        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
-        #     # After parsing curl, get the normalized URL
-        #     url = self._build_config["url_input"]["value"]
-
-        # Normalize URL before validation
+        # Normalize URL (add https:// if no protocol specified)
         url = self._normalize_url(url)
 
-        # Validate URL
+        # Basic URL format validation
         if not validators.url(url):
             msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
 
-        # SSRF Protection: Validate URL to prevent access to internal resources
-        # TODO: In next major version (2.0), remove warn_only=True to enforce blocking
+        # ============================================================================
+        # SSRF Protection with DNS Pinning
+        # ============================================================================
+        # This prevents DNS rebinding attacks by:
+        # 1. Resolving DNS and validating IPs during security check
+        # 2. Pinning the validated IP address
+        # 3. Using a custom HTTP transport that forces use of the pinned IP
+        # 4. Ignoring any new DNS resolutions (prevents rebinding)
+        #
+        # Without DNS pinning, an attacker could:
+        # - First DNS lookup: returns public IP (passes validation)
+        # - Second DNS lookup: returns internal IP (bypasses protection)
+        # - Attack succeeds: accesses internal services
+        #
+        # With DNS pinning:
+        # - First DNS lookup: returns public IP (passes validation)
+        # - IP is pinned: "example.com = 93.184.216.34"
+        # - HTTP request: uses pinned IP directly (no new DNS lookup)
+        # - Attack fails: even if DNS changes, we use the validated IP
+        # ============================================================================
+
         try:
-            validate_url_for_ssrf(url, warn_only=True)
+            # Validate URL and get validated IPs for DNS pinning
+            _validated_url, validated_ips = validate_and_resolve_url(url)
+
+            # Log DNS pinning information for security auditing
+            if validated_ips:
+                self.log(f"SSRF Protection: Using DNS pinning with {len(validated_ips)} validated IP(s)")
+
         except SSRFProtectionError as e:
-            # This will only raise if SSRF protection is enabled and warn_only=False
+            # SSRF protection blocked the request (private IP, internal network, etc.)
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
 
-        # Process query parameters
+        # Process query parameters (from string or Data object)
         if isinstance(self.query_params, str):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
 
-        # Process headers and body
+        # Process headers and body into proper format
         headers = self._process_headers(headers)
         body = self._process_body(body)
         url = self.add_query_params(url, query_params)
 
-        async with httpx.AsyncClient() as client:
-            result = await self.make_request(
-                client,
-                method,
-                url,
-                headers,
-                body,
-                timeout,
-                follow_redirects=follow_redirects,
-                save_to_file=save_to_file,
-                include_httpx_metadata=include_httpx_metadata,
-            )
+        # ============================================================================
+        # Create HTTP Client with DNS Pinning (if SSRF protection enabled)
+        # ============================================================================
+        from lfx.utils.ssrf_protection import is_ssrf_protection_enabled
+
+        if is_ssrf_protection_enabled() and validated_ips:
+            # SSRF protection is enabled and DNS pinning is needed
+            # Extract hostname from the final URL (after query params added)
+            hostname = urlparse(url).hostname
+
+            if hostname:
+                # Create client with DNS pinning to prevent rebinding attacks
+                # The custom transport will try validated IPs in order (supports dual-stack/load balancing)
+                # while preserving the Host header for virtual hosting/SNI
+                async with create_ssrf_protected_client(
+                    hostname=hostname,
+                    validated_ips=validated_ips,  # Pass all validated IPs
+                ) as client:
+                    result = await self.make_request(
+                        client,
+                        method,
+                        url,
+                        headers,
+                        body,
+                        timeout,
+                        follow_redirects=follow_redirects,
+                        save_to_file=save_to_file,
+                        include_httpx_metadata=include_httpx_metadata,
+                    )
+            else:
+                # Hostname extraction failed - fallback to normal client
+                # This should rarely happen as URL was already validated
+                async with httpx.AsyncClient() as client:
+                    result = await self.make_request(
+                        client,
+                        method,
+                        url,
+                        headers,
+                        body,
+                        timeout,
+                        follow_redirects=follow_redirects,
+                        save_to_file=save_to_file,
+                        include_httpx_metadata=include_httpx_metadata,
+                    )
+        else:
+            # No DNS pinning needed - use normal client
+            # This happens when SSRF protection is disabled or host is allowlisted
+            # - SSRF protection is disabled
+            # - Host is in the allowlist (e.g., localhost for Ollama)
+            # - Direct IP address was used (no DNS to pin)
+            async with httpx.AsyncClient() as client:
+                result = await self.make_request(
+                    client,
+                    method,
+                    url,
+                    headers,
+                    body,
+                    timeout,
+                    follow_redirects=follow_redirects,
+                    save_to_file=save_to_file,
+                    include_httpx_metadata=include_httpx_metadata,
+                )
+
         self.status = result
         return result
 
