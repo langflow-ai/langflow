@@ -100,7 +100,8 @@ const BundleHeaderActionsInner = ({
           added === 0 && removed === 0 && changed === 0
             ? t("sidebar.bundles.reload.success.noChanges", {
                 bundle: displayName,
-                defaultValue: "Reloaded {{bundle}} (no source changes detected)",
+                defaultValue:
+                  "Reloaded {{bundle}} (no source changes detected)",
               })
             : t("sidebar.bundles.reload.success.withChanges", {
                 bundle: displayName,
