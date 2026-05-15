@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { usePostProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account";
+import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import type { ProviderCredentials } from "../types";
 import ProviderCredentialsForm from "./provider-credentials-form";
@@ -93,7 +94,10 @@ export default function AddProviderModal({
             <p className="text-sm text-muted-foreground">
               Configure your watsonx Orchestrate credentials below. New to wxO?{" "}
               <a
-                href="https://www.ibm.com/products/watsonx-orchestrate#pricing"
+                href={decorateWxoUrl(
+                  "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+                  "signup-pricing",
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-primary hover:underline"
@@ -102,7 +106,10 @@ export default function AddProviderModal({
               </a>
               . Already have an account?{" "}
               <a
-                href="https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started"
+                href={decorateWxoUrl(
+                  "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+                  "docs-credentials",
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-medium text-primary hover:underline"
