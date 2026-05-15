@@ -459,6 +459,7 @@ class WatsonxDeploymentCreateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     app_ids: list[NormalizedId] = Field(default_factory=list)
     tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
@@ -508,6 +509,7 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
+    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
     created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
     added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)

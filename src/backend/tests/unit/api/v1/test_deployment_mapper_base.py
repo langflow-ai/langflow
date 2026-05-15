@@ -26,6 +26,7 @@ from langflow.api.v1.schemas.deployments import (
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
     DeploymentCreateResult,
+    DeploymentGetResult,
     DeploymentListResult,
     DeploymentType,
     DeploymentUpdateResult,
@@ -97,7 +98,6 @@ OUTBOUND_SLOT_NAMES = [
     "config_list_result",
     "snapshot_list_result",
     "deployment_item_data",
-    "deployment_status_data",
 ]
 
 
@@ -160,61 +160,16 @@ async def test_base_mapper_resolvers_passthrough_none_payload_when_slot_configur
 
 
 @pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_create_passthrough_without_flow_versions() -> None:
+async def test_base_mapper_resolve_deployment_create_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        display_name="create-deploy",
         description="",
         type="agent",
         provider_data={"some_key": "some_value"},
     )
 
-    resolved = await mapper.resolve_deployment_create(
-        user_id=uuid4(),
-        project_id=uuid4(),
-        db=None,  # type: ignore[arg-type]
-        payload=payload,
-    )
-
-    assert resolved.snapshot is None
-    assert resolved.config is None
-    assert resolved.provider_data == {"some_key": "some_value"}
-
-
-@pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_create_validates_provider_data_when_slot_configured() -> None:
-    mapper = _TypedMapper()
-    payload = DeploymentCreateRequest(
-        provider_id=uuid4(),
-        display_name="create-deploy",
-        description="",
-        type="agent",
-        provider_data={"label": "some_value"},
-    )
-
-    resolved = await mapper.resolve_deployment_create(
-        user_id=uuid4(),
-        project_id=uuid4(),
-        db=None,  # type: ignore[arg-type]
-        payload=payload,
-    )
-
-    assert resolved.provider_data == {"label": "some_value"}
-
-
-@pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_data_when_slot_configured() -> None:
-    mapper = _TypedMapper()
-    payload = DeploymentCreateRequest(
-        provider_id=uuid4(),
-        display_name="create-deploy",
-        description="",
-        type="agent",
-        provider_data={"invalid": "value"},
-    )
-
-    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+    with pytest.raises(NotImplementedError):
         await mapper.resolve_deployment_create(
             user_id=uuid4(),
             project_id=uuid4(),
@@ -224,43 +179,11 @@ async def test_base_mapper_resolve_deployment_create_rejects_invalid_provider_da
 
 
 @pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_update_passthrough_when_slot_not_configured() -> None:
+async def test_base_mapper_resolve_deployment_update_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
     payload = DeploymentUpdateRequest(provider_data={"patch": "replace"})
 
-    resolved = await mapper.resolve_deployment_update(  # type: ignore[arg-type]
-        user_id=uuid4(),
-        deployment_db_id=uuid4(),
-        db=None,
-        payload=payload,
-    )
-
-    assert resolved.spec is None
-    assert resolved.config is None
-    assert resolved.provider_data == {"patch": "replace"}
-
-
-@pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_update_validates_provider_data_when_slot_configured() -> None:
-    mapper = _TypedMapper()
-    payload = DeploymentUpdateRequest(provider_data={"patch": "replace"})
-
-    resolved = await mapper.resolve_deployment_update(  # type: ignore[arg-type]
-        user_id=uuid4(),
-        deployment_db_id=uuid4(),
-        db=None,
-        payload=payload,
-    )
-
-    assert resolved.provider_data == {"patch": "replace"}
-
-
-@pytest.mark.asyncio
-async def test_base_mapper_resolve_deployment_update_rejects_invalid_provider_data_when_slot_configured() -> None:
-    mapper = _TypedMapper()
-    payload = DeploymentUpdateRequest(provider_data={"invalid": "value"})
-
-    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+    with pytest.raises(NotImplementedError, match="not configured for updating deployments"):
         await mapper.resolve_deployment_update(  # type: ignore[arg-type]
             user_id=uuid4(),
             deployment_db_id=uuid4(),
@@ -323,11 +246,9 @@ async def test_base_mapper_resolve_deployment_list_adapter_params_passthrough() 
     mapper = BaseDeploymentMapper()
     params = await mapper.resolve_deployment_list_adapter_params(
         deployment_type=DeploymentType.AGENT,
-        names=["A", "B"],
         provider_params={"env": "prod"},
     )
     assert params.deployment_types == [DeploymentType.AGENT]
-    assert params.deployment_names == ["A", "B"]
     assert params.provider_params == {"env": "prod"}
 
 
@@ -336,7 +257,6 @@ async def test_base_mapper_resolve_deployment_list_adapter_params_returns_none_w
     mapper = BaseDeploymentMapper()
     params = await mapper.resolve_deployment_list_adapter_params(
         deployment_type=None,
-        names=None,
         provider_params=None,
     )
     assert params is None
@@ -417,7 +337,6 @@ def test_mapper_has_shape_method_for_all_outbound_slots() -> None:
     [
         "shape_deployment_operation_result",
         "shape_deployment_item_data",
-        "shape_deployment_status_data",
     ],
 )
 def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> None:
@@ -430,8 +349,16 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
 
 def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
-    with pytest.raises(NotImplementedError, match="shape_deployment_get_data"):
+    with pytest.raises(NotImplementedError, match="not configured for shaping provider data for a deployment"):
         mapper.shape_deployment_get_data({"ok": True})
+
+
+def test_base_mapper_resolve_deployment_update_kwargs_raises_not_implemented() -> None:
+    mapper = BaseDeploymentMapper()
+    payload = DeploymentUpdateRequest(description="new description")
+
+    with pytest.raises(NotImplementedError, match="not configured for updating local deployment metadata"):
+        mapper.resolve_deployment_update_kwargs(payload)
 
 
 def test_base_mapper_shapes_deployment_create_result() -> None:
@@ -456,7 +383,6 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
     assert shaped.id == deployment_id
     assert shaped.provider_id == provider_account_id
     assert shaped.provider_key == "test-provider"
-    assert shaped.display_name == "Deployment 1"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
 
@@ -688,7 +614,6 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     assert shaped.id == deployment_id
     assert shaped.provider_id == provider_account_id
     assert shaped.provider_key == "test-provider"
-    assert shaped.display_name == "Deployment Name"
     assert shaped.description == "desc"
     assert shaped.type == DeploymentType.AGENT
     assert shaped.provider_data == {"ok": True}
@@ -880,7 +805,6 @@ def test_base_mapper_util_existing_deployment_resource_key_for_create_raises_not
     mapper = BaseDeploymentMapper()
     payload = DeploymentCreateRequest(
         provider_id=uuid4(),
-        display_name="deploy",
         description="",
         type="agent",
         provider_data={},
@@ -889,27 +813,11 @@ def test_base_mapper_util_existing_deployment_resource_key_for_create_raises_not
         mapper.util_existing_deployment_resource_key_for_create(payload)
 
 
-def test_base_mapper_util_should_mutate_provider_for_existing_deployment_create_raises_not_implemented() -> None:
+def test_base_mapper_util_create_result_from_existing_resource_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
-    payload = DeploymentCreateRequest(
-        provider_id=uuid4(),
-        display_name="deploy",
-        description="",
-        type="agent",
-        provider_data={},
-    )
-    with pytest.raises(NotImplementedError):
-        mapper.util_should_mutate_provider_for_existing_deployment_create(payload)
-
-
-def test_base_mapper_util_create_result_from_existing_update_raises_not_implemented() -> None:
-    mapper = BaseDeploymentMapper()
-    result = DeploymentUpdateResult(id="provider-deploy-id")
-    with pytest.raises(NotImplementedError):
-        mapper.util_create_result_from_existing_update(
-            existing_resource_key="provider-deploy-id",
-            result=result,
-        )
+    existing_resource = DeploymentGetResult(id="provider-deploy-id", name="provider_deploy_name", type="agent")
+    with pytest.raises(NotImplementedError, match="not configured for onboarding existing deployment resources"):
+        mapper.util_create_result_from_existing_resource(existing_resource=existing_resource)
 
 
 # ---------------------------------------------------------------------------

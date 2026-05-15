@@ -201,9 +201,10 @@ class TestDeploymentUpdateRequest:
         with pytest.raises(ValidationError, match="At least one of"):
             DeploymentUpdateRequest()
 
-    def test_rejects_explicit_null_only_payload(self):
-        with pytest.raises(ValidationError, match="At least one of"):
-            DeploymentUpdateRequest(description=None)
+    def test_accepts_explicit_null_description(self):
+        payload = DeploymentUpdateRequest(description=None)
+        assert payload.description is None
+        assert "description" in payload.model_fields_set
 
     def test_rejects_description_over_max_length(self):
         with pytest.raises(ValidationError, match="at most"):
@@ -215,7 +216,6 @@ class TestDeploymentSpecPayloadCompatibility:
         with pytest.raises(ValidationError, match="provider_spec"):
             DeploymentCreateRequest(
                 provider_id=uuid4(),
-                display_name="deployment",
                 description="",
                 type="agent",
                 provider_spec={"region": "us-east-1", "size": "small"},
@@ -224,21 +224,19 @@ class TestDeploymentSpecPayloadCompatibility:
     def test_create_request_accepts_provider_data_payload(self):
         request = DeploymentCreateRequest(
             provider_id=uuid4(),
-            display_name="deployment",
             description="",
             type="agent",
-            provider_data={"operations": []},
+            provider_data={"display_name": "deployment", "operations": []},
         )
-        assert request.provider_data == {"operations": []}
+        assert request.provider_data == {"display_name": "deployment", "operations": []}
 
     def test_create_request_rejects_description_over_max_length(self):
         with pytest.raises(ValidationError, match="at most"):
             DeploymentCreateRequest(
                 provider_id=uuid4(),
-                display_name="deployment",
                 description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
                 type="agent",
-                provider_data={"operations": []},
+                provider_data={"display_name": "deployment", "operations": []},
             )
 
 
@@ -442,9 +440,9 @@ class TestDeploymentListItemFlowVersionIds:
             "id": uuid4(),
             "provider_id": uuid4(),
             "provider_key": DeploymentProviderKey.WATSONX_ORCHESTRATE,
-            "display_name": "dep",
             "type": "agent",
             "resource_key": "rk-1",
+            "provider_data": {"display_name": "dep"},
         }
         defaults.update(kwargs)
         return DeploymentListItem(**defaults)

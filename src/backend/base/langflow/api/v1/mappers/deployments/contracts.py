@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
+from lfx.services.adapters.deployment.schema import truncate_deployment_description
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 
@@ -63,6 +64,11 @@ class ProviderDeploymentMetadata(BaseModel):
 
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     description: str | None = None
+
+    @field_validator("description")
+    @classmethod
+    def truncate_description(cls, value: str | None) -> str | None:
+        return truncate_deployment_description(value)
 
 
 class CreatedSnapshotIds(BaseModel):

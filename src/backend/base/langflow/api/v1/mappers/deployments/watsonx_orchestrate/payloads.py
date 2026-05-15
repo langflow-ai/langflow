@@ -274,6 +274,10 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+    display_name: NormalizedStr | None = Field(
+        default=None,
+        description="Optional user-facing label to set on the wxO agent.",
+    )
     llm: WatsonxApiLlmName | None = Field(
         default=None,
         description=(
@@ -328,15 +332,28 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
+    display_name: NormalizedStr | None = Field(
+        default=None,
+        description=(
+            "User-facing label to set on a new wxO agent. "
+            "Required unless tracking an existing wxO agent in Langflow (via ``existing_agent_id`` field)."
+        ),
+    )
+    llm: WatsonxApiLlmName | None = Field(
+        default=None,
+        description=(
+            "Provider model identifier to use for a new wxO agent."
+            "Required unless tracking an existing wxO agent in Langflow (via ``existing_agent_id`` field)."
+        ),
+    )
     connections: list[WatsonxApiKeyValueConnectionPayload] = Field(default_factory=list)
     add_flows: list[WatsonxApiAddFlowItem] = Field(default_factory=list)
     upsert_tools: list[WatsonxApiCreateUpsertToolItem] = Field(default_factory=list)
     existing_agent_id: str | None = Field(
         default=None,
         description=(
-            "Provider-owned agent id to update/reuse instead of creating a new agent. "
-            "When provided, add_flows/upsert_tools are optional and may be empty for DB-only onboarding."
+            "Provider-owned agent id to track in Langflow instead of creating a new wxO agent. "
+            "When provided, the request must not include fields that would update the wxO agent."
         ),
     )
 
@@ -353,8 +370,25 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
 
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
-        has_operations = bool(self.add_flows or self.upsert_tools)
-        if self.existing_agent_id is None and not has_operations:
+        if "existing_agent_id" in self.model_fields_set:
+            if self.existing_agent_id is None:
+                msg = "provider_data.existing_agent_id cannot be set to null."
+                raise ValueError(msg)
+            if len(self.model_fields_set) > 1:
+                msg = (
+                    "existing_agent_id is only for tracking existing wxO agents in Langflow and cannot include "
+                    "fields that update the wxO agent. Update the deployment after it is tracked."
+                )
+                raise ValueError(msg)
+            return self
+        if self.display_name is None:
+            msg = "provider_data.display_name is required for new agent creation."
+            raise ValueError(msg)
+        if self.llm is None:
+            msg = "provider_data.llm is required for new agent creation."
+            raise ValueError(msg)
+        # TODO: Allow wxO agent creation without initial flows/tools once the adapter create path supports it.
+        if not (self.add_flows or self.upsert_tools):
             msg = "provider_data must include at least one add_flows or upsert_tools item for new agent creation."
             raise ValueError(msg)
         _validate_api_unique_connection_app_ids(connections=self.connections)
@@ -393,6 +427,8 @@ class WatsonxApiDeploymentCreateResultData(BaseModel):
 
     model_config = {"extra": "ignore"}
 
+    name: NormalizedStr = Field(description="Provider technical agent name.")
+    display_name: NormalizedStr
     created_app_ids: list[str] = Field(default_factory=list)
     created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
 
@@ -405,14 +441,7 @@ class WatsonxApiDeploymentCreateResultData(BaseModel):
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentCreateResultData:
-        if not isinstance(provider_result, dict):
-            return cls()
         return cls.model_validate(provider_result)
-
-    def to_api_provider_data(self) -> dict[str, Any] | None:
-        """Return API-safe provider_data subset for deployment create responses."""
-        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
-        return payload or None
 
 
 class WatsonxApiDeploymentUpdateResultData(BaseModel):
@@ -420,6 +449,8 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
 
     model_config = {"extra": "ignore"}
 
+    name: NormalizedStr = Field(description="Provider technical agent name.")
+    display_name: NormalizedStr
     created_app_ids: list[str] = Field(default_factory=list)
     created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
 
@@ -432,14 +463,7 @@ class WatsonxApiDeploymentUpdateResultData(BaseModel):
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:
-        if not isinstance(provider_result, dict):
-            return cls()
         return cls.model_validate(provider_result)
-
-    def to_api_provider_data(self) -> dict[str, Any] | None:
-        """Return API-safe provider_data subset for deployment update responses."""
-        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
-        return payload or None
 
 
 class WatsonxApiModelOut(BaseModel):
@@ -474,7 +498,7 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
 
     id: str = Field(min_length=1, description="Provider-owned deployment identifier.")
     name: str
-    display_name: str | None = None
+    display_name: NormalizedStr
     type: DeploymentType
     description: str
     created_at: datetime
@@ -496,6 +520,7 @@ class WatsonxApiDeploymentListItemProviderData(BaseModel):
     model_config = {"extra": "forbid"}
 
     name: str
+    display_name: NormalizedStr
     environments: list[NormalizedStr]
 
 
@@ -506,6 +531,7 @@ class WatsonxApiDeploymentGetProviderData(BaseModel):
 
     llm: NormalizedStr | None
     name: str
+    display_name: NormalizedStr
     environments: list[NormalizedStr]
 
 

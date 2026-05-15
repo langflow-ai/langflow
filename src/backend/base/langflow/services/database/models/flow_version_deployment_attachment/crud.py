@@ -155,6 +155,7 @@ async def list_deployment_attachments(
 
     stmt = (
         select(FlowVersionDeploymentAttachment)
+        # join with flow version to filter out orphaned attachments
         .join(FlowVersion, FlowVersion.id == FlowVersionDeploymentAttachment.flow_version_id)
         .where(
             FlowVersionDeploymentAttachment.user_id == user_id,

@@ -843,7 +843,6 @@ async def list_deployments_synced(
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-    names: list[str] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -870,7 +869,6 @@ async def list_deployments_synced(
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
             project_id=project_id,
-            names=names,
         )
         if not batch:
             break
@@ -954,7 +952,6 @@ async def list_deployments_synced(
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
-        names=names,
     )
     return accepted, total, provider_data_by_resource_key
 
