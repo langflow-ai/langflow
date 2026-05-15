@@ -1,5 +1,6 @@
 import copy
 import json
+import keyword
 import re
 from contextlib import suppress
 from typing import Any
@@ -679,6 +680,8 @@ class ComposioBaseComponent(Component):
                             # Prefix with app name to prevent clashes with component attributes
                             if clean_field in self.RESERVED_ATTRIBUTES:
                                 clean_field = f"{self.app_name}_{clean_field}"
+                            elif keyword.iskeyword(clean_field):
+                                clean_field = f"{clean_field}_"
 
                             action_fields.append(clean_field)
 
@@ -852,6 +855,15 @@ class ComposioBaseComponent(Component):
                     original_description = field_schema.get("description", "")
                     field_schema_copy["description"] = (
                         f"{original_name.replace('_', ' ').title()} for {self.app_name.title()}: {original_description}"
+                    ).strip()
+                elif keyword.iskeyword(clean_field_name):
+                    # Python reserved keywords (e.g. 'from') cannot be parameter names.
+                    original_name = clean_field_name
+                    clean_field_name = f"{clean_field_name}_"
+                    field_schema_copy = field_schema.copy()
+                    original_description = field_schema.get("description", "")
+                    field_schema_copy["description"] = (
+                        f"{original_name.replace('_', ' ').title()}: {original_description}"
                     ).strip()
                 else:
                     # Use the original field schema for all other fields
