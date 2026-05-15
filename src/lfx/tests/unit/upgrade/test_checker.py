@@ -158,3 +158,27 @@ def test_report_properties_with_mixed_statuses():
     assert not report.has_blocked
     assert not report.has_breaking
     assert not report.is_clean
+
+
+def test_nested_flow_nodes_are_classified():
+    """Nodes inside a grouped component's nested flow must be checked."""
+    outer_node = {
+        "id": "group-1",
+        "data": {
+            "type": "SomeGrouping",
+            "node": {
+                "display_name": "Group",
+                "template": {},  # no code — outer is skipped
+                "outputs": [],
+                "flow": {
+                    "data": {
+                        "nodes": [_node(code=REGISTRY_CODE_V1)],
+                        "edges": [],
+                    }
+                },
+            },
+        },
+    }
+    report = check_flow_compatibility({"nodes": [outer_node], "edges": []}, _registry())
+    assert len(report.nodes) == 1
+    assert report.nodes[0].status == "outdated_safe"

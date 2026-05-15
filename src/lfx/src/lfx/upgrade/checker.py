@@ -62,7 +62,7 @@ def _outputs_are_equal(original: list[dict], user: list[dict]) -> bool:
             return False
         if (
             orig.get("display_name") != u.get("display_name")
-            or orig.get("types") != u.get("types")
+            or sorted(orig.get("types") or []) != sorted(u.get("types") or [])
             or orig.get("method") != u.get("method")
             or orig.get("allows_loop") != u.get("allows_loop")
         ):
@@ -133,7 +133,7 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
     registry_code_field = registry_template.get("code")
     registry_code = registry_code_field.get("value") if isinstance(registry_code_field, dict) else None
 
-    if not registry_code or node_code == registry_code:
+    if registry_code is None or node_code == registry_code:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
 
     if _has_breaking_change(registry_entry, node_info):
