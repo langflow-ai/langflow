@@ -329,7 +329,19 @@ test(
         return data;
       }, newTxtFile);
 
-      // Trigger drag events
+      // Trigger drag events. We wait for the POST /files response so that
+      // the optimistic "temp" cache entry has been replaced with the real
+      // server path before we close the modal. On slower runners (Windows
+      // CI), closing the modal before the cache settles causes the new
+      // file's server path to be missing from useGetFilesV2 when the
+      // parent node re-renders, so the file never appears in the node.
+      const uploadResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v2/files") &&
+          response.request().method() === "POST" &&
+          response.status() === 201,
+        { timeout: 30000 },
+      );
       await page.dispatchEvent(
         '[data-testid="drag-files-component"]',
         "dragover",
@@ -340,6 +352,7 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
+      await uploadResponsePromise;
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
         timeout: 10000,
       });
@@ -348,6 +361,10 @@ test(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
 
+      // Wait for any in-flight files refetch triggered by the upload's
+      // onSettled invalidate before closing the modal.
+      await page.waitForLoadState("networkidle");
+
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
         {
@@ -355,7 +372,7 @@ test(
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 10000,
+        timeout: 30000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -826,12 +843,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Read File");
     await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     // Get flow ID from URL
     const url = page.url();
-    const flowId = url.split("/").slice(-1)[0];
+    const _flowId = url.split("/").slice(-1)[0];
 
     await page
       .getByTestId("files_and_knowledgeRead File")
@@ -902,7 +919,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -932,7 +949,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -958,7 +975,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chat Output");
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
     await page
       .getByTestId("input_outputChat Output")

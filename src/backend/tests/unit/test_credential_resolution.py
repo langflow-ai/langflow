@@ -10,6 +10,8 @@ env var is not set and the DB lookup is the only path.
 from unittest.mock import patch
 from uuid import uuid4
 
+from pydantic import SecretStr
+
 
 class TestGetApiKeyForProviderDbFallback:
     """Tests for get_api_key_for_provider when api_key param is None (second path)."""
@@ -100,6 +102,41 @@ class TestGetApiKeyForProviderDbFallback:
         result = get_api_key_for_provider(user_id, "OpenAI", None)
 
         assert result == "sk-from-database"
+
+    @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_unwrap_secretstr_from_db_lookup(self, mock_run, mock_mapping):
+        """DB credential variables are SecretStr and must be unwrapped before provider use."""
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        user_id = str(uuid4())
+        mock_mapping.return_value = {"OpenAI": "OPENAI_API_KEY"}
+        mock_run.return_value = SecretStr("sk-from-database")
+
+        result = get_api_key_for_provider(user_id, "OpenAI", None)
+
+        assert result == "sk-from-database"
+
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_unwrap_secretstr_from_explicit_variable_name_lookup(self, mock_run, monkeypatch):
+        """Explicit var-name inputs should resolve to the raw secret, not SecretStr's mask."""
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        user_id = str(uuid4())
+        mock_run.return_value = SecretStr("sk-from-database")
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-from-database"
+
+    def test_should_unwrap_secretstr_literal_api_key(self):
+        """SecretStr inputs should be passed to provider clients as raw strings."""
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(None, "OpenAI", SecretStr("sk-direct"))
+
+        assert result == "sk-direct"
 
     @patch("lfx.base.models.unified_models.credentials.get_model_provider_variable_mapping")
     def test_should_fallback_to_env_when_user_id_is_none(self, mock_mapping, monkeypatch):

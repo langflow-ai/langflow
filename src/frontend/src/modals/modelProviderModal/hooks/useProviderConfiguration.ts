@@ -1,10 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   PROVIDER_VARIABLE_MAPPING,
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
@@ -21,17 +23,6 @@ import { useModelToggleQueue } from "./useModelToggleQueue";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
-
-// Extract a user-facing message from an error caught from an API call.
-// Handles Axios-shaped errors (``response.data.detail``) and standard
-// ``Error.message`` without resorting to ``any``.
-const getErrorMessage = (error: unknown): string | undefined => {
-  const e = error as {
-    response?: { data?: { detail?: string } };
-    message?: string;
-  };
-  return e?.response?.data?.detail || e?.message;
-};
 
 interface UseProviderConfigurationOptions {
   selectedProvider: Provider | null;
@@ -59,6 +50,7 @@ interface UseProviderConfigurationReturn {
   validateCredentials: () => Promise<boolean>;
   handleModelToggle: (modelName: string, enabled: boolean) => void;
   flushPendingChanges: () => Promise<void>;
+  hasUserMadeChanges: () => boolean;
 
   // Helpers
   isVariableConfigured: (key: string) => boolean;
@@ -92,10 +84,22 @@ export const useProviderConfiguration = ({
   const [isFetchingAfterSave, setIsFetchingAfterSave] = useState(false);
   const [isFetchingAfterDisconnect, setIsFetchingAfterDisconnect] =
     useState(false);
-  const validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+  const _validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
+  // Tracks whether the user has made any persisted changes during this dialog
+  // session (save / activate / disconnect / model toggle). Read synchronously
+  // by the modal's onClose handler to skip refreshAllModelInputs and the
+  // accompanying loading affordance when the user opened the dialog and closed
+  // it without touching anything.
+  const hasUserMadeChangesRef = useRef(false);
+  const hasUserMadeChanges = useCallback(
+    () => hasUserMadeChangesRef.current,
+    [],
+  );
+
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -112,7 +116,7 @@ export const useProviderConfiguration = ({
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
-      {},
+      { includeDeprecated: true },
       {
         refetchInterval:
           syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
@@ -357,7 +361,7 @@ export const useProviderConfiguration = ({
       }
 
       setValidationState("invalid");
-      setValidationError(getErrorMessage(error) || "Validation failed");
+      setValidationError(getAxiosErrorMessage(error, "Validation failed"));
       return false;
     }
   }, [selectedProvider, getVariablesForValidation, validateProvider]);
@@ -423,17 +427,19 @@ export const useProviderConfiguration = ({
       );
 
       // All succeeded — defer toast and value clear until after models refetch
-      pendingSuccessTitleRef.current = `${selectedProvider.provider} Configuration Saved`;
+      hasUserMadeChangesRef.current = true;
+      pendingSuccessTitleRef.current = t("modelProviders.configurationSaved", {
+        provider: selectedProvider.provider,
+      });
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
     } catch (error: unknown) {
       setValidationFailed(true);
       setErrorData({
-        title: "Error Saving Configuration",
+        title: t("modelProviders.errorSavingConfiguration"),
         list: [
-          getErrorMessage(error) ||
-            "An unexpected error occurred. Please try again.",
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     } finally {
@@ -463,9 +469,11 @@ export const useProviderConfiguration = ({
 
     if (!variableName) {
       setErrorData({
-        title: "Invalid Provider",
+        title: t("modelProviders.errorInvalidProvider"),
         list: [
-          `Provider "${syncedSelectedProvider.provider}" is not supported.`,
+          t("modelProviders.errorInvalidProviderMessage", {
+            provider: syncedSelectedProvider.provider,
+          }),
         ],
       });
       return;
@@ -493,14 +501,18 @@ export const useProviderConfiguration = ({
         });
       }
 
-      setSuccessData({ title: `${syncedSelectedProvider.provider} Activated` });
+      hasUserMadeChangesRef.current = true;
+      setSuccessData({
+        title: t("modelProviders.providerActivated", {
+          provider: syncedSelectedProvider.provider,
+        }),
+      });
       invalidateProviderQueries();
     } catch (error: unknown) {
       setErrorData({
-        title: "Error Activating Provider",
+        title: t("modelProviders.errorActivatingProvider"),
         list: [
-          getErrorMessage(error) ||
-            "An unexpected error occurred. Please try again.",
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     }
@@ -531,17 +543,19 @@ export const useProviderConfiguration = ({
     try {
       await deleteGlobalVariable({ id: existingVariable.id });
 
+      hasUserMadeChangesRef.current = true;
       setSuccessData({
-        title: `${syncedSelectedProvider.provider} Disconnected`,
+        title: t("modelProviders.providerDisconnected", {
+          provider: syncedSelectedProvider.provider,
+        }),
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
     } catch (error: unknown) {
       setErrorData({
-        title: "Error Disconnecting Provider",
+        title: t("modelProviders.errorDisconnectingProvider"),
         list: [
-          getErrorMessage(error) ||
-            "An unexpected error occurred. Please try again.",
+          getAxiosErrorMessage(error, t("modelProviders.errorUnexpected")),
         ],
       });
     }
@@ -554,14 +568,19 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  // Model-toggle queue — overlay buffer, unsent buffer, debounced flush,
-  // awaitable close-time flush, re-overlay effect. Extracted into its own
-  // hook so this file stays focused on variable CRUD + provider lifecycle.
-  // See ``useModelToggleQueue`` for the full design rationale (split
-  // buffers, drain-before-rollback ordering, re-overlay loop guard).
-  const { handleModelToggle, flushPendingChanges } = useModelToggleQueue({
-    providerName: syncedSelectedProvider?.provider,
-  });
+  const { handleModelToggle: queueModelToggle, flushPendingChanges } =
+    useModelToggleQueue({
+      providerName: syncedSelectedProvider?.provider,
+    });
+
+  const handleModelToggle = useCallback(
+    (modelName: string, enabled: boolean) => {
+      if (!syncedSelectedProvider?.provider) return;
+      hasUserMadeChangesRef.current = true;
+      queueModelToggle(modelName, enabled);
+    },
+    [syncedSelectedProvider, queueModelToggle],
+  );
 
   return {
     variableValues,
@@ -582,6 +601,7 @@ export const useProviderConfiguration = ({
     validateCredentials,
     handleModelToggle,
     flushPendingChanges,
+    hasUserMadeChanges,
 
     // Helpers
     isVariableConfigured,

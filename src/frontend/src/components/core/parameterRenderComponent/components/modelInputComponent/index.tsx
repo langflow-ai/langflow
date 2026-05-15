@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
@@ -43,8 +45,9 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
-}: BaseInputProps<SelectedModel[]> &
+}: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
+  const { t } = useTranslation();
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -52,6 +55,10 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const showingBuildPanel =
+    isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
   // Connection mode: local state for reactivity, persisted in node data for reload
   const [isConnectionMode, setIsConnectionMode] = useState(() => {
@@ -80,7 +87,11 @@ export default function ModelInputComponent({
 
   const { refreshAllModelInputs } = useRefreshModelInputs();
 
-  const postTemplateValue = usePostTemplateValue({
+  // Ref to track if we've already processed the empty options state
+  // prevents infinite loop when no models are available
+  const hasProcessedEmptyRef = useRef(false);
+
+  const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
     nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
@@ -117,6 +128,12 @@ export default function ModelInputComponent({
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
+  const hasEnabledProviders = useMemo(() => {
+    return providersData?.some(
+      (provider) => provider.is_enabled || provider.is_configured,
+    );
+  }, [providersData]);
+
   // Groups models by their provider name for sectioned display in dropdown.
   // Filters out models from disabled providers AND disabled models, then
   // augments with any enabled models from `providersData` that weren't in the
@@ -130,12 +147,30 @@ export default function ModelInputComponent({
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
 
-      // Filter against client-side enabled models data. The user's
-      // current enabled list is the single source of truth: a model that
-      // isn't explicitly enabled (=== true) is hidden, even if it's the
-      // node's saved selection. There is no sticky-default carve-out —
-      // a globally-disabled model never appears in the dropdown.
-      if (enabledModelsData?.enabled_models) {
+      // Backend sticky-default: options tagged with `not_enabled_locally` are
+      // the user's saved selection injected into the options list by the
+      // unified-models build_config helper even though they aren't in the
+      // enabled list. They must always pass the client-side filter so the
+      // selection stays visible and selectable in the dropdown — UNLESS
+      // the user has the provider configured locally, in which case the
+      // sticky default reflects a model they've actively deactivated (not a
+      // provider that needs setup). Hide it so the dropdown defaults to a
+      // valid option instead of surfacing the stale selection with a wrench.
+      const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+      if (isStickyNotEnabled) {
+        const providerConfigured = providersData?.some(
+          (p) => p.provider === provider && p.is_configured,
+        );
+        if (providerConfigured) continue;
+      }
+
+      // Filter against client-side enabled models data. This is the source of
+      // truth for what the current user has enabled — stale `options` saved in
+      // an imported flow may include models from providers the current user
+      // hasn't enabled (e.g. WatsonX). When the provider is tracked in
+      // enabled_models, the model must be explicitly enabled (=== true); a
+      // `false` or missing entry means the model should be hidden.
+      if (!isStickyNotEnabled && enabledModelsData?.enabled_models) {
         const providerModels = enabledModelsData.enabled_models[provider];
         if (providerModels && providerModels[option.name] !== true) {
           continue;
@@ -201,17 +236,33 @@ export default function ModelInputComponent({
       }
     }
 
-    return grouped;
-  }, [options, enabledModelsData, providersData, modelType]);
+    // Zero-provider import fallback: if the user has no providers configured
+    // locally but an imported flow carries a saved model, inject that saved
+    // selection as the only dropdown entry so the trigger renders the model
+    // (with the Configure wrench) instead of the "Setup Provider" button.
+    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
+    // swap the dropdown for the setup CTA, visually losing the imported
+    // selection.
+    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    const savedValue = value?.[0];
+    if (!hasAnyGrouped && savedValue?.name) {
+      const providerName = savedValue.provider || "Unknown";
+      grouped[providerName] = [
+        {
+          ...(savedValue.id && { id: savedValue.id }),
+          name: savedValue.name,
+          icon: savedValue.icon || "Bot",
+          provider: providerName,
+          metadata: {
+            ...(savedValue.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as ModelOption,
+      ];
+    }
 
-  // True iff at least one model of this component's type is enabled across
-  // any provider. Drives the Setup Provider CTA — a provider that is
-  // configured but has all its models disabled is treated the same as a
-  // provider that hasn't been configured yet.
-  const hasEnabledProviders = useMemo(
-    () => Object.values(groupedOptions).some((models) => models.length > 0),
-    [groupedOptions],
-  );
+    return grouped;
+  }, [options, enabledModelsData, providersData, modelType, value]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -219,12 +270,9 @@ export default function ModelInputComponent({
     [groupedOptions],
   );
 
-  // Derive the currently selected model from the value prop. If the saved
-  // value isn't in the current ``flatOptions`` (typically because the
-  // model was globally disabled), it's treated as if no model is selected
-  // — the trigger renders the first available option as the visual
-  // selection and the effect below realigns the stored ``value`` to match.
+  // Derive the currently selected model from the value prop
   const selectedModel = useMemo(() => {
+    // If we're in connection mode, show the connection option as selected
     if (isConnectionMode) {
       return {
         name:
@@ -236,26 +284,84 @@ export default function ModelInputComponent({
     }
 
     const currentName = value?.[0]?.name;
-    if (currentName) {
-      const match = flatOptions.find((option) => option.name === currentName);
-      if (match) return match;
+    if (!currentName) {
+      // Logic to auto-select the first model if none is selected
+      // We only do this check if we have options available
+      if (flatOptions.length > 0 && !hasProcessedEmptyRef.current) {
+        // If we haven't processed empty state yet, we render the first one
+        return flatOptions[0];
+      }
+      return null;
+    }
+
+    const match = flatOptions.find((option) => option.name === currentName);
+    if (match) return match;
+
+    // Saved name isn't in the filtered options list — typically because the
+    // flow was imported via drag-drop (no backend sticky-default round-trip)
+    // or because an outdated component was upgraded and the fresh template
+    // lacks the sticky-default metadata. Preserve the saved selection in the
+    // trigger so it doesn't visually "snap" to the user's first enabled
+    // model. The wrench affordance in the dropdown handles configuration.
+    //
+    // EXCEPTION: when the saved provider is configured locally, the saved
+    // model has been actively deactivated (not missing-because-unconfigured).
+    // Fall through to the first available option so the user isn't shown a
+    // wrench for a provider that doesn't need configuring.
+    const saved = value?.[0];
+    if (saved) {
+      const savedProviderConfigured = providersData?.some(
+        (p) => p.provider === saved.provider && p.is_configured,
+      );
+      if (!savedProviderConfigured) {
+        return {
+          ...(saved.id && { id: saved.id }),
+          name: saved.name,
+          icon: saved.icon || "Bot",
+          provider: saved.provider || "Unknown",
+          metadata: {
+            ...(saved.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as SelectedModel;
+      }
     }
 
     return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions]);
+  }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
 
-  // Auto-select the first available option whenever the stored ``value``
-  // doesn't point at a currently-available model — including the case
-  // where the previously-selected model was globally disabled. Without
-  // this, the trigger would visually show one model while the node's
-  // saved value pointed at a different (or removed) one.
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
+    if (hasProcessedEmptyRef.current) return;
 
-    const savedName = value?.[0]?.name;
-    if (savedName && flatOptions.some((o) => o.name === savedName)) return;
+    const isEmpty = !value || value.length === 0;
+
+    // Detect a stale saved value: the saved model isn't in flatOptions AND
+    // the saved provider is configured locally (the user has actively
+    // deactivated this specific model rather than missing the provider
+    // entirely). Reset the persisted value so the flow doesn't reference a
+    // model the user can no longer run.
+    let isSavedValueStale = false;
+    if (!isEmpty) {
+      const saved = value[0];
+      const inOptions = flatOptions.some((opt) => opt.name === saved.name);
+      if (!inOptions && saved.provider) {
+        isSavedValueStale =
+          providersData?.some(
+            (p) => p.provider === saved.provider && p.is_configured,
+          ) ?? false;
+      }
+    }
+
+    // Sticky-default: if the component has a saved value, keep it as-is. The
+    // backend injects any selection that isn't in the user's enabled list
+    // back into `options` tagged with `not_enabled_locally`, so the saved
+    // value remains visible and runnable. Only auto-select the first option
+    // when there's no saved value at all OR when the saved value is stale.
+    if (!isEmpty && !isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
+    // Construct the new value object
     const newValue = [
       {
         ...(firstOption.id && { id: firstOption.id }),
@@ -266,7 +372,8 @@ export default function ModelInputComponent({
       },
     ];
     handleOnNewValue({ value: newValue });
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
+    hasProcessedEmptyRef.current = true;
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providersData]);
 
   /**
    * Handles model selection from the dropdown.
@@ -338,17 +445,26 @@ export default function ModelInputComponent({
     }
   }, [refreshAllModelInputs]);
 
-  const handleManageProvidersDialogClose = useCallback(() => {
-    setOpenManageProvidersDialog(false);
-    setIsRefreshingAfterClose(true);
-  }, []);
+  const handleManageProvidersDialogClose = useCallback(
+    (opts?: { hasChanges?: boolean }) => {
+      setOpenManageProvidersDialog(false);
+      // Only enter the post-close loading state when the modal will actually
+      // refresh model inputs. When the user opens the dialog and closes it
+      // without touching anything, there's no refetch to wait on, so the
+      // dropdown should not flicker through "Loading models…".
+      if (opts?.hasChanges) {
+        setIsRefreshingAfterClose(true);
+      }
+    },
+    [],
+  );
 
   // Clear the refreshing indicator only after BOTH the providers and the
   // enabled-models queries have completed a full refetch cycle (isFetching:
-  // false → true → false). Watching only ``isFetchingProviders`` clears the
+  // false -> true -> false). Watching only ``isFetchingProviders`` clears the
   // loading state too early when the enabled-models refetch is slower,
   // letting ``groupedOptions`` render against a stale ``enabledModelsData``
-  // cache — disabled models would briefly leak back into the dropdown after
+  // cache; disabled models would briefly leak back into the dropdown after
   // the user closes the provider modal. We track whether we've seen the
   // fetch start so we don't clear prematurely before the invalidation has
   // even been triggered by refreshAllModelInputs.
@@ -380,7 +496,7 @@ export default function ModelInputComponent({
       size="xs"
       disabled
     >
-      <LoadingTextComponent text="Loading models" />
+      <LoadingTextComponent text={t("modelInput.loadingModels")} />
     </Button>
   );
 
@@ -409,7 +525,7 @@ export default function ModelInputComponent({
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
       {renderFooterButton(
-        "Manage Model Providers",
+        t("modelInput.manageProviders"),
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
@@ -425,7 +541,10 @@ export default function ModelInputComponent({
     return (
       <PopoverContentInput
         side="bottom"
-        avoidCollisions={true}
+        avoidCollisions
+        collisionPadding={{
+          bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
+        }}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
@@ -436,7 +555,7 @@ export default function ModelInputComponent({
             onSelect={handleModelSelect}
           />
           {renderFooterButton(
-            "Refresh List",
+            t("modelInput.refreshList"),
             "RotateCw",
             handleRefreshButtonPress,
             "refresh-model-list",
@@ -446,7 +565,7 @@ export default function ModelInputComponent({
             <div className="border-t bg-background">
               {renderFooterButton(
                 externalOptions.fields.data.node.display_name ||
-                  "Connect other models",
+                  t("modelInput.connectOtherModels"),
                 externalOptions.fields.data.node.icon || "CornerDownLeft",
                 () => handleExternalOptions("connect_other_models"),
                 "connect-other-models",
@@ -467,22 +586,49 @@ export default function ModelInputComponent({
     return <div className="w-full">{renderLoadingButton()}</div>;
   }
 
+  // Show a small "Configure" wrench next to the trigger when the currently
+  // selected model was injected by the backend as a sticky default — i.e.
+  // the user's saved selection isn't in their current enabled_models list.
+  // Clicking it jumps straight to the provider manager so the user can
+  // enable the provider without losing their selection.
+  const showConfigureAffordance =
+    selectedModel?.metadata?.not_enabled_locally === true;
+
   // Main render
   return (
     <>
       <Popover open={open} onOpenChange={setOpen}>
-        <ModelTrigger
-          open={open}
-          disabled={disabled}
-          options={flatOptions}
-          selectedModel={selectedModel}
-          placeholder={placeholder}
-          hasEnabledProviders={hasEnabledProviders}
-          onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
-          id={id}
-          refButton={refButton}
-          showEmptyState={showEmptyState}
-        />
+        <div className="flex w-full items-center gap-2">
+          <div className="min-w-0 flex-1 truncate">
+            <ModelTrigger
+              open={open}
+              disabled={disabled}
+              options={flatOptions}
+              selectedModel={selectedModel}
+              placeholder={placeholder}
+              hasEnabledProviders={hasEnabledProviders ?? false}
+              onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
+              id={id}
+              refButton={refButton}
+              showEmptyState={showEmptyState}
+            />
+          </div>
+          {showConfigureAffordance && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setOpenManageProvidersDialog(true);
+              }}
+              data-testid={`${id}-configure`}
+              aria-label="Configure this model's provider"
+              title="This model isn't enabled for your user. Click to configure its provider."
+              className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
+            >
+              <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         {renderPopoverContent()}
       </Popover>
 

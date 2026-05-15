@@ -39,6 +39,34 @@ class TestLoggingComponent(Component):
     assert result.__name__ == "TestLoggingComponent"
 
 
+def test_create_class_future_annotations_with_type_checking():
+    """Regression test for issue #12776.
+
+     `from __future__ import annotations` must act as a compiler directive so that TYPE_CHECKING-only
+    imports don't raise NameError at classdefinition time.
+    """
+    code = dedent("""
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from langflow.custom import Component
+
+if TYPE_CHECKING:
+    from typing import List
+
+class TypeCheckingComponent(Component):
+    display_name = "Test"
+
+    def build(self, value: List[str]) -> str:
+        return str(value)
+    """)
+    result = create_class(code, "TypeCheckingComponent")
+    assert result.__name__ == "TypeCheckingComponent"
+    # With PEP 563 active, annotations should be stored as strings rather than evaluated
+    hints = result.build.__annotations__
+    assert hints.get("value") == "List[str]"
+    assert hints.get("return") == "str"
+
+
 def test_execute_function_supports_aliased_dotted_imports():
     code = dedent("""
 import urllib.request as request

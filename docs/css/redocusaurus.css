@@ -1,0 +1,55 @@
+/* ========================================
+   Redocusaurus / API Reference Pages
+   ======================================== */
+
+/* Remove Redoc's built-in left gutter so it aligns with the rest of the layout */
+.redocusaurus .menu-content {
+  padding-left: 0 !important;
+}
+
+/* Match sidebar font to site font */
+.redocusaurus .menu-content,
+.redocusaurus [class*="SidebarDivider"],
+.redocusaurus [class*="ApiItemName"] {
+  font-family: var(--ifm-font-family-base) !important;
+}
+
+/* Light theme Redoc sidebar */
+[data-theme="light"] .redocusaurus .menu-content {
+  background: var(--ifm-background-color) !important;
+  border-right: none !important;
+}
+
+/* Dark theme Redoc sidebar */
+[data-theme="dark"] .redocusaurus .menu-content {
+  background: #111 !important;
+  border-right: none !important;
+}
+
+[data-theme="dark"] .redocusaurus {
+  background: #111 !important;
+}
+
+/* Redoc operation panels */
+[data-theme="dark"] .redocusaurus [class*="OperationTitle"],
+[data-theme="dark"] .redocusaurus [class*="operation-type"] {
+  color: #cdcdd4;
+}
+
+/* Redoc search input */
+.redocusaurus input[type="search"] {
+  border-radius: 8px;
+  font-family: var(--ifm-font-family-base);
+}
+
+[data-theme="dark"] .redocusaurus input[type="search"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #303038;
+  color: #c6c6d1;
+}
+
+/* Redoc code samples */
+[data-theme="dark"] .redocusaurus [class*="CodeSample"] pre {
+  background: #161618 !important;
+  border: 1px solid #303038;
+}

@@ -707,6 +707,7 @@
             "description": "# 📖 README\nClassify images uploaded to the Playground by sentiment.\n\n## Prerequisites\n\n* [OpenAI API Key](https://platform.openai.com/)\n\n## Quick start\n\n1. Configure your **Model Provider** with your API credentials.\n\n2. Open the **Playground**, and then submit an image to the chat. \n\nThe LLM analyzes the image. The sentiment is output into a structured table according to the **Structured Output** component's Output Schema, and then parsed into a message for the Playground to display.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.image_sentiment_analysis.f0d5bc2d",
             "template": {}
           },
           "type": "note"
@@ -1122,7 +1123,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.12.5"
+                    "version": "2.13.4"
                   },
                   {
                     "name": "trustcall",

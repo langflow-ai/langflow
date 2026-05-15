@@ -1,13 +1,15 @@
 import { NodeResizer } from "@xyflow/react";
 import { debounce } from "lodash";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useGetNoteTranslationsQuery } from "@/controllers/API/queries/flows/use-get-note-translations";
 import { useAlternate } from "@/shared/hooks/use-alternate";
-import useFlowStore from "@/stores/flowStore";
+import useFlowStore, { syncNoteTranslations } from "@/stores/flowStore";
 import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import NodeDescription from "../GenericNode/components/NodeDescription";
@@ -68,11 +70,22 @@ function NoteNode({
   data: NoteDataType;
   selected?: boolean;
 }) {
+  const { t } = useTranslation();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [isEditingDescription, setIsEditingDescription] = useAlternate(false);
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const setNode = useFlowStore((state) => state.setNode);
+
+  const { data: noteTranslations } = useGetNoteTranslationsQuery(
+    currentFlow?.id,
+  );
+
+  useEffect(() => {
+    if (noteTranslations && Object.keys(noteTranslations).length > 0) {
+      syncNoteTranslations(noteTranslations);
+    }
+  }, [noteTranslations]);
 
   // Resolve background color: either a custom hex or a preset key from COLOR_OPTIONS
   const templateBgColor = data.node?.template.backgroundColor;
@@ -206,7 +219,7 @@ function NoteNode({
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
-            emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            emptyPlaceholder={t("noteNode.emptyPlaceholder")}
             placeholderClassName={cn(
               hasCustomColor
                 ? textColorMode === "light"

@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.3"
+version = "1.10.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.3",
+    "langflow-base[complete]>=0.10.0",
 ]
 
 
@@ -60,6 +60,7 @@ dev = [
     "mcp-server-fetch>=2025.1.17",
     "onnxruntime>=1.20,<1.24; python_version<'3.14'", # >=1.24 does not support Python 3.10; <1.24 allows 1.23.x for agent-lifecycle-toolkit
     "onnxruntime>=1.26; python_version>='3.14'",
+    "fakeredis>=2.0.0",
 ]
 
 [[tool.uv.index]]
@@ -115,7 +116,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]

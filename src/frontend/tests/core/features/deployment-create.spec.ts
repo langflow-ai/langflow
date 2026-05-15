@@ -19,6 +19,7 @@ async function setupDeploymentMocks(
   page: Page,
   folderId: string,
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
   // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
@@ -29,8 +30,27 @@ async function setupDeploymentMocks(
     });
   });
 
-  // Snapshots (used for duplicate tool name check on review step)
+  // Snapshots (used for duplicate tool name check on review step).
+  // When snapshotsMock is SNAPSHOTS_DUPLICATE_MOCK, echo back the requested names
+  // as existing tools so the check works regardless of the scoped tool name format.
   await page.route("**/api/v1/deployments/snapshots**", (route) => {
+    if (snapshotsMock === SNAPSHOTS_DUPLICATE_MOCK) {
+      const url = new URL(route.request().url());
+      const names = url.searchParams.getAll("names");
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider_data: {
+            tools: names.map((name, i) => ({ id: `tool-${i}`, name })),
+            page: 1,
+            size: 50,
+            total: names.length,
+          },
+        }),
+      });
+      return;
+    }
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -80,7 +100,7 @@ async function setupDeploymentMocks(
       });
       return;
     }
-    const flows = FLOWS_MOCK.map((f) => ({ ...f, folder_id: folderId }));
+    const flows = flowsMock.map((f) => ({ ...f, folder_id: folderId }));
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -104,6 +124,7 @@ async function setupDeploymentMocks(
 async function openDeploymentStepper(
   page: Page,
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
   // Listen for the folders/projects API response BEFORE bootstrap to capture
   // the real myCollectionId. The step-attach-flows component filters flows by
@@ -129,7 +150,7 @@ async function openDeploymentStepper(
     // proceed with empty id — test will likely fail at flow-item assertion
   }
 
-  await setupDeploymentMocks(page, myCollectionId, snapshotsMock);
+  await setupDeploymentMocks(page, myCollectionId, snapshotsMock, flowsMock);
   await page.getByTestId("deployments-btn").click();
   await page.waitForSelector('[data-testid="subtab-deployments"]');
   await page.getByTestId("create-deployment-empty-btn").click();
@@ -150,12 +171,13 @@ async function selectProvider(page: Page) {
 async function goToStepType(page: Page) {
   await selectProvider(page);
   await page.getByTestId("deployment-stepper-next").click();
-  // Wait for the Type step heading
-  await page.waitForSelector("text=Deployment Type");
+  await expect(
+    page.getByRole("heading", { name: /Deployment Type/i }),
+  ).toBeVisible();
 }
 
 // ---------------------------------------------------------------------------
-// Helper: navigate steps 1 → 2 → 3 (provider → type → attach flows)
+// Helper: navigate steps 1 → 2 → 3 (provider → type → flows)
 // ---------------------------------------------------------------------------
 async function goToStepAttachFlows(page: Page) {
   await goToStepType(page);
@@ -165,13 +187,13 @@ async function goToStepAttachFlows(page: Page) {
   // Select the LLM model
   await page.getByRole("combobox").click();
   await page.getByRole("option", { name: "ibm/granite-13b-chat" }).click();
-  // Advance to attach flows
+  // Advance to flows
   await page.getByTestId("deployment-stepper-next").click();
-  await page.waitForSelector("text=Attach Flows");
+  await expect(page.getByRole("heading", { name: /^Flows$/i })).toBeVisible();
 }
 
 // ---------------------------------------------------------------------------
-// Helper: navigate all steps through attach flows and select a flow+version
+// Helper: navigate all steps through flows and select a flow+version
 // ---------------------------------------------------------------------------
 async function goToStepReview(page: Page) {
   await goToStepAttachFlows(page);
@@ -189,7 +211,9 @@ async function goToStepReview(page: Page) {
   }
   // Advance to review
   await page.getByTestId("deployment-stepper-next").click();
-  await page.waitForSelector("text=Review & Confirm");
+  await expect(
+    page.getByRole("heading", { name: /Review & Confirm/i }),
+  ).toBeVisible();
 }
 
 // ---------------------------------------------------------------------------
@@ -197,7 +221,9 @@ async function goToStepReview(page: Page) {
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: opens stepper on New Deployment click",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -220,7 +246,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: step 1 provider - Next disabled without selection, enabled after selecting",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -245,7 +273,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: step 2 type - fill name and select type to enable Next",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -280,11 +310,13 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// Test 4: Step 3 (Attach Flows) — select a flow and version, Next enables
+// Test 4: Step 3 (Flows) — select a flow and version, Next enables
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: step 3 attach flows - select flow and version enables Next",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -331,7 +363,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: step 4 review - shows review content and Deploy button text",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -361,7 +395,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: clicking Deploy triggers POST and shows deploy status",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -414,7 +450,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: user can change tool name on review step",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -451,7 +489,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: review step shows error when tool name already exists in provider",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -476,7 +516,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: review step shows no error when tool name is unique",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -501,7 +543,9 @@ test(
 // ---------------------------------------------------------------------------
 test(
   "deployment-create: editing tool name to unique value clears duplicate error",
-  { tag: ["@deployment", "@workspace"] },
+  {
+    tag: ["@deployment", "@workspace"],
+  },
   async ({ page }) => {
     test.skip(
       process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
@@ -537,5 +581,30 @@ test(
       page.getByText("Edit tool name (already exists in provider)"),
     ).not.toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
+  },
+);
+
+test(
+  "deployment-create: review step shows inline error when flow name starts with number",
+  {
+    tag: ["@deployment", "@workspace"],
+  },
+  async ({ page }) => {
+    test.skip(
+      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+    );
+
+    await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK, [
+      { ...FLOWS_MOCK[0], name: "12925" },
+    ]);
+    await goToStepReview(page);
+
+    await expect(
+      page.getByText(
+        "Tool name must start with a letter and contain at least one alphanumeric character.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
   },
 );
