@@ -408,11 +408,19 @@ def _output_method_names(node: ast.ClassDef) -> set[str]:
     """
     names: set[str] = set()
     for item in node.body:
-        if not isinstance(item, ast.Assign):
+        if isinstance(item, ast.Assign):
+            targets = item.targets
+            value = item.value
+        elif isinstance(item, ast.AnnAssign):
+            if item.value is None:
+                continue
+            targets = [item.target]
+            value = item.value
+        else:
             continue
-        if not any(isinstance(t, ast.Name) and t.id == "outputs" for t in item.targets):
+        if not any(isinstance(t, ast.Name) and t.id == "outputs" for t in targets):
             continue
-        for sub in ast.walk(item.value):
+        for sub in ast.walk(value):
             if not isinstance(sub, ast.Call):
                 continue
             callee = sub.func

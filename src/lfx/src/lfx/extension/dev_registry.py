@@ -186,7 +186,12 @@ def _write_state(state_path: Path, entries: Iterable[DevExtensionEntry]) -> None
         dir=str(state_path.parent),
     )
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        try:
+            fh = os.fdopen(fd, "w", encoding="utf-8")
+        except BaseException:
+            os.close(fd)
+            raise
+        with fh:
             fh.write(serialized)
         Path(tmp_name).replace(state_path)
     except BaseException:
