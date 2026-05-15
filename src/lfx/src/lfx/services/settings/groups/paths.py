@@ -29,7 +29,10 @@ class PathSettings(BaseModel):
 
         if isinstance(value, str):
             value = Path(value)
-        value = value.resolve()
+        value = value.expanduser().resolve()
+        if value.exists() and not value.is_dir():
+            msg = f"config_dir must be a directory, got file: {value}"
+            raise ValueError(msg)
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
 
