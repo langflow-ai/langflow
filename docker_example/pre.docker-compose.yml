@@ -15,7 +15,11 @@ services:
       - langflow-data:/app/langflow
 
   postgres:
-    image: postgres:16
+    # Pinned to a specific Debian base (trixie) so the postgres:16 tag does not
+    # silently roll its OS underneath us — that roll causes a glibc collation
+    # version mismatch warning on existing volumes. Matches the langflow image
+    # base. See https://github.com/langflow-ai/langflow/issues/9608
+    image: postgres:16-trixie
     environment:
       POSTGRES_USER: langflow
       POSTGRES_PASSWORD: langflow

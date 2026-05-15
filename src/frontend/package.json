@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
@@ -11,6 +11,7 @@
     "glob": "^11.1.0",
     "test-exclude": "^7.0.0",
     "picomatch": "^4.0.4",
+    "ip-address": "^10.1.1",
     "jest-util": {
       "picomatch": "^4.0.4"
     },
@@ -72,7 +73,7 @@
     "framer-motion": "^11.2.10",
     "fuse.js": "^7.0.0",
     "i18next": "^25.8.18",
-    "lodash": "^4.18.0",
+    "lodash": "^4.17.21",
     "lucide-react": "^0.575.0",
     "moment": "^2.30.1",
     "moment-timezone": "^0.5.48",

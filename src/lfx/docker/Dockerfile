@@ -7,7 +7,7 @@
 ################################
 
 # Use an Alpine-based Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-alpine AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-alpine AS builder
 
 # Install build dependencies needed for some Python packages on Alpine
 RUN apk add --no-cache build-base libaio-dev linux-headers
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12-alpine AS runtime
+FROM python:3.14-alpine AS runtime
 
 # Create a non-root user
 # -D: Don't assign a password
