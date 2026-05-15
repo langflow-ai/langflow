@@ -33,6 +33,7 @@ members = [
     "lfx-arxiv",
     "lfx-datastax",
     "lfx-duckduckgo",
+    "lfx-wikipedia",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7182,6 +7183,7 @@ dependencies = [
     { name = "lfx-arxiv" },
     { name = "lfx-datastax" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-wikipedia" },
 ]
 
 [package.optional-dependencies]
@@ -7273,6 +7275,7 @@ requires-dist = [
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
     { name = "lfx-datastax", editable = "src/bundles/datastax" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-wikipedia", editable = "src/bundles/wikipedia" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
@@ -7543,7 +7546,6 @@ all = [
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
     { name = "weaviate-client" },
-    { name = "wikipedia" },
     { name = "wolframalpha" },
     { name = "yfinance" },
     { name = "youtube-transcript-api" },
@@ -7706,7 +7708,6 @@ complete = [
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
     { name = "weaviate-client" },
-    { name = "wikipedia" },
     { name = "wolframalpha" },
     { name = "yfinance" },
     { name = "youtube-transcript-api" },
@@ -7970,9 +7971,6 @@ vlmrun = [
 weaviate = [
     { name = "weaviate-client" },
 ]
-wikipedia = [
-    { name = "wikipedia" },
-]
 wolframalpha = [
     { name = "wolframalpha" },
 ]
@@ -8218,7 +8216,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["upstash"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["vlmrun"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["weaviate"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["wikipedia"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["wolframalpha"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["yfinance"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["youtube"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8318,13 +8315,12 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
-    { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
     { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
     { name = "yfinance", marker = "extra == 'yfinance'", specifier = "==0.2.50" },
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8752,6 +8748,27 @@ requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-wikipedia"
+version = "0.1.0"
+source = { editable = "src/bundles/wikipedia" }
+dependencies = [
+    { name = "httpx" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "lfx" },
+    { name = "wikipedia" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27,<1.0.0" },
+    { name = "langchain-community", specifier = "~=0.4.1" },
+    { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "wikipedia", specifier = "==1.4.0" },
 ]
 
 [[package]]

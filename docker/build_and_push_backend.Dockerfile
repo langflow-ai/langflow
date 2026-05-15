@@ -53,6 +53,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/duckduckgo \
         ./src/bundles/arxiv \
         ./src/bundles/datastax \
+        ./src/bundles/wikipedia \
         "./src/backend/base[complete,postgresql]"
 
 ################################

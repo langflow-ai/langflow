@@ -260,6 +260,46 @@
       "legacy_slot": "ext:datastax:GetEnvVar@official-pre-a",
       "target": "ext:datastax:GetEnvVar@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.wikidata.WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:wikipedia:WikidataComponent@official-pre-a",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.wikipedia.WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:wikipedia:WikipediaComponent@official-pre-a",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

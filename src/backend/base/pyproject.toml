@@ -256,7 +256,6 @@ smolagents = ["smolagents>=1.8.0"]
 beautifulsoup = ["beautifulsoup4==4.12.3"]
 serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
-wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
 # duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
 # Public consumers should install lfx-duckduckgo directly (pip-installing
@@ -425,7 +424,6 @@ complete = [
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",
     "langflow-base[google-api]",
-    "langflow-base[wikipedia]",
     "langflow-base[fake-useragent]",
     # duckduckgo was an extra of langflow-base; the LE-1023 pilot moved it
     # to the standalone lfx-duckduckgo bundle (now a regular dep of langflow).

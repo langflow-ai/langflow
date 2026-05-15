@@ -35,6 +35,7 @@ dependencies = [
     # ``lfx.base.datastax.astradb_base`` pre-extraction).  Regular dep so
     # ``pip install langflow`` keeps shipping the datastax components.
     "lfx-datastax>=0.1.0",
+    "lfx-wikipedia>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -95,6 +96,7 @@ langflow-sdk = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-datastax = { workspace = true }
+lfx-wikipedia = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -109,6 +111,7 @@ members = [
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
     "src/bundles/datastax",
+    "src/bundles/wikipedia",
     # langflow-extensions:bundle-members-end
 ]
 

@@ -110,6 +110,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/datastax
 
+# Bundle re-attach: ``lfx-wikipedia`` ships the Wikipedia
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/wikipedia
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

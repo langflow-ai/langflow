@@ -2,8 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from langflow.custom import Component
-from lfx.components.wikipedia import WikipediaComponent
 from lfx.custom.utils import build_custom_component_template
+from lfx_wikipedia import WikipediaComponent
 
 # Import the base test class
 from tests.base import ComponentTestBaseWithoutClient
