@@ -326,6 +326,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
