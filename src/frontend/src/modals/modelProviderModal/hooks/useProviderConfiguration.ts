@@ -7,10 +7,8 @@ import {
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
 import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
-import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   useDeleteGlobalVariables,
@@ -18,10 +16,10 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
+import { useModelToggleQueue } from "./useModelToggleQueue";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
@@ -115,8 +113,6 @@ export const useProviderConfiguration = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
-  const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
-    useUpdateEnabledModels({ retry: 0 });
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
@@ -572,145 +568,18 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  const pendingModelToggles = useRef<Record<string, boolean>>({});
-  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
-    undefined,
-  );
-
-  const flushModelToggles = useDebounce(() => {
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const updates = Object.entries(pendingModelToggles.current).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
-
-    if (updates.length === 0) return;
-
-    // Capture the fallback data
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    updateEnabledModels(
-      { updates },
-      {
-        onError: (error: unknown) => {
-          if (previousData) {
-            queryClient.setQueryData(["useGetEnabledModels"], previousData);
-          }
-          const errorMessage = getAxiosErrorMessage(
-            error,
-            t("modelProviders.errorFailedToUpdateModelStatus"),
-          );
-          setErrorData({
-            title: t("modelProviders.errorUpdatingModelStatus"),
-            list: [errorMessage],
-          });
-        },
-        onSettled: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["useGetEnabledModels"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["useGetModelProviders"],
-          });
-          refreshAllModelInputs({ silent: true });
-        },
-      },
-    );
-  }, 1000);
-
-  const flushPendingChanges = useCallback(async () => {
-    // Cancel the pending debounce timer — we'll send the toggles directly
-    flushModelToggles.cancel();
-
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const toggles = { ...pendingModelToggles.current };
-    if (Object.keys(toggles).length === 0) return;
-
-    const updates = Object.entries(toggles).map(([modelName, enabled]) => ({
-      provider: providerName,
-      model_id: modelName,
-      enabled,
-    }));
-
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    try {
-      await updateEnabledModelsAsync({ updates });
-      // Mutation succeeded — query invalidation is handled by
-      // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: unknown) {
-      // Revert optimistic update on failure
-      if (previousData) {
-        queryClient.setQueryData(["useGetEnabledModels"], previousData);
-      }
-      const errorMessage = getAxiosErrorMessage(
-        error,
-        t("modelProviders.errorFailedToUpdateModelStatus"),
-      );
-      setErrorData({
-        title: t("modelProviders.errorUpdatingModelStatus"),
-        list: [errorMessage],
-      });
-    }
-  }, [
-    flushModelToggles,
-    syncedSelectedProvider,
-    queryClient,
-    updateEnabledModelsAsync,
-    setErrorData,
-  ]);
+  const { handleModelToggle: queueModelToggle, flushPendingChanges } =
+    useModelToggleQueue({
+      providerName: syncedSelectedProvider?.provider,
+    });
 
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean) => {
       if (!syncedSelectedProvider?.provider) return;
-
-      const providerName = syncedSelectedProvider.provider;
-
       hasUserMadeChangesRef.current = true;
-
-      if (Object.keys(pendingModelToggles.current).length === 0) {
-        fallbackModelData.current =
-          queryClient.getQueryData<EnabledModelsResponse>([
-            "useGetEnabledModels",
-          ]);
-      }
-
-      queryClient.setQueryData<EnabledModelsResponse>(
-        ["useGetEnabledModels"],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            enabled_models: {
-              ...old.enabled_models,
-              [providerName]: {
-                ...old.enabled_models[providerName],
-                [modelName]: enabled,
-              },
-            },
-          };
-        },
-      );
-
-      pendingModelToggles.current[modelName] = enabled;
-      flushModelToggles();
+      queueModelToggle(modelName, enabled);
     },
-    [syncedSelectedProvider, queryClient, flushModelToggles],
+    [syncedSelectedProvider, queueModelToggle],
   );
 
   return {

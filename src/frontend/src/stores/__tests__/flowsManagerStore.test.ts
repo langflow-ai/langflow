@@ -461,7 +461,10 @@ describe("useFlowsManagerStore", () => {
         result.current.resetStore();
       });
 
-      expect(result.current.flows).toEqual([]);
+      // flows must be undefined (not []) so consumers gating on
+      // `flows && ...` correctly show a loader after logout instead of
+      // briefly rendering the empty-state splash with stale empty data.
+      expect(result.current.flows).toBeUndefined();
       expect(result.current.currentFlow).toBeUndefined();
       expect(result.current.currentFlowId).toBe("");
       expect(result.current.searchFlowsComponents).toBe("");
