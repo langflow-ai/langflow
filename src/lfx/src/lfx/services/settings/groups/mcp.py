@@ -14,8 +14,7 @@ class McpSettings(BaseModel):
     the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
-    database."""
+    """Timeout in seconds for MCP server operations (tool calls, server requests)."""
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
@@ -25,9 +24,9 @@ class McpSettings(BaseModel):
     Mirrors the default constant MAX_SESSIONS_PER_SERVER in util.py. Adjust to
     control resource usage or concurrency per server."""
 
-    mcp_session_idle_timeout: int = 400  # seconds
+    mcp_session_idle_timeout: int = 400  # seconds (~6.7 minutes)
     """How long (in seconds) an MCP session can stay idle before the background
-    cleanup task disposes of it. Defaults to 5 minutes."""
+    cleanup task disposes of it."""
 
     mcp_session_cleanup_interval: int = 120  # seconds
     """Frequency (in seconds) at which the background cleanup task wakes up to
