@@ -401,6 +401,20 @@ class TelemetryWriterService(Service):
                 self.dropped_vertex_builds += 1
         buffer.append(payload)
 
+    async def _wait_or_shutdown(self, timeout: float, *, name: str) -> None:
+        """Sleep up to ``timeout`` or return early if shutdown is signaled.
+
+        Wraps ``Event.wait()`` in a named task so pyleak (and operators
+        inspecting ``asyncio.all_tasks()``) can distinguish telemetry-writer
+        ticks from anonymous ``wait_for`` wrappers. Swallows ``TimeoutError``
+        so callers can write a plain ``await self._wait_or_shutdown(...)``.
+        """
+        if self._shutdown_event is None:
+            return
+        wait_task = asyncio.create_task(self._shutdown_event.wait(), name=name)
+        with suppress(asyncio.TimeoutError):
+            await asyncio.wait_for(wait_task, timeout=timeout)
+
     @staticmethod
     def _drain(buffer: collections.deque[dict[str, Any]], max_n: int) -> list[dict]:
         batch: list[dict] = []
@@ -519,8 +533,7 @@ class TelemetryWriterService(Service):
             if not tx_batch and not vb_batch:
                 if should_stop:
                     return
-                with suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=flush_interval)
+                await self._wait_or_shutdown(flush_interval, name="telemetry-writer-tick")
                 continue
 
             try:
@@ -552,8 +565,7 @@ class TelemetryWriterService(Service):
                         f"telemetry_writer: {consecutive_failures} consecutive batch failures, "
                         f"buffer depth tx={len(self._tx_buffer)} vb={len(self._vb_buffer)}"
                     )
-                with suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(self._shutdown_event.wait(), timeout=backoff)
+                await self._wait_or_shutdown(backoff, name="telemetry-writer-backoff")
 
     async def _flush(self, tx_batch: list[dict], vb_batch: list[dict]) -> None:
         if not tx_batch and not vb_batch:
@@ -581,12 +593,9 @@ class TelemetryWriterService(Service):
             return
         while not self._shutdown_event.is_set():
             interval = float(getattr(self.settings_service.settings, "telemetry_writer_cleanup_interval_s", 60))
-            try:
-                await asyncio.wait_for(self._shutdown_event.wait(), timeout=interval)
-            except asyncio.TimeoutError:
-                pass
-            else:
-                return  # shutdown requested
+            await self._wait_or_shutdown(interval, name="telemetry-sweeper-tick")
+            if self._shutdown_event.is_set():
+                return
             try:
                 await self._run_retention_pass()
             except Exception:  # noqa: BLE001
