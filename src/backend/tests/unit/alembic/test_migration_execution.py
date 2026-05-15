@@ -7,14 +7,13 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from langflow.services.database import models as db_models
 from langflow.services.database.service import SQLModel
 from sqlalchemy import create_engine, text
-
-from alembic import command
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
