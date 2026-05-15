@@ -94,10 +94,6 @@ class DatabaseSettings(BaseModel):
             raise ValueError(msg)
 
         if langflow_database_url := os.getenv("LANGFLOW_DATABASE_URL"):
-            if not is_valid_database_url(langflow_database_url):
-                sanitized = sanitize_database_url(langflow_database_url)
-                msg = f"Invalid LANGFLOW_DATABASE_URL: '{sanitized}'"
-                raise ValueError(msg)
             value = langflow_database_url
             logger.debug("Using LANGFLOW_DATABASE_URL env variable")
         else:
