@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -391,11 +391,25 @@ class Settings(BaseSettings):
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.
 
-    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
-    that will be allowed to execute, even when allow_custom_components is False.
+    Note: LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH can be used to define
+    an allow-list of custom components that will be allowed to execute, even when
+    allow_custom_components is False. That bypass can be disabled with
+    allow_components_paths_override.
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
+
+    allow_components_paths_override: bool = True
+    """If set to False, LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH will
+    not bypass the allow_custom_components=False restriction — only components matching
+    built-in server templates will be executable.
+
+    Default is True, which preserves the existing behavior: components loaded from those
+    env-var paths act as an admin-curated allow-list that remains executable even when
+    allow_custom_components is False.
+
+    Has no effect when allow_custom_components is True (the flag is not blocking anything
+    to override)."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = False
@@ -665,6 +679,44 @@ class Settings(BaseSettings):
         elif isinstance(value, list):
             value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
+
+    @model_validator(mode="after")
+    def _enforce_components_paths_override(self):
+        """Strip env-var-provided component paths when their bypass is disabled.
+
+        When ``allow_custom_components`` is False the server only trusts components
+        matching built-in templates. By default ``LANGFLOW_COMPONENTS_PATH`` and
+        ``LANGFLOW_COMPONENTS_INDEX_PATH`` still contribute to that trust set (an
+        admin-curated allow-list). Setting ``allow_components_paths_override=False``
+        disables that bypass: here we remove the env-contributed entries so nothing
+        downstream loads or trusts them.
+        """
+        if self.allow_custom_components or self.allow_components_paths_override:
+            return self
+
+        env_components_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_components_path and env_components_path in self.components_path:
+            logger.warning(
+                "Ignoring LANGFLOW_COMPONENTS_PATH=%s: "
+                "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                env_components_path,
+            )
+            # In-place removal avoids re-triggering ``set_components_path``, which would
+            # re-read LANGFLOW_COMPONENTS_PATH and append it again.
+            while env_components_path in self.components_path:
+                self.components_path.remove(env_components_path)
+
+        if self.components_index_path:
+            logger.warning(
+                "Ignoring LANGFLOW_COMPONENTS_INDEX_PATH=%s: "
+                "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                self.components_index_path,
+            )
+            self.components_index_path = None
+
+        return self
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 
