@@ -616,6 +616,9 @@ class _LazyImportProxy:
     def __iter__(self):
         return iter(self._resolve())
 
+    def __getitem__(self, item):
+        return self._resolve()[item]
+
     def __or__(self, other):
         return self._resolve() | other
 
@@ -823,6 +826,22 @@ def prepare_global_scope(module):
     definitions = [
         node for node in module.body if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign)
     ]
+
+    # Ensure `from __future__ import annotations` (PEP 563) is always active so that
+    # type annotations in class bodies are stored as strings rather than evaluated eagerly.
+    # Without this, `SomeProxiedType | None` in a field annotation would call `__or__` on
+    # the `_LazyImportProxy` at class-construction time and raise TypeError.
+    has_future_annotations = any(
+        any(alias.name == "annotations" for alias in node.names)
+        for node in future_imports
+    )
+    if not has_future_annotations:
+        future_imports.insert(0, ast.fix_missing_locations(ast.ImportFrom(
+            module="__future__",
+            names=[ast.alias(name="annotations")],
+            level=0,
+        )))
+
     if definitions or future_imports:
         combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
         compiled_code = compile(combined_module, "<string>", "exec")
