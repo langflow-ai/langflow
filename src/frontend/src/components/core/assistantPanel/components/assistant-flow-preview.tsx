@@ -254,8 +254,7 @@ export function AssistantFlowPreview({
           nodes is an unreadable tangle. */}
       {previewDisabled && (
         <div className="mb-3 w-fit rounded-md border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-          Preview disabled for flows with more than {MAX_PREVIEW_NODES}{" "}
-          components ({nodeCount}).
+          Preview disabled — too many components ({nodeCount}).
         </div>
       )}
 
