@@ -1063,6 +1063,34 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     return temp_dirs, list(component_paths)
 
 
+# Plain (non-relationship, non-PK, non-FK) columns on ``Flow`` that may be
+# refreshed from an on-disk flow file. Listing these explicitly avoids the
+# ``hasattr``/``setattr`` pattern that can call ``getattr`` on unloaded
+# relationship attributes — under an async SQLAlchemy session that triggers an
+# implicit lazy load outside greenlet context and raises ``MissingGreenlet``.
+# ``id``, ``user_id`` and ``folder_id`` are handled separately by the caller.
+_FLOW_UPDATABLE_COLUMNS = frozenset(
+    {
+        "name",
+        "description",
+        "icon",
+        "icon_bg_color",
+        "gradient",
+        "data",
+        "is_component",
+        "webhook",
+        "endpoint_name",
+        "tags",
+        "locked",
+        "mcp_enabled",
+        "action_name",
+        "action_description",
+        "access_type",
+        "fs_path",
+    }
+)
+
+
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
     flow = orjson.loads(file_content)
     flow_endpoint_name = flow.get("endpoint_name")
@@ -1087,36 +1115,37 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
     )
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
-        # Normalize the DB id to UUID before comparison so the check is correct on SQLite,
-        # where SQLAlchemy can return ids as strings.
-        if isinstance(existing.id, str):
+        # Normalize the DB id to UUID for comparison without mutating the attached
+        # row: SQLAlchemy can return ids as strings on SQLite, but assigning back
+        # to ``existing.id`` would mark the PK dirty and alter the identity map.
+        db_id_raw = existing.id
+        if isinstance(db_id_raw, str):
             try:
-                existing.id = UUID(existing.id)
+                db_id = UUID(db_id_raw)
             except ValueError:
-                await logger.aerror(f"Invalid UUID string in DB row: {existing.id}")
+                await logger.aerror(f"Invalid UUID string in DB row: {db_id_raw}")
                 return
-        matched_by_id = flow_id is not None and existing.id == flow_id
+        else:
+            db_id = db_id_raw
+        matched_by_id = flow_id is not None and db_id == flow_id
         if not matched_by_id and not get_settings_service().settings.load_flows_overwrite_on_name_match:
             await logger.awarning(
-                f"Skipping flow update: db_id={existing.id} name={existing.name!r} matched by "
+                f"Skipping flow update: db_id={db_id} name={existing.name!r} matched by "
                 f"name/endpoint_name but file id differs (file id={flow_id}). "
                 "Set LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true to overwrite."
             )
             return
         await logger.ainfo(
-            f"Updating existing flow: db_id={existing.id} name={existing.name!r} "
+            f"Updating existing flow: db_id={db_id} name={existing.name!r} "
             f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
         )
-        for key, value in flow.items():
-            if key == "id":
-                # Preserve the DB id. When matched by name/endpoint it must not be
-                # rewritten (FK referrers); when matched by id the DB value already
-                # equals flow_id, and assigning the raw string would break the
-                # SQLAlchemy UUID type processor on SQLite.
-                continue
-            if hasattr(existing, key):
-                # flow dict from json and db representation are not 100% the same
-                setattr(existing, key, value)
+        # Only copy plain columns. Using ``hasattr`` here would return True for
+        # relationship attributes (``user``, ``folder``); calling ``getattr`` on
+        # an unloaded relationship under an async session triggers an implicit
+        # lazy load outside greenlet context and raises ``MissingGreenlet``.
+        for key in _FLOW_UPDATABLE_COLUMNS:
+            if key in flow:
+                setattr(existing, key, flow[key])
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
         existing.user_id = user_id
 

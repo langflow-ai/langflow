@@ -19,6 +19,7 @@ from langflow.initial_setup.setup import (
     upsert_flow_from_file,
 )
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.user.model import User
 from lfx.services.deps import get_settings_service
 from sqlmodel import select
 
@@ -343,6 +344,106 @@ async def test_upsert_flow_from_file_skips_name_match_when_overwrite_disabled() 
         # User's UI edits preserved -- file contents did not overwrite them.
         assert rows[0].description == "initial"
         assert rows[0].data == {"nodes": [{"id": "user-node"}], "edges": []}
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_ignores_relationship_keys_in_json() -> None:
+    """BUG-001 regression: JSON keys that collide with SQLAlchemy relationships must not crash.
+
+    Previously the loader used ``hasattr(existing, key)`` + ``setattr``. ``hasattr`` returns
+    True for relationship attributes (``user``, ``folder``), and ``getattr`` on an unloaded
+    relationship under an async session triggers an implicit lazy load outside greenlet
+    context, raising ``MissingGreenlet`` ("greenlet_spawn has not been called; can't call
+    await_only() here.") and crashing Langflow startup.
+    """
+    user_id = uuid4()
+    original = await _create_flow(name="WithRel", user_id=user_id)
+
+    file_content = orjson.dumps(
+        {
+            "id": str(uuid4()),  # name-matched path (different id)
+            "name": "WithRel",
+            "description": "updated",
+            "data": {"nodes": [], "edges": []},
+            # Adversarial keys that match Flow relationship attribute names.
+            # The loader must skip these instead of triggering a lazy load.
+            "user": {"id": str(uuid4()), "username": "ghost"},
+            "folder": {"id": str(uuid4()), "name": "ghost-folder"},
+        }
+    )
+
+    with _overwrite_on_name_match(enabled=True):
+        async with session_scope() as session:
+            await upsert_flow_from_file(file_content, "WithRel", session, user_id)
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].id == original.id
+        assert rows[0].description == "updated"
+
+
+@pytest.mark.usefixtures("client")
+async def test_upsert_flow_from_file_with_user_loaded_in_same_session() -> None:
+    """BUG-001 regression: mimics ``load_flows_from_directory`` session shape.
+
+    ``load_flows_from_directory`` loads the superuser into the session *before* calling
+    ``upsert_flow_from_file``. With ``back_populates`` on ``User.flows``, setting
+    ``existing.user_id`` (or relying on autoflush at commit) can attempt to sync the
+    back-reference and load relationships lazily. Letting ``session_scope`` auto-commit
+    here (no explicit ``await session.commit()``) is the exact production code path that
+    crashed with ``MissingGreenlet``.
+    """
+    username = f"u_{uuid4().hex}"
+    # Real User row + flow already linked, mirroring a flow created via the UI before
+    # the load_flows_path file was added.
+    async with session_scope() as session:
+        user_row = User(
+            username=username,
+            password="x",  # noqa: S106
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(user_row)
+        await session.flush()
+        await session.refresh(user_row)
+        user_id = user_row.id
+        folder = await get_or_create_default_folder(session, user_id)
+        session.add(
+            Flow(
+                id=uuid4(),
+                name=f"le-1134-test-flow-{username}",
+                description="initial",
+                data={"nodes": [], "edges": []},
+                user_id=user_id,
+                folder_id=folder.id,
+            )
+        )
+
+    file_content = orjson.dumps(
+        {
+            "id": str(uuid4()),  # different id -> name-match path
+            "name": f"le-1134-test-flow-{username}",
+            "description": "updated from file",
+            "data": {"nodes": [{"id": "n1"}], "edges": []},
+        }
+    )
+
+    with _overwrite_on_name_match(enabled=True):
+        async with session_scope() as session:
+            # Load *our* user into the session (mirrors load_flows_from_directory loading
+            # the superuser). Filter by username so we don't pick up the default langflow
+            # superuser the test fixture creates.
+            stmt = select(User).where(User.username == username)
+            loaded_user = (await session.exec(stmt)).first()
+            assert loaded_user is not None
+            await upsert_flow_from_file(file_content, f"le-1134-test-flow-{username}", session, loaded_user.id)
+            # No explicit commit: session_scope must auto-commit without MissingGreenlet.
+
+    async with session_scope() as session:
+        rows = (await session.exec(select(Flow).where(Flow.user_id == user_id))).all()
+        assert len(rows) == 1
+        assert rows[0].description == "updated from file"
 
 
 @pytest.mark.usefixtures("client")
