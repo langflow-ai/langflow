@@ -1,8 +1,8 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from lfx.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from lfx.schema import Data, DataFrame, Message
+from lfx_youtube.components.youtube.youtube_transcripts import YouTubeTranscriptsComponent
 from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -102,7 +102,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Could not extract video ID"):
             component._extract_video_id(component.url)
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_get_dataframe_output_success(
         self, mock_api_class, component_class, default_kwargs, mock_transcript_data, mock_transcript_list
     ):
@@ -125,7 +125,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert "First part" in result_df.iloc[0]["text"]
         assert "Third part" in result_df.iloc[1]["text"]
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_get_message_output_success(
         self, mock_api_class, component_class, default_kwargs, mock_transcript_data, mock_transcript_list
     ):
@@ -144,7 +144,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert "Second part of the transcript" in result.text
         assert "Third part of the transcript" in result.text
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_get_data_output_success(
         self, mock_api_class, component_class, default_kwargs, mock_transcript_data, mock_transcript_list
     ):
@@ -165,7 +165,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert "Third part" in result.data["transcript"]
         assert "error" not in result.data
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_transcript_disabled_error(self, mock_api_class, component_class, default_kwargs):
         """Test handling of TranscriptsDisabled error."""
         mock_api = Mock()
@@ -193,7 +193,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert data_result.data["error"] is not None
         assert data_result.data["transcript"] == ""
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_no_transcript_found_error(self, mock_api_class, component_class, default_kwargs, mock_transcript_list):
         """Test handling of NoTranscriptFound error."""
         mock_transcript_list.find_transcript.side_effect = NoTranscriptFound(
@@ -224,7 +224,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
             component.set_attributes({"url": "https://youtube.com/watch?v=test", "translation": lang})
             assert component.translation == lang
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_empty_transcript_handling(self, mock_api_class, component_class, default_kwargs, mock_transcript_list):
         """Test handling of empty transcript response."""
         mock_api = Mock()
@@ -244,7 +244,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         df_result = component.get_dataframe_output()
         assert len(df_result) == 0
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_chunking_behavior(self, mock_api_class, component_class, default_kwargs, mock_transcript_list):
         """Test transcript chunking with custom chunk size."""
         # Create transcript data spanning 150 seconds
@@ -272,7 +272,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[1]["timestamp"] == "01:00"
         assert result.iloc[2]["timestamp"] == "02:00"
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_translation_parameter(
         self, mock_api_class, component_class, default_kwargs, mock_transcript_list, mock_transcript_data
     ):
@@ -295,7 +295,7 @@ class TestYouTubeTranscriptsComponent(ComponentTestBaseWithoutClient):
         mock_transcript_list.find_transcript.return_value.translate.assert_called_once_with("es")
         assert isinstance(result, Message)
 
-    @patch("lfx.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
+    @patch("lfx_youtube.components.youtube.youtube_transcripts.YouTubeTranscriptApi")
     def test_general_exception_handling(self, mock_api_class, component_class, default_kwargs):
         """Test handling of general exceptions."""
         mock_api = Mock()

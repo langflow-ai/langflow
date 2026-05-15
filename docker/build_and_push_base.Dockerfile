@@ -119,6 +119,42 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/wikipedia
 
+# Bundle re-attach: ``lfx-wolframalpha`` ships the WolframAlpha
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/wolframalpha
+
+# Bundle re-attach: ``lfx-serpapi`` ships the SerpAPI
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/serpapi
+
+# Bundle re-attach: ``lfx-tavily`` ships the Tavily
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/tavily
+
+# Bundle re-attach: ``lfx-youtube`` ships the YouTube
+# components as a standalone distribution.  ``--no-deps`` is intentional
+# -- the bundle's runtime deps live in the langflow-base lockfile so
+# installing them here would yank duplicates that fight the locked
+# versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/youtube
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

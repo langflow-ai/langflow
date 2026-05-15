@@ -85,9 +85,7 @@ if TYPE_CHECKING:
         sambanova,
         scrapegraph,
         searchapi,
-        serpapi,
         supabase,
-        tavily,
         textsplitters,
         toolkits,
         tools,
@@ -99,10 +97,8 @@ if TYPE_CHECKING:
         vertexai,
         vlmrun,
         weaviate,
-        wolframalpha,
         xai,
         yahoosearch,
-        youtube,
         zep,
     )
 
@@ -188,9 +184,7 @@ _dynamic_imports = {
     "sambanova": "__module__",
     "scrapegraph": "__module__",
     "searchapi": "__module__",
-    "serpapi": "__module__",
     "supabase": "__module__",
-    "tavily": "__module__",
     "textsplitters": "__module__",
     "toolkits": "__module__",
     "tools": "__module__",
@@ -202,10 +196,8 @@ _dynamic_imports = {
     "vertexai": "__module__",
     "vlmrun": "__module__",
     "weaviate": "__module__",
-    "wolframalpha": "__module__",
     "xai": "__module__",
     "yahoosearch": "__module__",
-    "youtube": "__module__",
     "zep": "__module__",
 }
 
@@ -317,9 +309,7 @@ __all__ = [
     "sambanova",
     "scrapegraph",
     "searchapi",
-    "serpapi",
     "supabase",
-    "tavily",
     "textsplitters",
     "toolkits",
     "tools",
@@ -331,10 +321,8 @@ __all__ = [
     "vertexai",
     "vlmrun",
     "weaviate",
-    "wolframalpha",
     "xai",
     "yahoosearch",
-    "youtube",
     "zep",
 ]
 

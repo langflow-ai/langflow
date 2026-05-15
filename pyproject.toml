@@ -36,6 +36,10 @@ dependencies = [
     # ``pip install langflow`` keeps shipping the datastax components.
     "lfx-datastax>=0.1.0",
     "lfx-wikipedia>=0.1.0",
+    "lfx-wolframalpha>=0.1.0",
+    "lfx-serpapi>=0.1.0",
+    "lfx-tavily>=0.1.0",
+    "lfx-youtube>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -97,6 +101,10 @@ lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-datastax = { workspace = true }
 lfx-wikipedia = { workspace = true }
+lfx-wolframalpha = { workspace = true }
+lfx-serpapi = { workspace = true }
+lfx-tavily = { workspace = true }
+lfx-youtube = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -112,6 +120,10 @@ members = [
     "src/bundles/arxiv",
     "src/bundles/datastax",
     "src/bundles/wikipedia",
+    "src/bundles/wolframalpha",
+    "src/bundles/serpapi",
+    "src/bundles/tavily",
+    "src/bundles/youtube",
     # langflow-extensions:bundle-members-end
 ]
 

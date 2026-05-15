@@ -374,7 +374,34 @@ class PortPlan:
     legacy_all: tuple[str, ...] = ()
 
 
-_CLASS_DECL_RE = re.compile(r"^class\s+(\w+)\s*\(", re.MULTILINE)
+# Capture both class name and base list so we can filter out classes
+# that obviously aren't Langflow components (pydantic BaseModels,
+# dataclasses, vendor SDK schemas, ABCs, etc.).
+_CLASS_DECL_RE = re.compile(r"^class\s+(?P<name>\w+)\s*\((?P<bases>[^)]*)\)", re.MULTILINE)
+
+# Bases (or any token in the bases list) that mean "this is a runtime
+# data shape, not a component" -- the loader doesn't register these and
+# the migration table must not name them.  Match on the bare identifier
+# so dotted/qualified forms like ``pydantic.BaseModel`` still trip the
+# filter.
+_NON_COMPONENT_BASES = frozenset(
+    {
+        "BaseModel",
+        "BaseSettings",
+        "RootModel",
+        "TypedDict",
+        "NamedTuple",
+        "Enum",
+        "IntEnum",
+        "StrEnum",
+        "Flag",
+        "Exception",
+        "Protocol",
+        "ABC",
+        "ABCMeta",
+        "object",
+    }
+)
 _DYNAMIC_IMPORTS_RE = re.compile(
     r"_dynamic_imports\s*=\s*\{(?P<body>.+?)\}",
     re.DOTALL,
@@ -388,7 +415,25 @@ _PER_FILE_IGNORES_ENTRY_RE = re.compile(
 
 
 def _discover_classes(source: str) -> tuple[str, ...]:
-    return tuple(_CLASS_DECL_RE.findall(source))
+    """Return top-level Component-shaped class names declared in ``source``.
+
+    Filters out classes whose first base is a known non-Component
+    shape (``BaseModel``, ``Enum``, ``TypedDict``, ``ABC``, ``Exception``,
+    etc.).  The filter is base-list-based rather than name-based because
+    Langflow's naming convention is loose: some components don't end in
+    ``Component`` (``Dotenv``, ``GetEnvVar``).
+    """
+    result: list[str] = []
+    for m in _CLASS_DECL_RE.finditer(source):
+        bases_raw = m.group("bases")
+        # Pull bare base identifiers (last dotted segment, no kwargs).
+        base_idents = {
+            tok.split(".")[-1].strip() for tok in re.split(r"[,\s]+", bases_raw.strip()) if tok and "=" not in tok
+        }
+        if base_idents & _NON_COMPONENT_BASES:
+            continue
+        result.append(m.group("name"))
+    return tuple(result)
 
 
 def _parse_legacy_init(init_path: Path) -> tuple[dict[str, str], tuple[str, ...]]:
@@ -489,6 +534,15 @@ def _discover_external_consumers(
         "!**/*.md",
         "--glob",
         "!**/*.mdx",
+        # JSON files are saved-flow artefacts (starter projects, legacy
+        # version fixtures).  The migration table rewrites these at flow
+        # load time -- the bare-name + full-path + short-path entries
+        # in the four-entry block we just appended cover every legacy
+        # form Langflow has serialized.  Mechanically rewriting the
+        # JSONs would defeat the migration test suite's purpose
+        # (verifying frozen historical snapshots still load).
+        "--glob",
+        "!**/*.json",
         "-e",
         needles[0],
         "-e",

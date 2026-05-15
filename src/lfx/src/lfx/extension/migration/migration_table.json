@@ -300,6 +300,226 @@
       "legacy_slot": "ext:wikipedia:WikipediaComponent@official-pre-a",
       "target": "ext:wikipedia:WikipediaComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wolframalpha.wolfram_alpha_api.WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.wolframalpha.WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:wolframalpha:WolframAlphaAPIComponent@official-pre-a",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SerpComponent",
+      "target": "ext:serpapi:SerpComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.serpapi.serp.SerpComponent",
+      "target": "ext:serpapi:SerpComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.serpapi.SerpComponent",
+      "target": "ext:serpapi:SerpComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:serpapi:SerpComponent@official-pre-a",
+      "target": "ext:serpapi:SerpComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.tavily_extract.TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:tavily:TavilyExtractComponent@official-pre-a",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.tavily_search.TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:tavily:TavilySearchComponent@official-pre-a",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeChannelComponent",
+      "target": "ext:youtube:YouTubeChannelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.channel.YouTubeChannelComponent",
+      "target": "ext:youtube:YouTubeChannelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeChannelComponent",
+      "target": "ext:youtube:YouTubeChannelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeChannelComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeChannelComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeCommentsComponent",
+      "target": "ext:youtube:YouTubeCommentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.comments.YouTubeCommentsComponent",
+      "target": "ext:youtube:YouTubeCommentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeCommentsComponent",
+      "target": "ext:youtube:YouTubeCommentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeCommentsComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeCommentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubePlaylistComponent",
+      "target": "ext:youtube:YouTubePlaylistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.playlist.YouTubePlaylistComponent",
+      "target": "ext:youtube:YouTubePlaylistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubePlaylistComponent",
+      "target": "ext:youtube:YouTubePlaylistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubePlaylistComponent@official-pre-a",
+      "target": "ext:youtube:YouTubePlaylistComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeSearchComponent",
+      "target": "ext:youtube:YouTubeSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.search.YouTubeSearchComponent",
+      "target": "ext:youtube:YouTubeSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeSearchComponent",
+      "target": "ext:youtube:YouTubeSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeSearchComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeTranscriptsComponent",
+      "target": "ext:youtube:YouTubeTranscriptsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent",
+      "target": "ext:youtube:YouTubeTranscriptsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeTranscriptsComponent",
+      "target": "ext:youtube:YouTubeTranscriptsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeTranscriptsComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeTranscriptsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeTrendingComponent",
+      "target": "ext:youtube:YouTubeTrendingComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.trending.YouTubeTrendingComponent",
+      "target": "ext:youtube:YouTubeTrendingComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeTrendingComponent",
+      "target": "ext:youtube:YouTubeTrendingComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeTrendingComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeTrendingComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "YouTubeVideoDetailsComponent",
+      "target": "ext:youtube:YouTubeVideoDetailsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.video_details.YouTubeVideoDetailsComponent",
+      "target": "ext:youtube:YouTubeVideoDetailsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.youtube.YouTubeVideoDetailsComponent",
+      "target": "ext:youtube:YouTubeVideoDetailsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:youtube:YouTubeVideoDetailsComponent@official-pre-a",
+      "target": "ext:youtube:YouTubeVideoDetailsComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

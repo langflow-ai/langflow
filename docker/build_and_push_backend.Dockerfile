@@ -54,6 +54,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/arxiv \
         ./src/bundles/datastax \
         ./src/bundles/wikipedia \
+        ./src/bundles/wolframalpha \
+        ./src/bundles/serpapi \
+        ./src/bundles/tavily \
+        ./src/bundles/youtube \
         "./src/backend/base[complete,postgresql]"
 
 ################################
