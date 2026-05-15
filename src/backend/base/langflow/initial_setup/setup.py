@@ -1087,11 +1087,21 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
     )
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
-        await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-        # If we matched the existing row by (user_id, name) or endpoint_name -- not by id --
-        # the file's id differs from the DB id. Preserve the DB id; rewriting it from under
-        # any FK referrers is unsafe and was never intended by the original upsert logic.
+        # Normalize the DB id to UUID before comparison so the check is correct on SQLite,
+        # where SQLAlchemy can return ids as strings.
+        if isinstance(existing.id, str):
+            try:
+                existing.id = UUID(existing.id)
+            except ValueError:
+                await logger.aerror(f"Invalid UUID string in DB row: {existing.id}")
+                return
+        # If we matched by (user_id, name) or endpoint_name the file's id may differ from
+        # the DB id. Preserve the DB id; rewriting it from under FK referrers is unsafe.
         matched_by_id = flow_id is not None and existing.id == flow_id
+        await logger.ainfo(
+            f"Updating existing flow: db_id={existing.id} name={existing.name!r} "
+            f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
+        )
         for key, value in flow.items():
             if key == "id" and not matched_by_id:
                 continue
@@ -1105,13 +1115,6 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         if existing.folder_id is None:
             folder = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder.id
-
-        if isinstance(existing.id, str):
-            try:
-                existing.id = UUID(existing.id)
-            except ValueError:
-                await logger.aerror(f"Invalid UUID string: {existing.id}")
-                return
 
         session.add(existing)
     else:
