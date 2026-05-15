@@ -1,3 +1,5 @@
+import i18n from "@/i18n";
+
 export const timeElapsed = (dateTimeString: string | undefined): string => {
   if (!dateTimeString) {
     return "";
@@ -15,16 +17,16 @@ export const timeElapsed = (dateTimeString: string | undefined): string => {
   const years = Math.floor(months / 12);
 
   if (years > 0) {
-    return years === 1 ? `${years} year` : `${years} years`;
+    return i18n.t("timeElapse.year", { count: years });
   } else if (months > 0) {
-    return months === 1 ? `${months} month` : `${months} months`;
+    return i18n.t("timeElapse.month", { count: months });
   } else if (days > 0) {
-    return days === 1 ? `${days} day` : `${days} days`;
+    return i18n.t("timeElapse.day", { count: days });
   } else if (hours > 0) {
-    return hours === 1 ? `${hours} hour` : `${hours} hours`;
+    return i18n.t("timeElapse.hour", { count: hours });
   } else if (minutes > 0) {
-    return minutes === 1 ? `${minutes} minute` : `${minutes} minutes`;
+    return i18n.t("timeElapse.minute", { count: minutes });
   } else {
-    return "less than a minute";
+    return i18n.t("timeElapse.lessThanAMinute");
   }
 };
