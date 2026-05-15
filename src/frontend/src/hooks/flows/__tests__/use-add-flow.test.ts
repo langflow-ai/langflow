@@ -30,16 +30,31 @@ type Selector<T> = (state: T) => unknown;
 
 type AlertState = { setErrorData: jest.Mock; setNoticeData: jest.Mock };
 type FlowsManagerState = { flows: never[]; setFlows: jest.Mock };
-type FolderState = { myCollectionId: string; folders: { id: string }[]; setMyCollectionId: jest.Mock };
+type FolderState = {
+  myCollectionId: string;
+  folders: { id: string }[];
+  setMyCollectionId: jest.Mock;
+};
 type AuthState = { userData: { optins: { dialog_dismissed: boolean } } };
 type UtilityState = { hideGettingStartedProgress: boolean };
-type GlobalVariablesState = { unavailableFields: never[]; globalVariablesEntries: never[] };
+type GlobalVariablesState = {
+  unavailableFields: never[];
+  globalVariablesEntries: never[];
+};
 
 jest.mock("@/stores/alertStore", () => {
   const store = Object.assign(
     (selector: Selector<AlertState>) =>
-      selector({ setErrorData: mockSetErrorData, setNoticeData: mockSetNoticeData }),
-    { getState: () => ({ setErrorData: mockSetErrorData, setNoticeData: mockSetNoticeData }) },
+      selector({
+        setErrorData: mockSetErrorData,
+        setNoticeData: mockSetNoticeData,
+      }),
+    {
+      getState: () => ({
+        setErrorData: mockSetErrorData,
+        setNoticeData: mockSetNoticeData,
+      }),
+    },
   );
   return { __esModule: true, default: store };
 });
@@ -238,7 +253,9 @@ describe("useAddFlow — success path", () => {
     resolveAddFlow({ ...FLOW_STUB, id: "created-id" });
 
     const { result } = renderHook(() => useAddFlow());
-    await expect(result.current({ flow: FLOW_STUB })).resolves.toBe("created-id");
+    await expect(result.current({ flow: FLOW_STUB })).resolves.toBe(
+      "created-id",
+    );
 
     expect(mockSetErrorData).not.toHaveBeenCalled();
   });
