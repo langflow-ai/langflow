@@ -72,6 +72,7 @@ async def run_flow(
     user_id: str | None = None,
     session_id: str | None = None,
     event_manager: "EventManager | None" = None,
+    upgrade_flow: str | None = None,
 ) -> dict:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -185,6 +186,41 @@ async def run_flow(
             error_msg = f"Error reading from stdin: {e}"
             output_error(error_msg, verbose=verbose)
             raise RunError(error_msg, e) from e
+
+    # --- upgrade compatibility check ---
+    if upgrade_flow and flow_dict is not None:
+        from lfx.interface.components import component_cache
+        from lfx.upgrade.applier import apply_safe_upgrades
+        from lfx.upgrade.checker import check_flow_compatibility
+
+        all_types = component_cache.all_types_dict or {}
+        report = check_flow_compatibility(flow_dict, all_types)
+
+        if upgrade_flow == "check":
+            if not report.is_clean:
+                outdated = [n for n in report.nodes if n.status != "ok"]
+                names = ", ".join(f"{n.display_name} ({n.status})" for n in outdated)
+                error_msg = f"Flow has incompatible components (--upgrade-flow=check): {names}"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, None)
+
+        elif upgrade_flow == "safe":
+            if report.has_blocked or report.has_breaking:
+                blockers = [n for n in report.nodes if n.status in ("blocked", "outdated_breaking")]
+                names = ", ".join(f"{n.display_name} ({n.status})" for n in blockers)
+                error_msg = f"Flow has components that cannot be auto-upgraded: {names}"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, None)
+            if report.has_safe_updates:
+                flow_dict, count = apply_safe_upgrades(flow_dict, all_types, report, return_count=True)
+                if verbose:
+                    sys.stderr.write(f"Applied {count} safe component upgrade(s).\n")
+
+        else:
+            error_msg = f"Unknown --upgrade-flow value '{upgrade_flow}'. Use 'safe' or 'check'."
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, None)
+    # --- end upgrade check ---
 
     try:
         # Handle direct JSON dict (from stdin or --flow-json)

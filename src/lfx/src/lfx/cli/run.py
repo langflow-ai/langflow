@@ -109,6 +109,7 @@ async def run(
             "Session ID to attach to the run. Agent and Memory Components will use this to track conversation history."
         ),
     ),
+    upgrade_flow: str | None = None,
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -148,6 +149,7 @@ async def run(
             timing=timing,
             global_variables=None,
             session_id=session_id,
+            upgrade_flow=upgrade_flow,
         )
 
         # Output based on format

@@ -68,6 +68,15 @@ def register(app: typer.Typer) -> None:
                 "Agent and Memory Components will use this to track conversation history."
             ),
         ),
+        upgrade_flow: str | None = typer.Option(
+            None,
+            "--upgrade-flow",
+            help=(
+                "Component compatibility mode. "
+                "'check' refuses to run if any component is outdated or blocked. "
+                "'safe' auto-applies safe upgrades; aborts on breaking or blocked components."
+            ),
+        ),
     ) -> None:
         """Run a flow directly (lazy-loaded)."""
         from pathlib import Path
@@ -90,6 +99,7 @@ def register(app: typer.Typer) -> None:
             verbose_full=verbose_full,
             timing=timing,
             session_id=session_id,
+            upgrade_flow=upgrade_flow,
         )
 
     @app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True, rich_help_panel="Running")
