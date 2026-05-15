@@ -5,7 +5,6 @@ import pytest
 
 @pytest.mark.skip("Temporarily disabled")
 async def test_component_to_toolkit():
-    from lfx.base.agents.agent import DEFAULT_TOOLS_DESCRIPTION
     from lfx.components.agents.agent import AgentComponent
     from lfx.components.tools.calculator import CalculatorToolComponent
 
@@ -18,7 +17,12 @@ async def test_component_to_toolkit():
 
     assert tool.name == "Call_Agent"
 
-    assert tool.description == DEFAULT_TOOLS_DESCRIPTION, tool.description
+    # After removing the deprecated agent_description override (issue #9155),
+    # an agent-as-tool behaves like any other tool: its description must match
+    # the output-derived display_description so the Actions-panel merge logic
+    # can detect genuine user customizations.
+    assert tool.description
+    assert tool.description == tool.metadata["display_description"], tool.description
 
     assert isinstance(tool.coroutine, Callable)
     assert tool.args_schema is not None

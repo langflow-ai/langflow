@@ -15,7 +15,7 @@ from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
-from lfx.inputs.inputs import InputTypes, MultilineInput
+from lfx.inputs.inputs import InputTypes
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
@@ -30,7 +30,6 @@ if TYPE_CHECKING:
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
-DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
 DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 
 
@@ -57,17 +56,6 @@ class LCAgentComponent(Component):
             value=15,
             advanced=True,
             info="The maximum number of attempts the agent can make to complete its task before it stops.",
-        ),
-        MultilineInput(
-            name="agent_description",
-            display_name="Agent Description [Deprecated]",
-            info=(
-                "The description of the agent. This is only used when in Tool Mode. "
-                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically. "
-                "This feature is deprecated and will be removed in future versions."
-            ),
-            advanced=True,
-            value=DEFAULT_TOOLS_DESCRIPTION,
         ),
     ]
 
@@ -356,9 +344,6 @@ class LCToolsAgentComponent(LCAgentComponent):
     def get_tool_name(self) -> str:
         return self.display_name or "Agent"
 
-    def get_tool_description(self) -> str:
-        return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
-
     def _build_tools_names(self):
         tools_names = ""
         if self.tools:
@@ -387,14 +372,9 @@ class LCToolsAgentComponent(LCAgentComponent):
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
 
         tools = component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(),
-            tool_description=description,
             # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )

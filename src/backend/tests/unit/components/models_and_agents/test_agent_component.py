@@ -40,7 +40,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "_type": "Agent",
             "add_current_date_tool": True,
             "add_calculator_tool": True,
-            "agent_description": "A helpful agent",
             "model": MockLanguageModel(),
             "handle_parsing_errors": True,
             "input_value": "",
@@ -822,6 +821,58 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert prompt_input is not None
         assert "{current_date}" in prompt_input.value
         assert "{model_name}" in prompt_input.value
+
+    async def test_should_keep_description_in_sync_when_agent_used_as_tool(self, component_class, default_kwargs):
+        """Regression for GitHub issue #9155.
+
+        When an Agent is exposed as a tool, the deprecated agent_description
+        override made the generated tool's ``description`` diverge from
+        ``display_description`` on the very first build. That divergence made the
+        merge logic in ``_build_tools_metadata_input()`` permanently treat the
+        description as a user customization, so later changes to the agent's
+        description never reached the parent agent's Actions panel.
+
+        Invariant under test: on the first build, a non-user-edited
+        agent-as-tool entry must have ``description == display_description``,
+        exactly like regular tool components.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+
+        metadata = component.tools_metadata
+        assert metadata, "Agent-as-tool should produce at least one tool entry"
+        for item in metadata:
+            assert item["description"] == item["display_description"], (
+                "Agent-as-tool description diverged from display_description on "
+                f"first build (issue #9155): {item['description']!r} != {item['display_description']!r}"
+            )
+
+    async def test_should_propagate_description_change_when_agent_used_as_tool(
+        self, component_class, default_kwargs
+    ):
+        """Regression for GitHub issue #9155 (user-visible symptom).
+
+        A change to the child agent's tool description must reach the parent
+        agent's Actions panel on the next build, as long as the user did not
+        manually customize it in the panel.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+        first_description = component.tools_metadata[0]["description"]
+
+        # Simulate the child agent's description changing (e.g. component.description),
+        # then the parent re-reading the tool. The new value must propagate.
+        component.description = "An updated agent description"
+        await component._build_tools_metadata_input()
+        second_description = component.tools_metadata[0]["description"]
+
+        assert second_description != first_description, (
+            "Description change on the child agent was not propagated to the "
+            f"Actions panel (issue #9155): still {second_description!r}"
+        )
+        assert "An updated agent description" in second_description
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):

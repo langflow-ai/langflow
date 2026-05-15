@@ -691,7 +691,6 @@ class CugaComponent(ToolCallingAgentComponent):
                 "input_value",
                 "add_current_date_tool",
                 "instructions",
-                "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",
                 "verbose",
@@ -730,11 +729,8 @@ class CugaComponent(ToolCallingAgentComponent):
         """
         logger.debug("[CUGA] Building agent tools.")
         component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        description = f"{agent_description}{tools_names}"
         tools = component_toolkit(component=self).get_tools(
-            tool_name="Call_CugaAgent", tool_description=description, callbacks=self.get_langchain_callbacks()
+            tool_name="Call_CugaAgent", callbacks=self.get_langchain_callbacks()
         )
         if hasattr(self, "tools_metadata"):
             tools = component_toolkit(component=self, metadata=self.tools_metadata).update_tools_metadata(tools=tools)
