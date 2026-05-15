@@ -72,14 +72,11 @@ You can have multiple category folders to organize components into different cat
 
 :::warning Directory Depth Limitation
 
-Components must be at most **2 levels deep** (`category/component.py`):
+Components can be at most 2 levels deep.
 
-- ✅ `data/custom_component.py` (level 2)
-- ❌ `data/tools/custom_component.py` (level 3 - not discovered)
+For example, `data/custom_component.py` is discoverable, but `data/tools/custom_component.py` is not discoverable.
 
-Each first-level directory becomes an independent category in the UI.
-
-**Advanced:** To increase the depth limit, modify `MAX_DEPTH` in `src/lfx/src/lfx/custom/directory_reader/directory_reader.py`. Subdirectories will still appear as separate categories, not nested hierarchies.
+To increase the depth limit, modify `MAX_DEPTH` in `src/lfx/src/lfx/custom/directory_reader/directory_reader.py`. Subdirectories will still appear as separate categories, not nested hierarchies.
 
 :::
 
