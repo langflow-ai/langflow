@@ -11,7 +11,7 @@ except ImportError:
 
 from agentics import AG
 from agentics.core.atype import create_pydantic_model
-from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from lfx_agentics.components.agentics.helpers.schema_builder import build_schema_fields
 from pydantic import create_model
 
 
@@ -23,7 +23,7 @@ def _extract_list_items(output: AG, atype: type) -> AG:
     """
     # Current (buggy) code: output = AG(atype=atype, states=output[0].items)
     # Fixed code should iterate all states like aMap does
-    from lfx.components.agentics.areduce_component import AreduceComponent  # noqa: F401
+    from lfx_agentics.components.agentics.areduce_component import AreduceComponent  # noqa: F401
 
     # We replicate what the component does — after the fix, this should iterate all states
     appended_states = [item_state for state in output for item_state in state.items]

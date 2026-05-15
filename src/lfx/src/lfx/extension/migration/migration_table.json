@@ -4570,6 +4570,346 @@
       "legacy_slot": "ext:unstructured:UnstructuredComponent@official-pre-a",
       "target": "ext:unstructured:UnstructuredComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AgenerateComponent",
+      "target": "ext:agentics:AgenerateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.agenerate_component.AgenerateComponent",
+      "target": "ext:agentics:AgenerateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.AgenerateComponent",
+      "target": "ext:agentics:AgenerateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:agentics:AgenerateComponent@official-pre-a",
+      "target": "ext:agentics:AgenerateComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AMapComponent",
+      "target": "ext:agentics:AMapComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.amap_component.AMapComponent",
+      "target": "ext:agentics:AMapComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.AMapComponent",
+      "target": "ext:agentics:AMapComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:agentics:AMapComponent@official-pre-a",
+      "target": "ext:agentics:AMapComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "AreduceComponent",
+      "target": "ext:agentics:AreduceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.areduce_component.AreduceComponent",
+      "target": "ext:agentics:AreduceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.agentics.AreduceComponent",
+      "target": "ext:agentics:AreduceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:agentics:AreduceComponent@official-pre-a",
+      "target": "ext:agentics:AreduceComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.altk.altk_agent.ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.altk.ALTKAgentComponent",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:altk:ALTKAgentComponent@official-pre-a",
+      "target": "ext:altk:ALTKAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.codeact_agent_smolagents.CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.CodeActAgentSmolagentsComponent",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:CodeActAgentSmolagentsComponent@official-pre-a",
+      "target": "ext:codeagents:CodeActAgentSmolagentsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.open_ds_star_agent.OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.OpenDsStarAgentComponent",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:OpenDsStarAgentComponent@official-pre-a",
+      "target": "ext:codeagents:OpenDsStarAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CodeActAgentSmolagentsRunnable",
+      "target": "ext:codeagents:CodeActAgentSmolagentsRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.codeact_agent_smolagents.CodeActAgentSmolagentsRunnable",
+      "target": "ext:codeagents:CodeActAgentSmolagentsRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.CodeActAgentSmolagentsRunnable",
+      "target": "ext:codeagents:CodeActAgentSmolagentsRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:CodeActAgentSmolagentsRunnable@official-pre-a",
+      "target": "ext:codeagents:CodeActAgentSmolagentsRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OpenDsStarAgentRunnable",
+      "target": "ext:codeagents:OpenDsStarAgentRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.open_ds_star_agent.OpenDsStarAgentRunnable",
+      "target": "ext:codeagents:OpenDsStarAgentRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.codeagents.OpenDsStarAgentRunnable",
+      "target": "ext:codeagents:OpenDsStarAgentRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:codeagents:OpenDsStarAgentRunnable@official-pre-a",
+      "target": "ext:codeagents:OpenDsStarAgentRunnable@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CrewAIAgentComponent",
+      "target": "ext:crewai:CrewAIAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.crewai.CrewAIAgentComponent",
+      "target": "ext:crewai:CrewAIAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.CrewAIAgentComponent",
+      "target": "ext:crewai:CrewAIAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:CrewAIAgentComponent@official-pre-a",
+      "target": "ext:crewai:CrewAIAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HierarchicalCrewComponent",
+      "target": "ext:crewai:HierarchicalCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.hierarchical_crew.HierarchicalCrewComponent",
+      "target": "ext:crewai:HierarchicalCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.HierarchicalCrewComponent",
+      "target": "ext:crewai:HierarchicalCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:HierarchicalCrewComponent@official-pre-a",
+      "target": "ext:crewai:HierarchicalCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "HierarchicalTaskComponent",
+      "target": "ext:crewai:HierarchicalTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.hierarchical_task.HierarchicalTaskComponent",
+      "target": "ext:crewai:HierarchicalTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.HierarchicalTaskComponent",
+      "target": "ext:crewai:HierarchicalTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:HierarchicalTaskComponent@official-pre-a",
+      "target": "ext:crewai:HierarchicalTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SequentialCrewComponent",
+      "target": "ext:crewai:SequentialCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.sequential_crew.SequentialCrewComponent",
+      "target": "ext:crewai:SequentialCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.SequentialCrewComponent",
+      "target": "ext:crewai:SequentialCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:SequentialCrewComponent@official-pre-a",
+      "target": "ext:crewai:SequentialCrewComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SequentialTaskAgentComponent",
+      "target": "ext:crewai:SequentialTaskAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.sequential_task_agent.SequentialTaskAgentComponent",
+      "target": "ext:crewai:SequentialTaskAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.SequentialTaskAgentComponent",
+      "target": "ext:crewai:SequentialTaskAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:SequentialTaskAgentComponent@official-pre-a",
+      "target": "ext:crewai:SequentialTaskAgentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "SequentialTaskComponent",
+      "target": "ext:crewai:SequentialTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.sequential_task.SequentialTaskComponent",
+      "target": "ext:crewai:SequentialTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.crewai.SequentialTaskComponent",
+      "target": "ext:crewai:SequentialTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:crewai:SequentialTaskComponent@official-pre-a",
+      "target": "ext:crewai:SequentialTaskComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "CugaComponent",
+      "target": "ext:cuga:CugaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cuga.cuga_agent.CugaComponent",
+      "target": "ext:cuga:CugaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.cuga.CugaComponent",
+      "target": "ext:cuga:CugaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:cuga:CugaComponent@official-pre-a",
+      "target": "ext:cuga:CugaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.olivya.olivya.OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.olivya.OlivyaComponent",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:olivya:OlivyaComponent@official-pre-a",
+      "target": "ext:olivya:OlivyaComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vlmrun.vlmrun_transcription.VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.vlmrun.VLMRunTranscription",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:vlmrun:VLMRunTranscription@official-pre-a",
+      "target": "ext:vlmrun:VLMRunTranscription@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

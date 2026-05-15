@@ -107,6 +107,13 @@ dependencies = [
     "lfx-mem0>=0.1.0",
     "lfx-twelvelabs>=0.1.0",
     "lfx-unstructured>=0.1.0",
+    "lfx-agentics>=0.1.0",
+    "lfx-altk>=0.1.0",
+    "lfx-codeagents>=0.1.0",
+    "lfx-crewai>=0.1.0",
+    "lfx-cuga>=0.1.0",
+    "lfx-olivya>=0.1.0",
+    "lfx-vlmrun>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -239,6 +246,13 @@ lfx-langwatch = { workspace = true }
 lfx-mem0 = { workspace = true }
 lfx-twelvelabs = { workspace = true }
 lfx-unstructured = { workspace = true }
+lfx-agentics = { workspace = true }
+lfx-altk = { workspace = true }
+lfx-codeagents = { workspace = true }
+lfx-crewai = { workspace = true }
+lfx-cuga = { workspace = true }
+lfx-olivya = { workspace = true }
+lfx-vlmrun = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -325,6 +339,13 @@ members = [
     "src/bundles/mem0",
     "src/bundles/twelvelabs",
     "src/bundles/unstructured",
+    "src/bundles/agentics",
+    "src/bundles/altk",
+    "src/bundles/codeagents",
+    "src/bundles/crewai",
+    "src/bundles/cuga",
+    "src/bundles/olivya",
+    "src/bundles/vlmrun",
     # langflow-extensions:bundle-members-end
 ]
 

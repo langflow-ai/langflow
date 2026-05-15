@@ -362,6 +362,13 @@ class PortPlan:
     bundle_dir: Path
     component_files: tuple[ComponentFile, ...]
     migration_release: str | None
+    # Nested subdirectories under the in-tree provider directory
+    # (e.g. ``agentics/helpers/``, ``agentics/inputs/``).  Moved
+    # wholesale into the bundle's ``components/<bundle>/`` so any
+    # imports from ``lfx.components.<bundle>.<subdir>.<module>``
+    # continue to resolve via the migration-rewritten path
+    # ``lfx_<bundle>.components.<bundle>.<subdir>.<module>``.
+    nested_subdirs: tuple[Path, ...]
     # Auto-detected extras.
     shared_base_dir: Path | None
     backend_test_dirs: tuple[Path, ...]
@@ -661,7 +668,28 @@ def _validate_candidate(
         raise SystemExit(msg)
 
     component_files: list[ComponentFile] = []
+    nested_subdirs: list[Path] = []
     for src in sorted(in_tree.iterdir()):
+        if src.is_dir():
+            if src.name == "__pycache__":
+                continue
+            # Nested subpackage (e.g. ``agentics/helpers``); validate
+            # its files for ``from langflow`` imports too, then plan
+            # to move the whole subdir wholesale.
+            for nested in src.rglob("*.py"):
+                if "__pycache__" in nested.parts:
+                    continue
+                text = nested.read_text(encoding="utf-8")
+                if "from langflow" in text:
+                    msg = (
+                        f"{nested} imports from ``langflow`` -- the bundle is "
+                        "installed against the public BUNDLE_API surface (lfx), "
+                        "not Langflow internals.  Either rewrite the import or "
+                        "leave the component in-tree.  See src/bundles/PORTING.md § 0."
+                    )
+                    raise SystemExit(msg)
+            nested_subdirs.append(src)
+            continue
         if not src.is_file() or src.suffix != ".py":
             continue
         text = src.read_text(encoding="utf-8")
@@ -676,7 +704,7 @@ def _validate_candidate(
         classes = () if src.name == "__init__.py" else _discover_classes(text)
         component_files.append(ComponentFile(path=src, classes=classes))
 
-    if not component_files:
+    if not component_files and not nested_subdirs:
         msg = f"No ``*.py`` files under {in_tree}; nothing to port."
         raise SystemExit(msg)
 
@@ -706,6 +734,7 @@ def _validate_candidate(
         bundle_dir=bundle_dir,
         component_files=tuple(component_files),
         migration_release=migration_release,
+        nested_subdirs=tuple(nested_subdirs),
         shared_base_dir=shared_base_dir,
         backend_test_dirs=backend_test_dirs,
         ruff_ignores=ruff_ignores,
@@ -892,23 +921,40 @@ def _move_shared_base(plan: PortPlan, *, apply: bool) -> list[str]:
 
 
 def _rewrite_intra_bundle_imports(plan: PortPlan, *, apply: bool, components_dir: Path) -> list[str]:
-    """Rewrite ``from lfx.base.<bundle>`` -> ``from lfx_<bundle>.base`` in moved components."""
-    if plan.shared_base_dir is None:
-        return []
+    """Rewrite intra-bundle imports in moved components.
+
+    Two substitutions, applied recursively across the bundle's
+    ``components/<bundle>/`` tree (so nested subpackages like
+    ``agentics/helpers/`` and ``agentics/inputs/`` are covered):
+
+    * ``lfx.base.<bundle>`` -> ``lfx_<bundle>.base``    (shared-base move)
+    * ``lfx.components.<bundle>`` -> ``lfx_<bundle>.components.<bundle>``
+      (cross-file imports between components/<bundle>/ siblings or
+      subpackages -- agentics in particular has helpers/* files that
+      import ``lfx_agentics.components.agentics.constants`` etc.)
+    """
     actions: list[str] = []
-    needle = f"lfx.base.{plan.bundle}"
-    replacement = f"lfx_{plan.bundle}.base"
-    if apply:
-        for f in sorted(components_dir.iterdir()):
-            if f.suffix != ".py":
-                continue
-            content = f.read_text(encoding="utf-8")
-            new_content = content.replace(needle, replacement)
-            if new_content != content:
-                f.write_text(new_content, encoding="utf-8")
-                actions.append(f"rewrite imports in {f.relative_to(REPO_ROOT)}")
-    else:
-        actions.append(f"rewrite ``{needle}`` -> ``{replacement}`` in {components_dir.relative_to(REPO_ROOT)}/*.py")
+    substitutions: list[tuple[str, str]] = []
+    if plan.shared_base_dir is not None:
+        substitutions.append((f"lfx.base.{plan.bundle}", f"lfx_{plan.bundle}.base"))
+    if plan.nested_subdirs:
+        substitutions.append((f"lfx.components.{plan.bundle}", f"lfx_{plan.bundle}.components.{plan.bundle}"))
+
+    if not substitutions:
+        return actions
+    if not apply:
+        for needle, repl in substitutions:
+            actions.append(f"rewrite ``{needle}`` -> ``{repl}`` in {components_dir.relative_to(REPO_ROOT)}/**/*.py")
+        return actions
+
+    for f in sorted(components_dir.rglob("*.py")):
+        content = f.read_text(encoding="utf-8")
+        new_content = content
+        for needle, repl in substitutions:
+            new_content = new_content.replace(needle, repl)
+        if new_content != content:
+            f.write_text(new_content, encoding="utf-8")
+            actions.append(f"rewrite imports in {f.relative_to(REPO_ROOT)}")
     return actions
 
 
@@ -952,6 +998,16 @@ def _layout_bundle(plan: PortPlan, *, apply: bool) -> list[str]:
         actions.append(f"move {src.relative_to(REPO_ROOT)} -> {dst.relative_to(REPO_ROOT)}")
         if apply:
             shutil.move(str(src), str(dst))
+
+    # Move nested subpackages wholesale (e.g. ``agentics/helpers``,
+    # ``agentics/inputs``).  Their internal ``lfx.components.<bundle>...``
+    # imports get rewritten in-place by the subsequent intra-bundle
+    # import rewrite pass below.
+    for subdir in plan.nested_subdirs:
+        dst = components_dir / subdir.name
+        actions.append(f"move {subdir.relative_to(REPO_ROOT)}/ -> {dst.relative_to(REPO_ROOT)}/")
+        if apply:
+            shutil.move(str(subdir), str(dst))
 
     # Move the shared base (if any) and rewrite intra-bundle imports.
     actions += _move_shared_base(plan, apply=apply)

@@ -23,7 +23,7 @@ import pytest
 # imported when an OpenAI provider is registered (depends on optional deps in the env).
 # Skip the whole module if the import side-effect fails.
 try:
-    from lfx.components.cuga import cuga_agent
+    from lfx_cuga import cuga_agent
 except Exception as exc:
     pytest.skip(f"cuga_agent module not importable in this env: {exc}", allow_module_level=True)
 

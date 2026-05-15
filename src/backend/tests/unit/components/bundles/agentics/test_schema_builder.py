@@ -10,7 +10,7 @@ try:
 except ImportError:
     pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
 
-from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from lfx_agentics.components.agentics.helpers.schema_builder import build_schema_fields
 
 
 @pytest.mark.unit

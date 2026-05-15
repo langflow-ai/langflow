@@ -125,6 +125,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/mem0 \
         ./src/bundles/twelvelabs \
         ./src/bundles/unstructured \
+        ./src/bundles/agentics \
+        ./src/bundles/altk \
+        ./src/bundles/codeagents \
+        ./src/bundles/crewai \
+        ./src/bundles/cuga \
+        ./src/bundles/olivya \
+        ./src/bundles/vlmrun \
         "./src/backend/base[complete,postgresql]"
 
 ################################

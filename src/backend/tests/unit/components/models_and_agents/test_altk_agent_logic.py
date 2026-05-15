@@ -25,9 +25,9 @@ from lfx.base.agents.altk_tool_wrappers import (
     PostToolProcessingWrapper,
     PreToolValidationWrapper,
 )
-from lfx.components.altk.altk_agent import ALTKAgentComponent
 from lfx.log.logger import logger
 from lfx.schema.message import Message
+from lfx_altk.components.altk.altk_agent import ALTKAgentComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel
@@ -464,7 +464,7 @@ class TestHelperFunctions:
 
     def test_set_advanced_true(self):
         """Test set_advanced_true function."""
-        from lfx.components.altk.altk_agent import set_advanced_true
+        from lfx_altk.components.altk.altk_agent import set_advanced_true
 
         # Create a mock input object
         mock_input = MagicMock()
@@ -477,7 +477,7 @@ class TestHelperFunctions:
 
     def test_get_parent_agent_inputs(self):
         """Test get_parent_agent_inputs function."""
-        from lfx.components.altk.altk_agent import get_parent_agent_inputs
+        from lfx_altk.components.altk.altk_agent import get_parent_agent_inputs
 
         # This function filters out inputs with specific names
         result = get_parent_agent_inputs()

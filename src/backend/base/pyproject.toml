@@ -286,7 +286,6 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
 # Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
-altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
 toolguard = ["toolguard>=0.2.16,<1.0.0"]
@@ -314,10 +313,6 @@ fastparquet = ["fastparquet>=2024.11.0,<2025.0.0"]
 
 # Vision / ML
 vlmrun = ["vlmrun[all]>=0.2.0"]
-cuga = [
-    "cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'",
-    "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
@@ -384,7 +379,6 @@ complete = [
     "langflow-base[ag2]",
     "langflow-base[spider]",
     # ALTK
-    "langflow-base[altk]",
     # Toolguard
     "langflow-base[toolguard]",
     # Additional LangChain integrations
@@ -403,8 +397,6 @@ complete = [
     "langflow-base[datasets]",
     "langflow-base[fastparquet]",
     # Vision / ML
-    "langflow-base[vlmrun]",
-    "langflow-base[cuga]",
     "langflow-base[mlx]",
     # MCP
     "langflow-base[fastmcp]",

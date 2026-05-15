@@ -13,7 +13,7 @@ try:
 except ImportError:
     pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
 
-from lfx.components.agentics.constants import (
+from lfx_agentics.components.agentics.constants import (
     DEFAULT_OLLAMA_URL,
     LLM_MODEL_PREFIXES,
     PROVIDER_ANTHROPIC,
@@ -43,7 +43,7 @@ class TestCreateLlm:
 
     def test_should_create_openai_llm_with_correct_params(self, mock_crewai):
         """Test OpenAI LLM creation with correct model prefix and API key."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -62,7 +62,7 @@ class TestCreateLlm:
 
     def test_should_create_google_llm_with_correct_params(self, mock_crewai):
         """Test Google LLM creation with correct model prefix and API key."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -81,7 +81,7 @@ class TestCreateLlm:
 
     def test_should_create_anthropic_llm_with_correct_params(self, mock_crewai):
         """Test Anthropic LLM creation with correct model prefix and API key."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -99,12 +99,12 @@ class TestCreateLlm:
         assert result == mock_llm
 
     @patch(
-        "lfx.components.agentics.helpers.llm_factory.IBM_WATSONX_URLS",
+        "lfx_agentics.components.agentics.helpers.llm_factory.IBM_WATSONX_URLS",
         ["https://default.watsonx.url"],
     )
     def test_should_create_watsonx_llm_with_all_params(self, mock_crewai):
         """Test WatsonX LLM creation with all required parameters."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -129,12 +129,12 @@ class TestCreateLlm:
         assert result == mock_llm
 
     @patch(
-        "lfx.components.agentics.helpers.llm_factory.IBM_WATSONX_URLS",
+        "lfx_agentics.components.agentics.helpers.llm_factory.IBM_WATSONX_URLS",
         ["https://default.watsonx.url"],
     )
     def test_should_use_default_watsonx_url_when_not_provided(self, mock_crewai):
         """Test WatsonX LLM uses default URL when base_url not provided."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -150,7 +150,7 @@ class TestCreateLlm:
 
     def test_should_create_ollama_llm_with_custom_url(self, mock_crewai):
         """Test Ollama LLM creation with custom base URL."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -170,7 +170,7 @@ class TestCreateLlm:
 
     def test_should_use_default_ollama_url_when_not_provided(self, mock_crewai):
         """Test Ollama LLM uses default URL when ollama_base_url not provided."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm
@@ -186,7 +186,7 @@ class TestCreateLlm:
 
     def test_should_raise_when_provider_not_supported(self, mock_crewai):
         """Test that ValueError is raised for unsupported provider."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         _ = mock_crewai  # Ensure crewai module is mocked
 
@@ -199,7 +199,7 @@ class TestCreateLlm:
 
     def test_should_handle_none_api_key_for_cloud_providers(self, mock_crewai):
         """Test that cloud providers accept None API key (may fail at runtime)."""
-        from lfx.components.agentics.helpers.llm_factory import create_llm
+        from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
         mock_llm = MagicMock()
         mock_crewai.return_value = mock_llm

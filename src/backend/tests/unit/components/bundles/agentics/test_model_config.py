@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from lfx.components.agentics.constants import (
+from lfx_agentics.components.agentics.constants import (
     ERROR_MODEL_NOT_SELECTED,
     PROVIDER_IBM_WATSONX,
     PROVIDER_OLLAMA,
     PROVIDER_OPENAI,
 )
-from lfx.components.agentics.helpers.model_config import (
+from lfx_agentics.components.agentics.helpers.model_config import (
     update_provider_fields_visibility,
     validate_model_selection,
 )

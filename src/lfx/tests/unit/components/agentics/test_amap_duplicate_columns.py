@@ -11,7 +11,7 @@ except ImportError:
 
 from agentics import AG
 from agentics.core.atype import create_pydantic_model
-from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from lfx_agentics.components.agentics.helpers.schema_builder import build_schema_fields
 
 
 @pytest.mark.unit

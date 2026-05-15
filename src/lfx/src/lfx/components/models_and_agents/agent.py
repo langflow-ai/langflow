@@ -9,6 +9,8 @@ from lfx.components.models_and_agents.memory import MemoryComponent
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
+from lfx_agentics.components.agentics.helpers.model_config import validate_model_selection
+
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
@@ -18,7 +20,6 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.components.agentics.helpers.model_config import validate_model_selection
 from lfx.components.helpers import CalculatorComponent, CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.custom.custom_component.component import get_component_toolkit

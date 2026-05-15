@@ -2,7 +2,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from langflow.schema.data import Data
-from lfx.components.vlmrun import VLMRunTranscription
+from lfx_vlmrun import VLMRunTranscription
 from tests.base import ComponentTestBaseWithoutClient
 
 

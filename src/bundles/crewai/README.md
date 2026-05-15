@@ -1,0 +1,29 @@
+# lfx-crewai
+
+Crewai component(s) as a standalone Langflow Extension Bundle.
+
+## Install
+
+```bash
+pip install lfx-crewai
+```
+
+The bundle is registered automatically via the `langflow.extensions`
+entry-point.  After install, restart your Langflow server; the bundle's
+components will appear in the palette under the `crewai` group with
+the namespaced IDs `ext:crewai:<Class>@official`.
+
+## Develop
+
+```bash
+cd src/bundles/crewai
+pip install -e .
+lfx extension validate src/lfx_crewai
+```
+
+## Migration
+
+Saved flows referencing the legacy class name(s) or the old import paths
+under `lfx.components.crewai.*` are rewritten to the new namespaced
+IDs by the migration table in
+`src/lfx/src/lfx/extension/migration/migration_table.json`.

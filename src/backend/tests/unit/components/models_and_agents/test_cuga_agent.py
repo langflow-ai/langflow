@@ -3,8 +3,8 @@ from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
-from lfx.components.cuga import CugaComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
+from lfx_cuga import CugaComponent
 
 from tests.base import ComponentTestBaseWithClient, ComponentTestBaseWithoutClient
 from tests.unit.mock_language_model import MockLanguageModel

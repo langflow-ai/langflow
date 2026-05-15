@@ -7,11 +7,7 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     # These imports are only for type checking and match _dynamic_imports
     from lfx.components import (
-        altk,
         chains,
-        codeagents,
-        crewai,
-        cuga,
         custom_component,
         data,
         deactivated,
@@ -25,7 +21,6 @@ if TYPE_CHECKING:
         link_extractors,
         logic,
         models_and_agents,
-        olivya,
         output_parsers,
         processing,
         prototypes,
@@ -33,7 +28,6 @@ if TYPE_CHECKING:
         toolkits,
         tools,
         vectorstores,
-        vlmrun,
         yahoosearch,
     )
 
@@ -41,11 +35,7 @@ if TYPE_CHECKING:
 # Dynamic imports mapping - maps both modules and individual components
 _dynamic_imports = {
     # Category modules (existing functionality)
-    "altk": "__module__",
     "chains": "__module__",
-    "crewai": "__module__",
-    "cuga": "__module__",
-    "codeagents": "__module__",
     "custom_component": "__module__",
     "data": "__module__",
     "deactivated": "__module__",
@@ -59,7 +49,6 @@ _dynamic_imports = {
     "link_extractors": "__module__",
     "logic": "__module__",
     "models_and_agents": "__module__",
-    "olivya": "__module__",
     "output_parsers": "__module__",
     "processing": "__module__",
     "prototypes": "__module__",
@@ -67,7 +56,6 @@ _dynamic_imports = {
     "toolkits": "__module__",
     "tools": "__module__",
     "vectorstores": "__module__",
-    "vlmrun": "__module__",
     "yahoosearch": "__module__",
 }
 
@@ -101,11 +89,7 @@ def _discover_components_from_module(module_name):
 
 # Static base __all__ with module names
 __all__ = [
-    "altk",
     "chains",
-    "codeagents",
-    "crewai",
-    "cuga",
     "custom_component",
     "data",
     "deactivated",
@@ -119,7 +103,6 @@ __all__ = [
     "link_extractors",
     "logic",
     "models_and_agents",
-    "olivya",
     "output_parsers",
     "processing",
     "prototypes",
@@ -127,7 +110,6 @@ __all__ = [
     "toolkits",
     "tools",
     "vectorstores",
-    "vlmrun",
     "yahoosearch",
 ]
 

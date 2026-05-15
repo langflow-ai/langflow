@@ -1,10 +1,10 @@
-from lfx.components.crewai.crewai import CrewAIAgentComponent
-from lfx.components.crewai.hierarchical_crew import HierarchicalCrewComponent
-from lfx.components.crewai.hierarchical_task import HierarchicalTaskComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import PromptComponent
 from lfx.components.tools import SearchAPIComponent, YfinanceToolComponent
 from lfx.graph import Graph
+from lfx_crewai.components.crewai.crewai import CrewAIAgentComponent
+from lfx_crewai.components.crewai.hierarchical_crew import HierarchicalCrewComponent
+from lfx_crewai.components.crewai.hierarchical_task import HierarchicalTaskComponent
 from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 

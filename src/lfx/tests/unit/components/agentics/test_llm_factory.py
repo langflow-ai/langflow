@@ -6,7 +6,7 @@ import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.agentics.constants import (
+from lfx_agentics.components.agentics.constants import (
     DEFAULT_OLLAMA_URL,
     LLM_MODEL_PREFIXES,
     PROVIDER_ANTHROPIC,
@@ -18,7 +18,7 @@ from lfx.components.agentics.constants import (
     WATSONX_DEFAULT_MAX_TOKENS,
     WATSONX_DEFAULT_TEMPERATURE,
 )
-from lfx.components.agentics.helpers.llm_factory import create_llm
+from lfx_agentics.components.agentics.helpers.llm_factory import create_llm
 
 FAKE_API_KEY = "test-api-key-123"
 FAKE_MODEL_NAME = "test-model"

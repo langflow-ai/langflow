@@ -10,7 +10,7 @@ try:
 except ImportError:
     pytest.skip("agentics-py and crewai not installed", allow_module_level=True)
 
-from lfx.components.agentics.amap_component import AMapComponent
+from lfx_agentics.components.agentics.amap_component import AMapComponent
 
 
 @pytest.mark.unit

@@ -5,11 +5,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from lfx.components.agentics.constants import (
+from lfx_agentics.components.agentics.constants import (
     PROVIDER_OLLAMA,
     PROVIDER_OPENAI,
 )
-from lfx.components.agentics.helpers.llm_setup import prepare_llm_from_component
+from lfx_agentics.components.agentics.helpers.llm_setup import prepare_llm_from_component
 
 FAKE_API_KEY = "test-api-key-456"
 FAKE_MODEL_NAME = "gpt-4"
@@ -34,8 +34,8 @@ def _create_mock_component(
 class TestPrepareLlmFromComponent:
     """Tests for prepare_llm_from_component function."""
 
-    @patch("lfx.components.agentics.helpers.llm_setup.create_llm")
-    @patch("lfx.components.agentics.helpers.llm_setup.get_api_key_for_provider")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.create_llm")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.get_api_key_for_provider")
     def test_should_create_llm_with_resolved_api_key(
         self,
         mock_get_api_key: MagicMock,
@@ -59,8 +59,8 @@ class TestPrepareLlmFromComponent:
             ollama_base_url=component.ollama_base_url,
         )
 
-    @patch("lfx.components.agentics.helpers.llm_setup.create_llm")
-    @patch("lfx.components.agentics.helpers.llm_setup.get_api_key_for_provider")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.create_llm")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.get_api_key_for_provider")
     def test_should_raise_when_api_key_missing_for_non_ollama_provider(
         self,
         mock_get_api_key: MagicMock,
@@ -76,8 +76,8 @@ class TestPrepareLlmFromComponent:
 
         mock_create_llm.assert_not_called()
 
-    @patch("lfx.components.agentics.helpers.llm_setup.create_llm")
-    @patch("lfx.components.agentics.helpers.llm_setup.get_api_key_for_provider")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.create_llm")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.get_api_key_for_provider")
     def test_should_allow_no_api_key_for_ollama_provider(
         self,
         mock_get_api_key: MagicMock,
@@ -98,7 +98,7 @@ class TestPrepareLlmFromComponent:
         assert call_kwargs["api_key"] is None
         assert call_kwargs["provider"] == PROVIDER_OLLAMA
 
-    @patch("lfx.components.agentics.helpers.llm_setup.create_llm")
+    @patch("lfx_agentics.components.agentics.helpers.llm_setup.create_llm")
     def test_should_raise_when_model_not_selected(
         self,
         mock_create_llm: MagicMock,

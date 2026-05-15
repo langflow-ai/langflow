@@ -28,7 +28,7 @@ def test_set_invalid_output():
 
 @pytest.mark.xfail(reason="CrewAI is not outdated")
 def test_set_component():
-    from lfx.components.crewai import CrewAIAgentComponent, SequentialTaskComponent
+    from lfx_crewai import CrewAIAgentComponent, SequentialTaskComponent
 
     crewai_agent = CrewAIAgentComponent()
     task = SequentialTaskComponent()

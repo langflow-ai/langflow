@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from lfx.components.agentics.helpers.schema_builder import build_schema_fields
+from lfx_agentics.components.agentics.helpers.schema_builder import build_schema_fields
 
 
 class TestBuildSchemaFields:
