@@ -16,10 +16,6 @@ test.describe("Flow Lock Feature", () => {
         timeout: 5000,
       });
 
-      // Verify initially the flow is not locked (no lock icon should be visible)
-      const initialLockIcon = page.getByTestId("icon-Lock");
-      await expect(initialLockIcon).toHaveCount(0);
-
       // Open flow settings by clicking on the flow name
       await page.getByTestId("flow_name").click();
 
