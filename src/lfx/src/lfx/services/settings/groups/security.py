@@ -66,6 +66,6 @@ class SecuritySettings(BaseModel):
             return "*"
         if isinstance(value, str) and value != "*":
             if "," in value:
-                return [origin.strip() for origin in value.split(",")]
+                return [origin for origin in (o.strip() for o in value.split(",")) if origin]
             return [value]
         return value
