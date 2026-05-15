@@ -831,16 +831,18 @@ def prepare_global_scope(module):
     # type annotations in class bodies are stored as strings rather than evaluated eagerly.
     # Without this, `SomeProxiedType | None` in a field annotation would call `__or__` on
     # the `_LazyImportProxy` at class-construction time and raise TypeError.
-    has_future_annotations = any(
-        any(alias.name == "annotations" for alias in node.names)
-        for node in future_imports
-    )
+    has_future_annotations = any(any(alias.name == "annotations" for alias in node.names) for node in future_imports)
     if not has_future_annotations:
-        future_imports.insert(0, ast.fix_missing_locations(ast.ImportFrom(
-            module="__future__",
-            names=[ast.alias(name="annotations")],
-            level=0,
-        )))
+        future_imports.insert(
+            0,
+            ast.fix_missing_locations(
+                ast.ImportFrom(
+                    module="__future__",
+                    names=[ast.alias(name="annotations")],
+                    level=0,
+                )
+            ),
+        )
 
     if definitions or future_imports:
         combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
