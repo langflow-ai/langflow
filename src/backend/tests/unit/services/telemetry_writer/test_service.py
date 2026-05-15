@@ -167,12 +167,14 @@ def test_bytes_strategy_drops_oldest_when_byte_cap_exceeded(writer_with_engine) 
     writer.settings_service.settings.telemetry_writer_size_strategy = "bytes"
     writer.settings_service.settings.telemetry_writer_max_queue = 10_000  # high — must not be the trigger
     writer.settings_service.settings.telemetry_writer_max_queue_bytes = 200
-    # Each payload encodes to >100 bytes, so 3 of them busts the 200B cap.
+    # {"payload": "x"*100, "i": N} encodes to 123 bytes. Two of them (246) bust
+    # the 200B cap, so on each subsequent enqueue the oldest is dropped first.
     for i in range(3):
         writer.enqueue_transaction({"payload": "x" * 100, "i": i})
-    assert writer._tx_bytes < 200
-    assert writer.dropped_transactions >= 1
-    assert writer.dropped_transactions_bytes > 0
+    assert writer._tx_bytes == 123
+    assert len(writer._tx_buffer) == 1
+    assert writer.dropped_transactions == 2
+    assert writer.dropped_transactions_bytes == 246
 
 
 def test_either_strategy_trips_on_first_threshold(writer_with_engine) -> None:
@@ -194,11 +196,13 @@ def test_drain_batch_respects_byte_budget(writer_with_engine) -> None:
     writer.settings_service.settings.telemetry_writer_size_strategy = "bytes"
     for i in range(10):
         writer.enqueue_transaction({"payload": "x" * 100, "i": i})
-    # Budget of 250 bytes should grab ~2 rows (each is just over 100B encoded).
+    # Each row encodes to 123 bytes. With a 250B budget the loop pops 3 rows
+    # (123, 246, 369) and breaks on the third when batch_bytes >= max_bytes.
     batch = writer._drain_batch("transactions", max_n=10, max_bytes=250)
-    assert 1 <= len(batch) <= 4
-    # Remainder still in buffer.
-    assert len(writer._tx_buffer) + len(batch) == 10
+    assert len(batch) == 3
+    assert len(writer._tx_buffer) == 7
+    assert len(writer._tx_sizes) == 7
+    assert writer._tx_bytes == 7 * 123
 
 
 def test_drain_batch_always_emits_one_row_even_when_oversized(writer_with_engine) -> None:
@@ -222,6 +226,101 @@ def test_return_batch_to_buffer_restores_sizes(writer_with_engine) -> None:
     writer._return_batch_to_buffer("transactions", batch)
     assert writer._tx_bytes == bytes_before
     assert len(writer._tx_sizes) == len(writer._tx_buffer) == 2
+
+
+def test_bytes_strategy_round_trip_through_spill_and_restore(tmp_path: Path) -> None:
+    """Spill must reset size tracking; restore must rebuild it via _enqueue."""
+    own_dir = tmp_path / "pid"
+    own_dir.mkdir()
+    writer = _build_writer({"telemetry_writer_size_strategy": "either"})
+    writer._started = True
+    writer.enqueue_transaction({"flow": "a", "i": 1})
+    writer.enqueue_transaction({"flow": "b", "i": 2})
+    original_bytes = writer._tx_bytes
+    assert original_bytes > 0
+    assert len(writer._tx_sizes) == 2
+
+    writer._spill_to_disk(own_dir, kind="transactions", buffer=writer._tx_buffer)
+    # Spill drained the buffer and must zero size tracking.
+    assert writer._tx_bytes == 0
+    assert len(writer._tx_sizes) == 0
+    assert not writer._tx_buffer
+
+    # Restore into a fresh writer with the same strategy.
+    restored = _build_writer({"telemetry_writer_size_strategy": "either"})
+    restored._started = True
+    restored._restore_from_disk(own_dir, kind="transactions", buffer=restored._tx_buffer)
+    assert len(restored._tx_buffer) == 2
+    assert len(restored._tx_sizes) == 2
+    # Bytes must match the pre-spill total — restore re-encodes via _enqueue.
+    assert restored._tx_bytes == original_bytes
+
+
+def test_bytes_strategy_round_trip_through_adoption(tmp_path: Path) -> None:
+    """Adopting an orphan outbox under 'bytes' strategy must populate size deques."""
+    dead_pid = _find_dead_pid()
+    dead_dir = tmp_path / str(dead_pid)
+    dead_dir.mkdir()
+    _write_owner_file(dead_dir)
+    spill_writer = _build_writer({"telemetry_writer_size_strategy": "either"})
+    spill_writer._started = True
+    spill_writer.enqueue_transaction({"orphan": True, "i": 1})
+    spill_writer.enqueue_transaction({"orphan": True, "i": 2})
+    spilled_bytes = spill_writer._tx_bytes
+    spill_writer._spill_to_disk(dead_dir, kind="transactions", buffer=spill_writer._tx_buffer)
+
+    adopter = _build_writer({"telemetry_writer_size_strategy": "either"})
+    adopter._adopt_orphan_outboxes(tmp_path, own_pid=1)
+    assert len(adopter._tx_buffer) == 2
+    assert len(adopter._tx_sizes) == 2
+    assert adopter._tx_bytes == spilled_bytes
+
+
+async def test_sweeper_calls_heartbeat_and_prune(tmp_path: Path) -> None:
+    """One sweeper tick must touch our owner file and prune stale foreign dirs."""
+    import json as _json
+    import os as _os
+    import time as _time
+
+    own_dir = tmp_path / "1234"
+    own_dir.mkdir()
+    _write_owner_file(own_dir)
+    owner_file = own_dir / "owner.json"
+    aged = _time.time() - 7200
+    _os.utime(owner_file, (aged, aged))
+    own_before = owner_file.stat().st_mtime
+
+    foreign_dir = tmp_path / "9999"
+    foreign_dir.mkdir()
+    (foreign_dir / "owner.json").write_text(
+        _json.dumps({"host": "dead-foreign-pod", "boot": "x", "pid": 9999, "started_at": 0})
+    )
+    _os.utime(foreign_dir / "owner.json", (aged, aged))
+
+    writer = _build_writer(
+        {
+            "telemetry_writer_outbox_dir": str(tmp_path),
+            "telemetry_writer_orphan_max_age_s": 3600.0,
+            # Skip the real retention pass — it needs a DB session.
+            "telemetry_writer_cleanup_interval_s": 0.01,
+        }
+    )
+    writer._own_outbox_dir = own_dir
+    writer._shutdown_event = asyncio.Event()
+    # Bypass _run_retention_pass by clearing the session_maker; the sweeper
+    # catches the exception path either way, but None makes it a no-op.
+    writer._session_maker = None
+
+    async def _stop_after_one_tick() -> None:
+        await asyncio.sleep(0.1)
+        writer._shutdown_event.set()
+
+    stopper = asyncio.create_task(_stop_after_one_tick())
+    await writer._run_sweeper()
+    await stopper
+
+    assert owner_file.stat().st_mtime > own_before
+    assert not foreign_dir.exists()
 
 
 async def test_flush_inserts_transactions_and_vertex_builds(writer_with_engine) -> None:

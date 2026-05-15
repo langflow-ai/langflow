@@ -359,13 +359,18 @@ class Settings(BaseSettings):
       deployments with variable payload sizes (large vertex_build artifacts,
       doc-loader outputs)."""
     telemetry_writer_batch_size_bytes: int = 262_144
-    """Cap on per-flush batch size in bytes. Consulted when
+    """Cap on per-flush batch size in *encoded JSON bytes*. Consulted when
     ``telemetry_writer_size_strategy`` is 'bytes' or 'either'. Sized around a
-    single TCP frame so individual INSERTs stay below DB packet limits."""
+    single TCP frame so individual INSERTs stay below DB packet limits.
+
+    Note: this measures the payload's serialized size, not Python's in-memory
+    footprint (dicts carry significant overhead beyond their JSON form)."""
     telemetry_writer_max_queue_bytes: int = 209_715_200
-    """Per-outbox byte cap. When exceeded under 'bytes' or 'either' strategy,
-    oldest entries are dropped until the buffer fits. Defaults to ~200MB so a
-    single worker's telemetry buffer can't dominate container memory."""
+    """Per-outbox cap in *encoded JSON bytes*. When exceeded under 'bytes' or
+    'either' strategy, oldest entries are dropped until the buffer fits.
+    Defaults to ~200MB so a single worker's telemetry buffer can't dominate
+    container memory. As with ``batch_size_bytes`` this is serialized size, not
+    Python in-memory size — actual RSS will be 2-5x higher."""
 
     # Config
     host: str = "localhost"
