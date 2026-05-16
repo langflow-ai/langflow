@@ -1170,11 +1170,25 @@ async def get_and_cache_all_types_dict(
         # on namespaced-ID collisions the namespaced entry wins by
         # definition (only the extension source produces those keys).
         merged: dict[str, dict[str, Any]] = {}
-        for source in (langflow_components["components"], custom_flat, extension_components):
+        for source_index, source in enumerate((langflow_components["components"], custom_flat, extension_components)):
             for category, items in source.items():
                 if not isinstance(items, dict):
                     continue
-                merged.setdefault(category, {}).update(items)
+                bucket = merged.setdefault(category, {})
+                # Log bare-name collisions between non-ext sources so we can
+                # diagnose cases where an unrelated extension class with the
+                # same name silently shadows a built-in.  Ext-keyed entries
+                # are expected to collide with their bare twins and are
+                # handled by the dedup pass below; only flag bare<->bare.
+                for key in items:
+                    if source_index > 0 and isinstance(key, str) and not key.startswith("ext:") and key in bucket:
+                        await logger.adebug(
+                            "Cache merge: bare key %r in category %r overwritten by source #%d",
+                            key,
+                            category,
+                            source_index,
+                        )
+                bucket.update(items)
 
         # Dedupe namespaced-ID keys against their bare-name twin.  The bundle
         # walk above registers each extracted-bundle component under its bare
@@ -1208,12 +1222,17 @@ async def get_and_cache_all_types_dict(
                 ext_template = category_items[ext_key]
                 if not isinstance(ext_template, dict):
                     continue
-                # Parse class name from ``ext:<bundle>:<Class>@<slot>``.
+                # Parse ``ext:<bundle>:<Class>@<slot>``.  We need both pieces:
+                # the class name for twin-matching, and the bundle name to
+                # guard against cross-bundle display_name collisions.
+                ext_bundle = ""
+                class_name = ""
                 try:
-                    klass_with_slot = ext_key.split(":", 2)[2]
-                    class_name = klass_with_slot.rsplit("@", 1)[0]
+                    parts = ext_key.split(":", 2)
+                    ext_bundle = parts[1]
+                    class_name = parts[2].rsplit("@", 1)[0]
                 except (IndexError, ValueError):
-                    class_name = ""
+                    pass
                 twin_key: str | None = None
                 # First try matching the class name and its Component-suffix
                 # variants (covers ``OpenAIModelComponent`` <-> ``OpenAIModel``).
@@ -1231,19 +1250,50 @@ async def get_and_cache_all_types_dict(
                 # Fallback: match on ``display_name`` (covers cases where
                 # ``obj.name`` diverges from the class name, e.g.
                 # ``PineconeVectorStoreComponent`` registers as ``Pinecone``).
+                # Guard against cross-bundle false matches: if the bare twin
+                # carries a ``bundle`` field already (from a prior extension
+                # entry), require it to match the bundle parsed from
+                # ``ext_key``.  Without this guard, two unrelated bundles
+                # registering components with the same generic display_name
+                # (e.g. ``"Embeddings"``) under the same category would
+                # transplant fields onto the wrong template.
                 if twin_key is None:
                     dn = ext_template.get("display_name")
                     if isinstance(dn, str) and dn in display_name_to_bare:
-                        twin_key = display_name_to_bare[dn]
+                        candidate = display_name_to_bare[dn]
+                        candidate_template = category_items.get(candidate)
+                        if isinstance(candidate_template, dict):
+                            candidate_bundle = candidate_template.get("bundle")
+                            if ext_bundle and candidate_bundle and candidate_bundle != ext_bundle:
+                                await logger.adebug(
+                                    "Cache dedup: rejecting display_name match for %r "
+                                    "(twin %r belongs to bundle %r, not %r)",
+                                    ext_key,
+                                    candidate,
+                                    candidate_bundle,
+                                    ext_bundle,
+                                )
+                            else:
+                                twin_key = candidate
                 if twin_key is None:
-                    # Orphan ext: entry with no bare-name twin.  Drop it if
-                    # ``display_name`` is falsy -- those are base classes the
-                    # bundle walk correctly excluded via
-                    # ``code_class_base_inheritance is None`` but the extension
-                    # loader picked up anyway (e.g.
-                    # ``ext:agentics:BaseAgenticComponent@official``).
+                    # Orphan ext: entry with no bare-name twin.  Drop when
+                    # the display_name strongly suggests a base class that
+                    # the bundle walk correctly excluded (via
+                    # ``code_class_base_inheritance is None``) but the
+                    # extension loader picked up anyway.
+                    #
+                    # The frontend-node serializer (FrontendNode.process_display_name)
+                    # falls back to ``self.name`` when ``display_name`` is
+                    # falsy upstream.  ``self.name`` defaults to the class
+                    # name, and for an un-named base class it bottoms out
+                    # at the literal string ``"Component"``.  So we drop
+                    # any of: falsy display_name, ``"Component"``, or the
+                    # parsed class_name itself -- all three indicate the
+                    # upstream class set ``display_name = False`` and the
+                    # serializer fell through to ``self.name``.
                     dn = ext_template.get("display_name")
-                    if not dn:
+                    is_base_class_leak = not dn or dn == "Component" or (class_name and dn == class_name)
+                    if is_base_class_leak:
                         del category_items[ext_key]
                     continue
                 twin = category_items[twin_key]
