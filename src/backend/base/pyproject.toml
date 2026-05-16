@@ -201,13 +201,6 @@ faiss = [
 ]
 mongodb-vectors = ["langchain-mongodb==0.7.0"]
 # Individual LLM providers
-google = [
-    "langchain-google-genai~=4.1.2",
-    "langchain-google-vertexai>=3.2.0",
-    "langchain-google-community~=3.0.2",
-    "langchain-google-calendar-tools~=0.0.1",
-    "google-api-python-client~=2.161",
-]
 
 # Individual local LLM providers
 sentence-transformers = ["sentence-transformers>=2.3.1"]
@@ -341,7 +334,6 @@ complete = [
     "langflow-base[elasticsearch]",
     "langflow-base[faiss]",
     "langflow-base[mongodb-vectors]",
-    "langflow-base[google]",
     "langflow-base[langfuse]",
     "langflow-base[langsmith]",
     "langflow-base[arize]",

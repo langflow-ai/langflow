@@ -1,0 +1,44 @@
+[project]
+name = "lfx-google-search"
+version = "0.1.0"
+description = "Google Search APIs: official Google Search and Serper."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "google", "google_search"]
+
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "langchain-google-community~=3.0.2",
+    "langchain-community~=0.4.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-google-search = "lfx_google_search"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_google_search"]
+include = [
+    "src/lfx_google_search/extension.json",
+    "src/lfx_google_search/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_google_search",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

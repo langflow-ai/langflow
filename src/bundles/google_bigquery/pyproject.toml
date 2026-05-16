@@ -1,0 +1,44 @@
+[project]
+name = "lfx-google-bigquery"
+version = "0.1.0"
+description = "Google BigQuery SQL executor with Service Account credentials."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "google", "google_bigquery"]
+
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "google-cloud-bigquery>=3.0,<4.0",
+    "google-auth>=2.0,<3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-google-bigquery = "lfx_google_bigquery"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_google_bigquery"]
+include = [
+    "src/lfx_google_bigquery/extension.json",
+    "src/lfx_google_bigquery/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_google_bigquery",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

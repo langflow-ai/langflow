@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-google-search",
+  "version": "0.1.0",
+  "name": "Google Search",
+  "description": "Google Search APIs: official Google Search and Serper.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "google_search",
+      "path": "components/google_search"
+    }
+  ]
+}

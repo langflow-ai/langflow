@@ -110,7 +110,7 @@ def _get_watsonx_inputs_and_fields():
 
 def _get_google_generative_ai_inputs_and_fields():
     try:
-        from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+        from lfx_google_genai.components.google_genai.google_generative_ai import GoogleGenerativeAIComponent
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
@@ -293,7 +293,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.google.google_generative_ai import GoogleGenerativeAIComponent
+    from lfx_google_genai.components.google_genai.google_generative_ai import GoogleGenerativeAIComponent
 
     google_generative_ai_inputs, google_generative_ai_fields = _get_google_generative_ai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Google Generative AI"] = {

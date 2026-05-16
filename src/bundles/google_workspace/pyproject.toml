@@ -1,0 +1,46 @@
+[project]
+name = "lfx-google-workspace"
+version = "0.1.0"
+description = "Google Workspace integrations: Gmail loader, Drive loader/search, and OAuth token helper."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "google", "google_workspace"]
+
+dependencies = [
+    "lfx>=0.5.0,<0.6.0",
+    "langchain-google-community~=3.0.2",
+    "langchain-core>=1.3.3,<2.0.0",
+    "google-api-python-client~=2.161",
+    "google-auth-oauthlib>=1.0,<2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-google-workspace = "lfx_google_workspace"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_google_workspace"]
+include = [
+    "src/lfx_google_workspace/extension.json",
+    "src/lfx_google_workspace/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_google_workspace",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

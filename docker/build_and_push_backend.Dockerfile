@@ -132,6 +132,10 @@ RUN --mount=type=cache,target=/root/.cache/uv \
         ./src/bundles/cuga \
         ./src/bundles/olivya \
         ./src/bundles/vlmrun \
+        ./src/bundles/google_genai \
+        ./src/bundles/google_workspace \
+        ./src/bundles/google_bigquery \
+        ./src/bundles/google_search \
         "./src/backend/base[complete,postgresql]"
 
 ################################

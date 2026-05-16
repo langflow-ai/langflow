@@ -2,7 +2,6 @@ import json
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, MessageTextInput
 from lfx.io import SecretStrInput

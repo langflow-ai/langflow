@@ -4910,6 +4910,186 @@
       "legacy_slot": "ext:vlmrun:VLMRunTranscription@official-pre-a",
       "target": "ext:vlmrun:VLMRunTranscription@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleGenerativeAIComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_generative_ai.GoogleGenerativeAIComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleGenerativeAIComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_genai:GoogleGenerativeAIComponent@official-pre-a",
+      "target": "ext:google_genai:GoogleGenerativeAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_generative_ai_embeddings.GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleGenerativeAIEmbeddingsComponent",
+      "target": "ext:google_genai:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_genai:GoogleGenerativeAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:google_genai:GoogleGenerativeAIEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GmailLoaderComponent",
+      "target": "ext:google_workspace:GmailLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.gmail.GmailLoaderComponent",
+      "target": "ext:google_workspace:GmailLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GmailLoaderComponent",
+      "target": "ext:google_workspace:GmailLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_workspace:GmailLoaderComponent@official-pre-a",
+      "target": "ext:google_workspace:GmailLoaderComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveComponent",
+      "target": "ext:google_workspace:GoogleDriveComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_drive.GoogleDriveComponent",
+      "target": "ext:google_workspace:GoogleDriveComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleDriveComponent",
+      "target": "ext:google_workspace:GoogleDriveComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_workspace:GoogleDriveComponent@official-pre-a",
+      "target": "ext:google_workspace:GoogleDriveComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveSearchComponent",
+      "target": "ext:google_workspace:GoogleDriveSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_drive_search.GoogleDriveSearchComponent",
+      "target": "ext:google_workspace:GoogleDriveSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleDriveSearchComponent",
+      "target": "ext:google_workspace:GoogleDriveSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_workspace:GoogleDriveSearchComponent@official-pre-a",
+      "target": "ext:google_workspace:GoogleDriveSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleOAuthToken",
+      "target": "ext:google_workspace:GoogleOAuthToken@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_oauth_token.GoogleOAuthToken",
+      "target": "ext:google_workspace:GoogleOAuthToken@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleOAuthToken",
+      "target": "ext:google_workspace:GoogleOAuthToken@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_workspace:GoogleOAuthToken@official-pre-a",
+      "target": "ext:google_workspace:GoogleOAuthToken@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "BigQueryExecutorComponent",
+      "target": "ext:google_bigquery:BigQueryExecutorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_bq_sql_executor.BigQueryExecutorComponent",
+      "target": "ext:google_bigquery:BigQueryExecutorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.BigQueryExecutorComponent",
+      "target": "ext:google_bigquery:BigQueryExecutorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_bigquery:BigQueryExecutorComponent@official-pre-a",
+      "target": "ext:google_bigquery:BigQueryExecutorComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleSearchAPICore",
+      "target": "ext:google_search:GoogleSearchAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_search_api_core.GoogleSearchAPICore",
+      "target": "ext:google_search:GoogleSearchAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleSearchAPICore",
+      "target": "ext:google_search:GoogleSearchAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_search:GoogleSearchAPICore@official-pre-a",
+      "target": "ext:google_search:GoogleSearchAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "GoogleSerperAPICore",
+      "target": "ext:google_search:GoogleSerperAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.google_serper_api_core.GoogleSerperAPICore",
+      "target": "ext:google_search:GoogleSerperAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.google.GoogleSerperAPICore",
+      "target": "ext:google_search:GoogleSerperAPICore@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:google_search:GoogleSerperAPICore@official-pre-a",
+      "target": "ext:google_search:GoogleSerperAPICore@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

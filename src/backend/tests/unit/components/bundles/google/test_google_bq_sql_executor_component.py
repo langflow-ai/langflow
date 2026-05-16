@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from google.auth.exceptions import RefreshError
 from google.oauth2.service_account import Credentials
-from lfx.components.google.google_bq_sql_executor import BigQueryExecutorComponent
+from lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor import BigQueryExecutorComponent
 from pandas import DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -62,7 +62,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         return []
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_execute_sql_success(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test successful SQL execution and component side-effects."""
         # Arrange mocks
@@ -109,7 +109,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
 
     @pytest.mark.parametrize("q", ["", "   \n\t  "])
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_empty_query_raises(self, mock_client_cls, mock_from_file, component_class, service_account_file, q):
         """Empty or whitespace-only queries should raise a ValueError."""
         # Create a proper mock credentials object
@@ -156,7 +156,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
                 component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_execute_sql_invalid_query(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """SQL execution errors should be wrapped in ValueError."""
         mock_from_file.return_value = MagicMock()
@@ -169,7 +169,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
             component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_refresh_error_handling(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """RefreshError should produce an authentication ValueError."""
         mock_from_file.return_value = MagicMock()
@@ -184,7 +184,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
             component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_complex_query_result(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Complex row structures should be correctly serialized to DataFrame."""
         # Arrange mocks
@@ -253,7 +253,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         mock_client.query.assert_called_once_with(default_kwargs["query"])
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_sql_code_block(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries with SQL code blocks are properly handled."""
         mock_from_file.return_value = MagicMock()
@@ -270,7 +270,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, DataFrame)
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_whitespace(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries with extra whitespace are properly handled."""
         # Arrange mocks
@@ -311,7 +311,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["column1"] == "value1"  # Check value
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_special_characters(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries with special characters are properly handled."""
         # Arrange mocks
@@ -352,7 +352,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["name"] == "test_value"  # Check value
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_multiple_statements(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries with multiple statements are properly handled."""
         # Arrange mocks
@@ -397,7 +397,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["id"] == 1  # Check value
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_parameters(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries with parameters are properly handled."""
         # Arrange mocks
@@ -466,7 +466,7 @@ class TestBigQueryExecutorComponent(ComponentTestBaseWithoutClient):
             component.execute_sql()
 
     @patch.object(Credentials, "from_service_account_file")
-    @patch("lfx.components.google.google_bq_sql_executor.bigquery.Client")
+    @patch("lfx_google_bigquery.components.google_bigquery.google_bq_sql_executor.bigquery.Client")
     def test_query_with_quotes(self, mock_client_cls, mock_from_file, component_class, default_kwargs):
         """Test that queries wrapped in quotes are properly handled."""
         # Arrange mocks

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-google-genai",
+  "version": "0.1.0",
+  "name": "Google Generative AI",
+  "description": "Google Gemini chat model and embeddings.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "google_genai",
+      "path": "components/google_genai"
+    }
+  ]
+}

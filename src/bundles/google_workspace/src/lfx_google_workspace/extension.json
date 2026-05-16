@@ -1,0 +1,18 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-google-workspace",
+  "version": "0.1.0",
+  "name": "Google Workspace",
+  "description": "Google Workspace integrations: Gmail loader, Drive loader/search, and OAuth token helper.",
+  "lfx": {
+    "compat": [
+      "1"
+    ]
+  },
+  "bundles": [
+    {
+      "name": "google_workspace",
+      "path": "components/google_workspace"
+    }
+  ]
+}

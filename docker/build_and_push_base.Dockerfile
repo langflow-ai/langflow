@@ -821,6 +821,20 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/vlmrun
 
+# Google split (4 bundles from the in-tree ``google/`` directory).
+# Each ships ``--no-deps`` because the SDK pins they need
+# (langchain-google-genai, langchain-google-community,
+# google-cloud-bigquery, google-api-python-client) are already in the
+# langflow-base lockfile via per-vendor extras the bundle pyprojects
+# duplicate.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps \
+        /app/src/bundles/google_genai \
+        /app/src/bundles/google_workspace \
+        /app/src/bundles/google_bigquery \
+        /app/src/bundles/google_search
+
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only

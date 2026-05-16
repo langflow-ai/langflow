@@ -114,6 +114,13 @@ dependencies = [
     "lfx-cuga>=0.1.0",
     "lfx-olivya>=0.1.0",
     "lfx-vlmrun>=0.1.0",
+    # Google split (4 bundles from the in-tree ``google/`` directory):
+    # GenAI (Gemini chat + embeddings), Workspace (Gmail, Drive, OAuth),
+    # BigQuery (SQL executor), and Search (Search + Serper).
+    "lfx-google-genai>=0.1.0",
+    "lfx-google-workspace>=0.1.0",
+    "lfx-google-bigquery>=0.1.0",
+    "lfx-google-search>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -253,6 +260,10 @@ lfx-crewai = { workspace = true }
 lfx-cuga = { workspace = true }
 lfx-olivya = { workspace = true }
 lfx-vlmrun = { workspace = true }
+lfx-google-genai = { workspace = true }
+lfx-google-workspace = { workspace = true }
+lfx-google-bigquery = { workspace = true }
+lfx-google-search = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -346,6 +357,10 @@ members = [
     "src/bundles/cuga",
     "src/bundles/olivya",
     "src/bundles/vlmrun",
+    "src/bundles/google_genai",
+    "src/bundles/google_workspace",
+    "src/bundles/google_bigquery",
+    "src/bundles/google_search",
     # langflow-extensions:bundle-members-end
 ]
 
