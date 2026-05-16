@@ -219,7 +219,15 @@ class TestComponentLoadingFix:
 
     @pytest.mark.asyncio
     async def test_component_merging_logic(self, mock_settings_service, mock_langflow_components):
-        """Test that langflow and custom components are properly merged."""
+        """Test that langflow and custom components are properly merged.
+
+        The merge is a deep two-level merge: a custom-source category is UNIONed
+        with the same-named langflow category rather than replacing it.  This is
+        required for extracted-bundle support, where the dynamic walk and the
+        extension loader can both contribute entries to the same category
+        (e.g. ``openai``).  On per-component collisions the later source wins
+        (custom overrides langflow).
+        """
         # Setup
         mock_settings_service.settings.components_path = ["/custom/path1"]
         mock_settings_service.settings.lazy_load_components = False
@@ -247,17 +255,20 @@ class TestComponentLoadingFix:
             assert "category2" in result  # From langflow
             assert "new_category" in result  # From custom
 
-            # Custom category should completely override langflow category
+            # Custom Component1 overrides the same-named langflow Component1
             assert result["category1"]["Component1"]["display_name"] == "CustomComponent1"
 
-            # Only components from custom category should remain in category1
-            assert "Component2" not in result["category1"]  # Langflow component is replaced by custom category
-            assert "Component4" in result["category1"]  # New custom component
+            # Langflow-only Component2 is preserved (deep merge UNIONs the
+            # category dict; custom-source entries don't blow away
+            # non-overlapping langflow entries in the same category).
+            assert "Component2" in result["category1"]
+            assert result["category1"]["Component2"]["display_name"] == "Component2"
 
-            # New custom component should be added
+            # New custom component is added
+            assert "Component4" in result["category1"]
             assert result["category1"]["Component4"]["display_name"] == "Component4"
 
-            # New category should be added
+            # New category from custom is added
             assert result["new_category"]["NewComponent"]["display_name"] == "NewComponent"
 
     @pytest.mark.asyncio
