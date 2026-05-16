@@ -1513,7 +1513,7 @@
             "last_updated": "2026-01-05T20:31:04.587Z",
             "legacy": false,
             "metadata": {
-              "code_hash": "62ef40337614",
+              "code_hash": "5947aa888f86",
               "dependencies": {
                 "dependencies": [
                   {
@@ -1525,6 +1525,10 @@
                     "version": "1.4.0"
                   },
                   {
+                    "name": "lfx_datastax",
+                    "version": null
+                  },
+                  {
                     "name": "lfx",
                     "version": null
                   },
@@ -1533,7 +1537,7 @@
                     "version": "1.0.0"
                   }
                 ],
-                "total_dependencies": 4
+                "total_dependencies": 5
               },
               "module": "lfx_datastax.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
             },

@@ -120,7 +120,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "lfx.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi"
+              "module": "lfx_scrapegraph.components.scrapegraph.scrapegraph_search_api.ScrapeGraphSearchApi"
             },
             "minimized": false,
             "output_types": [],

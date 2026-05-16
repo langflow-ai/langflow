@@ -1146,13 +1146,36 @@ async def get_and_cache_all_types_dict(
         custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
         # Merge built-in, custom, and extension components (no wrapper at cache level).
-        # Extension components win on collision so a manifest-shipping bundle
-        # supersedes any same-named legacy entry.
-        component_cache.all_types_dict = {
-            **langflow_components["components"],
-            **custom_flat,
-            **extension_components,
-        }
+        # The merge is a deep two-level merge: for each top-level category
+        # key the inner component dicts are UNIONed rather than replaced,
+        # because the same category name can appear in more than one
+        # source.  In particular:
+        #
+        # * The dynamic walk via ``import_langflow_components`` registers
+        #   extracted-bundle components under their bare class names
+        #   (e.g. ``"openai" -> {"OpenAIModel": template}``) so saved
+        #   flows and the flow builder's bare-name lookups keep working.
+        # * ``import_extension_components`` registers the SAME bundle
+        #   under its canonical namespaced ID (e.g.
+        #   ``"openai" -> {"ext:openai:OpenAIModelComponent@official": template}``).
+        #
+        # A shallow merge would drop one half: replacing the
+        # ``"openai"`` entry from ``langflow_components`` with the one
+        # from ``extension_components`` (or vice versa) removes a valid
+        # set of keys the rest of the cache assumes is present.  Deep
+        # merge keeps both surface forms accessible.
+        #
+        # On bare-name collisions the extension entry wins (so a
+        # manifest-shipping bundle supersedes a same-named legacy entry);
+        # on namespaced-ID collisions the namespaced entry wins by
+        # definition (only the extension source produces those keys).
+        merged: dict[str, dict[str, Any]] = {}
+        for source in (langflow_components["components"], custom_flat, extension_components):
+            for category, items in source.items():
+                if not isinstance(items, dict):
+                    continue
+                merged.setdefault(category, {}).update(items)
+        component_cache.all_types_dict = merged
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
 

@@ -1795,7 +1795,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "_lfx_ext.official.faiss.faiss"
+              "module": "lfx_faiss.components.faiss.faiss.FaissVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
