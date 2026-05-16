@@ -9,8 +9,6 @@ from lfx.components.models_and_agents.memory import MemoryComponent
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
 
-from lfx_agentics.components.agentics.helpers.model_config import validate_model_selection
-
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
@@ -302,6 +300,15 @@ class AgentComponent(ToolCallingAgentComponent):
             is_connected_model = False
 
         if not is_connected_model:
+            # Lazy import: ``lfx-agentics`` is an extracted bundle that is
+            # a regular dep of langflow (via the langflow root pyproject)
+            # but not of lfx itself.  Defer the import until the agent is
+            # actually invoked so importing this module never requires
+            # the bundle to be installed.
+            from lfx_agentics.components.agentics.helpers.model_config import (
+                validate_model_selection,
+            )
+
             validate_model_selection(selected_model)
 
         # Ensure _get_llm() uses the resolved model (e.g. from legacy agent_llm/model_name)

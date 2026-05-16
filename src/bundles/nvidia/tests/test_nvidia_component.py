@@ -56,7 +56,7 @@ class TestNVIDIAModelComponentLazyLoading:
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
-            "api_key": "fake-key",
+            "api_key": "fake-key",  # pragma: allowlist secret
             "tool_model_enabled": False,
         }
 
@@ -88,7 +88,7 @@ class TestNVIDIAModelComponentLazyLoading:
         component = NVIDIAModelComponent()
         component._attributes = {
             "base_url": "https://integrate.api.nvidia.com/v1",
-            "api_key": "fake-key",
+            "api_key": "fake-key",  # pragma: allowlist secret
             "tool_model_enabled": False,
         }
 
