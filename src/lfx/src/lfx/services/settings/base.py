@@ -238,6 +238,16 @@ class Settings(BaseSettings):
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    load_flows_overwrite_on_name_match: bool = False
+    """When a flow loaded from ``load_flows_path`` shares a name with an existing DB row but has
+    a different id, overwrite the existing row's content from the file.
+
+    Default ``False`` preserves user edits made in the UI on restart: name-matched rows are
+    skipped with a warning instead of being silently overwritten when file UUIDs regenerate.
+    (Pre-1.10.0 this case raised ``IntegrityError`` and crashed startup; the loader now boots
+    successfully either way.) Set ``True`` to opt into "prepackaged flows are the source of
+    truth on restart" semantics, typically for CI/CD pipelines.
+    """
     bundle_urls: list[str] = []
 
     # Redis
