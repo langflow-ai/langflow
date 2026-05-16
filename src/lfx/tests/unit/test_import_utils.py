@@ -32,8 +32,11 @@ class TestImportAttr:
 
     def test_import_modibute_from_module(self):
         """Test importing a specific attribute from a module."""
-        # Test importing a class from a specific module
-        result = import_mod("AnthropicModelComponent", "anthropic", "lfx.components.anthropic")
+        # Use an in-tree category (CalculatorComponent in ``helpers``) since
+        # anthropic was extracted into the ``lfx-anthropic`` bundle and is no
+        # longer at ``lfx.components.anthropic``.  This test exercises the
+        # generic ``import_mod`` mechanism rather than the specific class.
+        result = import_mod("CalculatorComponent", "calculator_core", "lfx.components.helpers")
 
         assert result is not None
         assert hasattr(result, "__name__")
@@ -42,7 +45,7 @@ class TestImportAttr:
     def test_import_nonexistent_module(self):
         """Test error handling when module doesn't exist."""
         with pytest.raises(ImportError, match="not found"):
-            import_mod("SomeComponent", "nonexistent_module", "lfx.components.openai")
+            import_mod("SomeComponent", "nonexistent_module", "lfx.components.processing")
 
     def test_module_not_found_with_none_module_name(self):
         """Test ModuleNotFoundError handling when module_name is None."""
@@ -57,7 +60,7 @@ class TestImportAttr:
     def test_import_nonexistent_attribute(self):
         """Test error handling when attribute doesn't exist in module."""
         with pytest.raises(AttributeError):
-            import_mod("NonExistentComponent", "anthropic", "lfx.components.anthropic")
+            import_mod("NonExistentComponent", "calculator_core", "lfx.components.helpers")
 
     def test_import_with_none_package(self):
         """Test behavior when package is None."""
@@ -115,13 +118,15 @@ class TestImportAttr:
 
     def test_return_value_types(self):
         """Test that import_mod returns appropriate types."""
-        # Test module import
-        module_result = import_mod("openai", "__module__", "lfx.components")
+        # Test module import using an in-tree category (``openai`` was
+        # extracted into the ``lfx-openai`` bundle).
+        module_result = import_mod("processing", "__module__", "lfx.components")
         assert hasattr(module_result, "__name__")
 
-        # Test class import - this should fail due to missing langchain-openai dependency
+        # Test class import for a non-existent submodule -- should raise
+        # ImportError/ModuleNotFoundError consistently.
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            import_mod("OpenAIModelComponent", "openai_chat_model", "lfx.components.openai")
+            import_mod("NonExistentComponent", "nonexistent_submodule", "lfx.components.processing")
 
     def test_caching_independence(self):
         """Test that import_mod doesn't interfere with Python's module caching."""

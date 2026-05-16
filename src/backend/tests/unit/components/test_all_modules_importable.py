@@ -521,11 +521,18 @@ class TestDirectModuleImports:
         many optional dependencies. This test ensures they can be imported
         when dependencies are available.
         """
+        # After the mass-extraction, most vector stores ship as
+        # ``lfx-<bundle>`` distributions.  Use the langflow-side
+        # backwards-compat import path so this test exercises both the
+        # ``langflow.components.<bundle>`` -> bundle bridge AND each
+        # bundle's import path in one go.  ``LocalDBComponent`` stays
+        # in-tree under ``lfx.components.vectorstores`` (it's the
+        # in-process default).
         vector_store_components = [
-            ("lfx.components.chroma", "ChromaVectorStoreComponent"),
-            ("lfx.components.pinecone", "PineconeVectorStoreComponent"),
-            ("lfx.components.qdrant", "QdrantVectorStoreComponent"),
-            ("lfx.components.weaviate", "WeaviateVectorStoreComponent"),
+            ("langflow.components.chroma", "ChromaVectorStoreComponent"),
+            ("langflow.components.pinecone", "PineconeVectorStoreComponent"),
+            ("langflow.components.qdrant", "QdrantVectorStoreComponent"),
+            ("langflow.components.weaviate", "WeaviateVectorStoreComponent"),
             ("lfx.components.vectorstores", "LocalDBComponent"),
         ]
 

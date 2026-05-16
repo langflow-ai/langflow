@@ -311,7 +311,11 @@ class TestSearchComponentTypes:
         results = await mcp_server_module.search_component_types(output_type="LanguageModel")
         assert len(results) > 0
         types = {r["type"] for r in results}
-        assert "OpenAIModel" in types
+        # Post-extraction the OpenAI provider ships as lfx-openai and its
+        # type is namespaced ``ext:openai:OpenAIModelComponent@official``.
+        # Accept either the legacy bare name (in case the registry hasn't
+        # rewritten saved flow types yet) or the namespaced form.
+        assert any(t in types for t in ("OpenAIModel", "ext:openai:OpenAIModelComponent@official"))
 
 
 @pytest.mark.usefixtures("mcp_client")

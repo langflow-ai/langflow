@@ -86,10 +86,29 @@ _INTERNAL_IMPORT_NAMES: frozenset[str] = frozenset({"lfx", "langflow", "langflow
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
 # Fallback provider → package mapping for providers whose component class may
-# not be importable in every environment (e.g. Azure OpenAI shares
-# langchain-openai with the regular OpenAI provider).
+# not be importable in every environment.  Two reasons a provider lands here:
+#   * It shares a langchain-* package with another provider (Azure OpenAI ↔ OpenAI).
+#   * Its component lives in an extracted ``lfx-<bundle>`` distribution that
+#     isn't installed in the lfx-only test environment (so MODEL_PROVIDERS_DICT
+#     skips it via try/except, but saved flows referencing the provider still
+#     need their ``langchain-*`` deps surfaced for the install hint).
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     "Azure OpenAI": {"langchain-openai"},
+    "OpenAI": {"langchain-openai"},
+    "Anthropic": {"langchain-anthropic"},
+    "Amazon Bedrock": {"langchain-aws"},
+    "Google Generative AI": {"langchain-google-genai"},
+    "Google Vertex AI": {"langchain-google-vertexai"},
+    "Cohere": {"langchain-cohere"},
+    "Groq": {"langchain-groq"},
+    "Mistral": {"langchain-mistralai"},
+    "MistralAI": {"langchain-mistralai"},
+    "NVIDIA": {"langchain-nvidia-ai-endpoints"},
+    "Ollama": {"langchain-ollama"},
+    "SambaNova": {"langchain-sambanova"},
+    "IBM watsonx.ai": {"langchain-ibm"},
+    "HuggingFace": {"huggingface-hub"},
+    "Hugging Face": {"huggingface-hub"},
 }
 
 
