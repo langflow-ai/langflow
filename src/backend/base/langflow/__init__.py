@@ -64,6 +64,29 @@ class _LangflowComponentsAliasLoader(importlib.abc.Loader):
         return None
 
 
+class _LangflowComponentsNamespaceLoader(importlib.abc.Loader):
+    """Loader that creates an empty namespace package for split bundles.
+
+    Used by the alias finder when the legacy in-tree directory was split
+    across multiple bundles (e.g. ``langflow.components.google`` after
+    the 4-way split): the namespace package's ``__path__`` carries the
+    union of the bundle subdirs so submodule imports resolve via
+    Python's regular path-based lookup.
+    """
+
+    def __init__(self, fullname: str) -> None:
+        self.fullname = fullname
+
+    def create_module(self, spec):
+        module = ModuleType(spec.name)
+        module.__path__ = list(spec.submodule_search_locations or ())
+        module.__spec__ = spec
+        return module
+
+    def exec_module(self, module):  # noqa: ARG002 - module already initialised
+        return None
+
+
 class _LangflowComponentsAliasFinder(importlib.abc.MetaPathFinder):
     """Bridge ``langflow.components.<rest>`` -> ``lfx.components.<rest>`` for arbitrary subpackages.
 
@@ -72,45 +95,144 @@ class _LangflowComponentsAliasFinder(importlib.abc.MetaPathFinder):
     parallel langflow shim.  Saved flows that imported components via
     the legacy ``langflow.components.*`` paths (and the integration tests
     that document the contract) continue to load without modification.
+
+    After the bundle mass-extraction, many former ``lfx.components.<head>``
+    subpackages are no longer in-tree -- they ship as standalone
+    ``lfx-<bundle>`` distributions whose import path is
+    ``lfx_<bundle>.components.<bundle>``.  The finder tries the legacy
+    in-tree path first, then falls back to the bundle path so old saved
+    flows that import via ``langflow.components.<bundle>...`` keep
+    resolving without modification.
     """
 
     _BRIDGE_PREFIX = "langflow.components"
     _LFX_PREFIX = "lfx.components"
 
-    # First-segment renames applied when translating ``langflow.components.<head>[.<tail>]``
-    # to ``lfx.components.<renamed>[.<tail>]``.  ``knowledge_bases`` was
-    # renamed to ``files_and_knowledge`` in lfx during the move; the
-    # langflow-side import path stays as ``knowledge_bases`` so the
-    # already-shipped saved flows continue to resolve.
-    _PACKAGE_OVERRIDES = {
+    # First-segment renames applied before lookup.  Two reasons a head
+    # gets remapped:
+    #   * In-tree rename: ``knowledge_bases`` -> ``files_and_knowledge``
+    #     (lfx renamed the dir during the move; the langflow-side path
+    #     stays as ``knowledge_bases`` for saved-flow compat).
+    #   * Case rename for schema-compliant bundle names: ``FAISS`` and
+    #     ``Notion`` used uppercase pre-extraction; the extension
+    #     manifest schema requires snake_case so the bundles ship as
+    #     ``lfx-faiss`` / ``lfx-notion`` with lowercase bundle names.
+    _HEAD_RENAMES = {
         "knowledge_bases": "files_and_knowledge",
+        "FAISS": "faiss",
+        "Notion": "notion",
     }
+
+    # The legacy ``google/`` directory was split into 4 bundles (one per
+    # audience).  Route ``langflow.components.google.<file>`` to the
+    # right bundle based on the file stem.
+    _GOOGLE_MODULE_TO_BUNDLE = {
+        "google_generative_ai": "google_genai",
+        "google_generative_ai_embeddings": "google_genai",
+        "gmail": "google_workspace",
+        "google_drive": "google_workspace",
+        "google_drive_search": "google_workspace",
+        "google_oauth_token": "google_workspace",
+        "google_bq_sql_executor": "google_bigquery",
+        "google_search_api_core": "google_search",
+        "google_serper_api_core": "google_search",
+    }
+
+    @staticmethod
+    def _safe_find_spec(name):
+        try:
+            return importlib.util.find_spec(name)
+        except (ImportError, ValueError, ModuleNotFoundError, AttributeError):
+            return None
+
+    def _make_spec(self, alias_fullname, target_name):
+        target_spec = self._safe_find_spec(target_name)
+        if target_spec is None:
+            return None
+        # Mirror the target's package-ness so ``__path__`` is set
+        # correctly on the alias and downstream ``import`` statements
+        # that treat the alias as a package keep working.
+        is_package = target_spec.submodule_search_locations is not None
+        return importlib.machinery.ModuleSpec(
+            alias_fullname,
+            _LangflowComponentsAliasLoader(alias_fullname, target_name),
+            is_package=is_package,
+        )
+
+    @staticmethod
+    def _google_namespace_path():
+        """Collect the per-bundle ``components/google_*`` dirs into a list.
+
+        Used to back ``langflow.components.google`` as a namespace
+        package whose ``__path__`` covers all 4 split bundles, so
+        ``from langflow.components.google import <stem>`` resolves the
+        ``<stem>`` to whichever bundle owns it.
+        """
+        paths = []
+        for bundle in ("google_genai", "google_workspace", "google_bigquery", "google_search"):
+            pkg_name = f"lfx_{bundle}.components.{bundle}"
+            spec = _LangflowComponentsAliasFinder._safe_find_spec(pkg_name)
+            if spec is not None and spec.submodule_search_locations is not None:
+                paths.extend(spec.submodule_search_locations)
+        return paths
 
     def find_spec(self, fullname, path=None, target=None):  # noqa: ARG002 - protocol signature
         if fullname != self._BRIDGE_PREFIX and not fullname.startswith(self._BRIDGE_PREFIX + "."):
             return None
         rel = fullname[len(self._BRIDGE_PREFIX) :].lstrip(".")
-        if rel:
-            head, _, tail = rel.partition(".")
-            head = self._PACKAGE_OVERRIDES.get(head, head)
-            lfx_name = f"{self._LFX_PREFIX}.{head}" + (f".{tail}" if tail else "")
-        else:
-            lfx_name = self._LFX_PREFIX
-        try:
-            lfx_spec = importlib.util.find_spec(lfx_name)
-        except (ImportError, ValueError, ModuleNotFoundError, AttributeError):
-            return None
-        if lfx_spec is None:
-            return None
-        # Mirror the lfx target's package-ness so ``__path__`` is set
-        # correctly on the alias and downstream ``import`` statements that
-        # treat the alias as a package keep working.
-        is_package = lfx_spec.submodule_search_locations is not None
-        return importlib.machinery.ModuleSpec(
-            fullname,
-            _LangflowComponentsAliasLoader(fullname, lfx_name),
-            is_package=is_package,
-        )
+        if not rel:
+            return self._make_spec(fullname, self._LFX_PREFIX)
+
+        head, _, tail = rel.partition(".")
+
+        # 1a. Bare ``langflow.components.google`` package.  No single
+        # bundle owns the name after the split, so synthesize a
+        # namespace package whose ``__path__`` covers all 4 google
+        # bundles.  Subsequent submodule imports resolve through
+        # Python's regular path-based lookup.
+        if head == "google" and not tail:
+            ns_paths = self._google_namespace_path()
+            if not ns_paths:
+                return None
+            ns_loader = _LangflowComponentsNamespaceLoader(fullname)
+            spec = importlib.machinery.ModuleSpec(fullname, ns_loader, is_package=True)
+            spec.submodule_search_locations = ns_paths
+            return spec
+
+        # 1b. Submodules under ``langflow.components.google.<file>``:
+        # route by file stem to the right split bundle.
+        if head == "google" and tail:
+            tail_head = tail.partition(".")[0]
+            google_bundle = self._GOOGLE_MODULE_TO_BUNDLE.get(tail_head)
+            if google_bundle:
+                target_name = f"lfx_{google_bundle}.components.{google_bundle}.{tail}"
+                spec = self._make_spec(fullname, target_name)
+                if spec is not None:
+                    return spec
+
+        # 2. Apply any single-segment renames before lookup.
+        head = self._HEAD_RENAMES.get(head, head)
+
+        # 3. Try ``lfx.components.<head>[.<tail>]`` (still-in-tree
+        # categories: helpers, processing, models_and_agents, etc.).
+        target_name = f"{self._LFX_PREFIX}.{head}" + (f".{tail}" if tail else "")
+        spec = self._make_spec(fullname, target_name)
+        if spec is not None:
+            return spec
+
+        # 4. Try ``lfx_<head>.components.<head>[.<tail>]`` (extracted
+        # bundles -- openai, datastax, anthropic, ...).
+        target_name = f"lfx_{head}.components.{head}" + (f".{tail}" if tail else "")
+        spec = self._make_spec(fullname, target_name)
+        if spec is not None:
+            return spec
+
+        # 5. Try ``lfx_<head>[.<tail>]`` (package-level re-export at
+        # the bundle root, e.g. ``from langflow.components.openai
+        # import OpenAIModelComponent`` -> ``from lfx_openai import
+        # OpenAIModelComponent``).
+        target_name = f"lfx_{head}" + (f".{tail}" if tail else "")
+        return self._make_spec(fullname, target_name)
 
 
 class LangflowCompatibilityModule(ModuleType):

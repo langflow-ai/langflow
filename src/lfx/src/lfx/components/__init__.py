@@ -138,10 +138,24 @@ def __getattr__(attr_name: str) -> Any:
             if attr_name in _dynamic_imports:
                 break
 
-    # If still not found, raise AttributeError
+    # If still not found, try to resolve as an extracted bundle.  The
+    # mass-extraction moved many former in-tree categories into
+    # standalone ``lfx-<bundle>`` distributions whose import path is
+    # ``lfx_<bundle>.components.<bundle>``.  Saved flows and the
+    # backwards-compat shim in ``langflow.components`` expect
+    # ``getattr(lfx.components, '<bundle>')`` to return the bundle
+    # package; resolve the import on first access and cache.
     if attr_name not in _dynamic_imports:
-        msg = f"module '{__name__}' has no attribute '{attr_name}'"
-        raise AttributeError(msg)
+        bundle_pkg_name = f"lfx_{attr_name}.components.{attr_name}"
+        try:
+            import importlib
+
+            result = importlib.import_module(bundle_pkg_name)
+        except ImportError:
+            msg = f"module '{__name__}' has no attribute '{attr_name}'"
+            raise AttributeError(msg) from None
+        globals()[attr_name] = result
+        return result
 
     try:
         module_path = _dynamic_imports[attr_name]
@@ -191,4 +205,29 @@ def __getattr__(attr_name: str) -> Any:
 
 
 def __dir__() -> list[str]:
-    return list(__all__)
+    """Listing of in-tree categories + installed bundle names.
+
+    Bundle names are discovered via the ``langflow.extensions`` entry
+    point so the listing stays in sync with whatever ``lfx-*``
+    distributions are installed (no static list to maintain).
+    Falls back silently if the entry-point scan fails -- the dir is
+    informational and must never block the import.
+    """
+    items = list(__all__)
+    try:
+        from importlib.metadata import entry_points
+
+        # Distribution names follow ``lfx-<bundle>``; the bundle
+        # category name is the distribution suffix with hyphens
+        # mapped to underscores.
+        items.extend(
+            ep.name[len("lfx-") :].replace("-", "_")
+            for ep in entry_points(group="langflow.extensions")
+            if ep.name.startswith("lfx-")
+        )
+    except Exception as _err:  # noqa: BLE001 - dir() must never block on diagnostics
+        # The listing is informational; downstream callers (IDE
+        # autocomplete, dir() prints) prefer an incomplete list over
+        # an exception.
+        _ = _err
+    return sorted(set(items))
