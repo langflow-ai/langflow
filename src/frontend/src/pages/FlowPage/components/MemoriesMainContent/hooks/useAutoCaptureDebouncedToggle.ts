@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import useAlertStore from "@/stores/alertStore";
-import { extractApiErrorMessages } from "@/utils/apiError";
-import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 import type {
   MemoryInfo,
   UpdateMemoryParams,
 } from "@/controllers/API/queries/memories/types";
+import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 
 type UpdateMemoryMutation = {
   mutate: (

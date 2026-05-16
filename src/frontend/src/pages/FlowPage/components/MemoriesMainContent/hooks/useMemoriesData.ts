@@ -8,10 +8,10 @@ import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memor
 import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
 import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
 import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { UseMemoriesDataProps } from "../types";
 import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
 import { useMemoryDocuments } from "./useMemoryDocuments";
-import { extractApiErrorMessages } from "@/utils/apiError";
 import { useMemorySessionResolver } from "./useMemorySessionResolver";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
