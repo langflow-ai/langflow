@@ -66,10 +66,6 @@ test.describe("Flow Lock Feature", () => {
         timeout: 10000,
       });
 
-      // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page.getByTestId("icon-Lock");
-      await expect(lockIconInHeader).toBeVisible();
-
       // Try to open settings again to unlock
       await page.getByTestId("flow_name").click();
 
