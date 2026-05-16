@@ -357,6 +357,54 @@ async def _load_from_index_or_cache(
     return modules_dict, None
 
 
+def _discover_bundle_component_packages() -> list[tuple[str, str]]:
+    """Return ``(walk_root_pkgname, prefix)`` for every installed ``lfx-<bundle>``.
+
+    After the mass-extraction each bundle ships its component classes at
+    ``lfx_<bundle>.components.<bundle>.*``.  Discover them via the
+    ``langflow.extensions`` entry-point group so newly installed bundles
+    are picked up without a registry rebuild.
+
+    The returned pairs feed ``pkgutil.walk_packages`` exactly like the
+    in-tree walk: ``walk_root_pkgname`` is the dotted package whose
+    ``__path__`` gets walked, and ``prefix`` is prepended to each
+    discovered module name so the prefix-based filters in the caller
+    (``parts[2]`` for the bundle group, ``len(parts) >= 4`` for the
+    file stem) match the in-tree shape.
+
+    Failures (missing package, broken entry-point) are swallowed: the
+    in-tree walk still populates the result, and the bundle-specific
+    diagnostics surface through the loader's own typed-error pipeline.
+    """
+    from importlib.metadata import entry_points
+
+    discovered: list[tuple[str, str]] = []
+    try:
+        eps = entry_points(group="langflow.extensions")
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"Failed to scan langflow.extensions entry points: {e}")
+        return discovered
+
+    for ep in eps:
+        if not ep.name.startswith("lfx-"):
+            continue
+        # Distribution ``lfx-<bundle>`` ships its components at
+        # ``lfx_<bundle>.components.<bundle>``.  The entry-point value
+        # is the bundle's importable package (``lfx_<bundle>``), so we
+        # walk ``<package>.components`` and rely on the caller's
+        # ``parts[2]`` extraction to land the bundle name in the
+        # ``top_level`` slot for the modules_dict.
+        try:
+            mod = importlib.import_module(f"{ep.value}.components")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Skipping bundle {ep.name!r}: components package not importable: {e}")
+            continue
+        for _, child_modname, ispkg in pkgutil.iter_modules(mod.__path__, prefix=f"{ep.value}.components."):
+            if ispkg:
+                discovered.append((child_modname, f"{child_modname}."))
+    return discovered
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -376,29 +424,48 @@ async def _load_components_dynamically(
         await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return modules_dict
 
+    # Walk both the in-tree ``lfx.components`` tree AND every installed
+    # bundle's ``lfx_<bundle>.components.<bundle>`` tree.  The bundle
+    # walks land under the bundle's snake_case category name in
+    # ``modules_dict`` because ``_process_single_module`` extracts
+    # ``parts[2]`` as the top-level key -- e.g. for
+    # ``lfx_openai.components.openai.openai_chat_model`` that's
+    # ``openai``, matching the in-tree pre-extraction layout.
+    walk_roots: list[tuple[list[str], str]] = [
+        (list(components_pkg.__path__), components_pkg.__name__ + "."),
+    ]
+    for bundle_pkg, bundle_prefix in _discover_bundle_component_packages():
+        try:
+            bundle_mod = importlib.import_module(bundle_pkg)
+        except Exception as e:  # noqa: BLE001
+            await logger.adebug(f"Skipping bundle {bundle_pkg!r}: not importable: {e}")
+            continue
+        walk_roots.append((list(bundle_mod.__path__), bundle_prefix))
+
     # Collect all module names to process
     module_names = []
-    for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
-        # Skip if the module is in the deactivated folder
-        if "deactivated" in modname:
-            continue
-
-        # Parse module name once for all checks
-        parts = modname.split(".")
-        if len(parts) > MIN_MODULE_PARTS:
-            component_type = parts[2]
-
-            # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
-            if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
-                module_filename = parts[3]
-                if is_component_disabled_in_astra_cloud(component_type.lower(), module_filename):
-                    continue
-
-            # If specific modules requested, filter by top-level module name
-            if target_modules and component_type.lower() not in target_modules:
+    for path_list, walk_prefix in walk_roots:
+        for _, modname, _ in pkgutil.walk_packages(path_list, prefix=walk_prefix):
+            # Skip if the module is in the deactivated folder
+            if "deactivated" in modname:
                 continue
 
-        module_names.append(modname)
+            # Parse module name once for all checks
+            parts = modname.split(".")
+            if len(parts) > MIN_MODULE_PARTS:
+                component_type = parts[2]
+
+                # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
+                if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
+                    module_filename = parts[3]
+                    if is_component_disabled_in_astra_cloud(component_type.lower(), module_filename):
+                        continue
+
+                # If specific modules requested, filter by top-level module name
+                if target_modules and component_type.lower() not in target_modules:
+                    continue
+
+            module_names.append(modname)
 
     if target_modules:
         await logger.adebug(f"Found {len(module_names)} modules matching filter")
