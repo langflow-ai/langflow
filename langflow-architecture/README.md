@@ -15,6 +15,7 @@ Langflow is an **open-source visual workflow builder for AI agents**. Think of i
 7. [Data Model](./07-data-model.md) — core tables
 8. [Deployment](./08-deployment.md) — build & ship
 9. [Summary](./09-summary.md) — mental model and reading order
+10. [API Contracts](./10-api-contracts.md) — endpoints, schemas, streaming protocol
 
 ## Quick mental model
 
