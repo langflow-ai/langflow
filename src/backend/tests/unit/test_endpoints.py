@@ -1,5 +1,9 @@
 import asyncio
+import contextlib
+import importlib
 import json
+from importlib.metadata import entry_points
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import orjson
@@ -141,8 +145,29 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     """
     response = await client.get("api/v1/all", headers=logged_in_headers)
     assert response.status_code == 200
-    dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)
-    files = dir_reader.get_files()
+    # Count source files in both BASE_COMPONENTS_PATH (in-tree ``lfx.components.*``)
+    # AND every installed ``lfx-<bundle>`` distribution's
+    # ``lfx_<bundle>/components/`` tree, since mass-extraction moved many
+    # component classes into separate distributions.  Without the bundle
+    # files the source count would be artificially low compared to the
+    # cache size, even though every cache entry still maps to a source
+    # file somewhere on disk.
+    files = list(DirectoryReader(BASE_COMPONENTS_PATH).get_files())
+    bundle_files: list[str] = []
+    eps: list = []
+    with contextlib.suppress(Exception):
+        eps = list(entry_points(group="langflow.extensions"))
+    for ep in eps:
+        if not ep.name.startswith("lfx-"):
+            continue
+        mod = None
+        with contextlib.suppress(Exception):
+            mod = importlib.import_module(f"{ep.value}.components")
+        if mod is None:
+            continue
+        for mod_path in getattr(mod, "__path__", []):
+            bundle_files.extend(str(p) for p in Path(mod_path).rglob("*.py"))
+    files = files + bundle_files
     # json_response is a dict of dicts
     all_names = [
         component_name
