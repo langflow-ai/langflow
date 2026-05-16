@@ -1175,6 +1175,84 @@ async def get_and_cache_all_types_dict(
                 if not isinstance(items, dict):
                     continue
                 merged.setdefault(category, {}).update(items)
+
+        # Dedupe namespaced-ID keys against their bare-name twin.  The bundle
+        # walk above registers each extracted-bundle component under its bare
+        # class name (frontend palette + saved-flow lookups), while
+        # ``import_extension_components`` registers the SAME component under
+        # ``ext:<bundle>:<Class>@<slot>``.  Keeping both as separate dict keys
+        # makes the frontend render every bundle component twice in the
+        # palette.  The canonical namespaced_id is preserved inside each
+        # template via ``template["namespaced_id"]``, so dropping the
+        # duplicate dict key loses no metadata.  We first transplant the
+        # extension fields (namespaced_id / bundle / extension / version)
+        # from the ``ext:`` entry onto the bare-name entry, then drop the
+        # ``ext:`` key.  An ``ext:`` entry without a bare-name twin is
+        # preserved (legacy custom-path bundles whose dynamic walk produced
+        # no bare entry).
+        for category_items in merged.values():
+            ext_keys = [k for k in category_items if isinstance(k, str) and k.startswith("ext:")]
+            # Build a display_name -> bare_key index of non-ext entries so we
+            # can find a twin even when ``obj.name`` doesn't map cleanly from
+            # the class name (e.g. ``PineconeVectorStoreComponent`` -> ``Pinecone``).
+            display_name_to_bare: dict[str, str] = {}
+            for bare_key, bare_template in category_items.items():
+                if isinstance(bare_key, str) and bare_key.startswith("ext:"):
+                    continue
+                if not isinstance(bare_template, dict):
+                    continue
+                dn = bare_template.get("display_name")
+                if isinstance(dn, str) and dn:
+                    display_name_to_bare.setdefault(dn, bare_key)
+            for ext_key in ext_keys:
+                ext_template = category_items[ext_key]
+                if not isinstance(ext_template, dict):
+                    continue
+                # Parse class name from ``ext:<bundle>:<Class>@<slot>``.
+                try:
+                    klass_with_slot = ext_key.split(":", 2)[2]
+                    class_name = klass_with_slot.rsplit("@", 1)[0]
+                except (IndexError, ValueError):
+                    class_name = ""
+                twin_key: str | None = None
+                # First try matching the class name and its Component-suffix
+                # variants (covers ``OpenAIModelComponent`` <-> ``OpenAIModel``).
+                candidates: list[str] = []
+                if class_name:
+                    candidates.append(class_name)
+                    if class_name.endswith("Component"):
+                        candidates.append(class_name[: -len("Component")])
+                    else:
+                        candidates.append(class_name + "Component")
+                for candidate in candidates:
+                    if candidate != ext_key and candidate in category_items:
+                        twin_key = candidate
+                        break
+                # Fallback: match on ``display_name`` (covers cases where
+                # ``obj.name`` diverges from the class name, e.g.
+                # ``PineconeVectorStoreComponent`` registers as ``Pinecone``).
+                if twin_key is None:
+                    dn = ext_template.get("display_name")
+                    if isinstance(dn, str) and dn in display_name_to_bare:
+                        twin_key = display_name_to_bare[dn]
+                if twin_key is None:
+                    # Orphan ext: entry with no bare-name twin.  Drop it if
+                    # ``display_name`` is falsy -- those are base classes the
+                    # bundle walk correctly excluded via
+                    # ``code_class_base_inheritance is None`` but the extension
+                    # loader picked up anyway (e.g.
+                    # ``ext:agentics:BaseAgenticComponent@official``).
+                    dn = ext_template.get("display_name")
+                    if not dn:
+                        del category_items[ext_key]
+                    continue
+                twin = category_items[twin_key]
+                if isinstance(twin, dict):
+                    for field in ("namespaced_id", "bundle", "extension", "extension_version"):
+                        if field in ext_template and field not in twin:
+                            twin[field] = ext_template[field]
+                del category_items[ext_key]
+
         component_cache.all_types_dict = merged
         component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
         await logger.adebug(f"Loaded {component_count} components")
