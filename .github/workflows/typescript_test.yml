@@ -70,7 +70,7 @@ env:
   # Define the directory where Playwright browsers will be installed.
   # This path is used for caching across workflows
   PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
-  PLAYWRIGHT_VERSION: "1.57.0"
+  PLAYWRIGHT_VERSION: "1.59.1"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
 
 jobs:

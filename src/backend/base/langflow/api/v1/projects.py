@@ -18,6 +18,10 @@ from langflow.api.utils import (
     custom_params,
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
+from langflow.api.v1.mappers.deployments.sync import (
+    retry_flow_operation_on_deployment_guard,
+    retry_project_operation_on_deployment_guard,
+)
 from langflow.api.v1.mcp_projects import register_project_with_composer
 from langflow.api.v1.projects_files import download_project_flows, upload_project_flows
 from langflow.api.v1.projects_mcp_helpers import (
@@ -27,6 +31,12 @@ from langflow.api.v1.projects_mcp_helpers import (
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.database.models.deployment.exceptions import (
+    araise_if_deployment_guard_error_or_skip,
+    remap_flow_guard_for_project_delete,
+)
+from langflow.services.database.models.deployment.guards import check_project_has_deployments
+from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
@@ -114,21 +124,60 @@ async def create_project(
         if get_settings_service().settings.add_projects_to_mcp_servers:
             await register_mcp_servers_for_project(new_project, mcp_auth, current_user, session)
 
-        if project.components_list:
-            update_statement_components = (
-                update(Flow)
-                .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                .values(folder_id=new_project.id)
-            )
-            await session.exec(update_statement_components)
+        flow_ids_for_sync = list(dict.fromkeys((project.flows_list or []) + (project.components_list or [])))
 
-        if project.flows_list:
-            update_statement_flows = (
-                update(Flow)
-                .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
-                .values(folder_id=new_project.id)
+        async def _move_flows_into_project() -> None:
+            if project.components_list:
+                component_flows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(project.components_list),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(component_flows),
+                    new_folder_id=new_project.id,
+                )
+                update_statement_components = (
+                    update(Flow)
+                    .where(Flow.id.in_(project.components_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
+                    .values(folder_id=new_project.id)
+                )
+                await session.exec(update_statement_components)
+
+            if project.flows_list:
+                project_flows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(project.flows_list),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(project_flows),
+                    new_folder_id=new_project.id,
+                )
+                update_statement_flows = (
+                    update(Flow)
+                    .where(Flow.id.in_(project.flows_list), Flow.user_id == current_user.id)  # type: ignore[attr-defined]
+                    .values(folder_id=new_project.id)
+                )
+                await session.exec(update_statement_flows)
+
+        if flow_ids_for_sync:
+            await retry_flow_operation_on_deployment_guard(
+                db=session,
+                user_id=current_user.id,
+                flow_ids=flow_ids_for_sync,
+                operation=_move_flows_into_project,
             )
-            await session.exec(update_statement_flows)
+        else:
+            await _move_flows_into_project()
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(new_project, from_attributes=True)
@@ -136,6 +185,10 @@ async def create_project(
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message="op=create_project",
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -316,17 +369,56 @@ async def update_project(
         excluded_flows = list(set(flows_ids) - set(project.flows))
 
         my_collection_project = (await session.exec(select(Folder).where(Folder.name == DEFAULT_FOLDER_NAME))).first()
-        if my_collection_project:
-            update_statement_my_collection = (
-                update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
-            )
-            await session.exec(update_statement_my_collection)
+        flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
 
-        if concat_project_components:
-            update_statement_components = (
-                update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+        async def _move_flows_for_project_update() -> None:
+            if my_collection_project:
+                excluded_flow_rows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(excluded_flow_rows),
+                    new_folder_id=my_collection_project.id,
+                )
+                update_statement_my_collection = (
+                    update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
+                )
+                await session.exec(update_statement_my_collection)
+
+            if concat_project_components:
+                component_flow_rows = (
+                    await session.exec(
+                        select(Flow.id, Flow.folder_id).where(
+                            Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
+                            Flow.user_id == current_user.id,
+                        )
+                    )
+                ).all()
+                await ensure_flow_moves_allowed(
+                    session,
+                    flow_folder_pairs=list(component_flow_rows),
+                    new_folder_id=existing_project.id,
+                )
+                update_statement_components = (
+                    update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+                )
+                await session.exec(update_statement_components)
+
+        if flow_ids_for_sync:
+            await retry_flow_operation_on_deployment_guard(
+                db=session,
+                user_id=current_user.id,
+                flow_ids=flow_ids_for_sync,
+                operation=_move_flows_for_project_update,
             )
-            await session.exec(update_statement_components)
+        else:
+            await _move_flows_for_project_update()
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
         folder_read = FolderRead.model_validate(existing_project, from_attributes=True)
@@ -335,6 +427,10 @@ async def update_project(
         # Re-raise HTTP exceptions (like 409 conflicts) without modification
         raise
     except Exception as e:
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message=f"op=update_project project_id={project_id}",
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return folder_read
@@ -348,13 +444,6 @@ async def delete_project(
     current_user: CurrentActiveUser,
 ):
     try:
-        flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
-        ).all()
-        if len(flows) > 0:
-            for flow in flows:
-                await cascade_delete_flow(session, flow.id)
-
         project = (
             await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
         ).first()
@@ -375,10 +464,33 @@ async def delete_project(
 
     await cleanup_mcp_on_delete(project, project_id, current_user, session)
 
-    try:
+    async def _delete_project_operation() -> None:
+        flows = (
+            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
+        ).all()
+        if len(flows) > 0:
+            for flow in flows:
+                await cascade_delete_flow(session, flow.id)
+
+        await check_project_has_deployments(session, project_id=project_id)
         await session.delete(project)
+        # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
+        await session.flush()
+
+    try:
+        await retry_project_operation_on_deployment_guard(
+            db=session,
+            user_id=current_user.id,
+            project_id=project_id,
+            operation=_delete_project_operation,
+        )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
+        await araise_if_deployment_guard_error_or_skip(
+            e,
+            log_message=f"op=delete_project project_id={project_id}",
+            remap=remap_flow_guard_for_project_delete,
+        )
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 

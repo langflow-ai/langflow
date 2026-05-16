@@ -5,10 +5,8 @@ import {
   ProviderVariable,
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
-import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   useDeleteGlobalVariables,
@@ -16,13 +14,24 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
+import { useModelToggleQueue } from "./useModelToggleQueue";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
+
+// Extract a user-facing message from an error caught from an API call.
+// Handles Axios-shaped errors (``response.data.detail``) and standard
+// ``Error.message`` without resorting to ``any``.
+const getErrorMessage = (error: unknown): string | undefined => {
+  const e = error as {
+    response?: { data?: { detail?: string } };
+    message?: string;
+  };
+  return e?.response?.data?.detail || e?.message;
+};
 
 interface UseProviderConfigurationOptions {
   selectedProvider: Provider | null;
@@ -100,8 +109,6 @@ export const useProviderConfiguration = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
-  const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
-    useUpdateEnabledModels({ retry: 0 });
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
@@ -342,7 +349,7 @@ export const useProviderConfiguration = ({
         setValidationError(result.error || "Validation failed");
         return false;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Ensure minimum 500ms duration even on error
       const elapsedTime = Date.now() - startTime;
       if (elapsedTime < 500) {
@@ -350,7 +357,7 @@ export const useProviderConfiguration = ({
       }
 
       setValidationState("invalid");
-      setValidationError(error?.message || "Validation failed");
+      setValidationError(getErrorMessage(error) || "Validation failed");
       return false;
     }
   }, [selectedProvider, getVariablesForValidation, validateProvider]);
@@ -420,12 +427,12 @@ export const useProviderConfiguration = ({
       setIsFetchingAfterSave(true);
       clearValuesAfterFetchRef.current = true;
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setValidationFailed(true);
       setErrorData({
         title: "Error Saving Configuration",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -488,11 +495,11 @@ export const useProviderConfiguration = ({
 
       setSuccessData({ title: `${syncedSelectedProvider.provider} Activated` });
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: "Error Activating Provider",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -529,11 +536,11 @@ export const useProviderConfiguration = ({
       });
       setIsFetchingAfterDisconnect(true);
       invalidateProviderQueries();
-    } catch (error: any) {
+    } catch (error: unknown) {
       setErrorData({
         title: "Error Disconnecting Provider",
         list: [
-          error?.response?.data?.detail ||
+          getErrorMessage(error) ||
             "An unexpected error occurred. Please try again.",
         ],
       });
@@ -547,144 +554,14 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  const pendingModelToggles = useRef<Record<string, boolean>>({});
-  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
-    undefined,
-  );
-
-  const flushModelToggles = useDebounce(() => {
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const updates = Object.entries(pendingModelToggles.current).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
-
-    if (updates.length === 0) return;
-
-    // Capture the fallback data
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    updateEnabledModels(
-      { updates },
-      {
-        onError: (error: any) => {
-          if (previousData) {
-            queryClient.setQueryData(["useGetEnabledModels"], previousData);
-          }
-          const errorMessage =
-            error?.response?.data?.detail ||
-            error?.message ||
-            "Failed to update model status";
-          setErrorData({
-            title: "Error updating model status",
-            list: [errorMessage],
-          });
-        },
-        onSettled: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["useGetEnabledModels"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["useGetModelProviders"],
-          });
-          refreshAllModelInputs({ silent: true });
-        },
-      },
-    );
-  }, 1000);
-
-  const flushPendingChanges = useCallback(async () => {
-    // Cancel the pending debounce timer — we'll send the toggles directly
-    flushModelToggles.cancel();
-
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const toggles = { ...pendingModelToggles.current };
-    if (Object.keys(toggles).length === 0) return;
-
-    const updates = Object.entries(toggles).map(([modelName, enabled]) => ({
-      provider: providerName,
-      model_id: modelName,
-      enabled,
-    }));
-
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    try {
-      await updateEnabledModelsAsync({ updates });
-      // Mutation succeeded — query invalidation is handled by
-      // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: any) {
-      // Revert optimistic update on failure
-      if (previousData) {
-        queryClient.setQueryData(["useGetEnabledModels"], previousData);
-      }
-      const errorMessage =
-        error?.response?.data?.detail ||
-        error?.message ||
-        "Failed to update model status";
-      setErrorData({
-        title: "Error updating model status",
-        list: [errorMessage],
-      });
-    }
-  }, [
-    flushModelToggles,
-    syncedSelectedProvider,
-    queryClient,
-    updateEnabledModelsAsync,
-    setErrorData,
-  ]);
-
-  const handleModelToggle = useCallback(
-    (modelName: string, enabled: boolean) => {
-      if (!syncedSelectedProvider?.provider) return;
-
-      const providerName = syncedSelectedProvider.provider;
-
-      if (Object.keys(pendingModelToggles.current).length === 0) {
-        fallbackModelData.current =
-          queryClient.getQueryData<EnabledModelsResponse>([
-            "useGetEnabledModels",
-          ]);
-      }
-
-      queryClient.setQueryData<EnabledModelsResponse>(
-        ["useGetEnabledModels"],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            enabled_models: {
-              ...old.enabled_models,
-              [providerName]: {
-                ...old.enabled_models[providerName],
-                [modelName]: enabled,
-              },
-            },
-          };
-        },
-      );
-
-      pendingModelToggles.current[modelName] = enabled;
-      flushModelToggles();
-    },
-    [syncedSelectedProvider, queryClient, flushModelToggles],
-  );
+  // Model-toggle queue — overlay buffer, unsent buffer, debounced flush,
+  // awaitable close-time flush, re-overlay effect. Extracted into its own
+  // hook so this file stays focused on variable CRUD + provider lifecycle.
+  // See ``useModelToggleQueue`` for the full design rationale (split
+  // buffers, drain-before-rollback ordering, re-overlay loop guard).
+  const { handleModelToggle, flushPendingChanges } = useModelToggleQueue({
+    providerName: syncedSelectedProvider?.provider,
+  });
 
   return {
     variableValues,

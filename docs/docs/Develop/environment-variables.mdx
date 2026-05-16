@@ -417,6 +417,20 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
 
+#### Gunicorn configuration
+
+When running Langflow in a production environment using Gunicorn, you can configure Gunicorn workers using the `GUNICORN_CMD_ARGS` environment variable. 
+
+This is particularly useful to manage worker memory and prevent potential memory leaks over time. You can add it to your `.env` file like this:
+
+```text
+GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
+```
+
+Here is what these arguments do:
+- `--max-requests 100`: Automatically restarts a worker after it has processed 100 requests. This helps prevent memory leaks from accumulating over time.
+- `--max-requests-jitter 20`: Adds a random jitter of up to 20 requests to the `--max-requests` value. This ensures that all workers don't restart simultaneously, which could cause a brief downtime or spikes in latency.
+
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
@@ -433,7 +447,7 @@ See [Telemetry](/contributing-telemetry).
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_AUTO_SAVING` | Boolean | `True` | Whether to automatically save flows. |
+| `LANGFLOW_AUTO_SAVING` | Boolean | `True` | Whether to automatically save the current flow draft. Auto-save only updates the live draft, and doesn't create [saved flow versions](/concepts-flows#save-and-restore-flow-versions). |
 | `LANGFLOW_AUTO_SAVING_INTERVAL` | Integer | `1000` | Set the auto-save interval in milliseconds if `LANGFLOW_AUTO_SAVING=True`. |
 | `LANGFLOW_BUNDLE_URLS` | List[String] | `[]` | A list of URLs from which to load custom bundles. Supports GitHub URLs. If `LANGFLOW_AUTO_LOGIN=True`, flows from these bundles are loaded into the database. |
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
