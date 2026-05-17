@@ -209,15 +209,15 @@ class TestComponentDynamicImports:
         """Test that TYPE_CHECKING imports work correctly with dynamic loading."""
         # This test ensures that imports in TYPE_CHECKING blocks
         # work correctly with the dynamic import system
-        import lfx.components.searchapi as searchapi_components
+        import lfx.components.ibm as ibm_components
 
         # Components should be available for dynamic loading
-        assert "SearchComponent" in searchapi_components.__all__
-        assert "SearchComponent" in searchapi_components._dynamic_imports
+        assert "DB2VectorStoreComponent" in ibm_components.__all__
+        assert "DB2VectorStoreComponent" in ibm_components._dynamic_imports
 
         # Accessing should trigger dynamic import - may fail due to missing dependencies
-        with pytest.raises(AttributeError, match=r"Could not import.*SearchComponent"):
-            _ = searchapi_components.SearchComponent
+        with pytest.raises(AttributeError, match=r"Could not import.*DB2VectorStoreComponent"):
+            _ = ibm_components.DB2VectorStoreComponent
 
 
 class TestPerformanceCharacteristics:
