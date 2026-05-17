@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 from lfx.components.perplexity.perplexity_search import PerplexitySearchComponent
 from lfx.schema import Data, DataFrame
@@ -129,11 +130,90 @@ class TestPerplexitySearchComponent(ComponentTestBaseWithoutClient):
         sent_payload = mock_client.post.call_args.kwargs["json"]
         assert sent_payload["max_results"] == 20
 
+    @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
+    def test_malformed_max_results_defaults_to_five(self, mock_client_cls, component_class, fake_search_response):
+        mock_response = MagicMock()
+        mock_response.json.return_value = fake_search_response
+        mock_response.raise_for_status.return_value = None
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+
+        component = component_class(api_key="test-key", query="langflow", max_results="many")
+        component.fetch_content()
+
+        sent_payload = mock_client.post.call_args.kwargs["json"]
+        assert sent_payload["max_results"] == 5
+
     def test_missing_query_returns_error(self, component_class):
         component = component_class(api_key="test-key", query="")
         results = component.fetch_content()
         assert len(results) == 1
         assert "error" in results[0].data
+
+    @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
+    def test_fetch_content_timeout_returns_error(self, mock_client_cls, component_class, default_kwargs):
+        mock_client = MagicMock()
+        mock_client.post.side_effect = httpx.TimeoutException("timeout")
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert results[0].data["error"] == "Request timed out (90.0s). Please try again or adjust parameters."
+
+    @patch("lfx.components.perplexity.perplexity_search.logger")
+    @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
+    def test_fetch_content_status_error_is_sanitized(
+        self, mock_client_cls, mock_logger, component_class, default_kwargs
+    ):
+        request = httpx.Request("POST", "https://api.perplexity.ai/search")
+        response = httpx.Response(429, text="upstream secret body", request=request)
+        mock_response = MagicMock()
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "rate limited",
+            request=request,
+            response=response,
+        )
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert results[0].data["error"] == "Perplexity API error: HTTP 429"
+        assert "upstream secret body" not in str(results[0].data)
+        mock_logger.error.assert_called_once_with("Perplexity API request failed with HTTP status 429.")
+
+    @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
+    def test_fetch_content_request_error_returns_error(self, mock_client_cls, component_class, default_kwargs):
+        mock_client = MagicMock()
+        mock_client.post.side_effect = httpx.RequestError("network unavailable")
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert results[0].data["error"] == "Request error occurred: network unavailable"
+
+    @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
+    def test_fetch_content_invalid_json_returns_error(self, mock_client_cls, component_class, default_kwargs):
+        mock_response = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_response.json.side_effect = ValueError("invalid json")
+        mock_client = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_client_cls.return_value.__enter__.return_value = mock_client
+
+        component = component_class(**default_kwargs)
+        results = component.fetch_content()
+
+        assert len(results) == 1
+        assert results[0].data["error"] == "Invalid response format: invalid json"
 
     @patch("lfx.components.perplexity.perplexity_search.httpx.Client")
     def test_fetch_content_dataframe(self, mock_client_cls, component_class, default_kwargs, fake_search_response):

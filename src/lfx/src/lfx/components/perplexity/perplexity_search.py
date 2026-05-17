@@ -84,8 +84,12 @@ class PerplexitySearchComponent(Component):
     ]
 
     def _build_payload(self) -> dict:
-        max_results = self.max_results or 5
-        max_results = max(1, min(int(max_results), 20))
+        max_results_value = self.max_results if self.max_results is not None else 5
+        try:
+            max_results = int(max_results_value)
+        except (TypeError, ValueError):
+            max_results = 5
+        max_results = max(1, min(max_results, 20))
         payload: dict = {"query": self.query, "max_results": max_results}
         if self.search_recency_filter:
             payload["search_recency_filter"] = self.search_recency_filter
@@ -118,9 +122,10 @@ class PerplexitySearchComponent(Component):
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
-            error_message = f"HTTP error occurred: {exc.response.status_code} - {exc.response.text}"
-            logger.error(error_message)
-            return [Data(text=error_message, data={"error": error_message})]
+            status_code = exc.response.status_code
+            logger.error(f"Perplexity API request failed with HTTP status {status_code}.")
+            error_message = f"Perplexity API error: HTTP {status_code}"
+            return [Data(error=error_message)]
         except httpx.RequestError as exc:
             error_message = f"Request error occurred: {exc}"
             logger.error(error_message)
