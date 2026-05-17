@@ -153,6 +153,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
