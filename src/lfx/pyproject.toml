@@ -40,6 +40,7 @@ dependencies = [
     "loguru>=0.7.3,<1.0.0",
     "langchain~=1.2.0",
     "langchain-classic~=1.0.7",
+    "langchain-community>=0.4.1,<1.0.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
     "pypdf>=6.10.0,<7.0.0",
@@ -50,6 +51,10 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "ibm-db>=3.2.0,<4.0.0",
+    "langchain-db2>=1.0.0,<2.0.0",
+    "langchain-ibm>=1.0.0,<2.0.0",
+    "ibm-watsonx-ai>=1.1.0,<2.0.0",
 ]
 
 [project.scripts]
@@ -96,7 +101,6 @@ dev = [
 integration = [
     # Dependencies for running Simple Agent and other integration tests
     "langchain-openai>=1.1.12,<2.0.0",
-    "langchain-community>=0.4.1,<1.0.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]

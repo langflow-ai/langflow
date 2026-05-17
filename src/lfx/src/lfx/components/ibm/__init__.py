@@ -9,11 +9,13 @@ if TYPE_CHECKING:
     from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
 _dynamic_imports = {
+    # "DB2SQLComponent": "db2_sql",
+    "DB2VectorStoreComponent": "db2_vector",
     "WatsonxAIComponent": "watsonx",
     "WatsonxEmbeddingsComponent": "watsonx_embeddings",
 }
 
-__all__ = ["WatsonxAIComponent", "WatsonxEmbeddingsComponent"]
+__all__ = ["DB2VectorStoreComponent", "WatsonxAIComponent", "WatsonxEmbeddingsComponent"]  # "DB2SQLComponent",
 
 
 def __getattr__(attr_name: str) -> Any:
