@@ -7,6 +7,11 @@ from langchain_community.vectorstores.utils import DistanceStrategy
 from lfx.components.ibm.db2_vector import DB2VectorStoreComponent
 from lfx.schema.data import Data
 
+# Skip all tests if IBM dependencies are not available
+pytest.importorskip("ibm_db_dbi", reason="IBM DB2 dependencies not installed")
+pytest.importorskip("langchain_db2", reason="langchain-db2 not installed")
+
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
 
