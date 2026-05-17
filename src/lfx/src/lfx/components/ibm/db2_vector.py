@@ -1,8 +1,5 @@
+import contextlib
 from typing import Any
-
-import ibm_db_dbi  # type: ignore[import-untyped]  # Third-party package does not ship typing metadata
-from langchain_community.vectorstores.utils import DistanceStrategy
-from langchain_db2.db2vs import DB2VS
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -89,7 +86,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             info="DB2 password",
             advanced=True,
         ),
-        # Security inputs (3)
+        # Security inputs (2)
         AnyBoolInput(
             name="use_ssl",
             display_name="Use SSL/TLS",
@@ -99,17 +96,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 "Enable SSL/TLS encryption for secure connections to DB2. "
                 "Requires SSL to be configured on the DB2 server. "
                 "Note: SSL typically uses port 50001 instead of 50000."
-            ),
-        ),
-        AnyBoolInput(
-            name="verify_ssl_cert",
-            display_name="Verify SSL Certificate",
-            value=True,
-            advanced=True,
-            info=(
-                "Informational setting for SSL certificate verification. "
-                "For IBM Cloud DB2, SECURITY=SSL is sufficient. "
-                "For custom certificates, contact your DB2 administrator."
             ),
         ),
         AnyIntInput(
@@ -158,7 +144,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
-    def _validate_table_name(self, table_name: str) -> None:
+    def _validate_table_name(self, table_name: str) -> str:
         """Validate table name to prevent SQL injection and ensure DB2 compatibility.
 
         Security measures:
@@ -170,6 +156,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         Args:
             table_name: The table name to validate
 
+        Returns:
+            Normalized (stripped) table name
+
         Raises:
             ValueError: If table name is invalid or potentially dangerous
         """
@@ -177,7 +166,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             msg = "Table name cannot be empty"
             raise ValueError(msg)
 
-        # Strip whitespace
+        # Strip whitespace and return normalized value
         table_name = table_name.strip()
 
         # Length validation (prevent ReDoS and excessive resource usage)
@@ -242,6 +231,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             msg = f"Table name '{table_name}' is a reserved SQL keyword and cannot be used"
             raise ValueError(msg)
 
+        return table_name
+
     def _sanitize_value(self, value: Any) -> Any:
         """Sanitize a single value for safe storage."""
         if isinstance(value, (str, int, float, bool, type(None))):
@@ -299,7 +290,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             msg = f"Invalid port number: {port}. Port must be between {MIN_PORT} and {MAX_PORT}."
             raise ValueError(msg)
 
-    def _validate_hostname(self, hostname: str) -> None:
+    def _validate_hostname(self, hostname: str) -> str:
         """Validate hostname format to prevent injection attacks.
 
         Security measures:
@@ -310,6 +301,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
         Args:
             hostname: Hostname or IP address to validate
+
+        Returns:
+            Normalized (stripped) hostname
 
         Raises:
             ValueError: If hostname is invalid or contains dangerous characters
@@ -328,6 +322,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         if "\x00" in hostname or "\n" in hostname or "\r" in hostname:
             msg = "Hostname contains invalid characters"
             raise ValueError(msg)
+
+        return hostname
 
     def _escape_connection_string_value(self, value: str) -> str:
         """Escape special characters in connection string values to prevent injection.
@@ -388,21 +384,31 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             "no additional certificate parameters are needed."
         )
 
-        # Note about certificate verification parameter
-        if self.verify_ssl_cert:
-            self.log(
-                "Note: The 'Verify SSL Certificate' setting is informational. "
-                "Actual certificate verification depends on server configuration. "
-                "If you need to specify a certificate file, contact your DB2 administrator."
-            )
-
     @check_cached_vector_store
-    def build_vector_store(self) -> DB2VS:
+    def build_vector_store(self):  # type: ignore[no-untyped-def]
         """Build and return the DB2 vector store instance.
 
         Security: All inputs are validated and sanitized before use.
         Credentials are never logged or exposed in error messages.
+
+        Returns:
+            DB2VS: The DB2 vector store instance
+
+        Raises:
+            ImportError: If IBM DB2 dependencies are not installed
         """
+        # Lazy import of IBM-specific dependencies
+        try:
+            import ibm_db_dbi  # type: ignore[import-untyped]
+            from langchain_community.vectorstores.utils import DistanceStrategy
+            from langchain_db2.db2vs import DB2VS
+        except ImportError as e:
+            msg = (
+                "IBM DB2 dependencies are not installed. "
+                "Install them with: pip install 'lfx[ibm]' or uv sync --extra ibm --package lfx"
+            )
+            raise ImportError(msg) from e
+
         # Note: Debug logging removed to prevent any potential credential exposure
 
         # Validate required connection parameters
@@ -413,14 +419,14 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             msg = "Hostname is required"
             raise ValueError(msg)
 
-        # Validate table name (SQL injection prevention + ReDoS protection)
-        self._validate_table_name(self.collection_name)
+        # Validate and normalize table name (SQL injection prevention + ReDoS protection)
+        normalized_table_name = self._validate_table_name(self.collection_name)
 
         # Validate port number
         self._validate_port(self.port)
 
-        # Validate hostname format
-        self._validate_hostname(self.hostname)
+        # Validate and normalize hostname format
+        normalized_hostname = self._validate_hostname(self.hostname)
 
         # Validate credentials
         if not self.username:
@@ -436,7 +442,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         # Escape and validate connection string values to prevent injection
         try:
             safe_database = self._escape_connection_string_value(self.database)
-            safe_hostname = self._escape_connection_string_value(self.hostname)
+            safe_hostname = self._escape_connection_string_value(normalized_hostname)
         except ValueError as e:
             msg = f"Invalid connection parameter: {e}"
             raise ValueError(msg) from e
@@ -461,11 +467,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         # Add SSL/TLS configuration if enabled
         if self.use_ssl:
             conn_str_parts.append("SECURITY=SSL")
-            # Note: For IBM Cloud DB2 or properly configured SSL servers,
-            # SECURITY=SSL alone is sufficient. The SSLServerCertificate parameter
-            # should only be added if you have a specific certificate file to validate.
-            # Leaving it empty or omitting it allows the driver to use system certificates
-            # or skip verification based on server configuration.
 
         # Add connection timeout
         if self.connection_timeout and self.connection_timeout > 0:
@@ -473,16 +474,20 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
         conn_str = ";".join(conn_str_parts)
 
-        # Create connection with proper error handling
+        # Create connection with proper error handling and cleanup
+        connection = None
         try:
             connection = ibm_db_dbi.connect(conn_str, "", "")
         except Exception as e:
             error_msg = str(e)
             error_msg_lower = error_msg.lower()
 
+            # Log the detailed error internally for debugging
+            self.log(f"DB2 connection error: {error_msg}")
+
             # Check for SSL/TLS specific errors FIRST (most specific)
             if "ssl" in error_msg_lower or "tls" in error_msg_lower or "security" in error_msg_lower:
-                # Build detailed SSL error message
+                # Build detailed SSL error message without exposing raw error
                 ssl_hints = [
                     "SSL/TLS connection failed. Common causes:",
                     "1. DB2 server not configured for SSL (check server settings)",
@@ -494,14 +499,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 else:
                     ssl_hints.append("2. Incorrect port - verify SSL port with your DB2 administrator")
 
-                # Add certificate hint
-                if self.verify_ssl_cert:
-                    ssl_hints.append("3. Certificate verification failed - try disabling 'Verify SSL Certificate'")
-                else:
-                    ssl_hints.append("3. SSL handshake failed - verify server SSL configuration")
+                ssl_hints.append("3. SSL handshake failed - verify server SSL configuration")
 
                 ssl_hints.append("4. Firewall blocking SSL port")
-                ssl_hints.append(f"\nOriginal error: {error_msg[:150]}")
 
                 msg = "\n".join(ssl_hints)
                 raise ConnectionError(msg) from e
@@ -536,7 +536,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 raise ConnectionError(msg) from e
 
             # Generic error without exposing details
-            msg = f"Failed to connect to DB2. Please check your connection parameters.\nError: {error_msg[:100]}"
+            msg = "Failed to connect to DB2. Please check your connection parameters."
             raise ConnectionError(msg) from e
 
         # Map distance strategy
@@ -547,67 +547,82 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         }
 
         if not self.embedding:
+            # Close connection before raising error
+            if connection:
+                with contextlib.suppress(Exception):
+                    connection.close()
             msg = "Embedding model is required"
             raise ValueError(msg)
 
-        # Build vector store
-        vector_store = DB2VS(
-            client=connection,
-            embedding_function=self.embedding,
-            table_name=self.collection_name,
-            distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
-        )
+        # Build vector store with error handling
+        try:
+            vector_store = DB2VS(
+                client=connection,
+                embedding_function=self.embedding,
+                table_name=normalized_table_name,
+                distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
+            )
 
-        # Add documents if provided
-        # Use base class method to prepare data - this handles DataFrame conversion
-        ingest_data = self._prepare_ingest_data()
+            # Add documents if provided
+            # Use base class method to prepare data - this handles DataFrame conversion
+            ingest_data = self._prepare_ingest_data()
 
-        if ingest_data:
-            from langchain_core.documents import Document
+            if ingest_data:
+                from langchain_core.documents import Document
 
-            documents = []
-            for data in ingest_data:
-                if isinstance(data, Data):
-                    documents.append(data.to_lc_document())
-                elif isinstance(data, Document):
-                    documents.append(data)
-                else:
-                    # Convert other types to Document
-                    text = str(data) if not hasattr(data, "text") else data.text
-                    metadata = {}
-                    if hasattr(data, "metadata") and isinstance(data.metadata, dict):
-                        metadata = data.metadata
-                    documents.append(Document(page_content=text, metadata=metadata))
-
-            if documents:
-                # Clean and sanitize metadata before adding documents
-                # Security: Remove potentially dangerous content from metadata
-                for doc in documents:
-                    if hasattr(doc, "metadata") and isinstance(doc.metadata, dict):
-                        doc.metadata = self._clean_metadata(doc.metadata)
+                documents = []
+                for data in ingest_data:
+                    if isinstance(data, Data):
+                        documents.append(data.to_lc_document())
+                    elif isinstance(data, Document):
+                        documents.append(data)
                     else:
-                        doc.metadata = {}
+                        # Convert other types to Document
+                        text = str(data) if not hasattr(data, "text") else data.text
+                        metadata = {}
+                        if hasattr(data, "metadata") and isinstance(data.metadata, dict):
+                            metadata = data.metadata
+                        documents.append(Document(page_content=text, metadata=metadata))
 
-                try:
-                    vector_store.add_documents(documents)
-                except ValueError as e:
-                    error_msg = str(e).lower()
-                    if "dimension mismatch" in error_msg or "dimension" in error_msg:
-                        msg = (
-                            "Embedding dimension mismatch. The table was created with a different "
-                            "embedding dimension. Please drop the table or use a different table name."
-                        )
+                if documents:
+                    # Clean and sanitize metadata before adding documents
+                    # Security: Remove potentially dangerous content from metadata
+                    for doc in documents:
+                        if hasattr(doc, "metadata") and isinstance(doc.metadata, dict):
+                            doc.metadata = self._clean_metadata(doc.metadata)
+                        else:
+                            doc.metadata = {}
+
+                    try:
+                        vector_store.add_documents(documents)
+                    except ValueError as e:
+                        error_msg = str(e).lower()
+                        # Log detailed error internally
+                        self.log(f"Document addition error: {e}")
+                        if "dimension mismatch" in error_msg or "dimension" in error_msg:
+                            msg = (
+                                "Embedding dimension mismatch. The table was created with a different "
+                                "embedding dimension. Please drop the table or use a different table name."
+                            )
+                            raise ValueError(msg) from e
+                        # Don't expose internal error details
+                        msg = "Failed to add documents to vector store. Please check your data format."
                         raise ValueError(msg) from e
-                    # Don't expose internal error details
-                    msg = "Failed to add documents to vector store. Please check your data format."
-                    raise ValueError(msg) from e
-                except Exception as e:
-                    # Catch any other exceptions and provide generic error
-                    # Security: Don't expose internal error details that could aid attackers
-                    msg = "An error occurred while adding documents to the vector store."
-                    raise RuntimeError(msg) from e
-
-        return vector_store
+                    except Exception as e:
+                        # Log detailed error internally
+                        self.log(f"Unexpected error adding documents: {e}")
+                        # Catch any other exceptions and provide generic error
+                        # Security: Don't expose internal error details that could aid attackers
+                        msg = "An error occurred while adding documents to the vector store."
+                        raise RuntimeError(msg) from e
+        except Exception:
+            # Close connection on any error during vector store creation
+            if connection:
+                with contextlib.suppress(Exception):
+                    connection.close()
+            raise
+        else:
+            return vector_store
 
     def search_documents(self) -> list[Data]:
         """Perform vector similarity search and return results.
@@ -617,7 +632,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
         Returns:
             List of Data objects containing search results
+
+        Raises:
+            ImportError: If IBM DB2 dependencies are not installed
         """
+        # Lazy import - needed for type checking in this method
+        try:
+            import ibm_db_dbi  # type: ignore[import-untyped]  # noqa: F401
+            from langchain_db2.db2vs import DB2VS  # noqa: F401
+        except ImportError as e:
+            msg = (
+                "IBM DB2 dependencies are not installed. "
+                "Install them with: pip install 'lfx[ibm]' or uv sync --extra ibm --package lfx"
+            )
+            raise ImportError(msg) from e
+
         if not self.search_query:
             return []
 

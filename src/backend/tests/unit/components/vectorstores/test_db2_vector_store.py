@@ -30,7 +30,6 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
             "collection_name": "test_vectors",
             "embedding": DeterministicFakeEmbedding(size=8),
             "use_ssl": False,
-            "verify_ssl_cert": True,
             "connection_timeout": 10,
             "number_of_results": 4,
             "search_type": "Similarity",
@@ -79,7 +78,6 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
         all_kwargs = {
             **default_kwargs,
             "use_ssl": True,
-            "verify_ssl_cert": False,
             "connection_timeout": 30,
             "number_of_results": 10,
             "search_type": "MMR",
@@ -88,7 +86,6 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
         }
         component: DB2VectorStoreComponent = component_class().set(**all_kwargs)
         assert component.use_ssl is True
-        assert component.verify_ssl_cert is False
         assert component.connection_timeout == 30
         assert component.number_of_results == 10
         assert component.search_type == "MMR"
@@ -427,7 +424,7 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            with patch("lfx.components.ibm.db2_vector.DB2VS") as mock_db2vs:
+            with patch("langchain_db2.db2vs.DB2VS") as mock_db2vs:
                 # Create a mock instance that will be returned by DB2VS()
                 mock_store_instance = MagicMock()
                 mock_db2vs.return_value = mock_store_instance
@@ -450,7 +447,7 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            with patch("lfx.components.ibm.db2_vector.DB2VS") as mock_db2vs:
+            with patch("langchain_db2.db2vs.DB2VS") as mock_db2vs:
                 # Create a mock instance
                 mock_store_instance = MagicMock()
                 mock_db2vs.return_value = mock_store_instance
@@ -480,7 +477,7 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            with patch("lfx.components.ibm.db2_vector.DB2VS") as mock_db2vs:
+            with patch("langchain_db2.db2vs.DB2VS") as mock_db2vs:
                 # Create a mock instance
                 mock_store_instance = MagicMock()
                 mock_db2vs.return_value = mock_store_instance
@@ -525,7 +522,7 @@ class TestDB2VectorStore(ComponentTestBaseWithoutClient):
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            with patch("lfx.components.ibm.db2_vector.DB2VS") as mock_db2vs:
+            with patch("langchain_db2.db2vs.DB2VS") as mock_db2vs:
                 mock_store_instance = MagicMock()
                 mock_db2vs.return_value = mock_store_instance
 
