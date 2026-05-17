@@ -1,7 +1,7 @@
 {
   "uid": "langflow-prod-logs",
-  "title": "Langflow Production Logs — Grafana/Loki readiness",
-  "description": "Demonstrates the production logging improvements: structured tracebacks, PII redaction, service labels, stdlib intercept, trace correlation.",
+  "title": "Langflow Logs",
+  "description": "Structured logs from Langflow and lfx: tracebacks, PII redaction, service labels, stdlib intercept, trace correlation.",
   "tags": ["langflow", "lfx", "structured-logs"],
   "timezone": "browser",
   "schemaVersion": 39,

@@ -8,7 +8,7 @@ Use this as a starting point. The compose file, Promtail config, and dashboard J
 
 - **Loki 3.2** on `:3100`
 - **Promtail 3.2** scraping a directory of Langflow log files
-- **Grafana 11.3** on `:3000` with the Loki datasource and the `Langflow Production Logs` dashboard already provisioned
+- **Grafana 11.3** on `:3000` with the Loki datasource and the `Langflow Logs` dashboard already provisioned
 
 ## Prerequisites on the Langflow side
 
