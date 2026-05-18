@@ -112,13 +112,14 @@ def convert_kwargs(params):
 
 
 def load_from_env_vars(params, load_from_db_fields, context=None):
+    no_env_fallback = bool(context and context.get("no_env_fallback"))
     for field in load_from_db_fields:
         if field not in params or not params[field]:
             continue
         variable_name = params[field]
         key = None
 
-        # Check request_variables in context
+        # Check request_variables in context first
         if context and "request_variables" in context:
             request_variables = context["request_variables"]
             if variable_name in request_variables:
@@ -126,14 +127,20 @@ def load_from_env_vars(params, load_from_db_fields, context=None):
                 logger.debug(f"Found context override for variable '{variable_name}'")
 
         if key is None:
-            key = os.getenv(variable_name)
-            if key:
-                logger.info(f"Using environment variable {variable_name} for {field}")
+            if no_env_fallback:
+                logger.warning(
+                    f"Variable '{variable_name}' not found in request_variables and "
+                    f"env fallback is disabled. Setting to None."
+                )
             else:
-                logger.error(f"Environment variable {variable_name} is not set.")
-        params[field] = key if key is not None else None
-        if key is None:
-            logger.warning(f"Could not get value for {field}. Setting it to None.")
+                key = os.getenv(variable_name)
+                if key:
+                    logger.info(f"Using environment variable {variable_name} for {field}")
+                else:
+                    logger.error(f"Environment variable {variable_name} is not set.")
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+
+        params[field] = key
     return params
 
 

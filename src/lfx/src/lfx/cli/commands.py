@@ -74,6 +74,15 @@ async def serve_command(
         "--check-variables/--no-check-variables",
         help="Check global variables for environment compatibility",
     ),
+    no_env_fallback: bool = typer.Option(  # noqa: FBT001, FBT003
+        False,
+        "--no-env-fallback/--env-fallback",
+        help=(
+            "Disable os.environ fallback for credential variables. "
+            "Variables not supplied via global_vars on each request resolve to None "
+            "instead of reading from the process environment."
+        ),
+    ),
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -138,7 +147,9 @@ async def serve_command(
             paths = [Path(temp_file_to_cleanup)]
             source_display = "inline JSON"
             try:
-                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+                registry = await build_registry_from_paths(
+                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1) from e
@@ -159,7 +170,9 @@ async def serve_command(
             paths = [Path(temp_file_to_cleanup)]
             source_display = "stdin"
             try:
-                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+                registry = await build_registry_from_paths(
+                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1) from e
@@ -178,7 +191,7 @@ async def serve_command(
                 source_display = str(dir_path)
                 try:
                     registry = await build_registry_from_directory(
-                        dir_path, verbose_print, check_variables=check_variables
+                        dir_path, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
                     )
                 except ValueError as e:
                     typer.echo(f"Error: {e}", err=True)
@@ -196,13 +209,15 @@ async def serve_command(
 
             if paths:
                 try:
-                    registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+                    registry = await build_registry_from_paths(
+                        paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                    )
                 except ValueError as e:
                     typer.echo(f"Error: {e}", err=True)
                     raise typer.Exit(1) from e
 
         else:
-            registry = FlowRegistry()
+            registry = FlowRegistry(no_env_fallback=no_env_fallback)
             source_display = "none (upload flows via POST /flows/upload/)"
             verbose_print("Starting with empty registry — flows can be uploaded at runtime")
 
@@ -298,6 +313,7 @@ async def build_registry_from_directory(
     verbose_print,
     *,
     check_variables: bool,
+    no_env_fallback: bool = False,
 ) -> FlowRegistry:
     """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive)."""
     json_files = sorted(dir_path.glob("*.json"))
@@ -305,7 +321,7 @@ async def build_registry_from_directory(
         msg = f"No .json files found in directory: {dir_path}"
         raise ValueError(msg)
 
-    registry = FlowRegistry()
+    registry = FlowRegistry(no_env_fallback=no_env_fallback)
     errors: list[str] = []
     for path in json_files:
         try:
@@ -327,11 +343,12 @@ async def build_registry_from_paths(
     verbose_print,
     *,
     check_variables: bool,
+    no_env_fallback: bool = False,
 ) -> FlowRegistry:
     """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
     # Use a shared root so same-named files in different directories get distinct IDs.
     common_root = Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent
-    registry = FlowRegistry()
+    registry = FlowRegistry(no_env_fallback=no_env_fallback)
     errors: list[str] = []
     for path in paths:
         try:

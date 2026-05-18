@@ -118,6 +118,37 @@ class TestFlowRegistry:
     def test_remove_nonexistent(self):
         assert FlowRegistry().remove("ghost") is False
 
+    def test_registry_no_env_fallback_stamps_context_on_add(self):
+        """FlowRegistry(no_env_fallback=True) must set graph.context['no_env_fallback']=True on add."""
+        registry = FlowRegistry(no_env_fallback=True)
+        graph = MagicMock()
+        graph.context = {}
+        meta = self._make_meta("test-flow")
+        registry.add(graph, meta)
+        assert graph.context.get("no_env_fallback") is True
+
+    def test_registry_default_does_not_stamp_no_env_fallback(self):
+        """FlowRegistry() (default) must NOT set no_env_fallback on the graph context."""
+        registry = FlowRegistry()
+        graph = MagicMock()
+        graph.context = {}
+        meta = self._make_meta("test-flow")
+        registry.add(graph, meta)
+        assert "no_env_fallback" not in graph.context
+
+    def test_registry_no_env_fallback_stamps_context_on_overwrite(self):
+        """Stamp must also be applied when overwrite=True."""
+        registry = FlowRegistry(no_env_fallback=True)
+        first_graph = MagicMock()
+        first_graph.context = {}
+        meta = self._make_meta("test-flow")
+        registry.add(first_graph, meta)
+
+        replacement_graph = MagicMock()
+        replacement_graph.context = {}
+        registry.add(replacement_graph, meta, overwrite=True)
+        assert replacement_graph.context.get("no_env_fallback") is True
+
 
 class TestSecurityFunctions:
     """Test security-related functions."""
@@ -613,6 +644,192 @@ class TestServeAppEndpoints:
             response = app_client.post("/flows/00000000-0000-0000-0000-000000000001/run", json={}, headers=headers)
 
         assert response.status_code == 422  # Validation error
+
+    def test_run_endpoint_injects_global_vars_into_context(self, real_graph_with_async, monkeypatch):
+        """global_vars in RunRequest must appear in graph_copy.context['request_variables']."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["request_variables"] = dict(graph.context.get("request_variables") or {})
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            TestClient(app) as client,
+        ):
+            response = client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run",
+                json={"input_value": "hello", "global_vars": {"MY_API_KEY": "secret-value"}},
+                headers=headers,
+            )
+
+        assert response.status_code == 200
+        assert captured["request_variables"] == {"MY_API_KEY": "secret-value"}
+
+    def test_run_endpoint_global_vars_do_not_mutate_registry_graph(self, real_graph_with_async, monkeypatch):
+        """global_vars must only be set on the deepcopy; the registry's original graph must be unchanged."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_noop),
+            TestClient(app) as client,
+        ):
+            client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run",
+                json={"input_value": "hello", "global_vars": {"MY_API_KEY": "secret-value"}},
+                headers=headers,
+            )
+
+        original_graph = registry.get("00000000-0000-0000-0000-000000000001")[0]
+        rv = original_graph.context.get("request_variables") or {}
+        assert "MY_API_KEY" not in rv
+
+    def test_stream_endpoint_injects_global_vars_into_context(self, real_graph_with_async, monkeypatch):
+        """global_vars in StreamRequest must appear in graph_copy.context['request_variables']."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["request_variables"] = dict(graph.context.get("request_variables") or {})
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            TestClient(app) as client,
+            client.stream(
+                "POST",
+                "/flows/00000000-0000-0000-0000-000000000001/stream",
+                json={"input_value": "hello", "global_vars": {"STREAM_KEY": "stream-secret"}},
+                headers=headers,
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        assert captured["request_variables"] == {"STREAM_KEY": "stream-secret"}
+
+    def test_stream_endpoint_no_global_vars_leaves_context_clean(self, real_graph_with_async, monkeypatch):
+        """Omitting global_vars must not create request_variables in the graph context."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["request_variables"] = graph.context.get("request_variables")
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            TestClient(app) as client,
+            client.stream(
+                "POST",
+                "/flows/00000000-0000-0000-0000-000000000001/stream",
+                json={"input_value": "hello"},  # no global_vars key
+                headers=headers,
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        assert not captured.get("request_variables")
+
+    def test_stream_endpoint_global_vars_do_not_mutate_registry_graph(self, real_graph_with_async, monkeypatch):
+        """global_vars must only be set on the deepcopy; the registry's original graph must be unchanged."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry()
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_noop),
+            TestClient(app) as client,
+            client.stream(
+                "POST",
+                "/flows/00000000-0000-0000-0000-000000000001/stream",
+                json={"input_value": "hello", "global_vars": {"STREAM_KEY": "stream-secret"}},
+                headers=headers,
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        original_graph = registry.get("00000000-0000-0000-0000-000000000001")[0]
+        rv = original_graph.context.get("request_variables") or {}
+        assert "STREAM_KEY" not in rv
 
     def test_flow_execution_with_message_output(self, app_client, real_graph_with_async):
         """Test flow execution with message-type output."""

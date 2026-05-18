@@ -83,6 +83,11 @@ class RunRequest(BaseModel):
 
     input_value: str = Field(..., description="Input value passed to the flow")
     session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
+    global_vars: dict[str, str] | None = Field(
+        default=None,
+        description="Per-request variables injected into graph.context['request_variables'] on the deepcopy. "
+        "Use this to supply credentials or other scoped values without touching os.environ.",
+    )
 
 
 class StreamRequest(BaseModel):
@@ -94,6 +99,11 @@ class StreamRequest(BaseModel):
     output_component: str | None = Field(default=None, description="Specific output component to stream from")
     session_id: str | None = Field(default=None, description="Session ID for maintaining conversation state")
     tweaks: dict[str, Any] | None = Field(default=None, description="Optional tweaks to modify flow behavior")
+    global_vars: dict[str, str] | None = Field(
+        default=None,
+        description="Per-request variables injected into graph.context['request_variables'] on the deepcopy. "
+        "Use this to supply credentials or other scoped values without touching os.environ.",
+    )
 
 
 class RunResponse(BaseModel):
@@ -123,15 +133,23 @@ class FlowRegistry:
 
     Uploaded flows are also not persisted to disk. They exist only for the
     lifetime of the server process; a restart will drop them.
+
+    When constructed with ``no_env_fallback=True``, every graph registered via
+    ``add()`` has ``graph.context['no_env_fallback']`` set to ``True`` at
+    registration time, preventing credential resolution from falling back to
+    ``os.environ`` for that graph's requests.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, no_env_fallback: bool = False) -> None:
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
+        self._no_env_fallback = no_env_fallback
 
     def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False) -> None:
         if not overwrite and meta.id in self._flows:
             msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
             raise ValueError(msg)
+        if self._no_env_fallback:
+            graph.context["no_env_fallback"] = True
         self._flows[meta.id] = (graph, meta)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
@@ -340,6 +358,8 @@ def create_multi_serve_app(
         )
         # NOTE: in-memory only — not persisted to disk and not visible to other
         # worker processes. See FlowRegistry docstring for multi-worker caveats.
+        # graph.prepare() must run before registry.add() — add() stamps
+        # graph.context with no_env_fallback, and prepare() must not overwrite it.
         registry.add(graph, meta, overwrite=body.replace)
         return UploadFlowResponse(
             id=flow_id,
@@ -385,6 +405,10 @@ def create_multi_serve_app(
         try:
             validate_flow_for_current_settings(graph)
             graph_copy = deepcopy(graph)
+            if request.global_vars:
+                if "request_variables" not in graph_copy.context:
+                    graph_copy.context["request_variables"] = {}
+                graph_copy.context["request_variables"].update(request.global_vars)
             results, logs = await execute_graph_with_capture(
                 graph_copy, request.input_value, session_id=request.session_id
             )
@@ -437,9 +461,14 @@ def create_multi_serve_app(
             asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
             event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
 
+            graph_copy = deepcopy(graph)
+            if request.global_vars:
+                if "request_variables" not in graph_copy.context:
+                    graph_copy.context["request_variables"] = {}
+                graph_copy.context["request_variables"].update(request.global_vars)
             main_task = asyncio.create_task(
                 run_flow_generator_for_serve(
-                    graph=deepcopy(graph),
+                    graph=graph_copy,
                     input_request=request,
                     flow_id=flow_id,
                     event_manager=event_manager,

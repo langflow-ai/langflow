@@ -537,3 +537,103 @@ class TestPythonScriptServe:
 
         assert result.exit_code != 0
         assert ".json or .py" in result.output
+
+
+def test_build_registry_from_paths_no_env_fallback_stamps_graphs(tmp_path):
+    """build_registry_from_paths with no_env_fallback=True must stamp each graph's context."""
+    import asyncio
+
+    from lfx.cli.commands import build_registry_from_paths
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps({"nodes": [], "edges": []}))
+
+    mock_graph = MagicMock()
+    mock_graph.prepare = MagicMock()
+    mock_graph.flow_id = None
+    mock_graph.context = {}
+
+    with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+        registry = asyncio.run(
+            build_registry_from_paths(
+                [p], lambda _: None, check_variables=False, no_env_fallback=True
+            )
+        )
+    flow_id = registry.list_metas()[0].id
+    graph, _ = registry.get(flow_id)
+    assert graph.context.get("no_env_fallback") is True
+
+
+def test_build_registry_from_paths_default_does_not_stamp(tmp_path):
+    """build_registry_from_paths without no_env_fallback must not stamp the context."""
+    import asyncio
+
+    from lfx.cli.commands import build_registry_from_paths
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps({"nodes": [], "edges": []}))
+
+    mock_graph = MagicMock()
+    mock_graph.prepare = MagicMock()
+    mock_graph.flow_id = None
+    mock_graph.context = {}
+
+    with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+        registry = asyncio.run(
+            build_registry_from_paths(
+                [p], lambda _: None, check_variables=False
+            )
+        )
+    flow_id = registry.list_metas()[0].id
+    graph, _ = registry.get(flow_id)
+    assert not graph.context.get("no_env_fallback")
+
+
+def test_build_registry_from_directory_no_env_fallback_stamps_graphs(tmp_path):
+    """build_registry_from_directory with no_env_fallback=True must stamp each graph's context."""
+    import asyncio
+
+    from lfx.cli.commands import build_registry_from_directory
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps({"nodes": [], "edges": []}))
+
+    mock_graph = MagicMock()
+    mock_graph.prepare = MagicMock()
+    mock_graph.flow_id = None
+    mock_graph.context = {}
+
+    with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+        registry = asyncio.run(
+            build_registry_from_directory(
+                tmp_path, lambda _: None, check_variables=False, no_env_fallback=True
+            )
+        )
+    flow_id = registry.list_metas()[0].id
+    graph, _ = registry.get(flow_id)
+    assert graph.context.get("no_env_fallback") is True
+
+
+def test_build_registry_from_directory_default_does_not_stamp(tmp_path):
+    """build_registry_from_directory without no_env_fallback must not stamp the context."""
+    import asyncio
+
+    from lfx.cli.commands import build_registry_from_directory
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps({"nodes": [], "edges": []}))
+
+    mock_graph = MagicMock()
+    mock_graph.prepare = MagicMock()
+    mock_graph.flow_id = None
+    mock_graph.context = {}
+
+    with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+        registry = asyncio.run(
+            build_registry_from_directory(
+                tmp_path, lambda _: None, check_variables=False
+            )
+        )
+    flow_id = registry.list_metas()[0].id
+    graph, _ = registry.get(flow_id)
+    assert not graph.context.get("no_env_fallback")
