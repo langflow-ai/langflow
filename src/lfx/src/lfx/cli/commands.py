@@ -330,9 +330,7 @@ async def build_registry_from_paths(
 ) -> FlowRegistry:
     """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
     # Use a shared root so same-named files in different directories get distinct IDs.
-    common_root = (
-        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent
-    )
+    common_root = Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent
     registry = FlowRegistry()
     errors: list[str] = []
     for path in paths:

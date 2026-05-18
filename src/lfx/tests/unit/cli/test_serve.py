@@ -481,12 +481,12 @@ class TestPythonScriptServe:
         # load_graph_from_script is lazily imported inside _load_graph_and_meta,
         # so patch its module-level name directly.
         with (
-            patch("lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)) as mock_script,
+            patch(
+                "lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)
+            ) as mock_script,
             patch("lfx.cli.commands.load_flow_from_json") as mock_json,
         ):
-            graph, meta = asyncio.run(
-                _load_graph_and_meta(script, tmp_path, check_variables=False)
-            )
+            graph, meta = asyncio.run(_load_graph_and_meta(script, tmp_path, check_variables=False))
 
         mock_json.assert_not_called()
         mock_script.assert_called_once_with(script)
@@ -494,7 +494,7 @@ class TestPythonScriptServe:
         assert meta.relative_path == "my_flow.py"
 
     def test_serve_command_accepts_py_file(self, tmp_path):
-        """lfx serve my_script.py must not be rejected as an unsupported file type."""
+        """Lfx serve my_script.py must not be rejected as an unsupported file type."""
         from lfx.cli.commands import serve_command
 
         script = tmp_path / "my_flow.py"
