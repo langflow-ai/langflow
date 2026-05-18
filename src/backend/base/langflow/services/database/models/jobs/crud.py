@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 
 from langflow.services.database.models.jobs.model import Job, JobStatus
 
@@ -37,17 +37,21 @@ async def get_jobs_by_flow_id(db: AsyncSession, flow_id: UUID, page: int = 1, si
     return list(result.all())
 
 
-async def get_job_by_job_id(db: AsyncSession, job_id: UUID) -> Job | None:
+async def get_job_by_job_id(db: AsyncSession, job_id: UUID, user_id: UUID | None = None) -> Job | None:
     """Get a single job by its UUID.
 
     Args:
         db: Async database session
         job_id: The job ID to fetch
+        user_id: When provided, restricts the result to jobs owned by this user
+            or legacy jobs with no owner (user_id IS NULL).
 
     Returns:
-        Job object or None if not found
+        Job object or None if not found (or not accessible by the given user)
     """
     statement = select(Job).where(Job.job_id == job_id)
+    if user_id is not None:
+        statement = statement.where(or_(Job.user_id == user_id, col(Job.user_id).is_(None)))
     result = await db.exec(statement)
     return result.first()
 

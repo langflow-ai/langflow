@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         DeploymentDeleteResult,
         DeploymentDuplicateResult,
         DeploymentGetResult,
+        DeploymentListLlmsResult,
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
@@ -34,6 +35,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
 
 
@@ -68,6 +71,15 @@ class DeploymentService(BaseDeploymentService):
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
         raise DeploymentNotConfiguredError(method="list_types")
+
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
+        raise DeploymentNotConfiguredError(method="list_llms")
 
     async def list(
         self,
@@ -150,7 +162,6 @@ class DeploymentService(BaseDeploymentService):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -187,6 +198,15 @@ class DeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
         raise DeploymentNotConfiguredError(method="list_snapshots")
+
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
+        raise DeploymentNotConfiguredError(method="verify_credentials")
 
     async def teardown(self) -> None:
         logger.debug("Deployment service teardown")

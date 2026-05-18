@@ -52,6 +52,16 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
 
+// Extension components carry a namespaced ``data.type`` of the form
+// ``ext:<bundle>:<ClassName>@<slot>``.  The inspect-button test IDs
+// historically read ``output-inspection-<title>-<ClassName>``; without this
+// strip, extension components would yield verbose IDs containing ``:`` and
+// ``@`` that diverge from the built-in convention.
+const classNameFromType = (type: string): string => {
+  const match = type.match(/^ext:[^:]+:([^@]+)@.+$/);
+  return match?.[1] ?? type;
+};
+
 const InspectButton = memo(
   forwardRef(
     (
@@ -79,7 +89,7 @@ const InspectButton = memo(
       <Button
         ref={ref}
         disabled={disabled}
-        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
         unstyled
         onClick={onClick}
       >
@@ -162,7 +172,9 @@ function NodeOutputField({
     () => ({
       displayOutputPreview:
         !!flowPool[flowPoolId] &&
-        logHasMessage(flowPoolNode?.data, internalOutputName),
+        (logHasMessage(flowPoolNode?.data, internalOutputName) ||
+          (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) >
+            0),
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
@@ -170,10 +182,17 @@ function NodeOutputField({
   );
 
   const emptyOutput = useMemo(() => {
-    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+    const hasLogs =
+      (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) > 0;
+    if (hasLogs) return false;
+    return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [flowPoolNode?.data?.outputs]);
+  }, [
+    flowPoolNode?.data?.outputs,
+    flowPoolNode?.data?.logs,
+    internalOutputName,
+  ]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),

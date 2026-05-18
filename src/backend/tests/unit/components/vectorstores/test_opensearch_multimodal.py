@@ -1,5 +1,6 @@
 """Tests for OpenSearch Multi-Model Multi-Embedding Vector Store Component."""
 
+import copy
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -391,6 +392,67 @@ class TestOpenSearchMultimodalComponent(ComponentTestBaseWithoutClient):
         # Verify Bearer settings
         assert component.auth_mode == "Bearer Token"
         assert component.bearer_token == "test_bearer_token"  # pragma: allowlist secret  # noqa: S105
+
+    def test_default_auth_mode_and_bearer_prefix_inputs(self, component_class):
+        """Test default auth-mode related input values for new instances."""
+        component = component_class()
+        auth_mode_input = next(field for field in component.inputs if field.name == "auth_mode")
+        bearer_prefix_input = next(field for field in component.inputs if field.name == "bearer_prefix")
+
+        assert auth_mode_input.value == "jwt"
+        assert bearer_prefix_input.value is False
+
+    def test_raw_search_applies_filter_expression(self, component_class, default_kwargs):
+        """Test raw_search applies filter clauses, limit, and score threshold from filter_expression."""
+        client = MagicMock()
+        client.search.return_value = {"hits": {"hits": []}}
+        component = component_class().set(
+            **default_kwargs,
+            filter_expression='{"filter":[{"term":{"owner":"user1"}}],"limit":3,"score_threshold":1.2}',
+        )
+
+        with patch.object(component, "build_client", return_value=client):
+            component.raw_search({"query": {"match": {"text": "python"}}})
+
+        body = client.search.call_args.kwargs["body"]
+        assert body["query"]["bool"]["must"] == [{"match": {"text": "python"}}]
+        assert body["query"]["bool"]["filter"] == [{"term": {"owner": "user1"}}]
+        assert body["size"] == 3
+        assert body["min_score"] == 1.2
+
+    def test_raw_search_invalid_filter_expression_json_raises(self, component_class, default_kwargs):
+        """Test raw_search raises ValueError for invalid filter_expression JSON."""
+        component = component_class().set(**default_kwargs, filter_expression='{"filter": [}')
+        with pytest.raises(ValueError, match="Invalid filter_expression JSON"):
+            component.raw_search({"query": {"match_all": {}}})
+
+    def test_raw_search_filter_expression_requires_json_object(self, component_class, default_kwargs):
+        """Test raw_search rejects non-object JSON filter_expression values."""
+        component = component_class().set(**default_kwargs, filter_expression='["owner"]')
+        with pytest.raises(TypeError, match="expected a JSON object"):
+            component.raw_search({"query": {"match_all": {}}})
+
+    def test_raw_search_does_not_mutate_input_query_dict(self, component_class, default_kwargs):
+        """Test raw_search does not mutate caller-provided query dicts."""
+        client = MagicMock()
+        client.search.return_value = {"hits": {"hits": []}}
+        component = component_class().set(
+            **default_kwargs,
+            filter_expression='{"filter":[{"term":{"owner":"user1"}}],"limit":2}',
+        )
+        raw_query = {"query": {"match": {"text": "python"}}}
+        original_query = copy.deepcopy(raw_query)
+
+        with patch.object(component, "build_client", return_value=client):
+            component.raw_search(raw_query)
+
+        assert raw_query == original_query
+
+    def test_raw_search_rejects_non_integer_limit(self, component_class, default_kwargs):
+        """Test raw_search rejects invalid non-integer filter limit values."""
+        component = component_class().set(**default_kwargs, filter_expression='{"limit":"abc"}')
+        with pytest.raises(ValueError, match=r"filter_expression\.limit"):
+            component.raw_search({"query": {"match_all": {}}})
 
     async def test_update_build_config_auth_basic(self, component_class):
         """Test update_build_config with basic authentication."""

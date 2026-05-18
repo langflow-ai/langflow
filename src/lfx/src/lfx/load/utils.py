@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import httpx
@@ -7,13 +8,20 @@ class UploadError(Exception):
     """Raised when an error occurs during the upload process."""
 
 
-def upload(file_path: str, host: str, flow_id: str):
+def upload(file_path: str, host: str, flow_id: str, api_key: str | None = None):
     """Upload a file to Langflow and return the file path.
+
+    The upload endpoint now requires authentication (see Langflow
+    PR #12831).  Callers must supply an API key via ``api_key`` or by
+    setting the ``LANGFLOW_API_KEY`` environment variable; otherwise the
+    server will reject the request with 401/403.
 
     Args:
         file_path (str): The path to the file to be uploaded.
         host (str): The host URL of Langflow.
         flow_id (UUID): The ID of the flow to which the file belongs.
+        api_key (str | None): API key sent as ``x-api-key``.  If None,
+            falls back to the ``LANGFLOW_API_KEY`` environment variable.
 
     Returns:
         dict: A dictionary containing the file path.
@@ -23,8 +31,10 @@ def upload(file_path: str, host: str, flow_id: str):
     """
     try:
         url = f"{host}/api/v1/upload/{flow_id}"
+        resolved_api_key = api_key if api_key is not None else os.environ.get("LANGFLOW_API_KEY")
+        headers = {"x-api-key": resolved_api_key} if resolved_api_key else {}
         with Path(file_path).open("rb") as file:
-            response = httpx.post(url, files={"file": file})
+            response = httpx.post(url, files={"file": file}, headers=headers)
             if response.status_code in {httpx.codes.OK, httpx.codes.CREATED}:
                 return response.json()
     except Exception as e:
@@ -35,7 +45,14 @@ def upload(file_path: str, host: str, flow_id: str):
     raise UploadError(msg)
 
 
-def upload_file(file_path: str, host: str, flow_id: str, components: list[str], tweaks: dict | None = None):
+def upload_file(
+    file_path: str,
+    host: str,
+    flow_id: str,
+    components: list[str],
+    tweaks: dict | None = None,
+    api_key: str | None = None,
+):
     """Upload a file to Langflow and return the file path.
 
     Args:
@@ -45,6 +62,8 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         flow_id (UUID): The ID of the flow to which the file belongs.
         components (str): List of component IDs or names that need the file.
         tweaks (dict): A dictionary of tweaks to be applied to the file.
+        api_key (str | None): API key forwarded to :func:`upload`.  Falls back
+            to ``LANGFLOW_API_KEY`` if not supplied.
 
     Returns:
         dict: A dictionary containing the file path and any tweaks that were applied.
@@ -53,7 +72,7 @@ def upload_file(file_path: str, host: str, flow_id: str, components: list[str], 
         UploadError: If an error occurs during the upload process.
     """
     try:
-        response = upload(file_path, host, flow_id)
+        response = upload(file_path, host, flow_id, api_key=api_key)
     except Exception as e:
         msg = f"Error uploading file: {e}"
         raise UploadError(msg) from e

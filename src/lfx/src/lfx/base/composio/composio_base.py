@@ -5,9 +5,9 @@ from contextlib import suppress
 from typing import Any
 
 from composio import Composio
-from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
 
+from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema
 from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
@@ -437,7 +437,7 @@ class ComposioBaseComponent(Component):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return Composio(api_key=self.api_key, provider=LangchainProvider())
+            return Composio(api_key=self.api_key, provider=SafeLangchainProvider())
 
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
@@ -2354,6 +2354,14 @@ class ComposioBaseComponent(Component):
             limit = 999
 
         tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=limit)
+        # Composio caches a deep copy of each tool's schema in `_tool_schemas` *before* the
+        # provider wraps it, and reuses that copy at execute time for file substitution.
+        # Patch every cached schema so missing JSON Schema "type" keys don't raise
+        # KeyError("type") inside `_substitute_file_uploads_recursively` (issues #12894/#12895).
+        cached_schemas = getattr(composio.tools, "_tool_schemas", None)
+        if isinstance(cached_schemas, dict):
+            for cached_tool in cached_schemas.values():
+                _sanitize_schema(getattr(cached_tool, "input_parameters", None))
         configured_tools = []
         for tool in tools:
             # Set the sanitized name

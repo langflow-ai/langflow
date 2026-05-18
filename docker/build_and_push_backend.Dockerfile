@@ -8,7 +8,7 @@
 ################################
 # BUILDER
 ################################
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 WORKDIR /app
 
@@ -29,6 +29,13 @@ RUN apt-get update \
 # Copy only backend source (excludes frontend)
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
+COPY ./src/sdk ./src/sdk
+# Workspace bundles (LE-1023 pilot+): each Bundle is shipped as a
+# separate distribution that langflow-base depends on by name (e.g.
+# ``lfx-duckduckgo``).  Without copying the source tree, the install
+# below cannot resolve the path-based bundle deps and ends up with a
+# Langflow image missing components that previously lived in lfx.
+COPY ./src/bundles ./src/bundles
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -36,13 +43,21 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
+# Install langflow-base with all extras except dev (which includes Playwright).
+# Each pilot-extracted bundle is installed alongside so the runtime image
+# keeps shipping the same component set users had before LE-1023.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install \
+        ./src/sdk \
+        ./src/lfx \
+        ./src/bundles/duckduckgo \
+        ./src/bundles/arxiv \
+        "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 # Install minimal runtime dependencies
 RUN apt-get update \

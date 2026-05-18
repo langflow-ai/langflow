@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useDragStart from "@/components/core/cardComponent/hooks/use-on-drag-start";
@@ -36,6 +37,7 @@ const ListComponent = ({
   setSelected: (selected: boolean) => void;
   shiftPressed: boolean;
 }) => {
+  const { t } = useTranslation();
   const navigate = useCustomNavigate();
   const [openDelete, setOpenDelete] = useState(false);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -64,13 +66,13 @@ const ListComponent = ({
     deleteFlow({ id: [flowData.id] })
       .then(() => {
         setSuccessData({
-          title: "Selected items deleted successfully",
+          title: t("flow.deletedSuccessfully"),
         });
       })
-      .catch(() => {
+      .catch((err) => {
         setErrorData({
-          title: "Error deleting items",
-          list: ["Please try again"],
+          title: t("flow.errorDeleting"),
+          list: [t("flow.errorDeletingRetry")],
         });
       });
   };
@@ -216,7 +218,9 @@ const ListComponent = ({
           setOpen={setOpenDelete}
           onConfirm={handleDelete}
           description={descriptionModal}
-          note={!flowData.is_component ? "and its message history" : ""}
+          note={
+            !flowData.is_component ? t("deleteModal.noteMessageHistory") : ""
+          }
         />
       )}
       <ExportModal

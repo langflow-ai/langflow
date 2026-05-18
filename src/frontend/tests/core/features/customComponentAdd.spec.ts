@@ -61,7 +61,7 @@ class CustomComponent(Component):
 
     await page.locator(".ace_content").click();
     await page.keyboard.press(`ControlOrMeta+A`);
-    await page.locator("textarea").fill(waitTimeoutCode);
+    await page.locator("textarea").last().fill(waitTimeoutCode);
 
     await page.getByText("Check & Save").last().click();
 

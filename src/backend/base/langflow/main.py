@@ -33,13 +33,13 @@ from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     create_or_update_starter_projects,
-    initialize_auto_login_default_superuser,
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
     get_queue_service,
@@ -53,8 +53,6 @@ from langflow.services.utils import initialize_services, initialize_settings_ser
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
 
 if TYPE_CHECKING:
-    from tempfile import TemporaryDirectory
-
     from lfx.services.mcp_composer.service import MCPComposerService
 
 # Ignore Pydantic deprecation warnings from Langchain
@@ -148,11 +146,12 @@ def warn_about_future_cors_changes(settings):
 
 def get_lifespan(*, fix_migration=False, version=None):
     initialize_settings_service()
-    telemetry_service = get_telemetry_service()
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
-        from lfx.interface.components import get_and_cache_all_types_dict
+        from lfx.interface.components import component_cache, get_and_cache_all_types_dict
+
+        from langflow.preload import PreloadStep, get_owned_temp_dirs, is_step_complete
 
         configure()
 
@@ -162,14 +161,39 @@ def get_lifespan(*, fix_migration=False, version=None):
         else:
             await logger.adebug("Starting Langflow...")
 
-        temp_dirs: list[TemporaryDirectory] = []
         sync_flows_from_fs_task = None
         mcp_init_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
 
+            if get_settings_service().settings.sentry_dsn:
+                try:
+                    import sentry_sdk
+                except ImportError:
+                    await logger.awarning(
+                        "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                        "Sentry will not be initialized. Install it with: pip install sentry-sdk"
+                    )
+                else:
+                    try:
+                        sentry_settings = get_settings_service().settings
+                        sentry_sdk.init(
+                            dsn=sentry_settings.sentry_dsn,
+                            traces_sample_rate=sentry_settings.sentry_traces_sample_rate,
+                            profiles_sample_rate=sentry_settings.sentry_profiles_sample_rate,
+                        )
+                        await logger.adebug("Sentry SDK initialized in worker")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize Sentry SDK (check LANGFLOW_SENTRY_DSN): {e}")
+
             await logger.adebug("Initializing services")
+            # When the master already ran preload, the service_manager (and the
+            # DB service object) are inherited via fork. We still call
+            # initialize_services() here so each worker rebuilds its own fresh
+            # connection pool on first use (the master disposed its engine
+            # before fork). The call is idempotent: factory registration and
+            # migration application both no-op when already done.
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
@@ -178,71 +202,143 @@ def get_lifespan(*, fix_migration=False, version=None):
             setup_llm_caching()
             await logger.adebug(f"LLM caching setup in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Copying profile pictures")
-            await copy_profile_pictures()
-            await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            if get_settings_service().auth_settings.AUTO_LOGIN:
+            # Gate: Copy profile pictures
+            if is_step_complete(PreloadStep.PROFILE_PICTURES):
+                await logger.adebug("Skipping profile-picture copy: master already completed it during preload")
+            else:
                 current_time = asyncio.get_event_loop().time()
-                await logger.adebug("Initializing default super user")
-                await initialize_auto_login_default_superuser()
-                await logger.adebug(
-                    f"Default super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                )
-
-            await logger.adebug("Initializing super user")
-            await initialize_auto_login_default_superuser()
-            await logger.adebug(f"Super user initialized in {asyncio.get_event_loop().time() - current_time:.2f}s")
+                await logger.adebug("Copying profile pictures")
+                await copy_profile_pictures()
+                await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading bundles")
-            temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
-            get_settings_service().settings.components_path.extend(bundles_components_paths)
-            await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Caching types")
-            all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
-            await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
-
-            # Use file-based lock to prevent multiple workers from creating duplicate starter projects concurrently.
-            # Note that it's still possible that one worker may complete this task, release the lock,
-            # then another worker pick it up, but the operation is idempotent so worst case it duplicates
-            # the initialization work.
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Creating/updating starter projects")
-
-            lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
-            lock = FileLock(lock_file, timeout=1)
+            await logger.adebug("Reconciling knowledge base rows from disk")
             try:
-                with lock:
-                    await create_or_update_starter_projects(all_types_dict)
-                    await logger.adebug(
-                        f"Starter projects created/updated in {asyncio.get_event_loop().time() - current_time:.2f}s"
-                    )
-            except TimeoutError:
-                # Another process has the lock
-                await logger.adebug("Another worker is creating starter projects, skipping")
-            except Exception as e:  # noqa: BLE001
-                await logger.awarning(
-                    f"Failed to acquire lock for starter projects: {e}. Starter projects may not be created or updated."
+                from langflow.api.utils import knowledge_base_service
+
+                inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                elapsed = asyncio.get_event_loop().time() - current_time
+                await logger.adebug(
+                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
                 )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
-            # Initialize agentic global variables early (before MCP server and flows)
-            if get_settings_service().settings.agentic_experience:
-                from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
-
-                current_time = asyncio.get_event_loop().time()
-                await logger.ainfo("Initializing agentic global variables...")
+            if get_settings_service().settings.prometheus_enabled:
                 try:
-                    async with session_scope() as session:
-                        await initialize_agentic_global_variables(session)
+                    from prometheus_client import start_http_server
+
+                    start_http_server(get_settings_service().settings.prometheus_port)
                     await logger.adebug(
-                        f"Agentic global variables initialized in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to initialize agentic global variables: {e}")
+                except ImportError:
+                    await logger.aerror(
+                        "prometheus_client is not installed. Install it with: pip install prometheus-client"
+                    )
+                except OSError as e:
+                    import errno
+
+                    if e.errno == errno.EADDRINUSE:
+                        await logger.adebug(
+                            f"Prometheus port {get_settings_service().settings.prometheus_port} already in use "
+                            "(may be running in another worker)"
+                        )
+                    else:
+                        await logger.awarning(f"Failed to start Prometheus server: {e}")
+
+            telemetry_service = get_telemetry_service()
+
+            # Gate: Load bundles
+            if is_step_complete(PreloadStep.BUNDLES):
+                # Inherit bundle paths from master via COW.
+                # get_owned_temp_dirs() returns the preloaded dirs if this is
+                # the master, or an empty list if this is a worker (workers
+                # must NOT clean up the master's temp_dirs).
+                temp_dirs = get_owned_temp_dirs()
+                await logger.adebug("Skipping bundle load: inherited from master")
+            else:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Loading bundles")
+                temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
+                get_settings_service().settings.components_path.extend(bundles_components_paths)
+                await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Locally-registered dev extensions (``lfx extension dev``) are
+            # loaded later via :func:`import_extension_components` through the
+            # @official-slot pathway alongside installed extensions, so they
+            # share the BundleRegistry, palette decoration, and reload
+            # endpoint with pip-installed bundles.  Nothing to wire here.
+
+            # Gate: Cache component types
+            # When types_cached is True, workers inherited the populated cache via COW; we still need a
+            # local handle for create_or_update_starter_projects. starter_projects_created can remain False
+            # if the master failed after caching types but before finishing starter projects.
+            if is_step_complete(PreloadStep.TYPES_CACHED):
+                await logger.adebug("Skipping types cache: inherited from master")
+                all_types_dict = component_cache.all_types_dict
+                if all_types_dict is None:
+                    # Inconsistent inherited state (e.g. rare fork/COW edge cases): rebuild instead of
+                    # skipping starter projects with an empty cache.
+                    await logger.awarning(
+                        "Component types cache is empty but preload marked types cached; "
+                        "rebuilding cache in this worker."
+                    )
+                    all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
+            else:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Caching types")
+                all_types_dict = await get_and_cache_all_types_dict(get_settings_service(), telemetry_service)
+                await logger.adebug(f"Types cached in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Gate: Create/update starter projects
+            if is_step_complete(PreloadStep.STARTER_PROJECTS):
+                await logger.adebug("Skipping starter projects: inherited from master")
+            else:
+                # Use file-based lock to prevent multiple workers from creating duplicate starter projects
+                # concurrently. Note that it's still possible that one worker may complete this task, release
+                # the lock, then another worker pick it up, but the operation is idempotent so worst case it
+                # duplicates the initialization work.
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Creating/updating starter projects")
+
+                if all_types_dict is None:
+                    await logger.awarning(
+                        "Skipping starter projects: component types cache is still empty after cache build. "
+                        "Starter projects will not be created or updated."
+                    )
+                else:
+                    lock_file = Path(tempfile.gettempdir()) / "langflow_starter_projects.lock"
+                    lock = FileLock(lock_file, timeout=1)
+                    try:
+                        with lock:
+                            await create_or_update_starter_projects(all_types_dict)
+                            elapsed = asyncio.get_event_loop().time() - current_time
+                            await logger.adebug(f"Starter projects created/updated in {elapsed:.2f}s")
+                    except TimeoutError:
+                        await logger.adebug("Another worker is creating starter projects, skipping")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(
+                            f"Failed to create or update starter projects: {e}. "
+                            "Starter projects may not be created or updated."
+                        )
+
+            # Gate: Initialize agentic global variables (when agentic_experience enabled)
+            if get_settings_service().settings.agentic_experience:
+                if is_step_complete(PreloadStep.AGENTIC_GLOBALS):
+                    await logger.adebug("Skipping agentic global variables: master already completed it during preload")
+                else:
+                    from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
+
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Initializing agentic global variables...")
+                    try:
+                        async with session_scope() as session:
+                            await initialize_agentic_global_variables(session)
+                        elapsed = asyncio.get_event_loop().time() - current_time
+                        await logger.adebug(f"Agentic global variables initialized in {elapsed:.2f}s")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to initialize agentic global variables: {e}")
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Starting telemetry service")
@@ -257,29 +353,40 @@ def get_lifespan(*, fix_migration=False, version=None):
                 f"started MCP Composer service in {asyncio.get_event_loop().time() - current_time:.2f}s"
             )
 
-            # Auto-configure Agentic MCP server if enabled (after variables are initialized)
+            # Gate: Auto-configure agentic MCP server (when agentic_experience enabled)
             if get_settings_service().settings.agentic_experience:
-                from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
-
-                current_time = asyncio.get_event_loop().time()
-                await logger.ainfo("Configuring Agentic MCP server...")
-                try:
-                    async with session_scope() as session:
-                        await auto_configure_agentic_mcp_server(session)
+                if is_step_complete(PreloadStep.AGENTIC_MCP):
                     await logger.adebug(
-                        f"Agentic MCP server configured in {asyncio.get_event_loop().time() - current_time:.2f}s"
+                        "Skipping agentic MCP server config: master already completed it during preload"
                     )
-                except Exception as e:  # noqa: BLE001
-                    await logger.awarning(f"Failed to configure agentic MCP server: {e}")
+                else:
+                    from langflow.api.utils.mcp.agentic_mcp import auto_configure_agentic_mcp_server
 
+                    current_time = asyncio.get_event_loop().time()
+                    await logger.ainfo("Configuring Agentic MCP server...")
+                    try:
+                        async with session_scope() as session:
+                            await auto_configure_agentic_mcp_server(session)
+                        elapsed = asyncio.get_event_loop().time() - current_time
+                        await logger.adebug(f"Agentic MCP server configured in {elapsed:.2f}s")
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"Failed to configure agentic MCP server: {e}")
+
+            # Gate: Load flows from directory
             current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Loading flows")
-            await load_flows_from_directory()
+            if is_step_complete(PreloadStep.FLOWS):
+                await logger.adebug("Skipping flows load: master already completed it during preload")
+            else:
+                await logger.adebug("Loading flows")
+                await load_flows_from_directory()
+                await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Per-worker setup: sync_flows_from_fs and queue service
+            # (MUST be started per-worker: they create asyncio tasks bound to this event loop)
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
             queue_service = get_queue_service()
-            if not queue_service.is_started():  # Start if not already started
+            if not queue_service.is_started():
                 queue_service.start()
-            await logger.adebug(f"Flows loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
@@ -432,18 +539,20 @@ def create_app():
     __version__ = get_version_info()["version"]
     configure()
     lifespan = get_lifespan(version=__version__)
+
+    settings = get_settings_service().settings
+
     app = FastAPI(
         title="Langflow",
         version=__version__,
         lifespan=lifespan,
+        root_path=settings.root_path,
     )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
 
-    setup_sentry(app)
-
-    settings = get_settings_service().settings
+    add_sentry_middleware(app)
 
     # Warn about future CORS changes
     warn_about_future_cors_changes(settings)
@@ -499,6 +608,28 @@ def create_app():
         return await call_next(request)
 
     @app.middleware("http")
+    async def forwarded_prefix_middleware(request: Request, call_next):
+        """Honour X-Forwarded-Prefix set by a reverse proxy.
+
+        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
+        the request, it can advertise the original prefix via X-Forwarded-Prefix.
+        We propagate this into the ASGI ``root_path`` so that transports like
+        MCP SSE include the prefix in the POST-back URLs they hand to clients.
+
+        This middleware is only active when ``root_path`` is configured in
+        settings (i.e. the operator has explicitly opted into reverse-proxy
+        mode).  The header value takes precedence over the static setting
+        because the proxy is the runtime source of truth for the prefix.
+        """
+        if not settings.root_path:
+            return await call_next(request)
+
+        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
+        if prefix and prefix.startswith("/") and "://" not in prefix and "?" not in prefix and "#" not in prefix:
+            request.scope["root_path"] = prefix
+        return await call_next(request)
+
+    @app.middleware("http")
     async def flatten_query_string_lists(request: Request, call_next):
         flattened: list[tuple[str, str]] = []
         for key, value in request.query_params.multi_items():
@@ -508,21 +639,42 @@ def create_app():
 
         return await call_next(request)
 
+    _supported_locales: frozenset[str] | None = None
+
+    @app.middleware("http")
+    async def set_locale(request: Request, call_next):
+        """Parse Accept-Language header and store normalised locale in request.state.
+
+        Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
+        zh-Hans as a full tag. All other locales are reduced to the language code.
+        Validates against the loaded locale files and falls back to "en" for unknown
+        values — prevents client-supplied headers from polluting the per-locale cache.
+        Result is available as request.state.locale in any endpoint.
+        """
+        nonlocal _supported_locales
+        if _supported_locales is None:
+            from langflow.utils.i18n import get_supported_locales
+
+            _supported_locales = frozenset(get_supported_locales())
+
+        accept_lang = request.headers.get("Accept-Language", "en")
+        primary = accept_lang.split(",")[0].strip()
+        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
+        if locale not in _supported_locales:
+            locale = "en"
+        request.state.locale = locale
+        return await call_next(request)
+
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
         prome_port = int(prome_port_str)
-        if prome_port > 0 or prome_port < MAX_PORT:
-            logger.debug(f"Starting Prometheus server on port {prome_port}...")
+        if prome_port > 0 and prome_port < MAX_PORT:
+            logger.debug(f"Prometheus server port configured as {prome_port}...")
             settings.prometheus_enabled = True
             settings.prometheus_port = prome_port
         else:
             msg = f"Invalid port number {prome_port_str}"
             raise ValueError(msg)
-
-    if settings.prometheus_enabled:
-        from prometheus_client import start_http_server
-
-        start_http_server(settings.prometheus_port)
 
     if settings.mcp_server_enabled:
         from langflow.api.v1 import mcp_router
@@ -535,6 +687,13 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    @app.exception_handler(DeploymentGuardError)
+    async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
+        return JSONResponse(
+            status_code=HTTPStatus.CONFLICT,
+            content={"detail": exc.detail},
+        )
 
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
@@ -560,17 +719,27 @@ def create_app():
     return app
 
 
-def setup_sentry(app: FastAPI) -> None:
+def add_sentry_middleware(app: FastAPI) -> None:
+    """Attach SentryAsgiMiddleware to the app.
+
+    Only the ASGI middleware is registered here so it is available at request time.
+    The actual ``sentry_sdk.init()`` call is deferred to the worker lifespan
+    (see ``get_lifespan``) to avoid ghost transactions across pre-fork workers.
+    """
     settings = get_settings_service().settings
     if settings.sentry_dsn:
-        import sentry_sdk
-        from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        try:
+            from sentry_sdk.integrations.asgi import SentryAsgiMiddleware
+        except ImportError:
+            logger.warning(
+                "LANGFLOW_SENTRY_DSN is set but sentry-sdk is not installed; "
+                "SentryAsgiMiddleware will not be added. Install it with: pip install sentry-sdk"
+            )
+            return
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Failed to import SentryAsgiMiddleware: {e}")
+            return
 
-        sentry_sdk.init(
-            dsn=settings.sentry_dsn,
-            traces_sample_rate=settings.sentry_traces_sample_rate,
-            profiles_sample_rate=settings.sentry_profiles_sample_rate,
-        )
         app.add_middleware(SentryAsgiMiddleware)
 
 

@@ -50,7 +50,7 @@ function ConfirmationModal({
   const [flag, setFlag] = useState(false);
 
   useEffect(() => {
-    if (open) setModalOpen(open);
+    if (open !== undefined) setModalOpen(open);
   }, [open]);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ function ConfirmationModal({
   return (
     <BaseModal
       {...props}
-      open={open}
+      open={modalOpen}
       setOpen={setModalOpen}
       onOpenAutoFocus={onOpenAutoFocus}
     >

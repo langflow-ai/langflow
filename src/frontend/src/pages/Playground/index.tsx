@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { v4 as uuid } from "uuid";
+import AlertDisplayArea from "@/alerts/displayArea";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { CustomIOModal } from "@/customization/components/custom-new-modal";
@@ -92,6 +93,9 @@ export default function PlaygroundPage() {
 
   return (
     <div className="flex h-full w-full flex-col items-center justify-center align-middle">
+      <div className="fixed bottom-4 left-4 z-[999]">
+        <AlertDisplayArea />
+      </div>
       {currentSavedFlow && (
         <CustomIOModal
           open={true}

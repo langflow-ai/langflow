@@ -1,47 +1,42 @@
+"""Knowledge Base retrieval component.
+
+Delegates to the same two abstractions ingestion uses:
+
+* ``get_embeddings`` from ``lfx.base.models.unified_models`` resolves
+  the embedding provider + API key via the user's provider settings,
+  so the component stays credential-free.
+* ``create_backend`` from ``lfx.base.knowledge_bases.backends`` opens
+  the configured vector store through the backend registry, so Chroma,
+  MongoDB, Astra, Postgres, and OpenSearch share the same retrieval path.
+"""
+
+from __future__ import annotations
+
 import json
-import os
 import uuid
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import chromadb
-import chromadb.api.client
-from cryptography.fernet import InvalidToken
-from langchain_chroma import Chroma
-from langflow.services.auth.utils import decrypt_api_key
-from langflow.services.database.models.user.crud import get_user_by_id
-from pydantic import SecretStr
-
+from lfx.base.knowledge_bases.backends import BackendType, create_backend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
-from lfx.base.models.unified_models import (
-    get_model_provider_variable_mapping,
-    get_provider_all_variables,
+from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.components.files_and_knowledge._kb_paths import (
+    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
+)
+from lfx.components.files_and_knowledge._kb_paths import (
+    load_kb_metadata,
 )
 from lfx.custom import Component
-from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-from lfx.services.deps import get_settings_service, get_variable_service, session_scope
+from lfx.services.deps import session_scope
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
 
-_KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
+if TYPE_CHECKING:
+    from pathlib import Path
 
-# Error message to raise if we're in Astra cloud environment and the component is not supported.
 astra_error_msg = "Knowledge retrieval is not supported in Astra cloud environment."
-
-
-def _get_knowledge_bases_root_path() -> Path:
-    """Lazy load the knowledge bases root path from settings."""
-    global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
-    if _KNOWLEDGE_BASES_ROOT_PATH is None:
-        settings = get_settings_service().settings
-        knowledge_directory = settings.knowledge_bases_dir
-        if not knowledge_directory:
-            msg = "Knowledge bases directory is not set in the settings."
-            raise ValueError(msg)
-        _KNOWLEDGE_BASES_ROOT_PATH = Path(knowledge_directory).expanduser()
-    return _KNOWLEDGE_BASES_ROOT_PATH
 
 
 class KnowledgeBaseComponent(Component):
@@ -59,13 +54,6 @@ class KnowledgeBaseComponent(Component):
             options=[],
             refresh_button=True,
             real_time_refresh=True,
-        ),
-        SecretStrInput(
-            name="api_key",
-            display_name="Embedding Provider API Key",
-            info="API key for the embedding provider to generate embeddings.",
-            advanced=True,
-            required=False,
         ),
         MessageTextInput(
             name="search_query",
@@ -95,6 +83,17 @@ class KnowledgeBaseComponent(Component):
             value=False,
             advanced=True,
         ),
+        MessageTextInput(
+            name="metadata_filter",
+            display_name="Metadata Filter",
+            info=(
+                "Optional JSON object of user-metadata key/value pairs. Only chunks "
+                'whose source_metadata matches every key are returned (e.g. {"tag": "invoice"} '
+                'or {"tag": ["invoice", "audit"]} for OR-of-values). Backends without '
+                "native filtering apply the match client-side after retrieval."
+            ),
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -107,16 +106,12 @@ class KnowledgeBaseComponent(Component):
     ]
 
     async def update_build_config(self, build_config, field_value, field_name=None):  # noqa: ARG002
-        # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
         if field_name == "knowledge_base":
-            # Update the knowledge base options dynamically
             build_config["knowledge_base"]["options"] = await get_knowledge_bases(
                 _get_knowledge_bases_root_path(),
-                user_id=self.user_id,  # Use the user_id from the component context
+                user_id=self.user_id,
             )
-
-            # If the selected knowledge base is not available, reset it
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 
@@ -130,194 +125,141 @@ class KnowledgeBaseComponent(Component):
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
     def _get_kb_metadata(self, kb_path: Path) -> dict:
-        """Load and process knowledge base metadata."""
-        # Check if we're in Astra cloud environment and raise an error if we are.
+        """Load the knowledge base's embedding metadata file.
+
+        The metadata file is the source of truth for which embedding
+        model was used at ingestion time — retrieval must use the same
+        model, otherwise queries are embedded into a different vector
+        space.
+
+        Legacy key material that may be present in older metadata
+        files (``api_key``) is loaded by ``load_kb_metadata`` but
+        intentionally ignored downstream; credential resolution is now
+        owned by the unified-models layer via provider settings.
+        """
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        metadata: dict[str, Any] = {}
-        metadata_file = kb_path / "embedding_metadata.json"
-        if not metadata_file.exists():
-            logger.warning(f"Embedding metadata file not found at {metadata_file}")
-            return metadata
+        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
 
+    async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002 — reserved for path-scoped fallback
+        """Return ``(backend_type, backend_config)`` for this KB.
+
+        Prefers the DB row written at create time (Phase 1.5) so the
+        configured backend (Chroma / Mongo / Astra / Postgres) is
+        honored. Falls back to Chroma for legacy KBs that only exist
+        on disk — those ingestions still work because the Chroma
+        files live next to ``embedding_metadata.json``.
+        """
         try:
-            with metadata_file.open("r", encoding="utf-8") as f:
-                metadata = json.load(f)
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {metadata_file}")
-            return {}
+            from langflow.api.utils import knowledge_base_service
 
-        # Decrypt API key if it exists
-        if "api_key" in metadata and metadata.get("api_key"):
-            settings_service = get_settings_service()
-            try:
-                decrypted_key = decrypt_api_key(metadata["api_key"], settings_service)
-                metadata["api_key"] = decrypted_key
-            except (InvalidToken, TypeError, ValueError) as e:
-                logger.error(f"Could not decrypt API key. Please provide it manually. Error: {e}")
-                metadata["api_key"] = None
-        return metadata
+            user_uuid = self._user_uuid
+            if user_uuid is None:
+                return BackendType.CHROMA.value, {}
+            record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        except Exception as exc:  # noqa: BLE001 — service hiccups fall through to Chroma
+            logger.debug("KB record lookup failed: %s", exc)
+            return BackendType.CHROMA.value, {}
 
-    async def _resolve_provider_variables(self, provider: str) -> dict[str, str]:
-        """Resolve all global variables for a provider using the async session.
+        if record is None:
+            return BackendType.CHROMA.value, {}
+        return (
+            record.backend_type or BackendType.CHROMA.value,
+            record.backend_config or {},
+        )
 
-        This avoids the run_until_complete thread dance by doing the lookup
-        directly in the already-running async context.
+    def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
+        """Resolve the ``get_embeddings``-compatible model selection from metadata.
+
+        New KBs persist the full ``model_selection`` dict at ingest
+        time so we can pass it straight through. Older KBs — and KBs
+        whose persisted ``model_selection`` was serialized without the
+        nested ``metadata`` block (e.g. third-party API clients, or
+        older frontend builds that dropped unknown fields) — fall
+        through to the catalog lookup.
+
+        The catalog lookup is also used as a *hydration* step when
+        ``model_selection`` is present but missing
+        ``metadata.embedding_class`` / ``metadata.param_mapping``, which
+        ``get_embeddings`` needs to instantiate the provider SDK.
+        Without this hydration the retrieval would fail with
+        ``No embedding class defined in metadata for <model>`` even
+        though the model is fully supported by the current runtime.
         """
-        result: dict[str, str] = {}
-        provider_vars = get_provider_all_variables(provider)
-        user_id = self._user_uuid
-        if not provider_vars or not user_id:
-            return result
+        model_selection = metadata.get("model_selection")
+        if model_selection:
+            selection_list = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
+            return [self._hydrate_model_metadata(entry) for entry in selection_list]
 
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return result
+        embedding_model_name = metadata.get("embedding_model")
+        embedding_provider = metadata.get("embedding_provider", "Unknown")
+        if not embedding_model_name:
+            msg = (
+                f"Knowledge base '{self.knowledge_base}' has no embedding model recorded; "
+                "re-create it with a supported embedding model."
+            )
+            raise ValueError(msg)
 
-            for var_info in provider_vars:
-                var_key = var_info.get("variable_key")
-                if not var_key:
-                    continue
-                try:
-                    value = await variable_service.get_variable(
-                        user_id=user_id,
-                        name=var_key,
-                        field="",
-                        session=session,
-                    )
-                    if value and str(value).strip():
-                        result[var_key] = str(value)
-                except (ValueError, KeyError, AttributeError) as e:
-                    logger.debug(f"Variable service lookup failed for '{var_key}', falling back to environment: {e}")
-                    env_value = os.environ.get(var_key)
-                    if env_value and env_value.strip():
-                        result[var_key] = env_value
-        return result
+        match = self._find_catalog_entry(embedding_model_name)
+        if match is None:
+            msg = (
+                f"Embedding model '{embedding_model_name}' (provider '{embedding_provider}') "
+                "recorded for this knowledge base is no longer available in the model registry. "
+                "Please re-create the knowledge base with a supported embedding model."
+            )
+            raise ValueError(msg)
+        return [match]
 
-    async def _resolve_api_key(self, provider: str) -> str | None:
-        """Resolve the API key for the given provider.
+    def _hydrate_model_metadata(self, entry: dict[str, Any]) -> dict[str, Any]:
+        """Fill in ``metadata.embedding_class`` / ``param_mapping`` if missing.
 
-        Priority: user override > metadata (decrypted) > global variable.
+        Preserves existing keys — the catalog is only used to fill
+        gaps. Returns a shallow copy so the persisted metadata on disk
+        is not mutated in place.
         """
-        provider_variable_map = get_model_provider_variable_mapping()
-        variable_name = provider_variable_map.get(provider)
-        user_id = self._user_uuid
-        if not variable_name or not user_id:
-            return None
+        entry_metadata = entry.get("metadata") or {}
+        has_class = bool(entry_metadata.get("embedding_class"))
+        has_mapping = bool(entry_metadata.get("param_mapping"))
+        if has_class and has_mapping:
+            return entry
 
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return None
-            try:
-                return await variable_service.get_variable(
-                    user_id=user_id,
-                    name=variable_name,
-                    field="",
-                    session=session,
-                )
-            except (ValueError, KeyError, AttributeError):
-                return None
+        model_name = entry.get("name")
+        if not model_name:
+            return entry
 
-    def _build_embeddings(self, metadata: dict, *, api_key: str | None = None, provider_vars: dict | None = None):
-        """Build embedding model from metadata.
+        catalog_entry = self._find_catalog_entry(model_name)
+        if catalog_entry is None:
+            return entry
 
-        Args:
-            metadata: The knowledge base embedding metadata.
-            api_key: Pre-resolved API key (user override > metadata > global).
-            provider_vars: Pre-resolved provider variables (for Ollama/WatsonX).
-        """
-        provider = metadata.get("embedding_provider")
-        model = metadata.get("embedding_model")
-        chunk_size = metadata.get("chunk_size")
+        catalog_metadata = catalog_entry.get("metadata") or {}
+        merged_metadata = {**catalog_metadata, **entry_metadata}
+        return {**entry, "metadata": merged_metadata}
 
-        # Handle various providers
-        if provider == "OpenAI":
-            from langchain_openai import OpenAIEmbeddings
-
-            if not api_key:
-                msg = (
-                    "OpenAI API key is required. Provide it in the component's advanced settings"
-                    " or configure it globally."
-                )
-                raise ValueError(msg)
-            openai_kwargs: dict = {"model": model, "api_key": api_key}
-            if chunk_size is not None:
-                openai_kwargs["chunk_size"] = chunk_size
-            return OpenAIEmbeddings(**openai_kwargs)
-        if provider == "HuggingFace":
-            from langchain_huggingface import HuggingFaceEmbeddings
-
-            return HuggingFaceEmbeddings(
-                model=model,
-            )
-        if provider == "Cohere":
-            from langchain_cohere import CohereEmbeddings
-
-            if not api_key:
-                msg = "Cohere API key is required when using Cohere provider"
-                raise ValueError(msg)
-            return CohereEmbeddings(
-                model=model,
-                cohere_api_key=api_key,
-            )
-        if provider == "Google Generative AI":
-            from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-            if not api_key:
-                msg = (
-                    "Google API key is required. Provide it in the component's advanced settings"
-                    " or configure it globally."
-                )
-                raise ValueError(msg)
-            return GoogleGenerativeAIEmbeddings(
-                model=model,
-                google_api_key=api_key,
-            )
-        if provider == "Ollama":
-            from langchain_ollama import OllamaEmbeddings
-
-            all_vars = provider_vars or {}
-            base_url = all_vars.get("OLLAMA_BASE_URL")
-            kwargs: dict = {"model": model}
-            if base_url:
-                kwargs["base_url"] = base_url
-            return OllamaEmbeddings(**kwargs)
-        if provider == "IBM WatsonX":
-            from langchain_ibm import WatsonxEmbeddings
-
-            all_vars = provider_vars or {}
-            watsonx_apikey = api_key or all_vars.get("WATSONX_APIKEY")
-            watsonx_project_id = all_vars.get("WATSONX_PROJECT_ID")
-            watsonx_url = all_vars.get("WATSONX_URL")
-            if not watsonx_apikey:
-                msg = (
-                    "IBM WatsonX API key is required. Provide it in the component's advanced settings"
-                    " or configure it globally."
-                )
-                raise ValueError(msg)
-            kwargs = {"model_id": model, "apikey": watsonx_apikey}
-            if watsonx_project_id:
-                kwargs["project_id"] = watsonx_project_id
-            if watsonx_url:
-                kwargs["url"] = watsonx_url
-            return WatsonxEmbeddings(**kwargs)
-        if provider == "Custom":
-            # For custom embedding models, we would need additional configuration
-            msg = "Custom embedding models not yet supported"
-            raise NotImplementedError(msg)
-        msg = f"Embedding provider '{provider}' is not supported for retrieval."
-        raise NotImplementedError(msg)
+    def _find_catalog_entry(self, model_name: str) -> dict[str, Any] | None:
+        """Look up an embedding model by name in the unified-models catalog."""
+        options = get_embedding_model_options(user_id=self.user_id)
+        return next((o for o in options if o.get("name") == model_name), None)
 
     async def retrieve_data(self) -> DataFrame:
-        """Retrieve data from the selected knowledge base by reading the Chroma collection.
+        """Retrieve data from the selected knowledge base.
 
-        Returns:
-            A DataFrame containing the data rows from the knowledge base.
+        Shape of the call:
+
+        1. Resolve the KB directory on disk (scoped to the current user).
+        2. Read ``embedding_metadata.json`` to learn which embedding
+           model was used at ingest time.
+        3. Hand that model_selection to ``get_embeddings`` so the
+           unified-models layer instantiates the right provider + pulls
+           the API key from the user's provider settings.
+        4. Open the configured vector-store backend and run the query.
         """
-        # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        # Get the current user
+
+        # Lazy import: langflow's user/DB models aren't part of lfx's
+        # standalone install, so ``lfx run <starter>.json`` can't
+        # resolve this symbol at module import time. Deferring to use
+        # keeps the component importable in both environments.
+        from langflow.services.database.models.user.crud import get_user_by_id
+
         async with session_scope() as db:
             if not self.user_id:
                 msg = "User ID is required for fetching Knowledge Base data."
@@ -334,78 +276,135 @@ class KnowledgeBaseComponent(Component):
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
-        # Resolve API key: user override > metadata (decrypted) > global variable
-        provider = metadata.get("embedding_provider")
-        runtime_api_key = self.api_key.get_secret_value() if isinstance(self.api_key, SecretStr) else self.api_key
-        api_key = runtime_api_key or metadata.get("api_key")
-        if not api_key and provider:
-            api_key = await self._resolve_api_key(provider)
-
-        # Resolve provider-specific variables (e.g. base_url for Ollama, project_id for WatsonX)
-        provider_vars: dict[str, str] = {}
-        if provider in {"Ollama", "IBM WatsonX"}:
-            provider_vars = await self._resolve_provider_variables(provider)
-
-        # Build the embedder for the knowledge base
-        embedding_function = self._build_embeddings(metadata, api_key=api_key, provider_vars=provider_vars)
-
-        # Clear Chroma's singleton client cache to avoid "different settings"
-        # conflicts when ingestion and retrieval run in the same process.
-        chromadb.api.client.SharedSystemClient.clear_system_cache()
-        chroma = Chroma(
-            persist_directory=str(kb_path),
-            embedding_function=embedding_function,
-            collection_name=self.knowledge_base,
+        # Unified-models owns credential resolution: the API key, base
+        # URL, and any provider-specific variables come from the
+        # user's provider settings, so retrieval uses the exact same
+        # code path as ingestion.
+        model_selection = self._resolve_model_selection(metadata)
+        chunk_size = metadata.get("chunk_size")
+        embedding_function = get_embeddings(
+            model=model_selection,
+            user_id=self.user_id,
+            chunk_size=chunk_size,
         )
 
-        # If a search query is provided, perform a similarity search
-        if self.search_query:
-            # Use the search query to perform a similarity search
-            logger.info("Performing similarity search")
-            results = chroma.similarity_search_with_score(
+        backend_type, backend_config = await self._resolve_backend(kb_user=kb_user)
+        backend = create_backend(
+            backend_type,
+            kb_name=self.knowledge_base,
+            kb_path=kb_path,
+            backend_config=backend_config,
+            embedding_function=embedding_function,
+            # Forward for variable_service-based credential resolution on
+            # remote backends. Chroma ignores this.
+            user_id=self.user_id,
+        )
+        try:
+            user_metadata_filter = _parse_metadata_filter(getattr(self, "metadata_filter", None))
+            use_scores = bool(self.search_query)
+            # similarity_search runs first without a backend filter — every
+            # supported backend has a different DSL, so a uniform Python
+            # post-filter on ``source_metadata`` keeps behaviour consistent
+            # while we wait on per-backend translators (P3 work).
+            #
+            # Retrieve a wider window when a filter is active so the post-
+            # filter doesn't starve the result set; the original ``top_k``
+            # is enforced after filtering.
+            search_k = self.top_k * 4 if user_metadata_filter else self.top_k
+            results = await backend.similarity_search(
                 query=self.search_query or "",
-                k=self.top_k,
+                k=search_k,
+                with_scores=use_scores,
             )
+            if user_metadata_filter:
+                results = [
+                    (doc, score) for doc, score in results if _chunk_matches_filter(doc.metadata, user_metadata_filter)
+                ]
+                results = results[: self.top_k]
+
+            # Build an id → embedding map via the backend-agnostic iterator
+            # rather than reaching into backend-specific private APIs.
+            # Scoped to the KB's doc ids so the pass stays bounded.
+            id_to_embedding: dict[str, list[float]] = {}
+            if self.include_embeddings and results:
+                doc_ids = {doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")}
+                if doc_ids:
+                    async for batch in backend.iter_documents(include_embeddings=True):
+                        for entry in batch:
+                            doc_id = entry.metadata.get("_id")
+                            if doc_id in doc_ids and entry.embedding is not None:
+                                id_to_embedding[doc_id] = entry.embedding
+                        if len(id_to_embedding) == len(doc_ids):
+                            break
+
+            data_list: list[Data] = []
+            for doc, score in results:
+                kwargs: dict[str, Any] = {"content": doc.page_content}
+                if use_scores:
+                    kwargs["_score"] = -1 * score
+                if self.include_metadata:
+                    kwargs.update(doc.metadata)
+                if self.include_embeddings:
+                    kwargs["_embeddings"] = id_to_embedding.get(doc.metadata.get("_id"))
+                data_list.append(Data(**kwargs))
+
+            return DataFrame(data=data_list)
+        finally:
+            await backend.teardown()
+
+
+def _parse_metadata_filter(raw: str | None) -> dict[str, list[str]]:
+    """Decode the ``metadata_filter`` input into a {key: [values]} map.
+
+    Empty or malformed input maps to an empty filter so retrieval falls back
+    to the unfiltered path. We intentionally swallow JSON errors here rather
+    than raise: surfacing component-config errors at the canvas node would
+    break a flow run for what is meant to be an optional refinement.
+    """
+    if not raw:
+        return {}
+    text = raw.strip() if isinstance(raw, str) else raw
+    if not text:
+        return {}
+    try:
+        decoded = json.loads(text)
+    except (TypeError, json.JSONDecodeError):
+        logger.warning("KnowledgeBaseComponent: metadata_filter is not valid JSON; ignoring filter.")
+        return {}
+    if not isinstance(decoded, dict):
+        logger.warning("KnowledgeBaseComponent: metadata_filter must be a JSON object; ignoring filter.")
+        return {}
+    result: dict[str, list[str]] = {}
+    for key, value in decoded.items():
+        if not isinstance(key, str):
+            continue
+        if isinstance(value, list):
+            result[key] = [str(entry) for entry in value]
         else:
-            results = chroma.similarity_search(
-                query=self.search_query or "",
-                k=self.top_k,
-            )
+            result[key] = [str(value)]
+    return result
 
-            # For each result, make it a tuple to match the expected output format
-            results = [(doc, 0) for doc in results]  # Assign a dummy score of 0
 
-        # If include_embeddings is enabled, get embeddings for the results
-        id_to_embedding = {}
-        if self.include_embeddings and results:
-            doc_ids = [doc[0].metadata.get("_id") for doc in results if doc[0].metadata.get("_id")]
-
-            # Only proceed if we have valid document IDs
-            if doc_ids:
-                # Access underlying collection to get embeddings
-                collection = chroma._collection  # noqa: SLF001
-                embeddings_result = collection.get(where={"_id": {"$in": doc_ids}}, include=["metadatas", "embeddings"])
-
-                # Create a mapping from document ID to embedding
-                for i, metadata in enumerate(embeddings_result.get("metadatas", [])):
-                    if metadata and "_id" in metadata:
-                        id_to_embedding[metadata["_id"]] = embeddings_result["embeddings"][i]
-
-        # Build output data based on include_metadata setting
-        data_list = []
-        for doc in results:
-            kwargs = {
-                "content": doc[0].page_content,
-            }
-            if self.search_query:
-                kwargs["_score"] = -1 * doc[1]
-            if self.include_metadata:
-                # Include all metadata, embeddings, and content
-                kwargs.update(doc[0].metadata)
-            if self.include_embeddings:
-                kwargs["_embeddings"] = id_to_embedding.get(doc[0].metadata.get("_id"))
-
-            data_list.append(Data(**kwargs))
-
-        # Return the DataFrame containing the data
-        return DataFrame(data=data_list)
+def _chunk_matches_filter(metadata: dict[str, Any] | None, filt: dict[str, list[str]]) -> bool:
+    """AND across keys, OR within key values, mirroring the chunks endpoint."""
+    if not filt:
+        return True
+    if not metadata:
+        return False
+    raw = metadata.get("source_metadata")
+    if not raw:
+        return False
+    try:
+        stored = json.loads(raw) if isinstance(raw, str) else raw
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(stored, dict):
+        return False
+    for key, expected_values in filt.items():
+        actual = stored.get(key)
+        if actual is None:
+            return False
+        actual_set = {str(entry) for entry in actual} if isinstance(actual, list) else {str(actual)}
+        if not actual_set & set(expected_values):
+            return False
+    return True

@@ -4,10 +4,11 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
 } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
@@ -36,6 +37,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -92,9 +95,7 @@ test(
         timeout: 5000,
       });
 
-      await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      await ensureFileSelected(page);
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -128,16 +129,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Test checkbox
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${jsonFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 
@@ -238,10 +239,10 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       await page.getByTestId("select-files-modal-button").click();
 
@@ -328,7 +329,19 @@ test(
         return data;
       }, newTxtFile);
 
-      // Trigger drag events
+      // Trigger drag events. We wait for the POST /files response so that
+      // the optimistic "temp" cache entry has been replaced with the real
+      // server path before we close the modal. On slower runners (Windows
+      // CI), closing the modal before the cache settles causes the new
+      // file's server path to be missing from useGetFilesV2 when the
+      // parent node re-renders, so the file never appears in the node.
+      const uploadResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v2/files") &&
+          response.request().method() === "POST" &&
+          response.status() === 201,
+        { timeout: 30000 },
+      );
       await page.dispatchEvent(
         '[data-testid="drag-files-component"]',
         "dragover",
@@ -339,13 +352,18 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
+      await uploadResponsePromise;
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 10000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
+
+      // Wait for any in-flight files refetch triggered by the upload's
+      // onSettled invalidate before closing the modal.
+      await page.waitForLoadState("networkidle");
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
@@ -354,7 +372,7 @@ test(
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 10000,
+        timeout: 30000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -434,6 +452,8 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("blank-flow").click();
+
+    await disableInspectPanel(page);
 
     await addLegacyComponents(page);
 
@@ -815,18 +835,20 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
+    await disableInspectPanel(page);
+
     await addLegacyComponents(page);
 
     // Add Read File Component
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Read File");
     await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     // Get flow ID from URL
     const url = page.url();
-    const flowId = url.split("/").slice(-1)[0];
+    const _flowId = url.split("/").slice(-1)[0];
 
     await page
       .getByTestId("files_and_knowledgeRead File")
@@ -835,15 +857,12 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await openAdvancedOptions(page);
-
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showfile_path").click();
-
-    await closeAdvancedOptions(page);
-
     await adjustScreenView(page);
+    await enableInspectPanel(page);
+    await page.getByTestId("title-Read File").click();
+    await page.getByTestId("edit-fields-button").click();
+    await page.getByTestId("showfile_path").click();
+    await page.getByTestId("edit-fields-button").click();
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();
@@ -870,12 +889,14 @@ test(
     await expect(page.getByText("Files uploaded successfully")).toBeVisible();
     await page.getByTestId("select-files-modal-button").click();
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await page.getByTestId(`remove-file-button-${file2}`).click();
 
     await page.getByTestId("dropdown-output-file").click();
-    await page.getByTestId("dropdown-item-output-file-file path").click();
+    await page
+      .getByTestId("dropdown-item-output-file-file path")
+      .click({ force: true });
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,
@@ -898,7 +919,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -928,7 +949,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -954,7 +975,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chat Output");
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
     await page
       .getByTestId("input_outputChat Output")

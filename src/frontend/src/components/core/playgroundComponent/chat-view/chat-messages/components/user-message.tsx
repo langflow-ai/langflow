@@ -1,6 +1,6 @@
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import { EMPTY_INPUT_SEND_MESSAGE } from "@/constants/constants";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import useAlertStore from "@/stores/alertStore";
@@ -14,6 +14,7 @@ import { EditMessageButton } from "./message-options";
 
 export const UserMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
+    const { t } = useTranslation();
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const flow_id = useFlowsManagerStore((state) => state.currentFlowId);
@@ -139,6 +140,9 @@ export const UserMessage = memo(
 
             {/* Content */}
             <div className="flex w-[94%] flex-col gap-2">
+              <span className="text-sm font-medium text-foreground">
+                {chat.sender_name ?? "User"}
+              </span>
               <div className="form-modal-chat-text-position flex-grow">
                 <div className="flex w-full flex-col">
                   {editMessage ? (
@@ -159,7 +163,7 @@ export const UserMessage = memo(
                           )}
                           data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                         >
-                          {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                          {isEmpty ? t("input.noInputMessage") : decodedMessage}
                           {editedFlag}
                         </div>
                       )}

@@ -20,7 +20,7 @@ from langflow.api.v1.mcp_utils import (
     handle_read_resource,
 )
 
-router = APIRouter(prefix="/mcp", tags=["mcp"])
+router = APIRouter(prefix="/mcp", tags=["mcp"], include_in_schema=False)
 
 server = Server("langflow-mcp-server")
 

@@ -1,0 +1,111 @@
+name: GP Upload Strings
+
+on:
+  push:
+    branches:
+      - "release-*"
+    paths:
+      - "src/frontend/src/locales/en.json"
+      - "src/backend/base/langflow/locales/en.json"
+  workflow_dispatch:
+
+jobs:
+  upload-frontend:
+    runs-on: ubuntu-latest
+    name: Upload frontend strings to GP
+    environment: GP-test
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      contains(toJSON(github.event.commits.*.modified), 'src/frontend/src/locales/en.json')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if this is the latest release branch
+        id: check-branch
+        run: |
+          LATEST=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+            | awk '{print $2}' \
+            | sed 's|refs/heads/||' \
+            | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n 1)
+          CURRENT="${{ github.ref_name }}"
+          if [ "$CURRENT" != "$LATEST" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping upload — $CURRENT is not the latest release branch ($LATEST)"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.check-branch.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.check-branch.outputs.skip != 'true'
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Upload strings to GP
+        if: steps.check-branch.outputs.skip != 'true'
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BUNDLE: ${{ vars.GP_BUNDLE }}
+        run: python upload.py --target frontend --source ../../src/frontend/src/locales/en.json
+
+  upload-backend:
+    runs-on: ubuntu-latest
+    name: Upload backend strings to GP
+    environment: GP-test
+    if: >-
+      github.actor != 'github-actions[bot]' && (
+        github.event_name == 'workflow_dispatch' ||
+        contains(toJSON(github.event.commits.*.modified), 'src/backend/base/langflow/locales/en.json')
+      )
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if this is the latest release branch
+        id: check-branch
+        run: |
+          LATEST=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+            | awk '{print $2}' \
+            | sed 's|refs/heads/||' \
+            | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n 1)
+          CURRENT="${{ github.ref_name }}"
+          if [ "$CURRENT" != "$LATEST" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping upload — $CURRENT is not the latest release branch ($LATEST)"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.check-branch.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: steps.check-branch.outputs.skip != 'true'
+        run: pip install -r scripts/gp/requirements.txt
+
+      - name: Upload strings to GP
+        if: steps.check-branch.outputs.skip != 'true'
+        working-directory: scripts/gp
+        env:
+          GP_ADMIN_USER_ID: ${{ secrets.GP_ADMIN_USER_ID }}
+          GP_ADMIN_PASSWORD: ${{ secrets.GP_ADMIN_PASSWORD }}
+          GP_INSTANCE: ${{ vars.GP_INSTANCE }}
+          GP_BACKEND_BUNDLE: ${{ vars.GP_BACKEND_BUNDLE }}
+        run: python upload.py --target backend

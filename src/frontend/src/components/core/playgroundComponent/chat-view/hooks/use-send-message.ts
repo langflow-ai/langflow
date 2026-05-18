@@ -5,7 +5,10 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { useGetFlowId } from "../../hooks/use-get-flow-id";
-import { addUserMessage } from "../utils/message-utils";
+import {
+  addUserMessage,
+  removePlaceholderUserMessage,
+} from "../utils/message-utils";
 
 interface UseSendMessageProps {
   sessionId?: string;
@@ -62,6 +65,7 @@ export const useSendMessage = ({ sessionId }: UseSendMessageProps = {}) => {
         })
         .catch((err) => {
           console.error("[useSendMessage] buildFlow error", err);
+          removePlaceholderUserMessage(actualSession, currentFlowId);
           throw err;
         });
     },

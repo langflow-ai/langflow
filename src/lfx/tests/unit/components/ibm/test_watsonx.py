@@ -4,6 +4,14 @@ import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
+try:
+    import langchain_ibm  # noqa: F401
+except ImportError:
+    # langchain-ibm is gated to python_version<'3.14' in pyproject.toml because
+    # upstream pins exclude 3.14. Skip these tests on 3.14 until upstream adapts.
+    pytest.skip("langchain-ibm not available", allow_module_level=True)
+
 from lfx.schema.dotdict import dotdict
 
 # Mock the langchain_ibm module before importing the component
@@ -66,9 +74,19 @@ class TestWatsonxAIComponent:
         """Test that API URLs are defined."""
         from lfx.components.ibm.watsonx import WatsonxAIComponent
 
+        expected_urls = [
+            "https://us-south.ml.cloud.ibm.com",
+            "https://eu-de.ml.cloud.ibm.com",
+            "https://eu-gb.ml.cloud.ibm.com",
+            "https://au-syd.ml.cloud.ibm.com",
+            "https://jp-tok.ml.cloud.ibm.com",
+            "https://ca-tor.ml.cloud.ibm.com",
+            "https://ap-south-1.aws.wxai.ibm.com",
+        ]
         assert len(WatsonxAIComponent._urls) > 0
-        assert "https://us-south.ml.cloud.ibm.com" in WatsonxAIComponent._urls
-        assert "https://eu-de.ml.cloud.ibm.com" in WatsonxAIComponent._urls
+
+        for url in expected_urls:
+            assert url in WatsonxAIComponent._urls, f"Expected URL {url} not found in WatsonxAIComponent._urls"
 
     def test_inputs_defined(self, wx_component):
         """Test that all required inputs are defined."""
@@ -221,10 +239,15 @@ class TestWatsonxAIComponent:
         assert call_kwargs["streaming"] is True
         assert call_kwargs["params"]["stop"] == ["END"]
 
-    @patch("lfx.components.ibm.watsonx.SecretStr", MockSecretStr)
     @patch("lfx.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_secret_str_api_key(self, mock_chatwatsonx, wx_component):
-        """Test that SecretStr API key is properly converted to string."""
+        """Test that SecretStr API key is properly converted to string.
+
+        ``WatsonxAIComponent.build_model`` duck-types ``get_secret_value`` so it
+        unwraps any SecretStr-shaped object (pydantic v1, pydantic v2, or this
+        in-test ``MockSecretStr``) without needing the symbol patched on the
+        module.
+        """
         wx_component.api_key = MockSecretStr("secret-api-key")
         wx_component.base_url = "https://us-south.ml.cloud.ibm.com"
         wx_component.project_id = "test-project-id"

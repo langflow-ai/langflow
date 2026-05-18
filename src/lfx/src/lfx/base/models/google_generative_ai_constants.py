@@ -65,33 +65,40 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         tool_calling=True,
         deprecated=True,
     ),
-    # GEMINI 3.0 (preview)
+    # GEMINI 3 (preview)
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3.1-pro-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,  # TODO: When Google GenAI has been upgraded, tool calling should be enabled for Gemini 3
-        preview=True,
-    ),
-    create_model_metadata(
-        provider="Google Generative AI",
-        name="gemini-3-pro-preview",
-        icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3-flash-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
+        preview=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-3.1-flash-lite-preview",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3-pro-image-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=False,
+        tool_calling=True,
+        preview=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-3.1-flash-image-preview",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
         preview=True,
     ),
 ]
@@ -100,17 +107,28 @@ GOOGLE_GENERATIVE_AI_MODELS = [metadata["name"] for metadata in GOOGLE_GENERATIV
 
 # Google Generative AI Embedding Models
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS = [
+    "models/gemini-embedding-001",
     "models/text-embedding-004",
     "models/embedding-001",
 ]
 
-# Embedding models as detailed metadata
+# Embedding models as detailed metadata.
+# `text-embedding-004` and `embedding-001` are marked deprecated because they
+# are no longer served by the Google Generative AI v1beta endpoint used by KB
+# ingestion (404). `gemini-embedding-001` is the current supported model.
+_GOOGLE_DEPRECATED_EMBEDDING_MODELS = {
+    "models/text-embedding-004",
+    "models/embedding-001",
+}
+
 GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED = [
     create_model_metadata(
         provider="Google Generative AI",
         name=name,
         icon="GoogleGenerativeAI",
         model_type="embeddings",
+        default=True,
+        deprecated=name in _GOOGLE_DEPRECATED_EMBEDDING_MODELS,
     )
     for name in GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS
 ]

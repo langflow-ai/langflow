@@ -1,4 +1,4 @@
-from langchain.chains import LLMMathChain
+from langchain_classic.chains import LLMMathChain
 
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import HandleInput, MultilineInput

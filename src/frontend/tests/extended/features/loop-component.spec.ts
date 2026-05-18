@@ -2,7 +2,6 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -182,6 +181,11 @@ test(
 
     await page.getByTestId("list_item_append_or_update").click();
 
+    // Wait for keypair fields to render after update_build_config round-trip
+    await page.waitForSelector('[data-testid="keypair0"]', {
+      timeout: 30000,
+    });
+
     await page.getByTestId("keypair0").fill("text");
     await page.getByTestId("keypair100").fill("modified_value");
 
@@ -215,19 +219,14 @@ test(
     await page.getByTestId("title-Chat Output").click();
     await page.keyboard.press(`ControlOrMeta+.`);
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
 
     // Verify output
-    await page.waitForSelector(
-      '[data-testid="output-inspection-output message-chatoutput"]',
-      {
-        timeout: 1000,
-      },
-    );
-    await page
+    const chatOutputInspectionButton = page
       .getByTestId("output-inspection-output message-chatoutput")
-      .first()
-      .click();
+      .first();
+    await expect(chatOutputInspectionButton).toBeVisible({ timeout: 30000 });
+    await expect(chatOutputInspectionButton).toBeEnabled({ timeout: 60000 });
+    await chatOutputInspectionButton.click();
 
     const output = await page.getByPlaceholder("Empty").textContent();
     expect(output).toContain("modified_value");

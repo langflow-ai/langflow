@@ -10,7 +10,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -50,6 +50,12 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 # Copy sdk metadata files since it's a workspace member
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.
+COPY ./src/bundles /app/src/bundles
 
 # Install the project's dependencies using the lockfile and settings
 # We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
@@ -69,15 +75,34 @@ RUN npm install \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app/src/backend/base
+# ``--extra duckduckgo`` pulls ``ddgs`` (the only dep the bundle adds on
+# top of langflow-base[complete]) at the version recorded in
+# ``src/backend/base/uv.lock``.  Routing the dep through the locked sync
+# instead of an ad-hoc ``uv pip install ddgs`` keeps the base image
+# reproducible across builds and prevents future ``ddgs`` releases from
+# silently drifting from the tested lock state.
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-dev --no-editable --extra postgresql
+    uv sync --frozen --no-dev --no-editable --extra postgresql --extra duckduckgo
+
+# Pilot Bundle re-attach (LE-1023): ``langflow-base`` no longer pulls in
+# DuckDuckGo (it moved to the standalone ``lfx-duckduckgo`` distribution
+# whose pyproject lives at ``src/bundles/duckduckgo``).  The base image
+# was the user-facing path for that component before the move; install
+# the extracted bundle so the runtime image keeps the same component
+# set.  ``--no-deps`` is intentional: the bundle's runtime deps (lfx,
+# langchain-community, ddgs) are now all in the langflow-base lockfile
+# above, so installing them here would yank duplicates that fight the
+# locked versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/duckduckgo
 
 ################################
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 
 RUN apt-get update \
@@ -101,8 +126,6 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-RUN /app/.venv/bin/pip install --upgrade playwright \
-    && /app/.venv/bin/playwright install
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

@@ -1,0 +1,54 @@
+# langflow-validate.yml
+#
+# PURPOSE
+#   Block a PR if any changed flow JSON fails lfx validate.
+#   No secrets required -- this is a pure static analysis step.
+#
+# USAGE
+#   Copy to .github/workflows/langflow-validate.yml in your repo.
+#   Adjust `paths` to match where you store your flow files.
+#
+# CUSTOMISATION
+#   --level 4   Full validation (structure + components + edge types + required inputs).
+#               Lower to 1-3 to skip progressively deeper checks.
+#   --skip-*    Use --skip-components, --skip-edge-types, or --skip-required-inputs
+#               to suppress individual check categories.
+
+name: Validate Langflow Flows
+
+on:
+  pull_request:
+    paths:
+      - "flows/**/*.json"
+  # Allow manual runs from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: lfx validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # ------------------------------------------------------------------ #
+      # Install lfx.  Replace with your published package name / version.  #
+      # ------------------------------------------------------------------ #
+      - name: Install lfx
+        run: pip install lfx
+
+      - name: Validate flows
+        run: |
+          lfx validate flows/ \
+            --level 4 \
+            --format text
+        # Exit code 1  => validation errors found  (blocks merge)
+        # Exit code 2  => a flow file was not found

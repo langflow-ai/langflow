@@ -670,11 +670,21 @@ class TestStarterProjects:
             pytest.skip("Simple Agent.json not found")
         return json.loads(path.read_text(encoding="utf-8"))
 
-    def test_basic_prompting_includes_anthropic(self, basic_prompting_flow):
-        """Basic Prompting (Anthropic pre-selected) should need lfx + anthropic deps."""
+    def test_basic_prompting_includes_lfx(self, basic_prompting_flow):
+        """Basic Prompting (ships with no pre-selected model) should still need lfx.
+
+        Starter projects intentionally ship with an empty ``ModelInput`` value
+        so the importing user's configured provider is used.  As a result no
+        provider-specific package (``langchain-anthropic``/``langchain-openai``/
+        etc.) is baked into the requirements until the user actually picks a
+        provider — see ``test_basic_prompting_with_openai_provider`` and
+        ``test_basic_prompting_with_anthropic_provider`` for the provider-
+        selection paths.
+        """
         result = generate_requirements_from_flow(basic_prompting_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-anthropic" in result
+        assert "langchain-anthropic" not in result
+        assert "langchain-openai" not in result
 
     def test_basic_prompting_with_openai_provider(self, basic_prompting_flow):
         """When OpenAI is selected as provider, langchain-openai should be added."""
@@ -707,19 +717,35 @@ class TestStarterProjects:
         assert "langchain-anthropic" in result
 
     def test_simple_agent_has_community(self, simple_agent_flow):
-        """Simple Agent should require langchain-community for its tools."""
+        """Simple Agent's URLComponent imports langchain_community.
+
+        When lfx provides langchain-community transitively (e.g. via
+        OpenDsStar in some environments) it is filtered out of generated
+        requirements as already-provided; otherwise it should appear.
+        """
+        from lfx.utils.flow_requirements import _get_lfx_provided_imports
+
         result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-community" in result
+        if "langchain_community" in _get_lfx_provided_imports():
+            assert "langchain-community" not in result
+        else:
+            assert "langchain-community" in result
 
     def test_basic_prompting_from_file(self):
-        """Test the file-based API."""
+        """Test the file-based API.
+
+        Starter projects ship with an empty ``ModelInput`` value, so the
+        generated requirements should include ``lfx`` but none of the
+        provider-specific packages until a provider is selected.
+        """
         path = STARTER_PROJECTS_DIR / "Basic Prompting.json"
         if not path.exists():
             pytest.skip("Basic Prompting.json not found")
         result = generate_requirements_from_file(path, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-anthropic" in result
+        assert "langchain-anthropic" not in result
+        assert "langchain-openai" not in result
 
     def test_lfx_nightly_package_name(self, basic_prompting_flow):
         """Test specifying lfx-nightly as the package name."""

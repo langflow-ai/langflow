@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ export function SidebarFilterComponent({
   description: string;
   resetFilters: () => void;
 }) {
+  const { t } = useTranslation();
   const tooltips = description.split("\n");
   const plural = tooltips.length > 1 ? "s" : "";
   return (
@@ -33,7 +35,7 @@ export function SidebarFilterComponent({
       <ShadTooltip
         side="right"
         styleClasses="max-w-full"
-        content="Remove filter"
+        content={t("sidebar.removeFilter")}
       >
         <Button
           unstyled

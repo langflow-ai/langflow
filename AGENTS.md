@@ -155,6 +155,7 @@ Required fixtures: `component_class`, `default_kwargs`, `file_names_mapping`
 - Database tests may fail in batch but pass individually
 - Pre-commit hooks require `uv run git commit`
 - Always use `uv run` when running Python commands
+- When running tests inside a sub-package (e.g. `langflow-base`, `lfx`), sync that package's dev group first: `uv sync --group dev --package langflow-base`. The default `uv sync` only resolves the top-level workspace and may leave dev-only test deps (e.g. `fakeredis`) uninstalled.
 
 ### Graph Testing Pattern
 
@@ -178,11 +179,13 @@ This updates: `pyproject.toml`, `src/backend/base/pyproject.toml`, `src/frontend
 
 ## Pre-commit Workflow
 
-1. Run `make format_backend` (FIRST - saves time on lint fixes)
-2. Run `make format_frontend`
-3. Run `make lint`
-4. Run `make unit_tests`
-5. Commit changes (use `uv run git commit` if pre-commit hooks are enabled)
+Pre-commit hooks run ruff and biome automatically on `git commit`, so manual
+formatting is not required. To avoid an extra commit cycle when you have many
+changes:
+
+1. Run `make format_backend` once before staging - fixes most ruff issues up front.
+2. Run `uv run git commit` (the `uv run` ensures pre-commit finds the right Python).
+3. If you touched backend code, run `make unit_tests` locally for faster feedback than CI.
 
 ## Pull Request Guidelines
 
