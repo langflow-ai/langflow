@@ -11,7 +11,7 @@ from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status
-from .provider_queries import MODELS_DETAILED, model_provider_metadata
+from .provider_queries import get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -56,9 +56,10 @@ def get_unified_models_detailed(
     if include_deprecated is None:
         include_deprecated = False
 
-    # Gather all models from imported *_MODELS_DETAILED lists
+    # Gather all models from the active catalog (static lists + any
+    # models.dev override that may have been installed at startup).
     all_models: list[dict] = []
-    for models_detailed in MODELS_DETAILED:
+    for models_detailed in get_models_detailed():
         all_models.extend(models_detailed)
 
     # Apply filters
