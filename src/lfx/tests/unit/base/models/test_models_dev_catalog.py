@@ -15,6 +15,7 @@ Covers:
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -349,6 +350,95 @@ def test_apply_overrides_preserves_static_deprecated_flag():
     assert by_name["gpt-3.5-turbo"]["deprecated"] is True
     assert by_name["gpt-4.5-preview"]["deprecated"] is True
     assert by_name["gpt-6"]["deprecated"] is False
+
+
+def test_apply_overrides_marks_embedding_family_as_embeddings_model_type():
+    """text-embedding-* rows must surface as embeddings, not LLMs.
+
+    models.dev mixes embedding models into a provider's models dict with no
+    explicit type flag. Detecting them by family / name keeps them out of the
+    Language Models section (a real bug from screenshot review).
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "family": "gpt", "tool_call": True},
+                "text-embedding-3-large": {
+                    "id": "text-embedding-3-large",
+                    "family": "text-embedding",
+                },
+                "text-embedding-ada-002": {
+                    "id": "text-embedding-ada-002",
+                    "family": "text-embedding",
+                },
+                # Belt-and-suspenders: a hypothetical embeddings model whose
+                # family is empty still gets classified by name substring.
+                "voyage-3-embedding": {"id": "voyage-3-embedding"},
+            },
+        }
+    }
+    # Use a fixed "now" so the age-based deprecation doesn't interfere with
+    # this test's assertions on model_type.
+    fixed_now = datetime(2024, 6, 1, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([], snapshot, now=fixed_now)
+    by_name = {m["name"]: m for group in result for m in group}
+
+    assert by_name["gpt-4o"]["model_type"] == "llm"
+    assert by_name["text-embedding-3-large"]["model_type"] == "embeddings"
+    assert by_name["text-embedding-ada-002"]["model_type"] == "embeddings"
+    assert by_name["voyage-3-embedding"]["model_type"] == "embeddings"
+
+
+def test_apply_overrides_auto_deprecates_stale_models():
+    """Models with last_updated older than ~30 months are auto-deprecated.
+
+    Catches gpt-4 / gpt-4-turbo / text-embedding-ada-002 today; leaves
+    gpt-4o / text-embedding-3-* / current Claudes active.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                # 2023-11 → 924 days as of 2026-05-18 → deprecated
+                "gpt-4": {"id": "gpt-4", "release_date": "2023-11-06", "last_updated": "2024-04-09"},
+                "gpt-4-turbo": {"id": "gpt-4-turbo", "release_date": "2023-11-06", "last_updated": "2024-04-09"},
+                # 2022-12 → very old → deprecated
+                "text-embedding-ada-002": {
+                    "id": "text-embedding-ada-002",
+                    "family": "text-embedding",
+                    "release_date": "2022-12-15",
+                    "last_updated": "2022-12-15",
+                },
+                # 2024-01-25 → 844 days → still active under the 900d threshold
+                "text-embedding-3-large": {
+                    "id": "text-embedding-3-large",
+                    "family": "text-embedding",
+                    "release_date": "2024-01-25",
+                    "last_updated": "2024-01-25",
+                },
+                # 2024-08 → 650 days → active
+                "gpt-4o": {"id": "gpt-4o", "release_date": "2024-05-13", "last_updated": "2024-08-06"},
+                # No date at all → not auto-deprecated (insufficient signal)
+                "gpt-future": {"id": "gpt-future"},
+            },
+        }
+    }
+
+    result = apply_models_dev_overrides([], snapshot, now=fixed_now)
+    by_name = {m["name"]: m for group in result for m in group}
+
+    assert by_name["gpt-4"]["deprecated"] is True
+    assert by_name["gpt-4-turbo"]["deprecated"] is True
+    assert by_name["text-embedding-ada-002"]["deprecated"] is True
+    assert by_name["text-embedding-3-large"]["deprecated"] is False
+    assert by_name["gpt-4o"]["deprecated"] is False
+    assert by_name["gpt-future"]["deprecated"] is False
 
 
 def test_apply_overrides_appends_new_provider_when_no_static_group():

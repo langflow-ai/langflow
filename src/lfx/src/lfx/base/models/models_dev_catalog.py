@@ -50,6 +50,16 @@ from lfx.log.logger import logger
 # dated snapshot and mark it deprecated so it falls into the disclosure tier.
 _DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8})$")
 
+# Threshold for auto-deprecating models that haven't shipped a new version in
+# a long time. models.dev has no deprecation field, and providers rarely
+# formally deprecate models even after they ship a successor — but a model
+# that hasn't been touched in 30 months is overwhelmingly legacy in practice
+# (catches gpt-4 / gpt-4-turbo / text-embedding-ada-002 today, leaves
+# gpt-4o / text-embedding-3-small/large active). Tuned conservatively so
+# current embeddings (~28 months old) survive; nudge down only if successor
+# adoption is verified.
+_AGE_DEPRECATION_DAYS = 900
+
 MODELS_DEV_URL = "https://models.dev/api.json"
 MODELS_DEV_FETCH_TIMEOUT = 10.0
 MODELS_DEV_SNAPSHOT_FILENAME = "snapshot.json"
@@ -196,6 +206,39 @@ def save_models_dev_snapshot(snapshot: dict[str, Any], path: Path | None = None)
 
 
 _RELEASE_DATE_MIN_LEN = len("YYYY-MM-DD")
+_SECONDS_PER_DAY = 86400
+
+
+def _is_embedding_family(model_dict: dict[str, Any]) -> bool:
+    """Detect embedding models in a provider's models.dev block.
+
+    models.dev mixes embeddings into the same ``models`` dict as LLMs, so
+    every entry needs a ``model_type`` decision. The most reliable signal is
+    the ``family`` field (e.g. ``"text-embedding"``); the name-substring check
+    is a belt-and-suspenders fallback for providers that fill ``family``
+    inconsistently.
+    """
+    family = (model_dict.get("family") or "").lower()
+    name = (model_dict.get("id") or "").lower()
+    return family.startswith("text-embedding") or family == "embedding" or "embedding" in name
+
+
+def _is_aged_out(model_dict: dict[str, Any], now: datetime) -> bool:
+    """Return True if the model is older than ``_AGE_DEPRECATION_DAYS`` days.
+
+    Prefers ``release_date`` (when the model functionally shipped) over
+    ``last_updated`` (which tracks catalog-curator edits like typo fixes, not
+    new model versions). The combination of preferring release_date and the
+    900-day threshold correctly catches ``gpt-4`` / ``gpt-4-turbo`` (924d from
+    their 2023-11 release) while keeping ``text-embedding-3-large`` (844d
+    from its 2024-01 release) active.
+    """
+    raw = model_dict.get("release_date") or model_dict.get("last_updated")
+    epoch = _release_date_to_epoch(raw)
+    if epoch == 0:
+        return False
+    age_days = (now.timestamp() - epoch) / _SECONDS_PER_DAY
+    return age_days > _AGE_DEPRECATION_DAYS
 
 
 def _release_date_to_epoch(value: Any) -> int:
@@ -219,6 +262,7 @@ def _translate_model_entry(
     model_dict: dict[str, Any],
     *,
     deprecated: bool = False,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Convert one models.dev model entry to Langflow's ``ModelMetadata`` shape.
 
@@ -230,13 +274,16 @@ def _translate_model_entry(
         ``cost.input``          -> ``cost_per_million_in``
         ``cost.output``         -> ``cost_per_million_out``
         ``release_date``        -> ``created`` (Unix epoch)
+        ``family == "text-embedding"`` -> ``model_type="embeddings"``
 
-    Dated-snapshot ids (matching :data:`_DATED_SNAPSHOT_RE`) are flagged
-    deprecated automatically so they collapse into the deprecated disclosure
-    rather than crowding the main picker. Callers may also pass
-    ``deprecated=True`` to forward a flag from the static-list curation
-    (which models.dev does not surface).
+    Three derived deprecation signals layer on top of the explicit
+    ``deprecated`` kwarg (which lets callers forward the static-list
+    curation that models.dev itself doesn't surface):
+      * dated-snapshot id (:data:`_DATED_SNAPSHOT_RE`);
+      * stale ``last_updated`` / ``release_date`` per :data:`_AGE_DEPRECATION_DAYS`.
+    ``now`` is injected for testability — defaults to the current UTC time.
     """
+    now = now or datetime.now(tz=timezone.utc)
     model_id = model_dict.get("id") or ""
     modalities = model_dict.get("modalities") or {}
     inputs = modalities.get("input") if isinstance(modalities, dict) else None
@@ -244,6 +291,8 @@ def _translate_model_entry(
     cost = model_dict.get("cost") or {}
 
     is_dated_snapshot = bool(_DATED_SNAPSHOT_RE.search(model_id))
+    is_aged_out = _is_aged_out(model_dict, now)
+    model_type = "embeddings" if _is_embedding_family(model_dict) else "llm"
 
     metadata = create_model_metadata(
         provider=provider_name,
@@ -252,7 +301,8 @@ def _translate_model_entry(
         tool_calling=bool(model_dict.get("tool_call")),
         reasoning=bool(model_dict.get("reasoning")),
         created=_release_date_to_epoch(model_dict.get("release_date")),
-        deprecated=bool(deprecated) or is_dated_snapshot,
+        deprecated=bool(deprecated) or is_dated_snapshot or is_aged_out,
+        model_type=model_type,
     )
     # Additive fields — kept as plain dict keys so existing consumers that read
     # the strict TypedDict shape stay happy while new consumers can pick them up.
@@ -281,6 +331,8 @@ def _provider_model_dicts(provider_block: dict[str, Any]) -> list[dict[str, Any]
 def apply_models_dev_overrides(
     static_lists: list[list[dict[str, Any]]],
     snapshot: dict[str, Any],
+    *,
+    now: datetime | None = None,
 ) -> list[list[dict[str, Any]]]:
     """Replace per-provider static rows with models.dev rows where available.
 
@@ -292,9 +344,12 @@ def apply_models_dev_overrides(
     preserves the static-list curation by name: any model that was already
     flagged deprecated in the bundled ``*_constants.py`` lists keeps that flag
     after the override. Dated-snapshot ids
-    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) are also
-    auto-flagged in :func:`_translate_model_entry`.
+    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) and rows whose
+    most recent date is older than :data:`_AGE_DEPRECATION_DAYS` are also
+    auto-flagged in :func:`_translate_model_entry`. ``now`` is forwarded for
+    testability.
     """
+    now = now or datetime.now(tz=timezone.utc)
     # Build provider_name -> {model_name: deprecated} from the static lists so
     # we can preserve the static curation through the override.
     static_deprecated_by_provider: dict[str, set[str]] = {}
@@ -321,6 +376,7 @@ def apply_models_dev_overrides(
                 provider_name,
                 m,
                 deprecated=(m.get("id") in static_deprecated),
+                now=now,
             )
             for m in _provider_model_dicts(provider_block)
         ]
