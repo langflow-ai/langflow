@@ -41,15 +41,15 @@ class CompatibilityReport:
 
 
 def build_registry_lookup(all_types_dict: Mapping[str, Any]) -> dict[str, dict]:
-    """Flatten all_types_dict into {component_type: component_data}."""
-    lookup: dict[str, dict] = {}
-    for category_components in all_types_dict.values():
-        if not isinstance(category_components, Mapping):
-            continue
-        for comp_name, comp_data in category_components.items():
-            if isinstance(comp_data, Mapping):
-                lookup[comp_name] = dict(comp_data)
-    return lookup
+    """Flatten all_types_dict into {component_type: component_data}, including legacy aliases.
+
+    Uses flatten_components_with_aliases so that renamed components (e.g. Prompt →
+    Prompt Template, parser → ParserComponent) are reachable under their old type key
+    and are not incorrectly classified as blocked.
+    """
+    from lfx.utils.component_aliases import flatten_components_with_aliases
+
+    return {k: dict(v) for k, v in flatten_components_with_aliases(all_types_dict).items() if isinstance(v, Mapping)}
 
 
 def _outputs_are_equal(original: list[dict], user: list[dict]) -> bool:
