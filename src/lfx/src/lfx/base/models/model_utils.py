@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Any
 from urllib.parse import urljoin
 from uuid import UUID
@@ -24,6 +25,42 @@ from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
 MIN_DEFAULT_MODELS = 5
+
+# Ollama model lists are cached in-process for a short window so that:
+# (1) overlapping ``/api/v1/models`` requests don't all serialize through
+#     Ollama's tags + per-model show endpoints, and
+# (2) downstream callers (UI, Agent picker, embed picker) that all fan out
+#     to the same catalog within a few seconds share one upstream round-trip.
+# Cache key is (base_url, capability) so different bases / capability filters
+# stay isolated. TTL is short enough that newly-pulled models surface
+# promptly; the previous 10s frontend poll became unnecessary once this cache
+# landed.
+_OLLAMA_MODEL_LIST_TTL_SECONDS = 30.0
+_ollama_model_list_cache: dict[tuple[str, str], tuple[float, list[str]]] = {}
+
+
+def _ollama_cache_get(key: tuple[str, str], *, now: float | None = None) -> list[str] | None:
+    """Return the cached model list for *key* if still fresh; else None."""
+    entry = _ollama_model_list_cache.get(key)
+    if entry is None:
+        return None
+    timestamp, value = entry
+    current = now if now is not None else time.monotonic()
+    if (current - timestamp) >= _OLLAMA_MODEL_LIST_TTL_SECONDS:
+        return None
+    # Return a copy so caller mutations don't leak into the cache.
+    return list(value)
+
+
+def _ollama_cache_set(key: tuple[str, str], value: list[str], *, now: float | None = None) -> None:
+    current = now if now is not None else time.monotonic()
+    _ollama_model_list_cache[key] = (current, list(value))
+
+
+def _ollama_cache_clear() -> None:
+    """Drop every cached entry. Exposed for tests; not called in production."""
+    _ollama_model_list_cache.clear()
+
 
 # Extract model names from metadata for fallback defaults
 WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
@@ -92,6 +129,11 @@ async def get_ollama_models(
     Raises:
         ValueError: If there is an issue with the API request or response.
     """
+    cache_key = (base_url_value, desired_capability)
+    cached = _ollama_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     try:
         # Strip /v1 suffix if present, as Ollama API endpoints are at root level
         base_url = base_url_value.rstrip("/").removesuffix("/v1")
@@ -104,7 +146,6 @@ async def get_ollama_models(
 
         # Ollama REST API to return model capabilities
         show_url = urljoin(base_url, "api/show")
-        tags_response = None
 
         async with httpx.AsyncClient() as client:
             # Fetch available models
@@ -115,33 +156,43 @@ async def get_ollama_models(
                 models = await models
             await logger.adebug(f"Available models: {models}")
 
-            # Filter models that are NOT embedding models
-            model_ids = []
-            for model in models.get(json_models_key, []):
-                model_name = model.get(json_name_key)
-                if not model_name:
-                    continue
-                await logger.adebug(f"Checking model: {model_name}")
+            candidates = [
+                model.get(json_name_key) for model in models.get(json_models_key, []) if model.get(json_name_key)
+            ]
 
-                payload = {"model": model_name}
-                show_response = await client.post(url=show_url, json=payload)
-                show_response.raise_for_status()
-                json_data = show_response.json()
-                if asyncio.iscoroutine(json_data):
-                    json_data = await json_data
+            async def _has_capability(model_name: str) -> str | None:
+                """Probe one model's capabilities. Returns its name on match, else None.
 
-                capabilities = json_data.get(json_capabilities_key, [])
-                await logger.adebug(f"Model: {model_name}, Capabilities: {capabilities}")
-
+                Per-model failures are absorbed (logged at debug) so a single
+                bad model does not poison the whole catalog response.
+                """
+                try:
+                    show_response = await client.post(url=show_url, json={"model": model_name})
+                    show_response.raise_for_status()
+                    json_data = show_response.json()
+                    if asyncio.iscoroutine(json_data):
+                        json_data = await json_data
+                except (httpx.RequestError, httpx.HTTPStatusError) as e:
+                    await logger.adebug(f"Ollama /api/show failed for {model_name}: {e}")
+                    return None
+                capabilities = json_data.get(json_capabilities_key) or []
                 if desired_capability in capabilities:
-                    model_ids.append(model_name)
+                    return model_name
+                return None
 
-            return sorted(model_ids)
+            # Parallel fan-out: one POST /api/show per candidate, awaited
+            # together so latency is bounded by the slowest single request
+            # instead of N * avg-request-latency.
+            results = await asyncio.gather(*(_has_capability(n) for n in candidates))
+            model_ids = sorted(name for name in results if name)
 
     except (httpx.RequestError, ValueError) as e:
         msg = "Could not get model names from Ollama."
         await logger.aexception(msg)
         raise ValueError(msg) from e
+    else:
+        _ollama_cache_set(cache_key, model_ids)
+        return model_ids
 
 
 # ============================================================================
