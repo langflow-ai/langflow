@@ -264,6 +264,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            # Locally-registered dev extensions (``lfx extension dev``) are
+            # loaded later via :func:`import_extension_components` through the
+            # @official-slot pathway alongside installed extensions, so they
+            # share the BundleRegistry, palette decoration, and reload
+            # endpoint with pip-installed bundles.  Nothing to wire here.
+
             # Gate: Cache component types
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
             # local handle for create_or_update_starter_projects. starter_projects_created can remain False
