@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from lfx.io.schema import flatten_schema
 from lfx.schema.json_schema import create_input_schema_from_json_schema
+from pydantic import BaseModel, ValidationError
 
 
 class TestCreateInputSchemaFromJsonSchema:
@@ -183,6 +184,112 @@ class TestCreateInputSchemaFromJsonSchema:
         schema = {"type": "array", "items": {"type": "string"}}
         with pytest.raises(ValueError, match="Root schema must be type 'object'"):
             create_input_schema_from_json_schema(schema)
+
+    @staticmethod
+    def _two_level_nested_ref_schema():
+        return {
+            "$defs": {
+                "Inner": {
+                    "type": "object",
+                    "required": ["key"],
+                    "properties": {
+                        "key": {"type": "string"},
+                        "count": {"type": "integer", "default": 0},
+                    },
+                },
+                "Outer": {
+                    "type": "object",
+                    "required": ["name", "inner"],
+                    "properties": {
+                        "name": {"type": "string"},
+                        "inner": {"$ref": "#/$defs/Inner"},
+                    },
+                },
+            },
+            "type": "object",
+            "required": ["payload"],
+            "properties": {"payload": {"$ref": "#/$defs/Outer"}},
+        }
+
+    def test_two_level_nested_refs_resolve_to_models_not_dict(self):
+        """Two-level nested $defs/$ref must resolve to nested BaseModels, not dict.
+
+        Regression: previously, parse_type stripped the $ref and named both nested
+        models AnonModel0 (because len(model_cache) is 0 during recursive descent),
+        falsely tripping the self-reference guard and collapsing Inner to dict.
+        """
+        schema = self._two_level_nested_ref_schema()
+        model = create_input_schema_from_json_schema(schema)
+
+        outer_type = model.model_fields["payload"].annotation
+        # payload is required, so it stays a BaseModel (not Optional)
+        assert isinstance(outer_type, type)
+        assert issubclass(outer_type, BaseModel)
+        inner_type = outer_type.model_fields["inner"].annotation
+        assert inner_type is not dict, "inner should be a BaseModel, not dict"
+        assert isinstance(inner_type, type)
+        assert issubclass(inner_type, BaseModel)
+
+        # A valid payload (with inner.key) must validate successfully.
+        instance = model.model_validate({"payload": {"name": "test", "inner": {"key": "k"}}})
+        assert instance.payload.name == "test"
+        assert instance.payload.inner.key == "k"
+
+    def test_two_level_nested_refs_missing_inner_field_raises(self):
+        """Omitting the required `inner` field must raise ValidationError on payload.inner."""
+        schema = self._two_level_nested_ref_schema()
+        model = create_input_schema_from_json_schema(schema)
+        with pytest.raises(ValidationError) as excinfo:
+            model.model_validate({"payload": {"name": "test"}})
+        # The error must reference payload.inner specifically.
+        assert any(err["loc"][:2] == ("payload", "inner") for err in excinfo.value.errors())
+
+    def test_two_level_nested_refs_no_self_referential_warning(self):
+        """A non-self-referential two-level nested $ref schema must not log self-ref warnings."""
+        schema = self._two_level_nested_ref_schema()
+        with patch("lfx.schema.json_schema.logger") as mock_logger:
+            create_input_schema_from_json_schema(schema)
+            warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
+            assert not any("Self-referential" in c or "self-referential" in c for c in warning_calls), (
+                f"Unexpected self-referential warning: {warning_calls}"
+            )
+
+    def test_sibling_inline_objects_get_distinct_models(self):
+        """Two sibling inline-object properties must produce distinct nested models.
+
+        Regression: anonymous model names previously used len(model_cache), which is
+        not unique during recursive descent and caused inline siblings to collide.
+        """
+        schema = {
+            "type": "object",
+            "properties": {
+                "first": {
+                    "type": "object",
+                    "properties": {"a": {"type": "string"}},
+                    "required": ["a"],
+                },
+                "second": {
+                    "type": "object",
+                    "properties": {"b": {"type": "integer"}},
+                    "required": ["b"],
+                },
+            },
+            "required": ["first", "second"],
+        }
+        model = create_input_schema_from_json_schema(schema)
+        first_type = model.model_fields["first"].annotation
+        second_type = model.model_fields["second"].annotation
+        assert isinstance(first_type, type)
+        assert issubclass(first_type, BaseModel)
+        assert isinstance(second_type, type)
+        assert issubclass(second_type, BaseModel)
+        assert first_type is not second_type
+        assert "a" in first_type.model_fields
+        assert "b" in second_type.model_fields
+
+        instance = model.model_validate({"first": {"a": "x"}, "second": {"b": 1}})
+        assert instance.first.a == "x"
+        assert instance.second.b == 1
 
 
 class TestFlattenSchema:
