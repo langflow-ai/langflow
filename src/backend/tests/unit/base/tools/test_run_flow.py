@@ -699,8 +699,7 @@ class TestRunFlowBaseComponentInputOutputHandling:
         bool_field = next(f for f in new_fields if f["name"].endswith("~should_store_message"))
 
         assert input_value_field["input_types"] == ["Message"], (
-            "Text-typed exposed inputs must receive a Message handle so upstream "
-            "components can be wired in (LE-1233)."
+            "Text-typed exposed inputs must receive a Message handle so upstream components can be wired in (LE-1233)."
         )
         # Bool fields don't expose a Message handle — handle visibility is driven by `type`.
         assert bool_field["input_types"] == []
