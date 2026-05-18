@@ -225,9 +225,9 @@ def test_serve_command_json_file():
             assert mock_uvicorn.called
             mock_load.assert_called_once()
 
-            # Check that the mock was called with the resolved path
+            # Check that the mock was called with the parsed JSON dict (not a path)
             args, _kwargs = mock_load.call_args
-            assert args[0] == Path(temp_path).resolve()
+            assert isinstance(args[0], dict)
 
     finally:
         Path(temp_path).unlink()
@@ -265,9 +265,9 @@ def test_serve_command_inline_json():
         assert mock_uvicorn.called
         mock_load.assert_called_once()
 
-        # Check that the mock was called with a .json temp file path
+        # Check that the mock was called with the parsed JSON dict (not a temp file path)
         args, _kwargs = mock_load.call_args
-        assert args[0].suffix == ".json"
+        assert isinstance(args[0], dict)
 
 
 class TestBuildRegistryFromDirectory:
@@ -482,14 +482,16 @@ class TestPythonScriptServe:
         # so patch its module-level name directly.
         with (
             patch(
-                "lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)
+                "lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)
             ) as mock_script,
+            patch("lfx.cli.commands.find_graph_variable", return_value={"source": "x", "type": "Graph", "line": 1}),
             patch("lfx.cli.commands.load_flow_from_json") as mock_json,
         ):
-            graph, meta = asyncio.run(_load_graph_and_meta(script, tmp_path, check_variables=False))
+            graph, meta, raw_json = asyncio.run(_load_graph_and_meta(script, tmp_path, check_variables=False))
 
         mock_json.assert_not_called()
         mock_script.assert_called_once_with(script)
+        assert raw_json is None
         assert meta.title == "my_flow"
         assert meta.relative_path == "my_flow.py"
 
@@ -507,7 +509,8 @@ class TestPythonScriptServe:
         mock_graph.edges = []
 
         with (
-            patch("lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
+            patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
+            patch("lfx.cli.commands.find_graph_variable", return_value={"type": "assignment", "line": 1}),
             patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
@@ -625,3 +628,102 @@ def test_build_registry_from_directory_default_does_not_stamp(tmp_path):
     flow_id = registry.list_metas()[0].id
     graph, _ = registry.get(flow_id)
     assert not graph.context.get("no_env_fallback")
+
+
+def test_build_registry_from_paths_passes_raw_json_to_store():
+    """build_registry_from_paths must pass raw_json so JSON flows are written to the store."""
+    import asyncio
+    import json
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from lfx.cli.commands import build_registry_from_paths
+    from lfx.cli.flow_store import NullFlowStore
+
+    written = {}
+
+    class SpyStore(NullFlowStore):
+        def write(self, flow_id, flow_json):
+            written[flow_id] = flow_json
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "flow.json"
+        p.write_text(json.dumps(flow_data))
+        with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+            registry = asyncio.run(
+                build_registry_from_paths(
+                    [p], lambda _: None, check_variables=False, store=SpyStore()
+                )
+            )
+
+    assert len(written) == 1
+    flow_id = registry.list_metas()[0].id
+    assert written[flow_id]["name"] == "Test"
+
+
+def test_build_registry_from_paths_py_file_skips_store():
+    """.py flows must not write to the store (no raw JSON round-trip)."""
+    import asyncio
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch, AsyncMock
+    from lfx.cli.commands import build_registry_from_paths
+    from lfx.cli.flow_store import NullFlowStore
+
+    written = {}
+
+    class SpyStore(NullFlowStore):
+        def write(self, flow_id, flow_json):
+            written[flow_id] = flow_json
+
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "flow.py"
+        p.write_text("graph = None\n")
+        with (
+            patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
+            patch("lfx.cli.commands.find_graph_variable", return_value={"source": "x", "type": "Graph", "line": 1}),
+        ):
+            asyncio.run(
+                build_registry_from_paths(
+                    [p], lambda _: None, check_variables=False, store=SpyStore()
+                )
+            )
+
+    assert written == {}
+
+
+def test_startup_scan_pre_warms_cache(tmp_path):
+    """Flows already in the store must be loaded into the in-memory cache on startup."""
+    import asyncio
+    import json
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from lfx.cli.commands import build_registry_from_paths
+    from lfx.cli.flow_store import FilesystemFlowStore
+
+    store = FilesystemFlowStore(tmp_path)
+    store.write(
+        "pre-existing-id",
+        {"name": "Pre-existing", "description": None, "data": {"nodes": [], "edges": []}, "id": "pre-existing-id"},
+    )
+
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+        registry = asyncio.run(
+            build_registry_from_paths(
+                [], lambda _: None, check_variables=False, store=store
+            )
+        )
+
+    assert "pre-existing-id" in registry._flows, (
+        "Startup scan must pre-warm the in-memory cache; flow should be in _flows immediately after build"
+    )

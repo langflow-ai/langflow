@@ -149,6 +149,135 @@ class TestFlowRegistry:
         registry.add(replacement_graph, meta, overwrite=True)
         assert replacement_graph.context.get("no_env_fallback") is True
 
+    def test_registry_get_misses_to_store(self):
+        """Cache miss must load from store, cache result, and return it."""
+        from unittest.mock import MagicMock, patch
+
+        raw = {
+            "name": "Stored Flow",
+            "description": "from disk",
+            "data": {"nodes": [], "edges": []},
+            "id": "flow-from-store",
+        }
+
+        class StubStore:
+            def write(self, flow_id, flow_json): pass
+            def read(self, flow_id):
+                return raw if flow_id == "flow-from-store" else None
+            def delete(self, flow_id): return False
+            def list_ids(self): return ["flow-from-store"]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            result = registry.get("flow-from-store")
+
+        assert result is not None
+        graph, meta = result
+        assert graph is mock_graph
+        assert meta.id == "flow-from-store"
+        assert meta.title == "Stored Flow"
+        # second call must hit in-memory cache, not store
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("should use cache")):
+            registry.get("flow-from-store")
+
+    def test_registry_add_with_raw_json_writes_to_store(self):
+        """add(raw_json=...) must write to store."""
+        from unittest.mock import MagicMock
+
+        written = {}
+
+        class SpyStore:
+            def write(self, flow_id, flow_json): written[flow_id] = flow_json
+            def read(self, flow_id): return None
+            def delete(self, flow_id): return False
+            def list_ids(self): return []
+
+        registry = FlowRegistry(store=SpyStore())
+        graph = MagicMock()
+        graph.context = {}
+        meta = self._make_meta("flow-1")
+        raw = {"name": "flow-1", "data": {}}
+        registry.add(graph, meta, raw_json=raw)
+
+        assert written == {"flow-1": raw}
+
+    def test_registry_add_without_raw_json_skips_store(self):
+        """add() without raw_json must NOT write to store."""
+        from unittest.mock import MagicMock
+
+        written = {}
+
+        class SpyStore:
+            def write(self, flow_id, flow_json): written[flow_id] = flow_json
+            def read(self, flow_id): return None
+            def delete(self, flow_id): return False
+            def list_ids(self): return []
+
+        registry = FlowRegistry(store=SpyStore())
+        graph = MagicMock()
+        graph.context = {}
+        registry.add(graph, self._make_meta("flow-1"))
+        assert written == {}
+
+    def test_registry_remove_deletes_from_store(self):
+        """remove() must delete from store in addition to clearing in-memory."""
+        from unittest.mock import MagicMock
+
+        deleted = []
+
+        class SpyStore:
+            def write(self, *a): pass
+            def read(self, *a): return None
+            def delete(self, flow_id):
+                deleted.append(flow_id)
+                return True
+            def list_ids(self): return []
+
+        registry = FlowRegistry(store=SpyStore())
+        graph = MagicMock()
+        graph.context = {}
+        registry.add(graph, self._make_meta("flow-1"))
+        registry.remove("flow-1")
+        assert "flow-1" in deleted
+
+    def test_list_metas_includes_store_only_flows(self):
+        """list_metas() must include flows that are in the store but not yet cached."""
+        from unittest.mock import MagicMock, patch
+
+        raw = {"name": "Store-Only Flow", "description": None, "data": {}, "id": "store-only"}
+
+        class StubStore:
+            def write(self, *a): pass
+            def read(self, flow_id): return raw if flow_id == "store-only" else None
+            def delete(self, *a): return False
+            def list_ids(self): return ["store-only"]
+
+        registry = FlowRegistry(store=StubStore())
+        metas = registry.list_metas()
+        assert any(m.id == "store-only" for m in metas)
+        assert any(m.title == "Store-Only Flow" for m in metas)
+
+    def test_registry_remove_store_only_flow_returns_true(self):
+        """remove() must return True when the flow is in the store but not in memory."""
+        from unittest.mock import patch
+
+        raw = {"name": "Store-Only", "data": {}, "id": "store-only"}
+
+        class StubStore:
+            def write(self, *a): pass
+            def read(self, flow_id): return raw if flow_id == "store-only" else None
+            def delete(self, flow_id): return flow_id == "store-only"
+            def list_ids(self): return ["store-only"]
+
+        registry = FlowRegistry(store=StubStore())
+        # do NOT call registry.get() first — flow is store-only, not in memory
+        result = registry.remove("store-only")
+        assert result is True
+
 
 class TestSecurityFunctions:
     """Test security-related functions."""

@@ -120,6 +120,16 @@ def register(app: typer.Typer) -> None:
             "--flow-json",
             help="Inline JSON flow content as a string (alternative to script_paths)",
         ),
+        flow_dir: str | None = typer.Option(
+            None,
+            "--flow-dir",
+            help=(
+                "Directory for filesystem-backed flow storage. "
+                "All uvicorn workers sharing this path will serve the same flows. "
+                "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
+                "Defaults to in-memory only when omitted."
+            ),
+        ),
         *,
         stdin: bool = typer.Option(
             False,
@@ -131,6 +141,15 @@ def register(app: typer.Typer) -> None:
             "--check-variables/--no-check-variables",
             help="Check global variables for environment compatibility",
         ),
+        no_env_fallback: bool = typer.Option(
+            False,
+            "--no-env-fallback/--env-fallback",
+            help=(
+                "Disable os.environ fallback for credential variables. "
+                "Variables not supplied via global_vars on each request resolve to None "
+                "instead of reading from the process environment."
+            ),
+        ),
     ) -> None:
         """Serve LFX flows as a web API (lazy-loaded)."""
         from pathlib import Path
@@ -138,6 +157,7 @@ def register(app: typer.Typer) -> None:
         from lfx.cli.commands import serve_command
 
         env_file_path = Path(env_file) if env_file else None
+        flow_dir_path = Path(flow_dir) if flow_dir else None
 
         serve_command(
             script_paths=script_paths,
@@ -147,6 +167,8 @@ def register(app: typer.Typer) -> None:
             env_file=env_file_path,
             log_level=log_level,
             flow_json=flow_json,
+            flow_dir=flow_dir_path,
             stdin=stdin,
             check_variables=check_variables,
+            no_env_fallback=no_env_fallback,
         )

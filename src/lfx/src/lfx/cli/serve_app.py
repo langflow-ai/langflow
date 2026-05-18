@@ -42,6 +42,7 @@ from lfx.utils.flow_validation import validate_flow_for_current_settings
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
 
+    from lfx.cli.flow_store import FlowStore
     from lfx.graph import Graph
 
 # Security - use the same pattern as Langflow main API
@@ -124,47 +125,98 @@ class ErrorResponse(BaseModel):
 class FlowRegistry:
     """Mutable in-process registry of loaded flows.
 
-    Designed for a **single uvicorn worker**. With multiple OS-level workers
-    (processes), each worker holds its own independent copy of this registry:
-    flows uploaded to one worker are invisible to the others, and there is no
-    locking to guard concurrent writes. To support multi-worker deployments,
-    replace the in-memory dict with a shared backing store (e.g. Redis or a
-    database) and add appropriate locking around mutations.
+    The in-memory dict is a per-worker cache. Backing persistence is provided
+    by a :class:`~lfx.cli.flow_store.FlowStore`; the default ``NullFlowStore``
+    keeps everything in memory only.
 
-    Uploaded flows are also not persisted to disk. They exist only for the
-    lifetime of the server process; a restart will drop them.
+    - ``NullFlowStore`` (default): single-worker, no disk I/O.
+    - ``FilesystemFlowStore("/tmp/lfx-flows")``: all uvicorn workers in the
+      same pod share flows via ``/tmp``.
+    - ``FilesystemFlowStore("/mnt/lfx-flows")``: same code, cross-pod if the
+      path is a PVC mount.
 
-    When constructed with ``no_env_fallback=True``, every graph registered via
-    ``add()`` has ``graph.context['no_env_fallback']`` set to ``True`` at
-    registration time, preventing credential resolution from falling back to
-    ``os.environ`` for that graph's requests.
+    When ``no_env_fallback=True``, every graph registered via ``add()`` has
+    ``graph.context['no_env_fallback']`` set to ``True`` at registration time,
+    preventing credential resolution from falling back to ``os.environ``.
     """
 
-    def __init__(self, *, no_env_fallback: bool = False) -> None:
+    def __init__(self, *, no_env_fallback: bool = False, store: "FlowStore | None" = None) -> None:
+        from lfx.cli.flow_store import NullFlowStore
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
         self._no_env_fallback = no_env_fallback
+        self._store = store if store is not None else NullFlowStore()
 
-    def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False) -> None:
+    def _stamp(self, graph: Graph) -> None:
+        if self._no_env_fallback:
+            graph.context["no_env_fallback"] = True
+
+    def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False, raw_json: dict | None = None) -> None:
         if not overwrite and meta.id in self._flows:
             msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
             raise ValueError(msg)
-        if self._no_env_fallback:
-            graph.context["no_env_fallback"] = True
+        if raw_json is not None:
+            self._store.write(meta.id, raw_json)
+        self._stamp(graph)
         self._flows[meta.id] = (graph, meta)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
-        return self._flows.get(flow_id)
+        if flow_id in self._flows:
+            return self._flows[flow_id]
+        raw_json = self._store.read(flow_id)
+        if raw_json is None:
+            return None
+        graph, meta = self._reconstruct(flow_id, raw_json)
+        self._flows[flow_id] = (graph, meta)
+        return graph, meta
+
+    def _reconstruct(self, flow_id: str, raw_json: dict) -> tuple[Graph, FlowMeta]:
+        graph = load_flow_from_json(raw_json)
+        graph.prepare()
+        graph.flow_id = flow_id
+        self._stamp(graph)
+        meta = FlowMeta(
+            id=flow_id,
+            relative_path="<filesystem>",
+            title=raw_json.get("name", flow_id),
+            description=raw_json.get("description"),
+        )
+        return graph, meta
+
+    def warm_from_store(self) -> None:
+        """Load all flows from the backing store into the in-memory cache.
+
+        Called once at startup so every worker can serve any flow that was
+        previously uploaded (by another worker or a prior run) without a
+        cache-miss penalty on the first request.
+        """
+        for flow_id in self._store.list_ids():
+            self.get(flow_id)  # no-op if already cached; loads from store otherwise
 
     def list_metas(self) -> list[FlowMeta]:
-        return [meta for _, meta in self._flows.values()]
+        result = [meta for _, meta in self._flows.values()]
+        cached_ids = set(self._flows)
+        for flow_id in self._store.list_ids():
+            if flow_id not in cached_ids:
+                raw_json = self._store.read(flow_id)
+                if raw_json:
+                    result.append(FlowMeta(
+                        id=flow_id,
+                        relative_path="<filesystem>",
+                        title=raw_json.get("name", flow_id),
+                        description=raw_json.get("description"),
+                    ))
+        return result
 
     def remove(self, flow_id: str) -> bool:
-        if flow_id in self._flows:
+        store_had_it = self._store.delete(flow_id)
+        mem_had_it = flow_id in self._flows
+        if mem_had_it:
             del self._flows[flow_id]
-            return True
-        return False
+        return mem_had_it or store_had_it
 
     def __len__(self) -> int:
+        # Returns the in-memory cache count. With a FilesystemFlowStore, flows on
+        # disk but not yet requested (cache-miss loaded) are not counted here.
         return len(self._flows)
 
 
@@ -356,11 +408,9 @@ def create_multi_serve_app(
             title=body.name,
             description=body.description,
         )
-        # NOTE: in-memory only — not persisted to disk and not visible to other
-        # worker processes. See FlowRegistry docstring for multi-worker caveats.
         # graph.prepare() must run before registry.add() — add() stamps
         # graph.context with no_env_fallback, and prepare() must not overwrite it.
-        registry.add(graph, meta, overwrite=body.replace)
+        registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
         return UploadFlowResponse(
             id=flow_id,
             name=body.name,

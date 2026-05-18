@@ -25,6 +25,7 @@ from lfx.cli.common import (
     get_free_port,
     is_port_in_use,
 )
+from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.load import load_flow_from_json
 
@@ -62,6 +63,16 @@ async def serve_command(
         None,
         "--flow-json",
         help="Inline JSON flow content as a string (alternative to script_paths)",
+    ),
+    flow_dir: Path | None = typer.Option(
+        None,
+        "--flow-dir",
+        help=(
+            "Directory for filesystem-backed flow storage. "
+            "All uvicorn workers sharing this path will serve the same flows. "
+            "Use /tmp/lfx-flows for single-pod sharing or a PVC mount for cross-pod. "
+            "Defaults to in-memory only when omitted."
+        ),
     ),
     *,
     stdin: bool = typer.Option(
@@ -133,6 +144,10 @@ async def serve_command(
         # ----------------------------------------------------------------
         # Build FlowRegistry from the input source
         # ----------------------------------------------------------------
+        from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
+
+        flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
+
         registry: FlowRegistry
 
         if flow_json is not None:
@@ -148,7 +163,8 @@ async def serve_command(
             source_display = "inline JSON"
             try:
                 registry = await build_registry_from_paths(
-                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
+                    store=flow_store,
                 )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
@@ -171,7 +187,8 @@ async def serve_command(
             source_display = "stdin"
             try:
                 registry = await build_registry_from_paths(
-                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
+                    store=flow_store,
                 )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
@@ -191,7 +208,8 @@ async def serve_command(
                 source_display = str(dir_path)
                 try:
                     registry = await build_registry_from_directory(
-                        dir_path, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                        dir_path, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
+                        store=flow_store,
                     )
                 except ValueError as e:
                     typer.echo(f"Error: {e}", err=True)
@@ -210,16 +228,20 @@ async def serve_command(
             if paths:
                 try:
                     registry = await build_registry_from_paths(
-                        paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback
+                        paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
+                        store=flow_store,
                     )
                 except ValueError as e:
                     typer.echo(f"Error: {e}", err=True)
                     raise typer.Exit(1) from e
 
         else:
-            registry = FlowRegistry(no_env_fallback=no_env_fallback)
+            registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
             source_display = "none (upload flows via POST /flows/upload/)"
             verbose_print("Starting with empty registry — flows can be uploaded at runtime")
+
+        if flow_dir:
+            verbose_print(f"✓ Flow store pre-warmed from {flow_dir} ({len(registry)} flows in cache)")
 
         # ----------------------------------------------------------------
         # Start the server
@@ -278,14 +300,19 @@ async def _load_graph_and_meta(
     *,
     check_variables: bool,
 ) -> tuple:
-    """Load and prepare one graph, returning (graph, FlowMeta)."""
+    """Load and prepare one graph, returning (graph, FlowMeta, raw_json | None).
+
+    raw_json is the parsed flow dict for .json files; None for .py files
+    (which cannot be round-tripped to JSON for store persistence).
+    """
+    raw_json: dict | None = None
     try:
         if path.suffix == ".py":
-            from lfx.cli.script_loader import load_graph_from_script
-
+            find_graph_variable(path)  # validates a 'graph' variable exists
             graph = await load_graph_from_script(path)
         else:
-            graph = load_flow_from_json(path)
+            raw_json = json.loads(path.read_text(encoding="utf-8"))
+            graph = load_flow_from_json(raw_json)
     except Exception as exc:
         msg = f"Failed to load {path.name}: {exc}"
         raise ValueError(msg) from exc
@@ -305,7 +332,7 @@ async def _load_graph_and_meta(
         title=path.stem,
         description=None,
     )
-    return graph, meta
+    return graph, meta, raw_json
 
 
 async def build_registry_from_directory(
@@ -314,19 +341,22 @@ async def build_registry_from_directory(
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
+    store: "FlowStore | None" = None,
 ) -> FlowRegistry:
     """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive)."""
+    from lfx.cli.flow_store import NullFlowStore
+
     json_files = sorted(dir_path.glob("*.json"))
     if not json_files:
         msg = f"No .json files found in directory: {dir_path}"
         raise ValueError(msg)
 
-    registry = FlowRegistry(no_env_fallback=no_env_fallback)
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
     errors: list[str] = []
     for path in json_files:
         try:
-            graph, meta = await _load_graph_and_meta(path, dir_path, check_variables=check_variables)
-            registry.add(graph, meta)
+            graph, meta, raw_json = await _load_graph_and_meta(path, dir_path, check_variables=check_variables)
+            registry.add(graph, meta, raw_json=raw_json)
             verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{path.name}: {exc}")
@@ -334,6 +364,10 @@ async def build_registry_from_directory(
     if errors:
         msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
         raise ValueError(msg)
+
+    # Pre-warm in-memory cache from any flows already in the store
+    # (e.g. uploaded by another worker before this one started).
+    registry.warm_from_store()
 
     return registry
 
@@ -344,16 +378,21 @@ async def build_registry_from_paths(
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
+    store: "FlowStore | None" = None,
 ) -> FlowRegistry:
     """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
+    from lfx.cli.flow_store import NullFlowStore
+
     # Use a shared root so same-named files in different directories get distinct IDs.
-    common_root = Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent
-    registry = FlowRegistry(no_env_fallback=no_env_fallback)
+    common_root = (
+        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path(".")
+    )
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
     errors: list[str] = []
     for path in paths:
         try:
-            graph, meta = await _load_graph_and_meta(path, common_root, check_variables=check_variables)
-            registry.add(graph, meta)
+            graph, meta, raw_json = await _load_graph_and_meta(path, common_root, check_variables=check_variables)
+            registry.add(graph, meta, raw_json=raw_json)
             verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{path.name}: {exc}")
@@ -361,5 +400,9 @@ async def build_registry_from_paths(
     if errors:
         msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
         raise ValueError(msg)
+
+    # Pre-warm in-memory cache from any flows already in the store
+    # (e.g. uploaded by another worker before this one started).
+    registry.warm_from_store()
 
     return registry
