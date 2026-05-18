@@ -462,3 +462,78 @@ class TestServeCommandMultiFlow:
             result = runner.invoke(app, [str(tmp_path)])
 
         assert result.exit_code != 0
+
+
+class TestPythonScriptServe:
+    def test_load_graph_and_meta_dispatches_to_script_loader_for_py(self, tmp_path):
+        """_load_graph_and_meta must call load_graph_from_script for .py files, not load_flow_from_json."""
+        import asyncio
+
+        from lfx.cli.commands import _load_graph_and_meta
+
+        script = tmp_path / "my_flow.py"
+        script.write_text("graph = None")
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+
+        # load_graph_from_script is lazily imported inside _load_graph_and_meta,
+        # so patch its module-level name directly.
+        with (
+            patch("lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)) as mock_script,
+            patch("lfx.cli.commands.load_flow_from_json") as mock_json,
+        ):
+            graph, meta = asyncio.run(
+                _load_graph_and_meta(script, tmp_path, check_variables=False)
+            )
+
+        mock_json.assert_not_called()
+        mock_script.assert_called_once_with(script)
+        assert meta.title == "my_flow"
+        assert meta.relative_path == "my_flow.py"
+
+    def test_serve_command_accepts_py_file(self, tmp_path):
+        """lfx serve my_script.py must not be rejected as an unsupported file type."""
+        from lfx.cli.commands import serve_command
+
+        script = tmp_path / "my_flow.py"
+        script.write_text("graph = None")
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+        mock_graph.nodes = {}
+        mock_graph.edges = []
+
+        with (
+            patch("lfx.cli.script_loader.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            import typer
+            from typer.testing import CliRunner
+
+            app = typer.Typer()
+            app.command()(serve_command)
+            result = CliRunner().invoke(app, [str(script)])
+
+        assert result.exit_code == 0, result.output
+
+    def test_serve_command_rejects_unsupported_extension(self, tmp_path):
+        """Non-.json/.py files must exit with an error."""
+        from lfx.cli.commands import serve_command
+
+        bad = tmp_path / "flow.txt"
+        bad.write_text("not a flow")
+
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
+            import typer
+            from typer.testing import CliRunner
+
+            app = typer.Typer()
+            app.command()(serve_command)
+            result = CliRunner().invoke(app, [str(bad)])
+
+        assert result.exit_code != 0
+        assert ".json or .py" in result.output
