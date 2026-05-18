@@ -11,11 +11,13 @@ from langflow.services.deps import get_cache_service
 
 
 def _cache_type_name(data: Any) -> str:
+    """Return a stable, pickle-safe name for cached value metadata."""
     data_type = type(data)
     return f"{data_type.__module__}.{data_type.__qualname__}"
 
 
 def _is_pickle_error(exc: TypeError) -> bool:
+    """Detect TypeErrors raised by pickle/dill serialization failures."""
     message = str(exc).lower()
     return "pickle" in message or "pickled" in message
 
