@@ -59,6 +59,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Database Name",
             required=True,
             advanced=True,
+            load_from_db=False,
             info="Name of the Db2 database",
         ),
         StrInput(
@@ -66,6 +67,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Hostname",
             required=True,
             advanced=True,
+            load_from_db=False,
             info="Db2 server hostname or IP address",
         ),
         IntInput(
@@ -81,6 +83,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Username",
             required=True,
             advanced=True,
+            load_from_db=False,
             info="Db2 database username",
         ),
         SecretStrInput(

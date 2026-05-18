@@ -27,12 +27,14 @@ class DB2SQLComponent(Component):
             name="database",
             display_name="Database Name",
             required=True,
+            load_from_db=False,
             info="Name of the Db2 database",
         ),
         StrInput(
             name="hostname",
             display_name="Hostname",
             required=True,
+            load_from_db=False,
             info="Db2 server hostname or IP address",
         ),
         IntInput(
@@ -46,6 +48,7 @@ class DB2SQLComponent(Component):
             name="username",
             display_name="Username",
             required=True,
+            load_from_db=False,
             info="Db2 database username",
         ),
         SecretStrInput(
