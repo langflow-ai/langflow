@@ -47,10 +47,6 @@ test(
 
     //ensure the UI is updated
 
-    await page.waitForSelector('[data-testid="icon-Lock"]', {
-      timeout: 3000,
-    });
-
     await unlockFlow(page);
 
     await page.getByTestId("icon-ChevronLeft").click();

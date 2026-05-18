@@ -15,6 +15,7 @@ import importlib.util
 import sys
 from typing import TYPE_CHECKING
 
+from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
 
 if TYPE_CHECKING:
@@ -32,8 +33,15 @@ if TYPE_CHECKING:
 # does not surface as half a dozen junk components.
 SKIP_FILE_NAMES: frozenset[str] = frozenset({"__init__.py", "__main__.py", "conftest.py"})
 
-# Directory names skipped during the recursive walk.  Same intent.
-SKIP_DIR_NAMES: frozenset[str] = frozenset({"__pycache__", ".git", ".venv", "venv", "node_modules", ".pytest_cache"})
+# Re-export the shared SKIP_DIR_NAMES for backward-compat at this import path.
+__all__ = [
+    "DEFAULT_MODULE_NAMESPACE",
+    "SKIP_DIR_NAMES",
+    "SKIP_FILE_NAMES",
+    "import_bundle_module",
+    "iter_bundle_python_files",
+    "module_name_for",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -54,7 +62,6 @@ def iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
     an empty walk rather than an unexpected ``FileNotFoundError`` escaping
     the loader's public boundary.
     """
-    bundle_resolved = bundle_root.resolve(strict=False)
 
     # Sort sibling directories and files at every level for platform-independent
     # walk order.  ``Path.iterdir`` order is filesystem-dependent.
@@ -66,10 +73,7 @@ def iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
         files: list[Path] = []
         dirs: list[Path] = []
         for child in children:
-            try:
-                resolved = child.resolve(strict=False)
-                resolved.relative_to(bundle_resolved)
-            except (OSError, ValueError):
+            if not is_within(child, bundle_root):
                 # Symlink escapes the bundle; skip it entirely.
                 continue
             if child.is_dir():

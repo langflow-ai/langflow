@@ -23,16 +23,15 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader._detection import collect_component_classes
 from lfx.extension.loader._discovery import (
     DEFAULT_MODULE_NAMESPACE,
-    SKIP_DIR_NAMES,
     import_bundle_module,
     iter_bundle_python_files,
     module_name_for,
 )
-from lfx.extension.loader._plugins import _resolve_distribution_roots
 from lfx.extension.loader._types import (
     SLOT_EXTRA,
     SLOT_OFFICIAL,
@@ -50,7 +49,6 @@ from lfx.extension.manifest import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-    from importlib import metadata as importlib_metadata
 
 
 logger = logging.getLogger(__name__)
@@ -96,10 +94,8 @@ def _resolve_bundle_path(root: Path, bundle: BundleRef) -> tuple[Path | None, Ex
             hint="Make sure the bundle path resolves to a directory under the manifest.",
         )
 
-    root_resolved = root.resolve(strict=False)
-    try:
-        resolved.relative_to(root_resolved)
-    except ValueError:
+    if not is_within(resolved, root):
+        root_resolved = root.resolve(strict=False)
         return None, ExtensionError(
             code="path-escape",
             message=(
@@ -372,9 +368,10 @@ def load_extension(
     if len(manifest.bundles) != 1:
         result.errors.append(
             ExtensionError(
-                code="multi-bundle-deferred-in-this-milestone",
+                code="multi-bundle-unsupported",
                 message=(
-                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; v0 accepts exactly one."
+                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; v0 accepts exactly one. "
+                    "Multi-bundle support is deferred to a future milestone."
                 ),
                 location=str(source.path),
                 hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
@@ -410,11 +407,50 @@ def load_extension(
 
 
 # Inline-bundle metadata, optionally provided as ``bundle.json`` at the
-# bundle's root.  Only ``version`` is read in v0; ``name`` is derived from
-# the directory name and validated against BUNDLE_NAME_RE so that the
-# namespaced ID is well-formed.  This is intentionally a tiny shape; full
-# manifest support belongs at the @official slot.
+# bundle's root.  Recognised keys in v0:
+#   - ``id``: optional extension id; consumed by callers that need to
+#     attribute components back to a stable identifier separate from the
+#     directory name.  Validated against the same regex as the manifest
+#     so a malformed id is rejected rather than silently corrupting the
+#     registry's keying.
+#   - ``version``: optional SemVer-ish string used for the bundle's
+#     ``extension_version``; defaults to ``0.0.0``.
+#   - ``name``: ignored; the bundle name is always derived from the
+#     directory name and validated against BUNDLE_NAME_RE so that the
+#     namespaced ID is well-formed.
+# This is intentionally a tiny shape; full manifest support belongs at
+# the @official slot.
 _INLINE_BUNDLE_DEFAULT_VERSION = "0.0.0"
+
+
+def _validate_inline_bundle_id(
+    candidate: str,
+    *,
+    directory_name: str,
+    location: str,
+) -> tuple[str, ExtensionError | None]:
+    """Validate ``bundle.json`` ``id`` against the extension-id pattern.
+
+    Returns the id to use plus an optional typed warning.  A malformed
+    candidate falls back to ``directory_name`` and emits a typed
+    ``inline-bundle-name-invalid`` warning so the operator sees the
+    misconfiguration in the diagnostics emitter instead of getting an
+    obscure registry mismatch later.
+    """
+    from lfx.extension.manifest import _EXTENSION_ID_RE
+
+    if _EXTENSION_ID_RE.fullmatch(candidate):
+        return candidate, None
+    return directory_name, ExtensionError(
+        code="inline-bundle-name-invalid",
+        message=(
+            f"bundle.json id {candidate!r} does not match the extension-id pattern; "
+            f"falling back to the directory name {directory_name!r}."
+        ),
+        location=location,
+        content=candidate,
+        hint="Use lowercase, hyphenated, starting with a letter, 2-64 chars.",
+    )
 
 
 def _read_inline_bundle_json(
@@ -511,7 +547,15 @@ def load_inline_bundle(
         return result
 
     bundle_meta = _read_inline_bundle_json(root, result=result)
-    extension_id = bundle_meta.get("id") or name
+    raw_id = bundle_meta.get("id")
+    if raw_id:
+        extension_id, id_warning = _validate_inline_bundle_id(
+            raw_id, directory_name=name, location=str(root / "bundle.json")
+        )
+        if id_warning is not None:
+            result.warnings.append(id_warning)
+    else:
+        extension_id = name
     extension_version = bundle_meta.get("version") or _INLINE_BUNDLE_DEFAULT_VERSION
 
     result.extension_id = extension_id
@@ -634,7 +678,15 @@ def discover_inline_bundles(
             seen_names[name] = child
 
             bundle_meta = _read_inline_bundle_json(child, result=result)
-            extension_id = bundle_meta.get("id") or name
+            raw_id = bundle_meta.get("id")
+            if raw_id:
+                extension_id, id_warning = _validate_inline_bundle_id(
+                    raw_id, directory_name=name, location=str(child / "bundle.json")
+                )
+                if id_warning is not None:
+                    result.warnings.append(id_warning)
+            else:
+                extension_id = name
             extension_version = bundle_meta.get("version") or _INLINE_BUNDLE_DEFAULT_VERSION
 
             result.extension_id = extension_id
@@ -655,147 +707,7 @@ def discover_inline_bundles(
     return results
 
 
-# ---------------------------------------------------------------------------
-# Public entry point: load_installed_extensions (server-startup discovery)
-# ---------------------------------------------------------------------------
-
-
-def load_installed_extensions(
-    distributions: Iterable[importlib_metadata.Distribution] | None = None,
-) -> list[LoadResult]:
-    """Discover all installed Extensions and load them at the @official slot.
-
-    This is the startup-time discovery flow: it scans every distribution
-    in ``distributions`` (defaults to the live environment), finds those
-    that ship an ``extension.json``, and calls :func:`load_extension` on
-    each of their package roots.
-
-    Two distributions sharing a canonical name (broken venv) are resolved
-    by lexicographically-first manifest path (the "winner") and surface a
-    typed ``duplicate-distribution`` *error* on the winner's
-    :class:`LoadResult` (so ``LoadResult.ok`` becomes False and the events
-    pipeline emits ``extension_error``, per the AC's "duplicate-distribution
-    error surfaced" wording). The winner's components still appear in
-    ``result.components`` so flows already pinned to them keep working;
-    the operator-actionable error is what changes status. The losing
-    distribution's components are NOT loaded; the error's ``location``
-    field names every involved manifest path so the operator can fix the
-    conflict.
-
-    See :func:`load_seed_extensions` for the parallel filesystem-resident
-    @official-slot source (Docker images that bake bundles in via
-    ``COPY ... /opt/langflow/bundles/`` instead of pip-installing them).
-
-    Args:
-        distributions: Override the distribution iterator (test seam).
-            Defaults to ``importlib.metadata.distributions()``.
-
-    Returns:
-        One :class:`LoadResult` per unique canonical distribution name.
-        Order is lexicographic by canonical name for determinism.
-    """
-    resolved = _resolve_distribution_roots(distributions)
-    results: list[LoadResult] = []
-    for canonical in sorted(resolved):
-        winner_root, manifests = resolved[canonical]
-        result = load_extension(winner_root, slot=SLOT_OFFICIAL, distribution=canonical)
-        if len(manifests) > 1:
-            paths_csv = ", ".join(str(m) for m in manifests)
-            result.errors.append(
-                ExtensionError(
-                    code="duplicate-distribution",
-                    message=(
-                        f"Two installed distributions share the canonical name {canonical!r}; "
-                        f"loading from {manifests[0]} and ignoring the others."
-                    ),
-                    location=paths_csv,
-                    content=canonical,
-                    hint=(
-                        "Uninstall the duplicate distribution(s) or rename one so each canonical "
-                        "name maps to a single installed package."
-                    ),
-                )
-            )
-        results.append(result)
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Public entry point: load_seed_extensions (server-startup filesystem source)
-# ---------------------------------------------------------------------------
-
-
-def load_seed_extensions(
-    *,
-    seed_dir_env: str | None = None,
-    default_seed_dir: Path | None = None,
-) -> list[LoadResult]:
-    """Discover seed-directory Extensions and load them at the @official slot.
-
-    The "seed directory" is the second production-install source documented
-    in the deployment guide: a filesystem location where an operator stages
-    bundles that should be loaded at startup without going through pip.
-    The default location is ``/opt/langflow/bundles`` and the override is
-    ``$LANGFLOW_SEED_DIR`` (pathsep-separated for multiple roots).  Each
-    immediate subdirectory that ships a v0 manifest becomes one Extension
-    at the @official slot; subdirectories without a manifest are silently
-    skipped so operators can stage non-extension content alongside.
-
-    Discovery delegates to :func:`lfx.extension.discovery.discover_seed_extensions`,
-    which already enforces the "configured but missing" vs "default and
-    absent" semantics and surfaces typed errors for misconfigured roots.
-    This loader wraps each discovered record in a :class:`LoadResult` so
-    callers can treat seed and installed-pkg sources uniformly.
-
-    Args:
-        seed_dir_env: Test seam.  ``None`` reads ``$LANGFLOW_SEED_DIR``
-            from the live environment; pass an explicit string to bypass
-            ``os.environ``.
-        default_seed_dir: Test seam.  ``None`` uses the discovery layer's
-            default (``/opt/langflow/bundles``); pass an explicit ``Path``
-            to override or ``Path("/dev/null")`` to disable the default.
-
-    Returns:
-        One :class:`LoadResult` per seed-resident Extension, plus one
-        sentinel :class:`LoadResult` per discovery-time error
-        (``seed-directory-not-found``, ``manifest-invalid``, ...) so the
-        existing diagnostics emitter surfaces the failure without dropping
-        the typed payload.  Order is sorted by seed-subdirectory path for
-        determinism.
-    """
-    # Local import: discovery depends on manifest, which depends on errors,
-    # which is fine; but the loader package historically does not import
-    # from discovery to keep startup-time module graphs tight.  Import
-    # inside the function so the dependency is paid only when seed loading
-    # is requested.
-    from lfx.extension.discovery import DEFAULT_SEED_DIR, discover_seed_extensions
-
-    if default_seed_dir is None:
-        default_seed_dir = DEFAULT_SEED_DIR
-
-    discovered, errors = discover_seed_extensions(
-        seed_dir_env=seed_dir_env,
-        default=default_seed_dir,
-    )
-
-    results: list[LoadResult] = []
-
-    # Surface discovery-time errors as sentinel LoadResults so the existing
-    # _emit_extension_diagnostics helper renders them through the same
-    # logger path as load failures.  These results carry no components and
-    # have ``slot=None`` so the registry-population loop in components.py
-    # skips them naturally.
-    for err in errors:
-        sentinel = LoadResult(slot=None, source_path=None, distribution=None)
-        sentinel.errors.append(err)
-        results.append(sentinel)
-
-    for record in sorted(discovered, key=lambda r: str(r.extension_root)):
-        result = load_extension(
-            record.extension_root,
-            slot=SLOT_OFFICIAL,
-            distribution=None,
-        )
-        results.append(result)
-
-    return results
+# load_installed_extensions / load_seed_extensions live in
+# :mod:`lfx.extension.loader._startup` (extracted to keep this orchestration
+# file under the structural file-size limit).  They are re-exported from
+# the loader package so external imports are unchanged.

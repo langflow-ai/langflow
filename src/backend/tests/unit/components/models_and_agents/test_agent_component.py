@@ -451,6 +451,47 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
 
+    async def test_should_expose_stream_input_when_agent_component_is_loaded(self, component_class, default_kwargs):
+        """Regression: the Stream toggle disappeared from the Agent after the ModelInput unification (#12025).
+
+        Given the Agent component is loaded, When its inputs are inspected,
+        Then a 'stream' input field must be present so users can control LLM streaming.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        assert "stream" in input_names, "stream input field should be present on the Agent component"
+        assert hasattr(component, "stream"), "Component should have a stream attribute"
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_should_pass_stream_value_to_get_llm_when_stream_input_is_enabled(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Regression: the Agent must forward the Stream toggle value to get_llm().
+
+        Given stream=True on the Agent, When get_agent_requirements runs,
+        Then get_llm() must be called with stream=True so the LLM streams responses.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+        mock_get_llm.return_value = MagicMock()
+
+        default_kwargs["stream"] = True
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        await component.get_agent_requirements()
+
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+        assert "stream" in call_kwargs, "stream should be passed to get_llm"
+        assert call_kwargs["stream"] is True
+
     async def test_should_append_calculator_tool_when_add_calculator_toggle_is_true(
         self, component_class, default_kwargs
     ):

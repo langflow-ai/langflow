@@ -40,8 +40,11 @@ Scope notes (kept here so the next milestone reads them):
 
 from __future__ import annotations
 
+import contextlib
 import json
+import logging
 import os
+import stat
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -54,6 +57,8 @@ from lfx.extension.loader._types import LoadResult
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -126,22 +131,50 @@ def _utcnow_iso() -> str:
 
 
 def _read_state(state_path: Path) -> list[DevExtensionEntry]:
-    """Parse the state file.  Missing/malformed file yields an empty list.
+    """Parse the state file.  Missing file yields an empty list; corrupt state logs a warning.
 
-    Malformed JSON or wrong shape is treated as an empty registry rather
-    than an error: the dev loop should keep working even if the file got
-    edited by hand.  The ``extension dev`` CLI rewrites the file on every
-    invocation, so a malformed entry self-heals as soon as the author
-    touches the registry.
+    Three failure modes are distinguished:
+
+    * **File absent** -- legitimate empty registry, return ``[]`` silently.
+    * **File present but unreadable** (permission error etc.) -- log a
+      WARNING so the operator does not silently lose every registered dev
+      extension on the next ``langflow run`` with no diagnostic.  A
+      ``PermissionError`` does NOT self-heal; treating it as an empty
+      registry was burning real debug cycles in practice.
+    * **File present but corrupt JSON / wrong shape** -- log a WARNING
+      with the failure detail and return ``[]`` so the dev loop keeps
+      working (the ``extension dev`` CLI rewrites the file on the next
+      invocation, so a hand-edit typo self-heals as soon as the author
+      re-registers).
     """
     if not state_path.is_file():
         return []
     try:
         raw = state_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        logger.warning(
+            "dev_registry: state file %s exists but is unreadable (%s); "
+            "treating as empty registry. Registered dev extensions will not load.",
+            state_path,
+            exc,
+        )
+        return []
+    try:
         data = json.loads(raw)
-    except (OSError, ValueError):
+    except ValueError as exc:
+        logger.warning(
+            "dev_registry: state file %s contains malformed JSON (%s); "
+            "treating as empty registry. Re-run `lfx extension dev <path>` "
+            "to repair the registry.",
+            state_path,
+            exc,
+        )
         return []
     if not isinstance(data, dict):
+        logger.warning(
+            "dev_registry: state file %s top-level value is not an object; treating as empty registry.",
+            state_path,
+        )
         return []
     extensions = data.get("extensions")
     if not isinstance(extensions, list):
@@ -166,6 +199,13 @@ def _write_state(state_path: Path, entries: Iterable[DevExtensionEntry]) -> None
     Uses tempfile + ``os.replace`` so a crashing writer never leaves a
     half-written file behind; readers always see either the previous
     consistent state or the new one.
+
+    The state file is created with mode 0600 (owner read/write only).
+    The file feeds arbitrary ``path`` strings straight into the loader's
+    code-loading path at startup, so any process able to write
+    ``dev_extensions.json`` gets code loaded at the next ``langflow run``;
+    restricting permissions to the owning developer is the trust boundary
+    we can enforce at the filesystem level.
     """
     state_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -193,6 +233,13 @@ def _write_state(state_path: Path, entries: Iterable[DevExtensionEntry]) -> None
             raise
         with fh:
             fh.write(serialized)
+        # 0600: owner read/write only.  Path.chmod is a no-op on Windows but
+        # POSIX systems get the tightened permission before the rename so
+        # there is no observable mode-0644 window.  Filesystems without
+        # mode-bit support (some Windows FATs) silently ignore chmod; the
+        # data is still correct so do not abort the rename.
+        with contextlib.suppress(OSError):
+            Path(tmp_name).chmod(stat.S_IRUSR | stat.S_IWUSR)
         Path(tmp_name).replace(state_path)
     except BaseException:
         Path(tmp_name).unlink(missing_ok=True)

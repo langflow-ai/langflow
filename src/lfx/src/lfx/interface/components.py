@@ -726,12 +726,25 @@ def _components_path_extension_paths(settings_service: "SettingsService") -> lis
     Each entry in components_path is treated as a parent directory whose
     immediate subfolders are inline bundles at the @extra slot. The base
     Langflow components path is excluded (it is not an inline-bundle root).
+
+    Comparison against ``BASE_COMPONENTS_PATH`` resolves both sides so a
+    trailing slash, ``./`` prefix, or symlink does not slip the base
+    components dir through as an inline-bundle root (which would produce
+    duplicate / garbage palette entries from walking it as a bundle parent).
     """
+    try:
+        base_resolved = Path(BASE_COMPONENTS_PATH).resolve(strict=False)
+    except OSError:
+        base_resolved = Path(BASE_COMPONENTS_PATH)
     paths: list[Path] = []
     for raw in settings_service.settings.components_path or []:
-        if raw == BASE_COMPONENTS_PATH:
-            continue
         candidate = Path(raw)
+        try:
+            candidate_resolved = candidate.resolve(strict=False)
+        except OSError:
+            candidate_resolved = candidate
+        if candidate_resolved == base_resolved:
+            continue
         if candidate.is_dir():
             paths.append(candidate)
     return paths

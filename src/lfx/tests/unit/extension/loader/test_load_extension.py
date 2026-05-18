@@ -144,7 +144,7 @@ def test_runtime_multi_bundle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.setattr(_orchestrator, "load_manifest", lambda _root: source)
     result = load_extension(tmp_path)
     codes = [e.code for e in result.errors]
-    assert codes == ["multi-bundle-deferred-in-this-milestone"]
+    assert codes == ["multi-bundle-unsupported"]
 
 
 def test_version_constraint_unsatisfied(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

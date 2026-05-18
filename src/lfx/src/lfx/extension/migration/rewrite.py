@@ -129,6 +129,15 @@ def _resolve_legacy_reference(
     return None, candidates
 
 
+# Beyond this node count we skip the ``difflib`` "did you mean" suggestion
+# pass.  ``get_close_matches`` is O(nodes * table * len(name)^2) and runs on
+# the flow-load request path; an adversarial payload with thousands of
+# unmapped nodes could otherwise pin a worker.  Above the threshold the
+# rewriter still does the table lookup and surfaces the typed error -- the
+# only thing dropped is the suggestion list in the hint.
+_SUGGESTION_NODE_THRESHOLD: int = 200
+
+
 def _closest_matches(value: str, known: list[str], *, n: int = 3) -> list[str]:
     """Return up to ``n`` strings from ``known`` that are closest to ``value``.
 
@@ -380,12 +389,17 @@ def migrate_flow_payload(
     if not isinstance(nodes, list):
         return report
 
-    known_legacy = table.all_known_legacy_values()
+    # Cap difflib suggestion cost: for very large flows the per-unmapped-node
+    # ``get_close_matches`` pass dominates flow-load latency.  Above the
+    # threshold we still do the table lookup (the migration runs) but skip
+    # the suggestion list in the typed error's hint -- the user-facing
+    # signal (the rewrite itself or the typed error) is unaffected.
+    suggestion_pool: list[str] = table.all_known_legacy_values() if len(nodes) <= _SUGGESTION_NODE_THRESHOLD else []
     for index, node in enumerate(nodes):
         record = _rewrite_one_node(
             node,
             table=table,
-            known_legacy=known_legacy,
+            known_legacy=suggestion_pool,
             node_index=index,
         )
         if record is None:

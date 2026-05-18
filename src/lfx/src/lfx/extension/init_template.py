@@ -41,7 +41,15 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from lfx.extension.errors import ExtensionError
-from lfx.extension.manifest import EXTENSION_SCHEMA_URL
+from lfx.extension.manifest import _EXTENSION_ID_RE, EXTENSION_SCHEMA_URL
+
+# The runtime validator's regex is the canonical source for what counts as
+# a valid bundle name / extension id.  Importing it here (rather than
+# recompiling local copies) eliminates a security-relevant drift surface:
+# a future tightening of the runtime check applies to the template
+# scaffolder for free, and the AC round-trip test that catches drift is
+# preserved by definition.
+from lfx.extension.manifest import BUNDLE_NAME_RE as _BUNDLE_NAME_RE
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -61,14 +69,6 @@ unknown values with ``template-deferred-in-this-milestone``."""
 # later milestone").
 _DEFERRED_TEMPLATE_NAMES: frozenset[str] = frozenset({"full", "service", "route", "multi-bundle", "starter-projects"})
 
-
-_BUNDLE_NAME_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
-"""Mirrors lfx.extension.manifest.BUNDLE_NAME_RE so we can derive a
-syntactically-valid bundle name from the directory name.  Drift here is
-caught by the AC test which round-trips init -> validate."""
-
-_EXTENSION_ID_RE = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
-"""Mirrors lfx.extension.manifest._EXTENSION_ID_RE for the same reason."""
 
 _MIN_IDENTIFIER_LENGTH: int = 2
 """Manifest identifiers (id, bundle name) must be at least 2 characters

@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import sys
 import threading
-import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -212,6 +211,45 @@ def test_reload_missing_source_returns_typed_error(tmp_path: Path) -> None:
     assert any(e.code == "reload-source-missing" for e in result.errors)
 
 
+def test_reload_traversal_source_path_does_not_escape(tmp_path: Path) -> None:
+    """A ``../``-laden source_path must surface a typed error, not touch /etc.
+
+    The reload entry point accepts a source_path; the worst-case failure mode
+    is a coordinate that lands in a filesystem path and is allowed to mutate
+    state outside the intended root.  ``reload_bundle`` should treat a
+    non-directory traversal source as a typed ``reload-source-missing``
+    error before touching the registry's reload-in-progress guard.
+    """
+    registry = BundleRegistry()
+    result = reload_bundle(
+        registry,
+        "any_name",
+        source_path=tmp_path / ".." / ".." / "etc" / "passwd",
+    )
+    assert not result.ok
+    assert any(e.code == "reload-source-missing" for e in result.errors)
+    # And the registry is untouched.
+    assert registry.get_bundle("any_name") is None
+    assert not registry.is_reload_in_progress("any_name")
+
+
+def test_reload_absolute_path_outside_does_not_load(tmp_path: Path) -> None:
+    """Absolute path to non-bundle directory fails cleanly without registering.
+
+    An absolute source_path pointing at something that exists but is not a
+    valid bundle must fail cleanly without registering anything.
+    """
+    registry = BundleRegistry()
+    # /tmp/something-that-isnt-an-extension exists but isn't a bundle root.
+    bogus = tmp_path / "definitely_not_a_bundle"
+    bogus.mkdir()
+    result = reload_bundle(registry, "any_name", source_path=bogus)
+    assert not result.ok
+    # Should fail at manifest discovery or downstream typed error; never
+    # silently produce ok=True.
+    assert registry.get_bundle("any_name") is None
+
+
 def test_reload_bundle_name_mismatch(tmp_path: Path) -> None:
     """Manifest at source declares a different bundle name than the one being reloaded."""
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
@@ -276,6 +314,13 @@ def test_double_reload_returns_in_progress(tmp_path: Path, monkeypatch: pytest.M
 
 
 def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Concurrent readers observe pre- or post-swap state, never a mix.
+
+    Race-window deterministic: a Barrier guarantees readers are running while
+    the reload is paused mid-stage.  The previous version used ``time.sleep(0.05)``
+    which could pass under CI load without actually exercising the race window
+    (the readers finished before the reload paused).
+    """
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()
     _initial_install(registry, root)
@@ -285,6 +330,11 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
     proceed = threading.Event()
     started = threading.Event()
     real_load = reload_mod.load_extension
+    n_readers = 16
+    # Barrier of (n_readers + 1): each reader rendezvouses once before
+    # starting the snapshot loop; the test thread is the +1 that signals
+    # the reload to proceed only after every reader has hit the barrier.
+    readers_ready = threading.Barrier(n_readers + 1, timeout=5.0)
 
     def slow_load(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
         started.set()
@@ -293,11 +343,11 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
 
     monkeypatch.setattr(reload_mod, "load_extension", slow_load)
 
-    n_readers = 16
     observations: list[frozenset[str]] = []
     obs_lock = threading.Lock()
 
     def reader() -> None:
+        readers_ready.wait()
         for _ in range(50):
             snap = registry.snapshot()
             rec = snap.get("pilot")
@@ -313,8 +363,10 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
     for r in readers:
         r.start()
 
-    # Let readers run a moment, then release the reload.
-    time.sleep(0.05)
+    # Wait until every reader thread has hit the barrier (they are all
+    # running their snapshot loop) BEFORE releasing the reload.  This is
+    # deterministic where the previous sleep was load-sensitive.
+    readers_ready.wait()
     proceed.set()
 
     for r in readers:
@@ -628,3 +680,123 @@ def test_post_swap_hook_success_adds_no_warnings(tmp_path: Path) -> None:
     result = reload_bundle(registry, "pilot")
     assert result.ok, result.errors
     assert not [w for w in result.warnings if w.code == "reload-post-swap-hook-failed"]
+
+
+# ---------------------------------------------------------------------------
+# Mid-rename rollback: BaseException leaves sys.modules byte-identical
+# ---------------------------------------------------------------------------
+
+
+def test_swap_rollback_on_mid_rename_baseexception_restores_sys_modules() -> None:
+    """A ``BaseException`` raised mid-rename leaves ``sys.modules`` byte-identical.
+
+    Regression guard for the partial-rename rollback window.  If an
+    interrupt (``KeyboardInterrupt`` / ``SystemExit`` / ``MemoryError``)
+    fires after one iteration of the rename loop has committed but
+    before later iterations process, the ``except BaseException`` clause
+    in :func:`lfx.extension.reload_swap.swap_sys_modules` must fully
+    restore the pre-call state:
+
+    * the just-renamed staging module must not be left bound at the
+      prod name (the half-swap state);
+    * the old prod module must be restored at its prod name;
+    * the staging modules must be restored at their staging names;
+    * ``module.__name__`` mutations that landed in earlier iterations
+      must be reverted.
+
+    The previous implementation used ``sys.modules.setdefault`` for the
+    restore, which is a no-op on prod names the rename loop had already
+    overwritten -- exactly the half-swap state the rollback is meant to
+    prevent.  This test fails on that implementation and passes on the
+    fix.
+    """
+    import types
+    from pathlib import Path as _Path
+
+    from lfx.extension import reload_swap
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader import SLOT_OFFICIAL, LoadedComponent
+
+    target_ns = "_lfx_ext.rollback_pilot"
+    staging_ns = "__reload_staging__.rollback_pilot"
+
+    class _InterruptOnNameSet(types.ModuleType):
+        """ModuleType whose ``__name__`` setter raises ``KeyboardInterrupt``.
+
+        Simulates a ``BaseException`` firing partway through the rename
+        loop's ``module.__name__ = prod_name`` assignment.
+        """
+
+        def __setattr__(self, key: str, value: object) -> None:
+            if key == "__name__":
+                raise KeyboardInterrupt
+            object.__setattr__(self, key, value)
+
+    # Pre-call sys.modules state: two old prod modules, two staging modules.
+    # The first staging module renames cleanly; the second raises mid-rename.
+    old_a = types.ModuleType(f"{target_ns}.a")
+    old_b = types.ModuleType(f"{target_ns}.b")
+    new_a = types.ModuleType(f"{staging_ns}.a")
+    new_b = _InterruptOnNameSet(f"{staging_ns}.b")
+    sys.modules[f"{target_ns}.a"] = old_a
+    sys.modules[f"{target_ns}.b"] = old_b
+    sys.modules[f"{staging_ns}.a"] = new_a
+    sys.modules[f"{staging_ns}.b"] = new_b
+
+    keys_in_scope = (
+        f"{target_ns}.a",
+        f"{target_ns}.b",
+        f"{staging_ns}.a",
+        f"{staging_ns}.b",
+    )
+    pre_state = {key: sys.modules.get(key) for key in keys_in_scope}
+    pre_name_new_a = new_a.__name__
+    pre_name_new_b = new_b.__name__
+
+    def _lc(module_name: str, class_name: str) -> LoadedComponent:
+        return LoadedComponent(
+            extension_id="rollback-pilot",
+            extension_version="0.0.0",
+            bundle="rollback_pilot",
+            class_name=class_name,
+            slot=SLOT_OFFICIAL,
+            klass=type(class_name, (), {}),
+            module_name=module_name,
+            file_path=_Path("/tmp/__rollback_pilot_synthetic__.py"),
+        )
+
+    previous = BundleRecord(
+        bundle="rollback_pilot",
+        extension_id="rollback-pilot",
+        extension_version="0.0.0",
+        slot=SLOT_OFFICIAL,
+        components=(
+            _lc(f"{target_ns}.a", "A"),
+            _lc(f"{target_ns}.b", "B"),
+        ),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        reload_swap.swap_sys_modules(
+            previous=previous,
+            new_components=[_lc(f"{target_ns}.a", "A"), _lc(f"{target_ns}.b", "B")],
+            staging_components=[_lc(f"{staging_ns}.a", "A"), _lc(f"{staging_ns}.b", "B")],
+        )
+
+    # sys.modules is byte-identical for every key the swap could touch.
+    # The critical assertion is that ``{target_ns}.a`` is *old_a* again,
+    # not ``new_a`` (the half-swap state).
+    post_state = {key: sys.modules.get(key) for key in keys_in_scope}
+    assert post_state == pre_state, (
+        f"sys.modules not byte-restored after mid-rename interrupt; "
+        f"diff: {[(k, pre_state[k], post_state[k]) for k in keys_in_scope if pre_state[k] is not post_state[k]]}"
+    )
+
+    # ``module.__name__`` mutations have been reverted.
+    assert new_a.__name__ == pre_name_new_a, "first-iteration __name__ mutation was not reverted on rollback"
+    assert new_b.__name__ == pre_name_new_b, "second-iteration __name__ should have been left at the original value"
+
+    # Cleanup (the autouse fixture handles ``_lfx_ext.*`` and
+    # ``__reload_staging__.*`` regardless, but be explicit here).
+    for key in keys_in_scope:
+        sys.modules.pop(key, None)

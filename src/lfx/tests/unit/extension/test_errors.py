@@ -103,6 +103,10 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "reload-bundle-name-mismatch": "error[reload-bundle-name-mismatch]: Reload source at loc declares bundle name 'content', which does not match the registered bundle being reloaded.",  # noqa: E501
     "reload-source-missing": "error[reload-source-missing]: Reload source path 'content' for bundle 'loc' does not exist or is not a directory.",  # noqa: E501
     "reload-post-swap-hook-failed": "error[reload-post-swap-hook-failed]: Post-swap hook failed for bundle 'content'; the bundle swap committed but a downstream side-effect (e.g. component cache rebuild) raised.",  # noqa: E501
+    "reload-class-retag-failed": "error[reload-class-retag-failed]: Could not retag content.__module__ after reload at loc: msg",  # noqa: E501
+    "reload-transport-error": "error[reload-transport-error]: Could not reach the reload endpoint at loc: msg",
+    "duplicate-bundle-name": "error[duplicate-bundle-name]: Bundle name 'content' is provided by two installed distributions; the second is dropped to prevent collision.",  # noqa: E501 — kept on one line for snapshot diff readability
+    "multi-bundle-unsupported": "error[multi-bundle-unsupported]: Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension.",  # noqa: E501
     "extension-reload-disabled": "error[extension-reload-disabled]: Extension reload is disabled on this server.  Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A).",  # noqa: E501
 }
 

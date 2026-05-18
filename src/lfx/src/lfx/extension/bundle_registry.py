@@ -42,10 +42,13 @@ upstream so the registry does not need to disambiguate by slot.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -189,9 +192,30 @@ class BundleRegistry:
         can compute added/removed components), or ``None`` for a fresh
         install.  Concurrent reads observe either the old record or the
         new record, never a partial state.
+
+        Silent-overwrite detection: when an existing record is replaced
+        by a record originating from a different source path (i.e. not a
+        reload of the same install but a cross-source bundle-name clash
+        that the precedence resolver missed), the overwrite is logged at
+        WARNING so an operator sees the collision in the server log even
+        if upstream shadow resolution dropped the typed warning.  The
+        reload pipeline overwrites the same source_path repeatedly and
+        is intentionally silent in that case.
         """
         with self._write_lock:
             previous = self._bundles.get(record.bundle)
+            if previous is not None and previous.source_path != record.source_path:
+                logger.warning(
+                    "bundle_registry: bundle %r is being overwritten by a different source "
+                    "(was %s [%s], now %s [%s]); upstream shadow resolver should have caught this. "
+                    "The last writer wins, but this typically indicates a cross-source bundle-name "
+                    "collision that needs operator attention.",
+                    record.bundle,
+                    previous.source_path,
+                    previous.distribution or previous.slot,
+                    record.source_path,
+                    record.distribution or record.slot,
+                )
             self._bundles[record.bundle] = record
             self._write_index_locked()
             return previous
@@ -276,9 +300,11 @@ class BundleRegistry:
             tmp = self._index_path.with_suffix(self._index_path.suffix + ".tmp")
             tmp.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
             tmp.replace(self._index_path)
-        except OSError:
-            # Cache miss only -- next successful write replaces it.
-            pass
+        except OSError as exc:
+            # Cache miss only -- next successful write replaces it.  Log at
+            # WARNING so a persistent permission / disk-full failure is not
+            # invisible to an operator wondering why the index never updates.
+            logger.warning("failed to write components_index.json at %s: %s", self._index_path, exc)
 
 
 # ---------------------------------------------------------------------------

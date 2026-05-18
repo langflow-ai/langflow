@@ -116,6 +116,19 @@ const BundleHeaderActionsInner = ({
           title: summary,
           ...(list ? { list: list.list } : {}),
         });
+        if (list && list.list.length > 0) {
+          // Reload succeeded with warnings (e.g. deprecated/partial component).
+          // The green success toast alone hides these from the user; surface
+          // them as a non-fatal notice so the operator sees the details and
+          // they end up in the notification center.
+          setNoticeData({
+            title: t("sidebar.bundles.reload.success.warnings", {
+              bundle: displayName,
+              defaultValue: "Reloaded {{bundle}} with warnings",
+            }),
+            list: list.list,
+          });
+        }
         return;
       }
       const list = renderTypedErrorList(data.errors);

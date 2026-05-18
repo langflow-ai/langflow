@@ -84,14 +84,20 @@ def reload_via_http(
         with httpx.Client(timeout=timeout) as client:
             response = client.post(url, headers=headers)
     except httpx.RequestError as exc:
+        # Transport-layer failure: connection refused, DNS, TLS, timeout.
+        # Use ``reload-transport-error`` so the CLI / log scrapers can
+        # distinguish "could not reach the server" from "the server
+        # responded that the source path is missing" -- the latter is
+        # ``reload-source-missing`` and is a server-side condition.
         return ReloadHttpResponse(
             status=0,
             payload={
                 "ok": False,
                 "errors": [
                     {
-                        "code": "reload-source-missing",
+                        "code": "reload-transport-error",
                         "message": f"Could not reach Langflow server at {url}: {exc}",
+                        "location": url,
                         "hint": (
                             "Start the dev server (e.g. `lfx run`) and pass --target / "
                             "set LANGFLOW_HOST if it is not on http://localhost:7860."
@@ -111,8 +117,9 @@ def reload_via_http(
             "ok": False,
             "errors": [
                 {
-                    "code": "reload-source-missing",
+                    "code": "reload-transport-error",
                     "message": f"Server returned non-JSON body (HTTP {response.status_code}): {response.text[:200]}",
+                    "location": url,
                     "hint": "Confirm the URL points at a Langflow server with the v1 API enabled.",
                 }
             ],
