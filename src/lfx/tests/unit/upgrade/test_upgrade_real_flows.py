@@ -14,14 +14,15 @@ verify the contract:
      (i.e. the apply loop converges in one pass).
   5. Blocked and breaking nodes are left unchanged by the applier.
 """
+
 from __future__ import annotations
 
 import json
 import pathlib
-import pytest
 
-from lfx.upgrade.checker import check_flow_compatibility, COMPONENTS_TO_IGNORE_UPDATE
+import pytest
 from lfx.upgrade.applier import apply_safe_upgrades
+from lfx.upgrade.checker import check_flow_compatibility
 
 FIXTURES_DIR = pathlib.Path(__file__).parent.parent.parent / "fixtures" / "starter_flows" / "v1.9.0"
 
@@ -36,7 +37,9 @@ def _load_registry() -> dict:
     whose only job is to get real component data into the checker.
     """
     import inspect
+
     import orjson
+
     import lfx
 
     pkg_dir = pathlib.Path(inspect.getfile(lfx)).parent
@@ -81,6 +84,7 @@ def flow_data_map() -> dict[str, dict]:
 # ---------------------------------------------------------------------------
 # Parametrise over every fixture file
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.parametrize("flow_name", [f.stem for f in FIXTURE_FLOWS])
 def test_checker_runs_without_error(flow_name, flow_data_map, registry):
@@ -145,20 +149,12 @@ def test_applier_does_not_change_blocking_or_breaking_nodes(flow_name, flow_data
     if not unchanged_ids:
         return  # nothing to check
 
-    orig_nodes = {
-        (n.get("data", {}).get("id") or n.get("id")): n
-        for n in flow.get("nodes", [])
-    }
-    updated_nodes = {
-        (n.get("data", {}).get("id") or n.get("id")): n
-        for n in updated.get("nodes", [])
-    }
+    orig_nodes = {(n.get("data", {}).get("id") or n.get("id")): n for n in flow.get("nodes", [])}
+    updated_nodes = {(n.get("data", {}).get("id") or n.get("id")): n for n in updated.get("nodes", [])}
     for node_id in unchanged_ids:
         orig_code = orig_nodes[node_id]["data"]["node"]["template"]["code"]["value"]
         updated_code = updated_nodes[node_id]["data"]["node"]["template"]["code"]["value"]
-        assert orig_code == updated_code, (
-            f"Blocked/breaking node {node_id} in {flow_name} was unexpectedly modified"
-        )
+        assert orig_code == updated_code, f"Blocked/breaking node {node_id} in {flow_name} was unexpectedly modified"
 
 
 @pytest.mark.parametrize("flow_name", [f.stem for f in FIXTURE_FLOWS])
@@ -182,14 +178,13 @@ def test_original_flow_not_mutated(flow_name, flow_data_map, registry):
             continue
         code_field = node.get("data", {}).get("node", {}).get("template", {}).get("code")
         current_code = code_field.get("value") if isinstance(code_field, dict) else None
-        assert current_code == original_codes[nid], (
-            f"Original flow was mutated for node {nid} in {flow_name}"
-        )
+        assert current_code == original_codes[nid], f"Original flow was mutated for node {nid} in {flow_name}"
 
 
 # ---------------------------------------------------------------------------
 # Summary test — print a human-readable report for CI logs
 # ---------------------------------------------------------------------------
+
 
 def test_upgrade_summary_report(flow_data_map, registry, capsys):
     """Print a human-readable summary of upgrade status across all fixture flows."""
