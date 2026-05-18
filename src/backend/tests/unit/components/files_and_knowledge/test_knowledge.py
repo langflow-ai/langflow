@@ -414,7 +414,6 @@ class TestExtractSourceTypesFromInput:
     """
 
     def test_extension_from_path_string(self) -> None:
-
         assert KnowledgeComponent._extension_from_value("docs/report.PDF") == "pdf"
 
     def test_extension_from_mimetype_string(self) -> None:
