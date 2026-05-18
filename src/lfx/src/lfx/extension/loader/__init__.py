@@ -57,14 +57,16 @@ from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
     load_extension,
     load_inline_bundle,
-    load_installed_extensions,
-    load_seed_extensions,
 )
 from lfx.extension.loader._plugins import (
     filter_component_entry_points,
     filter_plugin_entry_points,
     installed_extension_roots,
     manifest_owning_distributions,
+)
+from lfx.extension.loader._startup import (
+    load_installed_extensions,
+    load_seed_extensions,
 )
 from lfx.extension.loader._types import (
     SLOT_EXTRA,

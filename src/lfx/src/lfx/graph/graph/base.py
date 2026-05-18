@@ -1195,13 +1195,16 @@ class Graph:
         # placeholders.  The structured ``code``/``hint`` come from
         # ``ExtensionError`` so log scrapers can parse the payload.
         for migration_error in migration_report.errors:
+            # Use %s-style positional formatting consistent with the rest of
+            # the extension subsystem so the rendered message is readable
+            # without relying on structlog's keyword-binding behavior.
             logger.warning(
-                "extension migration: {code} flow_id={flow_id} location={location} hint={hint} message={message}",
-                code=migration_error.code,
-                flow_id=flow_id,
-                location=migration_error.location,
-                hint=migration_error.hint,
-                message=migration_error.message,
+                "extension migration: code=%s flow_id=%s location=%s hint=%s message=%s",
+                migration_error.code,
+                flow_id,
+                migration_error.location,
+                migration_error.hint,
+                migration_error.message,
             )
         # TODO(LE-1017): when the extension events pipeline lands, emit a
         # single ``flow-migrated`` event per flow per session here using

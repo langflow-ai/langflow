@@ -42,8 +42,10 @@ from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
+from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
 from lfx.extension.manifest import (
+    BundleRef,
     ExtensionManifest,
     ManifestSource,
     _read_extension_json,
@@ -138,6 +140,52 @@ def canonicalize_distribution(name: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Bundle path-safety verification
+# ---------------------------------------------------------------------------
+
+
+def _verify_bundle_path_safety(
+    extension_root: Path,
+    bundle: BundleRef,
+) -> ExtensionError | None:
+    """Confirm ``bundle.path`` (when resolved under ``extension_root``) stays inside.
+
+    Discovery records flow into the loader, which imports code from
+    ``bundle.path``.  The schema-level validator on :class:`BundleRef`
+    rejects ``..`` and absolute paths syntactically, but a symlink swap
+    or a path that resolves outside the extension root must be caught
+    here so the production-install path enforces the same trust boundary
+    as ``validate_extension``.
+
+    Returns ``None`` on success, or a typed ``path-escape`` error.
+    """
+    candidate = extension_root / bundle.path
+    try:
+        resolved = candidate.resolve(strict=False)
+    except OSError as exc:
+        return ExtensionError(
+            code="path-escape",
+            message=f"Could not resolve bundle path: {exc}",
+            location=bundle.path,
+            content=bundle.path,
+            hint="Make sure the bundle path resolves to a directory under the manifest.",
+        )
+    if not is_within(resolved, extension_root):
+        root_resolved = extension_root.resolve(strict=False)
+        return ExtensionError(
+            code="path-escape",
+            message=(
+                f"Bundle path {bundle.path!r} resolves to {resolved}, which is "
+                f"outside the extension root {root_resolved}."
+            ),
+            location=bundle.path,
+            content=bundle.path,
+            hint="Move the bundle directory inside the extension root or remove the symlink.",
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Installed-distribution discovery
 # ---------------------------------------------------------------------------
 
@@ -192,8 +240,16 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
             if located.is_file():
                 pyproject_candidate = located
 
-    if pyproject_candidate is not None and _pyproject_declares_extension(pyproject_candidate):
-        return pyproject_candidate
+    if pyproject_candidate is not None:
+        try:
+            if _pyproject_declares_extension(pyproject_candidate):
+                return pyproject_candidate
+        except OSError:
+            # Unreadable pyproject that might declare an extension.  Surface
+            # the candidate path so the downstream manifest-unreadable check
+            # fires with an actionable error instead of silently dropping
+            # the distribution.
+            return pyproject_candidate
     return None
 
 
@@ -204,6 +260,10 @@ def _pyproject_declares_extension(pyproject_path: Path) -> bool:
     schema.  A pyproject whose section exists but is malformed must still
     be visible to discovery so the caller can emit a typed
     ``manifest-invalid`` error rather than silently dropping the package.
+
+    An OSError on read (permission denied, etc.) propagates so the caller
+    can distinguish "section absent" (skip) from "could not read file"
+    (surface as a typed error and reach the manifest-unreadable path).
     """
     try:
         section = _read_pyproject_extension(pyproject_path)
@@ -216,8 +276,11 @@ def _pyproject_declares_extension(pyproject_path: Path) -> bool:
         # clearly intended to declare an extension, so surface the package
         # to discovery; the typed manifest-invalid will fire downstream.
         return True
-    except OSError:
-        return False
+    # Note: OSError propagates intentionally. A permission/I/O error on a
+    # pyproject.toml that *might* declare an extension is not the same as
+    # "no extension here" -- swallowing it would silently drop a legitimate
+    # install. Callers gate on this via the surrounding logic in
+    # _distribution_manifest_path / _build_seed_record.
     return section is not None
 
 
@@ -266,6 +329,9 @@ def _build_installed_record(
         )
 
     bundle = manifest.bundles[0]
+    path_error = _verify_bundle_path_safety(extension_root, bundle)
+    if path_error is not None:
+        return None, path_error
     source = ManifestSource(manifest=manifest, path=manifest_path, kind=kind)
     return (
         DiscoveredExtension(
@@ -398,22 +464,36 @@ def _iter_seed_subdirectories(seed_root: Path) -> Iterator[Path]:
     """Yield each immediate subdirectory of *seed_root* in deterministic order.
 
     Hidden directories (``.git``, ``.venv``) and the conventional
-    ``__pycache__`` artifact are skipped.  Symlinks are followed, but only
-    if their target stays on disk -- a dangling link is silently dropped.
+    ``__pycache__`` artifact are skipped.  Symlinked subdirectories are
+    followed only if their resolved target stays inside ``seed_root`` --
+    a symlink pointing anywhere else is silently dropped so the trust
+    boundary matches the loader's per-file check
+    (see lfx.extension._paths.is_within and loader._discovery.iter_bundle_python_files).
+    A dangling link (broken target) is also dropped.
     """
-    skip_names: frozenset[str] = frozenset({"__pycache__", ".git", ".venv", "venv", "node_modules", ".pytest_cache"})
     try:
         children = sorted(seed_root.iterdir(), key=lambda p: p.name)
     except OSError as exc:
         logger.warning("Could not enumerate seed directory %s: %s", seed_root, exc)
         return
     for child in children:
-        if child.name.startswith(".") or child.name in skip_names:
+        if child.name.startswith(".") or child.name in SKIP_DIR_NAMES:
             continue
         try:
             if not child.is_dir():
                 continue
         except OSError:
+            continue
+        # Containment check: a symlink pointing outside the seed root must
+        # not be treated as a seed-resident bundle. The loader's per-file
+        # walk already enforces this for descendant files; we apply the
+        # same gate at the directory level so the trust boundary matches.
+        if not is_within(child, seed_root):
+            logger.warning(
+                "Seed subdirectory %s resolves outside %s; skipping symlink-escape candidate.",
+                child,
+                seed_root,
+            )
             continue
         yield child
 
@@ -430,7 +510,18 @@ def _build_seed_record(seed_subdir: Path) -> tuple[DiscoveredExtension | None, E
     extension_json = seed_subdir / "extension.json"
     pyproject = seed_subdir / "pyproject.toml"
     has_extension_json = extension_json.is_file()
-    has_pyproject_section = pyproject.is_file() and _pyproject_declares_extension(pyproject)
+    has_pyproject_section = False
+    if not has_extension_json and pyproject.is_file():
+        try:
+            has_pyproject_section = _pyproject_declares_extension(pyproject)
+        except OSError as exc:
+            return None, ExtensionError(
+                code="manifest-unreadable",
+                message=str(exc),
+                location=str(pyproject),
+                content=seed_subdir.name,
+                hint="Check file permissions on the pyproject.toml and re-run.",
+            )
 
     if not has_extension_json and not has_pyproject_section:
         return None, None
@@ -455,6 +546,9 @@ def _build_seed_record(seed_subdir: Path) -> tuple[DiscoveredExtension | None, E
         )
 
     bundle = source.manifest.bundles[0]
+    path_error = _verify_bundle_path_safety(seed_subdir, bundle)
+    if path_error is not None:
+        return None, path_error
     return (
         DiscoveredExtension(
             extension_id=source.manifest.id,

@@ -63,11 +63,9 @@ this module from a non-Mode-A path, stop and re-read LE-905 first.
 
 from __future__ import annotations
 
-import contextlib
 import logging
-import sys
 import uuid
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -81,10 +79,18 @@ from lfx.extension.loader import (
     DEFAULT_MODULE_NAMESPACE,
     SLOT_EXTRA,
     SLOT_OFFICIAL,
-    LoadedComponent,
     LoadResult,
     load_extension,
     load_inline_bundle,
+)
+from lfx.extension.reload_swap import (
+    drop_staging_modules as _drop_staging_modules,
+)
+from lfx.extension.reload_swap import (
+    retag_component as _retag_component,
+)
+from lfx.extension.reload_swap import (
+    swap_sys_modules as _swap_sys_modules,
 )
 
 if TYPE_CHECKING:
@@ -470,7 +476,7 @@ def _run_pipeline_body(
     # an RLock, so install_bundle()'s own internal acquire is a no-op
     # reentry while this context is active.
     with registry.write_locked():
-        _swap_sys_modules(
+        swap_warnings = _swap_sys_modules(
             previous=previous,
             new_components=new_components,
             staging_components=staging.components,
@@ -496,7 +502,7 @@ def _run_pipeline_body(
         components_added=added,
         components_removed=removed,
         components_changed=changed,
-        warnings=tuple(staging.warnings) + hook_warnings,
+        warnings=tuple(staging.warnings) + tuple(swap_warnings) + hook_warnings,
         reload_id=reload_id,
     )
     _emit_bundle_reload_event(result)
@@ -517,107 +523,11 @@ def _resolve_source(source_path: Path | str | None, live: BundleRecord | None) -
     return None
 
 
-def _retag_component(
-    component: LoadedComponent,
-    staging_namespace: str,
-    target_namespace: str,
-) -> LoadedComponent:
-    """Return a copy of ``component`` with its module_name re-prefixed.
-
-    The loader stamped the staging namespace on every component during
-    Stage 1; Stage 3 swaps it back to the production namespace so the
-    registry's class metadata matches where the module ultimately lives
-    in ``sys.modules``.
-
-    Raises :class:`AssertionError` if the loader didn't honour the
-    ``module_namespace=staging_namespace`` contract for this component.
-    Silently returning the unmodified component (the prior behaviour)
-    would let :func:`_swap_sys_modules` succeed against the wrong
-    sys.modules entries, leaving the BundleRecord pointing at modules
-    under an unexpected prefix.
-    """
-    old_prefix = f"{staging_namespace}."
-    if not component.module_name.startswith(old_prefix):
-        msg = (
-            f"loader returned component {component.class_name!r} with "
-            f"module_name={component.module_name!r}, which does not start "
-            f"with the staging prefix {old_prefix!r}; the staging-namespace "
-            "contract is broken upstream of reload."
-        )
-        raise AssertionError(msg)
-    new_module_name = f"{target_namespace}.{component.module_name[len(old_prefix) :]}"
-    return replace(component, module_name=new_module_name)
-
-
-def _swap_sys_modules(
-    *,
-    previous: BundleRecord | None,
-    new_components: Iterable[LoadedComponent],
-    staging_components: Iterable[LoadedComponent],
-) -> None:
-    """Drop old prod entries; rename staging entries to their prod names.
-
-    Held under the registry write lock by virtue of being called from
-    :func:`_run_pipeline` between :func:`install_bundle` and stage-4
-    cleanup.  Ordering: drop-old first so a prod-name reuse picks up the
-    new module, not a stale one.
-
-    Module ``__name__`` attributes are also rewritten so ``inspect`` /
-    pickling treat the module as living at its production name.  Each
-    component class's ``__module__`` is retagged in lockstep so
-    ``inspect.getmodule(cls)`` resolves against ``sys.modules`` under the
-    production name; without this, post-swap consumers (notably
-    :func:`Component.set_class_code`) see ``cls.__module__`` pointing at
-    a staging key that has just been dropped and silently fail.
-    """
-    # Materialize the iterables so we can walk them twice (once to build
-    # the rename map, once to retag each class's __module__).
-    staging_list: list[LoadedComponent] = list(staging_components)
-    new_list: list[LoadedComponent] = list(new_components)
-
-    if previous is not None:
-        for old in previous.components:
-            sys.modules.pop(old.module_name, None)
-
-    # Map staging name -> new prod name for the swap.
-    rename_map: dict[str, str] = {
-        staged.module_name: new.module_name for staged, new in zip(staging_list, new_list, strict=True)
-    }
-
-    for staging_name, prod_name in rename_map.items():
-        module = sys.modules.pop(staging_name, None)
-        if module is None:
-            continue
-        # __name__ is a normal string attr on regular modules; only
-        # pathological subclasses block writes.  Best-effort.
-        with contextlib.suppress(AttributeError, TypeError):
-            module.__name__ = prod_name
-        sys.modules[prod_name] = module
-
-    # Retag each component class's __module__ to the production name.
-    # The class was defined while its module was registered under the
-    # staging namespace, so cls.__module__ was stamped at class-definition
-    # time to "__reload_staging__.<reload_id>....".  Renaming the
-    # sys.modules entry above does not propagate to the class objects.
-    # Without this fixup, inspect.getmodule(cls) returns None (the
-    # staging key has been dropped from sys.modules) and downstream
-    # consumers like Component.set_class_code raise -- silently breaking
-    # the post-swap cache rebuild (the empty-palette-after-reload bug).
-    for new in new_list:
-        with contextlib.suppress(AttributeError, TypeError):
-            new.klass.__module__ = new.module_name
-
-
-def _drop_staging_modules(staging_namespace: str) -> None:
-    """Remove any remaining ``<staging_namespace>.*`` entries from sys.modules.
-
-    Stage 4 cleanup.  Tolerates the staging namespace being already empty
-    (the happy path swapped everything to prod names in Stage 3).
-    """
-    prefix = f"{staging_namespace}."
-    stale = [name for name in sys.modules if name == staging_namespace or name.startswith(prefix)]
-    for name in stale:
-        sys.modules.pop(name, None)
+# sys.modules surgery primitives (_retag_component, _swap_sys_modules,
+# _drop_staging_modules) live in :mod:`lfx.extension.reload_swap`.  They
+# are aliased at the top of this module so existing test imports keep
+# working without re-exporting them from this file.  The split is purely
+# structural -- the call ordering and invariants are unchanged.
 
 
 def _diff(

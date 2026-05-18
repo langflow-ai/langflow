@@ -173,7 +173,7 @@ def test_reload_via_http_request_error(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result.status == 0
     assert not result.ok
-    assert result.payload["errors"][0]["code"] == "reload-source-missing"
+    assert result.payload["errors"][0]["code"] == "reload-transport-error"
 
 
 def test_reload_via_http_non_json_body(patched_httpx: dict) -> None:
@@ -186,4 +186,4 @@ def test_reload_via_http_non_json_body(patched_httpx: dict) -> None:
     )
     assert result.status == 500
     assert not result.ok
-    assert result.payload["errors"][0]["code"] == "reload-source-missing"
+    assert result.payload["errors"][0]["code"] == "reload-transport-error"

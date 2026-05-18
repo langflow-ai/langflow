@@ -12,6 +12,8 @@ short-circuits with 404 when ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` is off.
 
 from __future__ import annotations
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from lfx.extension.bundle_registry import get_default_registry
 from lfx.extension.errors import ExtensionError
@@ -113,7 +115,13 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
         )
 
     try:
-        result = reload_bundle(registry, bundle_name)
+        # reload_bundle is synchronous and does substantial blocking work
+        # (disk I/O, importlib execution of arbitrary extension code, file
+        # hashing, RLock acquisition).  Run it off the event loop so a slow
+        # or large bundle import does not freeze the worker for every other
+        # in-flight request.  ``asyncio.to_thread`` propagates the result
+        # and any exception (including ReloadInProgressError) back to us.
+        result = await asyncio.to_thread(reload_bundle, registry, bundle_name)
     except ReloadInProgressError as exc:
         # 409 is the conventional "in-progress / conflicting state" code.
         logger.info("extension reload-in-progress collision for %s", exc.bundle)

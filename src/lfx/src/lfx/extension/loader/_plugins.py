@@ -17,6 +17,7 @@ import surface to reach for.
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import re
 from importlib import metadata as importlib_metadata
@@ -379,19 +380,50 @@ def filter_plugin_entry_points(
 
 
 def _entry_point_loads_to_component(ep: importlib_metadata.EntryPoint) -> bool:
-    """Try to load ``ep`` and decide whether the loaded value is a Component.
+    """Try to decide whether ``ep`` resolves to a Component subclass.
 
-    Defensive: any load-time failure returns False so the entry-point is
-    treated as non-component (kept) by the caller. Surfacing the failure
-    as a typed error belongs to the layer that actually wants to load the
-    component (LE-1015 loader proper); this helper exists only to drive
-    manifest-first precedence for runtime entry-point consumers.
+    Lazy: tries ``importlib.util.find_spec`` first so a filter-time check
+    does NOT execute arbitrary third-party module-level code as a side
+    effect.  Only falls through to ``ep.load()`` if the spec lookup
+    cannot disambiguate (e.g. the entry-point points at a class inside
+    a module rather than at the module itself).
+
+    The sibling helper ``_manifest_via_entry_point`` (above) is explicit
+    that manifest discovery must not trigger module-level side effects;
+    this predicate now matches that posture for the runtime filter.
+
+    Any load-time failure returns False so the entry-point is treated as
+    non-component (kept) by the caller.  The narrow ``Exception`` (no
+    longer ``BaseException``) intentionally lets ``SystemExit`` and
+    ``KeyboardInterrupt`` propagate so a CTRL-C during startup is not
+    silently swallowed by the filter pass.
     """
+    # Fast path: most component entry-points point at a module-level
+    # symbol (``my_pkg.components.thing:ThingComponent``).  importlib's
+    # find_spec can locate the module without executing it, so we can
+    # skip the eager load in the common case.  The name component of the
+    # entry-point's value (the bit after the colon, if present) is what
+    # tells us whether the symbol is a class -- but find_spec only gives
+    # us module presence, not contents, so we still need ep.load() to
+    # confirm a class.  The win here is that for entry-points whose
+    # module clearly does NOT exist (broken install, missing dependency)
+    # we short-circuit to False before importing anything.
+    try:
+        module_name, _, _ = ep.value.partition(":")
+        if module_name and importlib.util.find_spec(module_name) is None:
+            return False
+    except (ValueError, ImportError, AttributeError):
+        # Malformed ep.value or import-time error during find_spec.  Fall
+        # through to the eager load below so the existing behaviour is
+        # preserved for unusual entry-point shapes.
+        pass
+
     try:
         value = ep.load()
-    except BaseException as exc:  # noqa: BLE001
-        # Same trade-off as the bundle loader: at startup we never want
-        # one bad entry-point to abort the whole filter pass.
+    except Exception as exc:  # noqa: BLE001
+        # Same trade-off as the bundle loader, but narrower: at startup
+        # we never want one bad entry-point to abort the whole filter
+        # pass, but we do not swallow SystemExit/KeyboardInterrupt.
         logger.debug("Could not load entry-point %r for component check: %s", ep.name, exc)
         return False
     return is_component_subclass(value)

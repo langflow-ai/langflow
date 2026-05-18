@@ -45,7 +45,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "manifest-invalid",
         "manifest-unreadable",
         "field-deferred-in-this-milestone",
+        # Deprecated alias of multi-bundle-unsupported; kept for one
+        # milestone for log scrapers.
         "multi-bundle-deferred-in-this-milestone",
+        "multi-bundle-unsupported",
         "template-deferred-in-this-milestone",
         # Validate-specific codes
         "path-escape",
@@ -94,6 +97,9 @@ ERROR_CODES: frozenset[str] = frozenset(
         # Surfaced on ReloadResult.warnings so the API caller knows the
         # palette may be stale even though ok=True.
         "reload-post-swap-hook-failed",
+        "reload-class-retag-failed",
+        "reload-transport-error",
+        "duplicate-bundle-name",
         # HTTP route gate (Mode A only): the runtime guard that hides the
         # reload route on Mode B/C deployments returns this code so the
         # client gets the same typed envelope as every other reload error.
@@ -199,6 +205,15 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "multi-bundle-deferred-in-this-milestone": (
         "Manifest declares more than one bundle entry; multi-bundle extensions are deferred in this milestone."
     ),
+    "multi-bundle-unsupported": (
+        "Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension."
+    ),
+    "duplicate-bundle-name": (
+        "Bundle name {content!r} is provided by two installed distributions; "
+        "the second is dropped to prevent collision."
+    ),
+    "reload-class-retag-failed": ("Could not retag {content}.__module__ after reload at {location}: {message}"),
+    "reload-transport-error": ("Could not reach the reload endpoint at {location}: {message}"),
     "template-deferred-in-this-milestone": ("Template {content!r} is deferred in this milestone."),
     "path-escape": (
         "Path {content!r} escapes the bundle root (..; absolute path; or symlink leaving the bundle directory)."

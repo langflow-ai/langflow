@@ -115,7 +115,7 @@ def test_multi_bundle_emits_dedicated_code(tmp_path: Path) -> None:
     }
     (tmp_path / "extension.json").write_text(json.dumps(bad), encoding="utf-8")
     report = validate_extension(tmp_path)
-    assert _codes(report) == ["multi-bundle-deferred-in-this-milestone"]
+    assert _codes(report) == ["multi-bundle-unsupported"]
 
 
 # ---------------------------------------------------------------------------

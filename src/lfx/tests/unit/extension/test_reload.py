@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import sys
 import threading
-import time
 from typing import TYPE_CHECKING
 
 import pytest
@@ -212,6 +211,45 @@ def test_reload_missing_source_returns_typed_error(tmp_path: Path) -> None:
     assert any(e.code == "reload-source-missing" for e in result.errors)
 
 
+def test_reload_traversal_source_path_does_not_escape(tmp_path: Path) -> None:
+    """A ``../``-laden source_path must surface a typed error, not touch /etc.
+
+    The reload entry point accepts a source_path; the worst-case failure mode
+    is a coordinate that lands in a filesystem path and is allowed to mutate
+    state outside the intended root.  ``reload_bundle`` should treat a
+    non-directory traversal source as a typed ``reload-source-missing``
+    error before touching the registry's reload-in-progress guard.
+    """
+    registry = BundleRegistry()
+    result = reload_bundle(
+        registry,
+        "any_name",
+        source_path=tmp_path / ".." / ".." / "etc" / "passwd",
+    )
+    assert not result.ok
+    assert any(e.code == "reload-source-missing" for e in result.errors)
+    # And the registry is untouched.
+    assert registry.get_bundle("any_name") is None
+    assert not registry.is_reload_in_progress("any_name")
+
+
+def test_reload_absolute_path_outside_does_not_load(tmp_path: Path) -> None:
+    """Absolute path to non-bundle directory fails cleanly without registering.
+
+    An absolute source_path pointing at something that exists but is not a
+    valid bundle must fail cleanly without registering anything.
+    """
+    registry = BundleRegistry()
+    # /tmp/something-that-isnt-an-extension exists but isn't a bundle root.
+    bogus = tmp_path / "definitely_not_a_bundle"
+    bogus.mkdir()
+    result = reload_bundle(registry, "any_name", source_path=bogus)
+    assert not result.ok
+    # Should fail at manifest discovery or downstream typed error; never
+    # silently produce ok=True.
+    assert registry.get_bundle("any_name") is None
+
+
 def test_reload_bundle_name_mismatch(tmp_path: Path) -> None:
     """Manifest at source declares a different bundle name than the one being reloaded."""
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
@@ -276,6 +314,13 @@ def test_double_reload_returns_in_progress(tmp_path: Path, monkeypatch: pytest.M
 
 
 def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Concurrent readers observe pre- or post-swap state, never a mix.
+
+    Race-window deterministic: a Barrier guarantees readers are running while
+    the reload is paused mid-stage.  The previous version used ``time.sleep(0.05)``
+    which could pass under CI load without actually exercising the race window
+    (the readers finished before the reload paused).
+    """
     root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
     registry = BundleRegistry()
     _initial_install(registry, root)
@@ -285,6 +330,11 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
     proceed = threading.Event()
     started = threading.Event()
     real_load = reload_mod.load_extension
+    n_readers = 16
+    # Barrier of (n_readers + 1): each reader rendezvouses once before
+    # starting the snapshot loop; the test thread is the +1 that signals
+    # the reload to proceed only after every reader has hit the barrier.
+    readers_ready = threading.Barrier(n_readers + 1, timeout=5.0)
 
     def slow_load(*args: object, **kwargs: object):  # type: ignore[no-untyped-def]
         started.set()
@@ -293,11 +343,11 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
 
     monkeypatch.setattr(reload_mod, "load_extension", slow_load)
 
-    n_readers = 16
     observations: list[frozenset[str]] = []
     obs_lock = threading.Lock()
 
     def reader() -> None:
+        readers_ready.wait()
         for _ in range(50):
             snap = registry.snapshot()
             rec = snap.get("pilot")
@@ -313,8 +363,10 @@ def test_concurrent_readers_see_pre_or_post_state(tmp_path: Path, monkeypatch: p
     for r in readers:
         r.start()
 
-    # Let readers run a moment, then release the reload.
-    time.sleep(0.05)
+    # Wait until every reader thread has hit the barrier (they are all
+    # running their snapshot loop) BEFORE releasing the reload.  This is
+    # deterministic where the previous sleep was load-sensitive.
+    readers_ready.wait()
     proceed.set()
 
     for r in readers:
