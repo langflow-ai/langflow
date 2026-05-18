@@ -1233,7 +1233,6 @@
               "handle_parsing_errors",
               "verbose",
               "max_iterations",
-              "agent_description",
               "stream",
               "add_current_date_tool",
               "add_calculator_tool"
@@ -1335,34 +1334,6 @@
                 "track_in_telemetry": true,
                 "type": "bool",
                 "value": true
-              },
-              "agent_description": {
-                "_input_type": "MultilineInput",
-                "advanced": true,
-                "ai_enabled": false,
-                "copy_field": false,
-                "display_name": "Agent Description [Deprecated]",
-                "dynamic": false,
-                "info": "The description of the agent. This is only used when in Tool Mode. Defaults to 'A helpful assistant with access to the following tools:' and tools are added dynamically. This feature is deprecated and will be removed in future versions.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "agent_description",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": "A helpful assistant with access to the following tools:"
               },
               "api_key": {
                 "_input_type": "SecretStrInput",
