@@ -185,7 +185,7 @@ def test_serve_command_json_file():
         # Mock the necessary dependencies
         with (
             patch("lfx.cli.commands.load_flow_from_json") as mock_load,
-            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+            patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
@@ -239,7 +239,7 @@ def test_serve_command_inline_json():
 
     with (
         patch("lfx.cli.commands.load_flow_from_json") as mock_load,
-        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch("lfx.cli.commands.uvicorn.run") as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
         import typer
@@ -406,7 +406,7 @@ class TestServeCommandMultiFlow:
 
         with (
             patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
-            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch("lfx.cli.commands.uvicorn.run"),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
@@ -436,7 +436,7 @@ class TestServeCommandMultiFlow:
 
         with (
             patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
-            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch("lfx.cli.commands.uvicorn.run"),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
@@ -511,7 +511,7 @@ class TestPythonScriptServe:
         with (
             patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
             patch("lfx.cli.commands.find_graph_variable", return_value={"type": "assignment", "line": 1}),
-            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)),
+            patch("lfx.cli.commands.uvicorn.run"),
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
             import typer
@@ -727,3 +727,136 @@ def test_startup_scan_pre_warms_cache(tmp_path):
     assert "pre-existing-id" in registry._flows, (
         "Startup scan must pre-warm the in-memory cache; flow should be in _flows immediately after build"
     )
+
+
+def test_serve_command_passes_workers_to_uvicorn():
+    """--workers N must be forwarded to uvicorn.run as the workers argument."""
+    import json
+    import os
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from lfx.cli.commands import serve_command
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "flow.json"
+        p.write_text(json.dumps(flow_data))
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+            patch("lfx.cli.commands.uvicorn.run") as mock_run,
+        ):
+            serve_command(
+                script_paths=[str(p)],
+                host="127.0.0.1",
+                port=9999,
+                workers=4,
+                verbose=False,
+                env_file=None,
+                log_level="warning",
+                flow_json=None,
+                flow_dir=None,
+                stdin=False,
+                check_variables=False,
+                no_env_fallback=False,
+            )
+
+    mock_run.assert_called_once()
+    call_args = mock_run.call_args[0]
+    call_kwargs = mock_run.call_args[1] if mock_run.call_args[1] else {}
+    assert call_kwargs.get("workers") == 4
+    # For workers > 1, the app must be the factory import string, not an object
+    assert call_args[0] == "lfx.cli.serve_app:create_serve_app"
+    # The factory=True flag is required so uvicorn calls create_serve_app() at
+    # worker startup, not at request time.
+    assert call_kwargs.get("factory") is True
+
+
+def test_serve_command_warns_when_workers_gt1_without_flow_dir():
+    """--workers > 1 without --flow-dir should emit a warning to stderr."""
+    import json
+    import os
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from lfx.cli.commands import serve_command
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    stderr_output = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "flow.json"
+        p.write_text(json.dumps(flow_data))
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+            patch("lfx.cli.commands.uvicorn.run"),
+            patch("typer.echo", side_effect=lambda msg, **kw: stderr_output.append(msg) if kw.get("err") else None),
+        ):
+            serve_command(
+                script_paths=[str(p)],
+                host="127.0.0.1",
+                port=9999,
+                workers=2,
+                verbose=False,
+                env_file=None,
+                log_level="warning",
+                flow_json=None,
+                flow_dir=None,
+                stdin=False,
+                check_variables=False,
+                no_env_fallback=False,
+            )
+
+    assert any("--flow-dir" in msg for msg in stderr_output), (
+        f"Expected a warning mentioning --flow-dir, got: {stderr_output}"
+    )
+
+
+def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):
+    """--workers > 1 WITH --flow-dir must not emit the missing-store warning."""
+    import json
+    import os
+    import tempfile
+    from pathlib import Path
+    from unittest.mock import MagicMock, patch
+    from lfx.cli.commands import serve_command
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    stderr_output = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        p = Path(tmp) / "flow.json"
+        p.write_text(json.dumps(flow_data))
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+            patch("lfx.cli.commands.uvicorn.run"),
+            patch("typer.echo", side_effect=lambda msg, **kw: stderr_output.append(msg) if kw.get("err") else None),
+        ):
+            serve_command(
+                script_paths=[str(p)],
+                host="127.0.0.1",
+                port=9999,
+                workers=2,
+                verbose=False,
+                env_file=None,
+                log_level="warning",
+                flow_json=None,
+                flow_dir=tmp_path / "flows",
+                stdin=False,
+                check_variables=False,
+                no_env_fallback=False,
+            )
+
+    assert not any("--flow-dir" in msg for msg in stderr_output)

@@ -47,6 +47,10 @@ if TYPE_CHECKING:
 
 # Security - use the same pattern as Langflow main API
 API_KEY_NAME = "x-api-key"
+
+# Constants for app factory env vars (used by uvicorn worker processes)
+_SERVE_FLOW_DIR_ENV = "LFX_SERVE_FLOW_DIR"
+_SERVE_NO_ENV_FALLBACK_ENV = "LFX_SERVE_NO_ENV_FALLBACK"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -545,3 +549,31 @@ def create_multi_serve_app(
             return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     return app
+
+
+def create_serve_app() -> FastAPI:
+    """ASGI app factory called by each uvicorn worker in multi-worker mode.
+
+    Workers cannot inherit the parent's in-memory app object. Instead, each
+    worker calls this factory, which reads ``LFX_SERVE_FLOW_DIR`` and
+    ``LFX_SERVE_NO_ENV_FALLBACK`` from the environment, pre-warms its own
+    in-memory cache from the shared ``FilesystemFlowStore``, and returns a
+    ready FastAPI app.
+
+    The parent process must set those env vars **before** calling
+    ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
+    """
+    import os
+    from pathlib import Path
+
+    from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
+
+    flow_dir_str = os.environ.get(_SERVE_FLOW_DIR_ENV)
+    no_env_fallback = os.environ.get(_SERVE_NO_ENV_FALLBACK_ENV, "0") == "1"
+    flow_dir = Path(flow_dir_str) if flow_dir_str else None
+
+    flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
+    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
+    registry.warm_from_store()
+
+    return create_multi_serve_app(registry=registry, verbose_print=lambda _: None)

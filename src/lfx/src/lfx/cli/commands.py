@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import os
 import sys
 import tempfile
-from functools import partial
 from pathlib import Path
 
 import typer
 import uvicorn
-from asyncer import syncify
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
@@ -36,8 +35,105 @@ console = Console()
 API_KEY_MASK_LENGTH = 8
 
 
-@partial(syncify, raise_sync_error=False)
-async def serve_command(
+async def _build_serve_registry(
+    *,
+    script_paths: list[str] | None,
+    flow_json: str | None,
+    stdin: bool,
+    check_variables: bool,
+    no_env_fallback: bool,
+    flow_store: "FlowStore",
+    verbose_print,
+) -> tuple["FlowRegistry", str | None]:
+    """Build the FlowRegistry from startup inputs.
+
+    Returns (registry, temp_file_path_or_None). Caller must unlink the temp
+    file if not None.
+    """
+    temp_file_to_cleanup: str | None = None
+
+    if flow_json is not None:
+        try:
+            json_data = json.loads(flow_json)
+        except json.JSONDecodeError as e:
+            typer.echo(f"Error: Invalid JSON content: {e}", err=True)
+            raise typer.Exit(1) from e
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            json.dump(json_data, tmp, indent=2)
+            temp_file_to_cleanup = tmp.name
+        try:
+            registry = await build_registry_from_paths(
+                [Path(temp_file_to_cleanup)], verbose_print,
+                check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+            )
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1) from e
+
+    elif stdin:
+        stdin_content = sys.stdin.read().strip()
+        if not stdin_content:
+            typer.echo("Error: No content received from stdin", err=True)
+            raise typer.Exit(1)
+        try:
+            json_data = json.loads(stdin_content)
+        except json.JSONDecodeError as e:
+            typer.echo(f"Error: Invalid JSON content from stdin: {e}", err=True)
+            raise typer.Exit(1) from e
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
+            json.dump(json_data, tmp, indent=2)
+            temp_file_to_cleanup = tmp.name
+        try:
+            registry = await build_registry_from_paths(
+                [Path(temp_file_to_cleanup)], verbose_print,
+                check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+            )
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1) from e
+
+    elif script_paths:
+        resolved = [Path(p).resolve() for p in script_paths]
+        missing = [p for p in resolved if not p.exists()]
+        if missing:
+            for m in missing:
+                typer.echo(f"Error: Path '{m}' does not exist.", err=True)
+            raise typer.Exit(1)
+
+        if len(resolved) == 1 and resolved[0].is_dir():
+            dir_path = resolved[0]
+            try:
+                registry = await build_registry_from_directory(
+                    dir_path, verbose_print,
+                    check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                )
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+            verbose_print(f"✓ Loaded {len(registry)} flow(s) from directory {dir_path}")
+        else:
+            non_supported = [p for p in resolved if p.suffix not in {".json", ".py"}]
+            if non_supported:
+                for p in non_supported:
+                    typer.echo(f"Error: '{p}' must be a .json or .py file.", err=True)
+                raise typer.Exit(1)
+            try:
+                registry = await build_registry_from_paths(
+                    resolved, verbose_print,
+                    check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                )
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
+
+    else:
+        registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
+        verbose_print("Starting with empty registry — flows can be uploaded at runtime")
+
+    return registry, temp_file_to_cleanup
+
+
+def serve_command(
     script_paths: list[str] | None = typer.Argument(
         default=None,
         help=(
@@ -48,6 +144,7 @@ async def serve_command(
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
+    workers: int = typer.Option(1, "--workers", "-w", help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
     env_file: Path | None = typer.Option(
         None,
@@ -85,7 +182,7 @@ async def serve_command(
         "--check-variables/--no-check-variables",
         help="Check global variables for environment compatibility",
     ),
-    no_env_fallback: bool = typer.Option(
+    no_env_fallback: bool = typer.Option(  # noqa: FBT001, FBT003
         False,
         "--no-env-fallback/--env-fallback",
         help=(
@@ -135,117 +232,58 @@ async def serve_command(
         )
         raise typer.Exit(1)
 
+    if workers < 1:
+        typer.echo("Error: --workers must be at least 1.", err=True)
+        raise typer.Exit(1)
+
     os.environ["LANGFLOW_PRETTY_LOGS"] = "false"
     configure(log_level=log_level)
 
-    temp_file_to_cleanup: str | None = None
+    from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
+    flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
 
-    try:
-        # ----------------------------------------------------------------
-        # Build FlowRegistry from the input source
-        # ----------------------------------------------------------------
-        from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
+    if workers > 1 and flow_dir is None:
+        typer.echo(
+            "Warning: --workers > 1 without --flow-dir means each worker has an isolated "
+            "in-memory registry. Flows uploaded to one worker will not be visible to others. "
+            "Pass --flow-dir to enable shared flow storage across workers.",
+            err=True,
+        )
 
-        flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
-
-        registry: FlowRegistry
-
-        if flow_json is not None:
-            try:
-                json_data = json.loads(flow_json)
-            except json.JSONDecodeError as e:
-                typer.echo(f"Error: Invalid JSON content: {e}", err=True)
-                raise typer.Exit(1) from e
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-                json.dump(json_data, tmp, indent=2)
-                temp_file_to_cleanup = tmp.name
-            paths = [Path(temp_file_to_cleanup)]
-            source_display = "inline JSON"
-            try:
-                registry = await build_registry_from_paths(
-                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
-                    store=flow_store,
-                )
-            except ValueError as e:
-                typer.echo(f"Error: {e}", err=True)
-                raise typer.Exit(1) from e
-
-        elif stdin:
-            stdin_content = sys.stdin.read().strip()
-            if not stdin_content:
-                typer.echo("Error: No content received from stdin", err=True)
-                raise typer.Exit(1)
-            try:
-                json_data = json.loads(stdin_content)
-            except json.JSONDecodeError as e:
-                typer.echo(f"Error: Invalid JSON content from stdin: {e}", err=True)
-                raise typer.Exit(1) from e
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-                json.dump(json_data, tmp, indent=2)
-                temp_file_to_cleanup = tmp.name
-            paths = [Path(temp_file_to_cleanup)]
-            source_display = "stdin"
-            try:
-                registry = await build_registry_from_paths(
-                    paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
-                    store=flow_store,
-                )
-            except ValueError as e:
-                typer.echo(f"Error: {e}", err=True)
-                raise typer.Exit(1) from e
-
-        elif script_paths:
-            resolved = [Path(p).resolve() for p in script_paths]
-
-            missing = [p for p in resolved if not p.exists()]
-            if missing:
-                for m in missing:
-                    typer.echo(f"Error: Path '{m}' does not exist.", err=True)
-                raise typer.Exit(1)
-
-            if len(resolved) == 1 and resolved[0].is_dir():
-                dir_path = resolved[0]
-                source_display = str(dir_path)
-                try:
-                    registry = await build_registry_from_directory(
-                        dir_path, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
-                        store=flow_store,
-                    )
-                except ValueError as e:
-                    typer.echo(f"Error: {e}", err=True)
-                    raise typer.Exit(1) from e
-                verbose_print(f"✓ Loaded {len(registry)} flow(s) from directory {dir_path}")
-                paths = []
-            else:
-                non_supported = [p for p in resolved if p.suffix not in {".json", ".py"}]
-                if non_supported:
-                    for p in non_supported:
-                        typer.echo(f"Error: '{p}' must be a .json or .py file.", err=True)
-                    raise typer.Exit(1)
-                paths = resolved
-                source_display = ", ".join(p.name for p in paths)
-
-            if paths:
-                try:
-                    registry = await build_registry_from_paths(
-                        paths, verbose_print, check_variables=check_variables, no_env_fallback=no_env_fallback,
-                        store=flow_store,
-                    )
-                except ValueError as e:
-                    typer.echo(f"Error: {e}", err=True)
-                    raise typer.Exit(1) from e
-
+    # Determine display name for startup panel
+    if flow_json is not None:
+        source_display = "inline JSON"
+    elif stdin:
+        source_display = "stdin"
+    elif script_paths:
+        resolved_display = [Path(p).resolve() for p in script_paths]
+        if len(resolved_display) == 1 and resolved_display[0].is_dir():
+            source_display = str(resolved_display[0])
         else:
-            registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
-            source_display = "none (upload flows via POST /flows/upload/)"
-            verbose_print("Starting with empty registry — flows can be uploaded at runtime")
+            source_display = ", ".join(Path(p).name for p in script_paths)
+    else:
+        source_display = "none (upload flows via POST /flows/upload/)"
+
+    temp_file_to_cleanup: str | None = None
+    try:
+        registry, temp_file_to_cleanup = asyncio.run(_build_serve_registry(
+            script_paths=script_paths,
+            flow_json=flow_json,
+            stdin=stdin,
+            check_variables=check_variables,
+            no_env_fallback=no_env_fallback,
+            flow_store=flow_store,
+            verbose_print=verbose_print,
+        ))
 
         if flow_dir:
+            if workers == 1:
+                # Single-worker: warm the cache now so the startup panel shows the real flow count.
+                # Multi-worker: each worker calls warm_from_store() inside create_serve_app(); the
+                # parent process can't know the count, so we leave the panel at 0 for that case.
+                registry.warm_from_store()
             verbose_print(f"✓ Flow store pre-warmed from {flow_dir} ({len(registry)} flows in cache)")
 
-        # ----------------------------------------------------------------
-        # Start the server
-        # ----------------------------------------------------------------
         if is_port_in_use(port, host):
             port = get_free_port(port)
             verbose_print(f"Port in use; using {port} instead")
@@ -263,6 +301,7 @@ async def serve_command(
                 f"[bold green]🎯 LFX Server Started![/bold green]\n\n"
                 f"[bold]Source:[/bold] {source_display}\n"
                 f"[bold]Flows:[/bold] {len(registry)}\n"
+                f"[bold]Workers:[/bold] {workers}\n"
                 f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
                 f"[bold]API Key:[/bold] {masked_key}\n\n"
                 f"[dim]List flows:[/dim]\n"
@@ -278,9 +317,19 @@ async def serve_command(
         console.print()
 
         try:
-            config = uvicorn.Config(serve_app, host=host, port=port, log_level=log_level)
-            server = uvicorn.Server(config)
-            await server.serve()
+            if workers > 1:
+                # uvicorn requires an import string (not an app object) for multi-worker mode.
+                # Set env vars so each worker's create_serve_app() factory can reconstruct config.
+                from lfx.cli.serve_app import _SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV
+                os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
+                os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
+                uvicorn.run(
+                    "lfx.cli.serve_app:create_serve_app",
+                    host=host, port=port, workers=workers, log_level=log_level,
+                    factory=True,
+                )
+            else:
+                uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None
