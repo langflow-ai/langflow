@@ -423,6 +423,56 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
 
 
 @pytest.mark.asyncio
+async def test_redis_service_cleanup_swallows_redis_delete_error():
+    """cleanup_job must not raise when Redis DEL fails.
+
+    Regression: the DEL ran in a finally block but a Redis error still escaped.
+    Real Redis tends to fail exactly when teardown runs (network blip,
+    failover), and that propagation could break stop() and explicit cancel.
+    The fix logs a warning and continues.
+    """
+
+    class _DeleteFailingClient:
+        """Proxies a real FakeRedis but makes delete() raise."""
+
+        def __init__(self, real: Any) -> None:
+            self._real = real
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+        async def delete(self, *_args: Any, **_kwargs: Any) -> None:
+            msg = "simulated Redis delete failure during teardown"
+            raise ConnectionError(msg)
+
+    real_client = fakeredis_aio.FakeRedis()
+    service, _ = await _make_service(shared_client=real_client)
+    # Swap in the failing wrapper after _make_service has wired up everything.
+    service._client = _DeleteFailingClient(real_client)
+    try:
+        job_id = str(uuid.uuid4())
+        service.create_queue(job_id)
+
+        async def _noop():
+            await asyncio.sleep(0)
+
+        service.start_job(job_id, _noop())
+        await asyncio.sleep(0.05)
+
+        # Must not raise — the warning path absorbs the Redis error and the
+        # rest of cleanup_job (local state, super().cleanup_job) still runs.
+        await service.cleanup_job(job_id)
+
+        # Local state was still torn down even though Redis DEL failed.
+        assert job_id not in service._queues
+        assert job_id not in service._job_owners
+    finally:
+        # Put the real client back so _stop_service can aclose cleanly.
+        service._client = real_client
+        await _stop_service(service)
+
+
+@pytest.mark.asyncio
 async def test_redis_service_owner_stored_in_redis():
     """register_job_owner writes to Redis; get_job_owner reads it cross-worker."""
     service, fake_client = await _make_service()
@@ -1803,6 +1853,46 @@ async def test_redis_queue_wrapper_on_fill_done_evicts_to_make_room_for_sentinel
 
 
 @pytest.mark.asyncio
+async def test_finish_with_sentinel_does_not_hang_on_full_buffer():
+    """finish_with_sentinel must not block on the bounded buffer during teardown.
+
+    Regression: the old implementation awaited buffer.put(...) here. If a slow or
+    abandoned consumer had already filled the buffer, shutdown would hang
+    forever. The fix mirrors _on_fill_done: evict one item and put_nowait the
+    sentinel so teardown always returns.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+    try:
+        # Stop the fill task so we own the buffer for this test.
+        await wrapper.cancel()
+        # _on_fill_done already enqueued one sentinel when cancel completed.
+        while not wrapper._buffer.empty():
+            wrapper._buffer.get_nowait()
+
+        # Fill the buffer to capacity. Without the fix, finish_with_sentinel
+        # would now hang on an awaited put.
+        for i in range(wrapper._buffer.maxsize):
+            wrapper._buffer.put_nowait((f"e{i}", b"data", float(i)))
+        assert wrapper._buffer.full()
+
+        # Must return promptly. The 1.0s budget is generous: the operation is
+        # pure in-memory eviction + put_nowait, so anything close to it means
+        # the buffer is blocking.
+        await asyncio.wait_for(wrapper.finish_with_sentinel(), timeout=1.0)
+        assert wrapper._buffer.full()
+
+        items: list = []
+        while not wrapper._buffer.empty():
+            items.append(wrapper._buffer.get_nowait())
+        sentinels = [item for item in items if item[0] is None and item[1] is None]
+        assert len(sentinels) == 1, "Exactly one sentinel must reach the consumer"
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_get_flow_events_response_rejects_unknown_event_delivery():
     """Unknown EventDeliveryType values produce a clear 4xx with instructions.
 
@@ -2223,6 +2313,32 @@ async def test_cancel_flow_build_returns_false_for_in_memory_backend_without_tas
     )
 
     await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_cancel_flow_build_returns_false_for_redis_with_disabled_cancel_channel():
+    """Redis with cancel_channel_enabled=False is the same as no cross-worker cancel.
+
+    signal_cancel exists on the service but short-circuits to 0 without setting
+    the persistent marker, so treating its return as a successful dispatch is
+    misleading. cancel_flow_build must fall through to the unreachable-build
+    branch and return False.
+    """
+    svc, _ = await _make_service(cancel_channel_enabled=False)
+    try:
+        assert getattr(svc, "signal_cancel", None) is not None
+        assert svc.cross_worker_cancel_enabled is False
+
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)  # registers event_task=None
+
+        result = await cancel_flow_build(job_id=job_id, queue_service=svc)
+        assert result is False, (
+            "Redis with cancel_channel_enabled=False has no cross-worker cancel; "
+            "cancel_flow_build must report failure rather than a false success."
+        )
+    finally:
+        await _stop_service(svc)
 
 
 @pytest.mark.asyncio
