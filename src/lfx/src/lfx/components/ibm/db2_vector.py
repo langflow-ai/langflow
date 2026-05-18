@@ -19,7 +19,11 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
     """IBM Db2 Vector Store with search capabilities."""
 
     display_name: str = "IBM Db2 Vector Store"
-    description: str = "IBM Db2 Vector Store with search capabilities"
+    description: str = (
+        "IBM Db2 Vector Store with search capabilities. "
+        "Use Generic-typed global variables for connection parameters (database, hostname, username). "
+        "Only password should use Credential-typed variables."
+    )
     documentation: str = "https://www.ibm.com/docs/en/db2/11.5"
     name = "DB2VectorStore"
     icon = "DB2"
@@ -59,16 +63,15 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Database Name",
             required=True,
             advanced=True,
-            load_from_db=False,
-            info="Name of the Db2 database",
+            info="Name of the Db2 database. Use a Generic-typed global variable or direct input. "
+            "Credential-typed variables are not allowed for database names.",
         ),
         StrInput(
             name="hostname",
             display_name="Hostname",
             required=True,
             advanced=True,
-            load_from_db=False,
-            info="Db2 server hostname or IP address",
+            info="Db2 server hostname or IP address. Use a Generic-typed global variable or direct input.",
         ),
         IntInput(
             name="port",
@@ -83,8 +86,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Username",
             required=True,
             advanced=True,
-            load_from_db=False,
-            info="Db2 database username",
+            info="Db2 database username. Use a Generic-typed global variable or direct input.",
         ),
         SecretStrInput(
             name="password",

@@ -17,7 +17,11 @@ class DB2SQLComponent(Component):
     """IBM Db2 SQL Executor Component with security validations."""
 
     display_name = "IBM Db2 SQL"
-    description = "Execute SQL queries on IBM Db2 database with security controls"
+    description = (
+        "Execute SQL queries on IBM Db2 database with security controls. "
+        "Use Generic-typed global variables for connection parameters (database, hostname, username). "
+        "Only password should use Credential-typed variables."
+    )
     documentation = "https://www.ibm.com/docs/en/db2/11.5"
     icon = "DB2"
     name = "DB2SQL"
@@ -27,15 +31,14 @@ class DB2SQLComponent(Component):
             name="database",
             display_name="Database Name",
             required=True,
-            load_from_db=False,
-            info="Name of the Db2 database",
+            info="Name of the Db2 database. Use a Generic-typed global variable or direct input. "
+            "Credential-typed variables are not allowed for database names.",
         ),
         StrInput(
             name="hostname",
             display_name="Hostname",
             required=True,
-            load_from_db=False,
-            info="Db2 server hostname or IP address",
+            info="Db2 server hostname or IP address. Use a Generic-typed global variable or direct input.",
         ),
         IntInput(
             name="port",
@@ -48,8 +51,7 @@ class DB2SQLComponent(Component):
             name="username",
             display_name="Username",
             required=True,
-            load_from_db=False,
-            info="Db2 database username",
+            info="Db2 database username. Use a Generic-typed global variable or direct input.",
         ),
         SecretStrInput(
             name="password",
