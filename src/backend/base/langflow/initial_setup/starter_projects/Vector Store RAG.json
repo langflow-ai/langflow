@@ -2026,6 +2026,7 @@
             },
             "tool_mode": false
           },
+          "selected_output": "retrieve_data",
           "showNode": true,
           "type": "Knowledge"
         },
