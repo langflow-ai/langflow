@@ -1,17 +1,18 @@
 """Unit tests for the upgrade compatibility checker."""
-import pytest
+
 from lfx.upgrade.checker import (
-    NodeStatus,
-    CompatibilityReport,
-    check_flow_compatibility,
     build_registry_lookup,
+    check_flow_compatibility,
 )
 
 REGISTRY_CODE_V2 = "class MyComp:\n    pass  # v2"
 REGISTRY_CODE_V1 = "class MyComp:\n    pass  # v1"
 
+
 def _registry(code: str = REGISTRY_CODE_V2, outputs=None, template_extra=None):
-    outputs = outputs or [{"name": "out", "display_name": "Output", "types": ["Message"], "method": "run", "allows_loop": False}]
+    outputs = outputs or [
+        {"name": "out", "display_name": "Output", "types": ["Message"], "method": "run", "allows_loop": False}
+    ]
     template = {"code": {"value": code}}
     if template_extra:
         template.update(template_extra)
@@ -27,7 +28,9 @@ def _registry(code: str = REGISTRY_CODE_V2, outputs=None, template_extra=None):
 
 
 def _node(type_: str = "MyComp", code: str = REGISTRY_CODE_V2, outputs=None, template_extra=None):
-    outputs = outputs or [{"name": "out", "display_name": "Output", "types": ["Message"], "method": "run", "allows_loop": False}]
+    outputs = outputs or [
+        {"name": "out", "display_name": "Output", "types": ["Message"], "method": "run", "allows_loop": False}
+    ]
     template = {"code": {"value": code}}
     if template_extra:
         template.update(template_extra)

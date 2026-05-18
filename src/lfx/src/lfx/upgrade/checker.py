@@ -1,4 +1,5 @@
 """Compatibility checker: Python port of check-code-validity.ts."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -137,7 +138,9 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
 
     if _has_breaking_change(registry_entry, node_info):
-        return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_breaking")
+        return NodeStatus(
+            node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_breaking"
+        )
 
     return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_safe")
 

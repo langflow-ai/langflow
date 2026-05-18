@@ -1,34 +1,42 @@
 """CLI tests for `lfx upgrade`."""
+
 import json
-import pytest
-from typer.testing import CliRunner
 from unittest.mock import patch
+
+import pytest
 from lfx.__main__ import app
+from typer.testing import CliRunner
 
 runner = CliRunner()
 
 REGISTRY_CODE = "class MyComp:\n    pass  # v2"
 NODE_CODE = "class MyComp:\n    pass  # v1"
 
+
 def _flow_json(code=NODE_CODE):
-    return json.dumps({
-        "nodes": [
-            {
-                "id": "n1",
-                "data": {
+    return json.dumps(
+        {
+            "nodes": [
+                {
                     "id": "n1",
-                    "type": "MyComp",
-                    "node": {
-                        "display_name": "My Component",
-                        "edited": False,
-                        "template": {"code": {"value": code}},
-                        "outputs": [{"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}],
+                    "data": {
+                        "id": "n1",
+                        "type": "MyComp",
+                        "node": {
+                            "display_name": "My Component",
+                            "edited": False,
+                            "template": {"code": {"value": code}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
                     },
-                },
-            }
-        ],
-        "edges": [],
-    })
+                }
+            ],
+            "edges": [],
+        }
+    )
+
 
 def _registry():
     return {
@@ -80,24 +88,28 @@ def test_upgrade_write_updates_file(flow_file):
 
 def test_upgrade_exits_nonzero_when_blocked(tmp_path):
     f = tmp_path / "flow.json"
-    f.write_text(json.dumps({
-        "nodes": [
+    f.write_text(
+        json.dumps(
             {
-                "id": "n1",
-                "data": {
-                    "id": "n1",
-                    "type": "GhostComponent",
-                    "node": {
-                        "display_name": "Ghost",
-                        "edited": False,
-                        "template": {"code": {"value": "some code"}},
-                        "outputs": [],
-                    },
-                },
+                "nodes": [
+                    {
+                        "id": "n1",
+                        "data": {
+                            "id": "n1",
+                            "type": "GhostComponent",
+                            "node": {
+                                "display_name": "Ghost",
+                                "edited": False,
+                                "template": {"code": {"value": "some code"}},
+                                "outputs": [],
+                            },
+                        },
+                    }
+                ],
+                "edges": [],
             }
-        ],
-        "edges": [],
-    }))
+        )
+    )
     with patch("lfx.cli.upgrade.load_registry_from_index", return_value={}):
         result = runner.invoke(app, ["upgrade", str(f)])
     assert result.exit_code != 0

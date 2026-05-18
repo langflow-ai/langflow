@@ -1,11 +1,13 @@
 """Unit tests for the upgrade applier."""
+
 import copy
-import pytest
-from lfx.upgrade.checker import check_flow_compatibility
+
 from lfx.upgrade.applier import apply_safe_upgrades
+from lfx.upgrade.checker import check_flow_compatibility
 
 REGISTRY_CODE = "class MyComp:\n    pass  # v2"
 NODE_CODE = "class MyComp:\n    pass  # v1"
+
 
 def _registry(code=REGISTRY_CODE):
     return {
@@ -17,6 +19,7 @@ def _registry(code=REGISTRY_CODE):
             }
         }
     }
+
 
 def _node(code=NODE_CODE, type_="MyComp"):
     return {
@@ -32,6 +35,7 @@ def _node(code=NODE_CODE, type_="MyComp"):
             },
         },
     }
+
 
 def _flow(*nodes):
     return {"nodes": list(nodes), "edges": []}

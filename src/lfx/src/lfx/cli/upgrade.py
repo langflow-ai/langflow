@@ -1,4 +1,5 @@
 """Implementation of `lfx upgrade <flow.json>`."""
+
 from __future__ import annotations
 
 import json

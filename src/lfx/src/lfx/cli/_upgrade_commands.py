@@ -1,4 +1,5 @@
 """Upgrade commands: upgrade."""
+
 import typer
 
 

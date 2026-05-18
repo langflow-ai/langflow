@@ -3,6 +3,7 @@
 Returns a deep copy of the flow with safe-upgradeable node codes replaced
 by the current registry code. Breaking and blocked nodes are left unchanged.
 """
+
 from __future__ import annotations
 
 import copy
