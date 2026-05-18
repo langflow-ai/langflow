@@ -7,8 +7,10 @@ by the current registry code. Breaking and blocked nodes are left unchanged.
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup
 

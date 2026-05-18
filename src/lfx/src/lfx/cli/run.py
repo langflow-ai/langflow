@@ -130,6 +130,7 @@ async def run(
         check_variables: Check global variables for environment compatibility
         timing: Include detailed timing information in output
         session_id: Optional session ID; auto-generated if not supplied
+        upgrade_flow: Component compatibility mode ('check' or 'safe')
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))

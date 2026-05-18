@@ -50,18 +50,21 @@ def upgrade_command(
         typer.echo(f"Error reading flow: {e}", err=True)
         raise typer.Exit(1) from e
 
-    # Exported Langflow flows have an outer envelope {"name": ..., "data": {"nodes": [...]}}.
-    # Unwrap it so the checker can find the nodes list.
-    flow_data = flow_data.get("data", flow_data)
+    # Exported Langflow flows may have an outer envelope:
+    # {"name": ..., "data": {"nodes": [...], "edges": [...]}}
+    # Keep a reference to the outer envelope so we can reconstruct it on write.
+    has_envelope = "data" in flow_data and "nodes" in flow_data.get("data", {})
+    inner_data = flow_data["data"] if has_envelope else flow_data
 
     all_types = load_registry_from_index()
-    report = check_flow_compatibility(flow_data, all_types)
+    report = check_flow_compatibility(inner_data, all_types)
 
     _print_report(report)
 
     if write and report.has_safe_updates:
-        updated, count = apply_safe_upgrades(flow_data, all_types, report, return_count=True)
-        flow_path.write_text(json.dumps(updated, indent=2, ensure_ascii=False), encoding="utf-8")
+        updated_inner, count = apply_safe_upgrades(inner_data, all_types, report, return_count=True)
+        output = {**flow_data, "data": updated_inner} if has_envelope else updated_inner
+        flow_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
         typer.echo(f"✓ Wrote {count} safe upgrade(s) to {flow_path}")
 
     if report.has_blocked or report.has_breaking:

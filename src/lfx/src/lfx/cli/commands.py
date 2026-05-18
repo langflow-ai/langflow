@@ -178,6 +178,11 @@ async def serve_command(
     elif upgrade_flow and script_path is not None:
         # File-path input with --upgrade-flow: load into json_data so the
         # upgrade check can run and any applied changes reach the server.
+        if not script_path.lower().endswith(".json"):
+            verbose_print(
+                f"Error: --upgrade-flow is only supported for JSON flows, not '{Path(script_path).suffix}' files."
+            )
+            raise typer.Exit(1)
         try:
             raw = json.loads(Path(script_path).read_text(encoding="utf-8"))
             json_data = raw.get("data", raw)

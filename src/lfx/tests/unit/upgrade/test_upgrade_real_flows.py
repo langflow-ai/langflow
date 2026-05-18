@@ -27,6 +27,7 @@ from lfx.upgrade.checker import check_flow_compatibility
 FIXTURES_DIR = pathlib.Path(__file__).parent.parent.parent / "fixtures" / "starter_flows" / "v1.9.0"
 
 FIXTURE_FLOWS = list(FIXTURES_DIR.glob("*.json"))
+assert FIXTURE_FLOWS, f"No starter flow fixtures found in {FIXTURES_DIR}"
 
 
 def _load_registry() -> dict:
@@ -55,7 +56,9 @@ def _load_registry() -> dict:
 
 @pytest.fixture(scope="module")
 def registry() -> dict:
-    return _load_registry()
+    loaded = _load_registry()
+    assert loaded, "Bundled component registry is empty or missing; integration checks are not meaningful"
+    return loaded
 
 
 @pytest.fixture(scope="module")
@@ -186,12 +189,14 @@ def test_original_flow_not_mutated(flow_name, flow_data_map, registry):
 # ---------------------------------------------------------------------------
 
 
-def test_upgrade_summary_report(flow_data_map, registry, capsys):
+def test_upgrade_summary_report(flow_data_map, registry):
     """Print a human-readable summary of upgrade status across all fixture flows."""
+    import sys
+
     for flow_name, flow in sorted(flow_data_map.items()):
         report = check_flow_compatibility(flow, registry)
         statuses = {}
         for n in report.nodes:
             statuses[n.status] = statuses.get(n.status, 0) + 1
-        print(f"{flow_name}: {dict(sorted(statuses.items()))}")
+        sys.stderr.write(f"{flow_name}: {dict(sorted(statuses.items()))}\n")
     # Always passes — output is visible in pytest -s
