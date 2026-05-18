@@ -1,5 +1,5 @@
 # CLAUDE.md
 
-See [AGENTS.md](./AGENTS.md) for project instructions.
+@AGENTS.md
 
-This project uses [AGENTS.md](https://agents.md/) as the standard for providing context to AI coding agents. The AGENTS.md file contains all the information needed to understand and contribute to this codebase.
+This project uses [AGENTS.md](https://agents.md/) as the standard for providing context to AI coding agents. The `@AGENTS.md` import above tells Claude Code to load `AGENTS.md` automatically; other tools that natively support `AGENTS.md` will pick it up directly.

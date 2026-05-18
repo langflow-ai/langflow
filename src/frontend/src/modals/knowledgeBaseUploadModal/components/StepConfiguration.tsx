@@ -1,5 +1,6 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { DBProviderInput } from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent, {
   type ModelOption,
 } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -19,13 +20,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import type {
+  AvailableDBProviderId,
+  DBProviderConfigValue,
+} from "@/constants/dbProviderConstants";
+import type { GlobalVariable } from "@/types/global_variables";
 import { cn } from "@/utils/utils";
 import { ACCEPTED_FILE_TYPES } from "../constants";
 import type { ColumnConfigRow } from "../types";
-import { ColumnConfig } from "./columnConfig/ColumnConfig";
+import { IngestionHistoryPanel } from "./IngestionHistoryPanel";
+import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
 
 interface StepConfigurationProps {
   isAddSourcesMode: boolean;
+  kbName?: string;
   sourceName: string;
   onSourceNameChange: (value: string) => void;
   selectedEmbeddingModel: ModelOption[];
@@ -40,17 +48,26 @@ interface StepConfigurationProps {
   separator: string;
   onSeparatorChange: (value: string) => void;
   showAdvanced: boolean;
-  toggleAdvanced: () => void;
+  hasFiles: boolean;
   onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFolderSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   validationErrors?: Record<string, string>;
   onFieldChange?: () => void;
   columnConfig: ColumnConfigRow[];
   onColumnConfigChange: (value: ColumnConfigRow[]) => void;
+  backendType: AvailableDBProviderId;
+  onBackendChange: (
+    type: AvailableDBProviderId,
+    config: Record<string, DBProviderConfigValue>,
+  ) => void;
+  globalVariables: GlobalVariable[];
+  metadataPairs: MetadataPair[];
+  onMetadataPairsChange: (pairs: MetadataPair[]) => void;
 }
 
 export function StepConfiguration({
   isAddSourcesMode,
+  kbName,
   sourceName,
   onSourceNameChange,
   selectedEmbeddingModel,
@@ -65,18 +82,28 @@ export function StepConfiguration({
   separator,
   onSeparatorChange,
   showAdvanced,
-  toggleAdvanced,
+  hasFiles,
   onFileSelect,
   onFolderSelect,
   validationErrors = {},
   onFieldChange,
   columnConfig,
   onColumnConfigChange,
+  backendType,
+  onBackendChange,
+  globalVariables,
+  metadataPairs,
+  onMetadataPairsChange,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
   return (
     <div className="relative">
       <div className="flex flex-col">
+        {isAddSourcesMode && kbName && (
+          <div className="pb-4">
+            <IngestionHistoryPanel kbName={kbName} />
+          </div>
+        )}
         {/* Name */}
         <div className="flex flex-col gap-2">
           <Label htmlFor="source-name" className="text-sm font-medium">
@@ -148,6 +175,39 @@ export function StepConfiguration({
           )}
         </div>
 
+        {/* Backend Selection */}
+        <div className="flex flex-col gap-2 pt-4">
+          <Label className="text-sm font-medium">
+            DB Provider <span className="text-destructive">*</span>
+          </Label>
+          <div
+            className={cn(
+              "rounded-md",
+              validationErrors.backend && "[&_button]:border-destructive",
+            )}
+          >
+            <DBProviderInput
+              id="kb-db-provider"
+              value={backendType}
+              globalVariables={globalVariables}
+              disabled={isAddSourcesMode}
+              onValueChange={(nextBackendType, nextBackendConfig) => {
+                onBackendChange(nextBackendType, nextBackendConfig);
+                onFieldChange?.();
+              }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground">
+            The backend controls where this knowledge base stores vectors.
+            Existing knowledge bases keep their original backend.
+          </span>
+          {validationErrors.backend && (
+            <span className="text-xs text-destructive">
+              {validationErrors.backend}
+            </span>
+          )}
+        </div>
+
         {/* Hidden file inputs */}
         <input
           id="file-input"
@@ -170,7 +230,7 @@ export function StepConfiguration({
           } as React.HTMLAttributes<HTMLInputElement>)}
         />
 
-        {/* Configure Sources - Animated */}
+        {/* Ingest Content - Animated */}
         <div
           className={cn(
             "grid transition-all duration-300 ease-in-out",
@@ -206,7 +266,7 @@ export function StepConfiguration({
                         variant="outline"
                         data-testid="kb-browse-btn"
                         className={cn(
-                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-offset-background ",
+                          "w-full justify-between focus-visible:ring-1 focus-visible:ring-input focus-visible:ring-offset-0 focus-visible:ring-offset-background",
                           validationErrors.files && "border-destructive",
                         )}
                       >
@@ -223,11 +283,11 @@ export function StepConfiguration({
                         />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-[200px]">
+                    <DropdownMenuContent align="start" className="w-[220px]">
                       <DropdownMenuItem
-                        onClick={() =>
-                          document.getElementById("file-input")?.click()
-                        }
+                        onClick={() => {
+                          document.getElementById("file-input")?.click();
+                        }}
                       >
                         <ForwardedIconComponent
                           name="FileText"
@@ -236,9 +296,9 @@ export function StepConfiguration({
                         {t("knowledge.uploadFiles")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() =>
-                          document.getElementById("folder-input")?.click()
-                        }
+                        onClick={() => {
+                          document.getElementById("folder-input")?.click();
+                        }}
                       >
                         <ForwardedIconComponent
                           name="Folder"
@@ -295,7 +355,13 @@ export function StepConfiguration({
         >
           <div className="overflow-hidden">
             <Separator className="my-4" />
-            <div className="flex flex-col gap-4">
+            <div
+              className={cn(
+                "flex flex-col gap-4 transition-opacity",
+                !hasFiles && "opacity-50",
+              )}
+              aria-disabled={!hasFiles}
+            >
               <div className="flex items-center gap-2">
                 <ForwardedIconComponent
                   name="Settings2"
@@ -339,6 +405,7 @@ export function StepConfiguration({
                     }
                     min={1}
                     max={10000}
+                    disabled={!hasFiles}
                     data-testid="kb-chunk-size-input"
                   />
                 </div>
@@ -375,6 +442,7 @@ export function StepConfiguration({
                     }
                     min={0}
                     max={chunkSize - 1}
+                    disabled={!hasFiles}
                     data-testid="kb-chunk-overlap-input"
                   />
                 </div>
@@ -408,9 +476,33 @@ export function StepConfiguration({
                   placeholder="\n"
                   value={separator}
                   onChange={(e) => onSeparatorChange(e.target.value)}
+                  disabled={!hasFiles}
                   data-testid="kb-separator-input"
                 />
               </div>
+
+              {/* Metadata */}
+              <Separator className="my-2" />
+              <div className="flex items-center gap-2">
+                <ForwardedIconComponent
+                  name="Tag"
+                  className="h-4 w-4 text-muted-foreground"
+                />
+                <span className="text-sm font-medium">Metadata</span>
+              </div>
+              <MetadataEditor
+                pairs={metadataPairs}
+                onPairsChange={onMetadataPairsChange}
+                testIdScope="kb-run"
+              />
+              {validationErrors.metadata && (
+                <span
+                  className="text-xs text-destructive"
+                  data-testid="kb-run-metadata-form-error"
+                >
+                  {validationErrors.metadata}
+                </span>
+              )}
             </div>
           </div>
         </div>

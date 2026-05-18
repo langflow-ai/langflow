@@ -1,5 +1,5 @@
-import { Outlet, type To } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Outlet, type To } from "react-router-dom";
 import SideBarButtonsComponent from "@/components/core/sidebarComponent";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { CustomStoreSidebar } from "@/customization/components/custom-store-sidebar";
@@ -75,7 +75,17 @@ export default function SettingsPage(): JSX.Element {
       href: "/settings/model-providers",
       icon: (
         <ForwardedIconComponent
-          name="Brain"
+          name="BrainCircuit"
+          className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
+        />
+      ),
+    },
+    {
+      title: "DB Providers",
+      href: "/settings/db-providers",
+      icon: (
+        <ForwardedIconComponent
+          name="Database"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),

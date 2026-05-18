@@ -13,15 +13,9 @@ IMPORTANT: HTTP Redirects
     See: https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html
 
 Configuration:
-    LANGFLOW_SSRF_PROTECTION_ENABLED: Enable/disable SSRF protection (default: false)
-        TODO: Change default to true in next major version (2.0)
+    LANGFLOW_SSRF_PROTECTION_ENABLED: Enable/disable SSRF protection (default: true)
     LANGFLOW_SSRF_ALLOWED_HOSTS: Comma-separated list of allowed hosts/CIDR ranges
         Examples: "192.168.1.0/24,internal-api.company.local,10.0.0.5"
-
-TODO: In next major version (2.0):
-    - Change LANGFLOW_SSRF_PROTECTION_ENABLED default to "true"
-    - Remove warning-only mode and enforce blocking
-    - Update documentation to reflect breaking change
 """
 
 import functools
@@ -83,6 +77,16 @@ def is_ssrf_protection_enabled() -> bool:
     Returns:
         bool: True if SSRF protection is enabled, False otherwise.
     """
+    # Read directly from environment variable to support test mocking with patch.dict()
+    # This ensures tests can override the protection state without settings service caching issues
+    import os
+
+    env_value = os.getenv("LANGFLOW_SSRF_PROTECTION_ENABLED")
+    if env_value is not None:
+        # Environment variable is set - use it (supports test mocking)
+        return env_value.lower() in ("true", "1", "yes", "on")
+
+    # Fall back to settings service for non-test scenarios
     return get_settings_service().settings.ssrf_protection_enabled
 
 
@@ -92,11 +96,23 @@ def get_allowed_hosts() -> list[str]:
     Returns:
         list[str]: Stripped hostnames or CIDR blocks from settings, or empty list if unset.
     """
-    allowed_hosts = get_settings_service().settings.ssrf_allowed_hosts
-    if not allowed_hosts:
-        return []
-    # ssrf_allowed_hosts is already a list[str], just clean and filter entries
-    return [host.strip() for host in allowed_hosts if host and host.strip()]
+    # Read directly from environment variable to support test mocking with patch.dict()
+    # This ensures tests can override the allowlist without settings service caching issues
+    import os
+
+    env_value = os.getenv("LANGFLOW_SSRF_ALLOWED_HOSTS", "")
+    if env_value:
+        # Parse comma-separated list from environment variable
+        return [host.strip() for host in env_value.split(",") if host.strip()]
+
+    # Fall back to settings service for non-test scenarios
+    settings_service = get_settings_service()
+    if settings_service:
+        allowed_hosts = settings_service.settings.ssrf_allowed_hosts
+        if allowed_hosts:
+            return [host.strip() for host in allowed_hosts if host and host.strip()]
+
+    return []
 
 
 def is_host_allowed(hostname: str, ip: str | None = None) -> bool:
@@ -271,7 +287,6 @@ def _validate_direct_ip_address(hostname: str) -> bool:
     if is_ip_blocked(ip_obj):
         msg = (
             f"Access to IP address {hostname} is blocked by SSRF protection. "
-            "Requests to private/internal IP ranges are not allowed for security reasons. "
             "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
         )
         raise SSRFProtectionError(msg)
@@ -313,15 +328,12 @@ def _validate_hostname_resolution(hostname: str) -> None:
     if blocked_ips:
         msg = (
             f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
-            "Requests to private/internal IP ranges are not allowed for security reasons. "
-            "This protection prevents access to internal services, cloud metadata endpoints "
-            "(e.g., AWS 169.254.169.254), and other sensitive internal resources. "
             "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
         )
         raise SSRFProtectionError(msg)
 
 
-def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
+def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
     """Validate a URL to prevent SSRF attacks.
 
     This function performs the following checks:
@@ -333,8 +345,7 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
 
     Args:
         url: URL to validate
-        warn_only: If True, only log warnings instead of raising errors (default: True)
-            TODO: Change default to False in next major version (2.0)
+        warn_only: If True, only log warnings instead of raising errors (default: False)
 
     Raises:
         SSRFProtectionError: If the URL is blocked due to SSRF protection (only if warn_only=False)
@@ -382,3 +393,187 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = True) -> None:
             )
             return
         raise
+
+
+def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
+    """Validate URL for SSRF and return validated IP addresses for DNS pinning.
+
+    This function is the core of DNS pinning-based SSRF protection. It performs
+    comprehensive validation and returns the validated IP addresses that should
+    be used for the actual HTTP request, preventing DNS rebinding attacks.
+
+    DNS Rebinding Attack Prevention:
+        Without DNS pinning, an attacker can exploit the time gap between validation
+        and the actual HTTP request:
+        1. Validation: DNS returns public IP (8.8.8.8) → passes security check
+        2. [Attacker changes DNS with TTL=0]
+        3. HTTP request: DNS returns internal IP (127.0.0.1) → bypasses protection
+
+        With DNS pinning (this function):
+        1. Validation: DNS returns public IP (8.8.8.8) → passes security check
+        2. Function returns: (url, ['8.8.8.8']) → IP is pinned
+        3. HTTP request: Uses pinned IP directly → no new DNS lookup → secure
+
+    Args:
+        url: URL to validate (e.g., "http://example.com/api")
+
+    Returns:
+        Tuple of (original_url, list_of_validated_ips):
+        - original_url: The input URL unchanged
+        - list_of_validated_ips: List of validated IP addresses to use for DNS pinning
+          Returns empty list if:
+          - SSRF protection is disabled
+          - Host is in the allowlist (e.g., localhost for Ollama)
+          - URL scheme is not http/https
+
+    Raises:
+        SSRFProtectionError: If URL is blocked by SSRF protection
+        ValueError: If URL format is invalid
+
+    Example:
+        >>> # Public domain - returns validated IPs for pinning
+        >>> url, ips = validate_and_resolve_url("http://example.com")
+        >>> print(ips)  # ['93.184.216.34']
+
+        >>> # Localhost (if in allowlist) - returns empty list (no pinning needed)
+        >>> url, ips = validate_and_resolve_url("http://localhost:8080")
+        >>> print(ips)  # []
+
+        >>> # Private IP - raises SSRFProtectionError
+        >>> url, ips = validate_and_resolve_url("http://192.168.1.1")
+        # Raises: SSRFProtectionError("Access to IP address 192.168.1.1 is blocked...")
+    """
+    # ============================================================================
+    # Step 1: Check if SSRF protection is enabled
+    # ============================================================================
+    if not is_ssrf_protection_enabled():
+        # Protection is disabled - return empty list (no DNS pinning)
+        return url, []
+
+    # ============================================================================
+    # Step 2: Parse and validate URL format
+    # ============================================================================
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid URL format: {e}"
+        raise ValueError(msg) from e
+
+    try:
+        # ============================================================================
+        # Step 3: Validate URL scheme (only http/https allowed)
+        # ============================================================================
+        _validate_url_scheme(parsed.scheme)
+        if parsed.scheme not in ("http", "https"):
+            # Non-HTTP schemes (ftp, file, etc.) are not subject to SSRF protection
+            return url, []
+
+        # ============================================================================
+        # Step 4: Extract and validate hostname
+        # ============================================================================
+        hostname = _validate_hostname_exists(parsed.hostname)
+
+        # ============================================================================
+        # Step 5: Check allowlist (early return for trusted hosts)
+        # ============================================================================
+        # Allowlisted hosts bypass all SSRF checks and DNS pinning
+        # This is used for legitimate internal services like Ollama (localhost)
+        if is_host_allowed(hostname):
+            logger.debug(f"Hostname {hostname} is in allowlist, bypassing SSRF checks and DNS pinning")
+            return url, []
+
+        # ============================================================================
+        # Step 6: Handle direct IP addresses
+        # ============================================================================
+        # Check if the hostname is already an IP address (no DNS resolution needed)
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+
+            # Check if this specific IP is in the allowlist
+            if is_host_allowed(hostname, str(ip_obj)):
+                logger.debug(f"IP {hostname} is in allowlist")
+                return url, []
+
+            # Check if IP is in blocked ranges (private IPs, localhost, etc.)
+            if is_ip_blocked(ip_obj):
+                msg = (
+                    f"Access to IP address {hostname} is blocked by SSRF protection. "
+                    "To allow this IP, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+                )
+                raise SSRFProtectionError(msg)
+            # Direct IP is public and allowed - return it for DNS pinning
+            # (Even though it's already an IP, we return it for consistency)
+            logger.debug(f"Direct IP {hostname} validated, will use for DNS pinning")
+            return url, [hostname]  # noqa: TRY300
+
+        except ValueError:
+            # Not an IP address, it's a hostname - continue to DNS resolution
+            pass
+
+        # ============================================================================
+        # Step 7: Resolve hostname to IP addresses
+        # ============================================================================
+        # This is the critical step for DNS pinning - we resolve DNS here during
+        # validation, and the returned IPs will be used for the actual HTTP request
+        resolved_ips = resolve_hostname(hostname)
+        blocked_ips = []
+
+        # ============================================================================
+        # Step 8: Validate all resolved IPs
+        # ============================================================================
+        # Security: We must check ALL resolved IPs before making any decisions.
+        # A hostname might resolve to multiple IPs (e.g., [8.8.8.8, 192.168.1.1]).
+        # If we return early on the first allowlisted IP, we skip validation of
+        # remaining IPs, which could include blocked/internal addresses.
+        #
+        # Strategy:
+        # 1. Collect all allowlisted IPs and all blocked IPs
+        # 2. If ANY IP is blocked → block the entire hostname (security first)
+        # 3. If some IPs are allowlisted but others are not → use only allowlisted IPs for pinning
+        # 4. If all IPs are public (none blocked, none allowlisted) → use all for pinning
+        allowed_ips = []
+        for ip in resolved_ips:
+            # Check if this resolved IP is in the allowlist
+            if is_host_allowed(hostname, ip):
+                allowed_ips.append(ip)
+            # Check if IP is in blocked ranges
+            elif is_ip_blocked(ip):
+                blocked_ips.append(ip)
+
+        # ============================================================================
+        # Step 9: Block if any resolved IPs are private/internal
+        # ============================================================================
+        # Security: If ANY resolved IP is blocked, we block the entire hostname.
+        # This prevents attacks where a hostname resolves to both safe and unsafe IPs.
+        if blocked_ips:
+            msg = (
+                f"Hostname {hostname} resolves to blocked IP address(es): {', '.join(blocked_ips)}. "
+                "To allow this hostname, add it to LANGFLOW_SSRF_ALLOWED_HOSTS environment variable."
+            )
+            raise SSRFProtectionError(msg)
+
+        # ============================================================================
+        # Step 9b: Handle partially allowlisted IPs
+        # ============================================================================
+        # If some (but not all) IPs are allowlisted, use only the allowlisted ones for pinning
+        if allowed_ips:
+            logger.debug(
+                f"Hostname {hostname} has {len(allowed_ips)} allowlisted IP(s) out of {len(resolved_ips)} total. "
+                f"Using allowlisted IPs for DNS pinning: {allowed_ips}"
+            )
+            return url, allowed_ips
+        # ============================================================================
+        # Step 10: Return validated IPs for DNS pinning
+        # ============================================================================
+        # All IPs are public and safe - return them for DNS pinning
+        # The HTTP client will use these IPs directly, preventing DNS rebinding
+        logger.debug(f"Hostname {hostname} validated, resolved to {resolved_ips}, will use for DNS pinning")
+        return url, resolved_ips  # noqa: TRY300
+
+    except SSRFProtectionError:
+        # Re-raise SSRF errors as-is
+        raise
+    except Exception as e:
+        # Wrap unexpected errors in SSRFProtectionError
+        msg = f"Error validating URL: {e}"
+        raise SSRFProtectionError(msg) from e

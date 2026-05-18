@@ -398,7 +398,7 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 
 async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
     async with session_scope() as session:
-        # SECURITY (LE-639): previously the UUID branch below called
+        # SECURITY: previously the UUID branch below called
         # ``session.get(Flow, flow_id)`` with no ownership check, so any
         # authenticated caller could resolve any other user's flow by UUID.
         # The endpoint_name branch scoped by ``user_id`` only when a truthy
@@ -499,5 +499,14 @@ def json_schema_from_flow(flow: Flow) -> dict:
 
                 if field_data.get("required", False):
                     required.append(field_name)
+
+    if "session_id" not in properties:
+        properties["session_id"] = {
+            "type": "string",
+            "description": (
+                "Optional session identifier used to persist conversation "
+                "history across tool calls. Omit to start a new session."
+            ),
+        }
 
     return {"type": "object", "properties": properties, "required": required}

@@ -135,7 +135,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   resetStore: () => {
     set({
-      flows: [],
+      flows: undefined,
       currentFlow: undefined,
       currentFlowId: "",
       searchFlowsComponents: "",
