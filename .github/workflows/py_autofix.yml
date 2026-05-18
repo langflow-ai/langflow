@@ -70,7 +70,17 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge origin/${{ github.base_ref }} --no-edit || {
+          BASE_REF="${{ github.base_ref }}"
+          # Fork PRs check out the fork as origin, so the base branch is not on origin.
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.event.pull_request.base.repo.full_name }}" ]; then
+            git remote add _pr_base "https://github.com/${{ github.event.pull_request.base.repo.full_name }}.git"
+            git fetch _pr_base "$BASE_REF"
+            MERGE_REF="_pr_base/${BASE_REF}"
+          else
+            git fetch origin "$BASE_REF"
+            MERGE_REF="origin/${BASE_REF}"
+          fi
+          git merge "$MERGE_REF" --no-edit || {
             # Check which files have conflicts
             CONFLICTED=$(git diff --name-only --diff-filter=U)
 
