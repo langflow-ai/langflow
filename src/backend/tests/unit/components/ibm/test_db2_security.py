@@ -104,9 +104,9 @@ class TestValidatePort:
 
     def test_invalid_port_type(self):
         """Test that non-integer ports are rejected."""
-        with pytest.raises(ValueError, match="must be an integer"):
+        with pytest.raises(TypeError, match="must be an integer"):
             validate_port("50000")  # type: ignore[arg-type]
-        with pytest.raises(ValueError, match="must be an integer"):
+        with pytest.raises(TypeError, match="must be an integer"):
             validate_port(50000.5)  # type: ignore[arg-type]
 
     def test_invalid_port_range(self):
@@ -185,6 +185,14 @@ class TestValidateSqlQuerySafety:
             validate_sql_query_safety("SELECT * FROM users; DROP TABLE users;")
         with pytest.raises(ValueError, match="Multiple statements"):
             validate_sql_query_safety("SELECT * FROM users; DELETE FROM users;")
+
+    def test_read_only_blocks_chained_insert(self):
+        """Test that read-only mode rejects a non-SELECT follow-up statement."""
+        with pytest.raises(ValueError, match="Multiple statements"):
+            validate_sql_query_safety(
+                "SELECT 1; INSERT INTO audit_log VALUES (1)",
+                allowed_operations={"SELECT"},
+            )
 
     def test_sql_comments(self):
         """Test that SQL comments are detected."""

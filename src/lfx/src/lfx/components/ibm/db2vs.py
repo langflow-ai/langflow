@@ -30,6 +30,7 @@ from langchain_core.vectorstores import VectorStore
 
 from lfx.components.ibm.db2_security import (
     create_safe_error_message,
+    get_quoted_identifier,
     sanitize_sql_string,
     validate_identifier,
 )
@@ -71,10 +72,16 @@ def _handle_exceptions(func: T) -> T:
     return cast("T", wrapper)
 
 
+def _quoted_table_identifier(table_name: str) -> str:
+    """Return a double-quoted table identifier for validated table names."""
+    return get_quoted_identifier(table_name)
+
+
 def _table_exists(client: Connection, table_name: str) -> bool:
+    quoted_table = _quoted_table_identifier(table_name)
     try:
         cursor = client.cursor()
-        query = f"SELECT COUNT(*) FROM {table_name}"  # noqa: S608
+        query = f"SELECT COUNT(*) FROM {quoted_table}"  # noqa: S608
         cursor.execute(query)
     except Exception as ex:
         if "SQL0204N" in str(ex):
@@ -197,7 +204,8 @@ def _create_table(client: Connection, table_name: str, embedding_dim: int) -> No
         try:
             ddl_body = ", ".join(f'"{col_name}" {col_type}' for col_name, col_type in cols_dict.items())
             # Use validated table name in query
-            ddl = f'CREATE TABLE "{validated_table_name}" ({ddl_body})'
+            quoted_table = _quoted_table_identifier(validated_table_name)
+            ddl = f"CREATE TABLE {quoted_table} ({ddl_body})"
             cursor.execute(ddl)
             cursor.execute("COMMIT")
             logger.debug("Table %s created successfully", validated_table_name)
@@ -220,7 +228,7 @@ def drop_table(client: Connection, table_name: str) -> None:
     """
     # Validate table name before using it in SQL
     validated_table_name = validate_identifier(table_name, "table name")
-    quoted_table_name = f'"{validated_table_name}"'
+    quoted_table_name = _quoted_table_identifier(validated_table_name)
 
     if _table_exists(client, validated_table_name):
         cursor = client.cursor()
@@ -258,7 +266,7 @@ def _update_empty_embeddings(
         # Check for both NULL values and empty vectors
         query = f"""
         SELECT {column_names["id"]}, {column_names["text"]}
-        FROM {table_name}
+        FROM {_quoted_table_identifier(table_name)}
         WHERE {column_names["embedding"]} IS NULL
         """  # noqa: S608
         cursor.execute(query)
@@ -269,7 +277,10 @@ def _update_empty_embeddings(
             logger.info("Checking for rows with TEXT but no corresponding data...")
 
             # Also check if there are rows with text but we need to verify the table structure
-            count_query = f"SELECT COUNT(*) FROM {table_name} WHERE {column_names['text']} IS NOT NULL"  # noqa: S608
+            count_query = (
+                f"SELECT COUNT(*) FROM {_quoted_table_identifier(table_name)} "  # noqa: S608
+                f"WHERE {column_names['text']} IS NOT NULL"
+            )
             cursor.execute(count_query)
             result = cursor.fetchone()
             total_rows = result[0] if result else 0
@@ -557,7 +568,7 @@ class DB2VS(VectorStore):
                 # Build SQL with sanitized values
                 # Note: table_name and column_names are validated during initialization
                 sql_insert = f"""
-                INSERT INTO "{self.table_name}"
+                INSERT INTO {_quoted_table_identifier(self.table_name)}
                 ({self.column_names["id"]}, {self.column_names["embedding"]},
                  {self.column_names["metadata"]}, {self.column_names["text"]})
                 VALUES ('{id_sanitized}', VECTOR('{vector_str}', {embedding_len}, FLOAT32),
@@ -659,7 +670,7 @@ class DB2VS(VectorStore):
           {self.column_names["metadata"]},
           vector_distance({self.column_names["embedding"]}, VECTOR('{embedding}', {embedding_len}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance
-        FROM {self.table_name}
+        FROM {_quoted_table_identifier(self.table_name)}
         ORDER BY distance
         FETCH FIRST {k} ROWS ONLY
         """  # noqa: S608
@@ -674,7 +685,7 @@ class DB2VS(VectorStore):
           {self.column_names["metadata"]},
           vector_distance({self.column_names["embedding"]}, VECTOR('[{embedding_preview}]', {embedding_len}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance
-        FROM {self.table_name}
+        FROM {_quoted_table_identifier(self.table_name)}
         ORDER BY distance
         FETCH FIRST {k} ROWS ONLY
         """  # noqa: S608
@@ -742,7 +753,7 @@ class DB2VS(VectorStore):
           vector_distance({self.column_names["embedding"]}, VECTOR('{embedding}', {embedding_len}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance,
           {self.column_names["embedding"]}
-        FROM {self.table_name}
+        FROM {_quoted_table_identifier(self.table_name)}
         ORDER BY distance
         FETCH FIRST {k} ROWS ONLY
         """  # noqa: S608
@@ -957,7 +968,10 @@ class DB2VS(VectorStore):
         # Constructing the SQL statement with individual placeholders
         placeholders = ", ".join(["?" for _ in range(len(normalized_ids))])
 
-        ddl = f'DELETE FROM "{self.table_name}" WHERE {self.column_names["id"]} IN ({placeholders})'  # noqa: S608
+        ddl = (
+            f"DELETE FROM {_quoted_table_identifier(self.table_name)} "  # noqa: S608
+            f"WHERE {self.column_names['id']} IN ({placeholders})"
+        )
         cursor = self.client.cursor()
         try:
             cursor.execute(ddl, normalized_ids)

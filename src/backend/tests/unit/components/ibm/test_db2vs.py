@@ -27,10 +27,9 @@ class TestDB2VSHelperFunctions:
         """Test _table_exists returns False for non-existing table."""
         from lfx.components.ibm.db2vs import _table_exists
 
-        # Mock the DB client and cursor
         mock_client = MagicMock()
         mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = [0]  # Table doesn't exist
+        mock_cursor.execute.side_effect = Exception("SQL0204N Table not found")
         mock_client.cursor.return_value = mock_cursor
 
         result = _table_exists(mock_client, "nonexistent_table")
@@ -245,8 +244,9 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._get_column_names")
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
-    @pytest.mark.usefixtures("_mock_create_table")
-    def test_delete_documents(self, mock_get_dim, mock_get_columns, mock_table_exists, mock_client, mock_embedding):
+    def test_delete_documents(
+        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+    ):
         """Test deleting documents by IDs."""
         from langchain_community.vectorstores.utils import DistanceStrategy
         from lfx.components.ibm.db2vs import DB2VS
@@ -264,6 +264,7 @@ class TestDB2VSClass:
             table_name="test_table",
             distance_strategy=DistanceStrategy.COSINE,
         )
+        mock_create_table.assert_called_once()
 
         # Delete documents
         ids_to_delete = ["id1", "id2"]
@@ -276,9 +277,8 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._get_column_names")
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
-    @pytest.mark.usefixtures("_mock_create_table")
     def test_embedding_dimension_validation(
-        self, mock_get_dim, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test embedding dimension validation."""
         from langchain_community.vectorstores.utils import DistanceStrategy
@@ -297,6 +297,7 @@ class TestDB2VSClass:
             table_name="test_table",
             distance_strategy=DistanceStrategy.COSINE,
         )
+        mock_create_table.assert_called_once()
 
         # Test dimension validation with correct dimension
         correct_embeddings = [[0.1, 0.2, 0.3]]
@@ -307,27 +308,21 @@ class TestDB2VSClass:
         with pytest.raises(ValueError, match="dimension mismatch"):
             db2vs._validate_embedding_dimension(incorrect_embeddings)
 
-    @patch("lfx.components.ibm.db2vs._table_exists")
-    def test_drop_table(self, mock_table_exists):
-        """Test dropping a table."""
+    def test_drop_table(self):
+        """Test dropping a table uses validated quoted identifiers."""
         from lfx.components.ibm.db2vs import drop_table
 
-        # Mock table exists
-        mock_table_exists.return_value = True
-
-        # Mock the DB client and cursor
         mock_client = MagicMock()
         mock_cursor = MagicMock()
         mock_client.cursor.return_value = mock_cursor
 
+        # First execute: _table_exists COUNT query succeeds; second: DROP TABLE
         drop_table(mock_client, "test_table")
 
-        # Verify cursor operations were called
         mock_cursor.execute.assert_called()
-        mock_cursor.close.assert_called_once()
-        # Verify DROP TABLE was executed
+        mock_cursor.close.assert_called()
         execute_calls = [str(call) for call in mock_cursor.execute.call_args_list]
-        assert any("DROP TABLE" in str(call) for call in execute_calls)
+        assert any('DROP TABLE "test_table"' in str(call) for call in execute_calls)
 
 
 # Made with Bob

@@ -1,17 +1,20 @@
 """Unit tests for DB2 Vector Store Component."""
 
+from typing import Any
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from lfx.components.ibm.db2_vector import DB2VectorStoreComponent
 from lfx.schema.data import Data
 
+from tests.base import DID_NOT_EXIST, ComponentTestBaseWithoutClient, VersionComponentMapping
 
-class TestDB2VectorStoreComponent:
+
+class TestDB2VectorStoreComponent(ComponentTestBaseWithoutClient):
     """Test DB2 Vector Store Component."""
 
     @pytest.fixture
-    def component_class(self):
+    def component_class(self) -> type[Any]:
         """Return the component class for testing."""
         return DB2VectorStoreComponent
 
@@ -33,9 +36,13 @@ class TestDB2VectorStoreComponent:
         }
 
     @pytest.fixture
-    def file_names_mapping(self):
-        """Return file names mapping for the component."""
-        return {"DB2VectorStore": "db2_vector.py"}
+    def file_names_mapping(self) -> list[VersionComponentMapping]:
+        """Return file names mapping for the component (new in this PR)."""
+        return [
+            VersionComponentMapping(version="1.0.19", module="ibm", file_name=DID_NOT_EXIST),
+            VersionComponentMapping(version="1.1.0", module="ibm", file_name=DID_NOT_EXIST),
+            VersionComponentMapping(version="1.1.1", module="ibm", file_name=DID_NOT_EXIST),
+        ]
 
     @pytest.fixture
     def component(self):

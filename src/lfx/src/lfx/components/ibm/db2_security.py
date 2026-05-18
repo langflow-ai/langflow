@@ -425,11 +425,49 @@ def validate_sql_query_safety(query: str, allowed_operations: set[str] | None = 
         msg = f"SQL operation '{operation}' is not allowed. Allowed operations: {allowed_operations}"
         raise ValueError(msg)
 
+    # Reject chained statements (e.g. SELECT 1; INSERT ...) not only DROP/DELETE/TRUNCATE
+    if ";" in query:
+        trailing_parts = [part.strip() for part in query.split(";")[1:] if part.strip()]
+        if trailing_parts:
+            if allowed_operations is not None:
+                for part in trailing_parts:
+                    part_upper = part.upper()
+                    sql_ops = [
+                        "SELECT",
+                        "INSERT",
+                        "UPDATE",
+                        "DELETE",
+                        "CREATE",
+                        "DROP",
+                        "ALTER",
+                        "TRUNCATE",
+                    ]
+                    follow_up_op = next(
+                        (op for op in sql_ops if part_upper.startswith(op)),
+                        None,
+                    )
+                    if follow_up_op is None:
+                        msg = "Potentially unsafe SQL query: Multiple statements detected"
+                        raise ValueError(msg)
+                    if follow_up_op not in allowed_operations:
+                        msg = (
+                            f"Potentially unsafe SQL query: Multiple statements detected "
+                            f"({follow_up_op} is not allowed)"
+                        )
+                        raise ValueError(msg)
+            else:
+                msg = "Potentially unsafe SQL query: Multiple statements detected"
+                raise ValueError(msg)
+
     # Check for dangerous patterns
     dangerous_patterns = [
         (r";\s*DROP", "Multiple statements with DROP detected"),
         (r";\s*DELETE", "Multiple statements with DELETE detected"),
         (r";\s*TRUNCATE", "Multiple statements with TRUNCATE detected"),
+        (r";\s*INSERT", "Multiple statements with INSERT detected"),
+        (r";\s*UPDATE", "Multiple statements with UPDATE detected"),
+        (r";\s*CREATE", "Multiple statements with CREATE detected"),
+        (r";\s*ALTER", "Multiple statements with ALTER detected"),
         (r"--", "SQL comment detected"),
         (r"/\*", "SQL block comment detected"),
         (r"xp_cmdshell", "Dangerous stored procedure detected"),
