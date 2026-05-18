@@ -203,10 +203,9 @@ def _json_default(obj):
     # Bytes
     if isinstance(obj, bytes):
         return obj.decode("utf-8", errors="replace")
-    raise TypeError(
-        f"Object of type '{type(obj).__name__}' is not JSON serializable. "
-        "Try converting the value to a dict or a simpler type."
-    )
+    type_name = type(obj).__name__
+    msg = f"Object of type '{type_name}' is not JSON serializable. Try converting the value to a dict or a simpler type."
+    raise TypeError(msg)
 
 
 def _serialize_value(value):
