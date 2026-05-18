@@ -40,8 +40,8 @@ async def serve_command(
     script_paths: list[str] | None = typer.Argument(
         default=None,
         help=(
-            "Path(s) to JSON flow file(s) (.json) or a directory containing .json files. "
-            "Optional when using --flow-json or --stdin."
+            "Path(s) to JSON flow file(s) (.json) or a directory containing .json files "
+            "(top-level only, non-recursive). Optional when using --flow-json or --stdin."
         ),
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
@@ -259,7 +259,6 @@ async def serve_command(
 async def _load_graph_and_meta(
     path: Path,
     root_dir: Path,
-    verbose_print,  # noqa: ARG001
     *,
     check_variables: bool,
 ) -> tuple:
@@ -304,7 +303,7 @@ async def build_registry_from_directory(
     errors: list[str] = []
     for path in json_files:
         try:
-            graph, meta = await _load_graph_and_meta(path, dir_path, verbose_print, check_variables=check_variables)
+            graph, meta = await _load_graph_and_meta(path, dir_path, check_variables=check_variables)
             registry.add(graph, meta)
             verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
         except Exception as exc:  # noqa: BLE001
@@ -328,7 +327,7 @@ async def build_registry_from_paths(
     errors: list[str] = []
     for path in paths:
         try:
-            graph, meta = await _load_graph_and_meta(path, path.parent, verbose_print, check_variables=check_variables)
+            graph, meta = await _load_graph_and_meta(path, path.parent, check_variables=check_variables)
             registry.add(graph, meta)
             verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
         except Exception as exc:  # noqa: BLE001

@@ -154,6 +154,7 @@ class UploadFlowRequest(BaseModel):
     data: dict = Field(..., description="Flow graph data — nodes and edges")
     description: str | None = Field(default=None, description="Optional flow description")
     id: str | None = Field(default=None, description="Stable flow ID from Langflow export")
+    replace: bool = Field(default=False, description="Overwrite the existing flow if the ID already exists")
 
 
 class UploadFlowResponse(BaseModel):
@@ -310,7 +311,7 @@ def create_multi_serve_app(
     )
     async def upload_flow(body: UploadFlowRequest) -> UploadFlowResponse:
         try:
-            graph = load_flow_from_json(body.model_dump())
+            graph = load_flow_from_json(body.model_dump(exclude={"replace"}))
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Invalid flow data: {exc}") from exc
 
@@ -320,6 +321,14 @@ def create_multi_serve_app(
             raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
 
         flow_id = body.id or flow_id_from_content(body.data)
+
+        if registry.get(flow_id) is not None and not body.replace:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Flow '{flow_id}' already exists. Pass replace=true to overwrite.",
+            )
+
+        graph.flow_id = flow_id
         meta = FlowMeta(
             id=flow_id,
             relative_path="<uploaded>",

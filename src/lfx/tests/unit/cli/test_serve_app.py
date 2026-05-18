@@ -672,6 +672,40 @@ class TestUploadEndpoint:
         with json_path.open() as f:
             return json.load(f)
 
+    @pytest.fixture
+    def full_export(self):
+        """Full Langflow export JSON as exported from the UI (name/data/... at top level).
+
+        This is what a user sends when they run:
+            curl -X POST .../flows/upload/ -d @myflow.json
+
+        body.data will be {"edges": [...], "nodes": [...]} — the inner graph with NO
+        nested "data" key. A regression that calls load_flow_from_json(body.data)
+        raises KeyError('data') here; the correct call passes body.model_dump(...).
+        """
+        test_data_dir = Path(__file__).parent.parent.parent / "data"
+        json_path = test_data_dir / "simple_chat_no_llm.json"
+        with json_path.open() as f:
+            return json.load(f)
+
+    def test_upload_full_export_as_body(self, app_with_empty_registry, full_export):
+        """Uploading a Langflow export JSON directly as the body must succeed.
+
+        Regression test: load_flow_from_json must be called with the full model dict
+        (which has a top-level "data" key), not body.data alone (which is just the
+        inner graph and has no "data" key).
+        """
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json=full_export,
+            headers={"x-api-key": "test-key"},
+        )
+        assert response.status_code == 201, response.json()
+        body = response.json()
+        assert body["name"] == full_export["name"]
+        assert body["run_url"].startswith("/flows/")
+        assert body["run_url"].endswith("/run")
+
     def test_upload_valid_flow(self, app_with_empty_registry, valid_flow_data):
         response = app_with_empty_registry.post(
             "/flows/upload/",
@@ -726,23 +760,43 @@ class TestUploadEndpoint:
         list_resp = app_with_empty_registry.get("/flows")
         assert any(f["id"] == flow_id for f in list_resp.json())
 
-    def test_upload_idempotent_same_data(self, app_with_empty_registry, valid_flow_data):
+    def test_upload_duplicate_without_replace_returns_409(self, app_with_empty_registry, valid_flow_data):
         r1 = app_with_empty_registry.post(
             "/flows/upload/",
             json={"name": "Flow A", "data": valid_flow_data},
             headers={"x-api-key": "test-key"},
         )
+        assert r1.status_code == 201
+
         r2 = app_with_empty_registry.post(
             "/flows/upload/",
             json={"name": "Flow B", "data": valid_flow_data},
             headers={"x-api-key": "test-key"},
         )
+        assert r2.status_code == 409
+        assert "already exists" in r2.json()["detail"]
+
+    def test_upload_replace_true_overwrites(self, app_with_empty_registry, valid_flow_data):
+        r1 = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Original Name", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
         assert r1.status_code == 201
+        flow_id = r1.json()["id"]
+
+        r2 = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Updated Name", "data": valid_flow_data, "replace": True},
+            headers={"x-api-key": "test-key"},
+        )
         assert r2.status_code == 201
-        assert r1.json()["id"] == r2.json()["id"]
+        assert r2.json()["id"] == flow_id
+        assert r2.json()["name"] == "Updated Name"
+
         flows = app_with_empty_registry.get("/flows").json()
         ids = [f["id"] for f in flows]
-        assert ids.count(r1.json()["id"]) == 1
+        assert ids.count(flow_id) == 1
 
     def test_upload_with_description(self, app_with_empty_registry, valid_flow_data):
         response = app_with_empty_registry.post(
