@@ -247,11 +247,14 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             msg = "RedisCache only accepts values that can be pickled. "
             raise TypeError(msg) from exc
 
-        if pickled:
-            result = await self._client.setex(str(key), self.expiration_time, pickled)
-            if not result:
-                msg = "RedisCache could not set the value."
-                raise ValueError(msg)
+        if not pickled:
+            msg = "RedisCache serialization returned empty result."
+            raise ValueError(msg)
+
+        result = await self._client.setex(str(key), self.expiration_time, pickled)
+        if not result:
+            msg = "RedisCache could not set the value."
+            raise ValueError(msg)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:

@@ -6,6 +6,7 @@ from threading import RLock
 from typing import Any
 
 import pytest
+from langflow.services.cache import service as cache_service_module
 from langflow.services.cache.base import AsyncBaseCacheService
 from langflow.services.cache.service import RedisCache
 from langflow.services.chat.service import ChatService, _cache_type_name
@@ -69,7 +70,6 @@ def make_chat_service(cache_service: AsyncBaseCacheService) -> ChatService:
     return service
 
 
-@pytest.mark.asyncio
 async def test_set_cache_stores_type_name_instead_of_class_object() -> None:
     cache = RecordingAsyncCache()
     service = make_chat_service(cache)
@@ -81,14 +81,12 @@ async def test_set_cache_stores_type_name_instead_of_class_object() -> None:
     assert isinstance(cache.values["flow-id"]["type"], str)
 
 
-@pytest.mark.asyncio
 async def test_set_cache_returns_false_for_unpickleable_cache_values() -> None:
     service = make_chat_service(RejectingAsyncCache())
 
     assert await service.set_cache("flow-id", object()) is False
 
 
-@pytest.mark.asyncio
 async def test_set_cache_reraises_unrelated_type_errors() -> None:
     service = make_chat_service(UnexpectedTypeErrorAsyncCache())
 
@@ -96,7 +94,6 @@ async def test_set_cache_reraises_unrelated_type_errors() -> None:
         await service.set_cache("flow-id", object())
 
 
-@pytest.mark.asyncio
 async def test_redis_cache_rejects_unpickleable_values_before_network_write() -> None:
     cache = RedisCache.__new__(RedisCache)
     cache.expiration_time = 60
@@ -110,3 +107,19 @@ async def test_redis_cache_rejects_unpickleable_values_before_network_write() ->
 
     with pytest.raises(TypeError, match="RedisCache only accepts values that can be pickled"):
         await cache.set("flow-id", UnpickleableValue())
+
+
+async def test_redis_cache_rejects_empty_serialization_result(monkeypatch: pytest.MonkeyPatch) -> None:
+    cache = RedisCache.__new__(RedisCache)
+    cache.expiration_time = 60
+
+    class FailingClient:
+        async def setex(self, key, expiration_time, value):
+            _ = key, expiration_time, value
+            pytest.fail("Redis should not be called when serialization returns an empty value")
+
+    cache._client = FailingClient()
+    monkeypatch.setattr(cache_service_module.dill, "dumps", lambda value, recurse=True: b"")
+
+    with pytest.raises(ValueError, match="RedisCache serialization returned empty result"):
+        await cache.set("flow-id", object())
