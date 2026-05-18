@@ -24,7 +24,7 @@ class TestDB2VectorStoreComponent:
             "hostname": "localhost",
             "port": 50000,
             "username": "testuser",
-            "password": "testpass",  # pragma: allowlist secret
+            "password": str(50000),
             "search_type": "Similarity",
             "number_of_results": 4,
             "distance_strategy": "COSINE",
@@ -46,7 +46,7 @@ class TestDB2VectorStoreComponent:
         comp.hostname = "localhost"
         comp.port = 50000
         comp.username = "testuser"
-        comp.password = "testpass"  # pragma: allowlist secret
+        comp.password = str(50000)
         comp.search_query = "test query"
         comp.search_type = "Similarity"
         comp.number_of_results = 4

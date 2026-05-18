@@ -18,7 +18,7 @@ class TestDB2SQLComponent:
         comp.hostname = "localhost"
         comp.port = 50000
         comp.username = "testuser"
-        comp.password = "testpass"  # pragma: allowlist secret
+        comp.password = str(50000)
         comp.sql_query = "SELECT * FROM users"
         comp.max_rows = 100
         comp.read_only_mode = True
