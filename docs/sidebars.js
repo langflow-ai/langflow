@@ -344,6 +344,7 @@ module.exports = {
               label: "Files and Knowledge",
               items: [
                 "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",

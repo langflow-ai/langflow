@@ -3,69 +3,63 @@ title: File System
 slug: /file-system
 ---
 
-The **File System** component provides sandboxed filesystem access for agents, exposing five file I/O tools (`read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`) that are scoped to a secure workspace on disk.
+The **File System** component provides sandboxed filesystem access for agents.
+It includes five file I/O tools for agents: `read_file`, `write_file`, `edit_file`, `glob_search`, and `grep_search`.
 
-All operations are confined to a base directory controlled by the `LANGFLOW_FS_TOOL_BASE_DIR` environment variable (default: `~/.langflow/fs_tool/fs_sandbox`). The workspace layout depends on the deployment mode:
+All operations are scoped to a base directory designated by the [`LANGFLOW_FS_TOOL_BASE_DIR`](/environment-variables) environment variable. The default location is `~/.langflow/fs_tool/fs_sandbox`.
+To use a different directory, set the location in `LANGFLOW_FS_TOOL_BASE_DIR` in your `.env` file.
 
-- **Shared mode** (`LANGFLOW_AUTO_LOGIN=true`): all agents share a single workspace at `<BASE>/shared/`.
-- **Isolated mode** (`LANGFLOW_AUTO_LOGIN=false`): each authenticated user gets a private workspace at `<BASE>/users/<hash>/`, where `<hash>` is an opaque HMAC-derived identifier. Anonymous calls are refused.
+If [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login) is set to `true`, all agents share a single workspace at `LANGFLOW_FS_TOOL_BASE_DIR/shared/`.
+If `LANGFLOW_AUTO_LOGIN` is set to `false`, each authenticated user gets a private workspace at `LANGFLOW_FS_TOOL_BASE_DIR/users/HASH/`, where `HASH` is an opaque HMAC-derived identifier. Anonymous requests are refused.
+`LANGFLOW_AUTO_LOGIN` defaults to `true`, so shared mode is the default.
+
+Tool errors are not raised as an unhandled exception.
+Tool errors are returned to the agent as structured JSON:
+
+   ```json
+   {"error":"File not found: DOC.md","path":"DOC.md"}
+   ```
 
 ## Use the File System component in a flow
 
 1. Connect the **File System** component to an **Agent** component's **Tools** input.
-2. In the **File System** component, enable **Tool Mode** to expose the five file tools to the agent.
+2. In the **File System** component, enable **Tool Mode** to expose `read_file`, `write_file`, `edit_file`, `glob_search`, and `grep_search` to the agent.
+3. Optionally, set a **Workspace Sub-path** to scope the agent to a specific sub-folder inside the sandbox.
+   The sub-folder is created automatically on first use.
+   Leave the field empty to give the agent access to the full sandbox root.
 
-When `read_only` is enabled, only `read_file`, `glob_search`, and `grep_search` are registered; `write_file` and `edit_file` are withheld.
+   For example, in the **Workspace Sub-path** field, enter `projects/my-application` to scope all file operations to `LANGFLOW_FS_TOOL_BASE_DIR/shared/projects/my-application/`.
 
-The **JSON** output returns metadata about the active sandbox — including `mode`, `effective_root`, `auto_login`, and any `resolution_error` — without performing any file I/O. Use this output to inspect the sandbox state or to pass configuration context to downstream components.
+   If `LANGFLOW_AUTO_LOGIN` is set to `false`, the scoped sub-folder for the agent is at `LANGFLOW_FS_TOOL_BASE_DIR/users/$HASH/projects/my-application`.
 
-The `LANGFLOW_AUTO_LOGIN` environment variable defaults to `true`, so shared mode is the default. Set it to `false` to enable per-user isolation in multi-user deployments.
+4. Optionally, select **Read Only** to disable `write_file` and `edit_file` operations.
+5. In the **Playground**, send a message to test the connection. For example:
+
+   > List all files in my workspace.
+
+   The agent calls `glob_search` with `**/*` and returns the contents of the sandbox directory.
+
 
 ## File System parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| `root_path` | String | Input parameter. Sub-folder inside the sandboxed workspace. Leave empty to use the workspace root. Resolves under `<BASE>/shared/<sub_path>/` in shared mode or `<BASE>/users/<hash>/<sub_path>/` in isolated mode. |
-| `read_only` | Boolean | Input parameter (advanced). If `true`, `write_file` and `edit_file` are disabled and not registered with the agent. Default: `false`. |
+| `root_path` | String | Input parameter. Sub-folder inside the sandboxed workspace. Leave empty to use the workspace root. |
+| `read_only` | Boolean | Input parameter. If `true`, `write_file` and `edit_file` are disabled and not registered with the agent. Default: `false`. |
 | `metadata` | Data | Output parameter. A `JSON` object containing sandbox introspection data: `root_path`, `read_only`, `tools_registered`, `auto_login`, `mode`, `effective_root`, and `resolution_error`. |
 
 ## Docker deployment
 
-When running Langflow in Docker, mount a persistent volume for the sandbox directory so the pepper file (used to derive per-user namespace hashes) and all workspace files survive container restarts. If the pepper file is lost, every user's namespace hash changes and their existing files are orphaned.
+When running Langflow in Docker, mount the sandbox directory as a persistent volume, so the pepper file used to derive per-user namespace hashes survives container restarts:
 
-```yaml
-# docker-compose.yml fragment
-services:
-  langflow:
-    environment:
-      - LANGFLOW_FS_TOOL_BASE_DIR=/data/fs_sandbox
+    ```yaml
+    services:
+      langflow:
+        environment:
+          - LANGFLOW_FS_TOOL_BASE_DIR=/data/fs_sandbox
+        volumes:
+          - lfx-fs-data:/data/fs_sandbox
+
     volumes:
-      - lfx-fs-data:/data/fs_sandbox
-
-volumes:
-  lfx-fs-data:
-```
-
-## Error reference
-
-All tool errors return a structured JSON envelope: `{"error": "<message>", "path": "..."}`. The component never raises an unhandled exception out of a tool call.
-
-| Condition | Error message |
-|-----------|---------------|
-| `AUTO_LOGIN=false` with no authenticated user | `FileSystemTool requires an authenticated user when AUTO_LOGIN=False` |
-| Path traversal (`..`) or symlink escaping the sandbox | `Path escapes workspace boundary: <path>` |
-| Path contains the reserved `.lfsig` segment | `Path component '.lfsig' is reserved` |
-| `LANGFLOW_FS_TOOL_BASE_DIR` is not writable | `Cannot create user namespace at <path>: Permission denied. Check that LANGFLOW_FS_TOOL_BASE_DIR (<value>) is writable by the Langflow process user.` |
-| Tool closure reused across different user sessions | `tool/user-id mismatch: this tool was bound to a different user session and cannot be reused` |
-
-## Agent tools
-
-When **Tool Mode** is enabled, the following tools are registered with the connected agent.
-
-| Tool | Description |
-|------|-------------|
-| `read_file` | Reads a text file from the sandbox. Returns line-numbered content plus `total_lines`, `start_line`, and `num_lines`. Supports optional `offset` and `limit` for paginated reads. Refuses binary files and files larger than 10 MB. |
-| `write_file` | Creates or overwrites a text file inside the sandbox. Returns `status` (`created` or `updated`) and `bytes_written`. Disabled when `read_only` is `true`. |
-| `edit_file` | Replaces an exact `old_string` with `new_string` in a file. Fails on ambiguous matches unless `replace_all=true`. Disabled when `read_only` is `true`. |
-| `glob_search` | Lists files matching a glob pattern (for example, `**/*.py`). Results are capped at 100 entries; a `truncated_branches` field signals omitted directories so the agent can narrow its search. |
-| `grep_search` | Searches file contents by literal substring (default) or Python regex (`is_regex=true`). Supports `files_with_matches`, `content`, and `count` output modes. Regex patterns with nested unbounded quantifiers are rejected to prevent catastrophic backtracking. |
+      lfx-fs-data:
+    ```

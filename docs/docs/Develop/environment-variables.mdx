@@ -475,6 +475,7 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | `False` | If `true`, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but can cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend: `polling`, `streaming` or `direct`. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. For development purposes only when you need to serve specific frontend code. |
+| `LANGFLOW_FS_TOOL_BASE_DIR` | String | `~/.langflow/fs_tool/fs_sandbox` | Base directory for the [**File System** component](/file-system) sandbox. All agent file operations are confined to this directory. |
 | `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect outputs or data passed between components. |
 | `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate outputs or responses passed between components. |
 | `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of flow transaction events to keep in the database. |
