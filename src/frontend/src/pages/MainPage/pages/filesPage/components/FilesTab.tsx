@@ -21,6 +21,7 @@ import useUploadFile from "@/hooks/files/use-upload-file";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
+import type { FileType } from "@/types/file_management";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
@@ -30,8 +31,8 @@ import DragWrapComponent from "./dragWrapComponent";
 interface FilesTabProps {
   quickFilterText: string;
   setQuickFilterText: (text: string) => void;
-  selectedFiles: any[];
-  setSelectedFiles: (files: any[]) => void;
+  selectedFiles: FileType[];
+  setSelectedFiles: (files: FileType[]) => void;
   quantitySelected: number;
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
@@ -47,14 +48,14 @@ const FilesTab = ({
   isShiftPressed,
 }: FilesTabProps) => {
   const { t } = useTranslation();
-  const tableRef = useRef<AgGridReact<any>>(null);
+  const tableRef = useRef<AgGridReact<FileType>>(null);
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
-  const handleRename = (params: NewValueParams<any, any>) => {
+  const handleRename = (params: NewValueParams<FileType, string>) => {
     rename({
       id: params.data.id,
       name: params.newValue,
@@ -83,10 +84,14 @@ const FilesTab = ({
             ? t("files.filesUploadedSuccessfully")
             : t("files.uploadedSuccessfully"),
       });
-    } catch (error: any) {
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("files.errorUploadingDetail");
       setErrorData({
         title: t("files.errorUploading"),
-        list: [error.message || t("files.errorUploadingDetail")],
+        list: [message],
       });
     }
   };
@@ -274,7 +279,8 @@ const FilesTab = ({
       <ShadTooltip content={t("files.uploadFile")} side="bottom">
         <Button
           className="!px-3 md:!px-4 md:!pl-3.5"
-          onClick={async () => {
+          onClick={async (e) => {
+            e.currentTarget.blur();
             await handleUpload();
           }}
           id="upload-file-btn"
