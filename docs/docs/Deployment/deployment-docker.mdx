@@ -188,6 +188,15 @@ This example replaces the built-in **Message History** component, but the same p
 
 ## Build and run the Docker image from source {#build-from-source}
 
+:::tip
+Both `make docker_build` and `make lfx_docker_build` use Podman by default. If you have Docker installed instead, pass the alias `DOCKER=docker` on the command line:
+
+```shell
+make docker_build DOCKER=docker
+```
+:::
+
+
 If you've cloned the Langflow repository and want to build and run your local changes inside a Docker container, run:
 
     ```shell
@@ -202,8 +211,7 @@ To run the image after building, run:
 docker run -p 7860:7860 langflow:<version>
 ```
 
-Replace `<version>` with the version printed during the build.
-You can also find the version in `pyproject.toml` at the repo root.
+Replace `<version>` with the version in `pyproject.toml` at the repo root.
 
 To build only the LFX executor CLI image instead of the full Langflow application, run:
 
@@ -211,8 +219,19 @@ To build only the LFX executor CLI image instead of the full Langflow applicatio
 make lfx_docker_build
 ```
 
+:::note
+`DOCKER=docker` passed on the command line does not propagate to `make lfx_docker_build` — the root target calls into `src/lfx/Makefile` without forwarding the variable, so it falls back to Podman. Export the variable before running the target instead:
+
+```shell
+export DOCKER=docker
+make lfx_docker_build
+```
+:::
+
 This builds `src/lfx/docker/Dockerfile` and tags the result `lfx:latest`.
 It produces a lightweight Alpine-based image that contains only the `lfx` CLI tool, with no frontend or Langflow UI.
+
+The build context is the repo root, not `src/lfx/`. The Dockerfile copies from `pyproject.toml`, `uv.lock`, and `src/sdk/`, so the full workspace is sent to the daemon (~55 MB of tracked files). A root `.dockerignore` file partially mitigates this, but the first build will be slower than you might expect for a small CLI image.
 
 ### Write a custom source-based Dockerfile
 
@@ -241,7 +260,12 @@ The workspace members are defined in `[tool.uv.workspace]` in the root `pyprojec
         uv sync --frozen --no-install-project --no-editable --extra postgresql --no-group dev
 
     COPY ./src /app/src
+
+    RUN --mount=type=cache,target=/root/.cache/uv \
+        uv sync --frozen --no-editable --extra postgresql --no-group dev
     ```
+
+    The first `uv sync` installs only dependencies before the source is copied, so that Docker can cache that layer. The second `uv sync` installs the project packages (`langflow`, `lfx`) from the copied source. Both calls are required. Omitting the second will produce a container with all dependencies present but the project packages missing, which fails at runtime.
 
 For an example, see [`docker/build_and_push_with_extras.Dockerfile`](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile).
 
@@ -268,7 +292,14 @@ The following environment variables are set by default:
 | `LANGFLOW_SUPERUSER_PASSWORD` | `langflow` | Initial admin password |
 | `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
 
-To override these values, create a `.env` file in the repo root before running `make dcdev_up`.
+To override these values, export variables in your shell before running `make dcdev_up`. Shell-exported variables take precedence over the values set in the `environment:` block of the Compose file:
+
+```shell
+export LANGFLOW_SUPERUSER=myadmin
+make dcdev_up
+```
+
+Alternatively, edit `docker/dev.docker-compose.yml` directly. A `.env` file in the repo root will not work  because Docker Compose v2 gives `environment:` block values higher precedence than `env_file:`, so the hardcoded defaults in the Compose file win.
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
