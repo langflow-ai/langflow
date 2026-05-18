@@ -23,7 +23,11 @@ from langflow.api.utils import (
     get_top_level_vertices,
     parse_exception,
 )
-from langflow.api.v1.schemas import FlowDataRequest, ResultDataResponse, VertexBuildResponse
+from langflow.api.v1.schemas import (
+    FlowDataRequest,
+    ResultDataResponse,
+    VertexBuildResponse,
+)
 from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
@@ -39,7 +43,11 @@ from langflow.services.deps import (
     session_scope,
 )
 from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
-from langflow.services.telemetry.schema import ComponentInputsPayload, ComponentPayload, PlaygroundPayload
+from langflow.services.telemetry.schema import (
+    ComponentInputsPayload,
+    ComponentPayload,
+    PlaygroundPayload,
+)
 
 
 def _log_component_input_telemetry(
@@ -198,10 +206,14 @@ async def get_flow_events_response(
             return Response(content=content, media_type="application/x-ndjson")
         except asyncio.CancelledError as exc:
             await logger.ainfo(f"Event polling was cancelled for job {job_id}")
-            raise HTTPException(status_code=499, detail="Event polling was cancelled") from exc
+            raise HTTPException(
+                status_code=499, detail="Event polling was cancelled"
+            ) from exc
         except asyncio.TimeoutError:
             await logger.awarning(f"Timeout while waiting for events for job {job_id}")
-            return Response(content="", media_type="application/x-ndjson")  # Return empty response instead of error
+            return Response(
+                content="", media_type="application/x-ndjson"
+            )  # Return empty response instead of error
 
     except JobQueueNotFoundError as exc:
         await logger.aerror(f"Job not found: {job_id}. Error: {exc!s}")
@@ -209,8 +221,12 @@ async def get_flow_events_response(
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise
-        await logger.aexception(f"Unexpected error processing flow events for job {job_id}")
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {exc!s}") from exc
+        await logger.aexception(
+            f"Unexpected error processing flow events for job {job_id}"
+        )
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error: {exc!s}"
+        ) from exc
 
 
 async def create_flow_response(
@@ -235,7 +251,11 @@ async def create_flow_response(
     # step, slow LLM, no tokens for a while) keeps proving its client is
     # alive and does not get reclaimed by the watchdog.
     streaming_activity_refresh_s = 10.0
-    touch = getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
+    touch = (
+        getattr(queue_service, "touch_activity", None)
+        if queue_service is not None and job_id is not None
+        else None
+    )
 
     async def _heartbeat() -> None:
         # Strong reference is the local variable `heartbeat_task` below; this
@@ -252,10 +272,14 @@ async def create_flow_response(
             except Exception as exc:  # noqa: BLE001
                 # touch_activity already counts errors; a heartbeat hiccup must
                 # not crash the streaming response.  Debug-log and continue.
-                await logger.adebug(f"streaming heartbeat: touch_activity failed for {job_id}: {exc}")
+                await logger.adebug(
+                    f"streaming heartbeat: touch_activity failed for {job_id}: {exc}"
+                )
 
     heartbeat_task: asyncio.Task | None = (
-        asyncio.create_task(_heartbeat(), name=f"stream-heartbeat-{job_id}") if touch is not None else None
+        asyncio.create_task(_heartbeat(), name=f"stream-heartbeat-{job_id}")
+        if touch is not None
+        else None
     )
 
     def _cancel_heartbeat() -> None:
@@ -271,7 +295,9 @@ async def create_flow_response(
                         break
                     get_time = time.time()
                     yield value.decode("utf-8")
-                    await logger.adebug(f"Event {event_id} consumed in {get_time - put_time:.4f}s")
+                    await logger.adebug(
+                        f"Event {event_id} consumed in {get_time - put_time:.4f}s"
+                    )
                 except Exception as exc:  # noqa: BLE001
                     await logger.aexception(f"Error consuming event: {exc}")
                     break
@@ -294,7 +320,9 @@ async def create_flow_response(
                 try:
                     await signal(job_id)
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning(f"Cross-worker disconnect: signal_cancel for {job_id} failed: {exc}")
+                    await logger.awarning(
+                        f"Cross-worker disconnect: signal_cancel for {job_id} failed: {exc}"
+                    )
         queue_cancel = getattr(queue, "cancel", None)
         if queue_cancel is not None:
             maybe_coro = queue_cancel()
@@ -357,13 +385,25 @@ async def generate_flow_events(
             # We need to get the id of each vertex
             # and return the same structure but only with the ids
             components_count = len(graph.vertices)
-            vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
+            vertices_to_run = list(
+                graph.vertices_to_run.union(
+                    get_top_level_vertices(graph, graph.vertices_to_run)
+                )
+            )
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, run_id=run_id, success=True)
+            await log_telemetry(
+                start_time, components_count, run_id=run_id, success=True
+            )
 
         except Exception as exc:
-            await log_telemetry(start_time, components_count, run_id=run_id, success=False, error_message=str(exc))
+            await log_telemetry(
+                start_time,
+                components_count,
+                run_id=run_id,
+                success=False,
+                error_message=str(exc),
+            )
 
             if "stream or streaming set to True" in str(exc):
                 raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -390,7 +430,9 @@ async def generate_flow_events(
             ),
         )
 
-    async def create_graph(fresh_session, flow_id_str: str, flow_name: str | None) -> Graph:
+    async def create_graph(
+        fresh_session, flow_id_str: str, flow_name: str | None
+    ) -> Graph:
         if inputs is not None and getattr(inputs, "session", None) is not None:
             effective_session_id = inputs.session
         else:
@@ -412,7 +454,9 @@ async def generate_flow_events(
             return graph
 
         if not flow_name:
-            result = await fresh_session.exec(select(Flow.name).where(Flow.id == flow_id))
+            result = await fresh_session.exec(
+                select(Flow.name).where(Flow.id == flow_id)
+            )
             flow_name = result.first()
 
         return await build_graph_from_data(
@@ -430,7 +474,9 @@ async def generate_flow_events(
             logger.exception("Error sorting vertices")
             return graph.sort_vertices()
 
-    async def _build_vertex(vertex_id: str, graph: Graph, event_manager: EventManager) -> VertexBuildResponse:
+    async def _build_vertex(
+        vertex_id: str, graph: Graph, event_manager: EventManager
+    ) -> VertexBuildResponse:
         flow_id_str = str(flow_id)
         next_runnable_vertices = []
         top_level_vertices = []
@@ -454,10 +500,16 @@ async def generate_flow_events(
                 params = vertex_build_result.params
                 valid = vertex_build_result.valid
                 artifacts = vertex_build_result.artifacts
-                next_runnable_vertices = await graph.get_next_runnable_vertices(lock, vertex=vertex, cache=False)
-                top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
+                next_runnable_vertices = await graph.get_next_runnable_vertices(
+                    lock, vertex=vertex, cache=False
+                )
+                top_level_vertices = graph.get_top_level_vertices(
+                    next_runnable_vertices
+                )
 
-                result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
+                result_data_response = ResultDataResponse.model_validate(
+                    result_dict, from_attributes=True
+                )
             except Exception as exc:  # noqa: BLE001
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
@@ -498,7 +550,9 @@ async def generate_flow_events(
             result_data_response.timedelta = timedelta
             vertex.add_build_time(timedelta)
             # Capture both inactivated and conditionally excluded vertices
-            inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
+            inactivated_vertices = list(
+                graph.inactivated_vertices.union(graph.conditionally_excluded_vertices)
+            )
             graph.reset_inactivated_vertices()
             graph.reset_activated_vertices()
 
@@ -526,7 +580,9 @@ async def generate_flow_events(
             )
 
             # Extract and send component input telemetry (separate payload)
-            _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
+            _log_component_input_telemetry(
+                vertex, vertex_id, graph.run_id, background_tasks, telemetry_service
+            )
 
             # Send component execution telemetry
             background_tasks.add_task(
@@ -543,7 +599,9 @@ async def generate_flow_events(
         except Exception as exc:
             if "vertex" in locals():
                 # Extract and send component input telemetry even on error (separate payload)
-                _log_component_input_telemetry(vertex, vertex_id, graph.run_id, background_tasks, telemetry_service)
+                _log_component_input_telemetry(
+                    vertex, vertex_id, graph.run_id, background_tasks, telemetry_service
+                )
 
             # Send component execution telemetry (error case)
             background_tasks.add_task(
@@ -578,7 +636,9 @@ async def generate_flow_events(
             vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
         try:
-            vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
+            vertex_build_response: VertexBuildResponse = await _build_vertex(
+                vertex_id, graph, event_manager
+            )
         except asyncio.CancelledError as exc:
             await logger.ainfo(f"Build cancelled: {exc}")
             raise
@@ -652,7 +712,9 @@ async def generate_flow_events(
     async def _run_vertex_build() -> None:
         tasks = []
         for vertex_id in ids:
-            task = asyncio.create_task(build_vertices(vertex_id, graph, event_manager, vertex_timedeltas))
+            task = asyncio.create_task(
+                build_vertices(vertex_id, graph, event_manager, vertex_timedeltas)
+            )
             tasks.append(task)
         try:
             await asyncio.gather(*tasks)
@@ -690,7 +752,9 @@ async def generate_flow_events(
     # finishes, FastAPI has already drained the background_tasks queue and any
     # tasks added after that point are silently dropped.
     try:
-        _run_id_uuid = uuid.UUID(graph.run_id) if graph.run_id else None  # type-cast only; same run_id set on graph
+        _run_id_uuid = (
+            uuid.UUID(graph.run_id) if graph.run_id else None
+        )  # type-cast only; same run_id set on graph
         await get_task_service().fire_and_forget_task(
             get_memory_base_service().on_flow_output,
             flow_id=flow_id,
@@ -698,7 +762,9 @@ async def generate_flow_events(
             job_id=_run_id_uuid,
         )
     except (RuntimeError, ValueError, OSError):
-        await logger.awarning("Memory base hook scheduling failed for flow %s", flow_id, exc_info=True)
+        await logger.awarning(
+            "Memory base hook scheduling failed for flow %s", flow_id, exc_info=True
+        )
 
     await event_manager.queue.put((None, None, time.time()))
 
@@ -742,7 +808,9 @@ async def cancel_flow_build(
             # A return of 0 is not a failure: the persistent marker key was also
             # set, so a worker that picks up the job later will still apply the
             # cancel during its start_job marker check.
-            await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))")
+            await logger.ainfo(
+                f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))"
+            )
             return True
         # In-memory backend with no cross-worker cancel support: the job is
         # owned by another process we cannot reach.  Return False so callers
@@ -750,8 +818,8 @@ async def cancel_flow_build(
         # false success.
         await logger.awarning(
             f"No event task found for job_id {job_id} — "
-            "this worker does not own the build and cross-worker cancel is not available. "
-            "The build will continue."
+            "this worker does not own the build and cross-worker cancel is not available.
+            A retry may land on the owning worker and succeed, but cancellation is not guaranteed."
         )
         return False
 
@@ -769,10 +837,14 @@ async def cancel_flow_build(
     except asyncio.CancelledError:
         # Check if the task was actually cancelled
         if task_before_cleanup.cancelled():
-            await logger.ainfo(f"Successfully cancelled flow build for job_id {job_id} (CancelledError caught)")
+            await logger.ainfo(
+                f"Successfully cancelled flow build for job_id {job_id} (CancelledError caught)"
+            )
             return True
         # If the task wasn't cancelled, re-raise the exception
-        await logger.aerror(f"CancelledError caught but task for job_id {job_id} was not cancelled")
+        await logger.aerror(
+            f"CancelledError caught but task for job_id {job_id} was not cancelled"
+        )
         raise
 
     # If no exception was raised, verify that the task was actually cancelled
@@ -782,5 +854,7 @@ async def cancel_flow_build(
         return True
 
     # If we get here, the task wasn't cancelled properly
-    await logger.aerror(f"Failed to cancel flow build for job_id {job_id}, task is still running")
+    await logger.aerror(
+        f"Failed to cancel flow build for job_id {job_id}, task is still running"
+    )
     return False

@@ -13,7 +13,11 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
-from langflow.api.build import cancel_flow_build, create_flow_response, get_flow_events_response
+from langflow.api.build import (
+    cancel_flow_build,
+    create_flow_response,
+    get_flow_events_response,
+)
 from langflow.api.utils import EventDeliveryType
 from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
@@ -41,13 +45,17 @@ async def _make_service(
     dispatcher task is spawned so signal_cancel can be exercised end-to-end.
     """
     fake_client = shared_client or fakeredis_aio.FakeRedis()
-    service = RedisJobQueueService(ttl=ttl, cancel_channel_enabled=cancel_channel_enabled)
+    service = RedisJobQueueService(
+        ttl=ttl, cancel_channel_enabled=cancel_channel_enabled
+    )
     # Inject the fake client directly so no real Redis connection is attempted.
     service._client = fake_client
     service._closed = False
     service._cleanup_task = asyncio.create_task(service._periodic_cleanup())
     if cancel_channel_enabled:
-        service._cancel_dispatcher_task = asyncio.create_task(service._run_cancel_dispatcher())
+        service._cancel_dispatcher_task = asyncio.create_task(
+            service._run_cancel_dispatcher()
+        )
         # Give the dispatcher a beat to complete PSUBSCRIBE before tests publish.
         await asyncio.sleep(0.05)
     service.ready = True
@@ -121,8 +129,12 @@ async def test_redis_queue_wrapper_reads_events():
     wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
 
     # Publish two events followed by the sentinel.
-    await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"hello", "ts": "1.0"})
-    await fake_client.xadd(stream_key, {"event_id": "e2", "data": b"world", "ts": "2.0"})
+    await fake_client.xadd(
+        stream_key, {"event_id": "e1", "data": b"hello", "ts": "1.0"}
+    )
+    await fake_client.xadd(
+        stream_key, {"event_id": "e2", "data": b"world", "ts": "2.0"}
+    )
     await fake_client.xadd(
         stream_key,
         {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": "3.0"},
@@ -253,7 +265,9 @@ async def test_redis_service_cross_worker_get_queue_data():
         stream_key = f"langflow:queue:{job_id}"
 
         # Simulate another worker having published events to this stream.
-        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"bytes", "ts": "1.0"})
+        await fake_client.xadd(
+            stream_key, {"event_id": "e1", "data": b"bytes", "ts": "1.0"}
+        )
         await fake_client.xadd(
             stream_key,
             {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": "2.0"},
@@ -309,8 +323,12 @@ async def test_redis_service_reuses_consumer_wrapper_for_sequential_polls():
         job_id = str(uuid.uuid4())
         stream_key = f"langflow:queue:{job_id}"
 
-        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"first", "ts": "1.0"})
-        await fake_client.xadd(stream_key, {"event_id": "e2", "data": b"second", "ts": "2.0"})
+        await fake_client.xadd(
+            stream_key, {"event_id": "e1", "data": b"first", "ts": "1.0"}
+        )
+        await fake_client.xadd(
+            stream_key, {"event_id": "e2", "data": b"second", "ts": "2.0"}
+        )
 
         first_queue, _, _, _ = service.get_queue_data(job_id)
         first_event = await asyncio.wait_for(first_queue.get(), timeout=5)
@@ -374,7 +392,9 @@ async def test_redis_service_cleanup_deletes_redis_keys():
         owner_key = f"langflow:owner:{job_id}"
 
         # Manually create the keys to verify deletion.
-        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"})
+        await fake_client.xadd(
+            stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"}
+        )
         await fake_client.set(owner_key, "some-user")
 
         await service.cleanup_job(job_id)
@@ -402,7 +422,9 @@ async def test_redis_service_cleanup_deletes_redis_keys_when_cancelled():
         stream_key = f"langflow:queue:{job_id}"
         owner_key = f"langflow:owner:{job_id}"
 
-        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"})
+        await fake_client.xadd(
+            stream_key, {"event_id": "e1", "data": b"x", "ts": "1.0"}
+        )
         await fake_client.set(owner_key, "some-user")
 
         with pytest.raises(asyncio.CancelledError):
@@ -441,8 +463,12 @@ async def test_redis_service_owner_stored_in_redis():
 async def test_redis_service_refreshes_owner_key_while_owned_job_is_active():
     """Active private jobs keep their Redis owner key alive beyond redis_queue_ttl."""
     shared_client = fakeredis_aio.FakeRedis()
-    producer, _ = await _make_service(ttl=1, shared_client=shared_client, cancel_channel_enabled=False)
-    consumer, _ = await _make_service(ttl=1, shared_client=shared_client, cancel_channel_enabled=False)
+    producer, _ = await _make_service(
+        ttl=1, shared_client=shared_client, cancel_channel_enabled=False
+    )
+    consumer, _ = await _make_service(
+        ttl=1, shared_client=shared_client, cancel_channel_enabled=False
+    )
     try:
         job_id = str(uuid.uuid4())
         user_id = uuid.uuid4()
@@ -560,7 +586,9 @@ async def test_redis_cross_worker_streaming_response_allows_missing_event_task()
     try:
         job_id = str(uuid.uuid4())
         stream_key = f"langflow:queue:{job_id}"
-        await fake_client.xadd(stream_key, {"event_id": "e1", "data": b"payload\n", "ts": "1.0"})
+        await fake_client.xadd(
+            stream_key, {"event_id": "e1", "data": b"payload\n", "ts": "1.0"}
+        )
         await fake_client.xadd(
             stream_key,
             {"event_id": "__sentinel__", "data": _STREAM_SENTINEL_DATA, "ts": "2.0"},
@@ -573,7 +601,8 @@ async def test_redis_cross_worker_streaming_response_allows_missing_event_task()
         )
 
         chunks = [
-            chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk async for chunk in response.body_iterator
+            chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk
+            async for chunk in response.body_iterator
         ]
 
         assert response.status_code == 200
@@ -694,7 +723,9 @@ async def test_redis_service_cross_worker_cancel_dispatches_to_owning_worker():
         assert cancelled_event.is_set()
         # Owner stats incremented exactly once; non-owner counted the publish as foreign.
         assert svc_producer._cancel_stats["dispatched_owned"] == 1
-        assert svc_other._cancel_stats["dispatched_foreign"] >= 0  # may also receive its own
+        assert (
+            svc_other._cancel_stats["dispatched_foreign"] >= 0
+        )  # may also receive its own
     finally:
         await _stop_service(svc_producer)
         await _stop_service(svc_other)
@@ -711,8 +742,12 @@ async def test_redis_service_owner_local_cancel_flushes_sentinel_to_consumer_bef
     startup grace window.
     """
     shared_client = fakeredis_aio.FakeRedis()
-    producer, _ = await _make_service(shared_client=shared_client, cancel_channel_enabled=False)
-    consumer, _ = await _make_service(shared_client=shared_client, cancel_channel_enabled=False)
+    producer, _ = await _make_service(
+        shared_client=shared_client, cancel_channel_enabled=False
+    )
+    consumer, _ = await _make_service(
+        shared_client=shared_client, cancel_channel_enabled=False
+    )
     try:
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
@@ -887,8 +922,12 @@ async def test_polling_watchdog_cancels_stale_owned_job():
     producer._client = shared_client
     producer._closed = False
     producer._cleanup_task = asyncio.create_task(producer._periodic_cleanup())
-    producer._cancel_dispatcher_task = asyncio.create_task(producer._run_cancel_dispatcher())
-    producer._polling_watchdog_task = asyncio.create_task(producer._run_polling_watchdog())
+    producer._cancel_dispatcher_task = asyncio.create_task(
+        producer._run_cancel_dispatcher()
+    )
+    producer._polling_watchdog_task = asyncio.create_task(
+        producer._run_polling_watchdog()
+    )
     producer.ready = True
     await asyncio.sleep(0.05)
     try:
@@ -914,7 +953,11 @@ async def test_polling_watchdog_cancels_stale_owned_job():
         assert producer._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -945,8 +988,12 @@ async def test_polling_watchdog_skips_fresh_activity():
     producer._client = shared_client
     producer._closed = False
     producer._cleanup_task = asyncio.create_task(producer._periodic_cleanup())
-    producer._cancel_dispatcher_task = asyncio.create_task(producer._run_cancel_dispatcher())
-    producer._polling_watchdog_task = asyncio.create_task(producer._run_polling_watchdog())
+    producer._cancel_dispatcher_task = asyncio.create_task(
+        producer._run_cancel_dispatcher()
+    )
+    producer._polling_watchdog_task = asyncio.create_task(
+        producer._run_polling_watchdog()
+    )
     producer.ready = True
     await asyncio.sleep(0.05)
     try:
@@ -976,7 +1023,11 @@ async def test_polling_watchdog_skips_fresh_activity():
         assert producer._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1036,12 +1087,18 @@ async def test_polling_watchdog_ignores_jobs_without_registered_owner():
         # Wait well past the threshold + a few watchdog ticks.  The kill must
         # never fire because the job has no registered owner.
         await asyncio.sleep(0.8)
-        assert not cancelled_event.is_set(), "watchdog killed an unowned (internal) task"
+        assert (
+            not cancelled_event.is_set()
+        ), "watchdog killed an unowned (internal) task"
         assert svc._cancel_stats["polling_watchdog_kills"] == 0
         assert job_id in svc._queues
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1125,14 +1182,20 @@ async def test_polling_watchdog_grants_start_grace_window():
         # grace should keep the job alive even though the key is missing.
         await asyncio.sleep(0.7)
         assert svc._cancel_stats["polling_watchdog_kills"] == 0
-        assert job_id in svc._queues, "job was wrongly reclaimed during start-grace window"
+        assert (
+            job_id in svc._queues
+        ), "job was wrongly reclaimed during start-grace window"
 
         # After the threshold passes, the watchdog should reclaim it.
         await asyncio.sleep(0.6)
         assert svc._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1190,7 +1253,11 @@ async def test_polling_watchdog_skips_malformed_activity_value():
         assert svc._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1244,7 +1311,11 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
         )
         try:
             # Find the heartbeat task we just spawned.
-            tasks = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
+            tasks = [
+                t
+                for t in asyncio.all_tasks()
+                if t.get_name().startswith(f"stream-heartbeat-{job_id}")
+            ]
             assert tasks, "stream heartbeat task was not spawned"
             # Trigger one manual touch (faster than waiting 10s) and verify TTL refresh.
             await svc.touch_activity(job_id)
@@ -1256,9 +1327,15 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
             # Trigger disconnect; the heartbeat task must be cancelled cleanly.
             await response.on_disconnect()
             await asyncio.sleep(0.05)
-            tasks_after = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
+            tasks_after = [
+                t
+                for t in asyncio.all_tasks()
+                if t.get_name().startswith(f"stream-heartbeat-{job_id}")
+            ]
             for t in tasks_after:
-                assert t.done() or t.cancelled(), "heartbeat task survived on_disconnect"
+                assert (
+                    t.done() or t.cancelled()
+                ), "heartbeat task survived on_disconnect"
     finally:
         await _stop_service(svc)
 
@@ -1351,9 +1428,9 @@ async def test_dispatcher_internal_error_logged_at_error_level():
         # did not kill the loop; it caught it and rescheduled.  This is the
         # core contract of the "internal-error reconnect" path.
         assert producer._cancel_dispatcher_task is not None
-        assert not producer._cancel_dispatcher_task.done(), (
-            "dispatcher task exited after internal error instead of reconnecting"
-        )
+        assert (
+            not producer._cancel_dispatcher_task.done()
+        ), "dispatcher task exited after internal error instead of reconnecting"
     finally:
         producer._handle_cancel = original_handle_cancel  # type: ignore[method-assign]
         await _stop_service(producer)
@@ -1441,7 +1518,9 @@ async def test_post_cancel_cleanup_bounded_by_outer_timeout():
         elapsed = asyncio.get_event_loop().time() - start
 
         # Should have given up within roughly the timeout, not blocked forever.
-        assert elapsed < 1.0, f"_post_cancel_cleanup did not bound runtime; elapsed={elapsed:.2f}s"
+        assert (
+            elapsed < 1.0
+        ), f"_post_cancel_cleanup did not bound runtime; elapsed={elapsed:.2f}s"
     finally:
         await _stop_service(svc)
 
@@ -1494,7 +1573,9 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
             self._pubsub_count += 1
             base = self._real.pubsub()
             # Only the first dispatcher's pubsub fails; subsequent reconnects succeed.
-            return _FlakeyPubSub(base, raise_on_listen_count=1 if self._pubsub_count == 1 else 0)
+            return _FlakeyPubSub(
+                base, raise_on_listen_count=1 if self._pubsub_count == 1 else 0
+            )
 
         # Delegate everything else.
         def __getattr__(self, item: str) -> Any:
@@ -1507,7 +1588,9 @@ async def test_cancel_dispatcher_reconnects_after_pubsub_error():
     svc_producer._client = flakey_client
     svc_producer._closed = False
     svc_producer._cleanup_task = asyncio.create_task(svc_producer._periodic_cleanup())
-    svc_producer._cancel_dispatcher_task = asyncio.create_task(svc_producer._run_cancel_dispatcher())
+    svc_producer._cancel_dispatcher_task = asyncio.create_task(
+        svc_producer._run_cancel_dispatcher()
+    )
     svc_producer.ready = True
     # Allow the first (flakey) subscribe + the reconnect to settle.
     await asyncio.sleep(0.6)
@@ -1602,7 +1685,9 @@ async def test_cancel_dispatcher_counts_transparent_pubsub_reconnect_callback():
     task = asyncio.create_task(svc._run_cancel_dispatcher())
     try:
         await asyncio.wait_for(pubsub.subscribed.wait(), timeout=1.0)
-        assert pubsub.connection.callbacks == [svc._on_cancel_dispatcher_connection_reconnect]
+        assert pubsub.connection.callbacks == [
+            svc._on_cancel_dispatcher_connection_reconnect
+        ]
 
         await pubsub.connection.callbacks[0](pubsub.connection)
 
@@ -1660,7 +1745,9 @@ async def test_redis_service_signal_cancel_flushes_sentinel_to_consumer():
                 break
             await asyncio.sleep(0.05)
 
-        assert last_fields is not None, f"sentinel never XADDed to {stream_key} after signal_cancel"
+        assert (
+            last_fields is not None
+        ), f"sentinel never XADDed to {stream_key} after signal_cancel"
         assert last_fields.get(b"data") == _STREAM_SENTINEL_DATA
         assert last_fields.get(b"event_id") == b"__sentinel__"
 
@@ -1776,7 +1863,12 @@ async def test_get_flow_events_response_rejects_unknown_event_delivery():
 
     service = JobQueueService()
     job_id = str(uuid.uuid4())
-    service._queues[job_id] = (asyncio.Queue(), EventManager(asyncio.Queue()), None, None)
+    service._queues[job_id] = (
+        asyncio.Queue(),
+        EventManager(asyncio.Queue()),
+        None,
+        None,
+    )
 
     class _BogusDelivery(str, Enum):
         WEBSOCKET = "websocket"
@@ -1857,8 +1949,12 @@ async def test_task_service_launch_does_not_trigger_polling_watchdog(monkeypatch
         # Wait well past the threshold + a few watchdog ticks.  An owned job
         # would have been killed by now; this one must survive.
         await asyncio.sleep(0.8)
-        assert svc._cancel_stats["polling_watchdog_kills"] == 0, "watchdog killed an internal TaskService task"
-        assert not cancelled_event.is_set(), "watchdog cancelled an internal TaskService task"
+        assert (
+            svc._cancel_stats["polling_watchdog_kills"] == 0
+        ), "watchdog killed an internal TaskService task"
+        assert (
+            not cancelled_event.is_set()
+        ), "watchdog cancelled an internal TaskService task"
         assert task_id in svc._queues
     finally:
         # Cancel the long-running task manually so the test teardown doesn't hang.
@@ -1868,7 +1964,11 @@ async def test_task_service_launch_does_not_trigger_polling_watchdog(monkeypatch
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await entry[2]
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1907,7 +2007,9 @@ async def test_redis_queue_wrapper_buffer_applies_backpressure(monkeypatch):
     # the fill task immediately hits the maxsize ceiling.
     total_events = 20
     for i in range(total_events):
-        await fake_client.xadd(stream_key, {b"event_id": f"e{i}".encode(), b"data": b"x", b"ts": b"0"})
+        await fake_client.xadd(
+            stream_key, {b"event_id": f"e{i}".encode(), b"data": b"x", b"ts": b"0"}
+        )
 
     wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60, startup_grace_s=10.0)
     try:
@@ -1917,9 +2019,9 @@ async def test_redis_queue_wrapper_buffer_applies_backpressure(monkeypatch):
         for _ in range(20):
             observed_sizes.append(wrapper._buffer.qsize())
             await asyncio.sleep(0.01)
-        assert max(observed_sizes) <= RedisQueueWrapper._BUFFER_MAXSIZE, (
-            f"buffer grew past maxsize={RedisQueueWrapper._BUFFER_MAXSIZE}: peak={max(observed_sizes)}"
-        )
+        assert (
+            max(observed_sizes) <= RedisQueueWrapper._BUFFER_MAXSIZE
+        ), f"buffer grew past maxsize={RedisQueueWrapper._BUFFER_MAXSIZE}: peak={max(observed_sizes)}"
 
         # Drain the buffer; backpressure should release and the fill task should
         # be able to make forward progress so all events eventually arrive.
@@ -2016,7 +2118,9 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     mock_job_svc.create_job = AsyncMock(side_effect=Exception("skip in test"))
 
     monkeypatch.setattr("langflow.api.build.get_chat_service", lambda: mock_chat)
-    monkeypatch.setattr("langflow.api.build.get_telemetry_service", lambda: mock_telemetry)
+    monkeypatch.setattr(
+        "langflow.api.build.get_telemetry_service", lambda: mock_telemetry
+    )
     monkeypatch.setattr("langflow.api.build.session_scope", _fake_session_scope)
     monkeypatch.setattr(
         "langflow.api.build.build_graph_from_db",
@@ -2024,7 +2128,9 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     )
     monkeypatch.setattr("langflow.api.build.get_job_service", lambda: mock_job_svc)
     monkeypatch.setattr("langflow.api.build.get_task_service", lambda: MagicMock())
-    monkeypatch.setattr("langflow.api.build.get_memory_base_service", lambda: MagicMock())
+    monkeypatch.setattr(
+        "langflow.api.build.get_memory_base_service", lambda: MagicMock()
+    )
     monkeypatch.setattr("langflow.api.build.get_top_level_vertices", lambda *_: [])
 
     # ── wire up the event manager ─────────────────────────────────────────────
@@ -2065,11 +2171,6 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     )
 
 
-# ---------------------------------------------------------------------------
-# Tests for PR-review fixes
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_fill_from_redis_last_id_not_advanced_before_put_completes(monkeypatch):
     """_last_id must not advance until after await buffer.put() returns.
@@ -2085,8 +2186,14 @@ async def test_fill_from_redis_last_id_not_advanced_before_put_completes(monkeyp
 
     # Pre-populate two events before the wrapper starts so both land in the
     # same XREAD batch.
-    id_a = (await fake_client.xadd(stream_key, {"event_id": b"a", "data": b"event-A", "ts": b"1.0"})).decode()
-    await fake_client.xadd(stream_key, {"event_id": b"b", "data": b"event-B", "ts": b"2.0"})
+    id_a = (
+        await fake_client.xadd(
+            stream_key, {"event_id": b"a", "data": b"event-A", "ts": b"1.0"}
+        )
+    ).decode()
+    await fake_client.xadd(
+        stream_key, {"event_id": b"b", "data": b"event-B", "ts": b"2.0"}
+    )
 
     # Buffer size 1: after A lands, put(B) blocks until A is consumed.
     monkeypatch.setattr(RedisQueueWrapper, "_BUFFER_MAXSIZE", 1)
