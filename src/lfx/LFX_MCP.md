@@ -18,7 +18,7 @@ The component registry is cached on first access per session.
 `lfx-mcp` runs over **stdio**: your MCP client spawns it as a subprocess and communicates over stdin and stdout. There is no HTTP port to connect to.
 
 Any client that supports stdio MCP servers can connect to the `lfx-mcp` server.
-Set the command to `lfx-mcp` (or `uvx lfx-mcp`) and pass the following environment variables:
+Set the command to `lfx-mcp` (or `uvx --from lfx lfx-mcp`) and pass the following environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -48,7 +48,7 @@ If `lfx` is not installed globally, use it through `uvx` instead.
   "mcpServers": {
     "langflow": {
       "command": "uvx",
-      "args": ["lfx-mcp"],
+      "args": ["--from", "lfx", "lfx-mcp"],
       "env": {
         "LANGFLOW_SERVER_URL": "http://localhost:7860",
         "LANGFLOW_API_KEY": "<your-api-key>"
@@ -156,3 +156,87 @@ The `batch` tool lets you send multiple actions in a single call, with `$N.field
   }}
 ]
 ```
+
+## Quickstart: build and run a flow with Claude Code
+
+This example shows how to connect Claude Code to a running Langflow instance using `lfx-mcp`, then build, validate, and run a chatbot flow from your terminal.
+
+### Prerequisites
+
+- A Langflow server running at `http://localhost:7860`
+- A Langflow API key. Create one in the Langflow UI under **Settings → Langflow API → Create new API key**.
+- An OpenAI API key. This example uses Langflow's Agent component with OpenAI. Add your OpenAI API key as a Global Variable in Langflow under **Settings → Global Variables** so all flows can use it automatically, or pass it explicitly when prompted. If you prefer a different provider, adjust the prompt accordingly.
+- `uv` installed. The `uvx` command used to run `lfx-mcp` requires `uv`. For more information, see the [uv docs](https://docs.astral.sh/uv/getting-started/installation/).
+- Claude Code installed. For more information, see the [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code).
+
+1. Add `lfx-mcp` to Claude Code.
+
+Run the following command in your terminal.
+Replacing the placeholder values with your actual keys:
+
+```bash
+claude mcp add langflow \
+  -e LANGFLOW_SERVER_URL=http://localhost:7860 \
+  -e LANGFLOW_API_KEY=<YOUR_LANGFLOW_API_KEY> \
+  -- uvx --from lfx lfx-mcp
+```
+
+2. Verify `lfx-mcp` was added to Claude Code:
+
+```bash
+claude mcp list
+```
+
+The output should include:
+
+```
+langflow: uvx --from lfx lfx-mcp
+```
+
+This confirms that Claude Code knows to spawn an `lfx-mcp` process when it needs to talk to Langflow.
+
+3. Start Claude Code in your terminal:
+
+```bash
+claude
+```
+
+4. Give Claude Code instructions.
+For example:
+
+```
+Create a simple agent chatbot flow in Langflow using OpenAI, validate the flow, and then run it with the message "What is Langflow?"
+```
+
+Given this instruction, Claude Code will typically do the following:
+
+    1. Discover the available components using `search_component_types` or `describe_component_type`.
+    2. Create the flow with all nodes and connections in one request using `create_flow_from_spec`.
+    3. Validate that every component is correctly connected using `validate_flow`.
+    4. Run the flow using `run_flow` and return the response.
+
+The flow appears in your Langflow UI at `http://localhost:7860` because `lfx-mcp` creates it through the Langflow API. The answer is printed in your terminal:
+
+```
+Langflow is a visual workflow builder for AI-powered agents. It lets you
+connect LLMs, tools, and data sources in a drag-and-drop UI, then expose
+the result as an API endpoint or run it from the command line.
+```
+
+### Troubleshooting
+
+* `lfx-mcp` not found when adding the server
+Use `uvx --from lfx lfx-mcp`, not `uvx lfx-mcp`. The `lfx-mcp` binary ships inside the `lfx` package, and there is no standalone `lfx-mcp` package on PyPI.
+
+* 403 Forbidden when Claude Code tries to use tools
+The API key is invalid or expired. Create a new API key in Langflow under **Settings → Langflow API**, and then remove and re-add the MCP server:
+```bash
+claude mcp remove langflow
+claude mcp add langflow \
+  -e LANGFLOW_SERVER_URL=http://localhost:7860 \
+  -e LANGFLOW_API_KEY=<YOUR_LANGFLOW_API_KEY> \
+  -- uvx --from lfx lfx-mcp
+```
+
+* Flow validation fails with an LLM provider error
+The API key for your LLM provider is not configured. Add it as a Global Variable in Langflow (**Settings → Global Variables → Add**), and then ask Claude Code to validate the flow again.
