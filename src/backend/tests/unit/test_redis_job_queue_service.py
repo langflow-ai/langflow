@@ -13,11 +13,16 @@ from typing import Any
 
 import fakeredis.aioredis as fakeredis_aio
 import pytest
-from langflow.api.build import cancel_flow_build, create_flow_response, get_flow_events_response
+from langflow.api.build import (
+    cancel_flow_build,
+    create_flow_response,
+    get_flow_events_response,
+)
 from langflow.api.utils import EventDeliveryType
 from langflow.events.event_manager import EventManager
 from langflow.services.job_queue.service import (
     _STREAM_SENTINEL_DATA,
+    JobQueueService,
     RedisJobQueueService,
     RedisQueueWrapper,
 )
@@ -913,7 +918,11 @@ async def test_polling_watchdog_cancels_stale_owned_job():
         assert producer._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -975,7 +984,11 @@ async def test_polling_watchdog_skips_fresh_activity():
         assert producer._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         producer._closed = True
-        for task_attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for task_attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(producer, task_attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1040,7 +1053,11 @@ async def test_polling_watchdog_ignores_jobs_without_registered_owner():
         assert job_id in svc._queues
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1131,7 +1148,11 @@ async def test_polling_watchdog_grants_start_grace_window():
         assert svc._cancel_stats["polling_watchdog_kills"] >= 1
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1189,7 +1210,11 @@ async def test_polling_watchdog_skips_malformed_activity_value():
         assert svc._cancel_stats["polling_watchdog_kills"] == 0
     finally:
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -1775,7 +1800,12 @@ async def test_get_flow_events_response_rejects_unknown_event_delivery():
 
     service = JobQueueService()
     job_id = str(uuid.uuid4())
-    service._queues[job_id] = (asyncio.Queue(), EventManager(asyncio.Queue()), None, None)
+    service._queues[job_id] = (
+        asyncio.Queue(),
+        EventManager(asyncio.Queue()),
+        None,
+        None,
+    )
 
     class _BogusDelivery(str, Enum):
         WEBSOCKET = "websocket"
@@ -1867,7 +1897,11 @@ async def test_task_service_launch_does_not_trigger_polling_watchdog(monkeypatch
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await entry[2]
         svc._closed = True
-        for attr in ("_cleanup_task", "_cancel_dispatcher_task", "_polling_watchdog_task"):
+        for attr in (
+            "_cleanup_task",
+            "_cancel_dispatcher_task",
+            "_polling_watchdog_task",
+        ):
             task = getattr(svc, attr, None)
             if task is not None and not task.done():
                 task.cancel()
@@ -2062,3 +2096,179 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
         "not background_tasks.add_task(), which is silently dropped once FastAPI "
         "drains the POST /build response queue."
     )
+
+
+@pytest.mark.asyncio
+async def test_fill_from_redis_last_id_not_advanced_before_put_completes(monkeypatch):
+    """_last_id must not advance until after await buffer.put() returns.
+
+    Regression: the cursor was previously advanced before the await, so a task
+    cancellation while put() was blocked on a full buffer would silently lose
+    that event — the next XREAD would start past it.  With the fix, the cursor
+    stays at the prior position and the event is re-delivered on restart.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+    stream_key = f"langflow:queue:{job_id}"
+
+    # Pre-populate two events before the wrapper starts so both land in the
+    # same XREAD batch.
+    id_a = (await fake_client.xadd(stream_key, {"event_id": b"a", "data": b"event-A", "ts": b"1.0"})).decode()
+    await fake_client.xadd(stream_key, {"event_id": b"b", "data": b"event-B", "ts": b"2.0"})
+
+    # Buffer size 1: after A lands, put(B) blocks until A is consumed.
+    monkeypatch.setattr(RedisQueueWrapper, "_BUFFER_MAXSIZE", 1)
+    wrapper = RedisQueueWrapper(job_id, fake_client, ttl=60)
+
+    # Spin until A is in the buffer — at that point the fill task is blocked
+    # on put(B) and has NOT yet updated _last_id to B's position.
+    for _ in range(200):
+        if not wrapper._buffer.empty():
+            break
+        await asyncio.sleep(0.01)
+    assert not wrapper._buffer.empty(), "event-A never landed in the buffer"
+
+    # Cancel the fill task while it is blocked inside put(B).
+    wrapper._fill_task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await wrapper._fill_task
+
+    # The cursor must still be at A's ID — B was not committed to the buffer.
+    assert wrapper._last_id == id_a, (
+        f"_last_id advanced to {wrapper._last_id!r} before put(B) completed; "
+        f"expected it to stay at {id_a!r} so event-B is not silently dropped."
+    )
+
+    await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_fill_from_redis_persistent_xread_error_delivers_sentinel(monkeypatch):
+    """Persistent XREAD failures must eventually deliver an end-of-stream sentinel.
+
+    Regression: the error-elapsed tracking was removed, causing the fill task
+    to retry forever and leaving the consumer stuck on await get() indefinitely.
+    With the fix, after _STARTUP_GRACE_S of continuous errors the sentinel is
+    delivered and the fill task exits.
+    """
+
+    class _FailingXreadClient:
+        """Thin wrapper whose xread always raises, simulating a persistent Redis error."""
+
+        def __init__(self, real: Any) -> None:
+            self._real = real
+
+        def __getattr__(self, name: str) -> Any:
+            return getattr(self._real, name)
+
+        async def xread(self, *_args: Any, **_kwargs: Any) -> None:
+            raise ConnectionError("simulated persistent Redis error")
+
+    fake_client = fakeredis_aio.FakeRedis()
+    job_id = str(uuid.uuid4())
+
+    # Very short grace period so the test completes quickly.
+    monkeypatch.setattr(RedisQueueWrapper, "_STARTUP_GRACE_S", 0.15)
+    monkeypatch.setattr(RedisQueueWrapper, "_READ_ERROR_BACKOFF_S", 0.02)
+
+    wrapper = RedisQueueWrapper(job_id, _FailingXreadClient(fake_client), ttl=60)
+    try:
+        # The sentinel must arrive within a generous timeout well above the grace period.
+        evt = await asyncio.wait_for(wrapper.get(), timeout=3.0)
+        assert evt[0] is None and evt[1] is None, f"expected sentinel, got {evt}"
+    finally:
+        await wrapper.cancel()
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_cancel_flow_build_returns_false_for_in_memory_backend_without_task():
+    """cancel_flow_build must return False when no task exists and no cross-worker path.
+
+    Regression: the function returned True ("Nothing to cancel is still a success")
+    when event_task is None and the queue service has no signal_cancel method
+    (in-memory backend).  This misled callers into believing cancellation succeeded
+    when in fact the build was unreachable.
+    """
+    svc = JobQueueService()
+    svc.start()
+    job_id = str(uuid.uuid4())
+
+    # create_queue registers the job with task=None; start_job has not been called,
+    # so get_queue_data returns event_task=None.
+    svc.create_queue(job_id)
+
+    result = await cancel_flow_build(job_id=job_id, queue_service=svc)
+    assert result is False, (
+        "cancel_flow_build must return False when it cannot reach the build "
+        "(no local task and no cross-worker signal channel available)."
+    )
+
+    await svc.stop()
+
+
+@pytest.mark.asyncio
+async def test_polling_watchdog_runs_when_cancel_channel_disabled():
+    """Watchdog must operate independently of cancel_channel_enabled.
+
+    Regression: the watchdog was only started when cancel_channel_enabled=True,
+    so disabling the pub/sub cancel channel also silently disabled stale-client
+    reclamation.  The fix starts the watchdog based on polling_stale_threshold_s
+    alone.
+    """
+    fake_client = fakeredis_aio.FakeRedis()
+    svc = RedisJobQueueService(
+        ttl=60,
+        cancel_channel_enabled=False,  # pub/sub disabled
+        polling_stale_threshold_s=0.3,
+        polling_watchdog_interval_s=0.1,
+    )
+    svc._client = fake_client
+    svc._closed = False
+    svc._cleanup_task = asyncio.create_task(svc._periodic_cleanup())
+    # Replicate what start() does after our fix: watchdog starts regardless of channel.
+    svc._polling_watchdog_task = asyncio.create_task(svc._run_polling_watchdog())
+    svc.ready = True
+
+    try:
+        job_id = str(uuid.uuid4())
+        svc.create_queue(job_id)
+        await svc.register_job_owner(job_id, uuid.uuid4())
+
+        cancelled_event = asyncio.Event()
+
+        async def _long_running():
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled_event.set()
+                raise
+
+        svc.start_job(job_id, _long_running())
+
+        # Do NOT call touch_activity — let the job go stale.  The grace window
+        # (populated by start_job via _job_start_times) protects the first
+        # threshold window, so the watchdog fires after ~threshold seconds.
+        await asyncio.wait_for(cancelled_event.wait(), timeout=5.0)
+
+        assert cancelled_event.is_set(), "watchdog did not cancel the stale job"
+        assert svc._cancel_stats["polling_watchdog_kills"] >= 1
+    finally:
+        svc._closed = True
+        for attr in ("_cleanup_task", "_polling_watchdog_task"):
+            task = getattr(svc, attr, None)
+            if task is not None and not task.done():
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+        for bg in list(svc._background_tasks):
+            if not bg.done():
+                bg.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await bg
+        for bridge in list(svc._bridge_tasks.values()):
+            if not bridge.done():
+                bridge.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await bridge
+        await fake_client.aclose()
