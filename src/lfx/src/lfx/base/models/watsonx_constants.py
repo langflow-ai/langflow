@@ -3,27 +3,19 @@ from .model_metadata import create_model_metadata
 WATSONX_DEFAULT_LLM_MODELS = [
     create_model_metadata(
         provider="IBM WatsonX",
-        name="ibm/granite-3-2b-instruct",
+        name="ibm/granite-8b-code-instruct",
         icon="IBM",
         model_type="llm",
         tool_calling=True,
-        default=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="IBM WatsonX",
-        name="ibm/granite-3-8b-instruct",
+        name="ibm/granite-guardian-3-8b",
         icon="IBM",
         model_type="llm",
-        tool_calling=True,
-        default=True,
-    ),
-    create_model_metadata(
-        provider="IBM WatsonX",
-        name="ibm/granite-13b-instruct-v2",
-        icon="IBM",
-        model_type="llm",
-        tool_calling=True,
-        default=True,
+        tool_calling=False,
+        deprecated=True,
     ),
 ]
 

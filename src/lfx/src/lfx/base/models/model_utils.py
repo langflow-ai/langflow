@@ -348,21 +348,34 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
         else:
             model_names = get_watsonx_embedding_models(watsonx_url)
 
-        # Convert to model metadata format
-        return [
-            create_model_metadata(
-                provider="IBM WatsonX",
-                name=name,
-                icon="IBM",
-                model_type=model_type if model_type == "llm" else "embeddings",
-                tool_calling=model_type == "llm",
-                default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
+        # Look up capability flags from the static catalog when known; otherwise
+        # fall back to defaults. Without this, the live API path blanket-marks
+        # every LLM as tool_calling=True, surfacing models like
+        # ibm/granite-3b-code-instruct and ibm/granite-guardian-3-8b in the
+        # Agent dropdown even though they don't support tool calling.
+        static_metadata = WATSONX_LLM_METADATA if model_type == "llm" else WATSONX_EMBEDDING_METADATA
+        known_by_name = {m["name"]: m for m in static_metadata}
+        default_tool_calling = model_type == "llm"
+
+        result: list[dict] = []
+        for i, name in enumerate(model_names):
+            known = known_by_name.get(name)
+            result.append(
+                create_model_metadata(
+                    provider="IBM WatsonX",
+                    name=name,
+                    icon="IBM",
+                    model_type=model_type if model_type == "llm" else "embeddings",
+                    tool_calling=known.get("tool_calling", default_tool_calling) if known else default_tool_calling,
+                    deprecated=bool(known.get("deprecated", False)) if known else False,
+                    default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
+                )
             )
-            for i, name in enumerate(model_names)
-        ]
     except Exception:  # noqa: BLE001
         logger.debug(f"Could not fetch live WatsonX {model_type} models from {watsonx_url}")
         return []
+    else:
+        return result
 
 
 def get_live_models_for_provider(
