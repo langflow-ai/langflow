@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Annotated, Any
 from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.cli.common import (
     execute_graph_with_capture,
@@ -148,9 +148,12 @@ class FlowRegistry:
 
 
 class UploadFlowRequest(BaseModel):
-    name: str = Field(..., description="Human-readable name for the flow (matches FlowBase.name)")
-    data: dict = Field(..., description="Raw flow JSON — nodes and edges (matches FlowBase.data)")
+    model_config = ConfigDict(extra="allow")
+
+    name: str = Field(..., description="Human-readable name for the flow")
+    data: dict = Field(..., description="Flow graph data — nodes and edges")
     description: str | None = Field(default=None, description="Optional flow description")
+    id: str | None = Field(default=None, description="Stable flow ID from Langflow export")
 
 
 class UploadFlowResponse(BaseModel):
@@ -307,7 +310,7 @@ def create_multi_serve_app(
     )
     async def upload_flow(body: UploadFlowRequest) -> UploadFlowResponse:
         try:
-            graph = load_flow_from_json(body.data)
+            graph = load_flow_from_json(body.model_dump())
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Invalid flow data: {exc}") from exc
 
@@ -316,7 +319,7 @@ def create_multi_serve_app(
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
 
-        flow_id = flow_id_from_content(body.data)
+        flow_id = body.id or flow_id_from_content(body.data)
         meta = FlowMeta(
             id=flow_id,
             relative_path="<uploaded>",

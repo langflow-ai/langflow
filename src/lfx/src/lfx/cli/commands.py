@@ -84,14 +84,11 @@ async def serve_command(
     configure(log_level=log_level)
     verbose_print = create_verbose_printer(verbose=verbose)
 
-    # Validate exactly one input source
+    # Validate at most one input source
     has_paths = bool(script_paths)
     input_sources = [has_paths, flow_json is not None, stdin]
-    if sum(input_sources) != 1:
-        if sum(input_sources) == 0:
-            typer.echo("Error: Must provide either path(s)/directory, --flow-json, or --stdin", err=True)
-        else:
-            typer.echo("Error: Cannot combine path(s), --flow-json, and --stdin. Choose exactly one.", err=True)
+    if sum(input_sources) > 1:
+        typer.echo("Error: Cannot combine path(s), --flow-json, and --stdin. Choose exactly one.", err=True)
         raise typer.Exit(1)
 
     if env_file:
@@ -139,6 +136,11 @@ async def serve_command(
                 temp_file_to_cleanup = tmp.name
             paths = [Path(temp_file_to_cleanup)]
             source_display = "inline JSON"
+            try:
+                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
 
         elif stdin:
             stdin_content = sys.stdin.read().strip()
@@ -155,9 +157,14 @@ async def serve_command(
                 temp_file_to_cleanup = tmp.name
             paths = [Path(temp_file_to_cleanup)]
             source_display = "stdin"
+            try:
+                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+            except ValueError as e:
+                typer.echo(f"Error: {e}", err=True)
+                raise typer.Exit(1) from e
 
-        else:
-            resolved = [Path(p).resolve() for p in script_paths]  # type: ignore[union-attr]
+        elif script_paths:
+            resolved = [Path(p).resolve() for p in script_paths]
 
             missing = [p for p in resolved if not p.exists()]
             if missing:
@@ -186,12 +193,17 @@ async def serve_command(
                 paths = resolved
                 source_display = ", ".join(p.name for p in paths)
 
-        if paths:
-            try:
-                registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
-            except ValueError as e:
-                typer.echo(f"Error: {e}", err=True)
-                raise typer.Exit(1) from e
+            if paths:
+                try:
+                    registry = await build_registry_from_paths(paths, verbose_print, check_variables=check_variables)
+                except ValueError as e:
+                    typer.echo(f"Error: {e}", err=True)
+                    raise typer.Exit(1) from e
+
+        else:
+            registry = FlowRegistry()
+            source_display = "none (upload flows via POST /flows/upload/)"
+            verbose_print("Starting with empty registry — flows can be uploaded at runtime")
 
         # ----------------------------------------------------------------
         # Start the server
