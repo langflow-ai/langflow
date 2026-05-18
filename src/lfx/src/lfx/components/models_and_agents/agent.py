@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
+from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -212,6 +213,13 @@ class AgentComponent(ToolCallingAgentComponent):
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
+            name="stream",
+            display_name="Stream",
+            info=STREAM_INFO_TEXT,
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
             advanced=True,
@@ -283,6 +291,7 @@ class AgentComponent(ToolCallingAgentComponent):
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
+            stream=bool(getattr(self, "stream", False)),
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
