@@ -268,7 +268,14 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
         variable_key: The variable key to look up (e.g., "OLLAMA_BASE_URL", "WATSONX_URL")
 
     Returns:
-        The variable value if found, None otherwise
+        The variable value if found, None otherwise. ``variable_service``
+        raises ``ValueError`` when a variable is missing — for live-model
+        probes (``fetch_live_ollama_models`` / ``fetch_live_watsonx_models``)
+        a missing variable is not an error, it just means "no live models
+        available for this provider," so we swallow the lookup error and
+        return ``None`` to keep callers on their existing ``if not value:``
+        guard. Without this, every embedding-model-options call from a
+        non-Ollama user crashed retrieval (Knowledge component BUG-01).
     """
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
         return None
@@ -278,12 +285,17 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
             variable_service = get_variable_service()
             if variable_service is None:
                 return None
-            return await variable_service.get_variable(
-                user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                name=variable_key,
-                field="",
-                session=session,
-            )
+            try:
+                return await variable_service.get_variable(
+                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                    name=variable_key,
+                    field="",
+                    session=session,
+                )
+            except ValueError:
+                # ``get_variable_object`` raises ValueError on missing var;
+                # treat absence as "no value" rather than propagating.
+                return None
 
     return _to_str(run_until_complete(_get_variable()))
 
