@@ -41,7 +41,11 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         provider="Google Generative AI",
         name="gemini-2.5-flash-image",
         icon="GoogleGenerativeAI",
-        tool_calling=True,
+        # Image-output Gemini models can't run with tools per Google's API
+        # (modalities.output includes "image"). Setting this to True caused
+        # the Agent picker to surface image-generation models alongside
+        # text models.
+        tool_calling=False,
     ),
     # GEMINI 1.5 (legacy - long out of rotation). These names live in the
     # static list specifically so the models.dev override preserves the
@@ -87,7 +91,8 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         provider="Google Generative AI",
         name="gemini-2.0-flash-preview-image-generation",
         icon="GoogleGenerativeAI",
-        tool_calling=True,
+        # Image-generation model — no tool calling support.
+        tool_calling=False,
         deprecated=True,
     ),
     # GEMINI 3 (preview)
@@ -116,14 +121,16 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         provider="Google Generative AI",
         name="gemini-3-pro-image-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=True,
+        # Image-output preview — no tool calling support.
+        tool_calling=False,
         preview=True,
     ),
     create_model_metadata(
         provider="Google Generative AI",
         name="gemini-3.1-flash-image-preview",
         icon="GoogleGenerativeAI",
-        tool_calling=True,
+        # Image-output preview — no tool calling support.
+        tool_calling=False,
         preview=True,
     ),
 ]
