@@ -139,24 +139,30 @@ def get_unified_models_detailed(
 
 
 def get_language_model_options(
-    user_id: UUID | str | None = None, *, tool_calling: bool | None = None
+    user_id: UUID | str | None = None,
+    *,
+    tool_calling: bool | None = None,
+    filters: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Return available language model providers with their configuration."""
+    """Return available language model providers with their configuration.
+
+    ``filters`` is a dict of metadata key/value constraints forwarded to
+    ``get_unified_models_detailed`` (e.g. ``{"tool_calling": True}``,
+    ``{"reasoning": True}``). It is the declarative path used by
+    ``ModelInput(filters=...)``. The legacy ``tool_calling`` kwarg is kept
+    for back-compat and merged into ``filters`` when present.
+    """
     # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
-    # Apply tool_calling filter if specified
+    metadata_filters: dict[str, Any] = dict(filters or {})
     if tool_calling is not None:
-        all_models = get_unified_models_detailed(
-            model_type="llm",
-            include_deprecated=False,
-            include_unsupported=False,
-            tool_calling=tool_calling,
-        )
-    else:
-        all_models = get_unified_models_detailed(
-            model_type="llm",
-            include_deprecated=False,
-            include_unsupported=False,
-        )
+        metadata_filters.setdefault("tool_calling", tool_calling)
+
+    all_models = get_unified_models_detailed(
+        model_type="llm",
+        include_deprecated=False,
+        include_unsupported=False,
+        **metadata_filters,
+    )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
