@@ -491,7 +491,7 @@ class RedisQueueWrapper:
     # Hard cap on in-process buffered events per consumer. Bounds memory when a
     # slow client falls behind a fast producer; without it, the buffer can grow
     # without limit until the consumer drains it.
-    _BUFFER_MAXSIZE = 1000
+    _BUFFER_MAXSIZE = 10_000
 
     def __init__(self, job_id: str, client: Any, ttl: int, startup_grace_s: float | None = None) -> None:
         self._job_id = job_id
