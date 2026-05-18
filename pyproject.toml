@@ -299,6 +299,9 @@ external = ["RUF027"]
     "S104",  # Intentional binding to all interfaces for server
     "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
 ]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
+]
 "src/lfx/src/lfx/components/__init__.py" = [
     "SLF001",  # Accessing _dynamic_imports from modules
 ]

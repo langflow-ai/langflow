@@ -1,5 +1,4 @@
 """Upgrade commands: upgrade."""
-
 import typer
 
 
@@ -14,8 +13,9 @@ def register(app: typer.Typer) -> None:
     )
     def upgrade_command_wrapper(
         flow_path: str = typer.Argument(help="Path to the flow JSON file to check"),
+        *,
         write: bool = typer.Option(
-            False,
+            False,  # noqa: FBT003
             "--write",
             "-w",
             help="Apply safe upgrades and write the updated flow back to the file.",
@@ -23,6 +23,7 @@ def register(app: typer.Typer) -> None:
     ) -> None:
         """Check component compatibility and optionally apply safe upgrades (lazy-loaded)."""
         from pathlib import Path
+
         from lfx.cli.upgrade import upgrade_command
 
         upgrade_command(Path(flow_path), write=write)

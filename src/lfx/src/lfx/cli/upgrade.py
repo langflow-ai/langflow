@@ -7,8 +7,8 @@ from typing import Any
 
 import typer
 
-from lfx.upgrade.checker import CompatibilityReport, check_flow_compatibility
 from lfx.upgrade.applier import apply_safe_upgrades
+from lfx.upgrade.checker import CompatibilityReport, check_flow_compatibility
 
 
 def load_registry_from_index() -> dict[str, Any]:
