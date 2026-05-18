@@ -138,21 +138,22 @@ class TestDB2SQLComponent:
         data = Data(data={"text": "SELECT * FROM products"})
         component.sql_query = data
 
-        # Mock the database connection
-        with patch("lfx.components.ibm.db2_sql.ibm_db_dbi") as mock_ibm_db_dbi:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchmany.return_value = []
-            mock_cursor.description = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_ibm_db_dbi.connect.return_value = mock_conn
+        # ibm_db_dbi is imported inside execute_query(), so patch sys.modules (not the component module).
+        mock_ibm_db_dbi = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchmany.return_value = []
+        mock_cursor.description = []
+        mock_conn.cursor.return_value = mock_cursor
+        mock_ibm_db_dbi.connect.return_value = mock_conn
 
+        with patch.dict("sys.modules", {"ibm_db_dbi": mock_ibm_db_dbi}):
             component.execute_query()
 
-            # Verify cursor.execute was called with the extracted SQL
-            mock_cursor.execute.assert_called_once()
-            call_args = mock_cursor.execute.call_args[0][0]
-            assert "SELECT * FROM products" in call_args
+            # SET CURRENT QUERY_TIMEOUT, then the user query
+            assert mock_cursor.execute.call_count == 2
+            sql_call = mock_cursor.execute.call_args_list[1][0][0]
+            assert "SELECT * FROM products" in sql_call
 
     def test_query_from_message_object(self, component):
         """Test extracting query from Message-like object."""
@@ -160,21 +161,20 @@ class TestDB2SQLComponent:
         message.text = "SELECT * FROM products"
         component.sql_query = message
 
-        # Mock the database connection
-        with patch("lfx.components.ibm.db2_sql.ibm_db_dbi") as mock_ibm_db_dbi:
-            mock_conn = MagicMock()
-            mock_cursor = MagicMock()
-            mock_cursor.fetchmany.return_value = []
-            mock_cursor.description = []
-            mock_conn.cursor.return_value = mock_cursor
-            mock_ibm_db_dbi.connect.return_value = mock_conn
+        mock_ibm_db_dbi = MagicMock()
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchmany.return_value = []
+        mock_cursor.description = []
+        mock_conn.cursor.return_value = mock_cursor
+        mock_ibm_db_dbi.connect.return_value = mock_conn
 
+        with patch.dict("sys.modules", {"ibm_db_dbi": mock_ibm_db_dbi}):
             component.execute_query()
 
-            # Verify cursor.execute was called with the extracted SQL
-            mock_cursor.execute.assert_called_once()
-            call_args = mock_cursor.execute.call_args[0][0]
-            assert "SELECT * FROM products" in call_args
+            assert mock_cursor.execute.call_count == 2
+            sql_call = mock_cursor.execute.call_args_list[1][0][0]
+            assert "SELECT * FROM products" in sql_call
 
 
 # Made with Bob
