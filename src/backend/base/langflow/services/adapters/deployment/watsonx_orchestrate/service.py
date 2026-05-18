@@ -481,9 +481,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 raise DeploymentNotFoundError(msg)
 
             validate_provider_update_request_sections(payload)
-            provider_update: WatsonxDeploymentUpdatePayload | None = None
+            core_update: WatsonxDeploymentUpdatePayload | None = None
             if payload.provider_data is not None:
-                provider_update = self._parse_provider_payload(
+                core_update = self._parse_provider_payload(
                     slot=self.payload_schemas.deployment_update,
                     slot_name="deployment_update",
                     provider_data=payload.provider_data,
@@ -492,13 +492,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             # base agent payload to build for final update call
             update_payload: dict[str, Any] = build_update_payload_from_spec(
                 payload.spec,
-                llm=provider_update.llm if provider_update is not None else None,
+                core_update=core_update,
             )
             final_name = update_payload.get("name", agent["name"])
 
-            if payload.provider_data is None or not (provider_update is not None and provider_update.has_tool_work):
+            if not (core_update and core_update.has_tool_work):
                 if not update_payload:
-                    msg = "provider_data is required when update operations do not include spec changes."
+                    msg = "No data was provided for updating the deployment."
                     raise InvalidContentError(message=msg)
                 await retry_update(
                     asyncio.to_thread,
@@ -513,7 +513,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             provider_plan = build_provider_update_plan(
                 agent=agent,
-                provider_update=provider_update,
+                provider_update=core_update,
             )
 
             apply_result = await apply_provider_update_plan_with_rollback(

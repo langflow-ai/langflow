@@ -347,7 +347,7 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
 class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
-    name: NormalizedStr = Field(description="The name of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str = Field(
         default="",
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
@@ -384,7 +384,7 @@ class ItemResult(ProviderDataModel[T_DeploymentItemData]):
     """Model representing a result for a deployment list item."""
 
     id: IdLike = Field(description="The id of the deployment")
-    name: NormalizedStr = Field(description="The name of the deployment")
+    name: NormalizedStr = Field(description="Technical name of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")
@@ -547,7 +547,7 @@ def get_deployment_create_schema() -> str:
 class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
-    name: NormalizedStr | None = Field(None, description="The name of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str | None = Field(
         None,
         max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,

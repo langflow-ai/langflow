@@ -384,7 +384,7 @@ class TestCreateDeploymentExistingAgent:
             )
 
         assert exc_info.value.status_code == 422
-        assert "DB-only onboarding" in str(exc_info.value.detail)
+        assert "cannot include fields that update the wxO agent" in str(exc_info.value.detail)
         adapter.get.assert_not_awaited()
         adapter.create.assert_not_awaited()
         adapter.update.assert_not_awaited()

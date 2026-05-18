@@ -304,6 +304,10 @@ class WatsonxDeploymentUpdatePayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    display_name: NormalizedStr | None = Field(
+        default=None,
+        description="User-facing label to set on the wxO agent.",
+    )
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
     operations: list[WatsonxUpdateOperation] = Field(default_factory=list)
@@ -399,6 +403,7 @@ class WatsonxDeploymentCreatePayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    display_name: NormalizedStr = Field(description="User-facing label to set on the wxO agent.")
     tools: WatsonxUpdateTools = Field(default_factory=WatsonxUpdateTools)
     connections: WatsonxUpdateConnections = Field(default_factory=WatsonxUpdateConnections)
     operations: list[WatsonxCreateOperation] = Field(default_factory=list)

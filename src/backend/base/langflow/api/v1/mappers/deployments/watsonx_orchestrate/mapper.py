@@ -111,7 +111,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name, validate_wxo_name
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
+    normalize_wxo_name,
+    validate_wxo_name,
+)
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.deployment_provider_account.utils import (
@@ -621,6 +624,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             return slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
+                    display_name=api_provider_payload.display_name,
                     raw_tool_payloads=[
                         artifact.model_copy(
                             update={
@@ -670,7 +674,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=msg)
         return AdapterDeploymentCreate(
             spec=BaseDeploymentData(
-                name=api_provider_payload.display_name,
                 description=payload.description,
                 type=payload.type,
             ),
@@ -699,8 +702,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=payload.provider_data,
         )
         spec_kwargs: dict[str, Any] = {}
-        if api_provider_payload.display_name is not None:
-            spec_kwargs["name"] = api_provider_payload.display_name
         if has_description:
             spec_kwargs["description"] = description
         adapter_spec = BaseDeploymentDataUpdate(**spec_kwargs) if spec_kwargs else None
@@ -797,6 +798,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_payload: AdapterPayload = update_slot.apply(
                 self._build_provider_payload_body(
                     llm=api_provider_payload.llm,
+                    display_name=api_provider_payload.display_name,
                     raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in filtered_raw_payloads],
                     connections=api_provider_payload.connections,
                     operations=provider_operations,
@@ -948,12 +950,21 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         update_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update
         if update_slot is None:
             return None
-        provider_payload = update_slot.apply({"put_tools": existing_tool_ids})
+        # TODO: Reintroduce a non-unique Deployment.name column for provider technical names
+        # and include it here so rollback can restore wxO `name` from Langflow's stored metadata.
+        provider_payload = update_slot.apply(
+            {
+                "put_tools": existing_tool_ids,
+                "display_name": deployment.display_name,
+            }
+        )
+        rollback_description = (
+            deployment.description if deployment.description and deployment.description.strip() else None
+        )
 
         return AdapterDeploymentUpdate(
             spec=BaseDeploymentDataUpdate(
-                name=deployment.display_name,
-                description=deployment.description or "",
+                description=rollback_description,
             ),
             provider_data=provider_payload,
         )
@@ -1830,6 +1841,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         self,
         *,
         llm: str | None,
+        display_name: str | None,
         raw_tool_payloads: list[dict[str, Any]],
         connections: list[Any],
         operations: list[AdapterPayload],
@@ -1845,6 +1857,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         }
         if llm is not None:
             payload["llm"] = llm
+        if display_name is not None:
+            payload["display_name"] = display_name
         return payload
 
     def _to_api_created_tools(
