@@ -309,7 +309,7 @@ class JobService(Service):
                 await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
             else:
                 # System-initiated cancellation - update status to FAILED
-                await logger.aerror(f"Job {job_id} was cancelled by system")
+                await logger.awarning(f"Job {job_id} was cancelled by system")
                 await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
 

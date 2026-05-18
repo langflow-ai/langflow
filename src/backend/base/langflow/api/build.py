@@ -600,7 +600,7 @@ async def generate_flow_events(
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError as exc:
-            await logger.ainfo(f"Build cancelled: {exc}")
+            await logger.ainfo("Build cancelled")
             raise
 
         # Accumulate the vertex timedelta
