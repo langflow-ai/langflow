@@ -495,6 +495,14 @@ export function StepConfiguration({
                 onPairsChange={onMetadataPairsChange}
                 testIdScope="kb-run"
               />
+              {validationErrors.metadata && (
+                <span
+                  className="text-xs text-destructive"
+                  data-testid="kb-run-metadata-form-error"
+                >
+                  {validationErrors.metadata}
+                </span>
+              )}
             </div>
           </div>
         </div>

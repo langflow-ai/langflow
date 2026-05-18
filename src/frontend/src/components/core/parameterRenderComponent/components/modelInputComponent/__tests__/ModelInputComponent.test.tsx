@@ -189,7 +189,9 @@ const defaultProps: BaseInputProps & ModelInputComponentType = {
   editNode: false,
 };
 
-// Helper to render with QueryClientProvider
+// Helper to render with QueryClientProvider. Returns the raw RTL handle plus
+// a ``rerenderWithProvider`` wrapper so callers can rerender without losing
+// the surrounding ``QueryClientProvider``.
 const renderWithQueryClient = (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -197,9 +199,13 @@ const renderWithQueryClient = (component: React.ReactElement) => {
       mutations: { retry: false },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{component}</QueryClientProvider>,
+  const wrap = (node: React.ReactElement) => (
+    <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
   );
+  const result = render(wrap(component));
+  const rerenderWithProvider = (node: React.ReactElement) =>
+    result.rerender(wrap(node));
+  return { ...result, rerenderWithProvider };
 };
 
 describe("ModelInputComponent", () => {
@@ -428,6 +434,68 @@ describe("ModelInputComponent", () => {
       // affordance should be visible until the refetch settles.
       await waitFor(() => {
         expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+    });
+
+    it("keeps loading state until providers and enabled-models refetches settle", async () => {
+      let providersFetching = true;
+      let enabledFetching = true;
+
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockImplementation(
+        () =>
+          ({
+            data: mockProvidersData,
+            isLoading: false,
+            isFetching: providersFetching,
+          }) as unknown as ReturnType<typeof useGetModelProviders>,
+      );
+      mockedEnabled.mockImplementation(
+        () =>
+          ({
+            data: { enabled_models: {} },
+            isLoading: false,
+            isFetching: enabledFetching,
+          }) as unknown as ReturnType<typeof useGetEnabledModels>,
+      );
+
+      const user = userEvent.setup();
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} />,
+      );
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("manage-model-providers"),
+        ).toBeInTheDocument();
+      });
+      await user.click(screen.getByTestId("manage-model-providers"));
+      await waitFor(() => {
+        expect(screen.getByTestId("model-provider-modal")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByTestId("close-provider-modal-with-changes"));
+      await waitFor(() => {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      });
+
+      providersFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(screen.getByText("Loading models")).toBeInTheDocument();
+
+      enabledFetching = false;
+      rerenderWithProvider(<ModelInputComponent {...defaultProps} />);
+      await waitFor(() => {
+        expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
       });
     });
   });

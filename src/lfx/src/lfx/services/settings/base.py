@@ -238,6 +238,16 @@ class Settings(BaseSettings):
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    load_flows_overwrite_on_name_match: bool = False
+    """When a flow loaded from ``load_flows_path`` shares a name with an existing DB row but has
+    a different id, overwrite the existing row's content from the file.
+
+    Default ``False`` preserves user edits made in the UI on restart: name-matched rows are
+    skipped with a warning instead of being silently overwritten when file UUIDs regenerate.
+    (Pre-1.10.0 this case raised ``IntegrityError`` and crashed startup; the loader now boots
+    successfully either way.) Set ``True`` to opt into "prepackaged flows are the source of
+    truth on restart" semantics, typically for CI/CD pipelines.
+    """
     bundle_urls: list[str] = []
 
     # Redis
@@ -246,6 +256,20 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Job Queue
+    job_queue_type: Literal["asyncio", "redis"] = "asyncio"
+    """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    redis_queue_host: str | None = None
+    """Redis host for the job queue. Falls back to redis_host if not set."""
+    redis_queue_port: int | None = None
+    """Redis port for the job queue. Falls back to redis_port if not set."""
+    redis_queue_db: int = 1
+    """Redis DB number for the job queue. Defaults to 1 to avoid conflict with the cache (DB 0)."""
+    redis_queue_url: str | None = None
+    """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
+    redis_queue_ttl: int = 3600
+    """TTL in seconds for job stream keys in Redis."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -429,12 +453,12 @@ class Settings(BaseSettings):
     use hardware-level isolation to restrict access."""
 
     # SSRF Protection
-    ssrf_protection_enabled: bool = False
+    ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
-    When False (default), no URL validation is performed, allowing requests to any destination
+    When False, no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    Default is True to protect against SSRF attacks including DNS rebinding.
 
     Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
@@ -475,7 +499,15 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed."""
+        """Convert comma-separated string to list if needed.
+
+        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
+        before this validator runs (the union list[str] | str resolves
+        differently). Collapse that back to the bare-string wildcard so
+        downstream consumers see the same shape on every Python version.
+        """
+        if isinstance(value, list) and value == ["*"]:
+            return "*"
         if isinstance(value, str) and value != "*":
             if "," in value:
                 # Convert comma-separated string to list
@@ -496,8 +528,9 @@ class Settings(BaseSettings):
     def set_event_delivery(cls, value, info):
         # If workers > 1, we need to use direct delivery
         # because polling and streaming are not supported
-        # in multi-worker environments
-        if info.data.get("workers", 1) > 1:
+        # in multi-worker environments — unless a Redis-backed job queue is configured,
+        # which shares state across workers and supports all delivery modes.
+        if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
             logger.warning("Multi-worker environment detected, using direct event delivery")
             return "direct"
         return value
