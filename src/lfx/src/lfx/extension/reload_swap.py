@@ -82,11 +82,24 @@ def swap_sys_modules(
     caller can surface them on :attr:`ReloadResult.warnings` instead of
     silently regressing the empty-palette-after-reload bug.
 
-    Non-destructive ordering invariant: the rename map is built BEFORE
-    any sys.modules mutation, and the old modules are snapshotted before
-    being popped so a length-mismatch in zip(..., strict=True) can be
-    rolled back into a no-op rather than leaving the prod namespace
-    permanently shredded.
+    Rollback safety
+    ---------------
+    Every ``sys.modules`` key the swap may touch -- staging names, the
+    new prod names, and the previous-record prod names being evicted --
+    is snapshotted *before* any mutation, together with
+    ``module.__name__`` for each staging module that will be renamed
+    in place.  If ``BaseException`` (including ``KeyboardInterrupt`` /
+    ``SystemExit`` / ``MemoryError``) is raised partway through the
+    rename loop, the ``except`` clause restores ``sys.modules`` to its
+    byte-identical pre-call state and reverts the ``module.__name__``
+    mutations.  A partially-completed rename window therefore cannot
+    leave the prod namespace half-swapped (e.g. with the new staging
+    module bound at the prod name while the old prod module is silently
+    dropped).
+
+    The pre-mutation length-mismatch tripwire (``zip(strict=True)``)
+    re-raises as ``AssertionError`` *before* any snapshot is built --
+    that path is a no-op rollback by construction.
     """
     staging_list: list[LoadedComponent] = list(staging_components)
     new_list: list[LoadedComponent] = list(new_components)
@@ -105,13 +118,32 @@ def swap_sys_modules(
         msg = f"reload swap invariant broken: {exc}"
         raise AssertionError(msg) from exc
 
-    recovery: dict[str, object] = {}
+    # Snapshot every key the swap may touch, plus the staging modules'
+    # original ``__name__`` attributes.  ``_absent`` distinguishes
+    # "key missing pre-call" from "key present with value ``None``"
+    # (sys.modules legitimately uses ``None`` as a negative-import
+    # cache marker).  Built BEFORE the mutation try-block so a failure
+    # during snapshot construction leaves sys.modules untouched.
+    _absent: object = object()
+    touched_keys: set[str] = set(rename_map.keys()) | set(rename_map.values())
+    if previous is not None:
+        touched_keys.update(old.module_name for old in previous.components)
+    sys_modules_snapshot: dict[str, object] = {key: sys.modules.get(key, _absent) for key in touched_keys}
+    staging_name_snapshot: dict[str, str] = {}
+    for staging_name in rename_map:
+        module = sys.modules.get(staging_name)
+        if module is None:
+            continue
+        # A module without ``__name__`` cannot be retagged anyway; the
+        # rename loop's ``contextlib.suppress`` will absorb the write
+        # attempt, so we have nothing to revert here.
+        with contextlib.suppress(AttributeError):
+            staging_name_snapshot[staging_name] = module.__name__
+
     try:
         if previous is not None:
             for old in previous.components:
-                module = sys.modules.pop(old.module_name, None)
-                if module is not None:
-                    recovery[old.module_name] = module
+                sys.modules.pop(old.module_name, None)
 
         for staging_name, prod_name in rename_map.items():
             module = sys.modules.pop(staging_name, None)
@@ -121,8 +153,37 @@ def swap_sys_modules(
                 module.__name__ = prod_name
             sys.modules[prod_name] = module
     except BaseException:
-        for name, module in recovery.items():
-            sys.modules.setdefault(name, module)  # type: ignore[arg-type]
+        # Byte-restore: every touched key returns to its pre-call value
+        # (or is popped if it was absent).  Unconditional assignment --
+        # ``setdefault`` would leave prod names that the rename loop
+        # already overwrote pointing at the new staging module.
+        for key, value in sys_modules_snapshot.items():
+            if value is _absent:
+                sys.modules.pop(key, None)
+            else:
+                sys.modules[key] = value  # type: ignore[assignment]
+        # Revert any in-place ``__name__`` mutations on staging modules
+        # the rename loop reached before the interrupt fired.  Without
+        # this the staging modules survive (restored above) but carry
+        # the prod-namespace ``__name__`` attribute, which would mislead
+        # ``inspect.getmodule`` and subsequent retag attempts.  The
+        # equality guard skips the ``__setattr__`` call when the rename
+        # loop never actually mutated ``__name__`` (the interrupt fired
+        # before the assignment landed) -- important both to avoid
+        # spurious writes and to avoid re-triggering a ``__setattr__``
+        # hook that may have raised the original exception.
+        for staging_name, original_name in staging_name_snapshot.items():
+            module = sys.modules.get(staging_name)
+            if module is None:
+                continue
+            try:
+                current_name = module.__name__
+            except AttributeError:
+                continue
+            if current_name == original_name:
+                continue
+            with contextlib.suppress(AttributeError, TypeError):
+                module.__name__ = original_name
         raise
 
     for new in new_list:

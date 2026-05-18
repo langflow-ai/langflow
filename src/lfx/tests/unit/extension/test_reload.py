@@ -680,3 +680,123 @@ def test_post_swap_hook_success_adds_no_warnings(tmp_path: Path) -> None:
     result = reload_bundle(registry, "pilot")
     assert result.ok, result.errors
     assert not [w for w in result.warnings if w.code == "reload-post-swap-hook-failed"]
+
+
+# ---------------------------------------------------------------------------
+# Mid-rename rollback: BaseException leaves sys.modules byte-identical
+# ---------------------------------------------------------------------------
+
+
+def test_swap_rollback_on_mid_rename_baseexception_restores_sys_modules() -> None:
+    """A ``BaseException`` raised mid-rename leaves ``sys.modules`` byte-identical.
+
+    Regression guard for the partial-rename rollback window.  If an
+    interrupt (``KeyboardInterrupt`` / ``SystemExit`` / ``MemoryError``)
+    fires after one iteration of the rename loop has committed but
+    before later iterations process, the ``except BaseException`` clause
+    in :func:`lfx.extension.reload_swap.swap_sys_modules` must fully
+    restore the pre-call state:
+
+    * the just-renamed staging module must not be left bound at the
+      prod name (the half-swap state);
+    * the old prod module must be restored at its prod name;
+    * the staging modules must be restored at their staging names;
+    * ``module.__name__`` mutations that landed in earlier iterations
+      must be reverted.
+
+    The previous implementation used ``sys.modules.setdefault`` for the
+    restore, which is a no-op on prod names the rename loop had already
+    overwritten -- exactly the half-swap state the rollback is meant to
+    prevent.  This test fails on that implementation and passes on the
+    fix.
+    """
+    import types
+    from pathlib import Path as _Path
+
+    from lfx.extension import reload_swap
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader import SLOT_OFFICIAL, LoadedComponent
+
+    target_ns = "_lfx_ext.rollback_pilot"
+    staging_ns = "__reload_staging__.rollback_pilot"
+
+    class _InterruptOnNameSet(types.ModuleType):
+        """ModuleType whose ``__name__`` setter raises ``KeyboardInterrupt``.
+
+        Simulates a ``BaseException`` firing partway through the rename
+        loop's ``module.__name__ = prod_name`` assignment.
+        """
+
+        def __setattr__(self, key: str, value: object) -> None:
+            if key == "__name__":
+                raise KeyboardInterrupt
+            object.__setattr__(self, key, value)
+
+    # Pre-call sys.modules state: two old prod modules, two staging modules.
+    # The first staging module renames cleanly; the second raises mid-rename.
+    old_a = types.ModuleType(f"{target_ns}.a")
+    old_b = types.ModuleType(f"{target_ns}.b")
+    new_a = types.ModuleType(f"{staging_ns}.a")
+    new_b = _InterruptOnNameSet(f"{staging_ns}.b")
+    sys.modules[f"{target_ns}.a"] = old_a
+    sys.modules[f"{target_ns}.b"] = old_b
+    sys.modules[f"{staging_ns}.a"] = new_a
+    sys.modules[f"{staging_ns}.b"] = new_b
+
+    keys_in_scope = (
+        f"{target_ns}.a",
+        f"{target_ns}.b",
+        f"{staging_ns}.a",
+        f"{staging_ns}.b",
+    )
+    pre_state = {key: sys.modules.get(key) for key in keys_in_scope}
+    pre_name_new_a = new_a.__name__
+    pre_name_new_b = new_b.__name__
+
+    def _lc(module_name: str, class_name: str) -> LoadedComponent:
+        return LoadedComponent(
+            extension_id="rollback-pilot",
+            extension_version="0.0.0",
+            bundle="rollback_pilot",
+            class_name=class_name,
+            slot=SLOT_OFFICIAL,
+            klass=type(class_name, (), {}),
+            module_name=module_name,
+            file_path=_Path("/tmp/__rollback_pilot_synthetic__.py"),
+        )
+
+    previous = BundleRecord(
+        bundle="rollback_pilot",
+        extension_id="rollback-pilot",
+        extension_version="0.0.0",
+        slot=SLOT_OFFICIAL,
+        components=(
+            _lc(f"{target_ns}.a", "A"),
+            _lc(f"{target_ns}.b", "B"),
+        ),
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        reload_swap.swap_sys_modules(
+            previous=previous,
+            new_components=[_lc(f"{target_ns}.a", "A"), _lc(f"{target_ns}.b", "B")],
+            staging_components=[_lc(f"{staging_ns}.a", "A"), _lc(f"{staging_ns}.b", "B")],
+        )
+
+    # sys.modules is byte-identical for every key the swap could touch.
+    # The critical assertion is that ``{target_ns}.a`` is *old_a* again,
+    # not ``new_a`` (the half-swap state).
+    post_state = {key: sys.modules.get(key) for key in keys_in_scope}
+    assert post_state == pre_state, (
+        f"sys.modules not byte-restored after mid-rename interrupt; "
+        f"diff: {[(k, pre_state[k], post_state[k]) for k in keys_in_scope if pre_state[k] is not post_state[k]]}"
+    )
+
+    # ``module.__name__`` mutations have been reverted.
+    assert new_a.__name__ == pre_name_new_a, "first-iteration __name__ mutation was not reverted on rollback"
+    assert new_b.__name__ == pre_name_new_b, "second-iteration __name__ should have been left at the original value"
+
+    # Cleanup (the autouse fixture handles ``_lfx_ext.*`` and
+    # ``__reload_staging__.*`` regardless, but be explicit here).
+    for key in keys_in_scope:
+        sys.modules.pop(key, None)
