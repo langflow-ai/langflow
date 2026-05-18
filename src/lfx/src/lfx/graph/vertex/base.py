@@ -227,6 +227,7 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
+        state["custom_component"] = None
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
@@ -384,6 +385,13 @@ class Vertex:
                 user_id=user_id,
                 vertex=self,
             )
+        self._apply_graph_output_cache_rules()
+
+    def _apply_graph_output_cache_rules(self) -> None:
+        if self.id in self.graph.cycle_vertices or any(
+            vertex.id.split("-")[0] in {"Listen", "Notify"} for vertex in self.graph.vertices
+        ):
+            self.apply_on_outputs(lambda output_object: setattr(output_object, "cache", False))
 
     async def _build(
         self,

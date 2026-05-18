@@ -4,6 +4,7 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import pickle
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -11,6 +12,7 @@ import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
@@ -68,6 +70,78 @@ def mock_edge() -> Mock:
 def parameter_handler(mock_vertex, mock_storage_service) -> ParameterHandler:
     """Create a parameter handler instance for testing."""
     return ParameterHandler(mock_vertex, mock_storage_service)
+
+
+def test_vertex_cache_state_drops_component_instance():
+    """Component instances can hold console/thread locals that Redis cache cannot pickle."""
+
+    class UnpickleableComponent:
+        def __getstate__(self):
+            msg = "cannot pickle Console Threaded object"
+            raise TypeError(msg)
+
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "_lock": None,
+            "custom_component": UnpickleableComponent(),
+            "built_object": UnbuiltObject(),
+            "built_result": UnbuiltResult(),
+        }
+    )
+
+    state = vertex.__getstate__()
+
+    assert state["custom_component"] is None
+    assert state["built_object"] is None
+    assert state["built_result"] is None
+    restored_vertex = pickle.loads(pickle.dumps(vertex))
+
+    assert restored_vertex.custom_component is None
+    assert isinstance(restored_vertex.built_object, UnbuiltObject)
+    assert isinstance(restored_vertex.built_result, UnbuiltResult)
+    assert restored_vertex._lock is not None
+
+
+@pytest.mark.parametrize(
+    ("cycle_vertices", "graph_vertex_ids"),
+    [
+        ({"test-vertex-id"}, []),
+        (set(), ["Listen-test-id"]),
+        (set(), ["Notify-test-id"]),
+    ],
+)
+def test_instantiate_component_reapplies_graph_output_cache_rules(
+    monkeypatch, cycle_vertices, graph_vertex_ids
+):
+    """Deserialized vertices should keep graph-level cache disabling rules."""
+    output = Mock(cache=True)
+    component = Mock()
+    component.outputs = [output]
+    component.get_outputs_map.return_value = {"output": output}
+
+    graph = Mock()
+    graph.cycle_vertices = cycle_vertices
+    graph.vertices = [Mock(id=vertex_id) for vertex_id in graph_vertex_ids]
+
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "test-vertex-id",
+            "graph": graph,
+            "custom_component": None,
+        }
+    )
+
+    monkeypatch.setattr(
+        vertex_base_module.initialize.loading,
+        "instantiate_class",
+        Mock(return_value=(component, {})),
+    )
+
+    vertex.instantiate_component()
+
+    assert output.cache is False
 
 
 def test_process_edge_parameters(parameter_handler, mock_edge):
