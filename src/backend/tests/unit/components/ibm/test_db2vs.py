@@ -246,7 +246,7 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
     def test_delete_documents(
-        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self, mock_get_dim, _mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test deleting documents by IDs."""
         from langchain_community.vectorstores.utils import DistanceStrategy
@@ -278,7 +278,7 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
     def test_embedding_dimension_validation(
-        self, mock_get_dim, mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self, mock_get_dim, _mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test embedding dimension validation."""
         from langchain_community.vectorstores.utils import DistanceStrategy
