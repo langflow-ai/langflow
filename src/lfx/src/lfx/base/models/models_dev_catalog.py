@@ -43,12 +43,17 @@ from lfx.base.models.model_metadata import create_model_metadata
 from lfx.log.logger import logger
 
 # models.dev exposes pinned-date snapshots (e.g. ``claude-opus-4-5-20251101``,
-# ``gpt-4o-2024-05-13``) alongside the moving aliases (``claude-opus-4-5``,
-# ``gpt-4o``). The snapshots are technically callable but most users want the
-# alias, and showing both clutters the picker badly (see PR feedback). Treat
-# any id ending in ``-YYYYMMDD`` (Anthropic) or ``-YYYY-MM-DD`` (OpenAI) as a
-# dated snapshot and mark it deprecated so it falls into the disclosure tier.
-_DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8})$")
+# ``gpt-4o-2024-05-13``, ``gemini-2.5-pro-preview-05-06``) alongside the
+# moving aliases (``claude-opus-4-5``, ``gpt-4o``, ``gemini-2.5-pro``). The
+# snapshots are technically callable but most users want the alias, and
+# showing both clutters the picker badly. Each vendor uses a different shape:
+#   * Anthropic: ``-YYYYMMDD``           (claude-opus-4-5-20251101)
+#   * OpenAI:    ``-YYYY-MM-DD``         (gpt-4o-2024-05-13)
+#   * Google:    ``-preview-MM-DD`` or   (gemini-2.5-pro-preview-05-06)
+#                ``-preview-MM-YYYY``    (gemini-2.5-flash-preview-09-2025)
+# Any id matching one of these is auto-flagged deprecated so it falls into
+# the disclosure tier.
+_DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8}|preview-\d{2}-\d{2}|preview-\d{2}-\d{4})$")
 
 # Threshold for auto-deprecating models that haven't shipped a new version in
 # a long time. models.dev has no deprecation field, and providers rarely
@@ -394,7 +399,14 @@ def apply_models_dev_overrides(
         provider_names = {m.get("provider") for m in group if isinstance(m, dict) and m.get("provider")}
         if len(provider_names) == 1:
             (provider,) = provider_names
-            if provider in overrides and provider not in consumed_providers:
+            if provider in overrides:
+                if provider in consumed_providers:
+                    # A second (or later) static group for the same provider
+                    # — e.g. OPENAI_EMBEDDING_MODELS_DETAILED appears after
+                    # OPENAI_MODELS_DETAILED. The override already contains
+                    # both LLMs and embeddings from that provider, so
+                    # appending this static group would duplicate the rows.
+                    continue
                 replaced.append(overrides[provider])
                 consumed_providers.add(provider)
                 continue

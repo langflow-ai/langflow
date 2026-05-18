@@ -267,9 +267,12 @@ def test_apply_overrides_when_snapshot_empty_passes_static_through():
 def test_apply_overrides_marks_dated_snapshot_ids_deprecated():
     """Dated-snapshot ids flag deprecated so they collapse into disclosure.
 
-    Anthropic ``-YYYYMMDD`` and OpenAI ``-YYYY-MM-DD`` snapshots are
-    pinned-date variants of moving aliases and clutter the picker. The
-    translator flags them deprecated so they fall into the disclosure tier.
+    Each vendor uses a different shape:
+      * Anthropic ``-YYYYMMDD``         (claude-opus-4-5-20251101)
+      * OpenAI    ``-YYYY-MM-DD``       (gpt-4o-2024-05-13)
+      * Google    ``-preview-MM-DD``    (gemini-2.5-pro-preview-05-06)
+      *           or ``-preview-MM-YYYY`` (gemini-2.5-flash-preview-09-2025)
+    Moving aliases and ``-preview-tts``-style non-dated suffixes stay active.
     """
     from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
 
@@ -299,9 +302,29 @@ def test_apply_overrides_marks_dated_snapshot_ids_deprecated():
                 "gpt-4-0314": {"id": "gpt-4-0314", "tool_call": True},
             },
         },
+        "google": {
+            "id": "google",
+            "models": {
+                "gemini-2.5-pro": {"id": "gemini-2.5-pro", "tool_call": True},
+                "gemini-2.5-pro-preview-05-06": {
+                    "id": "gemini-2.5-pro-preview-05-06",
+                    "tool_call": True,
+                },
+                "gemini-2.5-flash-preview-09-2025": {
+                    "id": "gemini-2.5-flash-preview-09-2025",
+                    "tool_call": True,
+                },
+                # Non-dated -preview-* suffix (TTS variant): stays active.
+                "gemini-2.5-pro-preview-tts": {
+                    "id": "gemini-2.5-pro-preview-tts",
+                    "tool_call": True,
+                },
+            },
+        },
     }
 
-    result = apply_models_dev_overrides([], snapshot)
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([], snapshot, now=fixed_now)
     by_name: dict[str, dict] = {}
     for group in result:
         for entry in group:
@@ -313,6 +336,60 @@ def test_apply_overrides_marks_dated_snapshot_ids_deprecated():
     assert by_name["gpt-4o"]["deprecated"] is False
     assert by_name["gpt-4o-2024-05-13"]["deprecated"] is True
     assert by_name["gpt-4-0314"]["deprecated"] is False
+    assert by_name["gemini-2.5-pro"]["deprecated"] is False
+    assert by_name["gemini-2.5-pro-preview-05-06"]["deprecated"] is True
+    assert by_name["gemini-2.5-flash-preview-09-2025"]["deprecated"] is True
+    assert by_name["gemini-2.5-pro-preview-tts"]["deprecated"] is False
+
+
+def test_apply_overrides_preserves_gemini_1_5_static_deprecation():
+    """gemini-1.5-* static deprecation flows through the override.
+
+    The 900-day age heuristic alone wouldn't catch the more recent 1.5
+    builds (gemini-1.5-flash-8b is ~592 days). The static
+    google_generative_ai_constants curation explicitly flags them and the
+    override preserves it.
+    """
+    from lfx.base.models.google_generative_ai_constants import (
+        GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+    )
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    # Sanity-check the static curation lists these names.
+    static_names_to_deprecated = {m["name"]: m.get("deprecated") for m in GOOGLE_GENERATIVE_AI_MODELS_DETAILED}
+    for name in ("gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.5-flash-8b"):
+        assert static_names_to_deprecated.get(name) is True, (
+            f"{name} must be flagged deprecated in the static Google constants"
+        )
+
+    snapshot = {
+        "google": {
+            "id": "google",
+            "models": {
+                # Recent enough not to be caught by the 900-day heuristic.
+                "gemini-1.5-flash-8b": {
+                    "id": "gemini-1.5-flash-8b",
+                    "release_date": "2024-10-03",
+                },
+                "gemini-1.5-flash": {
+                    "id": "gemini-1.5-flash",
+                    "release_date": "2024-05-14",
+                },
+                "gemini-2.5-pro": {
+                    "id": "gemini-2.5-pro",
+                    "release_date": "2025-03-20",
+                },
+            },
+        }
+    }
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([GOOGLE_GENERATIVE_AI_MODELS_DETAILED], snapshot, now=fixed_now)
+    by_name = {m["name"]: m for group in result for m in group}
+
+    assert by_name["gemini-1.5-flash-8b"]["deprecated"] is True
+    assert by_name["gemini-1.5-flash"]["deprecated"] is True
+    # Sanity: the current Gemini model stays active.
+    assert by_name["gemini-2.5-pro"]["deprecated"] is False
 
 
 def test_apply_overrides_preserves_static_deprecated_flag():
@@ -439,6 +516,56 @@ def test_apply_overrides_auto_deprecates_stale_models():
     assert by_name["text-embedding-3-large"]["deprecated"] is False
     assert by_name["gpt-4o"]["deprecated"] is False
     assert by_name["gpt-future"]["deprecated"] is False
+
+
+def test_apply_overrides_drops_subsequent_static_groups_for_overridden_provider():
+    """Drop subsequent static groups for an already-overridden provider.
+
+    OPENAI_MODELS_DETAILED + OPENAI_EMBEDDING_MODELS_DETAILED are two groups
+    for the same provider. The override combines LLMs + embeddings from the
+    single models.dev block, so the trailing static embedding group would
+    duplicate every embedding row if left in place.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    static_openai_llms = [
+        {"provider": "OpenAI", "name": "gpt-4o", "model_type": "llm"},
+    ]
+    static_openai_embeddings = [
+        {"provider": "OpenAI", "name": "text-embedding-3-large", "model_type": "embeddings"},
+        {"provider": "OpenAI", "name": "text-embedding-3-small", "model_type": "embeddings"},
+    ]
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "family": "gpt", "tool_call": True},
+                "text-embedding-3-large": {
+                    "id": "text-embedding-3-large",
+                    "family": "text-embedding",
+                },
+                "text-embedding-3-small": {
+                    "id": "text-embedding-3-small",
+                    "family": "text-embedding",
+                },
+            },
+        }
+    }
+
+    fixed_now = datetime(2026, 5, 18, tzinfo=timezone.utc)
+    result = apply_models_dev_overrides([static_openai_llms, static_openai_embeddings], snapshot, now=fixed_now)
+
+    # Flatten and collect duplicates by name.
+    seen: dict[str, int] = {}
+    for group in result:
+        for entry in group:
+            seen[entry["name"]] = seen.get(entry["name"], 0) + 1
+
+    assert seen.get("gpt-4o") == 1
+    assert seen.get("text-embedding-3-large") == 1, (
+        "embedding row must not be duplicated by the trailing static embedding group"
+    )
+    assert seen.get("text-embedding-3-small") == 1
 
 
 def test_apply_overrides_appends_new_provider_when_no_static_group():

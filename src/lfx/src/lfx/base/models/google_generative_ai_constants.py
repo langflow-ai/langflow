@@ -43,6 +43,31 @@ GOOGLE_GENERATIVE_AI_MODELS_DETAILED = [
         icon="GoogleGenerativeAI",
         tool_calling=True,
     ),
+    # GEMINI 1.5 (legacy - long out of rotation). These names live in the
+    # static list specifically so the models.dev override preserves the
+    # deprecation flag by name match; the 900-day age heuristic alone wouldn't
+    # catch the more recent 1.5 builds (gemini-1.5-flash-8b is only ~600d).
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-1.5-pro",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        deprecated=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-1.5-flash",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        deprecated=True,
+    ),
+    create_model_metadata(
+        provider="Google Generative AI",
+        name="gemini-1.5-flash-8b",
+        icon="GoogleGenerativeAI",
+        tool_calling=True,
+        deprecated=True,
+    ),
     # GEMINI 2.0 (legacy - scheduled deprecation)
     create_model_metadata(
         provider="Google Generative AI",
