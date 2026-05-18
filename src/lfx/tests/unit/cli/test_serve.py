@@ -555,9 +555,7 @@ def test_build_registry_from_paths_no_env_fallback_stamps_graphs(tmp_path):
 
     with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
         registry = asyncio.run(
-            build_registry_from_paths(
-                [p], lambda _: None, check_variables=False, no_env_fallback=True
-            )
+            build_registry_from_paths([p], lambda _: None, check_variables=False, no_env_fallback=True)
         )
     flow_id = registry.list_metas()[0].id
     graph, _ = registry.get(flow_id)
@@ -579,11 +577,7 @@ def test_build_registry_from_paths_default_does_not_stamp(tmp_path):
     mock_graph.context = {}
 
     with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
-        registry = asyncio.run(
-            build_registry_from_paths(
-                [p], lambda _: None, check_variables=False
-            )
-        )
+        registry = asyncio.run(build_registry_from_paths([p], lambda _: None, check_variables=False))
     flow_id = registry.list_metas()[0].id
     graph, _ = registry.get(flow_id)
     assert not graph.context.get("no_env_fallback")
@@ -605,9 +599,7 @@ def test_build_registry_from_directory_no_env_fallback_stamps_graphs(tmp_path):
 
     with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
         registry = asyncio.run(
-            build_registry_from_directory(
-                tmp_path, lambda _: None, check_variables=False, no_env_fallback=True
-            )
+            build_registry_from_directory(tmp_path, lambda _: None, check_variables=False, no_env_fallback=True)
         )
     flow_id = registry.list_metas()[0].id
     graph, _ = registry.get(flow_id)
@@ -629,11 +621,7 @@ def test_build_registry_from_directory_default_does_not_stamp(tmp_path):
     mock_graph.context = {}
 
     with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
-        registry = asyncio.run(
-            build_registry_from_directory(
-                tmp_path, lambda _: None, check_variables=False
-            )
-        )
+        registry = asyncio.run(build_registry_from_directory(tmp_path, lambda _: None, check_variables=False))
     flow_id = registry.list_metas()[0].id
     graph, _ = registry.get(flow_id)
     assert not graph.context.get("no_env_fallback")

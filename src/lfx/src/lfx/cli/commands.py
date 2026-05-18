@@ -74,7 +74,7 @@ async def serve_command(
         "--check-variables/--no-check-variables",
         help="Check global variables for environment compatibility",
     ),
-    no_env_fallback: bool = typer.Option(  # noqa: FBT001, FBT003
+    no_env_fallback: bool = typer.Option(
         False,
         "--no-env-fallback/--env-fallback",
         help=(
