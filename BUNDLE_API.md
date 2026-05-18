@@ -241,3 +241,95 @@ the deserialize half is covered by
   ``pkg.foo``.  The resolver tracks ``is_package`` and decrements
   ``level`` by one for ``__init__.py`` files so both shapes resolve
   correctly.
+- Code-review hardening pass across the extension subsystem.  No public
+  symbol's name or signature changed; this entry covers behavioural
+  tightening that bundle authors and operators should be aware of:
+  - **Path-safety contract honored on every discovery path.**
+    ``DiscoveredExtension`` records emitted from
+    ``discover_installed_extensions`` / ``discover_seed_extensions``
+    now run the same resolve-and-``relative_to`` containment check that
+    ``validate_extension`` performs.  A symlinked ``bundles[0].path``
+    or a symlinked seed subdirectory that escapes the extension root
+    is now rejected with ``path-escape`` *before* reaching the loader,
+    instead of slipping through to ``exec_module()``.  The shared
+    primitive lives at ``lfx.extension._paths.is_within``; every
+    walker (loader, validator, seed discovery, inline-bundle discovery)
+    uses the same function and the same ``SKIP_DIR_NAMES``.
+  - **``--execute-imports`` env allowlist.** The validator's
+    ``--execute-imports`` subprocess now inherits an explicit allowlist
+    (``PATH``, ``LANG``, ``LC_*``, ``SYSTEMROOT``, ``TMPDIR``, ``TZ``,
+    Python locale + encoding vars) instead of denylisting only
+    ``LANGFLOW_*``/``LFX_*``.  Cloud / CI credentials
+    (``AWS_*``, ``OPENAI_API_KEY``, ``GITHUB_TOKEN``, ...) no longer
+    propagate into untrusted bundle import.  The CLI / module docs
+    re-frame this pass as best-effort hygiene lint, not a sandbox.
+  - **AST hygiene lint widened.** ``_find_top_level_io`` now flags
+    ``exec``, ``eval``, ``__import__``, ``compile`` as top-level
+    primitives and ``importlib.import_module`` /
+    ``importlib.__import__`` as dotted-name primitives.  Still
+    best-effort literal-name matching; trivially bypassable by
+    obfuscation, and documented as such.
+  - **Reload swap is non-destructive.** ``_swap_sys_modules`` now
+    builds the staging->prod rename map **before** any ``sys.modules``
+    mutation, snapshots popped old modules into a recovery map, and
+    restores them on any mid-swap exception.  The length-mismatch
+    tripwire on ``zip(strict=True)`` no longer leaves the prod
+    namespace shredded.  A new typed code,
+    ``reload-class-retag-failed``, is appended to
+    ``ReloadResult.warnings`` when ``cls.__module__`` cannot be
+    retagged so the empty-palette-after-reload regression leaves a
+    trail instead of silently failing.
+  - **Cross-source bundle-name collision.**
+    ``load_installed_extensions`` now detects two distributions with
+    different canonical names but identical ``bundle.name`` (which
+    would silently clobber each other at
+    ``_lfx_ext.official.<name>.*``) and emits a typed
+    ``duplicate-bundle-name`` error on the loser, dropping its
+    components.  ``BundleRegistry.install_bundle`` additionally logs a
+    WARNING when an existing record is replaced by a record from a
+    different ``source_path`` (catches collisions the upstream
+    precedence resolver missed).
+  - **Reload endpoint off event loop.**
+    ``POST /api/v1/extensions/{id}/bundles/{name}/reload`` now invokes
+    ``reload_bundle`` via ``asyncio.to_thread`` so slow or large
+    bundle imports do not freeze the worker for other in-flight
+    requests.  The wire contract (status codes, body shape) is
+    unchanged.
+  - **Stable typed-error code rename.**
+    ``multi-bundle-deferred-in-this-milestone`` is renamed to the
+    stable ``multi-bundle-unsupported``.  The old code is retained in
+    ``ERROR_CODES`` as a deprecated alias for one milestone for log
+    scrapers.  Three new codes are added to
+    ``ERROR_CODES``: ``duplicate-bundle-name`` (see above),
+    ``reload-class-retag-failed`` (see above), and
+    ``reload-transport-error`` (CLI-side connectivity failure,
+    previously misreported as ``reload-source-missing``).
+  - **Discovery preserves "unreadable" vs "absent" distinction.**
+    ``_pyproject_declares_extension`` now propagates ``OSError`` so a
+    permission failure on a pyproject that *might* declare an
+    extension surfaces as ``manifest-unreadable`` instead of being
+    silently dropped as "no extension here".
+  - **Dev registry corruption is logged.** ``_read_state`` now
+    distinguishes file absent (silent, legitimate empty registry),
+    file present but unreadable (WARNING), and file present but
+    corrupt JSON / wrong shape (WARNING with detail).  The state
+    file is written with mode 0600 so a hostile third-party process
+    cannot inject an extension path into the developer's next
+    ``langflow run``.
+  - **Entry-point predicate avoids module-level side effects.**
+    ``_entry_point_loads_to_component`` now consults
+    ``importlib.util.find_spec`` first and only falls through to
+    ``ep.load()`` when the spec lookup is insufficient.  The
+    ``except BaseException`` was narrowed to ``except Exception`` so
+    ``SystemExit`` / ``KeyboardInterrupt`` are no longer swallowed at
+    filter time.
+  - **Frontend reload-success warnings surfaced.**  The reload route's
+    ``ReloadResult.warnings`` (non-empty on success) now reach the
+    user via a notice toast in addition to the green success toast.
+    Wire shape unchanged; this is a UI fix that consumes existing
+    payload fields.
+  - **Internal-only file split.** ``sys.modules`` surgery primitives
+    moved to ``lfx.extension.reload_swap``; ``load_installed_extensions``
+    / ``load_seed_extensions`` moved to
+    ``lfx.extension.loader._startup``.  Both are re-exported from
+    their previous import paths so external imports are unchanged.
