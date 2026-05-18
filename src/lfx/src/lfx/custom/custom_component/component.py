@@ -6,6 +6,7 @@ import inspect
 import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
+from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
@@ -479,10 +480,19 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                msg = "Could not find module for class"
-                raise ValueError(msg)
-
-            class_code = inspect.getsource(module)
+                # Fallback: ``inspect.getmodule`` returns None when
+                # ``cls.__module__`` points to a ``sys.modules`` key that has
+                # been swapped or dropped (e.g. mid-reload, when the staging
+                # namespace was just collapsed back into the production
+                # namespace).  Read the file directly so cache rebuilds and
+                # template construction survive a transient inconsistency.
+                try:
+                    class_code = Path(inspect.getfile(self.__class__)).read_text(encoding="utf-8")
+                except (OSError, TypeError) as inner:
+                    msg = f"Could not find module for class {self.__class__.__name__!r}"
+                    raise ValueError(msg) from inner
+            else:
+                class_code = inspect.getsource(module)
             self._code = class_code
         except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
