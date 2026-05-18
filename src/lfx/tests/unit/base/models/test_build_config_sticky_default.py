@@ -18,9 +18,17 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 
-def _component(user_id: str = "u-1") -> SimpleNamespace:
-    """Minimal component stub matching the ``update_model_options_in_build_config`` contract."""
-    return SimpleNamespace(user_id=user_id, cache={})
+def _component(user_id: str = "u-1", inputs=None) -> SimpleNamespace:
+    """Minimal component stub matching the ``update_model_options_in_build_config`` contract.
+
+    ``inputs`` mimics the class-level ``inputs`` list on real components so
+    ``_resolve_filters`` can locate the ModelInput by name.
+    """
+    return SimpleNamespace(user_id=user_id, cache={}, inputs=inputs or [])
+
+
+def _fake_model_input(name: str = "model", filters: dict | None = None) -> SimpleNamespace:
+    return SimpleNamespace(name=name, filters=filters)
 
 
 def _llm_option(name: str, provider: str = "Google Generative AI") -> dict:
@@ -52,6 +60,50 @@ def test_filters_from_build_config_returns_empty_when_missing():
     assert _filters_from_build_config({"model": {}}, "model") == {}
     assert _filters_from_build_config({"model": {"filters": None}}, "model") == {}
     assert _filters_from_build_config({"model": {"filters": "garbage"}}, "model") == {}
+
+
+def test_filters_from_component_inputs_reads_class_declaration():
+    """The canonical source — class-level inputs — surfaces the filters dict."""
+    from lfx.base.models.unified_models.build_config import _filters_from_component_inputs
+
+    component = _component(inputs=[_fake_model_input("model", {"tool_calling": True})])
+    assert _filters_from_component_inputs(component, "model") == {"tool_calling": True}
+
+
+def test_filters_from_component_inputs_empty_when_no_matching_input():
+    from lfx.base.models.unified_models.build_config import _filters_from_component_inputs
+
+    assert _filters_from_component_inputs(_component(inputs=[]), "model") == {}
+    component = _component(inputs=[_fake_model_input("not_model", {"tool_calling": True})])
+    assert _filters_from_component_inputs(component, "model") == {}
+
+
+def test_resolve_filters_prefers_class_declaration_over_build_config():
+    """Class declaration wins over stale build_config.
+
+    Saved flows that predate the filter shipping carry no ``filters`` in
+    their persisted build_config. The canonical source — the ModelInput's
+    class-level declaration — must still apply, and the build_config gets
+    patched in-place so the next round-trip carries the current filter.
+    """
+    from lfx.base.models.unified_models.build_config import _resolve_filters
+
+    # build_config has no filters (stale saved flow).
+    build_config = {"model": {"value": [], "options": []}}
+    component = _component(inputs=[_fake_model_input("model", {"tool_calling": True})])
+    filters = _resolve_filters(component, build_config, "model")
+    assert filters == {"tool_calling": True}
+    # And the build_config is patched so the next round-trip carries them.
+    assert build_config["model"]["filters"] == {"tool_calling": True}
+
+
+def test_resolve_filters_falls_back_to_build_config_when_component_has_no_inputs():
+    """Defensive fallback for callers that don't have an inputs attribute."""
+    from lfx.base.models.unified_models.build_config import _resolve_filters
+
+    build_config = {"model": {"value": [], "options": [], "filters": {"reasoning": True}}}
+    component = SimpleNamespace(user_id="u", cache={})  # no inputs attribute
+    assert _resolve_filters(component, build_config, "model") == {"reasoning": True}
 
 
 def test_filters_from_build_config_drops_none_values():

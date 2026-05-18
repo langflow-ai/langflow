@@ -18,6 +18,29 @@ from .provider_queries import _get_all_provider_specific_field_names
 _MODEL_OPTIONS_CACHE_TTL_SECONDS = 30
 
 
+def _filters_from_component_inputs(
+    component: Any,
+    model_field_name: str,
+) -> dict[str, Any]:
+    """Read filters from the component's class-level ModelInput declaration.
+
+    This is the canonical source: saved flows persisted before the
+    ``filters`` field shipped don't carry it in their stored template, so
+    relying on the round-tripped ``build_config`` lets old flows silently
+    bypass the constraint. Class-level declarations always reflect the
+    current server build.
+    """
+    inputs = getattr(component, "inputs", None) or getattr(type(component), "inputs", None) or []
+    for inp in inputs:
+        if getattr(inp, "name", None) != model_field_name:
+            continue
+        raw = getattr(inp, "filters", None)
+        if isinstance(raw, dict):
+            return {k: v for k, v in raw.items() if v is not None}
+        return {}
+    return {}
+
+
 def _filters_from_build_config(
     build_config: dict,
     model_field_name: str,
@@ -25,7 +48,8 @@ def _filters_from_build_config(
     """Read the declarative ``filters`` dict off the ModelInput's config.
 
     Returns an empty dict when no filters are declared, so callers can use
-    ``if filters:`` to detect the constrained mode.
+    ``if filters:`` to detect the constrained mode. Used as a fallback when
+    the calling helper doesn't have a component reference handy.
     """
     field_config = build_config.get(model_field_name)
     if not isinstance(field_config, dict):
@@ -35,6 +59,24 @@ def _filters_from_build_config(
         return {}
     # Drop empty / falsy filter entries so ``{"tool_calling": None}`` is a no-op.
     return {k: v for k, v in raw.items() if v is not None}
+
+
+def _resolve_filters(component: Any, build_config: dict, model_field_name: str) -> dict[str, Any]:
+    """Resolve the active filters dict.
+
+    Prefer the class-level ModelInput declaration (canonical, always
+    reflects the current server build) and fall back to ``build_config``
+    when the component happens to have no inputs attribute. The build_config
+    is also patched in-place so the next round-trip carries the current
+    filters back to the frontend.
+    """
+    filters = _filters_from_component_inputs(component, model_field_name) or _filters_from_build_config(
+        build_config, model_field_name
+    )
+    field_config = build_config.get(model_field_name)
+    if isinstance(field_config, dict) and filters and field_config.get("filters") != filters:
+        field_config["filters"] = dict(filters)
+    return filters
 
 
 def _augmented_cache_key_prefix(prefix: str, filters: dict[str, Any]) -> str:
@@ -296,8 +338,10 @@ def update_model_options_in_build_config(
             # ``not_enabled_locally`` injection would put a model in the
             # dropdown that crashes at run time. Clear the saved value so
             # the downstream auto-default falls through to a compatible
-            # model instead.
-            filters = _filters_from_build_config(build_config, model_field_name)
+            # model instead. ``_resolve_filters`` reads the class-level
+            # declaration so saved flows that predate the filter shipping
+            # cannot bypass the constraint.
+            filters = _resolve_filters(component, build_config, model_field_name)
             saved_passes_filters = _saved_model_passes_filters(saved_name, saved_provider, filters) if filters else True
             if filters and not saved_passes_filters:
                 logger.debug(
@@ -424,8 +468,11 @@ def handle_model_input_update(
     # ``filters`` dict on the ModelInput (e.g. Agent declares
     # ``filters={"tool_calling": True}``). The cache prefix is namespaced by
     # the sorted filter key/value pairs so different filter configurations
-    # don't poison each other's caches.
-    filters = _filters_from_build_config(build_config, model_field_name)
+    # don't poison each other's caches. ``_resolve_filters`` reads the
+    # class-level declaration as the canonical source so saved flows that
+    # were persisted before the filter shipped (and therefore don't carry
+    # ``filters`` in their stored template) still get the constraint applied.
+    filters = _resolve_filters(component, build_config, model_field_name)
     if get_options_func is None:
         if filters:
             cache_key_prefix = _augmented_cache_key_prefix(cache_key_prefix, filters)
