@@ -57,13 +57,15 @@ class SecuritySettings(BaseModel):
     def validate_cors_origins(cls, value):
         """Convert comma-separated string to list if needed.
 
-        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
-        before this validator runs (the union list[str] | str resolves
-        differently). Collapse that back to the bare-string wildcard so
-        downstream consumers see the same shape on every Python version.
+        Pydantic-settings on Python 3.14 parses the env var into a list before
+        this validator runs (the union list[str] | str resolves differently).
+        Handle both shapes: collapse ["*"] back to the bare-string wildcard,
+        and strip whitespace + drop empty entries on either path.
         """
-        if isinstance(value, list) and value == ["*"]:
-            return "*"
+        if isinstance(value, list):
+            if value == ["*"]:
+                return "*"
+            return [origin for origin in (str(o).strip() for o in value) if origin]
         if isinstance(value, str) and value != "*":
             if "," in value:
                 return [origin for origin in (o.strip() for o in value.split(",")) if origin]
