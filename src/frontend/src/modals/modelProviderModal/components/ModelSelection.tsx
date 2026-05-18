@@ -170,11 +170,14 @@ const ModelSelection = ({
   const { t } = useTranslation();
   const { data: enabledModelsData } = useGetEnabledModels();
   const [modelQuery, setModelQuery] = useState<string>("");
+  const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
 
-  // Reset the search when the selected provider changes so the input never
-  // carries stale text across providers (OpenRouter → Anthropic, etc.).
+  // Reset both the search and the deprecated disclosure when the selected
+  // provider changes so neither state leaks across providers
+  // (OpenRouter → Anthropic, etc.).
   useEffect(() => {
     setModelQuery("");
+    setShowDeprecated(false);
   }, [providerName]);
 
   const isModelEnabled = (modelName: string): boolean => {
@@ -206,30 +209,77 @@ const ModelSelection = ({
     [availableModels, trimmedModelQuery],
   );
 
+  const partitionDeprecated = (models: Model[]): [Model[], Model[]] => {
+    const active: Model[] = [];
+    const deprecated: Model[] = [];
+    for (const model of models) {
+      if (model.metadata?.deprecated) {
+        deprecated.push(model);
+      } else {
+        active.push(model);
+      }
+    }
+    return [active, deprecated];
+  };
+
+  const renderModelRow = (model: Model, testIdPrefix: string) => (
+    <ModelRow
+      key={model.model_name}
+      model={model}
+      enabled={isModelEnabled(model.model_name)}
+      onToggle={onModelToggle}
+      testIdPrefix={testIdPrefix}
+      isEnabledModel={isEnabledModel}
+      showEmbeddingTag={modelType === "all"}
+    />
+  );
+
   const renderModelSection = (
     title: string,
     models: Model[],
     testIdPrefix: string,
   ) => {
     if (models.length === 0) return null;
+    const [activeModels, deprecatedModels] = partitionDeprecated(models);
     return (
       <div data-testid={`${testIdPrefix}-models-section`}>
         <div className="text-[13px] font-semibold text-muted-foreground">
           {title}
         </div>
         <div className="flex flex-col gap-2 pt-4">
-          {models.map((model) => (
-            <ModelRow
-              key={model.model_name}
-              model={model}
-              enabled={isModelEnabled(model.model_name)}
-              onToggle={onModelToggle}
-              testIdPrefix={testIdPrefix}
-              isEnabledModel={isEnabledModel}
-              showEmbeddingTag={modelType === "all"}
-            />
-          ))}
+          {activeModels.map((model) => renderModelRow(model, testIdPrefix))}
         </div>
+        {deprecatedModels.length > 0 && (
+          <details
+            className="pt-3"
+            data-testid={`${testIdPrefix}-deprecated-disclosure`}
+            open={showDeprecated}
+            onToggle={(event) =>
+              setShowDeprecated(
+                (event.currentTarget as HTMLDetailsElement).open,
+              )
+            }
+          >
+            <summary
+              className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer select-none"
+              data-testid={`${testIdPrefix}-deprecated-summary`}
+            >
+              {deprecatedModels.length === 1
+                ? t("modelProviders.showDeprecatedSingular", {
+                    defaultValue: "Show 1 deprecated model",
+                  })
+                : t("modelProviders.showDeprecated", {
+                    count: deprecatedModels.length,
+                    defaultValue: "Show {{count}} deprecated models",
+                  })}
+            </summary>
+            <div className="flex flex-col gap-2 pt-3">
+              {deprecatedModels.map((model) =>
+                renderModelRow(model, testIdPrefix),
+              )}
+            </div>
+          </details>
+        )}
       </div>
     );
   };

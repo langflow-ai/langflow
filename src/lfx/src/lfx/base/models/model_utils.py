@@ -401,6 +401,14 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
             continue
         supported = raw.get("supported_parameters") or []
         is_list = isinstance(supported, list)
+        created_raw = raw.get("created")
+        # OpenRouter exposes ``created`` as a Unix epoch (seconds). Defensive
+        # int-coercion handles the occasional string or null in the payload
+        # without bringing the whole fetch down.
+        try:
+            created = int(created_raw) if created_raw is not None else 0
+        except (TypeError, ValueError):
+            created = 0
         by_id[mid] = {
             "tool_calling": is_list and "tools" in supported,
             # OpenRouter exposes "reasoning" (and "include_reasoning") in the
@@ -408,6 +416,7 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
             # signal shape as "tools". Drives the reasoning badge in the
             # picker and lets Agent/LLM components filter on it.
             "reasoning": is_list and "reasoning" in supported,
+            "created": max(created, 0),
         }
     if not by_id:
         return []
@@ -425,6 +434,7 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
             tool_calling=by_id[name]["tool_calling"],
             reasoning=by_id[name]["reasoning"],
             default=name in default_set,
+            created=by_id[name]["created"],
         )
         for name in sorted_ids
     ]

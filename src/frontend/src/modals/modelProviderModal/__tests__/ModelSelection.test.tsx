@@ -283,6 +283,106 @@ describe("ModelSelection", () => {
     });
   });
 
+  describe("Deprecated disclosure", () => {
+    const withDeprecated: Model[] = [
+      { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Bot" } },
+      { model_name: "gpt-4.1", metadata: { model_type: "llm", icon: "Bot" } },
+      {
+        model_name: "gpt-3.5-turbo",
+        metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+      },
+      {
+        model_name: "gpt-old",
+        metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+      },
+    ];
+
+    it("should not render deprecated rows by default", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      expect(screen.getByText("gpt-4o")).toBeInTheDocument();
+      expect(screen.getByText("gpt-4.1")).toBeInTheDocument();
+      // Deprecated rows live inside a <details> that's closed → not in DOM
+      // visually accessible role, but `getByText` still finds them since
+      // <details> children remain in the DOM. Check that the disclosure
+      // exists and reports the right count instead.
+      expect(
+        screen.getByTestId("llm-deprecated-disclosure"),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("llm-deprecated-summary").textContent).toMatch(
+        /Show 2 deprecated models/,
+      );
+    });
+
+    it("should pluralize 'model' correctly for a single deprecated row", () => {
+      const single: Model[] = [
+        { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Bot" } },
+        {
+          model_name: "gpt-old",
+          metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+        },
+      ];
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={single}
+          modelType="llm"
+        />,
+      );
+      // Mock i18n returns the singular en.json string with {{plural}} → ""
+      expect(screen.getByTestId("llm-deprecated-summary").textContent).toMatch(
+        /Show 1 deprecated model$/,
+      );
+    });
+
+    it("should not render the disclosure when nothing is deprecated", () => {
+      render(<ModelSelection {...defaultProps} modelType="llm" />);
+      expect(
+        screen.queryByTestId("llm-deprecated-disclosure"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should reset the disclosure to closed when the provider changes", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      // Open the disclosure the way a user would (click → onToggle → state
+      // flips to true), so React owns the open prop.
+      await user.click(screen.getByTestId("llm-deprecated-summary"));
+      expect(
+        (screen.getByTestId("llm-deprecated-disclosure") as HTMLDetailsElement)
+          .open,
+      ).toBe(true);
+
+      // Switching provider must collapse the disclosure (useEffect fires).
+      rerender(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Anthropic"
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      expect(
+        (screen.getByTestId("llm-deprecated-disclosure") as HTMLDetailsElement)
+          .open,
+      ).toBe(false);
+    });
+  });
+
   describe("Capability tags", () => {
     const tagModels: Model[] = [
       {

@@ -15,6 +15,12 @@ class ModelMetadata(TypedDict, total=False):
     deprecated: bool  # Whether model is deprecated (defaults to False)
     default: bool  # Whether model is a default/recommended option (defaults to False)
     model_type: str  # Type of model (defaults to "llm" or "embeddings")
+    # Optional release date as a Unix epoch (seconds). Populated by live
+    # fetches (OpenRouter ``created`` field) and by the models.dev override
+    # (``release_date`` parsed as YYYY-MM-DD). Drives newest-first sorting in
+    # the unified catalog. 0/absent → unknown; stable sort then preserves the
+    # original list order for that tier.
+    created: int
 
 
 def create_model_metadata(
@@ -30,6 +36,7 @@ def create_model_metadata(
     deprecated: bool = False,
     default: bool = False,
     model_type: str = "llm",
+    created: int = 0,
 ) -> ModelMetadata:
     """Helper function to create ModelMetadata with explicit defaults."""
     return ModelMetadata(
@@ -44,6 +51,7 @@ def create_model_metadata(
         deprecated=deprecated,
         default=default,
         model_type=model_type,
+        created=created,
     )
 
 

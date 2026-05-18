@@ -828,6 +828,8 @@
   "modelProviders.tag.embedding": "embedding",
   "modelProviders.tag.search": "search",
   "modelProviders.tag.preview": "preview",
+  "modelProviders.showDeprecated": "Show {{count}} deprecated models",
+  "modelProviders.showDeprecatedSingular": "Show 1 deprecated model",
   "multiselect.chooseOption": "Choose an option...",
   "multiselect.noValuesFound": "No values found.",
   "nodeToolbar.code": "Code",

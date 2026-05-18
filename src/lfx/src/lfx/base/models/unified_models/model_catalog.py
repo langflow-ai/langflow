@@ -96,16 +96,31 @@ def get_unified_models_detailed(
             }
         )
 
-    # Mark the first 5 models in each provider as default (based on list order)
-    # and optionally filter to only defaults
+    # Sort each provider's list so the picker presents newest-supported first,
+    # deprecated drops to the bottom, and providers with no date data preserve
+    # their hand-curated constants-file order (stable sort + tuple ties).
+    #
+    # Sort key: (is_deprecated, -created_epoch). When ``created`` is unknown
+    # (== 0) every row in the same deprecation tier ties on the second
+    # component, so list.sort's stable behavior keeps the original order
+    # intact. Defaults are stamped AFTER sorting so the first-N selection
+    # reflects the new ordering instead of the raw constants order.
     default_model_count = 5  # Number of default models per provider
 
+    def _sort_key(model: dict) -> tuple[int, int]:
+        meta = model.get("metadata", {})
+        is_deprecated = 1 if meta.get("deprecated") else 0
+        created = meta.get("created") or 0
+        try:
+            created_int = int(created)
+        except (TypeError, ValueError):
+            created_int = 0
+        return (is_deprecated, -created_int)
+
     for prov, models in provider_map.items():
+        models.sort(key=_sort_key)
         for i, model in enumerate(models):
-            if i < default_model_count:
-                model["metadata"]["default"] = True
-            else:
-                model["metadata"]["default"] = False
+            model["metadata"]["default"] = i < default_model_count
 
         # If only_defaults is True, filter to only default models
         if only_defaults:

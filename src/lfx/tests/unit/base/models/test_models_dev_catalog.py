@@ -180,12 +180,14 @@ def test_apply_overrides_replaces_covered_provider():
                     "modalities": {"input": ["text", "image"], "output": ["text"]},
                     "limit": {"context": 200000, "output": 32000},
                     "cost": {"input": 15, "output": 75},
+                    "release_date": "2025-08-05",
                 },
                 "claude-sonnet-4-5": {
                     "id": "claude-sonnet-4-5",
                     "tool_call": True,
                     "reasoning": False,
                     "limit": {"context": 200000},
+                    "release_date": "2025-09-29",
                 },
             },
         },
@@ -206,6 +208,7 @@ def test_apply_overrides_replaces_covered_provider():
     assert opus["context_window"] == 200000
     assert opus["cost_per_million_in"] == 15.0
     assert opus["cost_per_million_out"] == 75.0
+    assert opus["created"] == 1754352000  # 2025-08-05T00:00:00Z
 
     sonnet = next(m for m in anthropic_models if m["name"] == "claude-sonnet-4-5")
     assert sonnet["tool_calling"] is True
@@ -213,9 +216,35 @@ def test_apply_overrides_replaces_covered_provider():
     assert "vision" not in sonnet  # no image in modalities
     assert sonnet["context_window"] == 200000
     assert "cost_per_million_in" not in sonnet  # no cost block
+    assert sonnet["created"] == 1759104000  # 2025-09-29T00:00:00Z
 
     # WatsonX (not in snapshot, not in MODELS_DEV_PROVIDER_KEYS) is untouched.
     assert result[1] == _watsonx_group()
+
+
+def test_apply_overrides_handles_missing_or_invalid_release_date():
+    """release_date is best-effort: ISO YYYY-MM-DD parses, anything else → 0.
+
+    The downstream sort uses 0 to mean "unknown" and falls back to the
+    stable original-order tier, so this needs to degrade quietly.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-no-date": {"id": "gpt-no-date", "tool_call": True},
+                "gpt-bad-date": {"id": "gpt-bad-date", "release_date": "not-a-date"},
+                "gpt-iso": {"id": "gpt-iso", "release_date": "2024-05-13"},
+            },
+        }
+    }
+    result = apply_models_dev_overrides([], snapshot)
+    by_name = {m["name"]: m for m in result[0]}
+    assert by_name["gpt-no-date"]["created"] == 0
+    assert by_name["gpt-bad-date"]["created"] == 0
+    assert by_name["gpt-iso"]["created"] == 1715558400  # 2024-05-13T00:00:00Z
 
 
 def test_apply_overrides_skips_unknown_provider_keys():
@@ -259,6 +288,68 @@ def test_apply_overrides_appends_new_provider_when_no_static_group():
 # ---------------------------------------------------------------------------
 # Catalog cache invalidation
 # ---------------------------------------------------------------------------
+
+
+def test_get_unified_models_detailed_sorts_provider_lists():
+    """Provider lists sort by (deprecated, -created) with stable ties.
+
+    Within a provider: deprecated drops to the bottom, newest non-deprecated
+    rises to the top (when ``created`` is known), and rows tied on date
+    preserve their original list order via the stable sort.
+    """
+    from lfx.base.models import models_dev_catalog
+    from lfx.base.models.unified_models.model_catalog import get_unified_models_detailed
+    from lfx.base.models.unified_models.provider_queries import get_models_detailed
+
+    # Build a synthetic snapshot whose models.dev override drives the test.
+    # ``apply_models_dev_overrides`` will translate these into the catalog and
+    # the assembly path will then sort them.
+    snapshot = {
+        "anthropic": {
+            "id": "anthropic",
+            "models": {
+                "claude-old-deprecated": {
+                    "id": "claude-old-deprecated",
+                    "release_date": "2024-01-01",
+                },
+                "claude-newest": {"id": "claude-newest", "release_date": "2025-09-01"},
+                "claude-undated-a": {"id": "claude-undated-a"},
+                "claude-mid": {"id": "claude-mid", "release_date": "2025-05-01"},
+                "claude-undated-b": {"id": "claude-undated-b"},
+            },
+        }
+    }
+    # apply_models_dev_overrides has no notion of "deprecated", so simulate the
+    # state by flipping the flag on one row after the override step. The test
+    # exercises the sort, not the deprecation derivation.
+    prior = models_dev_catalog.get_active_snapshot()
+    try:
+        models_dev_catalog.set_active_snapshot(snapshot)
+        models_dev_catalog.invalidate_catalog_cache()
+
+        # Hand-flip deprecated on the oldest row by mutating the cached groups.
+        groups = get_models_detailed()
+        for group in groups:
+            for m in group:
+                if m.get("name") == "claude-old-deprecated":
+                    m["deprecated"] = True
+
+        unified = get_unified_models_detailed(providers=["Anthropic"], include_deprecated=True)
+        anthropic = next(p for p in unified if p["provider"] == "Anthropic")
+        names = [m["model_name"] for m in anthropic["models"]]
+
+        # Non-deprecated dated rows first (newest first), then undated rows
+        # in their original order, then deprecated last.
+        assert names == [
+            "claude-newest",
+            "claude-mid",
+            "claude-undated-a",
+            "claude-undated-b",
+            "claude-old-deprecated",
+        ]
+    finally:
+        models_dev_catalog.set_active_snapshot(prior)
+        models_dev_catalog.invalidate_catalog_cache()
 
 
 def test_install_snapshot_invalidates_get_models_detailed_cache():

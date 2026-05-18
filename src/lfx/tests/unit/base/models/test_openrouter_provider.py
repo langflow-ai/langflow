@@ -106,6 +106,31 @@ def test_fetch_live_openrouter_models_returns_empty_when_no_key():
         assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
 
 
+def test_fetch_live_openrouter_models_propagates_created_timestamp():
+    """OpenRouter exposes ``created`` as a Unix epoch (seconds)."""
+    from lfx.base.models import model_utils
+
+    response = _models_payload(
+        [
+            {"id": "openai/gpt-4o", "supported_parameters": ["tools"], "created": 1715558400},
+            {"id": "anthropic/claude-old", "supported_parameters": ["tools"], "created": 1700000000},
+            {"id": "broken-time", "supported_parameters": ["tools"], "created": "not-a-number"},
+            {"id": "no-time", "supported_parameters": ["tools"]},
+        ]
+    )
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
+        patch.object(model_utils.httpx, "get", return_value=response),
+    ):
+        result = model_utils.fetch_live_openrouter_models("user-id", "llm")
+
+    by_name = {m["name"]: m for m in result}
+    assert by_name["openai/gpt-4o"]["created"] == 1715558400
+    assert by_name["anthropic/claude-old"]["created"] == 1700000000
+    assert by_name["broken-time"]["created"] == 0  # invalid value degrades safely
+    assert by_name["no-time"]["created"] == 0
+
+
 def test_fetch_live_openrouter_models_derives_tool_calling_and_reasoning_per_model():
     from lfx.base.models import model_utils
 

@@ -31,6 +31,7 @@ import contextlib
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -185,6 +186,25 @@ def save_models_dev_snapshot(snapshot: dict[str, Any], path: Path | None = None)
 # ---------------------------------------------------------------------------
 
 
+_RELEASE_DATE_MIN_LEN = len("YYYY-MM-DD")
+
+
+def _release_date_to_epoch(value: Any) -> int:
+    """Convert a models.dev ``release_date`` (YYYY-MM-DD) to a Unix epoch.
+
+    Returns 0 for missing or unparseable values so downstream sort code can
+    treat "unknown" as a stable tier without special-casing.
+    """
+    if not isinstance(value, str) or len(value) < _RELEASE_DATE_MIN_LEN:
+        return 0
+    try:
+        # Date-only ISO 8601; interpret as UTC midnight.
+        dt = datetime.strptime(value[:_RELEASE_DATE_MIN_LEN], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return 0
+    return int(dt.timestamp())
+
+
 def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> dict[str, Any]:
     """Convert one models.dev model entry to Langflow's ``ModelMetadata`` shape.
 
@@ -195,6 +215,7 @@ def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> di
         ``limit.context``       -> ``context_window``
         ``cost.input``          -> ``cost_per_million_in``
         ``cost.output``         -> ``cost_per_million_out``
+        ``release_date``        -> ``created`` (Unix epoch)
     """
     model_id = model_dict.get("id") or ""
     modalities = model_dict.get("modalities") or {}
@@ -208,6 +229,7 @@ def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> di
         icon=provider_name,  # falls back to provider icon registry
         tool_calling=bool(model_dict.get("tool_call")),
         reasoning=bool(model_dict.get("reasoning")),
+        created=_release_date_to_epoch(model_dict.get("release_date")),
     )
     # Additive fields — kept as plain dict keys so existing consumers that read
     # the strict TypedDict shape stay happy while new consumers can pick them up.
