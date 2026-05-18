@@ -106,15 +106,21 @@ def test_fetch_live_openrouter_models_returns_empty_when_no_key():
         assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
 
 
-def test_fetch_live_openrouter_models_derives_tool_calling_per_model():
+def test_fetch_live_openrouter_models_derives_tool_calling_and_reasoning_per_model():
     from lfx.base.models import model_utils
 
     response = _models_payload(
         [
-            {"id": "anthropic/claude-3.5-sonnet", "supported_parameters": ["tools", "temperature"]},
+            # tools + reasoning both present
+            {"id": "anthropic/claude-opus", "supported_parameters": ["tools", "reasoning", "temperature"]},
+            # tools only
             {"id": "openai/gpt-4o", "supported_parameters": ["tools"]},
+            # reasoning only — e.g. older o1-style models
+            {"id": "openai/o1-think", "supported_parameters": ["reasoning"]},
+            # neither
             {"id": "perceptron/perceptron-mk1", "supported_parameters": ["temperature", "top_p"]},
-            {"id": "broken-model"},  # missing supported_parameters → False
+            # missing supported_parameters → both False
+            {"id": "broken-model"},
         ]
     )
     with (
@@ -129,10 +135,22 @@ def test_fetch_live_openrouter_models_derives_tool_calling_per_model():
     assert call.kwargs["headers"]["Authorization"].startswith("Bearer ")
 
     by_name = {m["name"]: m for m in result}
-    assert by_name["anthropic/claude-3.5-sonnet"]["tool_calling"] is True
+
+    assert by_name["anthropic/claude-opus"]["tool_calling"] is True
+    assert by_name["anthropic/claude-opus"]["reasoning"] is True
+
     assert by_name["openai/gpt-4o"]["tool_calling"] is True
+    assert by_name["openai/gpt-4o"]["reasoning"] is False
+
+    assert by_name["openai/o1-think"]["tool_calling"] is False
+    assert by_name["openai/o1-think"]["reasoning"] is True
+
     assert by_name["perceptron/perceptron-mk1"]["tool_calling"] is False
+    assert by_name["perceptron/perceptron-mk1"]["reasoning"] is False
+
     assert by_name["broken-model"]["tool_calling"] is False
+    assert by_name["broken-model"]["reasoning"] is False
+
     for entry in result:
         assert entry["provider"] == "OpenRouter"
         assert entry["icon"] == "OpenRouter"

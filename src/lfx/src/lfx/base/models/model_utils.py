@@ -400,8 +400,14 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
         if not mid:
             continue
         supported = raw.get("supported_parameters") or []
+        is_list = isinstance(supported, list)
         by_id[mid] = {
-            "tool_calling": isinstance(supported, list) and "tools" in supported,
+            "tool_calling": is_list and "tools" in supported,
+            # OpenRouter exposes "reasoning" (and "include_reasoning") in the
+            # supported_parameters array for reasoning-capable models — same
+            # signal shape as "tools". Drives the reasoning badge in the
+            # picker and lets Agent/LLM components filter on it.
+            "reasoning": is_list and "reasoning" in supported,
         }
     if not by_id:
         return []
@@ -417,6 +423,7 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
             name=name,
             icon="OpenRouter",
             tool_calling=by_id[name]["tool_calling"],
+            reasoning=by_id[name]["reasoning"],
             default=name in default_set,
         )
         for name in sorted_ids
