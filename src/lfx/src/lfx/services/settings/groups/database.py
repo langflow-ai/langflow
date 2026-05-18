@@ -126,13 +126,19 @@ class DatabaseSettings(BaseModel):
                 if Path(new_pre_path).exists():
                     final_path = new_pre_path
                 elif Path(new_path).exists() and info.data["save_db_in_config_dir"]:
-                    logger.debug("Copying existing database to new location")
-                    copy2(new_path, new_pre_path)
-                    logger.debug(f"Copied existing database to {new_pre_path}")
+                    try:
+                        logger.debug("Copying existing database to new location")
+                        copy2(new_path, new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    except OSError:
+                        logger.exception("Failed to copy database, using default path")
                 elif Path(f"./{db_file_name}").exists() and info.data["save_db_in_config_dir"]:
-                    logger.debug("Copying existing database to new location")
-                    copy2(f"./{db_file_name}", new_pre_path)
-                    logger.debug(f"Copied existing database to {new_pre_path}")
+                    try:
+                        logger.debug("Copying existing database to new location")
+                        copy2(f"./{db_file_name}", new_pre_path)
+                        logger.debug(f"Copied existing database to {new_pre_path}")
+                    except OSError:
+                        logger.exception("Failed to copy database, using default path")
                 else:
                     logger.debug(f"Creating new database at {new_pre_path}")
                     final_path = new_pre_path

@@ -38,9 +38,11 @@ class VariablesSettings(BaseModel):
 
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
-        # Add agentic variables if agentic_experience is enabled
-        # Check env var directly since we can't access instance attributes in validator
-        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "true").lower() == "true":
+        # Add agentic variables only if agentic_experience is explicitly enabled.
+        # Check env var directly because the field is declared after this validator
+        # runs, so info.data doesn't have it yet. Default matches the field default
+        # (agentic_experience: bool = False).
+        if os.getenv("LANGFLOW_AGENTIC_EXPERIENCE", "false").lower() == "true":
             result.extend(AGENTIC_VARIABLES)
 
         return list(set(result))

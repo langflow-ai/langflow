@@ -48,18 +48,10 @@ class ComponentsSettings(BaseModel):
         appended to the provided list if not already present. If the input list is empty or missing, it is
         set to an empty list.
         """
-        if os.getenv("LANGFLOW_COMPONENTS_PATH"):
-            logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if Path(langflow_component_path).exists() and langflow_component_path not in value:
-                if isinstance(langflow_component_path, list):
-                    for path in langflow_component_path:
-                        if path not in value:
-                            value.append(path)
-                    logger.debug(f"Extending {langflow_component_path} to components_path")
-                elif langflow_component_path not in value:
-                    value.append(langflow_component_path)
-                    logger.debug(f"Appending {langflow_component_path} to components_path")
+        env_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_path and Path(env_path).exists() and env_path not in value:
+            logger.debug(f"Appending {env_path} to components_path")
+            value.append(env_path)
 
         if not value:
             value = [BASE_COMPONENTS_PATH]
