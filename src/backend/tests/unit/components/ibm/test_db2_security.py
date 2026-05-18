@@ -63,7 +63,7 @@ class TestValidateIdentifier:
             "users/*comment*/",
         ]
         for name in malicious_names:
-            with pytest.raises(ValueError):
+            with pytest.raises(ValueError, match=r"Invalid|reserved SQL keyword"):
                 validate_identifier(name)
 
 
@@ -83,7 +83,7 @@ class TestSanitizeSqlString:
 
     def test_sanitize_none(self):
         """Test that None is converted to empty string."""
-        assert sanitize_sql_string(None) == ""
+        assert sanitize_sql_string(None) == ""  # type: ignore[arg-type]
 
     def test_sanitize_sql_injection_attempts(self):
         """Test that SQL injection attempts are escaped."""
@@ -105,9 +105,9 @@ class TestValidatePort:
     def test_invalid_port_type(self):
         """Test that non-integer ports are rejected."""
         with pytest.raises(ValueError, match="must be an integer"):
-            validate_port("50000")  # type: ignore
+            validate_port("50000")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="must be an integer"):
-            validate_port(50000.5)  # type: ignore
+            validate_port(50000.5)  # type: ignore[arg-type]
 
     def test_invalid_port_range(self):
         """Test that ports outside valid range are rejected."""
@@ -144,7 +144,7 @@ class TestValidateHostname:
             "xp_cmdshell",
         ]
         for host in malicious_hosts:
-            with pytest.raises(ValueError, match="(suspicious pattern|Invalid hostname format)"):
+            with pytest.raises(ValueError, match=r"(suspicious pattern|Invalid hostname format)"):
                 validate_hostname(host)
 
     def test_hostname_invalid_format(self):
@@ -168,11 +168,11 @@ class TestValidateSqlQuerySafety:
     def test_allowed_operations(self):
         """Test that only allowed operations pass when specified."""
         # Should pass - SELECT is allowed
-        validate_sql_query_safety("SELECT * FROM users", allowed_operations={'SELECT'})
-        
+        validate_sql_query_safety("SELECT * FROM users", allowed_operations={"SELECT"})
+
         # Should fail - INSERT not allowed
         with pytest.raises(ValueError, match="not allowed"):
-            validate_sql_query_safety("INSERT INTO users VALUES (1, 'test')", allowed_operations={'SELECT'})
+            validate_sql_query_safety("INSERT INTO users VALUES (1, 'test')", allowed_operations={"SELECT"})
 
     def test_empty_query(self):
         """Test that empty queries are rejected."""
@@ -252,9 +252,10 @@ class TestValidateDatabaseName:
 
     def test_invalid_database_names(self):
         """Test that invalid database names are rejected."""
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match=r"Invalid|reserved SQL keyword"):
             validate_database_name("db; DROP DATABASE;")
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="reserved SQL keyword"):
             validate_database_name("SELECT")  # Reserved keyword
+
 
 # Made with Bob

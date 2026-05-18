@@ -51,7 +51,7 @@ dependencies = [
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
     "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
-    "ibm-db>=3.2.3,<4.0.0",
+    "ibm-db>=3.2.9,<4.0.0",
 ]
 
 [project.scripts]

@@ -1,7 +1,5 @@
 """IBM Db2 Vector Store Component for Langflow."""
 
-from typing import TYPE_CHECKING
-
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.components.ibm.db2_security import (
     create_safe_error_message,
@@ -12,16 +10,9 @@ from lfx.components.ibm.db2_security import (
 )
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.io import Output, QueryInput, TabInput
+from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
-
-if TYPE_CHECKING:
-    import ibm_db_dbi
-    from langchain_community.vectorstores.utils import DistanceStrategy
-    from langchain_core.embeddings import Embeddings
-
-    from lfx.components.ibm.db2vs import DB2VS
 
 
 class DB2VectorStoreComponent(LCVectorStoreComponent):
@@ -160,10 +151,10 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
     def perform_search(self) -> DataFrame:
         """Return search results as a DataFrame."""
         from lfx.schema.dataframe import DataFrame
-        
+
         # Get search results
         results = self.search_documents()
-        
+
         # Return DataFrame wrapping the Data objects
         # DataFrame constructor will handle Data objects properly
         return DataFrame(results)
@@ -250,17 +241,17 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 from langchain_core.documents import Document
 
                 self.log(f"Starting data ingestion ({len(self.ingest_data)} items)")
-                
+
                 # OPTIMIZATION: Get existing document hashes if duplicate checking is enabled
                 # Use hash-based comparison instead of fetching all text content
                 stored_doc_hashes = set()
                 if not self.allow_duplicates:
                     try:
                         import hashlib
-                        
+
                         cursor = connection.cursor()
                         # Only fetch text for hash comparison, more efficient than storing all text
-                        cursor.execute(f"SELECT {vector_store.column_names['text']} FROM \"{validated_table_name}\"")
+                        cursor.execute(f'SELECT {vector_store.column_names["text"]} FROM "{validated_table_name}"')
                         for row in cursor.fetchall():
                             if row[0]:
                                 # Create hash of text content for efficient comparison
@@ -270,7 +261,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                         self.log(f"Found {len(stored_doc_hashes)} existing documents")
                     except Exception as e:
                         self.log(f"Warning: Could not check for duplicates: {e}")
-                
+
                 documents = []
                 for idx, data in enumerate(self.ingest_data):
                     # Reduced logging - only log every 100 items or first/last
@@ -411,7 +402,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                     # OPTIMIZATION: Filter out duplicates using hash-based comparison
                     if not self.allow_duplicates and stored_doc_hashes:
                         import hashlib
-                        
+
                         original_count = len(documents)
                         filtered_docs = []
                         for doc in documents:
@@ -444,8 +435,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                             if "VECTOR" in error_msg and "cannot be CAST" in error_msg:
                                 # DB2 vector dimension mismatch error
                                 msg = (
-                                    f"DB2 vector dimension mismatch: The table was created with a different "
-                                    f"vector dimension. Use a different table name or recreate the table."
+                                    "DB2 vector dimension mismatch: The table was created with a different "
+                                    "vector dimension. Use a different table name or recreate the table."
                                 )
                                 raise ValueError(msg) from e
                             # SECURITY: Use safe error messages
@@ -461,7 +452,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             raise
 
         return vector_store
-
 
     def search_documents(self) -> list[Data]:
         """Perform similarity search and return results."""
@@ -482,10 +472,10 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 if isinstance(self.search_query.data, dict):
                     # Extract text from common fields
                     query_text = (
-                        self.search_query.data.get("text") or
-                        self.search_query.data.get("content") or
-                        self.search_query.data.get("query") or
-                        str(self.search_query.data)
+                        self.search_query.data.get("text")
+                        or self.search_query.data.get("content")
+                        or self.search_query.data.get("query")
+                        or str(self.search_query.data)
                     )
                 else:
                     query_text = str(self.search_query.data)
@@ -515,16 +505,15 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
     def build(self):  # type: ignore[override]
         """Build the component based on the selected mode."""
         mode = getattr(self, "mode", "Ingest")
-        
+
         if mode == "Search":
             # Search mode: return search results
             return self.search_documents()
-        elif mode == "Vector Store":
+        if mode == "Vector Store":
             # Vector Store mode: return the vector store instance
             return self.build_vector_store()
-        else:
-            # Ingest mode (default): build vector store with data ingestion
-            return self.build_vector_store()
+        # Ingest mode (default): build vector store with data ingestion
+        return self.build_vector_store()
 
 
 # Made with Bob

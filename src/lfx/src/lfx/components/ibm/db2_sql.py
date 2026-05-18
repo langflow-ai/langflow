@@ -1,7 +1,5 @@
 """IBM Db2 SQL Component for Langflow."""
 
-from typing import TYPE_CHECKING
-
 from lfx.components.ibm.db2_security import (
     create_safe_error_message,
     validate_database_name,
@@ -13,9 +11,6 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.io import Output
 from lfx.schema.data import Data
-
-if TYPE_CHECKING:
-    import ibm_db_dbi
 
 
 class DB2SQLComponent(Component):
@@ -95,10 +90,10 @@ class DB2SQLComponent(Component):
 
     def execute_query(self) -> list[Data]:
         """Execute SQL query on Db2 database with security validations.
-        
+
         Returns:
             List of Data objects containing query results
-            
+
         Raises:
             ImportError: If DB2 packages are not installed
             ValueError: If inputs are invalid or query is unsafe
@@ -141,7 +136,7 @@ class DB2SQLComponent(Component):
         try:
             if self.read_only_mode:
                 # In read-only mode, only allow SELECT queries
-                validate_sql_query_safety(query_text, allowed_operations={'SELECT'})
+                validate_sql_query_safety(query_text, allowed_operations={"SELECT"})
             else:
                 # In read-write mode, validate but allow more operations
                 validate_sql_query_safety(query_text)
@@ -178,10 +173,12 @@ class DB2SQLComponent(Component):
             # Execute query with timeout
             cursor = conn.cursor()
             try:
-                # Note: DB2 doesn't support cursor.execute timeout directly
-                # Consider using connection-level timeout or statement timeout
+                # Set query timeout using DB2 special register
+                cursor.execute(f"SET CURRENT QUERY_TIMEOUT = {self.query_timeout}")
+                self.log(f"Set query timeout to {self.query_timeout} seconds")
+
                 cursor.execute(query_text)
-                self.log(f"Executed query successfully")
+                self.log("Executed query successfully")
 
                 # Fetch results
                 if cursor.description:
@@ -203,7 +200,7 @@ class DB2SQLComponent(Component):
                 # Query doesn't return results (INSERT, UPDATE, DELETE)
                 conn.commit()
                 affected_rows = cursor.rowcount
-                
+
                 self.log(f"Query affected {affected_rows} rows")
                 self.status = f"Query executed successfully. Affected {affected_rows} rows"
 

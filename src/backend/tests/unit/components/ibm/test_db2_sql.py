@@ -1,7 +1,8 @@
 """Unit tests for DB2 SQL Component."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, Mock
 from lfx.components.ibm.db2_sql import DB2SQLComponent
 from lfx.schema.data import Data
 
@@ -17,7 +18,7 @@ class TestDB2SQLComponent:
         comp.hostname = "localhost"
         comp.port = 50000
         comp.username = "testuser"
-        comp.password = "testpass"
+        comp.password = "testpass"  # pragma: allowlist secret
         comp.sql_query = "SELECT * FROM users"
         comp.max_rows = 100
         comp.read_only_mode = True
@@ -34,9 +35,11 @@ class TestDB2SQLComponent:
 
     def test_missing_ibm_db_package(self, component):
         """Test error when ibm_db package is not installed."""
-        with patch.dict('sys.modules', {'ibm_db_dbi': None}):
-            with pytest.raises(ImportError, match="Could not import required DB2 packages"):
-                component.execute_query()
+        with (
+            patch.dict("sys.modules", {"ibm_db_dbi": None}),
+            pytest.raises(ImportError, match="Could not import required DB2 packages"),
+        ):
+            component.execute_query()
 
     def test_invalid_database_name(self, component):
         """Test validation of database name."""
@@ -100,7 +103,7 @@ class TestDB2SQLComponent:
         component.max_rows = 0
         with pytest.raises(ValueError, match="max_rows must be between 1 and 10000"):
             component.execute_query()
-        
+
         component.max_rows = 10001
         with pytest.raises(ValueError, match="max_rows must be between 1 and 10000"):
             component.execute_query()
@@ -110,7 +113,7 @@ class TestDB2SQLComponent:
         component.query_timeout = 0
         with pytest.raises(ValueError, match="query_timeout must be between 1 and 300"):
             component.execute_query()
-        
+
         component.query_timeout = 301
         with pytest.raises(ValueError, match="query_timeout must be between 1 and 300"):
             component.execute_query()
@@ -120,12 +123,13 @@ class TestDB2SQLComponent:
 
     def test_database_error_handling(self, component):
         """Test handling of database errors."""
-        with patch('sys.modules', {'ibm_db_dbi': MagicMock()}):
+        with patch("sys.modules", {"ibm_db_dbi": MagicMock()}):
             import sys
-            mock_ibm_db_dbi = sys.modules['ibm_db_dbi']
+
+            mock_ibm_db_dbi = sys.modules["ibm_db_dbi"]
             mock_ibm_db_dbi.DatabaseError = Exception
             mock_ibm_db_dbi.connect.side_effect = Exception("SQL30081N Communication error")
-            
+
             with pytest.raises(RuntimeError, match="Connection failed"):
                 component.execute_query()
 
@@ -133,18 +137,44 @@ class TestDB2SQLComponent:
         """Test extracting query from Data object."""
         data = Data(data={"text": "SELECT * FROM products"})
         component.sql_query = data
-        
-        # Validation should pass - query is valid SELECT
-        assert True  # If we get here, validation passed
+
+        # Mock the database connection
+        with patch("lfx.components.ibm.db2_sql.ibm_db_dbi") as mock_ibm_db_dbi:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_cursor.fetchmany.return_value = []
+            mock_cursor.description = []
+            mock_conn.cursor.return_value = mock_cursor
+            mock_ibm_db_dbi.connect.return_value = mock_conn
+
+            component.execute_query()
+
+            # Verify cursor.execute was called with the extracted SQL
+            mock_cursor.execute.assert_called_once()
+            call_args = mock_cursor.execute.call_args[0][0]
+            assert "SELECT * FROM products" in call_args
 
     def test_query_from_message_object(self, component):
         """Test extracting query from Message-like object."""
         message = Mock()
         message.text = "SELECT * FROM products"
         component.sql_query = message
-        
-        # Validation should pass - query is valid SELECT
-        assert True  # If we get here, validation passed
+
+        # Mock the database connection
+        with patch("lfx.components.ibm.db2_sql.ibm_db_dbi") as mock_ibm_db_dbi:
+            mock_conn = MagicMock()
+            mock_cursor = MagicMock()
+            mock_cursor.fetchmany.return_value = []
+            mock_cursor.description = []
+            mock_conn.cursor.return_value = mock_cursor
+            mock_ibm_db_dbi.connect.return_value = mock_conn
+
+            component.execute_query()
+
+            # Verify cursor.execute was called with the extracted SQL
+            mock_cursor.execute.assert_called_once()
+            call_args = mock_cursor.execute.call_args[0][0]
+            assert "SELECT * FROM products" in call_args
 
 
 # Made with Bob

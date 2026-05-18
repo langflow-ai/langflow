@@ -6,18 +6,11 @@ import json
 import logging
 import os
 import uuid
+from collections.abc import Callable, Iterable
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Type,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -62,19 +55,17 @@ def _handle_exceptions(func: T) -> T:
         except RuntimeError as db_err:
             # Handle a known type of error (e.g., DB-related) specifically
             logger.exception("DB-related error occurred.")
-            raise RuntimeError(
-                "Failed due to a DB issue: {}".format(db_err)
-            ) from db_err
+            raise RuntimeError(f"Failed due to a DB issue: {db_err}") from db_err
         except ValueError as val_err:
             # Handle another known type of error specifically
             logger.exception("Validation error.")
-            raise ValueError("Validation failed: {}".format(val_err)) from val_err
+            raise ValueError(f"Validation failed: {val_err}") from val_err
         except Exception as e:
             # Generic handler for all other exceptions
-            logger.exception("An unexpected error occurred: {}".format(e))
-            raise RuntimeError("Unexpected error: {}".format(e)) from e
+            logger.exception(f"An unexpected error occurred: {e}")
+            raise RuntimeError(f"Unexpected error: {e}") from e
 
-    return cast(T, wrapper)
+    return cast("T", wrapper)
 
 
 def _table_exists(client: Connection, table_name: str) -> bool:
@@ -90,13 +81,13 @@ def _table_exists(client: Connection, table_name: str) -> bool:
     return True
 
 
-def _get_column_names(client: Connection, table_name: str) -> Dict[str, str]:
+def _get_column_names(client: Connection, table_name: str) -> dict[str, str]:
     """Detect actual column names in the table (quoted or unquoted).
-    
+
     Handles common column name variations:
     - 'text' can be 'TEXT', 'CONTENT', or 'text'
     - 'metadata' can be 'METADATA', 'META', or 'metadata'
-    
+
     Returns a dict mapping logical names to actual column identifiers.
     For example: {'id': 'ID', 'text': 'CONTENT', 'metadata': 'META', 'embedding': 'EMBEDDING'}
     """
@@ -111,22 +102,17 @@ def _get_column_names(client: Connection, table_name: str) -> Dict[str, str]:
         """
         cursor.execute(query, (table_name.upper(),))
         results = cursor.fetchall()
-        
+
         if not results:
             # Table doesn't exist or no columns found, return quoted defaults
-            return {
-                'id': '"id"',
-                'text': '"text"',
-                'metadata': '"metadata"',
-                'embedding': '"embedding"'
-            }
-        
+            return {"id": '"id"', "text": '"text"', "metadata": '"metadata"', "embedding": '"embedding"'}
+
         # Build a map of actual column names found in the table
         actual_columns = {}
         for row in results:
             col_name = row[0].strip()
             col_lower = col_name.lower()
-            
+
             # Check if column is uppercase (unquoted) or mixed case (quoted)
             if col_name == col_name.upper():
                 # Unquoted column - use without quotes
@@ -134,28 +120,28 @@ def _get_column_names(client: Connection, table_name: str) -> Dict[str, str]:
             else:
                 # Quoted column - use with quotes
                 actual_columns[col_lower] = f'"{col_name}"'
-        
+
         # Map logical names to actual column names with aliases
         column_map = {}
-        
+
         # ID column
-        column_map['id'] = actual_columns.get('id', actual_columns.get('_id', '"id"'))
-        
+        column_map["id"] = actual_columns.get("id", actual_columns.get("_id", '"id"'))
+
         # TEXT column (can be 'text', 'content', 'data', etc.)
-        column_map['text'] = actual_columns.get('text',
-                                                actual_columns.get('content',
-                                                actual_columns.get('data', '"text"')))
-        
+        column_map["text"] = actual_columns.get(
+            "text", actual_columns.get("content", actual_columns.get("data", '"text"'))
+        )
+
         # METADATA column (can be 'metadata', 'meta', 'properties', etc.)
-        column_map['metadata'] = actual_columns.get('metadata',
-                                                    actual_columns.get('meta',
-                                                    actual_columns.get('properties', '"metadata"')))
-        
+        column_map["metadata"] = actual_columns.get(
+            "metadata", actual_columns.get("meta", actual_columns.get("properties", '"metadata"'))
+        )
+
         # EMBEDDING column
-        column_map['embedding'] = actual_columns.get('embedding',
-                                                     actual_columns.get('vector',
-                                                     actual_columns.get('embeddings', '"embedding"')))
-        
+        column_map["embedding"] = actual_columns.get(
+            "embedding", actual_columns.get("vector", actual_columns.get("embeddings", '"embedding"'))
+        )
+
         logger.info(f"Column mapping for table {table_name}: {column_map}")
         return column_map
     finally:
@@ -182,18 +168,18 @@ def _get_distance_function(distance_strategy: DistanceStrategy) -> str:
 @_handle_exceptions
 def _create_table(client: Connection, table_name: str, embedding_dim: int) -> None:
     """Create a table for vector storage with validated table name.
-    
+
     Args:
         client: Database connection
         table_name: Name of the table to create (will be validated)
         embedding_dim: Dimension of the embedding vectors
-        
+
     Raises:
         ValueError: If table name is invalid
     """
     # Validate table name to prevent SQL injection
     validated_table_name = validate_identifier(table_name, "table name")
-    
+
     cols_dict = {
         "id": "VARCHAR(100) PRIMARY KEY NOT NULL",
         "text": "CLOB(10M)",
@@ -204,9 +190,7 @@ def _create_table(client: Connection, table_name: str, embedding_dim: int) -> No
     if not _table_exists(client, validated_table_name):
         cursor = client.cursor()
         try:
-            ddl_body = ", ".join(
-                f'"{col_name}" {col_type}' for col_name, col_type in cols_dict.items()
-            )
+            ddl_body = ", ".join(f'"{col_name}" {col_type}' for col_name, col_type in cols_dict.items())
             # Use validated table name in query
             ddl = f'CREATE TABLE "{validated_table_name}" ({ddl_body})'
             cursor.execute(ddl)
@@ -229,34 +213,37 @@ def drop_table(client: Connection, table_name: str) -> None:
     Raises:
         RuntimeError: If an error occurs while dropping the table.
     """
-    if _table_exists(client, table_name):
+    # Validate table name before using it in SQL
+    validated_table_name = validate_identifier(table_name, "table name")
+    quoted_table_name = f'"{validated_table_name}"'
+
+    if _table_exists(client, validated_table_name):
         cursor = client.cursor()
-        ddl = f"DROP TABLE {table_name}"
+        ddl = f"DROP TABLE {quoted_table_name}"
         try:
             cursor.execute(ddl)
             cursor.execute("COMMIT")
-            logger.info(f"Table {table_name} dropped successfully...")
+            logger.info(f"Table {validated_table_name} dropped successfully...")
         finally:
             cursor.close()
     else:
-        logger.info(f"Table {table_name} not found...")
-    return
+        logger.info(f"Table {validated_table_name} not found...")
 
 
 def _update_empty_embeddings(
     client: Connection,
     table_name: str,
-    embedding_function: Union[Callable[[str], List[float]], Embeddings],
-    column_names: Dict[str, str],
+    embedding_function: Callable[[str], list[float]] | Embeddings,
+    column_names: dict[str, str],
 ) -> int:
     """Update rows that have NULL or empty embeddings.
-    
+
     Args:
         client: The ibm_db_dbi connection object.
         table_name: The name of the table.
         embedding_function: Function to generate embeddings.
         column_names: Dictionary mapping logical column names to actual column names.
-        
+
     Returns:
         Number of rows updated.
     """
@@ -265,34 +252,34 @@ def _update_empty_embeddings(
         # Find rows with NULL or empty embeddings
         # Check for both NULL values and empty vectors
         query = f"""
-        SELECT {column_names['id']}, {column_names['text']}
+        SELECT {column_names["id"]}, {column_names["text"]}
         FROM {table_name}
-        WHERE {column_names['embedding']} IS NULL
+        WHERE {column_names["embedding"]} IS NULL
         """
         cursor.execute(query)
         rows = cursor.fetchall()
-        
+
         if not rows:
             logger.info(f"No rows with NULL embeddings found in {table_name}")
             logger.info("Checking for rows with TEXT but no corresponding data...")
-            
+
             # Also check if there are rows with text but we need to verify the table structure
             count_query = f"SELECT COUNT(*) FROM {table_name} WHERE {column_names['text']} IS NOT NULL"
             cursor.execute(count_query)
             total_rows = cursor.fetchone()[0]
             logger.info(f"Total rows with text in table: {total_rows}")
-            
+
             if total_rows == 0:
                 logger.info(f"No rows with text found in {table_name} - table appears to be empty")
-            
+
             return 0
-        
+
         logger.info(f"Found {len(rows)} rows with empty embeddings in {table_name}")
-        
+
         # Generate embeddings for texts
         texts = [row[1] if row[1] is not None else "" for row in rows]
         ids = [row[0] for row in rows]
-        
+
         # Generate embeddings
         if isinstance(embedding_function, Embeddings):
             embeddings = embedding_function.embed_documents(texts)
@@ -300,24 +287,24 @@ def _update_empty_embeddings(
             embeddings = [embedding_function(text) for text in texts]
         else:
             raise TypeError("The embedding_function is neither Embeddings nor callable.")
-        
+
         # Get embedding dimension
         embedding_dim = len(embeddings[0]) if embeddings else 0
-        
+
         # Update each row with its embedding
         update_query = f"""
         UPDATE {table_name}
-        SET {column_names['embedding']} = VECTOR(?, {embedding_dim}, FLOAT32)
-        WHERE {column_names['id']} = ?
+        SET {column_names["embedding"]} = VECTOR(?, {embedding_dim}, FLOAT32)
+        WHERE {column_names["id"]} = ?
         """
-        
-        update_data = [(f"{emb}", id_) for emb, id_ in zip(embeddings, ids)]
+
+        update_data = [(f"{emb}", id_) for emb, id_ in zip(embeddings, ids, strict=False)]
         cursor.executemany(update_query, update_data)
         cursor.execute("COMMIT")
-        
+
         logger.info(f"Successfully updated {len(rows)} rows with embeddings")
         return len(rows)
-        
+
     except Exception as e:
         logger.exception(f"Error updating empty embeddings: {e}")
         cursor.execute("ROLLBACK")
@@ -337,17 +324,14 @@ class DB2VS(VectorStore):
     def __init__(
         self,
         client: Connection,
-        embedding_function: Union[
-            Callable[[str], List[float]],
-            Embeddings,
-        ],
+        embedding_function: Callable[[str], list[float]] | Embeddings,
         table_name: str,
         distance_strategy: DistanceStrategy = DistanceStrategy.EUCLIDEAN_DISTANCE,
-        query: Optional[str] = "What is a Db2 database",
-        params: Optional[Dict[str, Any]] = None,
+        query: str | None = "What is a Db2 database",
+        params: dict[str, Any] | None = None,
     ):
         """Initialize DB2 vector store with security validations.
-        
+
         Args:
             client: IBM DB2 database connection
             embedding_function: Function or Embeddings object to generate embeddings
@@ -355,7 +339,7 @@ class DB2VS(VectorStore):
             distance_strategy: Strategy for distance calculation
             query: Optional default query
             params: Optional additional parameters
-            
+
         Raises:
             ValueError: If table name is invalid or other validation fails
             RuntimeError: If database operations fail
@@ -363,10 +347,10 @@ class DB2VS(VectorStore):
         try:
             # SECURITY: Validate table name before any operations
             validated_table_name = validate_identifier(table_name, "table name")
-            
+
             self.client = client
             self.table_name = validated_table_name
-            
+
             if not isinstance(embedding_function, Embeddings):
                 logger.warning(
                     "`embedding_function` is expected to be an Embeddings "
@@ -377,18 +361,18 @@ class DB2VS(VectorStore):
             self.query = query
             self.distance_strategy = distance_strategy
             self.params = params
-            
+
             # Get embedding dimension
             embedding_dim = self.get_embedding_dimension()
-            
+
             # Check if table exists before creating
             table_existed = _table_exists(client, validated_table_name)
             _create_table(client, validated_table_name, embedding_dim)
-            
+
             # Detect actual column names (quoted or unquoted)
             self.column_names = _get_column_names(client, validated_table_name)
             logger.debug(f"Detected column names: {self.column_names}")
-            
+
             # If table already existed, check for and update rows with empty embeddings
             if table_existed:
                 logger.debug(f"Table {validated_table_name} exists - checking for empty embeddings")
@@ -419,46 +403,39 @@ class DB2VS(VectorStore):
             raise RuntimeError(safe_msg) from ex
 
     @property
-    def embeddings(self) -> Optional[Embeddings]:
-        """
-        A property that returns an Embeddings instance if embedding_function
+    def embeddings(self) -> Embeddings | None:
+        """A property that returns an Embeddings instance if embedding_function
         is an instance of Embeddings, otherwise returns None.
 
         Returns:
             Optional[Embeddings]: Embeddings instance if embedding_function
             is an instance of Embeddings, otherwise returns None.
         """
-        return (
-            self.embedding_function
-            if isinstance(self.embedding_function, Embeddings)
-            else None
-        )
+        return self.embedding_function if isinstance(self.embedding_function, Embeddings) else None
 
     def get_embedding_dimension(self) -> int:
         """Get the dimension of embeddings from the embedding function."""
         # Embed the single document by wrapping it in a list
-        embedded_document = self._embed_documents(
-            [self.query if self.query is not None else ""]
-        )
+        embedded_document = self._embed_documents([self.query if self.query is not None else ""])
 
         # Get the first (and only) embedding's dimension
         return len(embedded_document[0])
-    
-    def _validate_embedding_dimension(self, embeddings: List[List[float]]) -> None:
+
+    def _validate_embedding_dimension(self, embeddings: list[list[float]]) -> None:
         """Validate that embeddings match the table's vector dimension.
-        
+
         Args:
             embeddings: List of embedding vectors to validate
-            
+
         Raises:
             ValueError: If embedding dimensions don't match table dimension
         """
         if not embeddings:
             return
-        
+
         actual_dim = len(embeddings[0])
         expected_dim = self.get_embedding_dimension()
-        
+
         if actual_dim != expected_dim:
             raise ValueError(
                 f"Embedding dimension mismatch: expected {expected_dim}, "
@@ -467,59 +444,49 @@ class DB2VS(VectorStore):
                 f"drop_table() or use an embedding model with {expected_dim} dimensions."
             )
 
-    def _embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def _embed_documents(self, texts: list[str]) -> list[list[float]]:
         if isinstance(self.embedding_function, Embeddings):
             return self.embedding_function.embed_documents(texts)
-        elif callable(self.embedding_function):
+        if callable(self.embedding_function):
             return [self.embedding_function(text) for text in texts]
-        else:
-            raise TypeError(
-                "The embedding_function is neither Embeddings nor callable."
-            )
+        raise TypeError("The embedding_function is neither Embeddings nor callable.")
 
-    def _embed_query(self, text: str) -> List[float]:
+    def _embed_query(self, text: str) -> list[float]:
         if isinstance(self.embedding_function, Embeddings):
             return self.embedding_function.embed_query(text)
-        else:
-            return self.embedding_function(text)
+        return self.embedding_function(text)
 
     @_handle_exceptions
     def add_texts(
         self,
         texts: Iterable[str],
-        metadatas: Optional[List[Dict[Any, Any]]] = None,
-        ids: Optional[List[str]] = None,
+        metadatas: list[dict[Any, Any]] | None = None,
+        ids: list[str] | None = None,
         **kwargs: Any,
-    ) -> List[str]:
+    ) -> list[str]:
         """Add more texts to the vectorstore.
-        
+
         Args:
             texts: Iterable of strings to add to the vectorstore.
             metadatas: Optional list of metadatas associated with the texts.
             ids: Optional list of ids for the texts that are being added to the vector store.
             kwargs: vectorstore specific parameters
-            
+
         Returns:
             List of ids from adding the texts into the vectorstore.
-            
+
         Raises:
             ValueError: If inputs are invalid or embedding dimensions don't match
         """
         texts = list(texts)
 
         if metadatas and len(metadatas) != len(texts):
-            msg = (
-                f"metadatas must be the same length as texts. "
-                f"Got {len(metadatas)} metadatas and {len(texts)} texts."
-            )
+            msg = f"metadatas must be the same length as texts. Got {len(metadatas)} metadatas and {len(texts)} texts."
             raise ValueError(msg)
 
         if ids:
             if len(ids) != len(texts):
-                msg = (
-                    f"ids must be the same length as texts. "
-                    f"Got {len(ids)} ids and {len(texts)} texts."
-                )
+                msg = f"ids must be the same length as texts. Got {len(ids)} ids and {len(texts)} texts."
                 raise ValueError(msg)
             # Use actual IDs directly (validated for length)
             processed_ids = [str(_id)[:100] for _id in ids]  # Limit to VARCHAR(100)
@@ -535,56 +502,51 @@ class DB2VS(VectorStore):
                         processed_ids.append(str(metadata["id"])[:100])
                     else:
                         # Only generate ID if not provided
-                        processed_ids.append(
-                            hashlib.sha256(str(uuid.uuid4()).encode())
-                            .hexdigest()[:16]
-                            .upper()
-                        )
+                        processed_ids.append(hashlib.sha256(str(uuid.uuid4()).encode()).hexdigest()[:16].upper())
         else:
             # Generate new ids if none are provided
             generated_ids = [str(uuid.uuid4()) for _ in texts]
-            processed_ids = [
-                hashlib.sha256(_id.encode()).hexdigest()[:16].upper()
-                for _id in generated_ids
-            ]
+            processed_ids = [hashlib.sha256(_id.encode()).hexdigest()[:16].upper() for _id in generated_ids]
 
         # Generate embeddings
         embeddings = self._embed_documents(texts)
-        
+
         # CRITICAL: Validate embedding dimensions before insert
         self._validate_embedding_dimension(embeddings)
-        
+
         if not metadatas:
             metadatas = [{} for _ in texts]
 
         embeddingLen = self.get_embedding_dimension()
-        
+
         cursor = self.client.cursor()
         try:
             logger.debug(f"Inserting {len(processed_ids)} documents into {self.table_name}")
-            
+
             # SECURITY FIX: Use parameterized queries where possible
             # For DB2 VECTOR() function, we need to use string formatting but with proper sanitization
-            for idx, (id_, embedding, metadata, text) in enumerate(zip(processed_ids, embeddings, metadatas, texts), 1):
+            for idx, (id_, embedding, metadata, text) in enumerate(
+                zip(processed_ids, embeddings, metadatas, texts, strict=False), 1
+            ):
                 # Convert numpy array to Python list if needed
-                if hasattr(embedding, 'tolist'):
+                if hasattr(embedding, "tolist"):
                     embedding_list = embedding.tolist()
                 else:
                     embedding_list = list(embedding)
-                
+
                 # Format as string for VECTOR() function
                 vector_str = str(embedding_list)
-                
+
                 # SECURITY: Properly sanitize text using SQL-safe escaping
                 text_sanitized = sanitize_sql_string(text) if text else ""
-                
+
                 # SECURITY: Sanitize metadata JSON
                 metadata_json = json.dumps(metadata)
                 metadata_sanitized = sanitize_sql_string(metadata_json)
-                
+
                 # SECURITY: Sanitize ID (already limited to 100 chars)
                 id_sanitized = sanitize_sql_string(id_)
-                
+
                 # Build SQL with sanitized values
                 # Note: table_name and column_names are validated during initialization
                 SQL_INSERT = f"""
@@ -592,13 +554,13 @@ class DB2VS(VectorStore):
                 ({self.column_names["id"]}, {self.column_names["embedding"]}, {self.column_names["metadata"]}, {self.column_names["text"]})
                 VALUES ('{id_sanitized}', VECTOR('{vector_str}', {embeddingLen}, FLOAT32), '{metadata_sanitized}', '{text_sanitized}')
                 """
-                
+
                 # Reduced logging - only log summary
                 if idx == 1:
                     logger.debug(f"Inserting documents 1-{len(processed_ids)} into {self.table_name}")
-                
+
                 cursor.execute(SQL_INSERT)
-            
+
             cursor.execute("COMMIT")
             logger.debug(f"Successfully inserted {len(processed_ids)} documents")
         except Exception as e:
@@ -618,10 +580,11 @@ class DB2VS(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs most similar to query.
+
         Args:
             query: str,
             k: int, the number for documents to retrieve
@@ -629,20 +592,17 @@ class DB2VS(VectorStore):
         Return:
             List[Document]: documents most similar to a query
         """
-        if isinstance(self.embedding_function, Embeddings):
-            embedding = self.embedding_function.embed_query(query)
-        documents = self.similarity_search_by_vector(
-            embedding=embedding, k=k, filter=filter, **kwargs
-        )
+        embedding = self._embed_query(query)
+        documents = self.similarity_search_by_vector(embedding=embedding, k=k, filter=filter, **kwargs)
         return documents
 
     def similarity_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: int = 4,
-        filter: Optional[dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         docs_and_scores = self.similarity_search_by_vector_with_relevance_scores(
             embedding=embedding, k=k, filter=filter, **kwargs
         )
@@ -652,9 +612,9 @@ class DB2VS(VectorStore):
         self,
         query: str,
         k: int = 4,
-        filter: Optional[dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         """Return docs most similar to query."""
         if isinstance(self.embedding_function, Embeddings):
             embedding = self.embedding_function.embed_query(query)
@@ -666,19 +626,19 @@ class DB2VS(VectorStore):
     @_handle_exceptions
     def similarity_search_by_vector_with_relevance_scores(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: int = 4,
-        filter: Optional[dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float]]:
+    ) -> list[tuple[Document, float]]:
         docs_and_scores = []
         embeddingLen = self.get_embedding_dimension()
 
         query = f"""
-        SELECT {self.column_names['id']},
-          {self.column_names['text']},
-          {self.column_names['metadata']},
-          vector_distance({self.column_names['embedding']}, VECTOR('{embedding}', {embeddingLen}, FLOAT32),
+        SELECT {self.column_names["id"]},
+          {self.column_names["text"]},
+          {self.column_names["metadata"]},
+          vector_distance({self.column_names["embedding"]}, VECTOR('{embedding}', {embeddingLen}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance
         FROM {self.table_name}
         ORDER BY distance
@@ -690,16 +650,16 @@ class DB2VS(VectorStore):
         # Log the query with truncated embedding
         embedding_preview = str(embedding[:3]) + "..." + str(embedding[-3:])
         query_preview = f"""
-        SELECT {self.column_names['id']},
-          {self.column_names['text']},
-          {self.column_names['metadata']},
-          vector_distance({self.column_names['embedding']}, VECTOR('[{embedding_preview}]', {embeddingLen}, FLOAT32),
+        SELECT {self.column_names["id"]},
+          {self.column_names["text"]},
+          {self.column_names["metadata"]},
+          vector_distance({self.column_names["embedding"]}, VECTOR('[{embedding_preview}]', {embeddingLen}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance
         FROM {self.table_name}
         ORDER BY distance
         FETCH FIRST {k} ROWS ONLY
         """
-        logger.info(f"🔍 Executing similarity search query:")
+        logger.info("🔍 Executing similarity search query:")
         logger.info(f"   Table: {self.table_name}")
         logger.info(f"   Distance strategy: {_get_distance_function(self.distance_strategy)}")
         logger.info(f"   Top K: {k}")
@@ -719,7 +679,7 @@ class DB2VS(VectorStore):
                 if meta_raw is None:
                     metadata = {}
                 elif isinstance(meta_raw, (bytes, memoryview)):
-                    metadata = json.loads(bytes(meta_raw).decode('utf-8'))
+                    metadata = json.loads(bytes(meta_raw).decode("utf-8"))
                 elif isinstance(meta_raw, str):
                     metadata = json.loads(meta_raw)
                 else:
@@ -748,21 +708,21 @@ class DB2VS(VectorStore):
     @_handle_exceptions
     def similarity_search_by_vector_returning_embeddings(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: int,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Tuple[Document, float, np.ndarray]]:
+    ) -> list[tuple[Document, float, np.ndarray]]:
         documents = []
         embeddingLen = self.get_embedding_dimension()
 
         query = f"""
-        SELECT {self.column_names['id']},
-          {self.column_names['text']},
-          {self.column_names['metadata']},
-          vector_distance({self.column_names['embedding']}, VECTOR('{embedding}', {embeddingLen}, FLOAT32),
+        SELECT {self.column_names["id"]},
+          {self.column_names["text"]},
+          {self.column_names["metadata"]},
+          vector_distance({self.column_names["embedding"]}, VECTOR('{embedding}', {embeddingLen}, FLOAT32),
           {_get_distance_function(self.distance_strategy)}) as distance,
-          {self.column_names['embedding']}
+          {self.column_names["embedding"]}
         FROM {self.table_name}
         ORDER BY distance
         FETCH FIRST {k} ROWS ONLY
@@ -778,13 +738,13 @@ class DB2VS(VectorStore):
 
             for result in results:
                 page_content_str = result[1] if result[1] is not None else ""
-                
+
                 # Handle metadata - convert memoryview/bytes to string if needed
                 meta_raw = result[2]
                 if meta_raw is None:
                     metadata = {}
                 elif isinstance(meta_raw, (bytes, memoryview)):
-                    metadata = json.loads(bytes(meta_raw).decode('utf-8'))
+                    metadata = json.loads(bytes(meta_raw).decode("utf-8"))
                 elif isinstance(meta_raw, str):
                     metadata = json.loads(meta_raw)
                 else:
@@ -792,12 +752,8 @@ class DB2VS(VectorStore):
 
                 # Apply filter if provided and matches; otherwise, add all
                 # documents
-                if not filter or all(
-                    metadata.get(key) in value for key, value in filter.items()
-                ):
-                    document = Document(
-                        page_content=page_content_str, metadata=metadata
-                    )
+                if not filter or all(metadata.get(key) in value for key, value in filter.items()):
+                    document = Document(page_content=page_content_str, metadata=metadata)
                     distance = result[3]
 
                     # Assuming result[4] is already in the correct format;
@@ -816,13 +772,13 @@ class DB2VS(VectorStore):
     @_handle_exceptions
     def max_marginal_relevance_search_with_score_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         *,
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: Optional[Dict[str, Any]] = None,
-    ) -> List[Tuple[Document, float]]:
+        filter: dict[str, Any] | None = None,
+    ) -> list[tuple[Document, float]]:
         """Return docs and their similarity scores selected using the
         maximal marginal relevance.
 
@@ -841,11 +797,11 @@ class DB2VS(VectorStore):
                        of diversity among the results with 0 corresponding
                        to maximum diversity and 1 to minimum diversity.
                        The default value is 0.5.
+
         Returns:
             List of Documents and similarity scores selected by maximal
             marginal relevance and score for each.
         """
-
         # Fetch documents and their scores
         docs_scores_embeddings = self.similarity_search_by_vector_returning_embeddings(
             embedding, fetch_k, filter=filter
@@ -855,7 +811,7 @@ class DB2VS(VectorStore):
         # If you need to split documents and scores for processing (e.g.,
         # for MMR calculation)
         documents, scores, embeddings = (
-            zip(*docs_scores_embeddings) if docs_scores_embeddings else ([], [], [])
+            zip(*docs_scores_embeddings, strict=False) if docs_scores_embeddings else ([], [], [])
         )
 
         # Assume maximal_marginal_relevance method accepts embeddings and
@@ -868,22 +824,20 @@ class DB2VS(VectorStore):
         )
 
         # Filter documents based on MMR-selected indices and map scores
-        mmr_selected_documents_with_scores = [
-            (documents[i], scores[i]) for i in mmr_selected_indices
-        ]
+        mmr_selected_documents_with_scores = [(documents[i], scores[i]) for i in mmr_selected_indices]
 
         return mmr_selected_documents_with_scores
 
     @_handle_exceptions
     def max_marginal_relevance_search_by_vector(
         self,
-        embedding: List[float],
+        embedding: list[float],
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance.
 
         Maximal marginal relevance optimizes for similarity to query AND
@@ -915,9 +869,9 @@ class DB2VS(VectorStore):
         k: int = 4,
         fetch_k: int = 20,
         lambda_mult: float = 0.5,
-        filter: Optional[Dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> List[Document]:
+    ) -> list[Document]:
         """Return docs selected using the maximal marginal relevance.
 
         Maximal marginal relevance optimizes for similarity to query AND
@@ -952,64 +906,58 @@ class DB2VS(VectorStore):
         return documents
 
     @_handle_exceptions
-    def delete(self, ids: Optional[List[str]] = None, **kwargs: Any) -> None:
+    def delete(self, ids: list[str] | None = None, **kwargs: Any) -> None:
         """Delete by vector IDs.
+
         Args:
           self: An instance of the class
-          ids: List of ids to delete.
+          ids: List of ids to delete (already hashed from add_texts).
           **kwargs
         """
-
         if ids is None:
             raise ValueError("No ids provided to delete.")
 
-        # Compute SHA-256 hashes of the ids and truncate them
-        hashed_ids = [
-            hashlib.sha256(_id.encode()).hexdigest()[:16].upper() for _id in ids
-        ]
+        # IDs are already hashed and truncated from add_texts, use them directly
+        # Normalize to uppercase to match the format used in add_texts
+        normalized_ids = [_id.upper()[:16] for _id in ids]
 
         # Constructing the SQL statement with individual placeholders
-        placeholders = ", ".join(["?" for i in range(len(hashed_ids))])
+        placeholders = ", ".join(["?" for _ in range(len(normalized_ids))])
 
-        ddl = f'DELETE FROM {self.table_name} WHERE {self.column_names["id"]} IN ({placeholders})'
+        ddl = f'DELETE FROM "{self.table_name}" WHERE {self.column_names["id"]} IN ({placeholders})'
         cursor = self.client.cursor()
         try:
-            cursor.execute(ddl, hashed_ids)
+            cursor.execute(ddl, normalized_ids)
             cursor.execute("COMMIT")
         finally:
             cursor.close()
 
     def update_empty_embeddings(self) -> int:
         """Update rows in the table that have NULL or empty embeddings.
-        
+
         This method is useful when you have an existing table with data but
         empty embedding columns. It will:
         1. Find all rows where the embedding column is NULL
         2. Generate embeddings for the text in those rows
         3. Update the rows with the generated embeddings
-        
+
         Returns:
             int: Number of rows that were updated with embeddings
-            
+
         Example:
             >>> vector_store = DB2VS(...)
             >>> updated_count = vector_store.update_empty_embeddings()
             >>> print(f"Updated {updated_count} rows with embeddings")
         """
-        return _update_empty_embeddings(
-            self.client,
-            self.table_name,
-            self.embedding_function,
-            self.column_names
-        )
+        return _update_empty_embeddings(self.client, self.table_name, self.embedding_function, self.column_names)
 
     @classmethod
     @_handle_exceptions
     def from_texts(
-        cls: Type[DB2VS],
+        cls: type[DB2VS],
         texts: Iterable[str],
         embedding: Embeddings,
-        metadatas: Optional[List[dict]] = None,
+        metadatas: list[dict] | None = None,
         **kwargs: Any,
     ) -> DB2VS:
         """Return VectorStore initialized from texts and embeddings."""
@@ -1020,13 +968,10 @@ class DB2VS(VectorStore):
 
         table_name = str(kwargs.get("table_name", "langchain"))
 
-        distance_strategy = cast(
-            DistanceStrategy, kwargs.get("distance_strategy", None)
-        )
+        # Get distance_strategy with default
+        distance_strategy = kwargs.get("distance_strategy", DistanceStrategy.COSINE)
         if not isinstance(distance_strategy, DistanceStrategy):
-            raise TypeError(
-                f"Expected DistanceStrategy got {type(distance_strategy).__name__} "
-            )
+            raise TypeError(f"Expected DistanceStrategy got {type(distance_strategy).__name__} ")
 
         query = kwargs.get("query", "What is a Db2 database")
 

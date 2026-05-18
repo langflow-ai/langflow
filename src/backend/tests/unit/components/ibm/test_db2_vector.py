@@ -1,13 +1,41 @@
 """Unit tests for DB2 Vector Store Component."""
 
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, Mock
 from lfx.components.ibm.db2_vector import DB2VectorStoreComponent
 from lfx.schema.data import Data
 
 
 class TestDB2VectorStoreComponent:
     """Test DB2 Vector Store Component."""
+
+    @pytest.fixture
+    def component_class(self):
+        """Return the component class for testing."""
+        return DB2VectorStoreComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        """Return default kwargs for component initialization."""
+        return {
+            "collection_name": "test_vectors",
+            "database": "TESTDB",
+            "hostname": "localhost",
+            "port": 50000,
+            "username": "testuser",
+            "password": "testpass",  # pragma: allowlist secret
+            "search_type": "Similarity",
+            "number_of_results": 4,
+            "distance_strategy": "COSINE",
+            "allow_duplicates": True,
+            "should_cache_vector_store": False,
+        }
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        """Return file names mapping for the component."""
+        return {"DB2VectorStore": "db2_vector.py"}
 
     @pytest.fixture
     def component(self):
@@ -18,7 +46,7 @@ class TestDB2VectorStoreComponent:
         comp.hostname = "localhost"
         comp.port = 50000
         comp.username = "testuser"
-        comp.password = "testpass"
+        comp.password = "testpass"  # pragma: allowlist secret
         comp.search_query = "test query"
         comp.search_type = "Similarity"
         comp.number_of_results = 4
@@ -46,9 +74,11 @@ class TestDB2VectorStoreComponent:
     def test_missing_ibm_db_package(self, component, mock_embedding):
         """Test error when ibm_db package is not installed."""
         component.embedding = mock_embedding
-        with patch.dict('sys.modules', {'ibm_db_dbi': None}):
-            with pytest.raises(ImportError, match="Could not import required DB2 packages"):
-                component.build_vector_store()
+        with (
+            patch.dict("sys.modules", {"ibm_db_dbi": None}),
+            pytest.raises(ImportError, match="Could not import required DB2 packages"),
+        ):
+            component.build_vector_store()
 
     def test_invalid_database_name(self, component, mock_embedding):
         """Test validation of database name."""
@@ -101,28 +131,29 @@ class TestDB2VectorStoreComponent:
         """Test extracting search query from Data object."""
         data = Data(data={"text": "search query"})
         component.search_query = data
-        
+
         # Mock the build_vector_store to avoid actual DB connection
-        with patch.object(component, 'build_vector_store') as mock_build:
+        with patch.object(component, "build_vector_store") as mock_build:
             mock_vector_store = MagicMock()
             mock_vector_store.similarity_search.return_value = []
             mock_build.return_value = mock_vector_store
-            
+
             component.search_documents()
-            
+
             # Verify search was called with extracted text
             mock_vector_store.similarity_search.assert_called_once()
             call_args = mock_vector_store.similarity_search.call_args
-            assert call_args[1]['query'] == "search query"
+            assert call_args[1]["query"] == "search query"
 
     def test_perform_search_returns_dataframe(self, component):
         """Test that perform_search returns a DataFrame."""
-        with patch.object(component, 'search_documents') as mock_search:
+        with patch.object(component, "search_documents") as mock_search:
             mock_search.return_value = [Data(data={"text": "result"})]
-            
+
             result = component.perform_search()
-            
+
             from lfx.schema.dataframe import DataFrame
+
             assert isinstance(result, DataFrame)
 
 

@@ -5492,6 +5492,44 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/ff/c9baf0997266d398ae08347951a2970e5e96ed6232ed0252f649f2b9a7eb/ibm_cos_sdk_s3transfer-2.14.3.tar.gz", hash = "sha256:2251ebfc4a46144401e431f4a5d9f04c262a0d6f95c88a8e71071da056e55f72", size = 139594, upload-time = "2025-08-01T06:35:46.403Z" }
 
 [[package]]
+name = "ibm-db"
+version = "3.2.9"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/cc/4db3062ce3b404098e73ec67498b25c672b212303a870c2703ac8f9a00c6/ibm_db-3.2.9-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:e130a461a0ce3fecdb9896ec767d95d89d4f14e5eb4b8b5e63aca249790c5155", size = 24166574, upload-time = "2026-04-22T16:27:50.985Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/62/98bd8e55a9a2fdd20997bd81e8d8f68b8956fa55d8c2c0cae2fd94ccd2f5/ibm_db-3.2.9-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:4edde94384f452720b6bc58b94ed03c9b3f5dadb7343d983a55c1122b4a38cf0", size = 20391416, upload-time = "2026-04-22T16:27:54.236Z" },
+    { url = "https://files.pythonhosted.org/packages/14/be/6f95944b3052b288e5842141f334633c900ba3320f8534a8f80f657ffbde/ibm_db-3.2.9-cp310-cp310-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:80c2e242601ff2e99bce79da0fddc6e0e525b1f83d05423f00524bad5c41991e", size = 40635334, upload-time = "2026-04-22T16:27:56.746Z" },
+    { url = "https://files.pythonhosted.org/packages/89/85/571df0152cb8632e99f7923599b94fd2139f01f9e9d6ca92345f75223e9e/ibm_db-3.2.9-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:0838993f2e98827afa9f30a1a4648bdadccabb6f9f6805ee42f24787a6ae45b7", size = 43980561, upload-time = "2026-04-22T16:27:59.973Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/4d/73602f4decf4c3f2f21079108cd5b43336db8c608c16aba8afd2578aa474/ibm_db-3.2.9-cp310-cp310-win32.whl", hash = "sha256:825f1ab7d911daef6ca370af62608d663e2193244832cad8dabbfa9708e81bdb", size = 24609207, upload-time = "2026-04-22T16:28:03.043Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/22/8d558528e019bdd595290ba109f837b17d476bf4fbeed46e4980b052a961/ibm_db-3.2.9-cp310-cp310-win_amd64.whl", hash = "sha256:b163dd252f695113851a3d480289f8b368885835fe3296e8b202063440fe34c8", size = 28754450, upload-time = "2026-04-22T16:28:05.536Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/47/992fe2d1157963df678d94cc2573e4e292d6e29c2c47fb069a36f16e3c90/ibm_db-3.2.9-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:b72049768de33e0767e7ca4f5cf9c44812a6422c8a4e07bb07fd30c242f555b2", size = 24166574, upload-time = "2026-04-22T16:28:08.538Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/27/628276aff846d1afa4680106ef7905916b12f32855c95540c638184203ec/ibm_db-3.2.9-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:a002be22327f29e1f6cf48b7ee84843e6a257bb7a2f7d017caa6e731aaea4e5a", size = 20391417, upload-time = "2026-04-22T16:28:11.392Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/a5/3adf8573468a18f3c82fc41c949326a500ee0335f0290e90b565722eacc0/ibm_db-3.2.9-cp311-cp311-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:5831070fe9e6b2654668cfada10fb31a64e7555a7ef35e04e17ca831822df3bb", size = 40641529, upload-time = "2026-04-22T16:28:13.944Z" },
+    { url = "https://files.pythonhosted.org/packages/12/9d/9c0c4cf2eacfdfd5faf2f878ca1e2fdb02640a21f3defa2390c0d41c85cc/ibm_db-3.2.9-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ec172bc1c61ac15cb98ebe1a2737689752b6565a2afa9c4442a09129f2ada963", size = 43987216, upload-time = "2026-04-22T16:28:17.083Z" },
+    { url = "https://files.pythonhosted.org/packages/05/c4/13723b51f6b560f44f146518e52b81c47e4a748d118e45f1ae3a5b496855/ibm_db-3.2.9-cp311-cp311-win32.whl", hash = "sha256:8aaefd0162f7c500af87b39593eeec126312cbebf6c4ff7c3051eeb9e8b7f47d", size = 24609273, upload-time = "2026-04-22T16:28:19.767Z" },
+    { url = "https://files.pythonhosted.org/packages/34/ef/b3dba8a536b8be36086c05f2d6903593aea7e9aef10c32bb7fabc7292660/ibm_db-3.2.9-cp311-cp311-win_amd64.whl", hash = "sha256:82517f76253ba3153aa8a43073cf9230a487974a660f3cf99bd4adda41910407", size = 28754305, upload-time = "2026-04-22T16:28:22.521Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/19/e4664a631cf69c2aa6684c03073b732ccbd41ed440a9d5d94f3700b979cb/ibm_db-3.2.9-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:5432ef9103c094631ebb7e534a72dfd8324f265c3695e79698eb5c09fa28cddb", size = 24166563, upload-time = "2026-04-22T16:28:25.312Z" },
+    { url = "https://files.pythonhosted.org/packages/40/23/5f9388f5ee2148a0ca5c372c4124415bbf7aaba5b64cd13ef5fb801becde/ibm_db-3.2.9-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:d4b650ac1e3a9161090234821a655adb767baa52764e839c1a5ff306cd967de5", size = 20391654, upload-time = "2026-04-22T16:28:27.865Z" },
+    { url = "https://files.pythonhosted.org/packages/77/02/e1226db9f19ae1672098027cbb0fab7bea8c29e9b802e4337a9651595c09/ibm_db-3.2.9-cp312-cp312-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:4b3d8d707a9cf3bf633c7742fffc557d9c71e6555f0c9733a0f9b8ed7f874ffe", size = 40606621, upload-time = "2026-04-22T16:28:30.411Z" },
+    { url = "https://files.pythonhosted.org/packages/23/26/3bf46353bb850d0ab71b8f9cc396da4e76d41e54abad26bc5f2fed95c8f7/ibm_db-3.2.9-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e60e1a12fa8e36510384944e1b438e6e9a353bc92d1d496a66acc8e1cb853a5e", size = 43945644, upload-time = "2026-04-22T16:28:33.351Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/75/c0506dc89c4da674adb40aa038729b1513d90a1ef3e2e6e34faaa00a5981/ibm_db-3.2.9-cp312-cp312-win32.whl", hash = "sha256:a0b395c0f770627bbb6765f45d9fe99ed990fc4801c1adeeaa872d599ccc3b9d", size = 24608567, upload-time = "2026-04-22T16:28:36.145Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/fa/730129a0169d4986c3af351617051a2fbcc73858de21f141ef8978f502a4/ibm_db-3.2.9-cp312-cp312-win_amd64.whl", hash = "sha256:2353c0b968ec337ee4d4111dc4f8fe15a56818b3c399939de952f9a1f2589840", size = 28755039, upload-time = "2026-04-22T16:28:38.868Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/62/2027a98282f2bc02ece82b46ea086b43cbc73fa4aa50e371a8e828a4b3cd/ibm_db-3.2.9-cp313-cp313-macosx_10_15_x86_64.whl", hash = "sha256:09cc163f950d0e8ffb8e390ddd65c3de45c0dc752ce7744e0934e74374134572", size = 24166466, upload-time = "2026-04-22T16:28:41.663Z" },
+    { url = "https://files.pythonhosted.org/packages/98/86/d66b45f1d7e975215abdcb9d33e61ed050467c0661fe6d98c65d2b6476bb/ibm_db-3.2.9-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:b9264183d3353f68a77f06a8cc4ff8ba8fdfc567bcde619c74b7fc685f27152a", size = 20391631, upload-time = "2026-04-22T16:28:44.114Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/8b/984c1584d1ffaa61a9c88d01ebda111bac04ede74ec8fa10528c89f680b5/ibm_db-3.2.9-cp313-cp313-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:06e578cceff73ec5a04a89b2d1807867b37553bee8dcd32369a9d07d17fe86c2", size = 40606656, upload-time = "2026-04-22T16:28:47.501Z" },
+    { url = "https://files.pythonhosted.org/packages/73/48/b017c182e3e5e902faa25b81a0416afdc7341a6fb03494f78fcfe69224cb/ibm_db-3.2.9-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bbc992915eb03a70be716844bb05f252dc0413f0d475602445be66df7e188a11", size = 43945653, upload-time = "2026-04-22T16:28:50.4Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/08/fd17875b1ddf66a8252f6cb80d30f7d2d7ffe5fd317a473ce25067ec6305/ibm_db-3.2.9-cp313-cp313-win32.whl", hash = "sha256:03e044a50abb91852b194bf6f6ca35b1c46b8695e0377c663ee3361c118024ce", size = 24608571, upload-time = "2026-04-22T16:28:53.195Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/c7/fcca5a11346d218e6a55328211c575cc29c53e7423e8b3c6c99e93144fbd/ibm_db-3.2.9-cp313-cp313-win_amd64.whl", hash = "sha256:973edafd5622a947d3a205274db5ace68a7d5bf53d92003f0901151b33c89d27", size = 28755050, upload-time = "2026-04-22T16:28:55.681Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/1e/93cb11b58589bab4b58433a54d2eb2716e4a735d9f604f01afe1dc26485c/ibm_db-3.2.9-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:5190366f1d4a777797a39624146cfa99d0884f8a3c7ced1c82c8fb9520d65faa", size = 24166743, upload-time = "2026-04-22T16:28:58.396Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/b4/238c00b95b2697c5e3cf1526057e5389c5d41d7803246c21f5057b5e2318/ibm_db-3.2.9-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:d204acdaa08436dd84ef999bb048ff352b7a1deae02752d144586bd278d9d31a", size = 20391505, upload-time = "2026-04-22T16:29:01.228Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/a1/e60b39120807bfafacdbc2a85b5d88b36fccfb36ed45338b792c77b63612/ibm_db-3.2.9-cp314-cp314-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:9eb5725526b046b0d0e1021c30fe2e60078f2f1080010dc93f95d057c51cce0a", size = 40606947, upload-time = "2026-04-22T16:29:04.25Z" },
+    { url = "https://files.pythonhosted.org/packages/46/ec/e44e5c11431a16ec933e10df9bfb55e97001b6946c10eba584219dd78e7a/ibm_db-3.2.9-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5ccbce68115de998ba99af314b489f36daab5453dbdb69c9a625b3a9722da0e3", size = 43945000, upload-time = "2026-04-22T16:29:07.36Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/9b/8b544037a245e573b4ba21f4b258143e5e4c147c9a75c25eae263ee6a861/ibm_db-3.2.9-cp314-cp314-win32.whl", hash = "sha256:350d6e40c62340b583b6aa4887730a626191290fa91f63d9f7e58ff60edf17af", size = 25562087, upload-time = "2026-04-22T16:29:10.118Z" },
+    { url = "https://files.pythonhosted.org/packages/07/92/6a3749de901a633c4eff94e58fb2263691981582771f9dc03ba54ba226f2/ibm_db-3.2.9-cp314-cp314-win_amd64.whl", hash = "sha256:62b2fc14da8b49895f6d9670a3bdce65d8ea2a5fdabd00303fbe404b8f84d947", size = 29355366, upload-time = "2026-04-22T16:29:13.318Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/04/0730e66aa3dc9c61bc2b1f59abdb274188bc1ae1cafc01705e3724ccead1/ibm_db-3.2.9-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:5fa430ce90eda04f2b1326a84817f09ad6a9f16d475afacb43522debf4283300", size = 24170941, upload-time = "2026-04-22T16:29:16.366Z" },
+]
+
+[[package]]
 name = "ibm-watsonx-ai"
 version = "1.3.42"
 source = { registry = "https://pypi.org/simple" }
@@ -8576,6 +8614,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "filelock" },
     { name = "httpx", extra = ["http2"] },
+    { name = "ibm-db" },
     { name = "json-repair" },
     { name = "langchain" },
     { name = "langchain-classic" },
@@ -8642,6 +8681,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0,<1.0.0" },
+    { name = "ibm-db", specifier = ">=3.2.9,<4.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-classic", specifier = "~=1.0.7" },

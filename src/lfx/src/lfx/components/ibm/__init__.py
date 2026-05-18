@@ -18,10 +18,10 @@ _dynamic_imports = {
 }
 
 __all__ = [
+    "DB2SQLComponent",
+    "DB2VectorStoreComponent",
     "WatsonxAIComponent",
     "WatsonxEmbeddingsComponent",
-    "DB2VectorStoreComponent",
-    "DB2SQLComponent",
 ]
 
 
