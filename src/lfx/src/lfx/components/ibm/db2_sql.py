@@ -146,13 +146,15 @@ class DB2SQLComponent(Component):
             raise ValueError(msg) from e
 
         # Validate max_rows
-        if self.max_rows < 1 or self.max_rows > 10000:
-            msg = "max_rows must be between 1 and 10000"
+        max_rows_limit = 10000
+        if self.max_rows < 1 or self.max_rows > max_rows_limit:
+            msg = f"max_rows must be between 1 and {max_rows_limit}"
             raise ValueError(msg)
 
         # Validate query_timeout
-        if self.query_timeout < 1 or self.query_timeout > 300:
-            msg = "query_timeout must be between 1 and 300 seconds"
+        max_timeout = 300
+        if self.query_timeout < 1 or self.query_timeout > max_timeout:
+            msg = f"query_timeout must be between 1 and {max_timeout} seconds"
             raise ValueError(msg)
 
         try:

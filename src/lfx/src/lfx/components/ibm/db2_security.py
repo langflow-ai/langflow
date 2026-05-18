@@ -240,8 +240,9 @@ def validate_identifier(identifier: str, identifier_type: str = "identifier") ->
     identifier = identifier.strip()
 
     # Check length (DB2 max identifier length is 128 characters)
-    if len(identifier) > 128:
-        msg = f"{identifier_type} cannot exceed 128 characters"
+    max_identifier_length = 128
+    if len(identifier) > max_identifier_length:
+        msg = f"{identifier_type} cannot exceed {max_identifier_length} characters"
         raise ValueError(msg)
 
     # Check for valid characters: alphanumeric, underscore, and dollar sign
@@ -293,12 +294,16 @@ def validate_port(port: int) -> int:
     Raises:
         ValueError: If the port is invalid
     """
+    # Port range constants
+    min_port = 1
+    max_port = 65535
+
     if not isinstance(port, int):
         msg = f"Port must be an integer, got {type(port).__name__}"
-        raise ValueError(msg)
+        raise TypeError(msg)
 
-    if port < 1 or port > 65535:
-        msg = f"Port must be between 1 and 65535, got {port}"
+    if port < min_port or port > max_port:
+        msg = f"Port must be between {min_port} and {max_port}, got {port}"
         raise ValueError(msg)
 
     return port

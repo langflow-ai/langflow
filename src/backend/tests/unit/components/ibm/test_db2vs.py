@@ -124,7 +124,7 @@ class TestDB2VSClass:
     def test_db2vs_initialization_existing_table(
         self,
         mock_get_dim,
-        mock_create_table,
+        mock_create_table,  # noqa: ARG002
         mock_update_embeddings,
         mock_get_columns,
         mock_table_exists,
@@ -161,9 +161,9 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs.DB2VS._validate_embedding_dimension")
     def test_add_texts(
         self,
-        mock_validate_dim,
+        mock_validate_dim,  # noqa: ARG002
         mock_get_dim,
-        mock_create_table,
+        mock_create_table,  # noqa: ARG002
         mock_get_columns,
         mock_table_exists,
         mock_client,
@@ -203,9 +203,9 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs.DB2VS._validate_embedding_dimension")
     def test_add_texts_with_custom_ids(
         self,
-        mock_validate_dim,
+        mock_validate_dim,  # noqa: ARG002
         mock_get_dim,
-        mock_create_table,
+        mock_create_table,  # noqa: ARG002
         mock_get_columns,
         mock_table_exists,
         mock_client,
@@ -245,9 +245,8 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._get_column_names")
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
-    def test_delete_documents(
-        self, mock_get_dim, _mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
-    ):
+    @pytest.mark.usefixtures("_mock_create_table")
+    def test_delete_documents(self, mock_get_dim, mock_get_columns, mock_table_exists, mock_client, mock_embedding):
         """Test deleting documents by IDs."""
         from langchain_community.vectorstores.utils import DistanceStrategy
         from lfx.components.ibm.db2vs import DB2VS
@@ -277,8 +276,9 @@ class TestDB2VSClass:
     @patch("lfx.components.ibm.db2vs._get_column_names")
     @patch("lfx.components.ibm.db2vs._create_table")
     @patch("lfx.components.ibm.db2vs.DB2VS.get_embedding_dimension")
+    @pytest.mark.usefixtures("_mock_create_table")
     def test_embedding_dimension_validation(
-        self, mock_get_dim, _mock_create_table, mock_get_columns, mock_table_exists, mock_client, mock_embedding
+        self, mock_get_dim, mock_get_columns, mock_table_exists, mock_client, mock_embedding
     ):
         """Test embedding dimension validation."""
         from langchain_community.vectorstores.utils import DistanceStrategy

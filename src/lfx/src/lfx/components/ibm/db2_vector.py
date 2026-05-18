@@ -251,16 +251,18 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
                         cursor = connection.cursor()
                         # Only fetch text for hash comparison, more efficient than storing all text
-                        cursor.execute(f'SELECT {vector_store.column_names["text"]} FROM "{validated_table_name}"')
+                        query = f'SELECT {vector_store.column_names["text"]} FROM "{validated_table_name}"'  # noqa: S608
+                        cursor.execute(query)
                         for row in cursor.fetchall():
                             if row[0]:
                                 # Create hash of text content for efficient comparison
-                                text_hash = hashlib.md5(str(row[0]).encode()).hexdigest()
+                                # Using MD5 for fast hashing of content (not for security)
+                                text_hash = hashlib.md5(str(row[0]).encode()).hexdigest()  # noqa: S324
                                 stored_doc_hashes.add(text_hash)
                         cursor.close()
                         self.log(f"Found {len(stored_doc_hashes)} existing documents")
-                    except Exception as e:
-                        self.log(f"Warning: Could not check for duplicates: {e}")
+                    except Exception:  # noqa: BLE001
+                        self.log("Warning: Could not check for duplicates")
 
                 documents = []
                 for idx, data in enumerate(self.ingest_data):
@@ -406,7 +408,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                         original_count = len(documents)
                         filtered_docs = []
                         for doc in documents:
-                            doc_hash = hashlib.md5(doc.page_content.encode()).hexdigest()
+                            # Using MD5 for fast hashing of content (not for security)
+                            doc_hash = hashlib.md5(doc.page_content.encode()).hexdigest()  # noqa: S324
                             if doc_hash not in stored_doc_hashes:
                                 filtered_docs.append(doc)
                         documents = filtered_docs
