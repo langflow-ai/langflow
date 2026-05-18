@@ -18,6 +18,11 @@ CACHE_DIR = user_cache_dir("langflow", "langflow")
 PREFIX = "langflow_cache"
 
 
+def is_cache_serialization_error(exc: TypeError) -> bool:
+    message = str(exc).lower()
+    return "pickle" in message or "pickled" in message
+
+
 def create_cache_folder(func):
     def wrapper(*args, **kwargs):
         # Get the destination folder
