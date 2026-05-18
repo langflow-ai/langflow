@@ -142,7 +142,7 @@ async def get_flow_events_response(
     try:
         main_queue, event_manager, event_task, _ = queue_service.get_queue_data(job_id)
         # Refresh the polling-watchdog heartbeat for any client-driven access
-        # (polling and streaming both count as "client alive").  No-op for the
+        # (polling and streaming both count as "client alive"). No-op for the
         # in-memory queue or when the watchdog is disabled.
         touch = getattr(queue_service, "touch_activity", None)
         if touch is not None:
@@ -159,7 +159,7 @@ async def get_flow_events_response(
         if event_delivery != EventDeliveryType.POLLING:
             # Defensive exhaustiveness check: if a new EventDeliveryType is added
             # without wiring it up here, surface a clear error instead of silently
-            # treating it as polling.  Each delivery mode has different cross-worker
+            # treating it as polling. Each delivery mode has different cross-worker
             # guarantees (DIRECT/STREAMING use signal_cancel + heartbeat; POLLING
             # uses the watchdog), so silent fallthrough hides real configuration
             # bugs in multi-worker Redis setups.
@@ -246,7 +246,7 @@ async def create_flow_response(
     instead of running the build to natural completion.
     """
     # Interval at which the heartbeat task refreshes the polling-watchdog
-    # activity key while the streaming response is open.  The heartbeat is
+    # activity key while the streaming response is open. The heartbeat is
     # INDEPENDENT of the event yield cadence so a quiet build (long graph
     # step, slow LLM, no tokens for a while) keeps proving its client is
     # alive and does not get reclaimed by the watchdog.
@@ -271,7 +271,7 @@ async def create_flow_response(
                 return
             except Exception as exc:  # noqa: BLE001
                 # touch_activity already counts errors; a heartbeat hiccup must
-                # not crash the streaming response.  Debug-log and continue.
+                # not crash the streaming response. Debug-log and continue.
                 await logger.adebug(
                     f"streaming heartbeat: touch_activity failed for {job_id}: {exc}"
                 )
@@ -720,7 +720,7 @@ async def generate_flow_events(
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
             # background_tasks is already drained after the POST /build response
-            # is sent; add_task() is silently dropped here.  Use create_task()
+            # is sent; add_task() is silently dropped here. Use create_task()
             # so the trace cleanup runs independently of background_tasks lifecycle.
             asyncio.create_task(graph.end_all_traces_in_context()())
             raise
@@ -792,16 +792,16 @@ async def cancel_flow_build(
     _, _, event_task, _ = queue_service.get_queue_data(job_id)
 
     if event_task is None:
-        # Cross-worker cancel: this worker doesn't own the build task.  If the
+        # Cross-worker cancel: this worker doesn't own the build task. If the
         # queue service supports a cancel side-channel (RedisJobQueueService with
         # cancel_channel_enabled=True), publish there so the owning worker can
-        # cancel locally.  Falls back to a no-op for the in-memory queue.
+        # cancel locally. Falls back to a no-op for the in-memory queue.
         signal = getattr(queue_service, "signal_cancel", None)
         if signal is not None:
             try:
                 receivers = await signal(job_id)
             except Exception as exc:  # noqa: BLE001
-                # Redis publish failed; the marker isn't reliable either.  Surface
+                # Redis publish failed; the marker isn't reliable either. Surface
                 # this so the client can retry rather than silently no-op.
                 await logger.aerror(f"signal_cancel for {job_id} failed: {exc}")
                 return False
@@ -812,14 +812,13 @@ async def cancel_flow_build(
                 f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))"
             )
             return True
-        # In-memory backend with no cross-worker cancel support: the job is
-        # owned by another process we cannot reach.  Return False so callers
-        # know the cancellation did not take effect rather than reporting a
-        # false success.
+        # No cross-worker cancel support (in-memory backend or Redis without
+        # cancel_channel_enabled). Two possible races: the job already finished
+        # and was cleaned up, or it is running on an unreachable worker. We
+        # cannot distinguish them cheaply, so return False.
         await logger.awarning(
-            f"No event task found for job_id {job_id} — "
-            "this worker does not own the build and cross-worker cancel is not available.
-            A retry may land on the owning worker and succeed, but cancellation is not guaranteed."
+            f"No event task found for job_id {job_id}. "
+            "Cross-worker cancel is not available; cancellation could not be confirmed."
         )
         return False
 
