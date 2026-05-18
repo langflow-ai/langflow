@@ -46,7 +46,7 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: true,
-      } as any);
+      });
 
       // Check for script tag
       expect(code).toContain("<script");
@@ -212,7 +212,7 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: false,
-      } as any);
+      });
 
       expect(code).toContain('api_key="..."');
     });
@@ -221,7 +221,7 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: true,
-      } as any);
+      });
 
       expect(code).not.toContain("api_key");
     });
@@ -232,7 +232,7 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: undefined,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       // When isAuth is undefined/falsy, api_key should be included
       expect(code).toContain('api_key="..."');
@@ -270,7 +270,7 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       // Should contain CDN URL with bundle path
       expect(code).toContain("build/static/js/bundle.min.js");
@@ -321,7 +321,7 @@ describe("getWidgetCode", () => {
         flowName: "",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       expect(code).toContain("<script");
       expect(code).toContain("<langflow-chat");
@@ -335,7 +335,7 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       expect(code).toContain("<script");
       expect(code).toContain("<langflow-chat");
@@ -404,7 +404,7 @@ describe("getWidgetCode", () => {
         isAuth: true,
         webhookAuthEnable: false,
         copy: false,
-      } as any);
+      });
 
       expect(code).toContain('flow_id="prod-flow-123"');
       expect(code).toContain('window_title="Production Chat Bot"');
@@ -418,7 +418,7 @@ describe("getWidgetCode", () => {
         isAuth: false,
         webhookAuthEnable: false,
         copy: true,
-      } as any);
+      });
 
       expect(code).toContain('flow_id="dev-flow-456"');
       expect(code).toContain('window_title="Dev Chat Bot"');
