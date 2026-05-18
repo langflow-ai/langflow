@@ -49,6 +49,10 @@ async def _make_service(
     # Inject the fake client directly so no real Redis connection is attempted.
     service._client = fake_client
     service._closed = False
+    # Track whether this service owns the FakeRedis client so the first
+    # _stop_service() doesn't aclose() it out from under a sibling that's
+    # sharing it (cross-worker tests).
+    service._owns_test_client = shared_client is None  # type: ignore[attr-defined]
     service._cleanup_task = asyncio.create_task(service._periodic_cleanup())
     if cancel_channel_enabled:
         service._cancel_dispatcher_task = asyncio.create_task(service._run_cancel_dispatcher())
@@ -90,9 +94,9 @@ async def _stop_service(service: RedisJobQueueService) -> None:
     for wrapper in list(service._consumer_wrappers.values()):
         await wrapper.cancel()
     service._consumer_wrappers.clear()
-    if service._client:
+    if service._client and getattr(service, "_owns_test_client", True):
         await service._client.aclose()
-        service._client = None
+    service._client = None
 
 
 class _BlockingXaddClient:
@@ -960,6 +964,10 @@ async def test_polling_watchdog_skips_fresh_activity():
     try:
         job_id = str(uuid.uuid4())
         producer.create_queue(job_id)
+        # Watchdog skips unowned jobs entirely (see _run_polling_watchdog).
+        # Without registering an owner this test passes even if touch_activity
+        # is broken, which defeats the assertion.
+        await producer.register_job_owner(job_id, uuid.uuid4())
         cancelled_event = asyncio.Event()
 
         async def _long_running():
@@ -1228,13 +1236,20 @@ async def test_polling_watchdog_skips_malformed_activity_value():
 
 
 @pytest.mark.asyncio
-async def test_streaming_heartbeat_runs_independent_of_event_yield():
+async def test_streaming_heartbeat_runs_independent_of_event_yield(monkeypatch):
     """A quiet streaming build (no events for > threshold) is NOT reclaimed.
 
     The heartbeat task in create_flow_response fires every N seconds regardless
     of whether the queue is producing events, so the polling watchdog can tell
     that the streaming client is still attached even during a long silent step.
     """
+    from langflow.api import build as build_module
+
+    # Patch the heartbeat interval down so the spawned task actually fires
+    # within the test budget. Without this the verification below would
+    # depend on the production 10s interval.
+    monkeypatch.setattr(build_module, "STREAMING_ACTIVITY_REFRESH_S", 0.1)
+
     shared_client = fakeredis_aio.FakeRedis()
     svc, _ = await _make_service(shared_client=shared_client)
     try:
@@ -1246,20 +1261,15 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
 
         svc.start_job(job_id, _alive())
 
-        # Force the activity timestamp to be old enough that without an
-        # independent heartbeat, the watchdog would reclaim the job.
-        await shared_client.set(svc._activity_key(job_id), str(time.time() - 100.0))
+        # Force the activity timestamp to be old enough that any update must
+        # come from the spawned heartbeat task, not from start_job's own touch.
+        stale_ts = time.time() - 100.0
+        await shared_client.set(svc._activity_key(job_id), str(stale_ts))
 
-        # Build a streaming response — its heartbeat task should immediately
-        # start refreshing activity.  Patch the refresh interval down so the
-        # test is fast.
-        from langflow.api.build import create_flow_response
-
-        # Temporarily monkey-patch the constant for this test only.
         monkey_q: asyncio.Queue = asyncio.Queue()
         # Use the real consumer wrapper for realism.
         wrapper = svc._get_consumer_wrapper(job_id)
-        response = await create_flow_response(
+        response = await build_module.create_flow_response(
             queue=wrapper,
             event_manager=EventManager(monkey_q),
             event_task=None,
@@ -1267,15 +1277,21 @@ async def test_streaming_heartbeat_runs_independent_of_event_yield():
             job_id=job_id,
         )
         try:
-            # Find the heartbeat task we just spawned.
             tasks = [t for t in asyncio.all_tasks() if t.get_name().startswith(f"stream-heartbeat-{job_id}")]
             assert tasks, "stream heartbeat task was not spawned"
-            # Trigger one manual touch (faster than waiting 10s) and verify TTL refresh.
-            await svc.touch_activity(job_id)
-            raw = await shared_client.get(svc._activity_key(job_id))
-            assert raw is not None
-            recorded = float(raw.decode() if isinstance(raw, bytes) else raw)
-            assert time.time() - recorded < 5.0, "activity timestamp not refreshed"
+            # Wait for the heartbeat task itself to refresh the activity key.
+            # No manual touch_activity here: if the spawned task is broken,
+            # the timestamp never advances and the loop times out.
+            deadline = time.monotonic() + 2.0
+            recorded = stale_ts
+            while time.monotonic() < deadline:
+                raw = await shared_client.get(svc._activity_key(job_id))
+                if raw is not None:
+                    recorded = float(raw.decode() if isinstance(raw, bytes) else raw)
+                    if recorded > stale_ts + 1.0:
+                        break
+                await asyncio.sleep(0.05)
+            assert recorded > stale_ts + 1.0, "heartbeat task did not refresh activity timestamp"
         finally:
             # Trigger disconnect; the heartbeat task must be cancelled cleanly.
             await response.on_disconnect()
@@ -1991,10 +2007,10 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     # ── trace spy ────────────────────────────────────────────────────────────
     traces_ended = asyncio.Event()
 
-    async def _fake_end_all_traces(outputs=None, error=None):
+    async def _fake_end_all_traces(_outputs=None, _error=None):
         traces_ended.set()
 
-    def _fake_end_all_traces_in_context(outputs=None, error=None):
+    def _fake_end_all_traces_in_context(_outputs=None, _error=None):
         # Mirror the real signature: returns a callable, not a coroutine.
         async def _run():
             await _fake_end_all_traces()
@@ -2004,7 +2020,7 @@ async def test_generate_flow_events_calls_end_all_traces_on_cancel(monkeypatch):
     # ── mock vertex that blocks so we can observe the cancel path ─────────────
     vertex_started = asyncio.Event()
 
-    async def _blocking_build_vertex(**kwargs):
+    async def _blocking_build_vertex(**_kwargs):
         vertex_started.set()
         await asyncio.Event().wait()  # hangs until the task is cancelled
 
@@ -2162,7 +2178,8 @@ async def test_fill_from_redis_persistent_xread_error_delivers_sentinel(monkeypa
             return getattr(self._real, name)
 
         async def xread(self, *_args: Any, **_kwargs: Any) -> None:
-            raise ConnectionError("simulated persistent Redis error")
+            msg = "simulated persistent Redis error"
+            raise ConnectionError(msg)
 
     fake_client = fakeredis_aio.FakeRedis()
     job_id = str(uuid.uuid4())
@@ -2175,7 +2192,8 @@ async def test_fill_from_redis_persistent_xread_error_delivers_sentinel(monkeypa
     try:
         # The sentinel must arrive within a generous timeout well above the grace period.
         evt = await asyncio.wait_for(wrapper.get(), timeout=3.0)
-        assert evt[0] is None and evt[1] is None, f"expected sentinel, got {evt}"
+        assert evt[0] is None, f"expected sentinel event_id, got {evt}"
+        assert evt[1] is None, f"expected sentinel payload, got {evt}"
     finally:
         await wrapper.cancel()
         await fake_client.aclose()

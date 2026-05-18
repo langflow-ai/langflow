@@ -105,6 +105,18 @@ class JobQueueService(Service):
         """
         return self._cleanup_task is not None
 
+    @property
+    def cross_worker_cancel_enabled(self) -> bool:
+        """True when this backend can deliver cancels across worker processes.
+
+        Callers using ``signal_cancel`` to reach a build owned by another
+        worker must check this first: when False, ``signal_cancel`` exists but
+        is a no-op (returns 0 without setting the persistent marker), so
+        treating its return value as a successful cross-worker dispatch is
+        misleading.
+        """
+        return False
+
     def set_ready(self) -> None:
         if not self.is_started():
             self.start()
@@ -654,12 +666,22 @@ class RedisQueueWrapper:
                 await self._fill_task
 
     async def finish_with_sentinel(self) -> None:
-        """Stop the fill task and wake active consumers with an end-of-stream item."""
+        """Stop the fill task and wake active consumers with an end-of-stream item.
+
+        Mirrors ``_on_fill_done``: when the buffer is full because the consumer
+        is gone or slow, evict the oldest item and ``put_nowait`` the sentinel
+        instead of awaiting. Losing one buffered event is strictly preferable
+        to a teardown that hangs forever on a closed-out consumer.
+        """
         if not self._fill_task.done():
             self._fill_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await self._fill_task
-        await self._buffer.put((None, None, time.time()))
+        if self._buffer.full():
+            with contextlib.suppress(asyncio.QueueEmpty):
+                self._buffer.get_nowait()
+        with contextlib.suppress(asyncio.QueueFull):
+            self._buffer.put_nowait((None, None, time.time()))
 
 
 class RedisJobQueueService(JobQueueService):
@@ -774,6 +796,15 @@ class RedisJobQueueService(JobQueueService):
         # by the polling watchdog to grant a brand-new job a grace window
         # before reclaiming it if the activity key hasn't been written yet.
         self._job_start_times: dict[str, float] = {}
+
+    @property
+    def cross_worker_cancel_enabled(self) -> bool:
+        """Reflects ``cancel_channel_enabled`` for the Redis backend.
+
+        When False, ``signal_cancel`` short-circuits to a 0 return without
+        setting the marker, so cross-worker delivery is genuinely unavailable.
+        """
+        return self._cancel_channel_enabled
 
     def _stream_key(self, job_id: str) -> str:
         return f"{self.STREAM_PREFIX}{job_id}"
@@ -1516,12 +1547,21 @@ class RedisJobQueueService(JobQueueService):
             if is_owner and self._client:
                 # Best-effort delete of all Redis state owned by this job.
                 # Combined into one DEL so a single round-trip handles them.
-                await self._client.delete(
-                    self._stream_key(job_id),
-                    self._owner_key(job_id),
-                    self._activity_key(job_id),
-                )
-                await logger.adebug(f"Redis keys deleted for job_id {job_id}")
+                # Truly best-effort: a Redis failure here must not escape and
+                # break stop() / explicit cancel, which is most likely to happen
+                # exactly when Redis is unhealthy.
+                try:
+                    await self._client.delete(
+                        self._stream_key(job_id),
+                        self._owner_key(job_id),
+                        self._activity_key(job_id),
+                    )
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning(f"Redis key cleanup failed for job_id {job_id}: {exc!r}")
+                else:
+                    await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
         """Store the job owner in Redis for cross-worker ownership checks."""

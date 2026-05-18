@@ -49,6 +49,11 @@ from langflow.services.telemetry.schema import (
     PlaygroundPayload,
 )
 
+# Interval (seconds) at which the streaming response's heartbeat refreshes
+# the polling-watchdog activity key. Exposed at module scope so tests can
+# patch it down for fast verification of the heartbeat task itself.
+STREAMING_ACTIVITY_REFRESH_S = 10.0
+
 
 def _log_component_input_telemetry(
     vertex,
@@ -241,8 +246,9 @@ async def create_flow_response(
     # activity key while the streaming response is open. The heartbeat is
     # INDEPENDENT of the event yield cadence so a quiet build (long graph
     # step, slow LLM, no tokens for a while) keeps proving its client is
-    # alive and does not get reclaimed by the watchdog.
-    streaming_activity_refresh_s = 10.0
+    # alive and does not get reclaimed by the watchdog. Read from the module
+    # constant at call time so tests can monkeypatch it down.
+    streaming_activity_refresh_s = STREAMING_ACTIVITY_REFRESH_S
     touch = getattr(queue_service, "touch_activity", None) if queue_service is not None and job_id is not None else None
 
     async def _heartbeat() -> None:
@@ -663,6 +669,11 @@ async def generate_flow_events(
     vertex_timedeltas: list[float] = []
     event_manager.on_build_start(data={})
 
+    # Strong references for fire-and-forget cleanup tasks created outside the
+    # FastAPI background_tasks queue (which is already drained by the time we
+    # reach the cancel path below). Each task removes itself on completion.
+    cleanup_tasks: set[asyncio.Task] = set()
+
     async def _run_vertex_build() -> None:
         tasks = []
         for vertex_id in ids:
@@ -674,7 +685,9 @@ async def generate_flow_events(
             # background_tasks is already drained after the POST /build response
             # is sent; add_task() is silently dropped here. Use create_task()
             # so the trace cleanup runs independently of background_tasks lifecycle.
-            asyncio.create_task(graph.end_all_traces_in_context()())
+            cleanup_task = asyncio.create_task(graph.end_all_traces_in_context()())
+            cleanup_tasks.add(cleanup_task)
+            cleanup_task.add_done_callback(cleanup_tasks.discard)
             raise
         except Exception as e:
             await logger.aerror(f"Error building vertices: {e}")
@@ -743,9 +756,12 @@ async def cancel_flow_build(
         # Cross-worker cancel: this worker doesn't own the build task. If the
         # queue service supports a cancel side-channel (RedisJobQueueService with
         # cancel_channel_enabled=True), publish there so the owning worker can
-        # cancel locally. Falls back to a no-op for the in-memory queue.
+        # cancel locally. Falls back to a no-op for the in-memory queue or for
+        # Redis with cancel_channel_enabled=False (signal_cancel exists but
+        # short-circuits to 0 without setting the marker).
         signal = getattr(queue_service, "signal_cancel", None)
-        if signal is not None:
+        cross_worker_available = getattr(queue_service, "cross_worker_cancel_enabled", False)
+        if signal is not None and cross_worker_available:
             try:
                 receivers = await signal(job_id)
             except Exception as exc:  # noqa: BLE001

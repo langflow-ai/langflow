@@ -233,29 +233,33 @@ class Settings(BaseSettings):
     """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
     redis_queue_ttl: int = 3600
     """TTL in seconds for job stream keys in Redis."""
-    redis_queue_startup_grace_s: float = 30.0
+    redis_queue_startup_grace_s: float = Field(default=30.0, ge=0)
     """Seconds a cross-worker consumer waits for the producer's first XADD before
     treating a missing stream key as end-of-stream. Bump this if cold-start build
     latency on the producer worker can exceed the default (e.g. large graph
-    instantiation, slow container image pulls)."""
+    instantiation, slow container image pulls). Negative values would make
+    consumers treat a not-yet-created stream as EOF immediately, so values must
+    be non-negative."""
     redis_queue_cancel_channel_enabled: bool = True
     """If True, RedisJobQueueService runs a single PSUBSCRIBE dispatcher per worker
     so POST /build/{job_id}/cancel works cross-worker. Any worker can publish a
     cancel signal; the owning worker cancels the local build task."""
-    redis_queue_cancel_marker_ttl: int = 60
+    redis_queue_cancel_marker_ttl: int = Field(default=60, gt=0)
     """TTL in seconds for the persistent cancel-marker key used to close the race
     where a cancel signal is published before the owning worker's dispatcher
     subscribes or before the job is registered. Should comfortably exceed worker
-    cold-start latency."""
-    redis_queue_polling_stale_threshold_s: float = 90.0
+    cold-start latency. Must be > 0: a non-positive TTL makes the marker
+    ineffective and reopens the publish-before-subscribe race it closes."""
+    redis_queue_polling_stale_threshold_s: float = Field(default=90.0, ge=0)
     """Maximum seconds a polling job may go without client activity before the
     watchdog publishes a cross-worker cancel. Polling clients have no persistent
     connection, so the server detects abandonment by tracking the most recent
-    poll (or streaming-response heartbeat). Set to <= 0 to disable the watchdog."""
-    redis_queue_polling_watchdog_interval_s: float = 15.0
+    poll (or streaming-response heartbeat). Set to 0 to disable the watchdog."""
+    redis_queue_polling_watchdog_interval_s: float = Field(default=15.0, gt=0)
     """How often the polling watchdog scans owned jobs. Smaller values give
     faster reclamation of abandoned builds at the cost of more Redis GETs.
-    The watchdog only checks jobs this worker owns (entries in self._queues)."""
+    The watchdog only checks jobs this worker owns (entries in self._queues).
+    Must be > 0 so the scan loop makes progress."""
 
     # Sentry
     sentry_dsn: str | None = None
