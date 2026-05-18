@@ -125,8 +125,8 @@ def test_graph_pickle_omits_unpickleable_custom_component():
         {
             "id": "model-node",
             "_lock": None,
-            "built_object": None,
-            "built_result": None,
+            "built_object": "built-value",
+            "built_result": {"result": "built-value"},
             "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
             "full_data": {"id": "model-node"},
         }
@@ -139,6 +139,11 @@ def test_graph_pickle_omits_unpickleable_custom_component():
     )["result"]
 
     assert restored.vertices[0].custom_component is None
+    assert restored.vertices[0].id == "model-node"
+    assert restored.vertices[0].built_object == "built-value"
+    assert restored.vertices[0].built_result == {"result": "built-value"}
+    assert restored.vertices[0].full_data == {"id": "model-node"}
+    assert restored._vertices == [{"id": "model-node"}]
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
