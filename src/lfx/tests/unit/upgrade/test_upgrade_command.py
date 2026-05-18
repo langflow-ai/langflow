@@ -122,7 +122,7 @@ def test_upgrade_file_not_found():
 
 
 # ---------------------------------------------------------------------------
-# Bug-1 regression: outer-envelope flow must not silently appear empty
+# Outer-envelope flow handling
 # ---------------------------------------------------------------------------
 
 def test_upgrade_outer_envelope_flow_finds_nodes(tmp_path):

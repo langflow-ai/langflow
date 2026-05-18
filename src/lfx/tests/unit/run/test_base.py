@@ -1412,7 +1412,7 @@ class TestRunFlowExecutionErrors:
 
 
 # ---------------------------------------------------------------------------
-# upgrade_flow regression tests (Bugs 2 & 3 + fail-fast)
+# --upgrade-flow option
 # ---------------------------------------------------------------------------
 
 class TestUpgradeFlowOption:
@@ -1458,7 +1458,7 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outdated_inline_json(self):
-        """Bug-2 regression: --upgrade-flow=check must reject outdated nodes from inline JSON."""
+        """--upgrade-flow=check must reject outdated nodes from inline JSON."""
         import json as _json
 
         flow_json = _json.dumps(self._flow_dict(code=self.NODE_CODE))
@@ -1470,7 +1470,7 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outdated_file(self, tmp_path):
-        """Bug-2 regression: --upgrade-flow=check must also fire for .json file paths, not just inline JSON."""
+        """--upgrade-flow=check must fire for .json file path inputs, not just inline JSON."""
         import json as _json
 
         f = tmp_path / "flow.json"
@@ -1483,7 +1483,7 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outer_envelope_file(self, tmp_path):
-        """Bug-1+2 combined: outer-envelope .json file must be unwrapped before checking."""
+        """Exported flows use an outer envelope {"name":..., "data":{...}}; the checker must unwrap it before inspecting nodes."""
         import json as _json
 
         envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
