@@ -889,9 +889,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
                 f"first build (issue #9155): {item['description']!r} != {item['display_description']!r}"
             )
 
-    async def test_should_propagate_description_change_when_agent_used_as_tool(
-        self, component_class, default_kwargs
-    ):
+    async def test_should_propagate_description_change_when_agent_used_as_tool(self, component_class, default_kwargs):
         """Regression for GitHub issue #9155 (user-visible symptom).
 
         A change to the child agent's tool description must reach the parent
