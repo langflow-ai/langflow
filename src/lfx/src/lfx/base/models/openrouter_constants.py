@@ -16,13 +16,19 @@ from .model_metadata import create_model_metadata
 OPENROUTER_MODELS_DETAILED = [
     create_model_metadata(
         provider="OpenRouter",
+        name="anthropic/claude-opus-4.7",
+        icon="OpenRouter",
+        tool_calling=True,
+    ),
+    create_model_metadata(
+        provider="OpenRouter",
         name="anthropic/claude-sonnet-4.5",
         icon="OpenRouter",
         tool_calling=True,
     ),
     create_model_metadata(
         provider="OpenRouter",
-        name="anthropic/claude-3.7-sonnet",
+        name="anthropic/claude-haiku-4.5",
         icon="OpenRouter",
         tool_calling=True,
     ),
@@ -47,12 +53,6 @@ OPENROUTER_MODELS_DETAILED = [
     create_model_metadata(
         provider="OpenRouter",
         name="meta-llama/llama-3.3-70b-instruct",
-        icon="OpenRouter",
-        tool_calling=True,
-    ),
-    create_model_metadata(
-        provider="OpenRouter",
-        name="mistralai/mistral-large",
         icon="OpenRouter",
         tool_calling=True,
     ),

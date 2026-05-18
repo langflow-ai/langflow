@@ -61,12 +61,20 @@ LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 #   - is_list: Whether the variable accepts multiple values
 #   - options: List of predefined options for the variable
 #   - langchain_param: The parameter name used when instantiating the LangChain class
+#   - is_header: If True, the value is forwarded as an HTTP header (via
+#                ChatOpenAI's ``default_headers``) instead of as a constructor
+#                kwarg. Used for OpenRouter attribution headers.
+#   - header_name: HTTP header name to use when ``is_header`` is True
+#                  (e.g. "HTTP-Referer", "X-Title").
 #
 # Variable attributes (component_metadata - for component inputs):
 #   - mapping_field: The component input field name that this variable maps to
 #   - required: Whether the variable is required in components (False = falls back to env var)
 #   - advanced: Whether to show the variable in the advanced section of components
 #   - info: Help text/description shown in the component input
+# Omit ``component_metadata`` entirely for variables that exist only as global
+# settings (no per-component input). The OpenRouter Site URL / App Name
+# attribution headers use this pattern.
 #
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "OpenAI": {

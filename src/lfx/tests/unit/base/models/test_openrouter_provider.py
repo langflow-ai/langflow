@@ -2,16 +2,20 @@
 
 Covers:
   - Provider metadata registration (variables, mapping, live-fetch flag).
-  - fetch_live_openrouter_models — mocks the OpenRouter /models endpoint.
-  - validate_model_provider_key — success and 401 paths.
-  - get_llm — base_url and default_headers wiring for ChatOpenAI.
+  - fetch_live_openrouter_models — mocks the OpenRouter /models endpoint and
+    pins the per-model ``tool_calling`` flag, default-set intersection logic,
+    and degradation paths for transport, status, and payload errors.
+  - validate_model_provider_key — success, 401, and transient-network paths.
+  - get_llm — base_url + default_headers wiring (including env-var fallback).
 """
 
 from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
+import requests
 
 # ---------------------------------------------------------------------------
 # Metadata
@@ -61,14 +65,30 @@ def test_openrouter_param_mapping_resolves_to_chatopenai():
     assert mapping["api_key_param"] == "api_key"  # pragma: allowlist secret
 
 
+def test_openrouter_env_vars_registered_for_auto_import():
+    """OPENROUTER_* env vars must be auto-imported as global variables.
+
+    Without this, a user with the env vars set would not see the provider as
+    configured in Settings → Model Providers (parity with OpenAI/Anthropic/etc.).
+    """
+    from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+
+    for var in ("OPENROUTER_API_KEY", "OPENROUTER_SITE_URL", "OPENROUTER_APP_NAME"):
+        assert var in VARIABLES_TO_GET_FROM_ENVIRONMENT
+
+
 # ---------------------------------------------------------------------------
 # Live model fetcher
 # ---------------------------------------------------------------------------
 
 
-def _mock_models_response(model_ids: list[str]) -> MagicMock:
+def _models_payload(entries: list[dict]) -> MagicMock:
+    """Build a fake httpx.Response carrying an OpenRouter /models payload.
+
+    Each entry should look like ``{"id": "...", "supported_parameters": [...]}``.
+    """
     response = MagicMock()
-    response.json.return_value = {"data": [{"id": mid, "name": mid} for mid in model_ids]}
+    response.json.return_value = {"data": entries}
     response.raise_for_status.return_value = None
     return response
 
@@ -86,46 +106,137 @@ def test_fetch_live_openrouter_models_returns_empty_when_no_key():
         assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
 
 
-def test_fetch_live_openrouter_models_happy_path():
+def test_fetch_live_openrouter_models_derives_tool_calling_per_model():
     from lfx.base.models import model_utils
 
-    response = _mock_models_response(
-        ["anthropic/claude-3.5-sonnet", "openai/gpt-4o", "meta-llama/llama-3.1-70b-instruct"]
+    response = _models_payload(
+        [
+            {"id": "anthropic/claude-3.5-sonnet", "supported_parameters": ["tools", "temperature"]},
+            {"id": "openai/gpt-4o", "supported_parameters": ["tools"]},
+            {"id": "perceptron/perceptron-mk1", "supported_parameters": ["temperature", "top_p"]},
+            {"id": "broken-model"},  # missing supported_parameters → False
+        ]
     )
     with (
-        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-openrouter-key"),
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
         patch.object(model_utils.httpx, "get", return_value=response) as mock_get,
     ):
         result = model_utils.fetch_live_openrouter_models("user-id", "llm")
 
     mock_get.assert_called_once()
-    call_args = mock_get.call_args
-    assert call_args.args[0] == "https://openrouter.ai/api/v1/models"
-    assert call_args.kwargs["headers"]["Authorization"] == "Bearer dummy-openrouter-key"
+    call = mock_get.call_args
+    assert call.args[0] == "https://openrouter.ai/api/v1/models"
+    assert call.kwargs["headers"]["Authorization"].startswith("Bearer ")
 
-    names = {m["name"] for m in result}
-    assert names == {
-        "anthropic/claude-3.5-sonnet",
-        "openai/gpt-4o",
-        "meta-llama/llama-3.1-70b-instruct",
-    }
+    by_name = {m["name"]: m for m in result}
+    assert by_name["anthropic/claude-3.5-sonnet"]["tool_calling"] is True
+    assert by_name["openai/gpt-4o"]["tool_calling"] is True
+    assert by_name["perceptron/perceptron-mk1"]["tool_calling"] is False
+    assert by_name["broken-model"]["tool_calling"] is False
     for entry in result:
         assert entry["provider"] == "OpenRouter"
         assert entry["icon"] == "OpenRouter"
-        assert entry["tool_calling"] is True
-
-    defaults = [m for m in result if m.get("default")]
-    assert len(defaults) == 3  # All 3 sample models within the first 5 marked defaults
 
 
-def test_fetch_live_openrouter_models_swallows_http_error():
-    import httpx
+def test_fetch_live_openrouter_models_defaults_intersect_with_seed_list():
+    """Seed slugs in the live catalog drive the ``default`` flag.
+
+    The curated seed list should win regardless of alphabetical ordering — seed
+    slugs that happen to sort late (e.g. ``openai/...``) must still be marked
+    default when present in the live catalog.
+    """
+    from lfx.base.models import model_utils
+    from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
+
+    seed_names = [m["name"] for m in OPENROUTER_MODELS_DETAILED]
+    # Two seed ids plus three non-seed ids. The seed ids may sort late
+    # alphabetically (e.g. ``openai/...``), so alphabetical default-picking
+    # would pick the non-seed ids first — this asserts we don't do that.
+    live_entries = [
+        {"id": "aaa/zzz-non-seed-1", "supported_parameters": ["tools"]},
+        {"id": "aab/zzz-non-seed-2", "supported_parameters": []},
+        {"id": "aac/zzz-non-seed-3", "supported_parameters": ["tools"]},
+        {"id": seed_names[0], "supported_parameters": ["tools"]},
+        {"id": seed_names[1], "supported_parameters": ["tools"]},
+    ]
+    response = _models_payload(live_entries)
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
+        patch.object(model_utils.httpx, "get", return_value=response),
+    ):
+        result = model_utils.fetch_live_openrouter_models("user-id", "llm")
+
+    defaults = {m["name"] for m in result if m.get("default")}
+    assert defaults == {seed_names[0], seed_names[1]}
+
+
+def test_fetch_live_openrouter_models_defaults_fall_back_when_no_seed_overlap():
+    """No seed/live intersection falls back to the first MIN_DEFAULT_MODELS.
+
+    Guards against the seed list going stale: if no seed slug appears in the
+    live catalog, the first ``MIN_DEFAULT_MODELS`` (alphabetical) become the
+    defaults so the UI is never devoid of suggestions.
+    """
+    from lfx.base.models import model_utils
+    from lfx.base.models.model_utils import MIN_DEFAULT_MODELS
+
+    live_ids = [f"vendor/model-{ch}" for ch in "abcdefghi"]  # 9 ids, none in seed list
+    response = _models_payload([{"id": mid, "supported_parameters": ["tools"]} for mid in live_ids])
+
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
+        patch.object(model_utils.httpx, "get", return_value=response),
+    ):
+        result = model_utils.fetch_live_openrouter_models("user-id", "llm")
+
+    defaults = {m["name"] for m in result if m.get("default")}
+    assert len(defaults) == MIN_DEFAULT_MODELS
+    # The first MIN_DEFAULT_MODELS sorted alphabetically.
+    assert defaults == set(sorted(live_ids)[:MIN_DEFAULT_MODELS])
+
+
+def test_fetch_live_openrouter_models_swallows_request_error():
     from lfx.base.models import model_utils
 
     failing_get = MagicMock(side_effect=httpx.RequestError("network down"))
     with (
-        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-openrouter-key"),
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
         patch.object(model_utils.httpx, "get", failing_get),
+    ):
+        assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
+
+
+def test_fetch_live_openrouter_models_swallows_http_status_error():
+    """A non-2xx response must degrade to ``[]``.
+
+    For example a 503 from OpenRouter during a brownout must not crash the
+    caller; the user sees an empty live catalog plus a warning log.
+    """
+    from lfx.base.models import model_utils
+
+    bad_response = MagicMock()
+    bad_response.status_code = 503
+    bad_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+        "service unavailable", request=MagicMock(), response=bad_response
+    )
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
+        patch.object(model_utils.httpx, "get", return_value=bad_response),
+    ):
+        assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
+
+
+def test_fetch_live_openrouter_models_swallows_malformed_payload():
+    """A 200 response with a non-list ``data`` field must not raise."""
+    from lfx.base.models import model_utils
+
+    weird_response = MagicMock()
+    weird_response.json.return_value = {"data": "not-a-list"}
+    weird_response.raise_for_status.return_value = None
+    with (
+        patch.object(model_utils, "get_provider_variable_value", return_value="dummy-key"),  # pragma: allowlist secret
+        patch.object(model_utils.httpx, "get", return_value=weird_response),
     ):
         assert model_utils.fetch_live_openrouter_models("user-id", "llm") == []
 
@@ -152,26 +263,28 @@ def test_validate_openrouter_no_key_returns_silently():
 
 
 def test_validate_openrouter_happy_path():
-    from lfx.base.models.unified_models import credentials, validate_model_provider_key
+    """Validation passes when ``GET /api/v1/models`` returns 200.
+
+    Patches ``requests.get`` on the actually-imported module (not via
+    ``sys.modules``) so the test stays correct if the lazy import inside
+    ``credentials.py`` is ever hoisted to module-level.
+    """
+    from lfx.base.models.unified_models import validate_model_provider_key
 
     response = MagicMock()
     response.status_code = 200
     response.raise_for_status.return_value = None
 
-    fake_requests = MagicMock()
-    fake_requests.get.return_value = response
-
-    with patch.dict("sys.modules", {"requests": fake_requests}):
+    with patch.object(requests, "get", return_value=response) as mock_get:
         validate_model_provider_key(
             "OpenRouter",
             {"OPENROUTER_API_KEY": "dummy-openrouter-key"},  # pragma: allowlist secret
         )
 
-    fake_requests.get.assert_called_once()
-    call_args = fake_requests.get.call_args
-    assert call_args.args[0] == "https://openrouter.ai/api/v1/models"
-    assert call_args.kwargs["headers"]["Authorization"] == "Bearer dummy-openrouter-key"
-    _ = credentials  # keep import warm for coverage
+    mock_get.assert_called_once()
+    call = mock_get.call_args
+    assert call.args[0] == "https://openrouter.ai/api/v1/models"
+    assert call.kwargs["headers"]["Authorization"].startswith("Bearer ")
 
 
 def test_validate_openrouter_raises_on_401():
@@ -181,16 +294,32 @@ def test_validate_openrouter_raises_on_401():
     response.status_code = 401
     response.raise_for_status.side_effect = AssertionError("should not be called when 401 path triggers")
 
-    fake_requests = MagicMock()
-    fake_requests.get.return_value = response
-
     with (
-        patch.dict("sys.modules", {"requests": fake_requests}),
+        patch.object(requests, "get", return_value=response),
         pytest.raises(ValueError, match="Invalid OpenRouter API key"),
     ):
         validate_model_provider_key(
             "OpenRouter",
             {"OPENROUTER_API_KEY": "dummy-openrouter-bad"},  # pragma: allowlist secret
+        )
+
+
+def test_validate_openrouter_network_error_raises_value_error():
+    """Transport errors must surface as ``ValueError``.
+
+    The variable API only catches ``ValueError`` and returns a user-facing 400;
+    any other exception escapes as an unhandled 500. A DNS / timeout / 5xx
+    during validation must take that ValueError path.
+    """
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    with (
+        patch.object(requests, "get", side_effect=requests.ConnectionError("DNS lookup failed")),
+        pytest.raises(ValueError, match="Could not reach OpenRouter"),
+    ):
+        validate_model_provider_key(
+            "OpenRouter",
+            {"OPENROUTER_API_KEY": "dummy-openrouter-key"},  # pragma: allowlist secret
         )
 
 
@@ -224,7 +353,9 @@ def test_get_llm_for_openrouter_sets_base_url_and_headers():
             captured_kwargs.update(kwargs)
 
     with (
-        patch.object(unified_models_module, "get_api_key_for_provider", return_value="dummy-openrouter-key"),
+        patch.object(
+            unified_models_module, "get_api_key_for_provider", return_value="dummy-openrouter-key"
+        ),  # pragma: allowlist secret
         patch.object(unified_models_module, "get_model_class", return_value=FakeChatOpenAI),
         patch.object(
             unified_models_module,
@@ -258,7 +389,9 @@ def test_get_llm_for_openrouter_omits_headers_when_not_configured():
             captured_kwargs.update(kwargs)
 
     with (
-        patch.object(unified_models_module, "get_api_key_for_provider", return_value="dummy-openrouter-key"),
+        patch.object(
+            unified_models_module, "get_api_key_for_provider", return_value="dummy-openrouter-key"
+        ),  # pragma: allowlist secret
         patch.object(unified_models_module, "get_model_class", return_value=FakeChatOpenAI),
         patch.object(
             unified_models_module,
@@ -270,3 +403,40 @@ def test_get_llm_for_openrouter_omits_headers_when_not_configured():
 
     assert captured_kwargs["base_url"] == "https://openrouter.ai/api/v1"
     assert "default_headers" not in captured_kwargs
+
+
+def test_get_llm_for_openrouter_reads_attribution_headers_from_environment(monkeypatch):
+    """Header vars resolve from os.environ when no global variable is stored.
+
+    Mirrors the OpenAI / Ollama env-fallback pattern so a self-hosted operator
+    can wire attribution via shell env without touching the database.
+    """
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    monkeypatch.setenv("OPENROUTER_SITE_URL", "https://env.example.com")
+    monkeypatch.setenv("OPENROUTER_APP_NAME", "EnvApp")
+
+    captured_kwargs: dict = {}
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            captured_kwargs.update(kwargs)
+
+    with (
+        patch.object(
+            unified_models_module, "get_api_key_for_provider", return_value="dummy-openrouter-key"
+        ),  # pragma: allowlist secret
+        patch.object(unified_models_module, "get_model_class", return_value=FakeChatOpenAI),
+        patch.object(
+            unified_models_module,
+            "get_all_variables_for_provider",
+            return_value={"OPENROUTER_API_KEY": "dummy-openrouter-key"},  # pragma: allowlist secret
+        ),
+    ):
+        get_llm(_build_model_selection(), user_id=None)
+
+    assert captured_kwargs["default_headers"] == {
+        "HTTP-Referer": "https://env.example.com",
+        "X-Title": "EnvApp",
+    }

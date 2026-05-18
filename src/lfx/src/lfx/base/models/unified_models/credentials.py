@@ -417,16 +417,26 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if not api_key:
                 return
 
-            response = requests.get(
-                "https://openrouter.ai/api/v1/models",
-                headers={"Authorization": f"Bearer {api_key}"},
-                timeout=5,
-            )
-            if response.status_code == HTTPStatus.UNAUTHORIZED:
-                msg = "Invalid OpenRouter API key"
-                logger.error(msg)
-                raise ValueError(msg)
-            response.raise_for_status()
+            try:
+                response = requests.get(
+                    "https://openrouter.ai/api/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OpenRouter API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Network/timeout/5xx during validation: surface as ValueError so
+                # the variable API returns a user-facing 400 instead of an
+                # unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach OpenRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
 
         elif provider == "Ollama":
             import requests

@@ -200,7 +200,10 @@ def get_llm(
             if not var.get("is_header"):
                 continue
             header_name = var.get("header_name")
-            value = provider_vars.get(var.get("variable_key")) or os.environ.get(var.get("variable_key", ""))
+            # KeyError on a misconfigured metadata entry beats silently
+            # skipping a header the operator expects to be sent.
+            variable_key = var["variable_key"]
+            value = provider_vars.get(variable_key) or os.environ.get(variable_key)
             if header_name and value:
                 default_headers[header_name] = value
         if default_headers:

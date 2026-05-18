@@ -339,7 +339,18 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
 
     Returns:
         List of model metadata dicts, or empty list if unable to fetch.
+
+    The ``tool_calling`` flag is derived per-model from OpenRouter's
+    ``supported_parameters`` so Agent/LLM components that filter on it (for
+    example ``get_language_model_options(tool_calling=True)``) show only the
+    models that can actually run with tools. The ``default`` flag is set by
+    intersecting the live catalog with the curated seed list in
+    ``openrouter_constants`` so user-facing defaults stay sensible regardless
+    of OpenRouter's id ordering — with a fallback to the first
+    ``MIN_DEFAULT_MODELS`` ids when the seed list has gone stale.
     """
+    from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
+
     if model_type != "llm":
         return []
 
@@ -347,29 +358,56 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
     if not api_key:
         return []
 
+    url = f"{OPENROUTER_API_BASE}/models"
     headers = {"Authorization": f"Bearer {api_key}"}
     try:
-        response = httpx.get(
-            f"{OPENROUTER_API_BASE}/models",
-            headers=headers,
-            timeout=OPENROUTER_FETCH_TIMEOUT,
-        )
+        response = httpx.get(url, headers=headers, timeout=OPENROUTER_FETCH_TIMEOUT)
         response.raise_for_status()
         raw_models = response.json().get("data", [])
-    except (httpx.RequestError, httpx.HTTPStatusError):
-        logger.debug("Could not fetch live OpenRouter models", exc_info=True)
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        # Surface as a warning (not debug) so a user who saved a key and sees
+        # an empty model catalog has a server-side breadcrumb.
+        status_code = getattr(getattr(e, "response", None), "status_code", None)
+        logger.warning("Could not fetch live OpenRouter models from %s (status=%s): %s", url, status_code, e)
+        return []
+    except (ValueError, TypeError) as e:
+        # 200 with malformed JSON or an unexpected payload shape — degrade to
+        # an empty catalog rather than crashing the caller.
+        logger.warning("Malformed OpenRouter /models response from %s: %s", url, e)
         return []
 
-    model_ids = sorted({m["id"] for m in raw_models if m.get("id")})
+    if not isinstance(raw_models, list):
+        logger.warning("Unexpected OpenRouter /models payload (data is %s): %r", type(raw_models).__name__, raw_models)
+        return []
+
+    by_id: dict[str, dict] = {}
+    for raw in raw_models:
+        if not isinstance(raw, dict):
+            continue
+        mid = raw.get("id")
+        if not mid:
+            continue
+        supported = raw.get("supported_parameters") or []
+        by_id[mid] = {
+            "tool_calling": isinstance(supported, list) and "tools" in supported,
+        }
+    if not by_id:
+        return []
+
+    sorted_ids = sorted(by_id)
+    seed_ids = {m["name"] for m in OPENROUTER_MODELS_DETAILED}
+    intersected_defaults = seed_ids & by_id.keys()
+    default_set = intersected_defaults or set(sorted_ids[:MIN_DEFAULT_MODELS])
+
     return [
         create_model_metadata(
             provider="OpenRouter",
             name=name,
             icon="OpenRouter",
-            tool_calling=True,
-            default=i < MIN_DEFAULT_MODELS,
+            tool_calling=by_id[name]["tool_calling"],
+            default=name in default_set,
         )
-        for i, name in enumerate(model_ids)
+        for name in sorted_ids
     ]
 
 
