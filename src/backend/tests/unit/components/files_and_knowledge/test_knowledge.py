@@ -390,3 +390,100 @@ class TestExtractSourceTypesFromDataFrame:
         df = pd.DataFrame({"file_path": ["docs/a.docx", np.nan, None]})
         extensions = KnowledgeComponent._extract_source_types_from_df(df)
         assert extensions == {"docx"}
+
+    def test_extracts_from_mimetype_column(self) -> None:
+        """MIME types like ``application/pdf`` map to ``pdf`` for the icon palette."""
+        import pandas as pd
+
+        df = pd.DataFrame({"mimetype": ["application/pdf", "text/plain"]})
+        extensions = KnowledgeComponent._extract_source_types_from_df(df)
+        assert "pdf" in extensions
+        assert "plain" in extensions
+
+
+# ---------------------------------------------------------------------------
+# source_types extraction from the *raw* component input (BUG-04 follow-up)
+# ---------------------------------------------------------------------------
+class TestExtractSourceTypesFromInput:
+    """Flow-driven ingestion must read file metadata from the raw input value.
+
+    When a File component's Raw Content (Message) is wired to ``input_df``,
+    ``convert_to_dataframe`` projects the Message down to ``{"text": ...}`` —
+    file_path / filename / mimetype never reach the DataFrame. We must look
+    at the raw input to keep the KB icon consistent with direct upload.
+    """
+
+    def test_extension_from_path_string(self) -> None:
+
+        assert KnowledgeComponent._extension_from_value("docs/report.PDF") == "pdf"
+
+    def test_extension_from_mimetype_string(self) -> None:
+        assert KnowledgeComponent._extension_from_value("application/pdf") == "pdf"
+
+    def test_extension_returns_none_for_garbage(self) -> None:
+        assert KnowledgeComponent._extension_from_value(None) is None
+        assert KnowledgeComponent._extension_from_value("") is None
+        assert KnowledgeComponent._extension_from_value("nodotsorslashes") is None
+
+    def test_extracts_from_message_data_dict(self) -> None:
+        """Mirror the shape ``BaseFileComponent._extract_file_metadata`` stamps onto a Message."""
+        from lfx.schema.message import Message
+
+        msg = Message(text="hello", file_path="/uploads/report.pdf", filename="report.pdf", mimetype="application/pdf")
+        assert KnowledgeComponent._extract_source_types_from_input(msg) == {"pdf"}
+
+    def test_extracts_from_data_object(self) -> None:
+        from lfx.schema.data import Data
+
+        data = Data(data={"text": "...", "file_path": "/uploads/notes.txt"})
+        assert KnowledgeComponent._extract_source_types_from_input(data) == {"txt"}
+
+    def test_extracts_from_plain_dict(self) -> None:
+        payload = {"text": "...", "filename": "presentation.PPTX"}
+        assert KnowledgeComponent._extract_source_types_from_input(payload) == {"pptx"}
+
+    def test_extracts_from_list_of_messages(self) -> None:
+        from lfx.schema.message import Message
+
+        msgs = [
+            Message(text="a", file_path="a.pdf"),
+            Message(text="b", file_path="b.docx"),
+        ]
+        assert KnowledgeComponent._extract_source_types_from_input(msgs) == {"pdf", "docx"}
+
+    def test_returns_empty_for_text_only_message(self) -> None:
+        """A bare ``Message(text="...")`` carries no file hints — extractor must not invent any."""
+        from lfx.schema.message import Message
+
+        assert KnowledgeComponent._extract_source_types_from_input(Message(text="just text")) == set()
+
+    def test_returns_empty_for_none(self) -> None:
+        assert KnowledgeComponent._extract_source_types_from_input(None) == set()
+
+
+# ---------------------------------------------------------------------------
+# Output handle types (BUG-02)
+# ---------------------------------------------------------------------------
+class TestOutputHandleTypesMatchStarterEdges:
+    """Output handle types must stay single-valued to match saved starter edges.
+
+    Saved starter-project edges store ``sourceHandle.output_types`` as a
+    single-element list (``["Table"]`` / ``["JSON"]``). React Flow rebuilds
+    handle IDs from the live API's ``output.types`` and matches by string
+    equality, so any widening — e.g. method annotated ``DataFrame | Data``
+    auto-extending the handle to ``["Table", "JSON"]`` — breaks every
+    pre-saved edge into / out of the Knowledge node (BUG-02).
+    """
+
+    def test_retrieve_output_type_is_table_only(self) -> None:
+        component = KnowledgeComponent()
+        retrieve = component._outputs_map["retrieve_data"]
+        assert retrieve.types == ["Table"], (
+            "retrieve_data must advertise only ['Table'] so saved starter edges keyed on "
+            "output_types=['Table'] still resolve. Widening here re-breaks BUG-02."
+        )
+
+    def test_ingest_output_type_is_json_only(self) -> None:
+        component = KnowledgeComponent()
+        ingest = component._outputs_map["dataframe_output"]
+        assert ingest.types == ["JSON"]

@@ -720,23 +720,84 @@ class KnowledgeComponent(Component):
         the File / S3 / cloud-storage components produce and collect any
         plausible extension so the icon is consistent across both flows.
         """
-        candidate_columns = ("file_path", "file_name", "filename", "source", "path")
-        extension_length_limit = 10
+        candidate_columns = ("file_path", "file_name", "filename", "source", "path", "mimetype")
         extensions: set[str] = set()
         for col in candidate_columns:
             if col not in df_source.columns:
                 continue
             for value in df_source[col].dropna():
-                text = str(value)
-                if "." not in text:
-                    continue
-                ext = text.rsplit(".", 1)[-1].strip().lower()
+                ext = KnowledgeComponent._extension_from_value(value)
                 # Drop anything that doesn't look like an extension (URL
                 # query strings, version segments, etc.) — the icon palette
                 # keys off short alphanumeric tokens like "pdf"/"docx".
-                if ext and len(ext) <= extension_length_limit and ext.isalnum():
+                if ext:
                     extensions.add(ext)
         return extensions
+
+    @staticmethod
+    def _extension_from_value(value: Any) -> str | None:
+        """Return a normalized file-extension token from a path / filename / MIME string.
+
+        Accepts values like ``"report.PDF"``, ``"/docs/notes.txt"``, or
+        ``"application/pdf"`` and returns ``"pdf"`` / ``"txt"``. Returns
+        ``None`` if no plausible extension can be derived.
+        """
+        extension_length_limit = 10
+        if value is None:
+            return None
+        text = str(value).strip()
+        if not text:
+            return None
+        # MIME types like ``application/pdf`` carry the canonical extension
+        # in the subtype slot — preserve them so File / S3 messages keyed
+        # only on ``mimetype`` still resolve to an icon.
+        if "/" in text and "." not in text.rsplit("/", 1)[-1]:
+            subtype = text.rsplit("/", 1)[-1].strip().lower()
+            return subtype if subtype and len(subtype) <= extension_length_limit and subtype.isalnum() else None
+        if "." not in text:
+            return None
+        ext = text.rsplit(".", 1)[-1].strip().lower()
+        if ext and len(ext) <= extension_length_limit and ext.isalnum():
+            return ext
+        return None
+
+    @classmethod
+    def _extract_source_types_from_mapping(cls, mapping: Any) -> set[str]:
+        """Pull extensions from a Message/Data-style ``data`` dict or a plain dict."""
+        if not isinstance(mapping, dict):
+            return set()
+        candidate_keys = ("file_path", "file_name", "filename", "source", "path", "mimetype")
+        extensions: set[str] = set()
+        for key in candidate_keys:
+            ext = cls._extension_from_value(mapping.get(key))
+            if ext:
+                extensions.add(ext)
+        return extensions
+
+    @classmethod
+    def _extract_source_types_from_input(cls, input_value: Any) -> set[str]:
+        """Pull file extensions out of the raw component input.
+
+        ``convert_to_dataframe`` strips Message/Data fields down to ``text``
+        when projecting onto a DataFrame, so file metadata attached to a
+        File-component "Raw Content" output never reaches
+        ``_extract_source_types_from_df``. Looking at the raw input first
+        keeps the KB icon consistent with direct upload.
+        """
+        if input_value is None:
+            return set()
+        if isinstance(input_value, list):
+            extensions: set[str] = set()
+            for item in input_value:
+                extensions |= cls._extract_source_types_from_input(item)
+            return extensions
+        if isinstance(input_value, pd.DataFrame):
+            return cls._extract_source_types_from_df(input_value)
+        # Message / Data / JSON all expose a ``data`` dict via the lfx schema.
+        mapping = getattr(input_value, "data", None)
+        if mapping is None and isinstance(input_value, dict):
+            mapping = input_value
+        return cls._extract_source_types_from_mapping(mapping)
 
     def _merge_source_types(self, kb_path: Path, extensions: set[str]) -> None:
         """Merge newly observed extensions into the KB's ``source_types`` metadata.
@@ -1078,14 +1139,17 @@ class KnowledgeComponent(Component):
             return ""
         return json.dumps(decoded, sort_keys=True)
 
-    async def build_kb_info(self) -> Data | DataFrame:
+    async def build_kb_info(self) -> Data:
         """Main ingestion routine → returns a dict with KB metadata.
 
-        Defensive: if a saved flow has the ingest output wired but the
-        user has since switched to retrieve mode, the runtime still hits
-        this method. Dispatch to ``retrieve_data`` in that case so the
-        flow keeps working instead of crashing on the (now-None)
-        ``input_df``.
+        The annotation is intentionally narrowed to ``Data`` even though the
+        cross-mode fallback below may return a ``DataFrame`` from
+        ``retrieve_data``. The frontend builds React-Flow handle IDs from
+        this output's type list; widening it to ``Data | DataFrame`` makes
+        the API advertise ``["JSON", "Table"]`` for the ingest output and
+        breaks every saved-edge sourceHandle that was generated against
+        a single-type handle (BUG-02). Python doesn't enforce return
+        annotations at runtime, so the rare fallback path keeps working.
         """
         if _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)):
             return await self.retrieve_data()
@@ -1203,7 +1267,12 @@ class KnowledgeComponent(Component):
                 # Stamp the KB with the file extensions we just ingested so
                 # the Knowledge Bases list renders the correct icon for
                 # flow-driven ingestion (input_df), matching direct upload.
-                self._merge_source_types(kb_path, self._extract_source_types_from_df(df_source))
+                # We look at the raw input first because ``convert_to_dataframe``
+                # drops Message/Data metadata fields (file_path, mimetype, …)
+                # when projecting onto the DataFrame.
+                source_types = self._extract_source_types_from_input(input_value)
+                source_types |= self._extract_source_types_from_df(df_source)
+                self._merge_source_types(kb_path, source_types)
             finally:
                 if isinstance(backend, BaseVectorStoreBackend):
                     await backend.teardown()
@@ -1524,12 +1593,16 @@ class KnowledgeComponent(Component):
         options = get_embedding_model_options(user_id=self.user_id)
         return next((o for o in options if o.get("name") == model_name), None)
 
-    async def retrieve_data(self) -> DataFrame | Data:
+    async def retrieve_data(self) -> DataFrame:
         """Retrieve data from the selected knowledge base.
 
-        Defensive: if the saved flow has the retrieve output wired but
-        the user has since switched to ingest mode, delegate to
-        ``build_kb_info`` so the flow keeps working.
+        Annotation narrowed to ``DataFrame`` to keep this output's handle
+        type list at ``["Table"]`` only; widening to a union surfaces
+        ``["Table", "JSON"]`` on the API and breaks every starter-project
+        edge whose sourceHandle was stored against a single-type handle
+        (BUG-02). The cross-mode defensive fallback may still return a
+        ``Data`` at runtime — Python ignores return annotations, so
+        nothing breaks.
         """
         if not _is_retrieve_mode(getattr(self, "mode", MODE_INGEST)):
             return await self.build_kb_info()
