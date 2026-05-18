@@ -97,7 +97,8 @@ def register(app: typer.Typer) -> None:
         script_paths: list[str] | None = typer.Argument(
             default=None,
             help=(
-                "Path(s) to JSON flow file(s) (.json) or a directory containing .json files. "
+                "Path(s) to JSON flow file(s) (.json), Python script(s) (.py), or a directory "
+                "containing .json files (top-level only, non-recursive). "
                 "Optional when using --flow-json or --stdin."
             ),
         ),

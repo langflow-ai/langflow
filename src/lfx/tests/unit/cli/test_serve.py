@@ -364,6 +364,31 @@ class TestBuildRegistryFromPaths:
         ):
             asyncio.run(build_registry_from_paths([p], lambda _: None, check_variables=False))
 
+    def test_same_filename_in_different_dirs_gets_distinct_ids(self, tmp_path):
+        """Regression: lfx serve a/flow.json b/flow.json must not collide on ID."""
+        import asyncio
+
+        from lfx.cli.commands import build_registry_from_paths
+
+        dir_a = tmp_path / "a"
+        dir_b = tmp_path / "b"
+        dir_a.mkdir()
+        dir_b.mkdir()
+        flow_data = {"nodes": [], "edges": []}
+        p1 = dir_a / "flow.json"
+        p2 = dir_b / "flow.json"
+        p1.write_text(json.dumps(flow_data))
+        p2.write_text(json.dumps(flow_data))
+
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.flow_id = None
+
+        with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
+            registry = asyncio.run(build_registry_from_paths([p1, p2], lambda _: None, check_variables=False))
+
+        assert len(registry) == 2, "both flows must be registered with distinct IDs"
+
 
 class TestServeCommandMultiFlow:
     def test_serve_command_with_directory(self, tmp_path):

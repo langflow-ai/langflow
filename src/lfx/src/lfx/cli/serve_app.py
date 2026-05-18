@@ -128,7 +128,10 @@ class FlowRegistry:
     def __init__(self) -> None:
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
 
-    def add(self, graph: Graph, meta: FlowMeta) -> None:
+    def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False) -> None:
+        if not overwrite and meta.id in self._flows:
+            msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
+            raise ValueError(msg)
         self._flows[meta.id] = (graph, meta)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
@@ -337,7 +340,7 @@ def create_multi_serve_app(
         )
         # NOTE: in-memory only — not persisted to disk and not visible to other
         # worker processes. See FlowRegistry docstring for multi-worker caveats.
-        registry.add(graph, meta)
+        registry.add(graph, meta, overwrite=body.replace)
         return UploadFlowResponse(
             id=flow_id,
             name=body.name,

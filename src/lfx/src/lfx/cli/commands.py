@@ -40,8 +40,9 @@ async def serve_command(
     script_paths: list[str] | None = typer.Argument(
         default=None,
         help=(
-            "Path(s) to JSON flow file(s) (.json) or a directory containing .json files "
-            "(top-level only, non-recursive). Optional when using --flow-json or --stdin."
+            "Path(s) to JSON flow file(s) (.json), Python script(s) (.py), or a directory "
+            "containing .json files (top-level only, non-recursive). "
+            "Optional when using --flow-json or --stdin."
         ),
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
@@ -185,10 +186,10 @@ async def serve_command(
                 verbose_print(f"✓ Loaded {len(registry)} flow(s) from directory {dir_path}")
                 paths = []
             else:
-                non_json = [p for p in resolved if p.suffix != ".json"]
-                if non_json:
-                    for p in non_json:
-                        typer.echo(f"Error: '{p}' is not a .json file.", err=True)
+                non_supported = [p for p in resolved if p.suffix not in {".json", ".py"}]
+                if non_supported:
+                    for p in non_supported:
+                        typer.echo(f"Error: '{p}' must be a .json or .py file.", err=True)
                     raise typer.Exit(1)
                 paths = resolved
                 source_display = ", ".join(p.name for p in paths)
@@ -264,7 +265,12 @@ async def _load_graph_and_meta(
 ) -> tuple:
     """Load and prepare one graph, returning (graph, FlowMeta)."""
     try:
-        graph = load_flow_from_json(path)
+        if path.suffix == ".py":
+            from lfx.cli.script_loader import load_graph_from_script
+
+            graph = await load_graph_from_script(path)
+        else:
+            graph = load_flow_from_json(path)
     except Exception as exc:
         msg = f"Failed to load {path.name}: {exc}"
         raise ValueError(msg) from exc
@@ -322,12 +328,16 @@ async def build_registry_from_paths(
     *,
     check_variables: bool,
 ) -> FlowRegistry:
-    """Build a FlowRegistry from an explicit list of ``*.json`` paths."""
+    """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
+    # Use a shared root so same-named files in different directories get distinct IDs.
+    common_root = (
+        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent
+    )
     registry = FlowRegistry()
     errors: list[str] = []
     for path in paths:
         try:
-            graph, meta = await _load_graph_and_meta(path, path.parent, check_variables=check_variables)
+            graph, meta = await _load_graph_and_meta(path, common_root, check_variables=check_variables)
             registry.add(graph, meta)
             verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
         except Exception as exc:  # noqa: BLE001

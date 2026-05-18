@@ -87,12 +87,19 @@ class TestFlowRegistry:
         ids = {m.id for m in registry.list_metas()}
         assert ids == {"a", "b"}
 
-    def test_duplicate_add_replaces_graph(self):
+    def test_duplicate_add_raises_without_overwrite(self):
+        registry = FlowRegistry()
+        meta = self._make_meta("flow-1")
+        registry.add(MagicMock(), meta)
+        with pytest.raises(ValueError, match="already registered"):
+            registry.add(MagicMock(), meta)
+
+    def test_duplicate_add_replaces_with_overwrite(self):
         registry = FlowRegistry()
         g1, g2 = MagicMock(), MagicMock()
         meta = self._make_meta("flow-1")
         registry.add(g1, meta)
-        registry.add(g2, meta)
+        registry.add(g2, meta, overwrite=True)
         assert registry.get("flow-1")[0] is g2
 
     def test_len(self):
