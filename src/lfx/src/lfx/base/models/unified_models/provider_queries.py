@@ -18,6 +18,7 @@ from lfx.base.models.openai_constants import (
     OPENAI_EMBEDDING_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
 )
+from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 
 
@@ -41,6 +42,7 @@ def get_models_detailed() -> list[list[dict]]:
         GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
         OLLAMA_MODELS_DETAILED,
         OLLAMA_EMBEDDING_MODELS_DETAILED,
+        OPENROUTER_MODELS_DETAILED,
         WATSONX_MODELS_DETAILED,
     ]
 

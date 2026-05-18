@@ -184,6 +184,27 @@ def get_llm(
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+    elif provider == "OpenRouter":
+        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
+        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
+        # any configured attribution headers (HTTP-Referer, X-Title) so usage
+        # shows up correctly in the OpenRouter dashboard.
+        provider_meta = model_provider_metadata.get(provider, {})
+        base_url_value = provider_meta.get("base_url")
+        if base_url_value:
+            kwargs["base_url"] = base_url_value
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        default_headers: dict[str, str] = {}
+        for var in provider_meta.get("variables", []):
+            if not var.get("is_header"):
+                continue
+            header_name = var.get("header_name")
+            value = provider_vars.get(var.get("variable_key")) or os.environ.get(var.get("variable_key", ""))
+            if header_name and value:
+                default_headers[header_name] = value
+        if default_headers:
+            kwargs["default_headers"] = default_headers
 
     try:
         return model_class(**kwargs)

@@ -408,6 +408,26 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             )
             llm.invoke("test")
 
+        elif provider == "OpenRouter":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("OPENROUTER_API_KEY")
+            if not api_key:
+                return
+
+            response = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=5,
+            )
+            if response.status_code == HTTPStatus.UNAUTHORIZED:
+                msg = "Invalid OpenRouter API key"
+                logger.error(msg)
+                raise ValueError(msg)
+            response.raise_for_status()
+
         elif provider == "Ollama":
             import requests
 

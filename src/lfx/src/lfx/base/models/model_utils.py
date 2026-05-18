@@ -326,6 +326,53 @@ def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm"
         return []
 
 
+OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
+OPENROUTER_FETCH_TIMEOUT = 10.0
+
+
+def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch live OpenRouter models using the user's configured API key.
+
+    Args:
+        user_id: The user ID to look up the OpenRouter API key
+        model_type: "llm" or "embeddings" (OpenRouter only supports llm)
+
+    Returns:
+        List of model metadata dicts, or empty list if unable to fetch.
+    """
+    if model_type != "llm":
+        return []
+
+    api_key = get_provider_variable_value(user_id, "OPENROUTER_API_KEY")
+    if not api_key:
+        return []
+
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        response = httpx.get(
+            f"{OPENROUTER_API_BASE}/models",
+            headers=headers,
+            timeout=OPENROUTER_FETCH_TIMEOUT,
+        )
+        response.raise_for_status()
+        raw_models = response.json().get("data", [])
+    except (httpx.RequestError, httpx.HTTPStatusError):
+        logger.debug("Could not fetch live OpenRouter models", exc_info=True)
+        return []
+
+    model_ids = sorted({m["id"] for m in raw_models if m.get("id")})
+    return [
+        create_model_metadata(
+            provider="OpenRouter",
+            name=name,
+            icon="OpenRouter",
+            tool_calling=True,
+            default=i < MIN_DEFAULT_MODELS,
+        )
+        for i, name in enumerate(model_ids)
+    ]
+
+
 def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live WatsonX models from the configured WatsonX instance.
 
@@ -386,6 +433,8 @@ def get_live_models_for_provider(
         return fetch_live_ollama_models(user_id, model_type)
     if provider == "IBM WatsonX":
         return fetch_live_watsonx_models(user_id, model_type)
+    if provider == "OpenRouter":
+        return fetch_live_openrouter_models(user_id, model_type)
     return []
 
 

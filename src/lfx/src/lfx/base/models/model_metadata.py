@@ -47,7 +47,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
@@ -287,6 +287,55 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "mapping": {
             "model_class": "ChatWatsonx",
             "model_param": "model_id",
+        },
+    },
+    "OpenRouter": {
+        "icon": "OpenRouter",
+        "max_tokens_field_name": "max_tokens",
+        "base_url": "https://openrouter.ai/api/v1",
+        "variables": [
+            {
+                "variable_name": "OpenRouter API Key",
+                "variable_key": "OPENROUTER_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to OPENROUTER_API_KEY environment variable",
+                },
+            },
+            {
+                "variable_name": "Site URL",
+                "variable_key": "OPENROUTER_SITE_URL",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "HTTP-Referer",
+                "description": "Optional. Sent as the HTTP-Referer header for OpenRouter attribution.",
+            },
+            {
+                "variable_name": "App Name",
+                "variable_key": "OPENROUTER_APP_NAME",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "X-Title",
+                "description": "Optional. Sent as the X-Title header for OpenRouter attribution.",
+            },
+        ],
+        "api_docs_url": "https://openrouter.ai/docs",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
         },
     },
 }
