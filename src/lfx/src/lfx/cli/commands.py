@@ -187,9 +187,7 @@ async def serve_command(
 
     # Fail fast if upgrade_flow was requested but we still have nothing to check.
     if upgrade_flow and json_data is None:
-        verbose_print(
-            "Error: --upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
-        )
+        verbose_print("Error: --upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path).")
         raise typer.Exit(1)
 
     # --- upgrade compatibility check (before temp-file write) ---

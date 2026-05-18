@@ -1415,6 +1415,7 @@ class TestRunFlowExecutionErrors:
 # --upgrade-flow option
 # ---------------------------------------------------------------------------
 
+
 class TestUpgradeFlowOption:
     """Tests for the --upgrade-flow option wired into run_flow."""
 

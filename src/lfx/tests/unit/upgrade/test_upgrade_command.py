@@ -125,8 +125,9 @@ def test_upgrade_file_not_found():
 # Outer-envelope flow handling
 # ---------------------------------------------------------------------------
 
+
 def test_upgrade_outer_envelope_flow_finds_nodes(tmp_path):
-    """lfx upgrade must detect nodes in Langflow's exported outer-envelope format.
+    """Lfx upgrade must detect nodes in Langflow's exported outer-envelope format.
 
     Langflow exports flows as {"name": "...", "data": {"nodes": [...], "edges": []}}.
     Before the fix, check_flow_compatibility received the outer dict, got nodes=[], and
