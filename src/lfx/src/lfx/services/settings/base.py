@@ -238,6 +238,16 @@ class Settings(BaseSettings):
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    load_flows_overwrite_on_name_match: bool = False
+    """When a flow loaded from ``load_flows_path`` shares a name with an existing DB row but has
+    a different id, overwrite the existing row's content from the file.
+
+    Default ``False`` preserves user edits made in the UI on restart: name-matched rows are
+    skipped with a warning instead of being silently overwritten when file UUIDs regenerate.
+    (Pre-1.10.0 this case raised ``IntegrityError`` and crashed startup; the loader now boots
+    successfully either way.) Set ``True`` to opt into "prepackaged flows are the source of
+    truth on restart" semantics, typically for CI/CD pipelines.
+    """
     bundle_urls: list[str] = []
 
     # Redis
@@ -443,12 +453,12 @@ class Settings(BaseSettings):
     use hardware-level isolation to restrict access."""
 
     # SSRF Protection
-    ssrf_protection_enabled: bool = False
+    ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
-    When False (default), no URL validation is performed, allowing requests to any destination
+    When False, no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    Default is True to protect against SSRF attacks including DNS rebinding.
 
     Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
