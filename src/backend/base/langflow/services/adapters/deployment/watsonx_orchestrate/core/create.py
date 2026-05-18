@@ -53,6 +53,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_langflow_wxo_resource_name,
     dedupe_list,
     raise_as_deployment_error,
+    validate_technical_name,
 )
 
 if TYPE_CHECKING:
@@ -93,11 +94,15 @@ def validate_provider_create_request_sections(payload: DeploymentCreate) -> None
 
 def build_provider_create_plan(
     *,
-    deployment_name: str,
+    deployment_name: str | None,
     provider_create: WatsonxDeploymentCreatePayload,
 ) -> ProviderCreatePlan:
     """Build a deterministic CPU-only plan for provider_data create operations."""
-    normalized_deployment_name = build_langflow_wxo_resource_name(deployment_name, resource="Agent")
+    technical_deployment_name = (
+        validate_technical_name(deployment_name, field_label="Agent name")
+        if deployment_name is not None
+        else build_langflow_wxo_resource_name(provider_create.display_name, resource="Agent")
+    )
 
     # existing_tool_ids: provider tool ids from bind operations that reference
     #   pre-existing tools (via tool_id_with_ref); included in the final agent.
@@ -152,8 +157,8 @@ def build_provider_create_plan(
     ]
 
     return ProviderCreatePlan(
-        deployment_name=normalized_deployment_name,
-        display_name=deployment_name,
+        deployment_name=technical_deployment_name,
+        display_name=provider_create.display_name,
         llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},

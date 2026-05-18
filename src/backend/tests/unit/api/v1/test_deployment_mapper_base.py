@@ -349,7 +349,7 @@ def test_base_mapper_shapers_passthrough_provider_payload(method_name: str) -> N
 
 def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
-    with pytest.raises(NotImplementedError, match="not configured for shaping provider data for a deployment"):
+    with pytest.raises(NotImplementedError, match="GET provider_data shaping is unavailable for this provider"):
         mapper.shape_deployment_get_data({"ok": True})
 
 

@@ -72,6 +72,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     assert slot.deployment_create is not None
 
     payload = {
+        "display_name": "Create Agent",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [_raw_tool("tool-new-1", 11)],
@@ -103,6 +104,7 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
     assert slot.deployment_create is not None
 
     payload = {
+        "display_name": "Create Agent",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [

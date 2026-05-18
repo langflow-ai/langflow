@@ -51,7 +51,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_langflow_wxo_resource_name,
     dedupe_list,
+    ensure_field_not_empty,
     extract_agent_tool_ids,
+    validate_description,
+    validate_technical_name,
 )
 
 if TYPE_CHECKING:
@@ -595,30 +598,33 @@ async def apply_provider_update_plan_with_rollback(
 def build_update_payload_from_spec(
     spec: BaseDeploymentDataUpdate | None,
     *,
-    llm: str | None = None,
+    core_update: WatsonxDeploymentUpdatePayload | None = None,
 ) -> dict[str, Any]:
     """Build agent update payload from deployment spec updates.
 
-    Uses ``exclude_unset=True`` so that fields the caller did not explicitly
-    provide are left untouched on the provider side (e.g. sending
-    ``description=None`` clears the description, while *omitting* description
-    leaves it unchanged).
+    Uses ``model_fields_set`` so fields the caller did not explicitly provide
+    are left untouched on the provider side (e.g. sending ``description=None``
+    clears the description, while omitting description leaves it unchanged).
     """
     update_payload: dict[str, Any] = {}
 
-    if llm is not None:
-        update_payload["llm"] = llm
+    if core_update is not None:
+        if "llm" in core_update.model_fields_set:
+            update_payload["llm"] = ensure_field_not_empty(core_update.llm, field_label="Agent llm")
 
-    if not spec:
-        return update_payload
+        if "display_name" in core_update.model_fields_set:
+            update_payload["display_name"] = ensure_field_not_empty(
+                core_update.display_name,
+                field_label="Agent display name",
+            )
 
-    if "description" in spec.model_fields_set:
-        update_payload["description"] = spec.description
+    if spec is not None:
+        if "name" in spec.model_fields_set:
+            update_payload["name"] = validate_technical_name(spec.name, field_label="Agent name")
+        if "description" in spec.model_fields_set:
+            update_payload["description"] = validate_description(spec.description, field_label="Agent description")
 
-    if "name" in spec.model_fields_set:
-        if spec.name is None:
-            msg = "Agent 'name' cannot be set to null."
-            raise InvalidContentError(message=msg)
-        update_payload["display_name"] = spec.name
-        update_payload["name"] = build_langflow_wxo_resource_name(spec.name, resource="Agent")
+    if "display_name" in update_payload and "name" not in update_payload:
+        update_payload["name"] = build_langflow_wxo_resource_name(update_payload["display_name"], resource="Agent")
+
     return update_payload

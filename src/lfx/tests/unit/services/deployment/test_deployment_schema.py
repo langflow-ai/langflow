@@ -143,12 +143,13 @@ def test_deployment_list_params_rejects_blank_filter_ids() -> None:
         DeploymentListParams(deployment_ids=["   "])
 
 
-def test_deployment_list_params_validates_deployment_names() -> None:
-    params = DeploymentListParams(deployment_names=[" A ", "B"])
-    assert params.deployment_names == ["A", "B"]
+def test_deployment_list_params_validates_entity_filter_ids() -> None:
+    params = DeploymentListParams(snapshot_ids=[" snap-1 ", "snap-1"], config_ids=[" cfg-1 "])
+    assert params.snapshot_ids == ["snap-1"]
+    assert params.config_ids == ["cfg-1"]
 
     with pytest.raises(ValidationError):
-        DeploymentListParams(deployment_names=["A", "  "])
+        DeploymentListParams(snapshot_ids=["snap-1", "  "])
 
 
 def test_item_result_normalizes_name() -> None:
@@ -504,6 +505,11 @@ def test_base_deployment_data_update_accepts_explicit_null_description() -> None
 def test_base_deployment_data_normalizes_name() -> None:
     payload = BaseDeploymentData(name=" My Deployment ", type=DeploymentType.AGENT)
     assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_allows_omitted_name() -> None:
+    payload = BaseDeploymentData(type=DeploymentType.AGENT)
+    assert payload.name is None
 
 
 def test_base_deployment_data_rejects_blank_name() -> None:

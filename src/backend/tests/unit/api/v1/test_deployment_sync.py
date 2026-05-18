@@ -2064,10 +2064,11 @@ class TestWxoResolveRollbackUpdate:
 
         assert result is not None
         assert result.spec is not None
-        assert result.spec.name == "test-dep"
+        assert "name" not in result.spec.model_fields_set
         assert result.spec.description == "desc"
         provider_data = result.provider_data
         assert provider_data["put_tools"] == ["tool-1", "tool-2"]
+        assert provider_data["display_name"] == "test-dep"
 
     @pytest.mark.asyncio
     @patch(f"{ATT_CRUD_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
@@ -2076,7 +2077,7 @@ class TestWxoResolveRollbackUpdate:
         """When no attachments exist, put_tools is an empty list (clears all tools)."""
         dep = MagicMock()
         dep.display_name = "test-dep"
-        dep.description = None
+        dep.description = "   "
         mock_get_dep.return_value = dep
         mock_list_att.return_value = []
 
@@ -2091,8 +2092,9 @@ class TestWxoResolveRollbackUpdate:
 
         assert result is not None
         assert result.provider_data["put_tools"] == []
+        assert result.provider_data["display_name"] == "test-dep"
         assert result.spec is not None
-        assert result.spec.description == ""
+        assert result.spec.description is None
 
 
 # ---------------------------------------------------------------------------

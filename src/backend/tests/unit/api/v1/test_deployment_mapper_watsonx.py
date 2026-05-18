@@ -1583,6 +1583,8 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     )
     provider_data = resolved.provider_data or {}
 
+    assert resolved.spec.name is None
+    assert provider_data["display_name"] == "create-deploy"
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
     assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
@@ -1633,6 +1635,8 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -
     )
     provider_data = resolved.provider_data or {}
 
+    assert resolved.spec.name is None
+    assert provider_data["display_name"] == "create-deploy"
     assert provider_data["tools"]["raw_payloads"][0]["name"] == "My_Create_Tool"
     assert provider_data["operations"][0]["op"] == "bind"
     assert provider_data["operations"][0]["tool"]["name_of_raw"] == "My_Create_Tool"
@@ -2913,8 +2917,9 @@ async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operat
     provider_data = resolved.provider_data or {}
 
     assert resolved.spec is not None
-    assert resolved.spec.name == "updated-name"
+    assert "name" not in resolved.spec.model_fields_set
     assert resolved.spec.description == "updated-description"
+    assert provider_data["display_name"] == "updated-name"
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["tools"]["raw_payloads"] is None
 
