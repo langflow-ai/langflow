@@ -1,6 +1,6 @@
 import React, { forwardRef } from "react";
-import SvgIBM from "./ibm/IBM";
 import SvgDB2 from "./db2/DB2";
+import SvgIBM from "./ibm/IBM";
 import SvgWatsonxAI from "./watsonx/WatsonxAI";
 import SvgWatsonxOrchestrate from "./watsonx/WatsonxOrchestrate";
 
