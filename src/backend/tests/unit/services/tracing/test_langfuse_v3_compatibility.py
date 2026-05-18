@@ -30,6 +30,16 @@ def langfuse_env_vars():
         yield
 
 
+@pytest.fixture(autouse=True)
+def reset_langfuse_shared_client():
+    """Clear the cached Langfuse client between tests so mocks don't leak."""
+    from langflow.services.tracing.langfuse import _reset_shared_client_for_tests
+
+    _reset_shared_client_for_tests()
+    yield
+    _reset_shared_client_for_tests()
+
+
 def _clear_failed_langfuse_import() -> None:
     """Remove partially imported Langfuse modules after SDK import failures."""
     for module_name in list(sys.modules):
@@ -296,3 +306,121 @@ class TestLangfuseTracerFunctionality:
             trace_context = call_kwargs["trace_context"]
             assert "parent_span_id" in trace_context
             assert trace_context["parent_span_id"] == "child-span-id"
+
+
+class TestLangfuseClientSingleton:
+    """Verify the Langfuse client is constructed once and reused across flow runs.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/9066.
+    """
+
+    def test_single_client_for_multiple_flow_runs(self):
+        """A single Langfuse() client must be reused across all flow runs.
+
+        Background threads (task_manager, prompt_cache, OTel exporters) are
+        spawned per client and never joined, so a per-run client leaks threads.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        n_runs = 5
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_langfuse_class.return_value = mock_client
+
+            for _ in range(n_runs):
+                LangFuseTracer(
+                    trace_name="test-flow - flow-id",
+                    trace_type="chain",
+                    project_name="test-project",
+                    trace_id=uuid.uuid4(),
+                )
+
+            # After fix: Langfuse() must be instantiated exactly once,
+            # regardless of how many flows run.
+            assert mock_langfuse_class.call_count == 1
+
+    def test_end_calls_client_flush(self):
+        """end() must flush buffered events so they're sent before the trace finishes."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_root_span = MagicMock()
+            mock_client.start_span.return_value = mock_root_span
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-id",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+            tracer.end(inputs={"a": 1}, outputs={"b": 2})
+
+            mock_client.flush.assert_called_once()
+
+    def test_end_swallows_flush_errors(self):
+        """A failing flush() must not break flow end."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_client.flush.side_effect = RuntimeError("upstream down")
+            mock_root_span = MagicMock()
+            mock_client.start_span.return_value = mock_root_span
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-id",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+            # Should not raise even though flush() blew up.
+            tracer.end(inputs={"a": 1}, outputs={"b": 2})
+
+            mock_client.flush.assert_called_once()
+
+    def test_feedback_helper_reuses_shared_client(self):
+        """`_get_langfuse_client()` (used by feedback scoring) must reuse the singleton."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_client = MagicMock()
+            mock_langfuse_class.return_value = mock_client
+
+            client_a = _get_langfuse_client()
+            client_b = _get_langfuse_client()
+
+            assert client_a is client_b
+            assert mock_langfuse_class.call_count == 1
+
+    def test_credential_change_creates_new_client(self):
+        """Rotating credentials should produce a fresh client, not reuse the stale one."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+
+            _get_langfuse_client()
+            assert mock_langfuse_class.call_count == 1
+
+            # Rotate credentials and call again.
+            with patch.dict(
+                os.environ,
+                {
+                    "LANGFUSE_SECRET_KEY": "sk-lf-rotated",  # pragma: allowlist secret
+                    "LANGFUSE_PUBLIC_KEY": "pk-lf-rotated",
+                    "LANGFUSE_HOST": "http://localhost:3000",
+                },
+            ):
+                _get_langfuse_client()
+
+            assert mock_langfuse_class.call_count == 2
