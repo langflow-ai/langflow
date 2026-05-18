@@ -1409,3 +1409,118 @@ class TestRunFlowExecutionErrors:
                 await run_flow(script_path=script_path)
 
             assert "Failed to prepare graph" in str(exc_info.value)
+
+
+# ---------------------------------------------------------------------------
+# upgrade_flow regression tests (Bugs 2 & 3 + fail-fast)
+# ---------------------------------------------------------------------------
+
+class TestUpgradeFlowOption:
+    """Tests for the --upgrade-flow option wired into run_flow."""
+
+    REGISTRY_CODE = "class MyComp:\n    pass  # v2"
+    NODE_CODE = "class MyComp:\n    pass  # v1"
+
+    def _registry(self):
+        return {
+            "Cat": {
+                "MyComp": {
+                    "template": {"code": {"value": self.REGISTRY_CODE}},
+                    "outputs": [
+                        {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                    ],
+                    "metadata": {},
+                }
+            }
+        }
+
+    def _flow_dict(self, code=None):
+        return {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": "MyComp",
+                        "node": {
+                            "display_name": "My Component",
+                            "edited": False,
+                            "template": {"code": {"value": code or self.NODE_CODE}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outdated_inline_json(self):
+        """Bug-2 regression: --upgrade-flow=check must reject outdated nodes from inline JSON."""
+        import json as _json
+
+        flow_json = _json.dumps(self._flow_dict(code=self.NODE_CODE))
+
+        with patch("lfx.interface.components.component_cache") as mock_cache:
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="incompatible components"):
+                await run_flow(flow_json=flow_json, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outdated_file(self, tmp_path):
+        """Bug-2 regression: --upgrade-flow=check must also fire for .json file paths, not just inline JSON."""
+        import json as _json
+
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(self._flow_dict(code=self.NODE_CODE)))
+
+        with patch("lfx.interface.components.component_cache") as mock_cache:
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="incompatible components"):
+                await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_file(self, tmp_path):
+        """Bug-1+2 combined: outer-envelope .json file must be unwrapped before checking."""
+        import json as _json
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(envelope))
+
+        with patch("lfx.interface.components.component_cache") as mock_cache:
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="incompatible components"):
+                await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_rejects_py_script(self, tmp_path):
+        """--upgrade-flow on a .py script must fail fast with a clear error, not silently skip."""
+        script = tmp_path / "flow.py"
+        script.write_text("graph = None")
+
+        with pytest.raises(RunError, match=r"only supported for JSON"):
+            await run_flow(script_path=script, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_fails_fast_on_unreadable_json_file(self, tmp_path):
+        """If the .json file can't be read for upgrade check, must raise RunError — not silently skip."""
+        f = tmp_path / "broken.json"
+        f.write_text("not valid json")
+
+        with pytest.raises(RunError, match="could not read flow file"):
+            await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_unknown_mode_raises(self):
+        """An unknown --upgrade-flow value must raise immediately, not silently pass."""
+        import json as _json
+
+        flow_json = _json.dumps(self._flow_dict(code=self.REGISTRY_CODE))
+
+        with patch("lfx.interface.components.component_cache") as mock_cache:
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="Unknown --upgrade-flow"):
+                await run_flow(flow_json=flow_json, upgrade_flow="typo")

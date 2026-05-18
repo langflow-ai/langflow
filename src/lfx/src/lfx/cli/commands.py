@@ -181,8 +181,16 @@ async def serve_command(
         try:
             raw = json.loads(Path(script_path).read_text(encoding="utf-8"))
             json_data = raw.get("data", raw)
-        except Exception as e:  # noqa: BLE001
-            verbose_print(f"Warning: could not read flow file for upgrade check: {e}")
+        except Exception as e:
+            verbose_print(f"Error: --upgrade-flow: could not read flow file '{script_path}': {e}")
+            raise typer.Exit(1) from e
+
+    # Fail fast if upgrade_flow was requested but we still have nothing to check.
+    if upgrade_flow and json_data is None:
+        verbose_print(
+            "Error: --upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
+        )
+        raise typer.Exit(1)
 
     # --- upgrade compatibility check (before temp-file write) ---
     if upgrade_flow and json_data is not None:

@@ -190,14 +190,28 @@ async def run_flow(
     # For JSON file paths with --upgrade-flow: read into flow_dict so the check below
     # fires and any applied upgrades are used when loading the graph (instead of the
     # original file).  .py scripts are not JSON flows and cannot be upgraded.
-    if upgrade_flow and flow_dict is None and script_path is not None and script_path.suffix.lower() == ".json":
-        try:
-            import json as _json
+    if upgrade_flow and flow_dict is None and script_path is not None:
+        if script_path.suffix.lower() == ".json":
+            try:
+                import json as _json
 
-            raw = _json.loads(script_path.read_text(encoding="utf-8"))
-            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
-        except Exception as e:  # noqa: BLE001
-            output_error(f"Could not read flow for upgrade check: {e}", verbose=verbose)
+                raw = _json.loads(script_path.read_text(encoding="utf-8"))
+                flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            except Exception as e:
+                error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, e) from e
+        else:
+            error_msg = f"--upgrade-flow is only supported for JSON flows, not '{script_path.suffix}' files."
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, None)
+
+    # Fail fast if upgrade_flow was requested but we still have nothing to check.
+    # This guards against unexpected code paths that leave flow_dict None.
+    if upgrade_flow and flow_dict is None:
+        error_msg = "--upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
+        output_error(error_msg, verbose=verbose)
+        raise RunError(error_msg, None)
 
     # --- upgrade compatibility check ---
     if upgrade_flow and flow_dict is not None:

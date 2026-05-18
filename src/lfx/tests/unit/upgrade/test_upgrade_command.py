@@ -119,3 +119,90 @@ def test_upgrade_file_not_found():
     result = runner.invoke(app, ["upgrade", "/nonexistent/flow.json"])
     assert result.exit_code != 0
     assert "not found" in result.output.lower() or "does not exist" in result.output.lower()
+
+
+# ---------------------------------------------------------------------------
+# Bug-1 regression: outer-envelope flow must not silently appear empty
+# ---------------------------------------------------------------------------
+
+def test_upgrade_outer_envelope_flow_finds_nodes(tmp_path):
+    """lfx upgrade must detect nodes in Langflow's exported outer-envelope format.
+
+    Langflow exports flows as {"name": "...", "data": {"nodes": [...], "edges": []}}.
+    Before the fix, check_flow_compatibility received the outer dict, got nodes=[], and
+    always reported 'all up to date' regardless of actual node state.
+    """
+    envelope_flow = {
+        "name": "My Flow",
+        "description": "test",
+        "data": {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": "MyComp",
+                        "node": {
+                            "display_name": "My Component",
+                            "edited": False,
+                            "template": {"code": {"value": NODE_CODE}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+    f = tmp_path / "flow.json"
+    f.write_text(json.dumps(envelope_flow))
+
+    with patch("lfx.cli.upgrade.load_registry_from_index", return_value=_registry()):
+        result = runner.invoke(app, ["upgrade", str(f)])
+
+    # Must find the outdated node — not falsely report "all up to date"
+    assert result.exit_code == 0
+    assert "outdated_safe" in result.output or "safe" in result.output.lower(), (
+        f"Expected outdated_safe in output but got: {result.output!r}"
+    )
+
+
+def test_upgrade_outer_envelope_write_updates_inner_nodes(tmp_path):
+    """--write on an outer-envelope flow must update nodes inside data.nodes."""
+    envelope_flow = {
+        "name": "My Flow",
+        "data": {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": "MyComp",
+                        "node": {
+                            "display_name": "My Component",
+                            "edited": False,
+                            "template": {"code": {"value": NODE_CODE}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+    f = tmp_path / "flow.json"
+    f.write_text(json.dumps(envelope_flow))
+
+    with patch("lfx.cli.upgrade.load_registry_from_index", return_value=_registry()):
+        result = runner.invoke(app, ["upgrade", "--write", str(f)])
+
+    assert result.exit_code == 0
+    written = json.loads(f.read_text())
+    # The written file is the unwrapped graph (the data key's content)
+    nodes = written.get("nodes", [])
+    assert nodes, "Expected nodes in written output"
+    assert nodes[0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
