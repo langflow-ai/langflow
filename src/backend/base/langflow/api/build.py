@@ -744,8 +744,16 @@ async def cancel_flow_build(
             # cancel during its start_job marker check.
             await logger.ainfo(f"Cross-worker cancel signaled for job_id {job_id} (reached {receivers} subscriber(s))")
             return True
-        await logger.awarning(f"No event task found for job_id {job_id}")
-        return True  # Nothing to cancel is still a success
+        # In-memory backend with no cross-worker cancel support: the job is
+        # owned by another process we cannot reach.  Return False so callers
+        # know the cancellation did not take effect rather than reporting a
+        # false success.
+        await logger.awarning(
+            f"No event task found for job_id {job_id} — "
+            "this worker does not own the build and cross-worker cancel is not available. "
+            "The build will continue."
+        )
+        return False
 
     if event_task.done():
         await logger.ainfo(f"Task for job_id {job_id} is already completed")

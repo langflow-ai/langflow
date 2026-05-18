@@ -491,7 +491,9 @@ class RedisQueueWrapper:
     # Hard cap on in-process buffered events per consumer.  Bounds memory when a
     # slow client falls behind a fast producer; without it, the buffer can grow
     # without limit until the consumer drains it.
-    _BUFFER_MAXSIZE = 10_000
+    # 1 000 events x ~200 B each ~= 200 KB per wrapper — well within reason
+    # even with many concurrent jobs.
+    _BUFFER_MAXSIZE = 1000
 
     def __init__(self, job_id: str, client: Any, ttl: int, startup_grace_s: float | None = None) -> None:
         self._job_id = job_id
@@ -554,6 +556,7 @@ class RedisQueueWrapper:
 
     async def _fill_from_redis(self) -> None:
         """Read events from the Redis Stream and forward them to the local buffer."""
+        _error_start: float | None = None
         try:
             while True:
                 try:
@@ -563,23 +566,40 @@ class RedisQueueWrapper:
                         count=self._XREAD_BATCH_COUNT,
                     )
                 except Exception as exc:  # noqa: BLE001
-                    await logger.awarning(f"RedisQueueWrapper read error for {self._job_id}: {exc}")
+                    now = time.monotonic()
+                    if _error_start is None:
+                        _error_start = now
+                    elapsed = now - _error_start
+                    await logger.awarning(
+                        f"RedisQueueWrapper read error for {self._job_id} (elapsed {elapsed:.1f}s): {exc}"
+                    )
+                    if elapsed >= self._STARTUP_GRACE_S:
+                        await logger.aerror(
+                            f"RedisQueueWrapper: persistent Redis error for {self._job_id} "
+                            f"after {elapsed:.1f}s; delivering end-of-stream sentinel."
+                        )
+                        await self._buffer.put((None, None, time.time()))
+                        return
                     await asyncio.sleep(self._READ_ERROR_BACKOFF_S)
                     continue
+                _error_start = None  # reset on successful XREAD
 
                 self._first_read_done = True
                 if results:
                     self._observed_stream = True
                     for _, messages in results:
                         for msg_id, fields in messages:
-                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                             data = fields.get(b"data")
                             ts = float(fields.get(b"ts", b"0") or b"0")
                             if data == _STREAM_SENTINEL_DATA:
                                 await self._buffer.put((None, None, ts))
+                                self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                                 return
                             event_id = (fields.get(b"event_id") or b"").decode()
                             await self._buffer.put((event_id, data, ts))
+                            # Advance cursor only after the item is safely in the buffer.
+                            # Advancing before the await would skip this message on cancellation.
+                            self._last_id = msg_id.decode() if isinstance(msg_id, bytes) else msg_id
                 # No results within the block timeout.
                 elif not self._observed_stream:
                     # Stream hasn't appeared yet — the producer may not have issued its
@@ -792,9 +812,12 @@ class RedisJobQueueService(JobQueueService):
         # connection-pool usage regardless of how many jobs are active.
         if self._cancel_channel_enabled:
             self._cancel_dispatcher_task = asyncio.create_task(self._run_cancel_dispatcher())
-        # Polling watchdog: nuke abandoned builds whose activity heartbeat has
-        # gone stale.  Disabled when threshold <= 0 so deployments can opt out.
-        if self._polling_stale_threshold_s > 0 and self._cancel_channel_enabled:
+        # Polling watchdog: reclaim owned jobs whose activity heartbeat has gone
+        # stale (client abandoned a polling build).  Runs independently of the
+        # pub/sub cancel channel — it uses only local state and _handle_cancel
+        # directly, so disabling cancel_channel_enabled must not silence it.
+        # Disabled entirely when threshold <= 0.
+        if self._polling_stale_threshold_s > 0:
             self._polling_watchdog_task = asyncio.create_task(self._run_polling_watchdog())
         logger.debug("RedisJobQueueService started.")
 
