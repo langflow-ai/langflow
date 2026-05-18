@@ -23,7 +23,10 @@ def test_vertex_getstate_drops_custom_component_runtime_state():
     """Graph cache serialization should rebuild component instances instead of pickling live runtime state."""
 
     class UnpickleableComponent:
+        """Component stand-in that fails if live runtime state is serialized."""
+
         def __getstate__(self):
+            """Raise when pickle tries to serialize the component instance."""
             msg = "cannot pickle component runtime state"
             raise TypeError(msg)
 
