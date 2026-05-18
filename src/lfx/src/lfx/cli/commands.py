@@ -138,7 +138,9 @@ async def serve_command(
     configure(log_level=log_level)
 
     # ------------------------------------------------------------------
-    # Handle inline JSON content or stdin input
+    # Parse all inputs into json_data first, then upgrade-check, then
+    # write temp file.  This ordering matters: the temp file must reflect
+    # any upgrades applied by --upgrade-flow before the server loads it.
     # ------------------------------------------------------------------
     temp_file_to_cleanup = None
     json_data: dict | None = None
@@ -146,54 +148,43 @@ async def serve_command(
     if flow_json is not None:
         logger.info("Processing inline JSON content...")
         try:
-            # Validate JSON syntax
-            json_data = json.loads(flow_json)
+            raw = json.loads(flow_json)
             logger.info("JSON content is valid")
-
-            # Create a temporary file with the JSON content
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
-                json.dump(json_data, temp_file, indent=2)
-                temp_file_to_cleanup = temp_file.name
-
-            script_path = temp_file_to_cleanup
-            logger.info(f"Created temporary file: {script_path}")
-
         except json.JSONDecodeError as e:
             typer.echo(f"Error: Invalid JSON content: {e}", err=True)
             raise typer.Exit(1) from e
         except Exception as e:
             verbose_print(f"Error processing JSON content: {e}")
             raise typer.Exit(1) from e
+        json_data = raw.get("data", raw)  # unwrap outer envelope if present
 
     elif stdin:
         logger.info("Reading JSON content from stdin...")
         try:
-            # Read all content from stdin
             stdin_content = sys.stdin.read().strip()
             if not stdin_content:
                 logger.error("No content received from stdin")
                 raise typer.Exit(1)
-
-            # Validate JSON syntax
-            json_data = json.loads(stdin_content)
+            raw = json.loads(stdin_content)
             logger.info("JSON content from stdin is valid")
-
-            # Create a temporary file with the JSON content
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
-                json.dump(json_data, temp_file, indent=2)
-                temp_file_to_cleanup = temp_file.name
-
-            script_path = temp_file_to_cleanup
-            logger.info(f"Created temporary file from stdin: {script_path}")
-
         except json.JSONDecodeError as e:
             verbose_print(f"Error: Invalid JSON content from stdin: {e}")
             raise typer.Exit(1) from e
         except Exception as e:
             verbose_print(f"Error reading from stdin: {e}")
             raise typer.Exit(1) from e
+        json_data = raw.get("data", raw)  # unwrap outer envelope if present
 
-    # --- upgrade compatibility check ---
+    elif upgrade_flow and script_path is not None:
+        # File-path input with --upgrade-flow: load into json_data so the
+        # upgrade check can run and any applied changes reach the server.
+        try:
+            raw = json.loads(Path(script_path).read_text(encoding="utf-8"))
+            json_data = raw.get("data", raw)
+        except Exception as e:  # noqa: BLE001
+            verbose_print(f"Warning: could not read flow file for upgrade check: {e}")
+
+    # --- upgrade compatibility check (before temp-file write) ---
     if upgrade_flow and json_data is not None:
         from lfx.interface.components import component_cache
         from lfx.upgrade.applier import apply_safe_upgrades
@@ -226,6 +217,19 @@ async def serve_command(
             typer.echo(f"Error: unknown --upgrade-flow value '{upgrade_flow}'. Use 'safe' or 'check'.", err=True)
             raise typer.Exit(1)
     # --- end upgrade check ---
+
+    # Write json_data to a temp file so the server can load it by path.
+    # This happens after upgrade check so the server sees upgraded content.
+    if json_data is not None:
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
+                json.dump(json_data, temp_file, indent=2)
+                temp_file_to_cleanup = temp_file.name
+            script_path = temp_file_to_cleanup
+            logger.info(f"Created temporary file: {script_path}")
+        except Exception as e:
+            verbose_print(f"Error creating temporary file: {e}")
+            raise typer.Exit(1) from e
 
     try:
         # Load the graph

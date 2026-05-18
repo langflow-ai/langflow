@@ -187,6 +187,18 @@ async def run_flow(
             output_error(error_msg, verbose=verbose)
             raise RunError(error_msg, e) from e
 
+    # For JSON file paths with --upgrade-flow: read into flow_dict so the check below
+    # fires and any applied upgrades are used when loading the graph (instead of the
+    # original file).  .py scripts are not JSON flows and cannot be upgraded.
+    if upgrade_flow and flow_dict is None and script_path is not None and script_path.suffix.lower() == ".json":
+        try:
+            import json as _json
+
+            raw = _json.loads(script_path.read_text(encoding="utf-8"))
+            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+        except Exception as e:  # noqa: BLE001
+            output_error(f"Could not read flow for upgrade check: {e}", verbose=verbose)
+
     # --- upgrade compatibility check ---
     if upgrade_flow and flow_dict is not None:
         from lfx.interface.components import component_cache

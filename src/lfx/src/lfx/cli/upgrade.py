@@ -50,6 +50,10 @@ def upgrade_command(
         typer.echo(f"Error reading flow: {e}", err=True)
         raise typer.Exit(1) from e
 
+    # Exported Langflow flows have an outer envelope {"name": ..., "data": {"nodes": [...]}}.
+    # Unwrap it so the checker can find the nodes list.
+    flow_data = flow_data.get("data", flow_data)
+
     all_types = load_registry_from_index()
     report = check_flow_compatibility(flow_data, all_types)
 
