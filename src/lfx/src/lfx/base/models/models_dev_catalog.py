@@ -30,6 +30,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +41,14 @@ from platformdirs import user_cache_dir
 
 from lfx.base.models.model_metadata import create_model_metadata
 from lfx.log.logger import logger
+
+# models.dev exposes pinned-date snapshots (e.g. ``claude-opus-4-5-20251101``,
+# ``gpt-4o-2024-05-13``) alongside the moving aliases (``claude-opus-4-5``,
+# ``gpt-4o``). The snapshots are technically callable but most users want the
+# alias, and showing both clutters the picker badly (see PR feedback). Treat
+# any id ending in ``-YYYYMMDD`` (Anthropic) or ``-YYYY-MM-DD`` (OpenAI) as a
+# dated snapshot and mark it deprecated so it falls into the disclosure tier.
+_DATED_SNAPSHOT_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{8})$")
 
 MODELS_DEV_URL = "https://models.dev/api.json"
 MODELS_DEV_FETCH_TIMEOUT = 10.0
@@ -205,7 +214,12 @@ def _release_date_to_epoch(value: Any) -> int:
     return int(dt.timestamp())
 
 
-def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> dict[str, Any]:
+def _translate_model_entry(
+    provider_name: str,
+    model_dict: dict[str, Any],
+    *,
+    deprecated: bool = False,
+) -> dict[str, Any]:
     """Convert one models.dev model entry to Langflow's ``ModelMetadata`` shape.
 
     models.dev field -> ours:
@@ -216,12 +230,20 @@ def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> di
         ``cost.input``          -> ``cost_per_million_in``
         ``cost.output``         -> ``cost_per_million_out``
         ``release_date``        -> ``created`` (Unix epoch)
+
+    Dated-snapshot ids (matching :data:`_DATED_SNAPSHOT_RE`) are flagged
+    deprecated automatically so they collapse into the deprecated disclosure
+    rather than crowding the main picker. Callers may also pass
+    ``deprecated=True`` to forward a flag from the static-list curation
+    (which models.dev does not surface).
     """
     model_id = model_dict.get("id") or ""
     modalities = model_dict.get("modalities") or {}
     inputs = modalities.get("input") if isinstance(modalities, dict) else None
     limit = model_dict.get("limit") or {}
     cost = model_dict.get("cost") or {}
+
+    is_dated_snapshot = bool(_DATED_SNAPSHOT_RE.search(model_id))
 
     metadata = create_model_metadata(
         provider=provider_name,
@@ -230,6 +252,7 @@ def _translate_model_entry(provider_name: str, model_dict: dict[str, Any]) -> di
         tool_calling=bool(model_dict.get("tool_call")),
         reasoning=bool(model_dict.get("reasoning")),
         created=_release_date_to_epoch(model_dict.get("release_date")),
+        deprecated=bool(deprecated) or is_dated_snapshot,
     )
     # Additive fields — kept as plain dict keys so existing consumers that read
     # the strict TypedDict shape stay happy while new consumers can pick them up.
@@ -264,14 +287,43 @@ def apply_models_dev_overrides(
     Static lists for providers models.dev doesn't cover (or that aren't in
     :data:`MODELS_DEV_PROVIDER_KEYS`) pass through unchanged. Override groups
     for covered providers that had no static group at all are appended.
+
+    models.dev exposes no ``deprecated`` field of its own, so this function
+    preserves the static-list curation by name: any model that was already
+    flagged deprecated in the bundled ``*_constants.py`` lists keeps that flag
+    after the override. Dated-snapshot ids
+    (e.g. ``claude-opus-4-5-20251101``, ``gpt-4o-2024-05-13``) are also
+    auto-flagged in :func:`_translate_model_entry`.
     """
+    # Build provider_name -> {model_name: deprecated} from the static lists so
+    # we can preserve the static curation through the override.
+    static_deprecated_by_provider: dict[str, set[str]] = {}
+    for group in static_lists:
+        for entry in group:
+            if not isinstance(entry, dict):
+                continue
+            provider = entry.get("provider")
+            name = entry.get("name")
+            if not provider or not name:
+                continue
+            if entry.get("deprecated"):
+                static_deprecated_by_provider.setdefault(provider, set()).add(name)
+
     # Build provider_name -> translated list once.
     overrides: dict[str, list[dict[str, Any]]] = {}
     for snapshot_key, provider_name in MODELS_DEV_PROVIDER_KEYS.items():
         provider_block = snapshot.get(snapshot_key)
         if not isinstance(provider_block, dict):
             continue
-        translated = [_translate_model_entry(provider_name, m) for m in _provider_model_dicts(provider_block)]
+        static_deprecated = static_deprecated_by_provider.get(provider_name, set())
+        translated = [
+            _translate_model_entry(
+                provider_name,
+                m,
+                deprecated=(m.get("id") in static_deprecated),
+            )
+            for m in _provider_model_dicts(provider_block)
+        ]
         if translated:
             overrides[provider_name] = translated
 

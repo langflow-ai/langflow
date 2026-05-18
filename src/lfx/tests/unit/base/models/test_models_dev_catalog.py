@@ -263,6 +263,94 @@ def test_apply_overrides_when_snapshot_empty_passes_static_through():
     assert apply_models_dev_overrides(static, {}) == static
 
 
+def test_apply_overrides_marks_dated_snapshot_ids_deprecated():
+    """Dated-snapshot ids flag deprecated so they collapse into disclosure.
+
+    Anthropic ``-YYYYMMDD`` and OpenAI ``-YYYY-MM-DD`` snapshots are
+    pinned-date variants of moving aliases and clutter the picker. The
+    translator flags them deprecated so they fall into the disclosure tier.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    snapshot = {
+        "anthropic": {
+            "id": "anthropic",
+            "models": {
+                "claude-opus-4-5": {"id": "claude-opus-4-5", "tool_call": True},
+                "claude-opus-4-5-20251101": {
+                    "id": "claude-opus-4-5-20251101",
+                    "tool_call": True,
+                },
+                "claude-haiku-4-5-20251001": {
+                    "id": "claude-haiku-4-5-20251001",
+                    "tool_call": True,
+                },
+            },
+        },
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "tool_call": True},
+                "gpt-4o-2024-05-13": {"id": "gpt-4o-2024-05-13", "tool_call": True},
+                # 4-digit-only suffixes (e.g. -0314) are NOT a dated-snapshot
+                # pattern; they should stay non-deprecated unless other signals
+                # mark them.
+                "gpt-4-0314": {"id": "gpt-4-0314", "tool_call": True},
+            },
+        },
+    }
+
+    result = apply_models_dev_overrides([], snapshot)
+    by_name: dict[str, dict] = {}
+    for group in result:
+        for entry in group:
+            by_name[entry["name"]] = entry
+
+    assert by_name["claude-opus-4-5"]["deprecated"] is False
+    assert by_name["claude-opus-4-5-20251101"]["deprecated"] is True
+    assert by_name["claude-haiku-4-5-20251001"]["deprecated"] is True
+    assert by_name["gpt-4o"]["deprecated"] is False
+    assert by_name["gpt-4o-2024-05-13"]["deprecated"] is True
+    assert by_name["gpt-4-0314"]["deprecated"] is False
+
+
+def test_apply_overrides_preserves_static_deprecated_flag():
+    """Static-list curation of deprecated flag survives the override.
+
+    models.dev has no deprecated field, so the static-list curation (e.g.
+    ``gpt-3.5-turbo`` flagged deprecated in ``openai_constants.py``) must
+    survive the override by name match.
+    """
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides
+
+    # Simulate the static OpenAI group with the curated deprecated flags.
+    static_openai = [
+        {"provider": "OpenAI", "name": "gpt-4o", "tool_calling": True, "deprecated": False},
+        {"provider": "OpenAI", "name": "gpt-3.5-turbo", "tool_calling": True, "deprecated": True},
+        {"provider": "OpenAI", "name": "gpt-4.5-preview", "tool_calling": True, "deprecated": True},
+    ]
+    snapshot = {
+        "openai": {
+            "id": "openai",
+            "models": {
+                "gpt-4o": {"id": "gpt-4o", "tool_call": True},
+                "gpt-3.5-turbo": {"id": "gpt-3.5-turbo", "tool_call": True},
+                "gpt-4.5-preview": {"id": "gpt-4.5-preview", "tool_call": True},
+                # New model not in our static list — should default to
+                # non-deprecated unless dated-snapshot.
+                "gpt-6": {"id": "gpt-6", "tool_call": True},
+            },
+        }
+    }
+
+    result = apply_models_dev_overrides([static_openai], snapshot)
+    by_name = {m["name"]: m for group in result for m in group}
+    assert by_name["gpt-4o"]["deprecated"] is False
+    assert by_name["gpt-3.5-turbo"]["deprecated"] is True
+    assert by_name["gpt-4.5-preview"]["deprecated"] is True
+    assert by_name["gpt-6"]["deprecated"] is False
+
+
 def test_apply_overrides_appends_new_provider_when_no_static_group():
     """Append override groups for covered providers with no static group.
 
