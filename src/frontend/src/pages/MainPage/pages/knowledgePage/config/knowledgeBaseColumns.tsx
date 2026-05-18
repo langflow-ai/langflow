@@ -8,10 +8,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { formatFileSize } from "@/utils/stringManipulation";
 import { FILE_ICONS } from "@/utils/styleUtils";
 import { cn } from "@/utils/utils";
+import { getKnowledgeBaseBackendLabel } from "../utils/backendMetadata";
 import {
   formatAverageChunkSize,
   formatNumber,
@@ -64,11 +71,11 @@ export const createKnowledgeBaseColumns = (
         }
 
         return (
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 pl-1">
             <div className="file-icon pointer-events-none relative">
               <ForwardedIconComponent
                 name={iconName}
-                className={cn("-mx-[3px] h-6 w-6 shrink-0", iconColor)}
+                className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
             <span>{params.value}</span>
@@ -119,6 +126,22 @@ export const createKnowledgeBaseColumns = (
       },
     },
     {
+      headerName: "Vector Store",
+      field: "backend_type",
+      flex: 1.3,
+      sortable: false,
+      editable: false,
+      cellClass: baseCellClass,
+      cellRenderer: (params: { data: KnowledgeBaseInfo }) => (
+        <span>
+          {getKnowledgeBaseBackendLabel(
+            params.data.backend_type,
+            params.data.backend_config as Record<string, unknown> | undefined,
+          )}
+        </span>
+      ),
+    },
+    {
       headerName: "Chunks",
       field: "chunks",
       flex: 1,
@@ -164,8 +187,8 @@ export const createKnowledgeBaseColumns = (
     {
       headerName: "",
       field: "actions",
-      width: 65,
-      minWidth: 65,
+      width: 110,
+      minWidth: 110,
       sortable: false,
       editable: false,
       resizable: false,
@@ -176,77 +199,103 @@ export const createKnowledgeBaseColumns = (
         const isBusy = isBusyStatus(status);
         const isCancelling = status === "cancelling";
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ForwardedIconComponent
-                  name="EllipsisVertical"
-                  className="h-4 w-4 text-primary"
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={isBusy}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  callbacks?.onAddSources?.(params.data);
-                }}
-              >
-                <ForwardedIconComponent
-                  name="RefreshCw"
-                  className="mr-2 h-4 w-4"
-                />
-                Update Knowledge
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  callbacks?.onViewChunks?.(params.data);
-                }}
-              >
-                <ForwardedIconComponent
-                  name="Layers"
-                  className="mr-2 h-4 w-4"
-                />
-                View Chunks
-              </DropdownMenuItem>
-              {isBusy ? (
-                <DropdownMenuItem
-                  disabled={isCancelling}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    callbacks?.onStopIngestion?.(params.data);
-                  }}
-                  className="text-destructive focus:text-destructive"
+          <div className="flex items-center justify-center gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={isBusy}
+                    data-testid="kb-row-update-button"
+                    aria-label="Ingest Files"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      callbacks?.onAddSources?.(params.data);
+                    }}
+                  >
+                    <ForwardedIconComponent
+                      name="FileUp"
+                      className="h-4 w-4 text-primary"
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Ingest Files</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  data-testid="kb-row-actions-trigger"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <ForwardedIconComponent
-                    name="Square"
+                    name="EllipsisVertical"
+                    className="h-4 w-4 text-primary"
+                  />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={isBusy}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    callbacks?.onAddSources?.(params.data);
+                  }}
+                >
+                  <ForwardedIconComponent
+                    name="FileUp"
                     className="mr-2 h-4 w-4"
                   />
-                  Stop Ingestion
+                  Ingest Files
                 </DropdownMenuItem>
-              ) : (
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    callbacks?.onDelete?.(params.data);
+                    callbacks?.onViewChunks?.(params.data);
                   }}
-                  className="text-destructive focus:text-destructive"
                 >
                   <ForwardedIconComponent
-                    name="Trash2"
+                    name="Layers"
                     className="mr-2 h-4 w-4"
                   />
-                  Delete
+                  View Chunks
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {isBusy ? (
+                  <DropdownMenuItem
+                    disabled={isCancelling}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      callbacks?.onStopIngestion?.(params.data);
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <ForwardedIconComponent
+                      name="Square"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Stop Ingestion
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      callbacks?.onDelete?.(params.data);
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <ForwardedIconComponent
+                      name="Trash2"
+                      className="mr-2 h-4 w-4"
+                    />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },

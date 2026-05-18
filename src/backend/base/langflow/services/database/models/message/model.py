@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+import numpy as np
+import pandas as pd
+from fastapi.encoders import jsonable_encoder
 from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
@@ -99,6 +102,8 @@ class MessageBase(SQLModel):
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not run_id and getattr(message, "run_id", None):
+            run_id = message.run_id
 
         message_text = "" if not isinstance(message.text, str) else message.text
 
@@ -195,7 +200,27 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @staticmethod
     def _sanitize_json(value):
-        """Replace float NaN/Infinity with None to avoid PostgreSQL jsonb rejection."""
+        """Coerce values into a JSON-safe shape before they reach the SQL UPDATE.
+
+        Replaces float NaN/Infinity with None to avoid PostgreSQL jsonb rejection,
+        and resolves non-serializable Python objects (notably pandas DataFrame /
+        lfx Table instances and numpy scalars) that can leak into ContentBlock
+        fields when an upstream component output — e.g. the Memory Base
+        ``retrieve_data`` Table — is captured by message tracking before the
+        consumer (Parser) has converted it to text.
+        """
+        # numpy scalars (np.float64, np.int64, np.bool_, ...) survive
+        # ``jsonable_encoder`` when nested inside a DataFrame-derived dict
+        # and would later be rejected by the jsonb encoder. Coerce them to
+        # their Python-native counterparts so persistence succeeds. This must
+        # come before the ``float`` / ``int`` / ``bool`` checks because numpy
+        # scalars inherit from those Python types.
+        if isinstance(value, np.generic):
+            return MessageTable._sanitize_json(value.item())
+
+        if isinstance(value, bool):
+            return value
+
         if isinstance(value, float):
             if not math.isfinite(value):
                 return None
@@ -207,7 +232,21 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, list):
             return [MessageTable._sanitize_json(v) for v in value]
 
-        return value
+        if isinstance(value, pd.DataFrame):
+            return [MessageTable._sanitize_json(record) for record in value.to_dict(orient="records")]
+
+        if value is None or isinstance(value, str | int):
+            return value
+
+        # Unknown type — coerce to a JSON-safe representation rather than
+        # letting it propagate to the SQL UPDATE and fail persistence.
+        try:
+            encoded = jsonable_encoder(value)
+        except (TypeError, ValueError):
+            return str(value)
+        if encoded is value:
+            return str(value)
+        return MessageTable._sanitize_json(encoded)
 
     @field_validator("properties", "content_blocks", "session_metadata", mode="before")
     @classmethod

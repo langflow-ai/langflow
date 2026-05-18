@@ -27,6 +27,17 @@ jest.mock(
   }),
 );
 
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-kb-metadata-keys",
+  () => ({
+    useGetKbMetadataKeys: () => ({
+      data: { keys: {}, truncated: false },
+      isLoading: false,
+      refetch: jest.fn(),
+    }),
+  }),
+);
+
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => (

@@ -383,7 +383,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       ref: ${{ inputs.release_tag }}
-      python-versions: "['3.10', '3.11', '3.12', '3.13']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       frontend-tests-folder: "tests"
       release: true
       run-all-tests: true
@@ -445,7 +445,10 @@ jobs:
           uv venv test-env --seed
           uv pip install --python ./test-env/bin/python dist/*.whl
           EXPECTED_VERSION="${{ needs.determine-sdk-version.outputs.version }}"
-          ./test-env/bin/python -c "from importlib.metadata import version; import langflow_sdk; installed_version = version('langflow-sdk'); print(f'langflow-sdk {installed_version} imported successfully'); assert installed_version == '$EXPECTED_VERSION', f'Installed version {installed_version} does not match expected version $EXPECTED_VERSION'"
+          # importlib.metadata returns the PEP 440 canonical form, so normalize
+          # the expected version the same way the wheel filename check does.
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          ./test-env/bin/python -c "from importlib.metadata import version; import langflow_sdk; installed_version = version('langflow-sdk'); print(f'langflow-sdk {installed_version} imported successfully'); assert installed_version == '$NORMALIZED_VERSION', f'Installed version {installed_version} does not match expected version $NORMALIZED_VERSION'"
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:

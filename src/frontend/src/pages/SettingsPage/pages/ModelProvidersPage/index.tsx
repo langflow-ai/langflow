@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelProvidersContent from "@/modals/modelProviderModal/components/ModelProvidersContent";
-import { useTranslation } from "react-i18next";
 
 export default function ModelProvidersPage() {
   const { t } = useTranslation();
@@ -14,7 +14,7 @@ export default function ModelProvidersPage() {
           >
             {t("modelProviders.pageTitle")}
             <ForwardedIconComponent
-              name="Brain"
+              name="BrainCircuit"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>

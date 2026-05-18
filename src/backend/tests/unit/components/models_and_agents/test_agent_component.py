@@ -451,6 +451,47 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
 
+    async def test_should_expose_stream_input_when_agent_component_is_loaded(self, component_class, default_kwargs):
+        """Regression: the Stream toggle disappeared from the Agent after the ModelInput unification (#12025).
+
+        Given the Agent component is loaded, When its inputs are inspected,
+        Then a 'stream' input field must be present so users can control LLM streaming.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        input_names = [inp.name for inp in component.inputs if hasattr(inp, "name")]
+
+        assert "stream" in input_names, "stream input field should be present on the Agent component"
+        assert hasattr(component, "stream"), "Component should have a stream attribute"
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_should_pass_stream_value_to_get_llm_when_stream_input_is_enabled(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Regression: the Agent must forward the Stream toggle value to get_llm().
+
+        Given stream=True on the Agent, When get_agent_requirements runs,
+        Then get_llm() must be called with stream=True so the LLM streams responses.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+        mock_get_llm.return_value = MagicMock()
+
+        default_kwargs["stream"] = True
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # validate_model_selection requires a list — set a valid model selection
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        await component.get_agent_requirements()
+
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+        assert "stream" in call_kwargs, "stream should be passed to get_llm"
+        assert call_kwargs["stream"] is True
+
     async def test_should_append_calculator_tool_when_add_calculator_toggle_is_true(
         self, component_class, default_kwargs
     ):
@@ -502,6 +543,48 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             _, _, tools = await component.get_agent_requirements()
 
         assert tools == []
+
+    async def test_should_register_calculator_tool_only_once_when_external_calculator_connected_and_toggle_enabled(
+        self, component_class, default_kwargs
+    ):
+        """Internal toggle must not register a tool whose name already comes from an external connection.
+
+        Bug: Agent has add_calculator_tool=True (default). When a Calculator component is also
+        wired into the external Tools input, the StructuredTool 'evaluate_expression' is registered
+        twice. Anthropic and Gemini reject duplicate tool names with HTTP 400
+        ('Tool names must be unique' / 'Duplicate function declaration found: evaluate_expression').
+
+        Given add_calculator_tool=True AND an external Calculator-derived tool already in self.tools,
+        When get_agent_requirements runs,
+        Then the resulting tools list contains 'evaluate_expression' exactly once.
+        """
+        from unittest.mock import AsyncMock
+
+        from lfx.components.utilities.calculator_core import CalculatorComponent
+
+        # An external connection delivers exactly the StructuredTool that
+        # CalculatorComponent.to_toolkit() produces — re-use the same path here.
+        external_calc_tool = (await CalculatorComponent().to_toolkit()).pop(0)
+        assert external_calc_tool.name == "evaluate_expression"
+
+        default_kwargs["add_calculator_tool"] = True
+        default_kwargs["add_current_date_tool"] = False
+        default_kwargs["tools"] = [external_calc_tool]
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+        component.get_memory_data = AsyncMock(return_value=[])
+        component._get_shared_callbacks = list
+        component.set_tools_callbacks = lambda *_: None
+
+        with patch("lfx.components.models_and_agents.agent.get_llm") as mock_get_llm:
+            mock_get_llm.return_value = MockLanguageModel()
+            _, _, tools = await component.get_agent_requirements()
+
+        tool_names = [t.name for t in tools]
+        assert tool_names.count("evaluate_expression") == 1, (
+            f"'evaluate_expression' must be registered exactly once; got {tool_names!r}. "
+            "Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400."
+        )
 
     def test_should_replace_current_date_and_model_name_when_both_placeholders_present(self, component_class):
         """Unit test: helper replaces both placeholders with concrete values."""

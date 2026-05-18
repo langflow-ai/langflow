@@ -1,6 +1,7 @@
 import socket
 import threading
 import time
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -8,6 +9,7 @@ import typer
 from langflow.__main__ import (
     DIRECT_UVICORN_PLATFORMS,
     _create_superuser,
+    api_key_banner,
     app,
     build_direct_uvicorn_kwargs,
     clamp_uvicorn_workers,
@@ -277,6 +279,40 @@ def test_build_direct_uvicorn_kwargs_does_not_clamp_on_linux():
     # if it ever gets reused on Linux the clamp must remain a no-op there.
     result = build_direct_uvicorn_kwargs(**_kwargs(workers=4, system="Linux"))
     assert result["workers"] == 4
+
+
+# ---------------------------------------------------------------------------
+# api_key_banner: clipboard must be best-effort.
+#
+# Regression guard for #12341: pyperclip raises in headless/Docker/SSH
+# environments because no clipboard mechanism is available. The banner must
+# still print the API key (the only time it's ever shown) instead of crashing.
+# ---------------------------------------------------------------------------
+
+
+def test_api_key_banner_survives_pyperclip_failure(capsys):
+    """Clipboard failure must not crash the banner — the key is the user's only copy."""
+    api_key_obj = SimpleNamespace(api_key="lf-test-12341")
+
+    with patch("pyperclip.copy", side_effect=Exception("Pyperclip could not find a copy/paste mechanism")):
+        api_key_banner(api_key_obj)
+
+    output = capsys.readouterr().out
+    assert "lf-test-12341" in output, "API key must still be displayed when clipboard fails"
+    assert "clipboard" not in output.lower(), "no clipboard hint should appear when copy failed"
+
+
+def test_api_key_banner_shows_clipboard_hint_on_success(capsys):
+    """Happy path: when clipboard copy succeeds, the paste hint is shown."""
+    api_key_obj = SimpleNamespace(api_key="lf-test-ok")
+
+    with patch("pyperclip.copy") as mock_copy:
+        api_key_banner(api_key_obj)
+
+    mock_copy.assert_called_once_with("lf-test-ok")
+    output = capsys.readouterr().out
+    assert "lf-test-ok" in output
+    assert "clipboard" in output.lower()
 
 
 def test_build_direct_uvicorn_kwargs_pins_full_shape():

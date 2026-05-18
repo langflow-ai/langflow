@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
+from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -212,6 +213,13 @@ class AgentComponent(ToolCallingAgentComponent):
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
+            name="stream",
+            display_name="Stream",
+            info=STREAM_INFO_TEXT,
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
             advanced=True,
@@ -283,6 +291,7 @@ class AgentComponent(ToolCallingAgentComponent):
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
+            stream=bool(getattr(self, "stream", False)),
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
@@ -325,7 +334,10 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(current_date_tool, StructuredTool):
                 msg = "CurrentDateComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
-            self.tools.append(current_date_tool)
+            # Skip if an externally-connected tool already provides the same name.
+            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.
+            if not any(getattr(t, "name", None) == current_date_tool.name for t in self.tools):
+                self.tools.append(current_date_tool)
 
         # Add calculator tool if enabled (zero-config arithmetic)
         if getattr(self, "add_calculator_tool", False):
@@ -336,7 +348,10 @@ class AgentComponent(ToolCallingAgentComponent):
             if not isinstance(calculator_tool, StructuredTool):
                 msg = "CalculatorComponent must be converted to a StructuredTool"
                 raise TypeError(msg)
-            self.tools.append(calculator_tool)
+            # Skip if an externally-connected tool already provides the same name.
+            # Duplicate tool names are rejected by Anthropic/Gemini with HTTP 400.
+            if not any(getattr(t, "name", None) == calculator_tool.name for t in self.tools):
+                self.tools.append(calculator_tool)
 
         # Set shared callbacks for tracing the tools used by the agent
         self.set_tools_callbacks(self.tools, self._get_shared_callbacks())

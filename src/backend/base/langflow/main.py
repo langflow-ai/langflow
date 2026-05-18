@@ -211,6 +211,19 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
+            current_time = asyncio.get_event_loop().time()
+            await logger.adebug("Reconciling knowledge base rows from disk")
+            try:
+                from langflow.api.utils import knowledge_base_service
+
+                inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                elapsed = asyncio.get_event_loop().time() - current_time
+                await logger.adebug(
+                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server
@@ -250,6 +263,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                 temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Locally-registered dev extensions (``lfx extension dev``) are
+            # loaded later via :func:`import_extension_components` through the
+            # @official-slot pathway alongside installed extensions, so they
+            # share the BundleRegistry, palette decoration, and reload
+            # endpoint with pip-installed bundles.  Nothing to wire here.
 
             # Gate: Cache component types
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
