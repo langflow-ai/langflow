@@ -2173,5 +2173,10 @@
     "versions": {
       "0.3.0": "9bf5e6f39e2d"
     }
+  },
+  "WhileLoopComponent": {
+    "versions": {
+      "0.3.0": "f9cc625c0fb5"
+    }
   }
 }
