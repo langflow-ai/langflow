@@ -227,6 +227,7 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
+        state["graph"] = None  # Graph references rich.Console via event_manager, not pickle-safe
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
@@ -234,6 +235,7 @@ class Vertex:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
+        self.graph = None  # Restored by build_vertex after unpickling
         self.built_object = state.get("built_object") or UnbuiltObject()
         self.built_result = state.get("built_result") or UnbuiltResult()
 
