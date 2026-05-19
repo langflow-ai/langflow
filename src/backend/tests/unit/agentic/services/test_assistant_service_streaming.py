@@ -252,6 +252,49 @@ class TestCompoundOrchestration:
         assert not any('"event": "error"' in e for e in events), blob[:800]
 
 
+class TestBuildAndRunAutoApply:
+    """A 'build a flow AND run it' request must auto-apply to the canvas.
+
+    Bug: a non-compound build_flow that ALSO asks to run ("crie um flow
+    ... e rode") emitted set_flow GATED behind the Continue card and the
+    agent claimed "coloquei no canvas" — but the canvas stayed empty
+    (only compound `component_then_flow` set auto_apply). Gating a flow
+    the user explicitly asked to RUN is contradictory. Deterministic,
+    from the user's intent — never the LLM's wording.
+    """
+
+    @pytest.mark.asyncio
+    async def test_build_plus_run_sets_auto_apply_and_skips_the_continue_gate(self):
+        mock_stream = MagicMock(
+            side_effect=lambda **_kw: _make_flow_events([("end", {"result": "17 é primo."})])()
+        )
+        mock_classify = AsyncMock(return_value=_make_intent("build_flow"))
+
+        with (
+            patch(f"{MODULE}.classify_intent", mock_classify),
+            patch(f"{MODULE}.execute_flow_file_streaming", mock_stream),
+            patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow"}], [], []]),
+            patch(f"{MODULE}.extract_response_text", return_value="17 é primo."),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect_events(
+                execute_flow_with_validation_streaming(
+                    flow_filename="flow_builder_assistant",
+                    input_value="crie um flow com um agent que identifica primos e rode esse flow",
+                    global_variables={},
+                    max_retries=1,
+                )
+            )
+
+        blob = "\n".join(events)
+        set_flow_events = [e for e in events if '"action": "set_flow"' in e]
+        assert set_flow_events, blob[:800]
+        # The built flow is APPLIED, not proposed-and-gated.
+        assert any('"auto_apply": true' in e for e in set_flow_events), blob[:800]
+        assert not any('"step": "flow_proposal_ready"' in e for e in events), blob[:800]
+        assert not any('"event": "error"' in e for e in events), blob[:800]
+
+
 class TestComponentGeneration:
     """Tests for component generation flow."""
 

@@ -17,6 +17,10 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 
 # Assistant configuration
 MAX_VALIDATION_RETRIES = 3
+# Hard cost ceiling for the post-build flow-validation loop. Each attempt
+# is deterministic (Tier-1 static + Tier-2 graph build, zero LLM tokens);
+# the only LLM cost is the agent's own fix turn between attempts.
+MAX_FLOW_VALIDATION_ATTEMPTS = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
 FLOW_BUILDER_ASSISTANT_FLOW = "flow_builder_assistant"

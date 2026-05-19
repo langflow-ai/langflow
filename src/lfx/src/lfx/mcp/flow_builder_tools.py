@@ -1016,9 +1016,35 @@ class RunFlow(Component):
         from uuid import uuid4
 
         flow_id = _current_flow_id_var.get() or str(uuid4())
+
+        # The assistant runs with a verified provider/model/api_key. The
+        # LLM-chosen (or empty) model on a built Agent often has no
+        # configured key -> "Authentication failed". Propagate the
+        # assistant's working credential into the Agent node(s) so this
+        # assistant-triggered run actually authenticates and returns a
+        # result. Deterministic and LLM-agnostic; the canvas still shows
+        # the Agent, so the user can change the model afterwards.
+        try:
+            from langflow.agentic.services.agent_run_context import current_agent_run_model
+            from langflow.agentic.services.flow_preparation import inject_model_into_flow
+
+            run_model = current_agent_run_model() or {}
+            run_provider = run_model.get("provider")
+            run_model_name = run_model.get("model_name")
+            if run_provider and run_model_name:
+                inject_model_into_flow(flow, run_provider, run_model_name, run_model.get("api_key_var"))
+        except (ImportError, ValueError) as exc:
+            logger.warning("run_flow.verified_model_inject_skipped: %s", exc)
+
         result = await run_working_flow(flow_data=flow, flow_id=flow_id, user_id=user_id)
         if "error" in result:
             return Data(data={"error": result["error"], "text": result["error"]})
+        # Deterministic, LLM/language-agnostic signal that the flow ACTUALLY
+        # ran this turn. The streaming generator uses it to apply a built
+        # flow to the canvas (running a flow the user can't see is
+        # contradictory) instead of guessing intent from the prompt wording.
+        # Emitted only on success — a failed run must never claim it ran.
+        _emit("flow_ran", flow_id=flow_id)
         text = result.get("result", "")
         metrics = result.get("metrics") or {}
         summary = _format_run_metrics(metrics)

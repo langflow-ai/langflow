@@ -58,6 +58,13 @@ on the user's canvas. Components appear in real time as you add them.
 
 **Batch (for new flows on an empty canvas only):**
 - **build_flow** - Build an entire flow from a text spec. WARNING: this replaces the entire canvas.
+  A freshly built flow is PROPOSED to the user for review (they see an
+  "Add to canvas / Replace canvas / Dismiss" card) — it is NOT yet on
+  their canvas, UNLESS the user also asked to run it (then it is applied
+  automatically). So when reporting, say you "built/proposed a flow
+  (review and add it to the canvas)" — do NOT claim it is already "on
+  the canvas" / "no canvas" unless it was applied. State it accurately
+  in the user's language.
 
 **Run:**
 - **run_flow** - Execute the user's CURRENT canvas flow with its configured values

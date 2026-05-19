@@ -229,3 +229,64 @@ class TestRunWorkingFlow:
         assert m["duration_seconds"] > 0
         assert m["total_tokens"] == 7
         assert m["input_tokens"] == 5
+
+
+class TestRunWorkingFlowSecurityGate:
+    """Refuse to RUN component code that fails the security scan.
+
+    The generation pipeline scans LLM code, but a flow reaching the run
+    engine can carry code that bypassed it (build_flow inline code, an
+    overlay .components/*.py, an imported flow). The engine exec's it, so
+    run_working_flow must scan first and refuse on any violation —
+    deterministic, never reaching build/exec.
+    """
+
+    def _flow_with_code(self, code: str) -> dict:
+        return {
+            "name": "Evil",
+            "data": {
+                "nodes": [
+                    {
+                        "id": "Custom-1",
+                        "data": {"type": "Custom", "node": {"template": {"code": {"value": code}}}},
+                    }
+                ],
+                "edges": [],
+            },
+        }
+
+    @pytest.mark.asyncio
+    async def test_should_refuse_to_run_when_a_node_has_unsafe_code(self):
+        evil = self._flow_with_code('import os\nos.system("rm -rf /")')
+        with patch(f"{MODULE}.build_graph_from_data", new_callable=AsyncMock) as bg:
+            out = await run_working_flow(flow_data=evil, flow_id="flow-1", user_id="u1")
+
+        assert "error" in out
+        assert "result" not in out
+        assert "unsafe" in out["error"].lower()
+        bg.assert_not_awaited()  # never reached the graph build / exec
+
+    @pytest.mark.asyncio
+    async def test_should_refuse_on_secret_exfiltration_code(self):
+        evil = self._flow_with_code('import os\nk = os.environ["OPENAI_API_KEY"]')
+        with patch(f"{MODULE}.build_graph_from_data", new_callable=AsyncMock) as bg:
+            out = await run_working_flow(flow_data=evil, flow_id="flow-1", user_id="u1")
+
+        assert "error" in out
+        bg.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_should_run_normally_when_code_is_safe(self):
+        safe = self._flow_with_code("from math import isqrt\n\nclass C:\n    pass")
+
+        async def fake_run(_g, _f, **_kw):
+            return ([], "sess")
+
+        with (
+            patch(f"{MODULE}.build_graph_from_data", new_callable=AsyncMock, return_value=object()) as bg,
+            patch(f"{MODULE}.run_graph_internal", side_effect=fake_run),
+        ):
+            out = await run_working_flow(flow_data=safe, flow_id="flow-1", user_id="u1")
+
+        bg.assert_awaited_once()  # no false positive — safe code still runs
+        assert "error" not in out

@@ -1151,6 +1151,38 @@ config:
         assert "You are a helpful assistant." in result["config"]["A"]["system_prompt"]
         assert "Be concise." in result["config"]["A"]["system_prompt"]
 
+    def test_multiline_block_does_not_swallow_the_next_config_key(self):
+        # Production bug: a `Node.field:` key with NO inline value (e.g.
+        # `C.model:` whose value is on following lines) was not matched by
+        # _CONFIG_KEY_RE (it required a colon-SPACE-value), so while a
+        # `|` block was open the next key got appended into the block.
+        # Result: system_prompt polluted + the model config lost (Agent
+        # built with no model).
+        spec = """\
+name: Bug
+
+nodes:
+  C: Agent
+
+config:
+  C.system_prompt: |
+    You are an assistant.
+    Be concise.
+  C.model:
+    - provider: OpenAI
+      name: gpt-4o
+"""
+        result = parse_flow_spec(spec)
+
+        cfg = result["config"]["C"]
+        # The block scalar must STOP at the next key — not absorb it.
+        assert "C.model" not in cfg["system_prompt"]
+        assert "provider" not in cfg["system_prompt"]
+        assert "gpt-4o" not in cfg["system_prompt"]
+        assert cfg["system_prompt"].strip().endswith("Be concise.")
+        # `C.model` must be parsed as its own config entry.
+        assert "model" in cfg
+
     def test_config_multiple_nodes(self):
         spec = """\
 name: Multi Config

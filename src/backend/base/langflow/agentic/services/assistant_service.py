@@ -281,6 +281,82 @@ async def execute_flow_with_validation(
     }
 
 
+def _reconcile_flow_updates(
+    updates: list[dict],
+    *,
+    auto_apply_flow: bool,
+    saw_set_flow: bool,
+    saw_run: bool,
+    last_set_flow: dict | None,
+    set_flow_applied: bool,
+) -> tuple[list[dict], bool, bool, bool, dict | None, bool]:
+    """Decide which flow_update events to emit, applying the build+run rule.
+
+    A ``flow_ran`` event means the agent ACTUALLY executed the flow this
+    turn (emitted by RunFlow on success, regardless of the user's wording
+    or language). Running a flow the user cannot see is contradictory, so
+    a built flow that was also run MUST be applied to the canvas — never
+    inferred from a regex over the prompt (the recurring "diz que fez e
+    não fez" bug).
+
+    Two-pass + late reconciliation make this correct for EVERY ordering:
+
+    - same batch: a ``flow_ran`` anywhere in the batch auto-applies the
+      ``set_flow`` even if listed before it (pre-scan);
+    - later batch: a ``set_flow`` proposed earlier (run not yet known) is
+      re-emitted with ``auto_apply`` once ``flow_ran`` arrives —
+      re-applying the same flow is idempotent (full replace);
+    - ``set_flow_applied`` guards against ever emitting it twice.
+
+    ``flow_ran`` is an internal signal and is never forwarded to the
+    frontend (it has no canvas reducer).
+
+    Args:
+        updates: The freshly drained event batch.
+        auto_apply_flow: Whether canvas application is already forced
+            (compound, or a prior ``flow_ran`` this turn).
+        saw_set_flow: Whether a ``set_flow`` was seen this turn.
+        saw_run: Whether a ``flow_ran`` was seen this turn.
+        last_set_flow: The most recent ``set_flow`` update dict (for late
+            re-application), or ``None``.
+        set_flow_applied: Whether a ``set_flow`` was already emitted with
+            ``auto_apply`` (so it is never duplicated).
+
+    Returns:
+        ``(events_to_emit, auto_apply_flow, saw_set_flow, saw_run,
+        last_set_flow, set_flow_applied)`` — the events to forward and the
+        carried state for the next batch.
+    """
+    if any(u.get("action") == "flow_ran" for u in updates):
+        saw_run = True
+        auto_apply_flow = True
+
+    events: list[dict] = []
+    for update in updates:
+        action = update.get("action")
+        if action == "flow_ran":
+            continue  # internal-only signal; the canvas has no reducer for it
+        if action == "set_flow":
+            saw_set_flow = True
+            last_set_flow = update
+            if auto_apply_flow:
+                update["auto_apply"] = True
+                set_flow_applied = True
+        events.append(update)
+
+    # Late-run reconciliation: the set_flow was proposed in an EARLIER
+    # batch (run not known yet), then the agent ran it. Re-emit it with
+    # auto_apply so the canvas ends in the state the agent truthfully
+    # reports. Idempotent — guarded so it happens exactly once.
+    if saw_run and saw_set_flow and not set_flow_applied and last_set_flow is not None:
+        reapply = dict(last_set_flow)
+        reapply["auto_apply"] = True
+        events.append(reapply)
+        set_flow_applied = True
+
+    return events, auto_apply_flow, saw_set_flow, saw_run, last_set_flow, set_flow_applied
+
+
 async def execute_flow_with_validation_streaming(
     flow_filename: str,
     input_value: str,
@@ -427,6 +503,15 @@ async def execute_flow_with_validation_streaming(
         PLAN_APPROVAL_INPUT,
         EDIT_CONTINUATION_INPUT,
     )
+    # A build_flow that ALSO asks to run ("crie um flow ... e rode") wants
+    # the flow APPLIED, not just proposed — gating a canvas the user
+    # explicitly asked to run behind a manual "Add to canvas" is
+    # contradictory (the agent already ran it and claims it's on the
+    # canvas). Treat build+run like compound for canvas application:
+    # auto-apply, no Continue gate. Deterministic, from the user's intent
+    # — never the LLM's wording.
+    is_build_and_run = is_flow_request and not is_compound and continuation_expected
+    auto_apply_flow = is_compound or is_build_and_run
     current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 
     # Build-flow and manage_files both route to the FlowBuilderAssistant —
@@ -504,6 +589,12 @@ async def execute_flow_with_validation_streaming(
             # Incremental edits (add/remove/connect/configure/edit_field)
             # apply live and must not be gated.
             saw_set_flow = False
+            # Deterministic build+run state (LLM/language-agnostic): the
+            # agent ran the flow this turn (`flow_ran`) → the built flow
+            # MUST land on the canvas, never inferred from prompt wording.
+            saw_run = False
+            last_set_flow: dict | None = None
+            set_flow_applied = False
             # aclosing guarantees the async generator is closed on every exit path
             # (normal completion, exception, or cancellation) — not relying on GC.
             async with aclosing(
@@ -523,18 +614,29 @@ async def execute_flow_with_validation_streaming(
                 try:
                     async for event_type, event_data in flow_generator:
                         if event_type == "token":
-                            # Drain any flow_update events from tools so the canvas
-                            # reflects the agent's incremental edits in real time.
-                            for update in drain_flow_events():
+                            # Drain flow_update events so the canvas reflects
+                            # the agent's incremental edits live. Reconcile
+                            # build+run deterministically: a `flow_ran` this
+                            # turn forces the built flow onto the canvas.
+                            (
+                                events_to_emit,
+                                auto_apply_flow,
+                                saw_set_flow,
+                                saw_run,
+                                last_set_flow,
+                                set_flow_applied,
+                            ) = _reconcile_flow_updates(
+                                drain_flow_events(),
+                                auto_apply_flow=auto_apply_flow,
+                                saw_set_flow=saw_set_flow,
+                                saw_run=saw_run,
+                                last_set_flow=last_set_flow,
+                                set_flow_applied=set_flow_applied,
+                            )
+                            if events_to_emit:
                                 has_flow_updates = True
-                                if update.get("action") == "set_flow":
-                                    saw_set_flow = True
-                                    # Compound pipeline: the user explicitly
-                                    # asked to clear+replace the canvas, so
-                                    # apply directly (no Continue gate).
-                                    if is_compound:
-                                        update["auto_apply"] = True
-                                yield format_flow_update_event(update)
+                            for emitted in events_to_emit:
+                                yield format_flow_update_event(emitted)
                             # Drain file_written events the same way — each one
                             # becomes a card on the frontend message.
                             for file_event in drain_file_events():
@@ -617,14 +719,29 @@ async def execute_flow_with_validation_streaming(
             response_text = extract_response_text(result)
             final_response_text = response_text or final_response_text
 
-            # Drain any remaining flow events
-            for update in drain_flow_events():
+            # Drain remaining flow events with the same deterministic
+            # build+run reconciliation (the trailing batch is where a
+            # `flow_ran` after the last token is picked up, re-applying a
+            # flow that was proposed earlier in the turn).
+            (
+                events_to_emit,
+                auto_apply_flow,
+                saw_set_flow,
+                saw_run,
+                last_set_flow,
+                set_flow_applied,
+            ) = _reconcile_flow_updates(
+                drain_flow_events(),
+                auto_apply_flow=auto_apply_flow,
+                saw_set_flow=saw_set_flow,
+                saw_run=saw_run,
+                last_set_flow=last_set_flow,
+                set_flow_applied=set_flow_applied,
+            )
+            if events_to_emit:
                 has_flow_updates = True
-                if update.get("action") == "set_flow":
-                    saw_set_flow = True
-                    if is_compound:
-                        update["auto_apply"] = True
-                yield format_flow_update_event(update)
+            for emitted in events_to_emit:
+                yield format_flow_update_event(emitted)
             # Drain any remaining file_written events emitted after the last token.
             for file_event in drain_file_events():
                 yield format_file_written_event(
@@ -647,7 +764,7 @@ async def execute_flow_with_validation_streaming(
                 # Compound auto-applies (the set_flow event carries
                 # auto_apply=True and the user already asked to replace
                 # the canvas) — no gate.
-                if is_flow_request and saw_set_flow and not is_compound:
+                if is_flow_request and saw_set_flow and not auto_apply_flow:
                     yield format_progress_event(
                         "flow_proposal_ready",
                         attempt + 1,

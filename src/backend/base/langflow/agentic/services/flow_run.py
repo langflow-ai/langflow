@@ -30,6 +30,7 @@ import logging
 from time import perf_counter
 from typing import Any
 
+from langflow.agentic.helpers.code_security import scan_code_security
 from langflow.agentic.helpers.error_handling import extract_friendly_error
 from langflow.api.utils.flow_utils import build_graph_from_data
 from langflow.processing.process import run_graph_internal
@@ -130,6 +131,32 @@ def extract_run_result_text(run_outputs: list[Any]) -> str:
     return text if len(text) <= MAX_RESULT_CHARS else text[:MAX_RESULT_CHARS]
 
 
+def _scan_flow_component_code(payload: dict) -> list[str]:
+    """Security-scan every node's inline component ``code`` before run.
+
+    The generation pipeline scans LLM-produced component code, but a flow
+    reaching the run engine can carry code that bypassed it (built via
+    build_flow with inline code, an overlay ``.components/*.py``, an
+    imported flow). The run engine ``exec``s that code, so scan it here
+    and refuse to run on any violation. Deterministic, never executes.
+    """
+    violations: list[str] = []
+    for node in (payload or {}).get("nodes", []) or []:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data") or {}
+        template = (node_data.get("node") or {}).get("template") or {}
+        code_field = template.get("code")
+        code = code_field.get("value") if isinstance(code_field, dict) else None
+        if not isinstance(code, str) or not code.strip():
+            continue
+        result = scan_code_security(code)
+        if not result.is_safe:
+            node_id = node.get("id") or node_data.get("id") or "?"
+            violations.append(f"{node_id}: {'; '.join(result.violations)}")
+    return violations
+
+
 async def run_working_flow(*, flow_data: dict, flow_id: str, user_id: str | None) -> dict:
     """Run the assistant's current canvas flow in-process and return its result.
 
@@ -143,6 +170,13 @@ async def run_working_flow(*, flow_data: dict, flow_id: str, user_id: str | None
     """
     payload = flow_data.get("data") or {}
     flow_name = flow_data.get("name") or "Assistant Flow"
+
+    # Security gate: never exec component code that fails the scan, even
+    # if it reached the run path without going through generation.
+    code_violations = _scan_flow_component_code(payload)
+    if code_violations:
+        logger.warning("assistant.run_flow.blocked_unsafe_code flow_id=%s n=%d", flow_id, len(code_violations))
+        return {"error": f"Refused to run: unsafe component code detected — {'; '.join(code_violations)}"}
 
     started = perf_counter()
     graph: Any = None

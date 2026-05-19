@@ -10,7 +10,12 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, patch
 
-from lfx.mcp.flow_builder_tools import RunFlow, init_working_flow, reset_working_flow
+from lfx.mcp.flow_builder_tools import (
+    RunFlow,
+    drain_flow_events,
+    init_working_flow,
+    reset_working_flow,
+)
 
 RWF = "langflow.agentic.services.flow_run.run_working_flow"
 
@@ -91,3 +96,112 @@ class TestRunFlowTool:
         kwargs = m.call_args.kwargs
         assert kwargs["flow_id"] == "flow-xyz"
         assert kwargs["flow_data"]["data"]["nodes"][0]["id"] == "ChatInput-1"
+
+
+class TestRunFlowEmitsRanSignal:
+    """RunFlow must emit a deterministic ``flow_ran`` signal on success.
+
+    This is the LLM/language-agnostic anchor for "the agent built AND ran
+    the flow this turn → apply it to the canvas". It fires on the REAL
+    action (a successful run), never inferred from the user's wording, so
+    paraphrases like "rode ele" / "run it" / any language work identically.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def test_emits_flow_ran_on_successful_run(self):
+        init_working_flow(
+            {"name": "F", "data": {"nodes": [{"id": "ChatInput-1"}], "edges": []}},
+            "flow-1",
+        )
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "12.0"}):
+            _run(RunFlow())
+
+        events = drain_flow_events()
+        ran = [e for e in events if e.get("action") == "flow_ran"]
+        assert len(ran) == 1, f"expected exactly one flow_ran, got {events}"
+
+    def test_does_not_emit_flow_ran_when_run_errors(self):
+        init_working_flow(
+            {"name": "F", "data": {"nodes": [{"id": "Agent-1"}], "edges": []}},
+            "flow-1",
+        )
+        with patch(RWF, new_callable=AsyncMock, return_value={"error": "Authentication failed."}):
+            _run(RunFlow())
+
+        assert not [e for e in drain_flow_events() if e.get("action") == "flow_ran"], (
+            "a failed run must NOT claim the flow ran (no false canvas application)"
+        )
+
+    def test_does_not_emit_flow_ran_when_canvas_empty(self):
+        init_working_flow({"name": "F", "data": {"nodes": [], "edges": []}}, "flow-1")
+        with patch(RWF, new_callable=AsyncMock):
+            _run(RunFlow())
+
+        assert not [e for e in drain_flow_events() if e.get("action") == "flow_ran"]
+
+
+class TestRunFlowInjectsVerifiedModel:
+    """The assistant-triggered run must use a model that AUTHENTICATES.
+
+    Bug (real user): the assistant built ChatInput->Agent->ChatOutput and
+    ran it; the Agent's model (LLM-chosen / empty) had no configured key
+    -> "Authentication failed. Check your API key." The assistant itself
+    runs with a verified provider/model/api_key (agent_run_context); that
+    working credential must be injected into the Agent before running so
+    the user actually gets a result. Deterministic, LLM-agnostic.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        from langflow.agentic.services.agent_run_context import reset_agent_run_model
+
+        reset_working_flow()
+        reset_agent_run_model()
+
+    def _agent_flow(self):
+        return {
+            "name": "F",
+            "data": {
+                "nodes": [
+                    {
+                        "id": "Agent-1",
+                        "data": {"type": "Agent", "node": {"template": {"model": {"value": ""}}}},
+                    }
+                ],
+                "edges": [],
+            },
+        }
+
+    def test_injects_the_assistants_verified_model_into_modelless_agent_before_running(self):
+        from langflow.agentic.services.agent_run_context import set_agent_run_model
+
+        set_agent_run_model("OpenAI", "gpt-4o", "OPENAI_API_KEY")
+        init_working_flow(self._agent_flow(), "flow-1")
+
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "42 is prime"}) as m:
+            data = _run(RunFlow())
+
+        flow_data = m.await_args.kwargs["flow_data"]
+        agent_tmpl = flow_data["data"]["nodes"][0]["data"]["node"]["template"]
+        model_value = agent_tmpl["model"]["value"]
+        # The Agent now carries the assistant's verified model (structured),
+        # not the empty/LLM-chosen one -> the run can authenticate.
+        assert isinstance(model_value, list)
+        assert model_value
+        assert model_value[0]["name"] == "gpt-4o"
+        assert model_value[0]["provider"] == "OpenAI"
+        assert data.data["result"] == "42 is prime"
+
+    def test_runs_normally_when_no_verified_model_is_bound(self):
+        # No agent_run_context set -> no injection, but the run still works
+        # (no regression to the existing success path).
+        init_working_flow(self._agent_flow(), "flow-1")
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "ok"}) as m:
+            data = _run(RunFlow())
+
+        m.assert_awaited_once()
+        assert data.data["result"] == "ok"
