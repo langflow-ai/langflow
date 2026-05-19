@@ -11,7 +11,7 @@ from lfx.utils.async_helpers import run_until_complete
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .credentials import _fetch_enabled_providers_for_user, _get_model_status
-from .provider_queries import MODELS_DETAILED, model_provider_metadata
+from .provider_queries import get_models_detailed, model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -56,9 +56,10 @@ def get_unified_models_detailed(
     if include_deprecated is None:
         include_deprecated = False
 
-    # Gather all models from imported *_MODELS_DETAILED lists
+    # Gather all models from the active catalog (static lists + any
+    # models.dev override that may have been installed at startup).
     all_models: list[dict] = []
-    for models_detailed in MODELS_DETAILED:
+    for models_detailed in get_models_detailed():
         all_models.extend(models_detailed)
 
     # Apply filters
@@ -95,16 +96,31 @@ def get_unified_models_detailed(
             }
         )
 
-    # Mark the first 5 models in each provider as default (based on list order)
-    # and optionally filter to only defaults
+    # Sort each provider's list so the picker presents newest-supported first,
+    # deprecated drops to the bottom, and providers with no date data preserve
+    # their hand-curated constants-file order (stable sort + tuple ties).
+    #
+    # Sort key: (is_deprecated, -created_epoch). When ``created`` is unknown
+    # (== 0) every row in the same deprecation tier ties on the second
+    # component, so list.sort's stable behavior keeps the original order
+    # intact. Defaults are stamped AFTER sorting so the first-N selection
+    # reflects the new ordering instead of the raw constants order.
     default_model_count = 5  # Number of default models per provider
 
+    def _sort_key(model: dict) -> tuple[int, int]:
+        meta = model.get("metadata", {})
+        is_deprecated = 1 if meta.get("deprecated") else 0
+        created = meta.get("created") or 0
+        try:
+            created_int = int(created)
+        except (TypeError, ValueError):
+            created_int = 0
+        return (is_deprecated, -created_int)
+
     for prov, models in provider_map.items():
+        models.sort(key=_sort_key)
         for i, model in enumerate(models):
-            if i < default_model_count:
-                model["metadata"]["default"] = True
-            else:
-                model["metadata"]["default"] = False
+            model["metadata"]["default"] = i < default_model_count
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
@@ -123,24 +139,30 @@ def get_unified_models_detailed(
 
 
 def get_language_model_options(
-    user_id: UUID | str | None = None, *, tool_calling: bool | None = None
+    user_id: UUID | str | None = None,
+    *,
+    tool_calling: bool | None = None,
+    filters: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Return available language model providers with their configuration."""
+    """Return available language model providers with their configuration.
+
+    ``filters`` is a dict of metadata key/value constraints forwarded to
+    ``get_unified_models_detailed`` (e.g. ``{"tool_calling": True}``,
+    ``{"reasoning": True}``). It is the declarative path used by
+    ``ModelInput(filters=...)``. The legacy ``tool_calling`` kwarg is kept
+    for back-compat and merged into ``filters`` when present.
+    """
     # Get all LLM models (excluding embeddings, deprecated, and unsupported by default)
-    # Apply tool_calling filter if specified
+    metadata_filters: dict[str, Any] = dict(filters or {})
     if tool_calling is not None:
-        all_models = get_unified_models_detailed(
-            model_type="llm",
-            include_deprecated=False,
-            include_unsupported=False,
-            tool_calling=tool_calling,
-        )
-    else:
-        all_models = get_unified_models_detailed(
-            model_type="llm",
-            include_deprecated=False,
-            include_unsupported=False,
-        )
+        metadata_filters.setdefault("tool_calling", tool_calling)
+
+    all_models = get_unified_models_detailed(
+        model_type="llm",
+        include_deprecated=False,
+        include_unsupported=False,
+        **metadata_filters,
+    )
 
     # Get disabled and explicitly enabled models for this user if user_id is provided
     disabled_models: set[str] = set()
