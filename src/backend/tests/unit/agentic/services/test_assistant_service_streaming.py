@@ -265,9 +265,7 @@ class TestBuildAndRunAutoApply:
 
     @pytest.mark.asyncio
     async def test_build_plus_run_sets_auto_apply_and_skips_the_continue_gate(self):
-        mock_stream = MagicMock(
-            side_effect=lambda **_kw: _make_flow_events([("end", {"result": "17 é primo."})])()
-        )
+        mock_stream = MagicMock(side_effect=lambda **_kw: _make_flow_events([("end", {"result": "17 é primo."})])())
         mock_classify = AsyncMock(return_value=_make_intent("build_flow"))
 
         with (

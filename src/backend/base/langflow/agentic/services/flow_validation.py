@@ -70,10 +70,7 @@ def _no_model_caveat() -> str:
 
 
 def _failed_caveat(attempts: int, errors: list[str]) -> str:
-    return (
-        f"I built the flow but couldn't make it valid after {attempts} attempt(s). "
-        f"Last error: {_summarize(errors)}."
-    )
+    return f"I built the flow but couldn't make it valid after {attempts} attempt(s). Last error: {_summarize(errors)}."
 
 
 async def verify_flow(
