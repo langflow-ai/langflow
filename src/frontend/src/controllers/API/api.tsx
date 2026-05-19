@@ -25,6 +25,23 @@ const api: AxiosInstance = axios.create({
   baseURL: baseURL,
   withCredentials: getAxiosWithCredentials(),
 });
+
+// URL fragments for auth-maintenance endpoints. A 401/403 on any of these
+// must NOT trigger the refresh-then-retry branch — that path itself goes
+// through this same axios instance, so retrying would recurse. Exported
+// for unit testing.
+export const AUTH_MAINTENANCE_PATHS = [
+  "/refresh",
+  "/login",
+  "/logout",
+  "/auto_login",
+];
+
+export function isAuthMaintenanceURL(url: string | undefined): boolean {
+  if (!url) return false;
+  return AUTH_MAINTENANCE_PATHS.some((path) => url.includes(path));
+}
+
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -81,6 +98,26 @@ function ApiInterceptor() {
           ) {
             return Promise.reject(error);
           }
+          // Auth-maintenance endpoints must not trigger refresh themselves.
+          // The refresh mutation uses this same axios instance, so if
+          // ``/refresh`` returns 401 (expired refresh token) it would
+          // re-enter this branch and recurse. Same for login/logout/
+          // auto_login. Reject the original failure and let the caller
+          // (typically the refresh mutation's catch block) drive logout.
+          if (isAuthMaintenanceURL(error?.config?.url)) {
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
+          // One-shot guard: if we've already retried this exact request
+          // once after a refresh, don't retry again. Without this, a
+          // request that 401s post-refresh would loop back through here.
+          const requestConfig = error?.config as
+            | (AxiosRequestConfig & { _retry?: boolean })
+            | undefined;
+          if (requestConfig?._retry) {
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
           const stillRefresh = checkErrorCount();
           if (!stillRefresh) {
             return Promise.reject(error);
@@ -102,6 +139,9 @@ function ApiInterceptor() {
           // the interceptor fell through without returning the retried
           // response.
           await clearBuildVerticesState(error);
+          if (requestConfig) {
+            requestConfig._retry = true;
+          }
           return await remakeRequest(error);
         }
 
