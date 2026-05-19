@@ -741,10 +741,9 @@ def create_serve_app() -> FastAPI:
     The parent process must set those env vars **before** calling
     ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
     """
+    import asyncio
     import os
     from pathlib import Path
-
-    import asyncio
 
     from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
 

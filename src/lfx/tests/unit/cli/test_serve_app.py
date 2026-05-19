@@ -720,8 +720,8 @@ class TestFlowRegistry:
         raw = {"name": "my-flow", "id": json_uuid, "data": {"nodes": [], "edges": []}}
 
         store_data: dict[str, dict] = {
-            "my-flow": raw,       # pre-placed stem file
-            json_uuid: raw,       # UUID file written by add() at startup
+            "my-flow": raw,  # pre-placed stem file
+            json_uuid: raw,  # UUID file written by add() at startup
         }
         deleted: list[str] = []
 
@@ -979,7 +979,8 @@ class TestCreateServeAppFactory:
 
     def test_create_serve_app_startup_paths_cleaned_from_env_by_caller(self):
         """LFX_SERVE_STARTUP_PATHS must be consumed by create_serve_app() but not deleted —
-        cleanup is the caller's (serve_command's) responsibility via the prefix sweep."""
+        cleanup is the caller's (serve_command's) responsibility via the prefix sweep.
+        """
         import json
         import os
         from unittest.mock import patch
@@ -1008,15 +1009,14 @@ class TestCreateServeAppFactory:
         """
         import json
         import os
-        from pathlib import Path
-        from unittest.mock import MagicMock, call, patch
+        from unittest.mock import MagicMock, patch
 
+        from lfx.cli.flow_store import FilesystemFlowStore
         from lfx.cli.serve_app import (
             _SERVE_FLOW_DIR_ENV,
             _SERVE_STARTUP_PATHS_ENV,
             create_serve_app,
         )
-        from lfx.cli.flow_store import FilesystemFlowStore
 
         # Pre-place a flow in the store (simulating what the parent did)
         store = FilesystemFlowStore(tmp_path)
@@ -1860,7 +1860,9 @@ class TestUploadEndpoint:
             patch("lfx.cli.serve_app.FlowRegistry.get", return_value=None),
             patch(
                 "lfx.cli.serve_app.FlowRegistry.add",
-                side_effect=FlowAlreadyRegisteredError("Flow 'x' is already registered. Pass overwrite=True to replace it."),
+                side_effect=FlowAlreadyRegisteredError(
+                    "Flow 'x' is already registered. Pass overwrite=True to replace it."
+                ),
             ),
         ):
             response = app_with_empty_registry.post(
