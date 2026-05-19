@@ -215,4 +215,270 @@ describe("ModelSelection", () => {
       expect(screen.getByText("Check Ollama Library")).toBeInTheDocument();
     });
   });
+
+  describe("Search filtering", () => {
+    it("should render the search input when there are available models", () => {
+      render(<ModelSelection {...defaultProps} />);
+      expect(screen.getByTestId("model-search-input")).toBeInTheDocument();
+    });
+
+    it("should filter LLM and embedding lists by the typed query", async () => {
+      const user = userEvent.setup();
+      render(<ModelSelection {...defaultProps} />);
+
+      await user.type(screen.getByTestId("model-search-input"), "embed");
+
+      // gpt-4 / gpt-3.5-turbo are filtered out (no "embed" substring).
+      expect(screen.queryByText("gpt-4")).not.toBeInTheDocument();
+      expect(screen.queryByText("gpt-3.5-turbo")).not.toBeInTheDocument();
+      expect(screen.getByText("text-embedding-ada-002")).toBeInTheDocument();
+      expect(screen.getByText("embed-large")).toBeInTheDocument();
+    });
+
+    it("should render the no-match message when the query matches nothing", async () => {
+      const user = userEvent.setup();
+      render(<ModelSelection {...defaultProps} />);
+
+      await user.type(screen.getByTestId("model-search-input"), "xyzzy");
+
+      expect(screen.getByTestId("model-search-empty")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("llm-models-section"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("embeddings-models-section"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should reset the query when the selected provider changes", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(<ModelSelection {...defaultProps} />);
+
+      const input = screen.getByTestId(
+        "model-search-input",
+      ) as HTMLInputElement;
+      await user.type(input, "gpt");
+      expect(input.value).toBe("gpt");
+
+      rerender(<ModelSelection {...defaultProps} providerName="Anthropic" />);
+
+      const refreshed = screen.getByTestId(
+        "model-search-input",
+      ) as HTMLInputElement;
+      expect(refreshed.value).toBe("");
+    });
+
+    it("should not render the search input when no models are available at all", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Ollama"
+          availableModels={[]}
+          isEnabledModel={true}
+        />,
+      );
+      expect(
+        screen.queryByTestId("model-search-input"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("Deprecated disclosure", () => {
+    const withDeprecated: Model[] = [
+      { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Bot" } },
+      { model_name: "gpt-4.1", metadata: { model_type: "llm", icon: "Bot" } },
+      {
+        model_name: "gpt-3.5-turbo",
+        metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+      },
+      {
+        model_name: "gpt-old",
+        metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+      },
+    ];
+
+    it("should not render deprecated rows by default", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      expect(screen.getByText("gpt-4o")).toBeInTheDocument();
+      expect(screen.getByText("gpt-4.1")).toBeInTheDocument();
+      // Deprecated rows live inside a <details> that's closed → not in DOM
+      // visually accessible role, but `getByText` still finds them since
+      // <details> children remain in the DOM. Check that the disclosure
+      // exists and reports the right count instead.
+      expect(
+        screen.getByTestId("llm-deprecated-disclosure"),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId("llm-deprecated-summary").textContent).toMatch(
+        /Show 2 deprecated models/,
+      );
+    });
+
+    it("should pluralize 'model' correctly for a single deprecated row", () => {
+      const single: Model[] = [
+        { model_name: "gpt-4o", metadata: { model_type: "llm", icon: "Bot" } },
+        {
+          model_name: "gpt-old",
+          metadata: { model_type: "llm", icon: "Bot", deprecated: true },
+        },
+      ];
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={single}
+          modelType="llm"
+        />,
+      );
+      // Mock i18n returns the singular en.json string with {{plural}} → ""
+      expect(screen.getByTestId("llm-deprecated-summary").textContent).toMatch(
+        /Show 1 deprecated model$/,
+      );
+    });
+
+    it("should not render the disclosure when nothing is deprecated", () => {
+      render(<ModelSelection {...defaultProps} modelType="llm" />);
+      expect(
+        screen.queryByTestId("llm-deprecated-disclosure"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should reset the disclosure to closed when the provider changes", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      // Open the disclosure the way a user would (click → onToggle → state
+      // flips to true), so React owns the open prop.
+      await user.click(screen.getByTestId("llm-deprecated-summary"));
+      expect(
+        (screen.getByTestId("llm-deprecated-disclosure") as HTMLDetailsElement)
+          .open,
+      ).toBe(true);
+
+      // Switching provider must collapse the disclosure (useEffect fires).
+      rerender(
+        <ModelSelection
+          {...defaultProps}
+          providerName="Anthropic"
+          availableModels={withDeprecated}
+          modelType="llm"
+        />,
+      );
+
+      expect(
+        (screen.getByTestId("llm-deprecated-disclosure") as HTMLDetailsElement)
+          .open,
+      ).toBe(false);
+    });
+  });
+
+  describe("Capability tags", () => {
+    const tagModels: Model[] = [
+      {
+        model_name: "claude-opus",
+        metadata: {
+          model_type: "llm",
+          icon: "Bot",
+          tool_calling: true,
+          reasoning: true,
+          vision: true,
+        },
+      },
+      {
+        model_name: "vanilla-llm",
+        metadata: { model_type: "llm", icon: "Bot", tool_calling: false },
+      },
+      {
+        model_name: "embed-only",
+        metadata: { model_type: "embeddings", icon: "Bot" },
+      },
+      {
+        model_name: "preview-model",
+        metadata: {
+          model_type: "llm",
+          icon: "Bot",
+          preview: true,
+          search: true,
+        },
+      },
+    ];
+
+    it("should render tags for the capabilities present in metadata", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={tagModels}
+          modelType="all"
+        />,
+      );
+
+      expect(
+        screen.getByTestId("llm-tag-tool-claude-opus"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("llm-tag-reasoning-claude-opus"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("llm-tag-vision-claude-opus"),
+      ).toBeInTheDocument();
+
+      expect(
+        screen.getByTestId("llm-tag-preview-preview-model"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("llm-tag-search-preview-model"),
+      ).toBeInTheDocument();
+
+      // Embedding models surface the "embedding" tag only in the all-view
+      // because the dedicated section heading already conveys the same info.
+      expect(
+        screen.getByTestId("embeddings-tag-embedding-embed-only"),
+      ).toBeInTheDocument();
+    });
+
+    it("should not render absent capability tags", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={tagModels}
+          modelType="all"
+        />,
+      );
+
+      expect(
+        screen.queryByTestId("llm-tag-tool-vanilla-llm"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("llm-tag-reasoning-vanilla-llm"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("llm-tag-vision-vanilla-llm"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should not render the embedding tag when modelType is embeddings", () => {
+      render(
+        <ModelSelection
+          {...defaultProps}
+          availableModels={tagModels}
+          modelType="embeddings"
+        />,
+      );
+
+      expect(
+        screen.queryByTestId("embeddings-tag-embedding-embed-only"),
+      ).not.toBeInTheDocument();
+    });
+  });
 });
