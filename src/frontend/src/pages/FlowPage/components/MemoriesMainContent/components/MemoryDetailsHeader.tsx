@@ -77,19 +77,6 @@ export function MemoryDetailsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          aria-label="Reload sessions and messages"
-        >
-          <IconComponent
-            name="RefreshCw"
-            className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-          />
-        </Button>
-
         {sessions && sessions.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -162,6 +149,19 @@ export function MemoryDetailsHeader({
             className={`h-2 w-2 shrink-0 rounded-full ${memory.is_active ? "bg-accent-emerald-foreground" : "bg-muted-foreground"}`}
           />
           Auto-capture
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          aria-label="Reload sessions and messages"
+        >
+          <IconComponent
+            name="RefreshCw"
+            className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+          />
         </Button>
 
         <DeleteConfirmationModal

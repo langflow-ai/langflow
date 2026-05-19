@@ -1,4 +1,5 @@
 import type { UIEvent } from "react";
+import StringReader from "@/components/common/stringReaderComponent";
 import IconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
 import {
@@ -56,8 +57,7 @@ export function MemoryKnowledgeBaseSection({
             />
             <p className="text-sm font-medium text-foreground">No chunks yet</p>
             <p className="max-w-xs text-xs text-muted-foreground">
-              Head to the Playground, run your flow, and chunks will start
-              appearing here automatically.
+              Run a flow, and chunks will start appearing automatically.
             </p>
           </div>
         ) : (
@@ -85,21 +85,47 @@ export function MemoryKnowledgeBaseSection({
                     )}
                     onClick={() => handleOpenDocumentPanel(doc)}
                   >
-                    <TableCell className="text-xs text-muted-foreground">
-                      {doc.sender || "-"}
+                    <TableCell
+                      className="text-xs text-muted-foreground [&>button]:text-left"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StringReader
+                        editable={false}
+                        setValue={() => {}}
+                        string={doc.sender || "-"}
+                      />
                     </TableCell>
-                    <TableCell className="max-w-40 truncate text-xs text-muted-foreground">
-                      {doc.job_id || "-"}
+                    <TableCell
+                      className="max-w-40 overflow-hidden text-xs text-muted-foreground [&>button]:text-left"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StringReader
+                        editable={false}
+                        setValue={() => {}}
+                        string={doc.job_id || "-"}
+                      />
                     </TableCell>
-                    <TableCell className="max-w-md text-xs">
-                      <div className="line-clamp-2" title={doc.content}>
-                        {doc.content}
-                      </div>
+                    <TableCell
+                      className="max-w-md overflow-hidden text-xs [&>button]:text-left"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StringReader
+                        editable={false}
+                        setValue={() => {}}
+                        string={doc.content}
+                      />
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatTimestamp(
-                        doc.ingestion_timestamp || doc.timestamp,
-                      )}
+                    <TableCell
+                      className="text-xs text-muted-foreground [&>button]:text-left"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <StringReader
+                        editable={false}
+                        setValue={() => {}}
+                        string={formatTimestamp(
+                          doc.ingestion_timestamp || doc.timestamp,
+                        )}
+                      />
                     </TableCell>
                   </TableRow>
                 )),
