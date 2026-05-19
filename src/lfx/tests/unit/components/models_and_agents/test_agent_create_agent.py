@@ -1064,3 +1064,90 @@ async def test_should_not_require_verbose_in_update_build_config() -> None:
         # Should NOT raise. If it does, the canvas surfaces "Error while updating
         # the Component — Missing required keys in build_config: ['verbose']".
         await component.update_build_config(build_config, [], field_name="model")
+
+
+# ===== _inject_dynamic_prompt_values: connected (Message) system_prompt =========
+# CodeRabbit PR #12992 (comment 3266521738): `system_prompt` is a MultilineInput
+# that accepts connections (e.g. a Prompt node in Invoice Summarizer wires into
+# Agent.system_prompt). When the connected value arrives as a Message, the old
+# `prompt.replace(...)` raised AttributeError before the agent could run.
+
+
+def test_should_replace_placeholders_when_system_prompt_arrives_as_a_message() -> None:
+    """A connected `Message` system_prompt must be normalized to text, not crash.
+
+    `_inject_dynamic_prompt_values` did `prompt.replace(...)` directly; a Message has
+    no `.replace`, so a connected Prompt node blew up the agent build with
+    AttributeError. The helper must reuse `_extract_text_content` first.
+    """
+    from lfx.schema.message import Message
+
+    component = _build_component()
+    with patch.object(type(component), "_get_resolved_model_name", return_value="gpt-test"):
+        result = component._inject_dynamic_prompt_values(Message(text="Model {model_name} on {current_date}."))
+
+    assert isinstance(result, str)
+    assert "{model_name}" not in result
+    assert "gpt-test" in result
+    assert "{current_date}" not in result
+
+
+def test_should_return_none_when_system_prompt_is_none() -> None:
+    """Preserve the original contract: None in → None out (callers rely on `or ''`)."""
+    component = _build_component()
+
+    assert component._inject_dynamic_prompt_values(None) is None
+
+
+def test_should_still_replace_placeholders_when_system_prompt_is_plain_string() -> None:
+    """Regression guard: the plain-string path must keep working unchanged."""
+    component = _build_component()
+    with patch.object(type(component), "_get_resolved_model_name", return_value="m1"):
+        result = component._inject_dynamic_prompt_values("hello {model_name}")
+
+    assert result == "hello m1"
+
+
+# ===== max_iterations must never silently disable the call cap =================
+# CodeRabbit PR #12992 (comment 3266521785): `if max_iterations:` treats a saved
+# `0` as "no limit", removing the ModelCallLimitMiddleware guard entirely and
+# allowing unbounded model/tool calls (DoS-via-loop).
+
+
+@pytest.mark.asyncio
+async def test_should_still_cap_model_calls_when_max_iterations_is_zero() -> None:
+    """A saved `max_iterations=0` must NOT remove the iteration cap.
+
+    `0` is falsy, so `if max_iterations:` skipped ModelCallLimitMiddleware and the
+    agent could loop unbounded. A non-positive value must be clamped to a real cap.
+    """
+    from langchain.agents.middleware import ModelCallLimitMiddleware
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    component.set_attributes({"max_iterations": 0})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    limiters = [m for m in middleware if isinstance(m, ModelCallLimitMiddleware)]
+    assert limiters, "ModelCallLimitMiddleware must remain when max_iterations is 0 (no unbounded loop)"
+    assert limiters[0].run_limit >= 1
+
+
+def test_should_declare_min_one_range_spec_on_max_iterations_input() -> None:
+    """The UI must not let users set `max_iterations` below 1."""
+    from lfx.components.models_and_agents.agent import _agent_base_inputs
+
+    max_iter = next(inp for inp in _agent_base_inputs() if inp.name == "max_iterations")
+
+    assert max_iter.range_spec is not None, "max_iterations needs a RangeSpec to block sub-1 values"
+    assert max_iter.range_spec.min == 1

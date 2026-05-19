@@ -94,10 +94,11 @@ def _agent_base_inputs():
             display_name="Max Iterations",
             value=15,
             advanced=True,
+            range_spec=RangeSpec(min=1, max=128000, step=1, step_type="int"),
             info=(
                 "Maximum number of model calls the agent can make before stopping "
                 "(maps to `ModelCallLimitMiddleware.run_limit` on the create_agent "
-                "path)."
+                "path). Must be at least 1 — it is a safety cap, never 'unlimited'."
             ),
         ),
     }
@@ -451,7 +452,7 @@ class AgentComponent(ToolCallingAgentComponent):
             return legacy_model_name
         return ""
 
-    def _inject_dynamic_prompt_values(self, prompt: str | None) -> str | None:
+    def _inject_dynamic_prompt_values(self, prompt: Any | None) -> str | None:
         """Replace known env placeholders in the system prompt.
 
         Handles {current_date}, {model_name}, and {optional_user_context} (the
@@ -459,7 +460,14 @@ class AgentComponent(ToolCallingAgentComponent):
         is currently unused at the AgentComponent layer, so it resolves to "").
         Uses str.replace (not str.format) so user prompts containing literal
         braces such as JSON examples ({"key": 1}) never break the agent.
+
+        `system_prompt` is a connectable MultilineInput, so the value can arrive
+        as a Message (e.g. a Prompt node wired in). Normalize it to text first —
+        a raw Message has no `.replace` and used to crash the agent build.
         """
+        if prompt is None:
+            return None
+        prompt = _extract_text_content(prompt)
         if not prompt:
             return prompt
         replacements = {
@@ -534,8 +542,12 @@ class AgentComponent(ToolCallingAgentComponent):
         # resolved it once for `bind_tools`, so reuse that instance here.
         middleware: list = []
         max_iterations = getattr(self, "max_iterations", None)
-        if max_iterations:
-            middleware.append(ModelCallLimitMiddleware(run_limit=int(max_iterations)))
+        if max_iterations is not None:
+            # `max_iterations` is a safety cap, not an "unlimited" toggle. A saved
+            # 0 or negative value (falsy) must NOT silently drop the limiter and
+            # allow an unbounded model/tool loop — clamp it to a real minimum.
+            run_limit = max(1, int(max_iterations))
+            middleware.append(ModelCallLimitMiddleware(run_limit=run_limit))
         if getattr(self, "handle_parsing_errors", False):
             middleware.append(ToolRetryMiddleware(max_retries=2))
         # WatsonX models have two known platform quirks; both still reproduce on
