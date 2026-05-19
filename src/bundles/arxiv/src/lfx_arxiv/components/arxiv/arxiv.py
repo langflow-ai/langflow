@@ -10,7 +10,7 @@ from lfx.schema.dataframe import DataFrame
 
 class ArXivComponent(Component):
     display_name = "arXiv"
-    description = "Search and retrieve papers from arXiv.org"
+    description = "Search and retrieve papers from arXiv.org. With new features for filtering by title, abstract, author, and category. Returns results as a DataFrame."
     icon = "arXiv"
 
     inputs = [

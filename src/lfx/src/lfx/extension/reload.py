@@ -586,19 +586,8 @@ def _failure(
 # ---------------------------------------------------------------------------
 
 
-# TODO(LE-1017): replace this stub with a call to
-# ExtensionEventsService.emit(...) once the events pipeline ticket lands.
-# The shape of the payload below is what the events service will consume:
-# the ReloadResult is serializable and carries everything needed for the
-# bundle_reloaded / bundle_reload_failed discriminants.
-def _emit_bundle_reload_event(result: ReloadResult) -> None:
-    """Stub for the LE-1017 events pipeline.
-
-    Currently logs a structured event; LE-1017 will swap the body to
-    ``ExtensionEventsService.emit("bundle_reloaded" | "bundle_reload_failed", payload)``.
-    Tests can monkey-patch this symbol to capture emissions without
-    waiting for the events service to land.
-    """
+def _log_bundle_reload_event(result: ReloadResult) -> None:
+    """Structured-log fallback used when ExtensionEventsService is unavailable."""
     if result.ok:
         logger.info(
             "extension.bundle_reloaded",
@@ -621,6 +610,48 @@ def _emit_bundle_reload_event(result: ReloadResult) -> None:
                 "errors": [e.to_dict() for e in result.errors],
             },
         )
+
+
+def _emit_bundle_reload_event(result: ReloadResult) -> None:
+    """Emit a bundle_reloaded or bundle_reload_failed event via ExtensionEventsService.
+
+    Falls back to structured logging when the service is unavailable.
+    Tests can monkey-patch this symbol to capture emissions without
+    instantiating the full service stack.
+    """
+    try:
+        from lfx.services.deps import get_extension_events_service
+
+        svc = get_extension_events_service()
+        if svc is None:
+            raise RuntimeError("ExtensionEventsService not available")
+        if result.ok:
+            svc.emit(
+                "bundle_reloaded",
+                {
+                    "bundle": result.bundle,
+                    "reload_id": result.reload_id,
+                    "components_added": list(result.components_added),
+                    "components_removed": list(result.components_removed),
+                    "warnings": [w.to_dict() for w in result.warnings],
+                },
+            )
+        else:
+            svc.emit(
+                "bundle_reload_failed",
+                {
+                    "bundle": result.bundle,
+                    "reload_id": result.reload_id,
+                    "errors": [e.to_dict() for e in result.errors],
+                },
+            )
+    except Exception:
+        logger.warning(
+            "extension.event_emit_failed: failed to emit bundle reload event via "
+            "ExtensionEventsService; falling back to structured log.",
+            exc_info=True,
+        )
+        _log_bundle_reload_event(result)
 
 
 # Re-export for caller convenience.

@@ -1206,13 +1206,36 @@ class Graph:
                 migration_error.hint,
                 migration_error.message,
             )
-        # TODO(LE-1017): when the extension events pipeline lands, emit a
-        # single ``flow-migrated`` event per flow per session here using
-        # ExtensionEventsService, plus one event per ``ExtensionError`` in
-        # ``migration_report.errors`` so the frontend can surface the
-        # ``component-not-found-with-hint`` / ``component-name-ambiguous``
-        # codes inline.  Until then the warnings above are the only
-        # external-facing surface for these errors.
+        # Emit extension events so the frontend can surface migration results.
+        try:
+            from lfx.services.deps import get_extension_events_service
+
+            _svc = get_extension_events_service()
+            if _svc is not None:
+                if migration_report.any_rewritten:
+                    _svc.emit(
+                        "flow_migrated",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "rewritten_count": migration_report.rewritten_count,
+                        },
+                    )
+                for migration_error in migration_report.errors:
+                    _svc.emit(
+                        "extension_error",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "code": migration_error.code,
+                            "message": migration_error.message,
+                            "hint": migration_error.hint,
+                            "location": migration_error.location,
+                        },
+                    )
+        except Exception:
+            logger.warning(
+                "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                exc_info=True,
+            )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API

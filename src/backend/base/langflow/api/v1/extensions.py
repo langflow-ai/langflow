@@ -13,17 +13,30 @@ short-circuits with 404 when ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` is off.
 from __future__ import annotations
 
 import asyncio
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.extension.bundle_registry import get_default_registry
 from lfx.extension.errors import ExtensionError
 from lfx.extension.reload import ReloadInProgressError, reload_bundle
 from lfx.log.logger import logger
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_extension_events_service, get_settings_service
+from pydantic import BaseModel
 
 from langflow.services.auth.utils import get_current_active_user
 
 router = APIRouter(prefix="/extensions", tags=["Extensions"])
+
+
+class ExtensionEventResponse(BaseModel):
+    type: str
+    timestamp: float
+    payload: dict
+
+
+class ExtensionEventsResponse(BaseModel):
+    events: list[ExtensionEventResponse]
+    settled: bool
 
 
 def _typed_http_exception(*, status_code: int, error: ExtensionError) -> HTTPException:
@@ -168,3 +181,33 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
         )
 
     return result.to_dict()
+
+
+@router.get(
+    "/events",
+    response_model=ExtensionEventsResponse,
+    dependencies=[Depends(get_current_active_user)],
+)
+async def get_extension_events(
+    since: Annotated[float, Query(description="UTC epoch timestamp; return events after this cursor")] = 0.0,
+    keyspace: Annotated[str, Query(description="Event keyspace ('global' or 'session:<id>')")] = "global",
+) -> ExtensionEventsResponse:
+    """Poll for extension lifecycle events since the given cursor.
+
+    Returns events from the specified keyspace. Auth via CurrentActiveUser is
+    sufficient — extension events are system-scoped, not per-user resources.
+
+    svc.since() uses blocking sqlite3; run in a thread pool so the asyncio
+    event loop is not held while waiting on disk I/O.
+    """
+    svc = get_extension_events_service()
+    if svc is None:
+        return ExtensionEventsResponse(events=[], settled=True)
+    events, settled = await asyncio.to_thread(svc.since, since, keyspace)
+    return ExtensionEventsResponse(
+        events=[
+            ExtensionEventResponse(type=e.type, timestamp=e.timestamp, payload=e.payload)
+            for e in events
+        ],
+        settled=settled,
+    )
