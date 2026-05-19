@@ -322,15 +322,16 @@ class DeploymentFlowVersionListItem(BaseModel):
     distinguishes the following cases:
 
     * **Tool renamed in provider** — Same ``provider_snapshot_id``, different
-      ``provider_data.tool_name``.  Langflow picks up the new name on the next fetch.
+      ``provider_data.tool_display_name``. Langflow picks up the new label on the next fetch.
     * **Tool deleted in provider** — ``provider_snapshot_id`` no longer
-      resolves.  ``provider_data.tool_name`` may be missing/``None``.
+      resolves. ``provider_data.tool_display_name`` may be missing/``None``.
     * **Tool deleted + new tool created with same name** — The new tool has
       a different ID.  Langflow's attachment still points to the old
       (missing) ID.  The new tool is invisible to Langflow until explicitly
       attached via an update operation.
 
-    Frontends should use ``provider_data.tool_name`` for display and
+    Frontends should use ``provider_data.tool_display_name`` for display,
+    ``provider_data.tool_name`` for provider technical metadata, and
     ``provider_snapshot_id`` for identity / operations.
     """
 

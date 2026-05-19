@@ -80,7 +80,6 @@ from langflow.api.v1.schemas.deployments import (
 
 from .contracts import (
     CreatedSnapshotIds,
-    CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
     ProviderDeploymentMetadata,
@@ -544,19 +543,6 @@ class BaseDeploymentMapper:
     ) -> dict[str, Any] | None:
         """Return non-sensitive provider metadata for provider-account responses."""
         return {"url": provider_account.provider_url}
-
-    def util_create_flow_artifact_provider_data(
-        self,
-        *,
-        project_id: UUID,
-        flow_version_id: UUID,
-    ) -> CreateFlowArtifactProviderData:
-        """Build provider_data for create-time flow artifacts.
-
-        Contract schema: ``CreateFlowArtifactProviderData``.
-        """
-        _ = project_id
-        return CreateFlowArtifactProviderData(source_ref=str(flow_version_id))
 
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         """Resolve flow-version ids referenced by create payload."""

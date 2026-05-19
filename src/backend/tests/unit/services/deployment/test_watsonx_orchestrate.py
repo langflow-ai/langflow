@@ -205,8 +205,10 @@ class FakeToolClient:
         self.delete_calls: list[str] = []
         self.update_calls: list[tuple[str, dict]] = []
         self.create_calls: list[dict] = []
+        self.get_drafts_by_ids_calls: list[list[str]] = []
 
     def get_drafts_by_ids(self, tool_ids: list[str]):
+        self.get_drafts_by_ids_calls.append(list(tool_ids))
         return [dict(self._tools_by_id[tool_id]) for tool_id in tool_ids if tool_id in self._tools_by_id]
 
     def get_draft_by_name(self, tool_name: str):
@@ -666,7 +668,7 @@ async def test_update_provider_data_bind_unbind_and_rename_preserves_connection_
                 "operations": [
                     {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-add"]},
                     {"op": "unbind", "tool": _tool_ref("tool-1"), "app_ids": ["cfg-remove"]},
-                    {"op": "rename_tool", "tool": _tool_ref("tool-1"), "new_name": "renamed_tool"},
+                    {"op": "rename_tool", "tool": _tool_ref("tool-1"), "tool_display_name": "Renamed Tool"},
                 ],
             }
         ),
@@ -674,11 +676,11 @@ async def test_update_provider_data_bind_unbind_and_rename_preserves_connection_
     )
 
     assert result.provider_result is not None
-    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-1", "tool-1"]
+    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-1"]
 
-    _, rename_payload = fake_tool.update_calls[1]
-    assert rename_payload["name"] == "renamed_tool"
-    assert rename_payload["display_name"] == "renamed_tool"
+    _, rename_payload = fake_tool.update_calls[0]
+    _assert_langflow_agent_name(rename_payload["name"], display_name="Renamed Tool")
+    assert rename_payload["display_name"] == "Renamed Tool"
     assert rename_payload["binding"]["langflow"]["connections"] == {
         "cfg-keep": "conn-keep",
         "cfg-add": "conn-add",
@@ -1020,7 +1022,12 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-raw-only-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-raw-only-1",
+                                "tool_name": "snapshot_new_raw_only",
+                                "tool_display_name": "Snapshot New Raw Only",
+                            },
                         }
                     ]
                 },
@@ -1091,7 +1098,12 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-update-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-update-1",
+                                "tool_name": "snapshot_new_1",
+                                "tool_display_name": "Snapshot New 1",
+                            },
                         }
                     ]
                 },
@@ -1107,7 +1119,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"name_of_raw": "snapshot-new-1"},
+                        "tool": {"name_of_raw": "snapshot_new_1"},
                         "app_ids": ["cfg"],
                     }
                 ],
@@ -1284,7 +1296,12 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-plan-1"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-plan-1",
+                            "tool_name": "snapshot_raw_1",
+                            "tool_display_name": "Snapshot Raw 1",
+                        },
                     }
                 ],
             },
@@ -1304,7 +1321,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]},
                 {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-3"]},
                 {"op": "remove_tool", "tool": _tool_ref("tool-b")},
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
+                {"op": "bind", "tool": {"name_of_raw": "snapshot_raw_1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
             ],
         }
     )
@@ -1341,7 +1358,12 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-bound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-bound",
+                            "tool_name": "snapshot_bound",
+                            "tool_display_name": "Snapshot Bound",
+                        },
                     },
                     {
                         "id": str(UUID("00000000-0000-0000-0000-000000000052")),
@@ -1349,7 +1371,12 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-unbound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-unbound",
+                            "tool_name": "snapshot_unbound",
+                            "tool_display_name": "Snapshot Unbound",
+                        },
                     },
                 ],
             },
@@ -1362,7 +1389,7 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"name_of_raw": "snapshot-bound"},
+                    "tool": {"name_of_raw": "snapshot_bound"},
                     "app_ids": ["cfg"],
                 }
             ],
@@ -1373,7 +1400,7 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
         provider_update=provider_update,
     )
 
-    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-bound", "snapshot-unbound"]
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot_bound", "snapshot_unbound"]
     assert plan.raw_tools_to_create[0].app_ids == ["cfg"]
     assert plan.raw_tools_to_create[1].app_ids == []
 
@@ -1452,7 +1479,12 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-unbound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-unbound",
+                            "tool_name": "snapshot_unbound",
+                            "tool_display_name": "Snapshot Unbound",
+                        },
                     }
                 ]
             },
@@ -1465,7 +1497,7 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
         provider_create=provider_create,
     )
 
-    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-unbound"]
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot_unbound"]
     assert plan.raw_tools_to_create[0].app_ids == []
     assert plan.selected_operation_app_ids == []
     assert plan.existing_tool_ids == []
@@ -1485,7 +1517,12 @@ def test_build_provider_create_plan_keeps_technical_name_separate_from_display_n
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
                     }
                 ]
             },
@@ -1516,7 +1553,12 @@ def test_build_provider_create_plan_rejects_invalid_technical_name():
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
                     }
                 ]
             },
@@ -1547,7 +1589,12 @@ def test_build_provider_create_plan_rejects_unnormalized_explicit_technical_name
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
                     }
                 ]
             },
@@ -1579,7 +1626,12 @@ def test_build_provider_create_plan_generates_technical_name_from_display_name(d
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
                     }
                 ]
             },
@@ -1610,7 +1662,12 @@ def test_build_provider_create_plan_uses_resource_fallback_for_symbol_only_displ
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-edge"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
                     }
                 ]
             },
@@ -1658,12 +1715,14 @@ async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors(
     delta.bind.extend(["cfg-missing-first", "cfg-present"])
 
     with pytest.raises(InvalidContentError, match="cfg-missing-first"):
-        await update_core_module._update_existing_tool_connection_deltas(
+        await update_core_module._update_existing_tools(
             clients=clients,
             existing_tool_deltas={"tool-c": delta},
+            tool_renames={},
             resolved_connections={"cfg-present": "conn-present"},
             operation_to_provider_app_id={},
             original_tools={},
+            tool_by_id={"tool-c": fake_tool._tools_by_id["tool-c"]},
         )
 
 
@@ -1680,7 +1739,12 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-1"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-1",
+                            "tool_name": "snapshot_raw_1",
+                            "tool_display_name": "Snapshot Raw 1",
+                        },
                     }
                 ]
             },
@@ -1691,7 +1755,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
             },
             "llm": TEST_WXO_LLM,
             "operations": [
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg"]},
+                {"op": "bind", "tool": {"name_of_raw": "snapshot_raw_1"}, "app_ids": ["cfg"]},
             ],
         }
     )
@@ -2446,7 +2510,12 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-create-service-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-create-service-1",
+                                "tool_name": "snapshot_new_1",
+                                "tool_display_name": "Snapshot New 1",
+                            },
                         }
                     ]
                 },
@@ -2457,7 +2526,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                 },
                 "llm": TEST_WXO_LLM,
                 "operations": [
-                    {"op": "bind", "tool": {"name_of_raw": "snapshot-new-1"}, "app_ids": ["cfg"]},
+                    {"op": "bind", "tool": {"name_of_raw": "snapshot_new_1"}, "app_ids": ["cfg"]},
                 ],
             },
         ),
@@ -2569,7 +2638,12 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-conflict-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-conflict-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2585,7 +2659,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2638,7 +2712,12 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-conflict-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-create-conflict-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2654,7 +2733,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2844,7 +2923,12 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-rollback-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-rollback-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2860,7 +2944,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2948,7 +3032,12 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-rollback-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-create-rollback-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2964,7 +3053,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -3064,6 +3153,7 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-1",
+                    tool_display_name="Snapshot One",
                 ),
             ),
             BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
@@ -3075,6 +3165,7 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-2",
+                    tool_display_name="Snapshot Two",
                 ),
             ),
         ],
@@ -3141,6 +3232,7 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-typed-1",
+                    tool_display_name="Snapshot One",
                 ),
             ),
         ],
@@ -3232,6 +3324,7 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="fv-flow-template-1",
+            tool_display_name="Flow Template",
         ),
     )
 
@@ -3300,6 +3393,7 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="src-ref-1",
+            tool_display_name="Flow",
         ),
     )
 
@@ -3365,6 +3459,8 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="fv-prefix-1",
+            tool_name="basicllmwxo",
+            tool_display_name="Basic LLM wxO",
         ),
     )
 
@@ -3393,6 +3489,46 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
 
     assert tool_payload["name"] == "basicllmwxo"
     assert tool_payload["binding"]["langflow"]["project_id"] == "project-123"
+    assert artifact_bytes == b"artifact"
+
+
+def test_create_wxo_flow_tool_uses_provider_data_technical_name(monkeypatch):
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="raw-correlation-key",
+        description="desc",
+        data={"nodes": [], "edges": []},
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="fv-prefix-1",
+            tool_display_name="Basic LLM wxO",
+        ),
+    )
+
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "raw-correlation-key"},  # noqa: ARG005
+        )
+    )
+    monkeypatch.setattr(
+        tools_module,
+        "create_langflow_tool",
+        lambda **kwargs: fake_tool,  # noqa: ARG005
+    )
+    monkeypatch.setattr(
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+
+    tool_payload, artifact_bytes = tools_module.create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={},
+    )
+
+    _assert_langflow_agent_name(tool_payload["name"], display_name="Basic LLM wxO")
+    assert tool_payload["display_name"] == "Basic LLM wxO"
     assert artifact_bytes == b"artifact"
 
 
@@ -4384,7 +4520,11 @@ async def test_list_snapshots_single_deployment_scope_extracts_connections(monke
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
 
 
 @pytest.mark.anyio
@@ -4640,8 +4780,12 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
 
     result = await service.list_snapshots(user_id="user-1", db=object(), params=None)
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
-    assert result.snapshots[1].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
+    assert result.snapshots[1].provider_data == {"name": "tool-2", "display_name": "tool-2", "connections": {}}
     assert result.provider_result == {}
 
 
@@ -4662,8 +4806,12 @@ async def test_list_snapshots_snapshot_ids_returns_verified_provider_data(monkey
             snapshots=[
                 SnapshotItem(
                     id="tool-1",
-                    name="Tool One",
-                    provider_data={"connections": {"cfg-1": "conn-1"}},
+                    name="tool_one",
+                    provider_data={
+                        "name": "tool_one",
+                        "display_name": "Tool One",
+                        "connections": {"cfg-1": "conn-1"},
+                    },
                 )
             ]
         )
@@ -4678,7 +4826,11 @@ async def test_list_snapshots_snapshot_ids_returns_verified_provider_data(monkey
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[0].provider_data == {
+        "name": "tool_one",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
 
 
 @pytest.mark.anyio
@@ -4769,7 +4921,11 @@ async def test_list_snapshots_snapshot_names_returns_matching_tools(monkeypatch)
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
     assert result.snapshots[0].name == "my_tool"
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[0].provider_data == {
+        "name": "my_tool",
+        "display_name": "my_tool",
+        "connections": {"cfg-1": "conn-1"},
+    }
 
 
 @pytest.mark.anyio
@@ -4863,19 +5019,21 @@ async def test_list_snapshots_snapshot_names_wraps_provider_error(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_verify_tools_by_ids_returns_only_connections_provider_data():
+async def test_verify_tools_by_ids_returns_tool_metadata_provider_data():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                     "extra": "ignored",
                 },
                 {
                     "id": "tool-2",
                     "name": "Tool Two",
+                    "display_name": "Tool Two",
                     "binding": {"langflow": {"connections": {}}},
                     "extra": "ignored",
                 },
@@ -4886,8 +5044,12 @@ async def test_verify_tools_by_ids_returns_only_connections_provider_data():
     result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1", "tool-2"])
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
-    assert result.snapshots[1].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
+    assert result.snapshots[1].provider_data == {"name": "Tool Two", "display_name": "Tool Two", "connections": {}}
 
 
 @pytest.mark.anyio
@@ -4898,6 +5060,7 @@ async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": ["not-a-dict"]}},
                 }
             ]
@@ -4908,17 +5071,18 @@ async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {"name": "Tool One", "display_name": "Tool One", "connections": {}}
 
 
 @pytest.mark.anyio
-async def test_verify_tools_by_ids_tolerates_malformed_connection_values():
+async def test_verify_tools_by_ids_preserves_provider_connection_values():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "   "}}},
                 }
             ]
@@ -4929,17 +5093,22 @@ async def test_verify_tools_by_ids_tolerates_malformed_connection_values():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "   "},
+    }
 
 
 @pytest.mark.anyio
-async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
+async def test_verify_tools_by_ids_preserves_provider_connection_mapping():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {
                         "langflow": {
                             "connections": {
@@ -4959,7 +5128,16 @@ async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {
+            "cfg-1": "conn-1",
+            "cfg-2": "   ",
+            "   ": "conn-3",
+            "cfg-4": 123,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -8083,8 +8261,8 @@ def _make_unbound_tool(tool_id: str) -> dict[str, Any]:
 
 @pytest.mark.anyio
 async def test_update_connection_deltas_rejects_non_langflow_tool():
-    """_update_existing_tool_connection_deltas must refuse to modify tools without binding.langflow."""
-    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+    """_update_existing_tools must refuse to modify tools without binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tools
 
     external_tool = _make_external_tool("ext-1")
     clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
@@ -8094,16 +8272,18 @@ async def test_update_connection_deltas_rejects_non_langflow_tool():
         await _update_deltas(
             clients=clients,
             existing_tool_deltas={"ext-1": ops},
+            tool_renames={},
             resolved_connections={"app-1": "conn-1"},
             operation_to_provider_app_id={"app-1": "app-1"},
             original_tools={},
+            tool_by_id={"ext-1": external_tool},
         )
 
 
 @pytest.mark.anyio
 async def test_update_connection_deltas_accepts_langflow_tool():
-    """_update_existing_tool_connection_deltas succeeds for tools with binding.langflow."""
-    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+    """_update_existing_tools succeeds for tools with binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
@@ -8113,9 +8293,11 @@ async def test_update_connection_deltas_accepts_langflow_tool():
     await _update_deltas(
         clients=clients,
         existing_tool_deltas={"lf-1": ops},
+        tool_renames={},
         resolved_connections={"app-1": "conn-1"},
         operation_to_provider_app_id={"app-1": "app-1"},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert "lf-1" in original_tools
     assert clients.tool.update_calls
@@ -8200,8 +8382,8 @@ async def test_update_existing_tool_connection_bindings_rejects_unbound_tool():
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_succeeds_for_langflow_tool():
-    """_apply_tool_renames renames a Langflow-owned tool on the agent."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools renames a Langflow-owned tool on the agent."""
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
@@ -8209,22 +8391,48 @@ async def test_apply_tool_renames_succeeds_for_langflow_tool():
     original_tools: dict[str, dict] = {}
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert clients.tool.update_calls
     tool_id, payload = clients.tool.update_calls[0]
     assert tool_id == "lf-1"
-    assert payload["name"] == "new_name"
-    assert payload["display_name"] == "new_name"
+    _assert_langflow_agent_name(payload["name"], display_name="New Name")
+    assert payload["display_name"] == "New Name"
     assert "lf-1" in original_tools
 
 
 @pytest.mark.anyio
+async def test_apply_tool_renames_uses_loaded_tool_without_fetching():
+    """Rename should reuse the update-apply tool map instead of fetching the tool again."""
+    _apply_renames = update_core_module._update_existing_tools
+
+    lf_tool = _make_langflow_tool("lf-1")
+    fake_tool = FakeToolClient([])
+    clients = FakeWXOClients(tool=fake_tool)
+
+    await _apply_renames(
+        clients=clients,
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
+        original_tools={},
+        tool_by_id={"lf-1": lf_tool},
+    )
+
+    assert fake_tool.get_drafts_by_ids_calls == []
+    assert fake_tool.update_calls
+
+
+@pytest.mark.anyio
 async def test_apply_tool_renames_rejects_non_langflow_tool():
-    """_apply_tool_renames must refuse to rename tools without binding.langflow."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must refuse to rename tools without binding.langflow."""
+    _apply_renames = update_core_module._update_existing_tools
 
     external_tool = _make_external_tool("ext-1")
     clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
@@ -8232,51 +8440,39 @@ async def test_apply_tool_renames_rejects_non_langflow_tool():
     with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
         await _apply_renames(
             clients=clients,
-            agent_tool_ids=["ext-1"],
+            existing_tool_deltas={},
             tool_renames={"ext-1": "stolen_name"},
+            resolved_connections={},
+            operation_to_provider_app_id={},
             original_tools={},
-        )
-    assert not clients.tool.update_calls
-
-
-@pytest.mark.anyio
-async def test_apply_tool_renames_rejects_tool_not_on_agent():
-    """_apply_tool_renames must refuse to rename tools not attached to the agent."""
-    _apply_renames = update_core_module._apply_tool_renames
-
-    lf_tool = _make_langflow_tool("lf-1")
-    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
-
-    with pytest.raises(InvalidContentError, match="not attached to this agent"):
-        await _apply_renames(
-            clients=clients,
-            agent_tool_ids=["other-tool"],
-            tool_renames={"lf-1": "new_name"},
-            original_tools={},
+            tool_by_id={"ext-1": external_tool},
         )
     assert not clients.tool.update_calls
 
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_rejects_missing_tool():
-    """_apply_tool_renames must fail if tool doesn't exist on provider."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must fail if tool doesn't exist on provider."""
+    _apply_renames = update_core_module._update_existing_tools
 
     clients = FakeWXOClients(tool=FakeToolClient([]))
 
     with pytest.raises(InvalidContentError, match="not found in provider"):
         await _apply_renames(
             clients=clients,
-            agent_tool_ids=["ghost-1"],
-            tool_renames={"ghost-1": "new_name"},
+            existing_tool_deltas={},
+            tool_renames={"ghost-1": "New Name"},
+            resolved_connections={},
+            operation_to_provider_app_id={},
             original_tools={},
+            tool_by_id={},
         )
 
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_captures_original_for_rollback():
-    """_apply_tool_renames must capture original payload before renaming for rollback."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must capture original payload before renaming for rollback."""
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     lf_tool["name"] = "original_name"
@@ -8286,9 +8482,12 @@ async def test_apply_tool_renames_captures_original_for_rollback():
     original_tools: dict[str, dict] = {}
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert original_tools["lf-1"]["name"] == "original_name"
 
@@ -8296,7 +8495,7 @@ async def test_apply_tool_renames_captures_original_for_rollback():
 @pytest.mark.anyio
 async def test_apply_tool_renames_preserves_latest_connections_when_original_already_captured():
     """Rename should keep connection updates already applied earlier in the transaction."""
-    _apply_renames = update_core_module._apply_tool_renames
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1", connections={"app-1": "conn-1", "app-2": "conn-2"})
     lf_tool["name"] = "current_name"
@@ -8314,14 +8513,17 @@ async def test_apply_tool_renames_preserves_latest_connections_when_original_alr
     }
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
 
     _, payload = clients.tool.update_calls[0]
-    assert payload["name"] == "new_name"
-    assert payload["display_name"] == "new_name"
+    _assert_langflow_agent_name(payload["name"], display_name="New Name")
+    assert payload["display_name"] == "New Name"
     assert payload["binding"]["langflow"]["connections"] == {"app-1": "conn-1", "app-2": "conn-2"}
     # Pre-captured rollback state must remain unchanged.
     assert original_tools["lf-1"]["name"] == "pre_delta_name"
@@ -8331,7 +8533,7 @@ async def test_apply_tool_renames_preserves_latest_connections_when_original_alr
 @pytest.mark.anyio
 async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remove_delta():
     """Rename should preserve the latest provider connections after mixed add/remove updates."""
-    _apply_renames = update_core_module._apply_tool_renames
+    _apply_renames = update_core_module._update_existing_tools
 
     # Simulate post-delta provider state (one app removed, one app added).
     lf_tool = _make_langflow_tool("lf-1", connections={"cfg-keep": "conn-keep", "cfg-add": "conn-add"})
@@ -8355,14 +8557,17 @@ async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remov
     }
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "renamed_tool"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "Renamed Tool"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
 
     _, payload = clients.tool.update_calls[0]
-    assert payload["name"] == "renamed_tool"
-    assert payload["display_name"] == "renamed_tool"
+    _assert_langflow_agent_name(payload["name"], display_name="Renamed Tool")
+    assert payload["display_name"] == "Renamed Tool"
     assert payload["binding"]["langflow"]["connections"] == {"cfg-keep": "conn-keep", "cfg-add": "conn-add"}
     # Rollback snapshot remains pre-delta.
     assert original_tools["lf-1"]["binding"]["langflow"]["connections"] == {
@@ -8372,44 +8577,73 @@ async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remov
 
 
 # ---------------------------------------------------------------------------
-# Tool name validation
+# Tool technical-name generation
 # ---------------------------------------------------------------------------
 
 
-def test_validate_tool_name_accepts_valid_name():
-    """_validate_tool_name accepts a name that normalizes to a valid wxO identifier."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_generates_provider_technical_name():
+    """WatsonxFlowArtifactProviderData derives a provider-valid technical name from a display label."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="My Flow",
+    )
 
-    assert _validate_tool_name("My Flow") == "My_Flow"
-    assert _validate_tool_name("hello_world") == "hello_world"
-    assert _validate_tool_name("flow-with-dashes") == "flow_with_dashes"
-
-
-def test_validate_tool_name_rejects_empty():
-    """_validate_tool_name rejects names that normalize to empty string."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
-
-    with pytest.raises(HTTPException) as exc_info:
-        _validate_tool_name("!@#$%")
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    _assert_langflow_agent_name(provider_data.tool_name, display_name="My Flow")
 
 
-def test_validate_tool_name_rejects_leading_digit():
-    """_validate_tool_name rejects names that start with a digit after normalization."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_uses_resource_fallback_for_symbol_only_label():
+    """Symbol-only display labels still get a provider-valid generated name."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="!@#$%",
+    )
 
-    with pytest.raises(HTTPException) as exc_info:
-        _validate_tool_name("123flow")
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert provider_data.tool_name.startswith("langflow_tool_")
+    assert utils_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
 
 
-def test_validate_tool_name_is_idempotent():
-    """Running _validate_tool_name twice produces the same result."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_accepts_leading_digit_display_label():
+    """Display labels are not validated as provider technical names."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="123flow",
+    )
 
-    first = _validate_tool_name("My Flow!")
-    second = _validate_tool_name(first)
-    assert first == second
+    assert provider_data.tool_name.startswith("langflow_123flow_")
+    assert utils_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+
+
+def test_flow_artifact_provider_data_validates_explicit_provider_technical_name():
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_name="explicit_tool_name",
+        tool_display_name="My Flow",
+    )
+
+    assert provider_data.tool_name == "explicit_tool_name"
+
+
+def test_flow_artifact_provider_data_requires_display_name():
+    with pytest.raises(ValidationError, match="tool_display_name"):
+        payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-1",
+            source_ref="fv-1",
+            tool_name="explicit_tool_name",
+        )
+
+
+def test_flow_artifact_provider_data_rejects_invalid_explicit_provider_technical_name():
+    with pytest.raises(ValidationError, match="Tool name must start with a letter"):
+        payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-1",
+            source_ref="fv-1",
+            tool_name="123_tool_name",
+            tool_display_name="My Flow",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -8428,12 +8662,12 @@ def test_build_update_plan_includes_rename():
             {
                 "op": "rename_tool",
                 "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
-                "new_name": "better_name",
+                "tool_display_name": "Better Name",
             },
         ],
     )
     plan = build_plan(agent=agent, provider_update=payload)
-    assert plan.tool_renames == {"tool-1": "better_name"}
+    assert plan.tool_renames == {"tool-1": "Better Name"}
 
 
 def test_build_update_plan_without_renames_has_empty_dict():
@@ -8490,21 +8724,21 @@ def test_rename_tool_api_payload_parses():
     op = WatsonxApiRenameToolOperation(
         op="rename_tool",
         flow_version_id="00000000-0000-0000-0000-000000000001",
-        tool_name="new_tool_name",
+        tool_display_name="New Tool Name",
     )
     assert op.op == "rename_tool"
-    assert op.tool_name == "new_tool_name"
+    assert op.tool_display_name == "New Tool Name"
 
 
 def test_rename_tool_api_payload_rejects_empty_name():
-    """WatsonxApiRenameToolOperation rejects empty tool_name."""
+    """WatsonxApiRenameToolOperation rejects empty tool_display_name."""
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiRenameToolOperation
 
     with pytest.raises(ValidationError):
         WatsonxApiRenameToolOperation(
             op="rename_tool",
             flow_version_id="00000000-0000-0000-0000-000000000001",
-            tool_name="",
+            tool_display_name="",
         )
 
 
@@ -8513,19 +8747,19 @@ def test_rename_tool_provider_payload_parses():
     op = WatsonxRenameToolOperation(
         op="rename_tool",
         tool={"source_ref": "fv-1", "tool_id": "tool-1"},
-        new_name="better_name",
+        tool_display_name="Better Name",
     )
-    assert op.new_name == "better_name"
+    assert op.tool_display_name == "Better Name"
     assert op.tool.tool_id == "tool-1"
 
 
 # ---------------------------------------------------------------------------
-# DeploymentFlowVersionListItem carries provider tool_name under provider_data
+# DeploymentFlowVersionListItem carries provider tool names under provider_data
 # ---------------------------------------------------------------------------
 
 
-def test_flow_version_list_item_includes_tool_name_in_provider_data():
-    """DeploymentFlowVersionListItem serializes provider tool_name under provider_data."""
+def test_flow_version_list_item_includes_tool_names_in_provider_data():
+    """DeploymentFlowVersionListItem serializes provider tool metadata under provider_data."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -8533,10 +8767,11 @@ def test_flow_version_list_item_includes_tool_name_in_provider_data():
         flow_id="00000000-0000-0000-0000-000000000002",
         flow_name="My Flow",
         version_number=1,
-        provider_data={"tool_name": "my_custom_tool"},
+        provider_data={"tool_name": "my_custom_tool", "tool_display_name": "My Custom Tool"},
     )
     data = item.model_dump()
     assert data["provider_data"]["tool_name"] == "my_custom_tool"
+    assert data["provider_data"]["tool_display_name"] == "My Custom Tool"
 
 
 def test_flow_version_list_item_provider_data_defaults_to_none():

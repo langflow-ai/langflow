@@ -288,9 +288,12 @@ def create_wxo_flow_tool(
         raise InvalidContentError(message=msg)
     project_id = str(flow_provider_data.project_id).strip()
 
+    tool_display_name = flow_provider_data.tool_display_name
+    technical_tool_name = flow_provider_data.tool_name
+
     flow_definition.update(
         {
-            "name": normalize_wxo_name(flow_definition.get("name") or ""),
+            "name": technical_tool_name,
             "id": str(flow_definition.get("id")),
         }
     )
@@ -316,9 +319,8 @@ def create_wxo_flow_tool(
         by_alias=True,
     )
 
-    current_name = str(tool_payload.get("name") or "").strip()
-    if current_name:
-        tool_payload["name"] = normalize_wxo_name(current_name)
+    tool_payload["name"] = technical_tool_name
+    tool_payload["display_name"] = tool_display_name
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
     logger.debug(
@@ -547,27 +549,19 @@ async def verify_tools_by_ids(
         if not isinstance(tool, dict) or not tool.get("id"):
             continue
         connections = extract_langflow_connections_binding(tool)
-        normalized_connections: dict[str, str] = {
-            key: value
-            for raw_key, raw_value in connections.items()
-            if isinstance(raw_key, str)
-            and isinstance(raw_value, str)
-            and (key := raw_key.strip())
-            and (value := raw_value.strip())
-        }
 
-        if len(normalized_connections) < len(connections):
-            logger.warning(
-                "Tool %s returned malformed langflow connection bindings; defaulting to empty mapping",
-                tool["id"],
-            )
-            provider_data: dict[str, dict[str, str]] = {"connections": {}}
-        else:
-            provider_data = {"connections": normalized_connections}
+        technical_name = tool["name"]
+        display_name = tool["display_name"]
+
+        provider_data: dict[str, Any] = {
+            "name": technical_name,
+            "display_name": display_name,
+            "connections": connections,
+        }
         snapshots.append(
             SnapshotItem(
                 id=tool["id"],
-                name=tool.get("name") or tool["id"],
+                name=technical_name,
                 provider_data=provider_data,
             )
         )
