@@ -324,9 +324,10 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
         run: |
           ls -la ./bundles-dist/
-          find ./bundles-dist -name "*.whl" -type f
-          mapfile -t BUNDLE_WHEELS < <(find ./bundles-dist -name "*.whl" -type f)
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
             uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${BUNDLE_WHEELS[@]}"
           else
             echo "No bundle wheels found in ./bundles-dist/"
@@ -409,9 +410,10 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
         run: |
           ls -la ./bundles-dist/
-          find ./bundles-dist -name "*.whl" -type f
-          mapfile -t BUNDLE_WHEELS < <(find ./bundles-dist -name "*.whl" -type f)
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
             uv pip install --prerelease=allow --python ./test-env/bin/python "${BUNDLE_WHEELS[@]}"
           else
             echo "No bundle wheels found in ./bundles-dist/"
@@ -752,9 +754,10 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
         run: |
           ls -la ./bundles-dist/
-          find ./bundles-dist -name "*.whl" -type f
-          mapfile -t BUNDLE_WHEELS < <(find ./bundles-dist -name "*.whl" -type f)
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
             uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${BUNDLE_WHEELS[@]}"
           else
             echo "No bundle wheels found in ./bundles-dist/"
@@ -808,9 +811,10 @@ jobs:
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
         run: |
           ls -la ./bundles-dist/
-          find ./bundles-dist -name "*.whl" -type f
-          mapfile -t BUNDLE_WHEELS < <(find ./bundles-dist -name "*.whl" -type f)
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
             uv pip install --prerelease=allow --python ./test-env/bin/python "${BUNDLE_WHEELS[@]}"
           else
             echo "No bundle wheels found in ./bundles-dist/"
