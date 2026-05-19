@@ -16,7 +16,6 @@ from pydantic import (
     model_validator,
 )
 
-from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
 from langflow.api.v1.schemas.deployments import ValidatedUrl
 from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
@@ -82,12 +81,6 @@ class WatsonxApiProviderAccountResponse(BaseModel):
         return value
 
 
-class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
-    """Watsonx create-time flow artifact provider_data contract."""
-
-    project_id: str = Field(min_length=1)
-
-
 class WatsonxApiAddFlowItem(BaseModel):
     """Create-time flow item (tool is created/attached if absent)."""
 
@@ -101,9 +94,9 @@ class WatsonxApiAddFlowItem(BaseModel):
             "the flow version as a tool with no connection bindings."
         ),
     )
-    tool_name: str | None = Field(
+    tool_display_name: NormalizedStr | None = Field(
         default=None,
-        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+        description=("Optional user-provided tool label. When omitted, the label is derived from the flow name."),
     )
 
 
@@ -121,9 +114,9 @@ class WatsonxApiUpsertFlowItem(BaseModel):
         default_factory=list,
         description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
     )
-    tool_name: str | None = Field(
+    tool_display_name: NormalizedStr | None = Field(
         default=None,
-        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+        description=("Optional user-provided tool label. When omitted, the label is derived from the flow name."),
     )
 
 
@@ -570,14 +563,15 @@ class WatsonxApiSnapshotListItem(BaseModel):
 
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
+    display_name: NormalizedStr
     connections: dict[str, str] = Field(default_factory=dict)
 
-    @field_validator("id", "name", mode="before")
+    @field_validator("id", "name", "display_name", mode="before")
     @classmethod
     def normalize_required_strings(cls, value: Any) -> str:
         normalized = str(value or "").strip()
         if not normalized:
-            msg = "Snapshot list item fields 'id' and 'name' must be non-empty strings."
+            msg = "Snapshot list item fields 'id', 'name', and 'display_name' must be non-empty strings."
             raise ValueError(msg)
         return normalized
 
@@ -596,25 +590,27 @@ class WatsonxApiSnapshotListProviderData(BaseModel):
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
     """API-facing provider_data contract for deployment flow-version list items.
 
-    ``tool_name`` is required (non-empty) because wxO snapshots always carry a
-    name.  Missing or blank names indicate corrupt provider data and the mapper
-    intentionally rejects them with a 500 so the issue surfaces immediately.
+    ``tool_name`` is the provider technical name, while ``tool_display_name`` is
+    the user-facing label. Missing or blank values indicate corrupt provider
+    data and the mapper intentionally rejects them with a 500 so the issue
+    surfaces immediately.
     """
 
     model_config = {"extra": "forbid"}
 
     app_ids: list[NormalizedStr] = Field(default_factory=list)
     tool_name: NormalizedStr
+    tool_display_name: NormalizedStr
 
 
 class WatsonxApiRenameToolOperation(BaseModel):
-    """API-facing rename-tool operation payload."""
+    """API-facing tool display-label operation payload."""
 
     model_config = {"extra": "forbid"}
 
     op: Literal["rename_tool"]
     flow_version_id: str = Field(min_length=1)
-    tool_name: NormalizedStr = Field(min_length=1)
+    tool_display_name: NormalizedStr = Field(min_length=1)
 
 
 class WatsonxApiExecutionInput(BaseModel):

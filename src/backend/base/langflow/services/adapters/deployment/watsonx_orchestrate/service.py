@@ -187,6 +187,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             detail = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
             raise InvalidContentError(message=detail) from None
 
+    def _snapshot_item_provider_data_from_tool(self, tool: dict[str, Any]) -> dict[str, object]:
+        technical_name = str(tool.get("name") or tool["id"]).strip()
+        display_name = str(tool.get("display_name") or technical_name).strip()
+        return self._validate_snapshot_item_provider_data(
+            {
+                "name": technical_name,
+                "display_name": display_name,
+                "connections": extract_langflow_connections_binding(tool),
+            }
+        )
+
     def _validate_deployment_item_provider_data(
         self,
         agent: dict[str, Any],
@@ -764,9 +775,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 SnapshotItem(
                     id=tool["id"],
                     name=tool.get("name") or tool["id"],
-                    provider_data=self._validate_snapshot_item_provider_data(
-                        {"connections": extract_langflow_connections_binding(tool)}
-                    ),
+                    provider_data=self._snapshot_item_provider_data_from_tool(tool),
                 )
                 for tool in (raw_tools or [])
                 if isinstance(tool, dict) and tool.get("id")
@@ -788,9 +797,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 SnapshotItem(
                     id=tool["id"],
                     name=tool.get("name") or tool["id"],
-                    provider_data=self._validate_snapshot_item_provider_data(
-                        {"connections": extract_langflow_connections_binding(tool)}
-                    ),
+                    provider_data=self._snapshot_item_provider_data_from_tool(tool),
                 )
                 for tool in (raw_tools or [])
                 if isinstance(tool, dict) and tool.get("id")
@@ -831,9 +838,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             SnapshotItem(
                 id=tool["id"],
                 name=tool.get("name") or tool["id"],
-                provider_data=self._validate_snapshot_item_provider_data(
-                    {"connections": extract_langflow_connections_binding(tool)}
-                ),
+                provider_data=self._snapshot_item_provider_data_from_tool(tool),
             )
             for tool in (tools or [])
             if isinstance(tool, dict) and tool.get("id")

@@ -114,10 +114,11 @@ def build_provider_create_plan(
     #   (used to determine which connections the create plan needs).
     selected_operation_app_ids = OrderedUniqueStrs()
 
-    # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
+    # raw_tool_app_ids: per raw tool provider_data.tool_name, collects operation app_ids to bind
     #   when the raw tool is created.
     raw_tool_app_ids = {
-        raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_create.tools.raw_payloads or [])
+        raw_payload.provider_data.tool_name: OrderedUniqueStrs()
+        for raw_payload in (provider_create.tools.raw_payloads or [])
     }
     for operation in provider_create.operations:
         if isinstance(operation, WatsonxAttachToolOperation):
@@ -150,7 +151,9 @@ def build_provider_create_plan(
         )
         for raw_payload in (provider_create.connections.raw_payloads or [])
     ]
-    raw_tool_pool = {raw_payload.name: raw_payload for raw_payload in (provider_create.tools.raw_payloads or [])}
+    raw_tool_pool = {
+        raw_payload.provider_data.tool_name: raw_payload for raw_payload in (provider_create.tools.raw_payloads or [])
+    }
     raw_tools_to_create = [
         RawToolCreatePlan(raw_name=raw_name, payload=raw_tool_pool[raw_name], app_ids=app_ids.to_list())
         for raw_name, app_ids in raw_tool_app_ids.items()

@@ -630,14 +630,24 @@ def test_watsonx_mapper_flow_version_item_data_from_snapshot_connections() -> No
         snapshots=[
             SnapshotItem(
                 id="tool-1",
-                name="Tool 1",
-                provider_data={"connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"}},
+                name="tool_technical_1",
+                provider_data={
+                    "name": "tool_technical_1",
+                    "display_name": "Tool 1",
+                    "connections": {"cfg-1": "conn-1", "cfg-2": "conn-2"},
+                },
             )
         ]
     )
     shaped_by_snapshot_id = mapper._resolve_flow_version_item_data_by_snapshot_id(snapshot_result=snapshot_result)
 
-    assert shaped_by_snapshot_id == {"tool-1": {"app_ids": ["cfg-1", "cfg-2"], "tool_name": "Tool 1"}}
+    assert shaped_by_snapshot_id == {
+        "tool-1": {
+            "app_ids": ["cfg-1", "cfg-2"],
+            "tool_name": "tool_technical_1",
+            "tool_display_name": "Tool 1",
+        }
+    }
 
 
 def test_wxo_mapper_flow_version_item_data_rejects_empty_tool_name() -> None:
@@ -647,7 +657,7 @@ def test_wxo_mapper_flow_version_item_data_rejects_empty_tool_name() -> None:
             SnapshotItem(
                 id="tool-1",
                 name="",
-                provider_data={"connections": {}},
+                provider_data={"name": "", "display_name": "Tool 1", "connections": {}},
             )
         ]
     )
@@ -693,8 +703,12 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
         snapshots=[
             SnapshotItem(
                 id="tool-1",
-                name="Tool 1",
-                provider_data={"connections": {"cfg-1": "conn-1"}},
+                name="tool_technical_1",
+                provider_data={
+                    "name": "tool_technical_1",
+                    "display_name": "Tool 1",
+                    "connections": {"cfg-1": "conn-1"},
+                },
             )
         ]
     )
@@ -715,7 +729,11 @@ def test_watsonx_mapper_shapes_flow_version_list_result_with_enrichment() -> Non
     assert shaped.flow_versions[0].version_number == 3
     assert shaped.flow_versions[0].attached_at == attached_at
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
-    assert shaped.flow_versions[0].provider_data == {"app_ids": ["cfg-1"], "tool_name": "Tool 1"}
+    assert shaped.flow_versions[0].provider_data == {
+        "app_ids": ["cfg-1"],
+        "tool_name": "tool_technical_1",
+        "tool_display_name": "Tool 1",
+    }
 
 
 def test_watsonx_mapper_flow_version_list_result_returns_empty_app_ids_when_snapshot_has_no_connections() -> None:
@@ -731,8 +749,8 @@ def test_watsonx_mapper_flow_version_list_result_returns_empty_app_ids_when_snap
         snapshots=[
             SnapshotItem(
                 id="tool-1",
-                name="Tool 1",
-                provider_data={"connections": {}},
+                name="tool_technical_1",
+                provider_data={"name": "tool_technical_1", "display_name": "Tool 1", "connections": {}},
             )
         ]
     )
@@ -748,7 +766,11 @@ def test_watsonx_mapper_flow_version_list_result_returns_empty_app_ids_when_snap
     assert shaped.total == 1
     assert len(shaped.flow_versions) == 1
     assert shaped.flow_versions[0].provider_snapshot_id == "tool-1"
-    assert shaped.flow_versions[0].provider_data == {"app_ids": [], "tool_name": "Tool 1"}
+    assert shaped.flow_versions[0].provider_data == {
+        "app_ids": [],
+        "tool_name": "tool_technical_1",
+        "tool_display_name": "Tool 1",
+    }
 
 
 def test_watsonx_mapper_flow_version_list_result_degrades_when_snapshot_result_missing() -> None:
@@ -788,8 +810,12 @@ def test_watsonx_mapper_flow_version_list_result_degrades_when_required_snapshot
         snapshots=[
             SnapshotItem(
                 id="tool-2",
-                name="Tool 2",
-                provider_data={"connections": {"cfg-2": "conn-2"}},
+                name="tool_technical_2",
+                provider_data={
+                    "name": "tool_technical_2",
+                    "display_name": "Tool 2",
+                    "connections": {"cfg-2": "conn-2"},
+                },
             )
         ]
     )
@@ -964,8 +990,12 @@ def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data
         snapshots=[
             SnapshotItem(
                 id="tool-1",
-                name="Tool 1",
-                provider_data={"connections": {"cfg-1": "conn-1"}},
+                name="tool_technical_1",
+                provider_data={
+                    "name": "tool_technical_1",
+                    "display_name": "Tool 1",
+                    "connections": {"cfg-1": "conn-1"},
+                },
             )
         ],
         provider_result={"deployment_id": "dep-1"},
@@ -984,7 +1014,8 @@ def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data
     assert shaped.provider_data["tools"] == [
         {
             "id": "tool-1",
-            "name": "Tool 1",
+            "name": "tool_technical_1",
+            "display_name": "Tool 1",
             "connections": {"cfg-1": "conn-1"},
         }
     ]
@@ -994,7 +1025,17 @@ def test_watsonx_mapper_shapes_snapshot_list_result_without_nested_provider_data
 def test_watsonx_mapper_snapshot_list_result_ignores_extra_provider_result_fields() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = SnapshotListResult(
-        snapshots=[SnapshotItem(id="tool-1", name="Tool 1", provider_data={"connections": {"cfg-1": "conn-1"}})],
+        snapshots=[
+            SnapshotItem(
+                id="tool-1",
+                name="tool_technical_1",
+                provider_data={
+                    "name": "tool_technical_1",
+                    "display_name": "Tool 1",
+                    "connections": {"cfg-1": "conn-1"},
+                },
+            )
+        ],
         provider_result={"deployment_id": "dep-1", "unexpected": True},
     )
 
@@ -1586,17 +1627,19 @@ async def test_watsonx_mapper_translates_create_bind_into_raw_tool_payload() -> 
     assert resolved.spec.name is None
     assert provider_data["display_name"] == "create-deploy"
     assert provider_data["llm"] == TEST_WXO_LLM
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
-    assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
-        "project_id": str(project_id),
-        "source_ref": str(flow_version_id),
-    }
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_A"
+    raw_tool_name = provider_data["tools"]["raw_payloads"][0]["name"]
+    raw_provider_data = provider_data["tools"]["raw_payloads"][0]["provider_data"]
+    assert raw_provider_data["project_id"] == str(project_id)
+    assert raw_provider_data["source_ref"] == str(flow_version_id)
+    assert raw_provider_data["tool_display_name"] == "Flow A"
+    assert raw_provider_data["tool_name"].startswith("langflow_Flow_A_")
+    assert raw_tool_name == "Flow A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_provider_data["tool_name"]
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -> None:
-    """Create bind should use tool_name override directly in raw tool and bind selector."""
+async def test_watsonx_mapper_translates_create_bind_with_tool_display_name_override() -> None:
+    """Create bind should generate a technical name from the tool_display_name override."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     flow_id = uuid4()
@@ -1612,7 +1655,7 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -
             "add_flows": [
                 {
                     "flow_version_id": str(flow_version_id),
-                    "tool_name": "My Create Tool",
+                    "tool_display_name": "My Create Tool",
                     "app_ids": ["app-one"],
                 }
             ],
@@ -1637,14 +1680,18 @@ async def test_watsonx_mapper_translates_create_bind_with_tool_name_override() -
 
     assert resolved.spec.name is None
     assert provider_data["display_name"] == "create-deploy"
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "My_Create_Tool"
+    raw_tool_name = provider_data["tools"]["raw_payloads"][0]["name"]
+    raw_provider_data = provider_data["tools"]["raw_payloads"][0]["provider_data"]
+    assert raw_provider_data["tool_display_name"] == "My Create Tool"
+    assert raw_provider_data["tool_name"].startswith("langflow_My_Create_Tool_")
+    assert raw_tool_name == "Flow A"
     assert provider_data["operations"][0]["op"] == "bind"
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "My_Create_Tool"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_provider_data["tool_name"]
     assert all(op["op"] != "rename_tool" for op in provider_data["operations"])
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_422(monkeypatch) -> None:
+async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_500(monkeypatch) -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     flow_id = uuid4()
@@ -1675,13 +1722,17 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
 
     fake_validation_error = SimpleNamespace(errors=lambda: [{"msg": "simulated adapter validation failure"}])
 
-    def _raise_adapter_payload_validation_error(_self, _raw):
-        raise AdapterPayloadValidationError(
-            model_name="WatsonxDeploymentCreatePayload",
-            error=fake_validation_error,  # type: ignore[arg-type]
-        )
+    original_parse = PayloadSlot.parse
 
-    monkeypatch.setattr(PayloadSlot, "apply", _raise_adapter_payload_validation_error)
+    def _parse_with_deployment_create_failure(_self, _raw):
+        if _self.adapter_model.__name__ == "WatsonxDeploymentCreatePayload":
+            raise AdapterPayloadValidationError(
+                model_name="WatsonxDeploymentCreatePayload",
+                error=fake_validation_error,  # type: ignore[arg-type]
+            )
+        return original_parse(_self, _raw)
+
+    monkeypatch.setattr(PayloadSlot, "parse", _parse_with_deployment_create_failure)
 
     with pytest.raises(HTTPException) as exc_info:
         await mapper.resolve_deployment_create(
@@ -1690,8 +1741,12 @@ async def test_watsonx_mapper_maps_create_adapter_payload_validation_errors_to_4
             db=_FakeDb([row]),
             payload=payload,
         )
-    assert exc_info.value.status_code == 422
-    assert exc_info.value.detail == "Invalid provider_data payload: simulated adapter validation failure"
+    assert exc_info.value.status_code == 500
+    assert (
+        exc_info.value.detail
+        == "Unexpected result while building the deployment_create provider payload (watsonx Orchestrate): "
+        "Invalid payload."
+    )
 
 
 async def test_watsonx_mapper_create_reports_missing_llm_field_name() -> None:
@@ -1803,11 +1858,13 @@ async def test_watsonx_mapper_create_skips_empty_bind_operations_but_keeps_raw_t
     assert provider_data["llm"] == TEST_WXO_LLM
     assert provider_data["operations"] == []
     assert len(provider_data["tools"]["raw_payloads"]) == 1
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
-    assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
-        "project_id": str(project_id),
-        "source_ref": str(flow_version_id),
-    }
+    raw_tool_name = provider_data["tools"]["raw_payloads"][0]["name"]
+    raw_provider_data = provider_data["tools"]["raw_payloads"][0]["provider_data"]
+    assert raw_provider_data["project_id"] == str(project_id)
+    assert raw_provider_data["source_ref"] == str(flow_version_id)
+    assert raw_provider_data["tool_display_name"] == "Flow A"
+    assert raw_provider_data["tool_name"].startswith("langflow_Flow_A_")
+    assert raw_tool_name == "Flow A"
 
 
 @pytest.mark.asyncio
@@ -1851,12 +1908,14 @@ async def test_watsonx_mapper_translates_flow_version_bind_into_raw_tool_payload
     provider_data = resolved.provider_data or {}
 
     assert provider_data["llm"] == TEST_WXO_LLM
-    assert provider_data["tools"]["raw_payloads"][0]["name"] == "Flow_A"
-    assert provider_data["tools"]["raw_payloads"][0]["provider_data"] == {
-        "project_id": str(project_id),
-        "source_ref": str(flow_version_id),
-    }
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_A"
+    raw_tool_name = provider_data["tools"]["raw_payloads"][0]["name"]
+    raw_provider_data = provider_data["tools"]["raw_payloads"][0]["provider_data"]
+    assert raw_provider_data["project_id"] == str(project_id)
+    assert raw_provider_data["source_ref"] == str(flow_version_id)
+    assert raw_provider_data["tool_display_name"] == "Flow A"
+    assert raw_provider_data["tool_name"].startswith("langflow_Flow_A_")
+    assert raw_tool_name == "Flow A"
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_provider_data["tool_name"]
 
 
 @pytest.mark.asyncio
@@ -1914,9 +1973,15 @@ async def test_watsonx_mapper_skips_empty_bind_operations_but_keeps_raw_tools() 
     provider_data = resolved.provider_data or {}
 
     assert len(provider_data["tools"]["raw_payloads"]) == 2
-    assert sorted(item["name"] for item in provider_data["tools"]["raw_payloads"]) == ["Flow_Bound", "Flow_Unbound"]
+    raw_payload_by_source_ref = {
+        item["provider_data"]["source_ref"]: item for item in provider_data["tools"]["raw_payloads"]
+    }
+    assert set(raw_payload_by_source_ref) == {str(flow_version_id_bound), str(flow_version_id_unbound)}
     assert len(provider_data["operations"]) == 1
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_Bound"
+    assert (
+        provider_data["operations"][0]["tool"]["name_of_raw"]
+        == raw_payload_by_source_ref[str(flow_version_id_bound)]["provider_data"]["tool_name"]
+    )
     assert provider_data["operations"][0]["app_ids"] == ["app-one"]
 
 
@@ -2688,7 +2753,9 @@ async def test_watsonx_mapper_bind_creates_new_tool_when_no_attachment() -> None
     )
     provider_data = resolved.provider_data or {}
 
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "Flow_B"
+    raw_payload = provider_data["tools"]["raw_payloads"][0]
+    assert provider_data["operations"][0]["tool"]["name_of_raw"] == raw_payload["provider_data"]["tool_name"]
+    assert raw_payload["provider_data"]["source_ref"] == str(flow_version_id)
 
 
 @pytest.mark.asyncio
@@ -2741,8 +2808,8 @@ async def test_watsonx_mapper_bind_reuse_with_empty_app_ids_emits_attach_tool() 
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_upsert_flow_with_tool_name_emits_rename_for_existing_attachment() -> None:
-    """tool_name on upsert_flows should become rename_tool for existing attachments."""
+async def test_watsonx_mapper_upsert_flow_with_tool_display_name_emits_rename_for_existing_attachment() -> None:
+    """tool_display_name on upsert_flows should become rename_tool for existing attachments."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     project_id = uuid4()
@@ -2770,7 +2837,7 @@ async def test_watsonx_mapper_upsert_flow_with_tool_name_emits_rename_for_existi
                     "flow_version_id": str(flow_version_id),
                     "add_app_ids": [],
                     "remove_app_ids": [],
-                    "tool_name": "My Better Tool",
+                    "tool_display_name": "My Better Tool",
                 }
             ],
         }
@@ -2789,12 +2856,12 @@ async def test_watsonx_mapper_upsert_flow_with_tool_name_emits_rename_for_existi
     assert provider_data["operations"][0]["op"] == "attach_tool"
     assert provider_data["operations"][1]["op"] == "rename_tool"
     assert provider_data["operations"][1]["tool"]["tool_id"] == "existing-tool-id"
-    assert provider_data["operations"][1]["new_name"] == "My_Better_Tool"
+    assert provider_data["operations"][1]["tool_display_name"] == "My Better Tool"
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_name_emits_bind_unbind_rename() -> None:
-    """upsert_flows with add/remove + tool_name should emit bind, unbind, and rename for existing attachments."""
+async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_display_name_emits_bind_unbind_rename() -> None:
+    """upsert_flows with add/remove + tool_display_name should emit bind, unbind, and rename."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     project_id = uuid4()
@@ -2822,7 +2889,7 @@ async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_name_emits_bi
                     "flow_version_id": str(flow_version_id),
                     "add_app_ids": ["app-add-1", "app-add-2"],
                     "remove_app_ids": ["app-remove-1"],
-                    "tool_name": "My Mixed Tool",
+                    "tool_display_name": "My Mixed Tool",
                 }
             ],
         }
@@ -2848,12 +2915,12 @@ async def test_watsonx_mapper_upsert_flow_with_add_remove_and_tool_name_emits_bi
 
     assert provider_data["operations"][2]["op"] == "rename_tool"
     assert provider_data["operations"][2]["tool"]["tool_id"] == "existing-tool-id"
-    assert provider_data["operations"][2]["new_name"] == "My_Mixed_Tool"
+    assert provider_data["operations"][2]["tool_display_name"] == "My Mixed Tool"
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operation_families() -> None:
-    """tool_name/rename should coexist with flow removals, tool upserts/removals, and spec updates."""
+async def test_watsonx_mapper_tool_display_name_rename_compatible_with_all_update_operation_families() -> None:
+    """tool_display_name rename should coexist with flow removals, tool upserts/removals, and spec updates."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id_upsert = uuid4()
     flow_version_id_remove = uuid4()
@@ -2891,7 +2958,7 @@ async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operat
                     "flow_version_id": str(flow_version_id_upsert),
                     "add_app_ids": ["app-add"],
                     "remove_app_ids": ["app-remove"],
-                    "tool_name": "My Combined Tool",
+                    "tool_display_name": "My Combined Tool",
                 }
             ],
             "remove_flows": [str(flow_version_id_remove)],
@@ -2933,7 +3000,7 @@ async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operat
     assert ops[1]["app_ids"] == ["app-remove"]
 
     assert ops[2]["tool"]["tool_id"] == "existing-tool-upsert"
-    assert ops[2]["new_name"] == "My_Combined_Tool"
+    assert ops[2]["tool_display_name"] == "My Combined Tool"
 
     assert ops[3]["tool"]["tool_id"] == "existing-tool-remove"
 
@@ -2944,8 +3011,8 @@ async def test_watsonx_mapper_tool_name_rename_compatible_with_all_update_operat
 
 
 @pytest.mark.asyncio
-async def test_watsonx_mapper_tool_name_override_defers_invalid_flow_name_validation() -> None:
-    """A valid tool_name override should win over an invalid underlying flow name."""
+async def test_watsonx_mapper_tool_display_name_override_generates_valid_technical_name() -> None:
+    """tool_display_name should not be treated as a caller-owned technical name."""
     mapper = WatsonxOrchestrateDeploymentMapper()
     flow_version_id = uuid4()
     project_id = uuid4()
@@ -2969,7 +3036,7 @@ async def test_watsonx_mapper_tool_name_override_defers_invalid_flow_name_valida
                     "flow_version_id": str(flow_version_id),
                     "add_app_ids": ["app-one"],
                     "remove_app_ids": [],
-                    "tool_name": "valid_name",
+                    "tool_display_name": "valid name",
                 }
             ],
         }
@@ -2986,7 +3053,11 @@ async def test_watsonx_mapper_tool_name_override_defers_invalid_flow_name_valida
     provider_data = resolved.provider_data or {}
 
     assert provider_data["operations"][0]["op"] == "bind"
-    assert provider_data["operations"][0]["tool"]["name_of_raw"] == "valid_name"
+    raw_tool_name = provider_data["operations"][0]["tool"]["name_of_raw"]
+    raw_payload = provider_data["tools"]["raw_payloads"][0]
+    assert raw_tool_name == raw_payload["provider_data"]["tool_name"]
+    assert raw_payload["provider_data"]["source_ref"] == str(flow_version_id)
+    assert raw_payload["provider_data"]["tool_name"].startswith("langflow_valid_name_")
 
 
 # ---------------------------------------------------------------------------
