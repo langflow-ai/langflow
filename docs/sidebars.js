@@ -352,6 +352,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -369,6 +370,7 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",
