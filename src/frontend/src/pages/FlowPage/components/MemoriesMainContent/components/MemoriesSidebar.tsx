@@ -49,12 +49,14 @@ export function MemoriesSidebar({
             Create
           </Button>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {(() => {
-            const count = memories?.length ?? 0;
-            return `${count} ${count === 1 ? "memory" : "memories"}`;
-          })()}
-        </p>
+        {(memories?.length ?? 0) > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {(() => {
+              const count = memories!.length;
+              return `${count} ${count === 1 ? "memory" : "memories"}`;
+            })()}
+          </p>
+        )}
       </div>
 
       <div className="p-4">
@@ -66,17 +68,16 @@ export function MemoriesSidebar({
       </div>
 
       <div className="flex-1 overflow-auto px-2 pb-4" onScroll={handleScroll}>
-        {!filteredMemories.length ? (
+        {!filteredMemories.length && memoriesSearch.trim() && (
           <div className="px-3 py-6 text-center">
             <IconComponent
               name="BrainCog"
               className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-xs text-muted-foreground">
-              {memoriesSearch.trim() ? "No memories found" : "No memories yet"}
-            </p>
+            <p className="text-xs text-muted-foreground">No memories found</p>
           </div>
-        ) : (
+        )}
+        {filteredMemories.length > 0 && (
           <div className="flex flex-col gap-1">
             {filteredMemories.map((memoryItem) => {
               const isSelected = selectedMemoryId === memoryItem.id;

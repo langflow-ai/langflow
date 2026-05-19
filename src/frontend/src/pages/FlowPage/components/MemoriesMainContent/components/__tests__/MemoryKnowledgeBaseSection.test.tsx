@@ -63,7 +63,7 @@ describe("MemoryKnowledgeBaseSection", () => {
 
     render(<MemoryKnowledgeBaseSection {...props} />);
 
-    expect(screen.getByText("No chunks yet.")).toBeInTheDocument();
+    expect(screen.getByText("No chunks yet")).toBeInTheDocument();
   });
 
   it("opens document panel when row is clicked", () => {
