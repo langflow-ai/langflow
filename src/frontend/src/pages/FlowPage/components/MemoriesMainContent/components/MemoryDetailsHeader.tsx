@@ -149,7 +149,9 @@ export function MemoryDetailsHeader({
           <span
             className={cn(
               "h-2 w-2 shrink-0 rounded-full",
-              memory.is_active ? "bg-accent-emerald-foreground" : "bg-muted-foreground",
+              memory.is_active
+                ? "bg-accent-emerald-foreground"
+                : "bg-muted-foreground",
             )}
           />
           Auto-capture
