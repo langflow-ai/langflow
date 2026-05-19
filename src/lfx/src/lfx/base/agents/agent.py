@@ -30,6 +30,9 @@ if TYPE_CHECKING:
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
+# Kept for backward compatibility: flows serialized with the pre-deprecation
+# component code still call get_tool_description(), which falls back to this.
+DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
 DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 
 
@@ -343,6 +346,18 @@ class LCToolsAgentComponent(LCAgentComponent):
 
     def get_tool_name(self) -> str:
         return self.display_name or "Agent"
+
+    def get_tool_description(self) -> str:
+        """Backward-compat shim for the deprecated ``agent_description`` input.
+
+        The current agent-as-tool path derives the tool description from the
+        component's ``display_description`` (see ``_get_tools``) and no longer
+        calls this method. It is kept only so older flows serialized with the
+        pre-deprecation component code -- which still call
+        ``self.get_tool_description()`` and define their own ``agent_description``
+        input -- stay loadable.
+        """
+        return getattr(self, "agent_description", None) or DEFAULT_TOOLS_DESCRIPTION
 
     def _build_tools_names(self):
         tools_names = ""
