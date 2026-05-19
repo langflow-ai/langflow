@@ -1,8 +1,8 @@
 """Tests for FlowStore implementations."""
+
 from __future__ import annotations
 
 import pytest
-
 from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
 
 

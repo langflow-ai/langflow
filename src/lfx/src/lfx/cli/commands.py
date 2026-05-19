@@ -67,8 +67,11 @@ async def _build_serve_registry(
             temp_file_to_cleanup = tmp.name
         try:
             registry = await build_registry_from_paths(
-                [Path(temp_file_to_cleanup)], verbose_print,
-                check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                [Path(temp_file_to_cleanup)],
+                verbose_print,
+                check_variables=check_variables,
+                no_env_fallback=no_env_fallback,
+                store=flow_store,
             )
         except ValueError as e:
             typer.echo(f"Error: {e}", err=True)
@@ -89,8 +92,11 @@ async def _build_serve_registry(
             temp_file_to_cleanup = tmp.name
         try:
             registry = await build_registry_from_paths(
-                [Path(temp_file_to_cleanup)], verbose_print,
-                check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                [Path(temp_file_to_cleanup)],
+                verbose_print,
+                check_variables=check_variables,
+                no_env_fallback=no_env_fallback,
+                store=flow_store,
             )
         except ValueError as e:
             typer.echo(f"Error: {e}", err=True)
@@ -108,8 +114,11 @@ async def _build_serve_registry(
             dir_path = resolved[0]
             try:
                 registry = await build_registry_from_directory(
-                    dir_path, verbose_print,
-                    check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                    dir_path,
+                    verbose_print,
+                    check_variables=check_variables,
+                    no_env_fallback=no_env_fallback,
+                    store=flow_store,
                 )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
@@ -123,8 +132,11 @@ async def _build_serve_registry(
                 raise typer.Exit(1)
             try:
                 registry = await build_registry_from_paths(
-                    resolved, verbose_print,
-                    check_variables=check_variables, no_env_fallback=no_env_fallback, store=flow_store,
+                    resolved,
+                    verbose_print,
+                    check_variables=check_variables,
+                    no_env_fallback=no_env_fallback,
+                    store=flow_store,
                 )
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
@@ -249,6 +261,7 @@ def serve_command(
     configure(log_level=log_level)
 
     from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
+
     flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
 
     if workers > 1 and flow_dir is None:
@@ -275,15 +288,17 @@ def serve_command(
 
     temp_file_to_cleanup: str | None = None
     try:
-        registry, temp_file_to_cleanup = asyncio.run(_build_serve_registry(
-            script_paths=script_paths,
-            flow_json=flow_json,
-            stdin=stdin,
-            check_variables=check_variables,
-            no_env_fallback=no_env_fallback,
-            flow_store=flow_store,
-            verbose_print=verbose_print,
-        ))
+        registry, temp_file_to_cleanup = asyncio.run(
+            _build_serve_registry(
+                script_paths=script_paths,
+                flow_json=flow_json,
+                stdin=stdin,
+                check_variables=check_variables,
+                no_env_fallback=no_env_fallback,
+                flow_store=flow_store,
+                verbose_print=verbose_print,
+            )
+        )
 
         if flow_dir:
             if workers == 1:
@@ -330,11 +345,15 @@ def serve_command(
                 # uvicorn requires an import string (not an app object) for multi-worker mode.
                 # Set env vars so each worker's create_serve_app() factory can reconstruct config.
                 from lfx.cli.serve_app import _SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV
+
                 os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
                 os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
                 uvicorn.run(
                     "lfx.cli.serve_app:create_serve_app",
-                    host=host, port=port, workers=workers, log_level=log_level,
+                    host=host,
+                    port=port,
+                    workers=workers,
+                    log_level=log_level,
                     factory=True,
                 )
             else:

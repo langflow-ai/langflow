@@ -430,9 +430,7 @@ class TestPythonScriptServe:
         # load_graph_from_script is lazily imported inside _load_graph_and_meta,
         # so patch its module-level name directly.
         with (
-            patch(
-                "lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)
-            ) as mock_script,
+            patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)) as mock_script,
             patch("lfx.cli.commands.find_graph_variable", return_value={"source": "x", "type": "Graph", "line": 1}),
             patch("lfx.cli.commands.load_flow_from_json") as mock_json,
         ):
@@ -605,9 +603,7 @@ def test_build_registry_from_paths_passes_raw_json_to_store():
         p.write_text(json.dumps(flow_data))
         with patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph):
             registry = asyncio.run(
-                build_registry_from_paths(
-                    [p], lambda _: None, check_variables=False, store=SpyStore()
-                )
+                build_registry_from_paths([p], lambda _: None, check_variables=False, store=SpyStore())
             )
 
     assert len(written) == 1
@@ -641,11 +637,7 @@ def test_build_registry_from_paths_py_file_skips_store():
             patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
             patch("lfx.cli.commands.find_graph_variable", return_value={"source": "x", "type": "Graph", "line": 1}),
         ):
-            asyncio.run(
-                build_registry_from_paths(
-                    [p], lambda _: None, check_variables=False, store=SpyStore()
-                )
-            )
+            asyncio.run(build_registry_from_paths([p], lambda _: None, check_variables=False, store=SpyStore()))
 
     assert written == {}
 
@@ -668,11 +660,7 @@ def test_startup_scan_pre_warms_cache(tmp_path):
     mock_graph.context = {}
 
     with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
-        registry = asyncio.run(
-            build_registry_from_paths(
-                [], lambda _: None, check_variables=False, store=store
-            )
-        )
+        registry = asyncio.run(build_registry_from_paths([], lambda _: None, check_variables=False, store=store))
 
     assert "pre-existing-id" in registry._flows, (
         "Startup scan must pre-warm the in-memory cache; flow should be in _flows immediately after build"

@@ -161,11 +161,17 @@ class TestFlowRegistry:
         }
 
         class StubStore:
-            def write(self, flow_id, flow_json): pass
+            def write(self, flow_id, flow_json):
+                pass
+
             def read(self, flow_id):
                 return raw if flow_id == "flow-from-store" else None
-            def delete(self, _flow_id): return False
-            def list_ids(self): return ["flow-from-store"]
+
+            def delete(self, _flow_id):
+                return False
+
+            def list_ids(self):
+                return ["flow-from-store"]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -199,10 +205,17 @@ class TestFlowRegistry:
         }
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["prompt_one"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "prompt_one" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["prompt_one"]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -229,10 +242,17 @@ class TestFlowRegistry:
         raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["prompt_one"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "prompt_one" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["prompt_one"]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -259,14 +279,20 @@ class TestFlowRegistry:
         store_data: dict[str, dict] = {"prompt_one": old_raw}
 
         class StubStore:
-            def write(self, fid, data): store_data[fid] = data
-            def read(self, fid): return store_data.get(fid)
+            def write(self, fid, data):
+                store_data[fid] = data
+
+            def read(self, fid):
+                return store_data.get(fid)
+
             def delete(self, fid):
                 existed = fid in store_data
                 store_data.pop(fid, None)
                 deleted.append(fid)
                 return existed
-            def list_ids(self): return list(store_data)
+
+            def list_ids(self):
+                return list(store_data)
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -306,10 +332,17 @@ class TestFlowRegistry:
         written = {}
 
         class SpyStore:
-            def write(self, flow_id, flow_json): written[flow_id] = flow_json
-            def read(self, _flow_id): return None
-            def delete(self, _flow_id): return False
-            def list_ids(self): return []
+            def write(self, flow_id, flow_json):
+                written[flow_id] = flow_json
+
+            def read(self, _flow_id):
+                return None
+
+            def delete(self, _flow_id):
+                return False
+
+            def list_ids(self):
+                return []
 
         registry = FlowRegistry(store=SpyStore())
         graph = MagicMock()
@@ -327,10 +360,17 @@ class TestFlowRegistry:
         written = {}
 
         class SpyStore:
-            def write(self, flow_id, flow_json): written[flow_id] = flow_json
-            def read(self, _flow_id): return None
-            def delete(self, _flow_id): return False
-            def list_ids(self): return []
+            def write(self, flow_id, flow_json):
+                written[flow_id] = flow_json
+
+            def read(self, _flow_id):
+                return None
+
+            def delete(self, _flow_id):
+                return False
+
+            def list_ids(self):
+                return []
 
         registry = FlowRegistry(store=SpyStore())
         graph = MagicMock()
@@ -345,12 +385,18 @@ class TestFlowRegistry:
         deleted = []
 
         class SpyStore:
-            def write(self, *_a): pass
-            def read(self, *_a): return None
+            def write(self, *_a):
+                pass
+
+            def read(self, *_a):
+                return None
+
             def delete(self, flow_id):
                 deleted.append(flow_id)
                 return True
-            def list_ids(self): return []
+
+            def list_ids(self):
+                return []
 
         registry = FlowRegistry(store=SpyStore())
         graph = MagicMock()
@@ -364,10 +410,17 @@ class TestFlowRegistry:
         raw = {"name": "Store-Only Flow", "description": None, "data": {}, "id": "store-only"}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "store-only" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["store-only"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "store-only" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["store-only"]
 
         registry = FlowRegistry(store=StubStore())
         metas = registry.list_metas()
@@ -379,10 +432,17 @@ class TestFlowRegistry:
         raw = {"name": "Store-Only", "data": {}, "id": "store-only"}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "store-only" else None
-            def delete(self, flow_id): return flow_id == "store-only"
-            def list_ids(self): return ["store-only"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "store-only" else None
+
+            def delete(self, flow_id):
+                return flow_id == "store-only"
+
+            def list_ids(self):
+                return ["store-only"]
 
         registry = FlowRegistry(store=StubStore())
         # do NOT call registry.get() first — flow is store-only, not in memory
@@ -397,14 +457,22 @@ class TestFlowRegistry:
         raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
 
         class StubStore:
-            def __init__(self): self._deleted: set[str] = set()
-            def write(self, *_a): pass
-            def read(self, fid): return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+            def __init__(self):
+                self._deleted: set[str] = set()
+
+            def write(self, *_a):
+                pass
+
+            def read(self, fid):
+                return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+
             def delete(self, fid):
                 existed = fid == "prompt_one" and fid not in self._deleted
                 self._deleted.add(fid)
                 return existed
-            def list_ids(self): return [f for f in ["prompt_one"] if f not in self._deleted]
+
+            def list_ids(self):
+                return [f for f in ["prompt_one"] if f not in self._deleted]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -430,15 +498,23 @@ class TestFlowRegistry:
         deleted: list[str] = []
 
         class StubStore:
-            def __init__(self): self._deleted: set[str] = set()
-            def write(self, *_a): pass
-            def read(self, fid): return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+            def __init__(self):
+                self._deleted: set[str] = set()
+
+            def write(self, *_a):
+                pass
+
+            def read(self, fid):
+                return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+
             def delete(self, fid):
                 deleted.append(fid)
                 existed = fid == "prompt_one" and fid not in self._deleted
                 self._deleted.add(fid)
                 return existed
-            def list_ids(self): return [f for f in ["prompt_one"] if f not in self._deleted]
+
+            def list_ids(self):
+                return [f for f in ["prompt_one"] if f not in self._deleted]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -460,10 +536,17 @@ class TestFlowRegistry:
         raw = {"name": "prompt_one", "id": json_uuid, "data": {}}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["prompt_one"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "prompt_one" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["prompt_one"]
 
         registry = FlowRegistry(store=StubStore())
         # Do NOT call registry.get() first — flow stays uncached in the store branch
@@ -479,10 +562,17 @@ class TestFlowRegistry:
         raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["prompt_one"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "prompt_one" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["prompt_one"]
 
         mock_graph = MagicMock()
         mock_graph.context = {}
@@ -501,10 +591,17 @@ class TestFlowRegistry:
         raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
 
         class StubStore:
-            def write(self, *_a): pass
-            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
-            def delete(self, *_a): return False
-            def list_ids(self): return ["prompt_one"]
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "prompt_one" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["prompt_one"]
 
         mock_graph = MagicMock()
         mock_graph.context = {}

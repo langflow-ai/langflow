@@ -146,6 +146,7 @@ class FlowRegistry:
 
     def __init__(self, *, no_env_fallback: bool = False, store: FlowStore | None = None) -> None:
         from lfx.cli.flow_store import NullFlowStore
+
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
         self._no_env_fallback = no_env_fallback
         self._store = store if store is not None else NullFlowStore()
@@ -226,12 +227,14 @@ class FlowRegistry:
                 if raw_json:
                     actual_id = raw_json.get("id") or flow_id
                     if actual_id not in seen:
-                        result.append(FlowMeta(
-                            id=actual_id,
-                            relative_path="<filesystem>",
-                            title=raw_json.get("name", actual_id),
-                            description=raw_json.get("description"),
-                        ))
+                        result.append(
+                            FlowMeta(
+                                id=actual_id,
+                                relative_path="<filesystem>",
+                                title=raw_json.get("name", actual_id),
+                                description=raw_json.get("description"),
+                            )
+                        )
                         seen.add(actual_id)
         return result
 
