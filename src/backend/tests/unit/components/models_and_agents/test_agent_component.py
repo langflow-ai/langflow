@@ -47,7 +47,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "max_iterations": 10,
             "system_prompt": "You are a helpful assistant.",
             "tools": [],
-            "verbose": True,
             "n_messages": 100,
             "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
             "output_schema": [],
