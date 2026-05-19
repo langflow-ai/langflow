@@ -110,7 +110,7 @@ def build_output_logs(vertex, result) -> dict:
         type_ = get_type(output_result)
 
         match type_:
-            case LogType.STREAM if "stream_url" in message:
+            case LogType.STREAM if isinstance(message, dict) and "stream_url" in message:
                 message = StreamURL(location=message["stream_url"])
 
             case LogType.STREAM:
@@ -123,9 +123,13 @@ def build_output_logs(vertex, result) -> dict:
                 message = ""
 
             case LogType.ARRAY:
-                if isinstance(message, DataFrame):
+                if message is None:
+                    message = []
+                elif isinstance(message, DataFrame):
                     message = message.to_dict(orient="records")
-                message = [serialize(item) for item in message]
+                    message = [serialize(item) for item in message]
+                else:
+                    message = [serialize(item) for item in message]
         name = output.get("name", f"output_{index}")
         outputs |= {name: OutputValue(message=message, type=type_).model_dump()}
 

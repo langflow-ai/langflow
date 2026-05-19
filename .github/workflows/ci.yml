@@ -11,7 +11,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.10']"
+        default: "['3.10', '3.14']"
       frontend-tests-folder:
         description: "Frontend Tests Folder"
         required: false
@@ -50,7 +50,7 @@ on:
         description: "Python Versions"
         required: false
         type: string
-        default: "['3.10']"
+        default: "['3.10', '3.14']"
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -87,6 +87,22 @@ jobs:
           echo "  release: ${{ inputs.release }}"
           echo "  run-all-tests: ${{ inputs.run-all-tests }}"
           echo "  runs-on: ${{ inputs.runs-on }}"
+
+  validate-pr-title:
+    name: Validate PR Title
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    env:
+      PR_TITLE: ${{ github.event.pull_request.title }}
+    steps:
+      - name: Reject titles ending in ellipsis
+        run: |
+          echo "PR title: $PR_TITLE"
+          if [[ "$PR_TITLE" == *"..." || "$PR_TITLE" == *"…" ]]; then
+            echo "❌ PR title ends with ellipsis. Please write a complete, descriptive title."
+            exit 1
+          fi
+          echo "✅ PR title is complete."
 
   check-nightly-status:
     name: Check PyPI Version Update
@@ -245,13 +261,27 @@ jobs:
       )
     uses: ./.github/workflows/python_test.yml
     with:
-      python-versions: ${{ inputs.python-versions || '["3.10"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
     secrets:
       OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+
+  lint-frontend:
+    needs: [path-filter, set-ci-condition]
+    name: Lint Frontend
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-ci == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.frontend == 'true')
+      )
+    uses: ./.github/workflows/lint-js.yml
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
@@ -415,18 +445,25 @@ jobs:
             --report-dir coverage/final
 
       - name: Upload Merged Frontend Coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           files: coverage/combined/total-frontend-coverage.json
           flags: frontend
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
+    # Note: `lint-frontend` is intentionally NOT in this list — the Biome
+    # check runs on every PR and shows up in the checks list, but its failure
+    # does NOT block merge (informational only).
     needs:
       [
+        validate-pr-title,
         test-backend,
         test-frontend-unit,
         test-frontend,
@@ -476,7 +513,9 @@ jobs:
               to_entries[]
               | select(.value.result=="failure")
               | .key as $job
-              | if $job == "test-backend" then
+              | if $job == "validate-pr-title" then
+                  "  - PR Title Validation: Title ends with ellipsis (...). Use a complete, descriptive title."
+                elif $job == "test-backend" then
                   "  - Backend Tests: Check Python code, tests, and dependencies"
                 elif $job == "test-frontend-unit" then
                   "  - Frontend Unit Tests: Check React components and unit test logic"

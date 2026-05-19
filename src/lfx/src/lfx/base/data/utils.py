@@ -21,6 +21,11 @@ from lfx.utils.async_helpers import run_until_complete
 
 logger = logging.getLogger(__name__)
 
+# Max bytes to feed to chardet for encoding detection.
+# Scanning the first 100 KB is sufficient for reliable detection
+# and avoids O(n) overhead on large files (e.g. 800s for 1.5 GB).
+_CHARDET_SAMPLE_BYTES = 102400
+
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
 TEXT_FILE_TYPES = [
@@ -153,7 +158,7 @@ def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
     Returns a list of encodings to try in order, ending with latin-1
     which always succeeds as it maps all 256 byte values.
     """
-    result = chardet.detect(raw_data)
+    result = chardet.detect(raw_data[:_CHARDET_SAMPLE_BYTES])
     detected_encoding = result.get("encoding") if result else None
 
     if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:

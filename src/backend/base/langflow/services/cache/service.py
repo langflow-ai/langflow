@@ -1,8 +1,12 @@
 import asyncio
+import atexit
+import os
 import pickle
+import tempfile
 import threading
 import time
 from collections import OrderedDict
+from pathlib import Path
 from typing import Generic, Union
 
 import dill
@@ -17,6 +21,36 @@ from langflow.services.cache.base import (
     ExternalAsyncBaseCacheService,
     LockType,
 )
+
+_redis_cache_experimental_warning_lock = threading.Lock()
+_redis_cache_experimental_warning_emitted = False
+
+
+def _warn_redis_experimental_once() -> None:
+    """Emit the RedisCache experimental warning only once per server run."""
+    global _redis_cache_experimental_warning_emitted  # noqa: PLW0603
+
+    with _redis_cache_experimental_warning_lock:
+        if _redis_cache_experimental_warning_emitted:
+            return
+        _redis_cache_experimental_warning_emitted = True
+
+    # Cross-process deduplication: all workers forked from the same master
+    # share the same getppid() value, so they all target the same sentinel.
+    sentinel = Path(tempfile.gettempdir()) / f"langflow_redis_cache_warned_{os.getppid()}.sentinel"
+    try:
+        fd = os.open(sentinel, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.close(fd)
+    except FileExistsError:
+        return  # Another worker already logged the warning
+
+    # Best-effort cleanup so we don't leave a stale file in /tmp after every restart.
+    atexit.register(sentinel.unlink, missing_ok=True)
+
+    logger.warning(
+        "RedisCache is an experimental feature and may not work as expected."
+        " Please report any issues to our GitHub repository."
+    )
 
 
 class ThreadingInMemoryCache(CacheService, Generic[LockType]):
@@ -196,6 +230,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         b = cache["b"]
     """
 
+    KEY_PREFIX = "langflow:cache:"
+
     def __init__(self, host="localhost", port=6379, db=0, url=None, expiration_time=60 * 60) -> None:
         """Initialize a new RedisCache instance.
 
@@ -210,15 +246,16 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         # Redis is a main dependency, no need to import check
         from redis.asyncio import StrictRedis
 
-        logger.warning(
-            "RedisCache is an experimental feature and may not work as expected."
-            " Please report any issues to our GitHub repository."
-        )
+        _warn_redis_experimental_once()
         if url:
             self._client = StrictRedis.from_url(url)
         else:
             self._client = StrictRedis(host=host, port=port, db=db)
         self.expiration_time = expiration_time
+
+    def _key(self, key) -> str:
+        """Return the namespaced Redis key."""
+        return f"{self.KEY_PREFIX}{key}"
 
     async def is_connected(self) -> bool:
         """Check if the Redis client is connected."""
@@ -236,14 +273,14 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     async def get(self, key, lock=None):
         if key is None:
             return CACHE_MISS
-        value = await self._client.get(str(key))
+        value = await self._client.get(self._key(key))
         return dill.loads(value) if value else CACHE_MISS
 
     @override
     async def set(self, key, value, lock=None) -> None:
         try:
             if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(str(key), self.expiration_time, pickled)
+                result = await self._client.setex(self._key(key), self.expiration_time, pickled)
                 if not result:
                     msg = "RedisCache could not set the value."
                     raise ValueError(msg)
@@ -273,18 +310,30 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def delete(self, key, lock=None) -> None:
-        await self._client.delete(key)
+        await self._client.delete(self._key(key))
 
     @override
     async def clear(self, lock=None) -> None:
-        """Clear all items from the cache."""
-        await self._client.flushdb()
+        """Clear all items from the cache using a key-prefix scan to avoid nuking unrelated data."""
+        cursor = 0
+        pattern = f"{self.KEY_PREFIX}*"
+        while True:
+            cursor, keys = await self._client.scan(cursor, match=pattern, count=100)
+            if keys:
+                await self._client.delete(*keys)
+            if cursor == 0:
+                break
 
     async def contains(self, key) -> bool:
         """Check if the key is in the cache."""
         if key is None:
             return False
-        return bool(await self._client.exists(str(key)))
+        return bool(await self._client.exists(self._key(key)))
+
+    @override
+    async def teardown(self) -> None:
+        """Close the Redis client connection to prevent socket leaks across fork."""
+        await self._client.aclose()
 
     def __repr__(self) -> str:
         """Return a string representation of the RedisCache instance."""

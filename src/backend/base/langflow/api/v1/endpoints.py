@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
@@ -35,6 +35,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
+from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -62,8 +63,17 @@ from langflow.services.auth.utils import (
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_auth_service,
+    get_job_service,
+    get_memory_base_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
@@ -78,11 +88,52 @@ router = APIRouter(tags=["Base"])
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
+_SIMPLIFIED_API_FORM_FIELDS = (
+    "input_value",
+    "input_type",
+    "output_type",
+    "output_component",
+    "session_id",
+)
+
+
+async def _parse_multipart_form_data(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest fields from a multipart/form-data request.
+
+    Reads the form via ``http_request.form()`` so uploaded file streams are not
+    consumed by an upstream JSON parse attempt. Only string-valued fields that
+    map to ``SimplifiedAPIRequest`` are extracted; any ``UploadFile`` entries
+    (e.g. inline file uploads) are intentionally ignored here and remain
+    available to downstream handlers.
+    """
+    form = await http_request.form()
+    data: dict = {}
+
+    for field in _SIMPLIFIED_API_FORM_FIELDS:
+        value = form.get(field)
+        if isinstance(value, str):
+            data[field] = value
+
+    raw_tweaks = form.get("tweaks")
+    if isinstance(raw_tweaks, (str, bytes)) and raw_tweaks:
+        try:
+            data["tweaks"] = orjson.loads(raw_tweaks)
+        except orjson.JSONDecodeError as exc:
+            logger.warning(f"Failed to parse 'tweaks' form field as JSON: {exc}")
+
+    return SimplifiedAPIRequest(**data)
+
+
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
     """Parse SimplifiedAPIRequest from HTTP request body.
 
     This function handles the case where FastAPI can't automatically parse the request body
     due to the presence of a Request parameter in the endpoint signature.
+
+    Supports both ``application/json`` and ``multipart/form-data`` bodies. For
+    multipart requests, form fields matching ``SimplifiedAPIRequest`` (including
+    ``session_id``) are extracted via ``request.form()`` rather than being lost
+    to a failing JSON parse.
 
     Args:
         http_request: The FastAPI Request object
@@ -90,7 +141,12 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
     Returns:
         SimplifiedAPIRequest: Parsed request or default instance if parsing fails
     """
+    content_type = (http_request.headers.get("content-type") or "").lower()
+
     try:
+        if content_type.startswith("multipart/form-data"):
+            return await _parse_multipart_form_data(http_request)
+
         body = await http_request.body()
         if body:
             body_data = orjson.loads(body)
@@ -102,17 +158,23 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all():
+async def get_all(request: Request):
     """Retrieve all component types with compression for better performance.
 
-    Returns a compressed response containing all available component types.
+    Returns a compressed response containing all available component types,
+    with display_names translated to the locale indicated by Accept-Language.
     """
     from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
-        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-        # Return compressed response using our utility function
-        return compress_response(all_types)
+        all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+
+        locale = getattr(request.state, "locale", "en")
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+
+        component_display_names = build_component_display_names(all_types_en)
+        return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -170,11 +232,18 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        # Mirror the Playground's one-time fix in-memory: bind empty fields whose
+        # display_name matches a user global variable's default_fields. Without
+        # this, API-only workflows never trigger the frontend hook that persists
+        # load_from_db=true, so variables with "Apply to Fields" silently fail.
+        # See: https://github.com/langflow-ai/langflow/issues/11781
+        if user_id is not None:
+            graph_data = await apply_global_variable_defaults(graph_data, user_id)
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
-        if run_id is None:
-            run_id = str(uuid4())
+        run_id_uuid = uuid4() if run_id is None else UUID(run_id)
+        run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
@@ -197,15 +266,57 @@ async def simple_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
                 )
             ]
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=input_request.session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-            event_manager=event_manager,
-        )
+
+        # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to run flows.",
+            )
+
+        try:
+            _job_svc = get_job_service()
+            await _job_svc.create_job(
+                job_id=run_id_uuid,
+                flow_id=flow.id,
+                user_id=user_id,
+                job_type=JobType.WORKFLOW,
+            )
+            task_result, session_id = await _job_svc.execute_with_status(
+                run_id_uuid,
+                run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=input_request.session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+                event_manager=event_manager,
+            )
+        except Exception as exc:
+            await logger.aerror(
+                "Workflow job execution failed for flow %s: %s",
+                flow.id,
+                str(exc),
+                exc_info=True,
+            )
+            raise APIException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                exception=exc,
+                flow=flow,
+            ) from exc
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -437,6 +548,35 @@ async def get_flow_for_current_user(
 ) -> FlowRead:
     """Session-auth variant of :func:`get_flow_for_api_key_user`."""
     return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id)
+
+
+async def get_flow_for_sse_user(
+    flow_id_or_name: str,
+    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
+) -> FlowRead:
+    """Auth-aware wrapper around ``get_flow_by_id_or_endpoint_name`` for SSE routes."""
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id)
+
+
+class WebhookAuth:
+    """Helper to carry both authenticated user and flow for webhook execution."""
+
+    def __init__(self, user: UserRead, flow: FlowRead):
+        self.user = user
+        self.flow = flow
+
+
+async def get_webhook_auth(
+    flow_id_or_name: str,
+    request: Request,
+) -> WebhookAuth:
+    """Auth-aware dependency that resolves both the webhook user and the flow.
+
+    Centralizes the security logic for webhook run endpoints.
+    """
+    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id)
+    return WebhookAuth(user=webhook_user, flow=flow)
 
 
 async def _run_flow_internal(
@@ -707,9 +847,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
-    flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
-    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
+    flow: Annotated[FlowRead, Depends(get_flow_for_sse_user)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -720,12 +858,6 @@ async def webhook_events_stream(
     Authentication: Requires user to be logged in (via cookie) or provide API key.
     The user must own the flow to subscribe to its events.
     """
-    # Verify user owns the flow
-    if str(flow.user_id) != str(user.id):
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Access denied: You can only subscribe to events for flows you own",
-        )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -766,15 +898,13 @@ async def webhook_events_stream(
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
-    flow_id_or_name: str,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    auth: Annotated[WebhookAuth, Depends(get_webhook_auth)],
     request: Request,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow_id_or_name: The flow ID or endpoint name (used by dependency).
-        flow: The flow to be executed.
+        auth: Resolved webhook user and flow, scoped to the authenticated caller.
         request: The incoming HTTP request.
 
     Returns:
@@ -788,8 +918,9 @@ async def webhook_run_flow(
     await logger.adebug("Received webhook request")
     error_msg = ""
 
-    # Get the appropriate user for webhook execution based on auth settings
-    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    # Webhook user and flow are resolved by the dependency
+    webhook_user = auth.user
+    flow = auth.flow
 
     try:
         data = await request.body()
@@ -969,6 +1100,18 @@ async def experimental_run_flow(
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    try:
+        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow.id,
+            session_id=session_id,
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return RunResponse(outputs=task_result, session_id=session_id)
 

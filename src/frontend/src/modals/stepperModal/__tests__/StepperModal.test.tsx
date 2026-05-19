@@ -120,5 +120,111 @@ describe("StepperModal", () => {
       );
       expect(screen.getByTestId("side-panel-content")).toBeInTheDocument();
     });
+
+    it("applies translate offset when side panel is open", () => {
+      render(
+        <StepperModal
+          {...baseProps}
+          sidePanel={<div>Panel</div>}
+          sidePanelOpen
+        />,
+        { wrapper: Wrapper },
+      );
+      // Find DialogContent - it's the element that contains "Test Modal Title"
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveStyle({ translate: "-150px 0" });
+    });
+
+    it("applies no translate offset when side panel is closed", () => {
+      render(
+        <StepperModal
+          {...baseProps}
+          sidePanel={<div>Panel</div>}
+          sidePanelOpen={false}
+        />,
+        { wrapper: Wrapper },
+      );
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveStyle({ translate: "0 0" });
+    });
+
+    it("applies no translate offset when sidePanel prop is omitted", () => {
+      render(<StepperModal {...baseProps} sidePanelOpen />, {
+        wrapper: Wrapper,
+      });
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveStyle({ translate: "0 0" });
+    });
+
+    it("applies rounded-l-xl and border-r-0 classes when side panel is open", () => {
+      render(
+        <StepperModal
+          {...baseProps}
+          sidePanel={<div>Panel</div>}
+          sidePanelOpen
+        />,
+        { wrapper: Wrapper },
+      );
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveClass("rounded-l-xl");
+      expect(dialogContent).toHaveClass("rounded-r-none");
+      expect(dialogContent).toHaveClass("border-r-0");
+      // rounded-xl is still in the class string but rounded-l-xl and rounded-r-none take precedence
+    });
+
+    it("applies rounded-xl class when side panel is closed", () => {
+      render(
+        <StepperModal
+          {...baseProps}
+          sidePanel={<div>Panel</div>}
+          sidePanelOpen={false}
+        />,
+        { wrapper: Wrapper },
+      );
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveClass("rounded-xl");
+      expect(dialogContent).not.toHaveClass("rounded-l-xl");
+      expect(dialogContent).not.toHaveClass("rounded-r-none");
+      expect(dialogContent).not.toHaveClass("border-r-0");
+    });
+
+    it("applies rounded-xl class when sidePanel prop is omitted", () => {
+      render(<StepperModal {...baseProps} sidePanelOpen />, {
+        wrapper: Wrapper,
+      });
+      const titleElement = screen.getByRole("heading", {
+        name: /Test Modal Title/i,
+      });
+      const dialogContent = titleElement.closest(
+        ".flex.max-h-\\[85vh\\]",
+      ) as HTMLElement;
+      expect(dialogContent).toHaveClass("rounded-xl");
+      expect(dialogContent).not.toHaveClass("rounded-l-xl");
+    });
   });
 });

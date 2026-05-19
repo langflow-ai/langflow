@@ -117,15 +117,23 @@ async def aget_messages(
         return [await Message.create(**d.model_dump()) for d in messages]
 
 
-def add_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
+def add_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+):
     """DEPRECATED - Add a message to the monitor service.
 
     DEPRECATED: Use `aadd_messages` instead.
     """
-    return run_until_complete(aadd_messages(messages, flow_id=flow_id))
+    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id))
 
 
-async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
+async def aadd_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -142,7 +150,7 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
             raise ValueError(msg)
 
     try:
-        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
+        messages_models = [MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id) for msg in messages]
         async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
@@ -279,6 +287,7 @@ async def delete_message(id_: str) -> None:
 def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -288,6 +297,7 @@ def store_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -295,12 +305,13 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
 
 
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -308,6 +319,7 @@ async def astore_message(
         message (Message): The message to store.
         flow_id (Optional[str]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -334,7 +346,7 @@ async def astore_message(
             await logger.aerror(e)
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
-    return await aadd_messages([message], flow_id=flow_id)
+    return await aadd_messages([message], flow_id=flow_id, run_id=run_id)
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):

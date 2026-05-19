@@ -48,6 +48,7 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   recomputeComponentsToUpdateIfNeeded: mockRecomputeComponentsToUpdateIfNeeded,
+  syncNodeTranslations: jest.fn(),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => ({

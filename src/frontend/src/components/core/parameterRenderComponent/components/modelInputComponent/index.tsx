@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
@@ -43,8 +45,9 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
-}: BaseInputProps<SelectedModel[]> &
+}: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
+  const { t } = useTranslation();
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -52,6 +55,10 @@ export default function ModelInputComponent({
     useState(false);
   const [isRefreshingAfterClose, setIsRefreshingAfterClose] = useState(false);
   const [refreshOptions, setRefreshOptions] = useState(false);
+  const isBuilding = useFlowStore((state) => state.isBuilding);
+  const buildInfo = useFlowStore((state) => state.buildInfo);
+  const showingBuildPanel =
+    isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
   // Connection mode: local state for reactivity, persisted in node data for reload
   const [isConnectionMode, setIsConnectionMode] = useState(() => {
@@ -84,7 +91,7 @@ export default function ModelInputComponent({
   // prevents infinite loop when no models are available
   const hasProcessedEmptyRef = useRef(false);
 
-  const postTemplateValue = usePostTemplateValue({
+  const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
     nodeId: nodeId || "",
     node: (nodeClass as APIClassType) || null,
@@ -108,13 +115,51 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
+  // Declarative metadata filters from the backend ModelInput (e.g. Agent
+  // declares ``filters={"tool_calling": True}``). The backend already
+  // applies this to ``options``, but the augment loop below adds models
+  // from ``useGetModelProviders`` (which is *not* filter-aware), so without
+  // this re-check the picker re-introduces tool-incompatible models
+  // alongside the backend-filtered list. Conservative: when a filter key
+  // is set but the candidate's metadata doesn't carry that key at all, the
+  // candidate fails the check — we'd rather drop an undeclared model than
+  // surface one that crashes at run time.
+  const modelFilters = useMemo(() => {
+    const raw = (
+      nodeClass?.template?.model as
+        | { filters?: Record<string, unknown> }
+        | undefined
+    )?.filters;
+    if (!raw || typeof raw !== "object") return undefined;
+    const entries = Object.entries(raw).filter(
+      ([, v]) => v !== null && v !== undefined,
+    );
+    if (entries.length === 0) return undefined;
+    return Object.fromEntries(entries) as Record<string, unknown>;
+  }, [nodeClass]);
+
+  const passesModelFilters = useCallback(
+    (metadata: Record<string, unknown> | undefined | null): boolean => {
+      if (!modelFilters) return true;
+      if (!metadata) return false;
+      for (const [key, expected] of Object.entries(modelFilters)) {
+        if (metadata[key] !== expected) return false;
+      }
+      return true;
+    },
+    [modelFilters],
+  );
+
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
   } = useGetModelProviders({});
-  const { data: enabledModelsData, isLoading: isLoadingEnabledModels } =
-    useGetEnabledModels();
+  const {
+    data: enabledModelsData,
+    isLoading: isLoadingEnabledModels,
+    isFetching: isFetchingEnabledModels,
+  } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
 
@@ -141,8 +186,18 @@ export default function ModelInputComponent({
       // the user's saved selection injected into the options list by the
       // unified-models build_config helper even though they aren't in the
       // enabled list. They must always pass the client-side filter so the
-      // selection stays visible and selectable in the dropdown.
+      // selection stays visible and selectable in the dropdown — UNLESS
+      // the user has the provider configured locally, in which case the
+      // sticky default reflects a model they've actively deactivated (not a
+      // provider that needs setup). Hide it so the dropdown defaults to a
+      // valid option instead of surfacing the stale selection with a wrench.
       const isStickyNotEnabled = option.metadata?.not_enabled_locally === true;
+      if (isStickyNotEnabled) {
+        const providerConfigured = providersData?.some(
+          (p) => p.provider === provider && p.is_configured,
+        );
+        if (providerConfigured) continue;
+      }
 
       // Filter against client-side enabled models data. This is the source of
       // truth for what the current user has enabled — stale `options` saved in
@@ -155,6 +210,20 @@ export default function ModelInputComponent({
         if (providerModels && providerModels[option.name] !== true) {
           continue;
         }
+      }
+
+      // Defensive filter pass. The backend's update_build_config already
+      // applies ``filters`` to ``options``, but stale saved flows (template
+      // persisted before the filter shipped) can deliver a build_config
+      // that hasn't been filter-corrected yet. Apply the same filter here
+      // so a tool-incompatible saved model can't surface even when
+      // ``options`` includes it.
+      if (
+        !passesModelFilters(
+          option.metadata as Record<string, unknown> | undefined,
+        )
+      ) {
+        continue;
       }
 
       if (!grouped[provider]) {
@@ -189,15 +258,23 @@ export default function ModelInputComponent({
           // Only include models whose declared type matches this component.
           // Older metadata without ``model_type`` is allowed through so we
           // don't regress providers that haven't adopted the tag yet.
-          const modelMetadataType = (
-            model.metadata as Record<string, unknown> | undefined
-          )?.model_type;
+          const modelMetadata = (model.metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const modelMetadataType = modelMetadata.model_type;
           if (
             typeof modelMetadataType === "string" &&
             modelMetadataType !== modelType
           ) {
             continue;
           }
+
+          // Apply the declarative filter (e.g. tool_calling=True for the
+          // Agent picker). Without this, every enabled model from
+          // ``useGetModelProviders`` re-enters the dropdown regardless of
+          // capability and re-introduces the bug the backend filter fixed.
+          if (!passesModelFilters(modelMetadata)) continue;
 
           const key = `${providerName}::${modelName}`;
           if (seen.has(key)) continue;
@@ -210,7 +287,7 @@ export default function ModelInputComponent({
             name: modelName,
             icon: providerInfo.icon || "Bot",
             provider: providerName,
-            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+            metadata: modelMetadata,
           });
         }
       }
@@ -242,7 +319,14 @@ export default function ModelInputComponent({
     }
 
     return grouped;
-  }, [options, enabledModelsData, providersData, modelType, value]);
+  }, [
+    options,
+    enabledModelsData,
+    providersData,
+    modelType,
+    value,
+    passesModelFilters,
+  ]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -283,34 +367,62 @@ export default function ModelInputComponent({
     // lacks the sticky-default metadata. Preserve the saved selection in the
     // trigger so it doesn't visually "snap" to the user's first enabled
     // model. The wrench affordance in the dropdown handles configuration.
+    //
+    // EXCEPTION: when the saved provider is configured locally, the saved
+    // model has been actively deactivated (not missing-because-unconfigured).
+    // Fall through to the first available option so the user isn't shown a
+    // wrench for a provider that doesn't need configuring.
     const saved = value?.[0];
     if (saved) {
-      return {
-        ...(saved.id && { id: saved.id }),
-        name: saved.name,
-        icon: saved.icon || "Bot",
-        provider: saved.provider || "Unknown",
-        metadata: {
-          ...(saved.metadata ?? {}),
-          not_enabled_locally: true,
-        },
-      } as SelectedModel;
+      const savedProviderConfigured = providersData?.some(
+        (p) => p.provider === saved.provider && p.is_configured,
+      );
+      if (!savedProviderConfigured) {
+        return {
+          ...(saved.id && { id: saved.id }),
+          name: saved.name,
+          icon: saved.icon || "Bot",
+          provider: saved.provider || "Unknown",
+          metadata: {
+            ...(saved.metadata ?? {}),
+            not_enabled_locally: true,
+          },
+        } as SelectedModel;
+      }
     }
 
     return flatOptions.length > 0 ? flatOptions[0] : null;
-  }, [value, flatOptions, isConnectionMode, externalOptions]);
+  }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
     if (hasProcessedEmptyRef.current) return;
 
     const isEmpty = !value || value.length === 0;
+
+    // Detect a stale saved value: the saved model isn't in flatOptions AND
+    // the saved provider is configured locally (the user has actively
+    // deactivated this specific model rather than missing the provider
+    // entirely). Reset the persisted value so the flow doesn't reference a
+    // model the user can no longer run.
+    let isSavedValueStale = false;
+    if (!isEmpty) {
+      const saved = value[0];
+      const inOptions = flatOptions.some((opt) => opt.name === saved.name);
+      if (!inOptions && saved.provider) {
+        isSavedValueStale =
+          providersData?.some(
+            (p) => p.provider === saved.provider && p.is_configured,
+          ) ?? false;
+      }
+    }
+
     // Sticky-default: if the component has a saved value, keep it as-is. The
     // backend injects any selection that isn't in the user's enabled list
     // back into `options` tagged with `not_enabled_locally`, so the saved
     // value remains visible and runnable. Only auto-select the first option
-    // when there's no saved value at all.
-    if (!isEmpty) return;
+    // when there's no saved value at all OR when the saved value is stale.
+    if (!isEmpty && !isSavedValueStale) return;
 
     const firstOption = flatOptions[0];
     // Construct the new value object
@@ -325,7 +437,7 @@ export default function ModelInputComponent({
     ];
     handleOnNewValue({ value: newValue });
     hasProcessedEmptyRef.current = true;
-  }, [flatOptions, value, handleOnNewValue, isConnectionMode]);
+  }, [flatOptions, value, handleOnNewValue, isConnectionMode, providersData]);
 
   /**
    * Handles model selection from the dropdown.
@@ -397,27 +509,41 @@ export default function ModelInputComponent({
     }
   }, [refreshAllModelInputs]);
 
-  const handleManageProvidersDialogClose = useCallback(() => {
-    setOpenManageProvidersDialog(false);
-    setIsRefreshingAfterClose(true);
-  }, []);
+  const handleManageProvidersDialogClose = useCallback(
+    (opts?: { hasChanges?: boolean }) => {
+      setOpenManageProvidersDialog(false);
+      // Only enter the post-close loading state when the modal will actually
+      // refresh model inputs. When the user opens the dialog and closes it
+      // without touching anything, there's no refetch to wait on, so the
+      // dropdown should not flicker through "Loading models…".
+      if (opts?.hasChanges) {
+        setIsRefreshingAfterClose(true);
+      }
+    },
+    [],
+  );
 
-  // Clear the refreshing indicator after the providers query completes a full
-  // refetch cycle (isFetchingProviders: false → true → false). We track whether
-  // we've seen the fetch start so we don't clear prematurely before the
-  // invalidation has even been triggered by refreshAllModelInputs.
+  // Clear the refreshing indicator only after BOTH the providers and the
+  // enabled-models queries have completed a full refetch cycle (isFetching:
+  // false -> true -> false). Watching only ``isFetchingProviders`` clears the
+  // loading state too early when the enabled-models refetch is slower,
+  // letting ``groupedOptions`` render against a stale ``enabledModelsData``
+  // cache; disabled models would briefly leak back into the dropdown after
+  // the user closes the provider modal. We track whether we've seen the
+  // fetch start so we don't clear prematurely before the invalidation has
+  // even been triggered by refreshAllModelInputs.
   const hasSeenFetchStartRef = useRef(false);
   useEffect(() => {
     if (!isRefreshingAfterClose) {
       hasSeenFetchStartRef.current = false;
       return;
     }
-    if (isFetchingProviders) {
+    if (isFetchingProviders || isFetchingEnabledModels) {
       hasSeenFetchStartRef.current = true;
     } else if (hasSeenFetchStartRef.current) {
       setIsRefreshingAfterClose(false);
     }
-  }, [isRefreshingAfterClose, isFetchingProviders]);
+  }, [isRefreshingAfterClose, isFetchingProviders, isFetchingEnabledModels]);
 
   // Safety timeout: clear loading even if no refetch cycle is detected
   // (e.g. no model nodes on canvas, or the refresh was a no-op)
@@ -434,7 +560,7 @@ export default function ModelInputComponent({
       size="xs"
       disabled
     >
-      <LoadingTextComponent text="Loading models" />
+      <LoadingTextComponent text={t("modelInput.loadingModels")} />
     </Button>
   );
 
@@ -463,7 +589,7 @@ export default function ModelInputComponent({
   const renderManageProvidersButton = () => (
     <div className="bottom-0 bg-background">
       {renderFooterButton(
-        "Manage Model Providers",
+        t("modelInput.manageProviders"),
         "Settings",
         () => setOpenManageProvidersDialog(true),
         "manage-model-providers",
@@ -479,7 +605,10 @@ export default function ModelInputComponent({
     return (
       <PopoverContentInput
         side="bottom"
-        avoidCollisions={true}
+        avoidCollisions
+        collisionPadding={{
+          bottom: showingBuildPanel ? BUILD_PANEL_COLLISION_PADDING_PX : 0,
+        }}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
@@ -490,7 +619,7 @@ export default function ModelInputComponent({
             onSelect={handleModelSelect}
           />
           {renderFooterButton(
-            "Refresh List",
+            t("modelInput.refreshList"),
             "RotateCw",
             handleRefreshButtonPress,
             "refresh-model-list",
@@ -500,7 +629,7 @@ export default function ModelInputComponent({
             <div className="border-t bg-background">
               {renderFooterButton(
                 externalOptions.fields.data.node.display_name ||
-                  "Connect other models",
+                  t("modelInput.connectOtherModels"),
                 externalOptions.fields.data.node.icon || "CornerDownLeft",
                 () => handleExternalOptions("connect_other_models"),
                 "connect-other-models",

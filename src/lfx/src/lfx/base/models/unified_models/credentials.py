@@ -12,6 +12,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import secret_value_to_str
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -19,13 +20,16 @@ from .provider_queries import (
 )
 
 
-def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
 
     When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
+    # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
+    # stringification. Unwrap here because provider clients need the raw value.
+    api_key = secret_value_to_str(api_key, strip=True)
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
@@ -50,8 +54,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
 
             value = run_until_complete(_get_by_var_name())
-            if value and str(value).strip():
-                return str(value).strip()
+            value = secret_value_to_str(value, strip=True)
+            if value:
+                return value
         return None
 
     if api_key and api_key.strip():
@@ -100,6 +105,7 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         except (ValueError, Exception):  # noqa: BLE001
             api_key = None
 
+    api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
         return api_key
 
@@ -147,8 +153,9 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        values[var_key] = str(value)
+                    value = secret_value_to_str(value, strip=True)
+                    if value:
+                        values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001
                     # Variable not found - check environment
                     env_value = os.environ.get(var_key)
@@ -347,8 +354,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
+    validation_model = model_name or first_model
+
     # For providers that need a model to test credentials
-    if not first_model and provider in [
+    if not validation_model and provider in [
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
@@ -363,7 +372,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm = ChatOpenAI(api_key=api_key, model_name=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Anthropic":
@@ -372,7 +381,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
-            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Google Generative AI":
@@ -381,7 +390,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
-            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
@@ -395,11 +404,41 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
-                model_id=first_model,
+                model_id=validation_model,
                 project_id=project_id,
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
+
+        elif provider == "OpenRouter":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("OPENROUTER_API_KEY")
+            if not api_key:
+                return
+
+            try:
+                response = requests.get(
+                    "https://openrouter.ai/api/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OpenRouter API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Network/timeout/5xx during validation: surface as ValueError so
+                # the variable API returns a user-facing 400 instead of an
+                # unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach OpenRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
 
         elif provider == "Ollama":
             import requests

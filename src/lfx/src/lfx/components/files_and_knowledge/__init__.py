@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from lfx.components.files_and_knowledge.directory import DirectoryComponent
     from lfx.components.files_and_knowledge.file import FileComponent
     from lfx.components.files_and_knowledge.ingestion import KnowledgeIngestionComponent
+    from lfx.components.files_and_knowledge.knowledge import KnowledgeComponent
+    from lfx.components.files_and_knowledge.memory_retrieval import MemoryBaseComponent
     from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
     from lfx.components.files_and_knowledge.save_file import SaveToFileComponent
 
@@ -15,8 +17,10 @@ if TYPE_CHECKING:
 _dynamic_imports = {
     "DirectoryComponent": "directory",
     "FileComponent": "file",
+    "KnowledgeComponent": "knowledge",
     "KnowledgeIngestionComponent": "ingestion",
     "KnowledgeBaseComponent": "retrieval",
+    "MemoryBaseComponent": "memory_retrieval",
     "SaveToFileComponent": "save_file",
 }
 
@@ -24,7 +28,9 @@ __all__ = [
     "DirectoryComponent",
     "FileComponent",
     "KnowledgeBaseComponent",
+    "KnowledgeComponent",
     "KnowledgeIngestionComponent",
+    "MemoryBaseComponent",
     "SaveToFileComponent",
 ]
 

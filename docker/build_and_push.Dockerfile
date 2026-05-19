@@ -9,7 +9,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -50,6 +50,14 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.  The full ./src copy a few lines below
+# produces the same layer either way -- this earlier copy just unblocks the
+# dependency-resolution sync.
+COPY ./src/bundles /app/src/bundles
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
@@ -75,7 +83,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.13-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 
 RUN apt-get update \
@@ -113,4 +121,3 @@ ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
 CMD ["langflow", "run"]
-

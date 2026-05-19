@@ -25,7 +25,7 @@ export const McpAutoInstallContent = ({
   installClient,
   installedClients,
 }: McpAutoInstallContentProps) => (
-  <div className="flex flex-col gap-1 mt-4">
+  <div className="flex flex-col gap-1">
     {!isLocalConnection && (
       <div className="mb-2 rounded-md bg-accent-amber px-3 py-2 text-sm text-accent-amber-foreground">
         <div className="flex items-center gap-3">
