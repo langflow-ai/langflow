@@ -400,7 +400,7 @@ export default function NodeStatus({
               styleClasses={cn(
                 "border rounded-xl p-2",
                 conditionSuccess
-                  ? "bg-zinc-700"
+                  ? "bg-hard-zinc"
                   : "border-destructive bg-error-background",
               )}
               content={

@@ -23,12 +23,6 @@ interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   {
-    id: "search",
-    icon: "search",
-    label: "sidebar.nav.search",
-    tooltip: "sidebar.nav.search",
-  },
-  {
     id: "components",
     icon: "component",
     label: "sidebar.nav.components",
@@ -60,7 +54,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "memories",
-    icon: "Brain",
+    icon: "BrainCog",
     label: "Memories",
     tooltip: "Memories",
   },
@@ -69,7 +63,7 @@ export const NAV_ITEMS: NavItem[] = [
 const SidebarSegmentedNav = () => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, setSearch } = useSearchContext();
+  const { setSearch } = useSearchContext();
   const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
@@ -101,9 +95,6 @@ const SidebarSegmentedNav = () => {
                       setActiveSection(item.id);
                       if (!open) {
                         toggleSidebar();
-                      }
-                      if (item.id === "search") {
-                        setTimeout(() => focusSearch(), 100);
                       }
                     }
                   }}

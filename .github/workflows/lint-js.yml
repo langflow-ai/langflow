@@ -25,6 +25,8 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch || github.ref }}
+          # Need full history so biome can diff against the PR base
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -47,7 +49,41 @@ jobs:
           npm install
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
-      - name: Run Biome
+      - name: Run Biome on PR-changed files
         run: |
+          # Determine the branch this PR targets (falls back to `main` for
+          # workflow_dispatch / non-PR contexts).
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          echo "=== Debug ==="
+          echo "HEAD:          $(git rev-parse HEAD)"
+          echo "BASE_REF:      $BASE_REF"
+          echo "origin/$BASE_REF: $(git rev-parse "origin/$BASE_REF" 2>/dev/null || echo NOT_FOUND)"
+
+          # Merge-base = the commit where this branch forked off its target.
+          # Diffing against it yields ONLY the files this PR introduced,
+          # ignoring unrelated upstream changes merged into the base since.
+          MERGE_BASE=$(git merge-base HEAD "origin/$BASE_REF")
+          echo "MERGE_BASE:    $MERGE_BASE"
+
+          # Collect frontend files modified in this PR. Filter to file types
+          # biome can process (ts/tsx/js/jsx/json/jsonc and the like).
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR \
+            "$MERGE_BASE"...HEAD -- 'src/frontend/' \
+            | grep -E '\.(tsx?|jsx?|c(js|ts)|m(js|ts)|jsonc?)$' \
+            || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No frontend files changed in this PR — skipping biome."
+            exit 0
+          fi
+
+          echo "=== Files to lint ==="
+          echo "$CHANGED_FILES"
+
+          # Biome runs from src/frontend; strip that prefix from paths.
+          RELATIVE_FILES=$(echo "$CHANGED_FILES" | sed 's|^src/frontend/||')
+
           cd src/frontend
-          npx @biomejs/biome check --changed
+          echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
+            --files-ignore-unknown=true \
+            --diagnostic-level=error
