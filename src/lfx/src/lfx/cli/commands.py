@@ -30,6 +30,8 @@ from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.load import load_flow_from_json
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from lfx.cli.flow_store import FlowStore
 
 # Initialize console
@@ -47,7 +49,7 @@ async def _build_serve_registry(
     check_variables: bool,
     no_env_fallback: bool,
     flow_store: FlowStore,
-    verbose_print,
+    verbose_print: Callable[[str], None],
 ) -> tuple[FlowRegistry, str | None]:
     """Build the FlowRegistry from startup inputs.
 
@@ -56,37 +58,23 @@ async def _build_serve_registry(
     """
     temp_file_to_cleanup: str | None = None
 
-    if flow_json is not None:
-        try:
-            json_data = json.loads(flow_json)
-        except json.JSONDecodeError as e:
-            typer.echo(f"Error: Invalid JSON content: {e}", err=True)
-            raise typer.Exit(1) from e
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(json_data, tmp, indent=2)
-            temp_file_to_cleanup = tmp.name
-        try:
-            registry = await build_registry_from_paths(
-                [Path(temp_file_to_cleanup)],
-                verbose_print,
-                check_variables=check_variables,
-                no_env_fallback=no_env_fallback,
-                store=flow_store,
-            )
-        except ValueError as e:
-            typer.echo(f"Error: {e}", err=True)
-            raise typer.Exit(1) from e
-
-    elif stdin:
-        stdin_content = sys.stdin.read().strip()
-        if not stdin_content:
-            typer.echo("Error: No content received from stdin", err=True)
-            raise typer.Exit(1)
-        try:
-            json_data = json.loads(stdin_content)
-        except json.JSONDecodeError as e:
-            typer.echo(f"Error: Invalid JSON content from stdin: {e}", err=True)
-            raise typer.Exit(1) from e
+    if flow_json is not None or stdin:
+        if flow_json is not None:
+            try:
+                json_data = json.loads(flow_json)
+            except json.JSONDecodeError as e:
+                typer.echo(f"Error: Invalid JSON content: {e}", err=True)
+                raise typer.Exit(1) from e
+        else:
+            stdin_content = sys.stdin.read().strip()
+            if not stdin_content:
+                typer.echo("Error: No content received from stdin", err=True)
+                raise typer.Exit(1)
+            try:
+                json_data = json.loads(stdin_content)
+            except json.JSONDecodeError as e:
+                typer.echo(f"Error: Invalid JSON content from stdin: {e}", err=True)
+                raise typer.Exit(1) from e
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             json.dump(json_data, tmp, indent=2)
             temp_file_to_cleanup = tmp.name
@@ -416,9 +404,31 @@ async def _load_graph_and_meta(
     return graph, meta, raw_json
 
 
+async def _populate_registry(
+    paths: list[Path],
+    root_dir: Path,
+    registry: FlowRegistry,
+    verbose_print: Callable[[str], None],
+    *,
+    check_variables: bool,
+) -> None:
+    """Load each path into *registry*, collecting errors and raising at the end."""
+    errors: list[str] = []
+    for path in paths:
+        try:
+            graph, meta, raw_json = await _load_graph_and_meta(path, root_dir, check_variables=check_variables)
+            registry.add(graph, meta, raw_json=raw_json)
+            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{path.name}: {exc}")
+    if errors:
+        msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise ValueError(msg)
+
+
 async def build_registry_from_directory(
     dir_path: Path,
-    verbose_print,
+    verbose_print: Callable[[str], None],
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
@@ -433,29 +443,14 @@ async def build_registry_from_directory(
         raise ValueError(msg)
 
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
-    errors: list[str] = []
-    for path in json_files:
-        try:
-            graph, meta, raw_json = await _load_graph_and_meta(path, dir_path, check_variables=check_variables)
-            registry.add(graph, meta, raw_json=raw_json)
-            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"{path.name}: {exc}")
-
-    if errors:
-        msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
-        raise ValueError(msg)
-
-    # Pre-warm in-memory cache from any flows already in the store
-    # (e.g. uploaded by another worker before this one started).
+    await _populate_registry(json_files, dir_path, registry, verbose_print, check_variables=check_variables)
     registry.warm_from_store()
-
     return registry
 
 
 async def build_registry_from_paths(
     paths: list[Path],
-    verbose_print,
+    verbose_print: Callable[[str], None],
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
@@ -469,21 +464,6 @@ async def build_registry_from_paths(
         Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path()
     )
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
-    errors: list[str] = []
-    for path in paths:
-        try:
-            graph, meta, raw_json = await _load_graph_and_meta(path, common_root, check_variables=check_variables)
-            registry.add(graph, meta, raw_json=raw_json)
-            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
-        except Exception as exc:  # noqa: BLE001
-            errors.append(f"{path.name}: {exc}")
-
-    if errors:
-        msg = "Failed to load flows:\n" + "\n".join(f"  - {e}" for e in errors)
-        raise ValueError(msg)
-
-    # Pre-warm in-memory cache from any flows already in the store
-    # (e.g. uploaded by another worker before this one started).
+    await _populate_registry(paths, common_root, registry, verbose_print, check_variables=check_variables)
     registry.warm_from_store()
-
     return registry

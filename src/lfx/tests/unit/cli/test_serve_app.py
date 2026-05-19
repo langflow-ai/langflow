@@ -190,6 +190,59 @@ class TestFlowRegistry:
         with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("should use cache")):
             registry.get("flow-from-store")
 
+    def test_list_metas_caches_store_reads(self):
+        """list_metas() must not re-read a store file it already parsed in a prior call."""
+        raw = {"name": "Cached", "data": {"nodes": [], "edges": []}, "id": "cached-id"}
+        read_count = 0
+
+        class CountingStore:
+            def write(self, *_a):
+                pass
+
+            def read(self, _flow_id):
+                nonlocal read_count
+                read_count += 1
+                return raw
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["cached-id"]
+
+        registry = FlowRegistry(store=CountingStore())
+        registry.list_metas()  # first call — reads from store, populates cache
+        registry.list_metas()  # second call — must use cache, not read again
+        assert read_count == 1, f"Expected 1 store read, got {read_count}"
+
+    def test_list_metas_cache_invalidated_after_remove(self):
+        """After remove(), a subsequent list_metas() must not serve stale cached metadata."""
+        raw = {"name": "Gone", "data": {"nodes": [], "edges": []}, "id": "gone-id"}
+
+        class MemStore:
+            def __init__(self):
+                self._data = {"gone-id": raw}
+
+            def write(self, fid, v):
+                self._data[fid] = v
+
+            def read(self, fid):
+                return self._data.get(fid)
+
+            def delete(self, fid):
+                return bool(self._data.pop(fid, None))
+
+            def list_ids(self):
+                return list(self._data)
+
+        registry = FlowRegistry(store=MemStore())
+        metas = registry.list_metas()
+        assert any(m.id == "gone-id" for m in metas)
+
+        registry.remove("gone-id")
+        metas_after = registry.list_metas()
+        assert not any(m.id == "gone-id" for m in metas_after)
+
     def test_registry_get_uses_json_id_over_filename_stem(self):
         """When JSON has a different id than the filename stem, meta.id uses the JSON id.
 
@@ -1054,7 +1107,8 @@ class TestServeAppEndpoints:
 
     def test_list_flows_endpoint(self, multi_flow_client):
         """Test listing flows in multi-flow mode."""
-        response = multi_flow_client.get("/flows")
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
+            response = multi_flow_client.get("/flows", headers={"x-api-key": "test-api-key"})
 
         assert response.status_code == 200
         flows = response.json()
@@ -1444,7 +1498,7 @@ class TestUploadEndpoint:
         assert upload_resp.status_code == 201
         flow_id = upload_resp.json()["id"]
 
-        list_resp = app_with_empty_registry.get("/flows")
+        list_resp = app_with_empty_registry.get("/flows", headers={"x-api-key": "test-key"})
         assert any(f["id"] == flow_id for f in list_resp.json())
 
     def test_upload_duplicate_without_replace_returns_409(self, app_with_empty_registry, valid_flow_data):
@@ -1481,7 +1535,7 @@ class TestUploadEndpoint:
         assert r2.json()["id"] == flow_id
         assert r2.json()["name"] == "Updated Name"
 
-        flows = app_with_empty_registry.get("/flows").json()
+        flows = app_with_empty_registry.get("/flows", headers={"x-api-key": "test-key"}).json()
         ids = [f["id"] for f in flows]
         assert ids.count(flow_id) == 1
 
@@ -1493,3 +1547,106 @@ class TestUploadEndpoint:
         )
         assert response.status_code == 201
         assert response.json()["description"] == "my desc"
+
+    def test_upload_concurrent_conflict_returns_409_not_500(self, app_with_empty_registry, valid_flow_data):
+        """registry.add() raising ValueError (concurrent race) must surface as 409, not 500."""
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.context = {}
+
+        with (
+            patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph),
+            # Simulate the race: registry.get() returns None but registry.add() still raises.
+            patch("lfx.cli.serve_app.FlowRegistry.get", return_value=None),
+            patch(
+                "lfx.cli.serve_app.FlowRegistry.add",
+                side_effect=ValueError("Flow 'x' is already registered. Pass overwrite=True to replace it."),
+            ),
+        ):
+            response = app_with_empty_registry.post(
+                "/flows/upload/",
+                json={"name": "Flow", "data": valid_flow_data},
+                headers={"x-api-key": "test-key"},
+            )
+
+        assert response.status_code == 409
+        assert "already exists" in response.json()["detail"]
+
+    # ------------------------------------------------------------------
+    # GET /flows requires authentication
+    # ------------------------------------------------------------------
+
+    def test_list_flows_requires_auth(self, app_with_empty_registry):
+        response = app_with_empty_registry.get("/flows")
+        assert response.status_code == 401
+
+    def test_list_flows_with_auth(self, app_with_empty_registry, valid_flow_data):
+        upload = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "My Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert upload.status_code == 201
+
+        response = app_with_empty_registry.get("/flows", headers={"x-api-key": "test-key"})
+        assert response.status_code == 200
+        assert any(f["id"] == upload.json()["id"] for f in response.json())
+
+    # ------------------------------------------------------------------
+    # Runtime flow removal via DELETE /flows/{flow_id}
+    # ------------------------------------------------------------------
+
+    def test_delete_flow_removes_it(self, app_with_empty_registry, valid_flow_data):
+        upload = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Temp Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert upload.status_code == 201
+        flow_id = upload.json()["id"]
+
+        delete_resp = app_with_empty_registry.delete(f"/flows/{flow_id}", headers={"x-api-key": "test-key"})
+        assert delete_resp.status_code == 204
+
+        run_resp = app_with_empty_registry.post(
+            f"/flows/{flow_id}/run",
+            json={"input_value": "hi"},
+            headers={"x-api-key": "test-key"},
+        )
+        assert run_resp.status_code == 404
+
+    def test_delete_nonexistent_flow_returns_404(self, app_with_empty_registry):
+        response = app_with_empty_registry.delete("/flows/does-not-exist", headers={"x-api-key": "test-key"})
+        assert response.status_code == 404
+
+    def test_delete_flow_requires_auth(self, app_with_empty_registry, valid_flow_data):
+        upload = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        flow_id = upload.json()["id"]
+        response = app_with_empty_registry.delete(f"/flows/{flow_id}")
+        assert response.status_code == 401
+
+    # ------------------------------------------------------------------
+    # body.id must be a valid UUID to prevent path/store injection
+    # ------------------------------------------------------------------
+
+    def test_upload_with_valid_uuid_id(self, app_with_empty_registry, valid_flow_data):
+        explicit_id = "b0529294-e297-41d1-9303-2c2128b7860a"
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow", "data": valid_flow_data, "id": explicit_id},
+            headers={"x-api-key": "test-key"},
+        )
+        assert response.status_code == 201
+        assert response.json()["id"] == explicit_id
+
+    def test_upload_with_invalid_id_returns_422(self, app_with_empty_registry, valid_flow_data):
+        response = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Flow", "data": valid_flow_data, "id": "not-a-uuid"},
+            headers={"x-api-key": "test-key"},
+        )
+        assert response.status_code == 422

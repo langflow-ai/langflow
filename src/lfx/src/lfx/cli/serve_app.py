@@ -21,13 +21,14 @@ import asyncio
 import json
 import time
 import traceback
+import uuid
 from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import Depends, FastAPI, HTTPException, Security
+from fastapi import Depends, FastAPI, HTTPException, Response, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from lfx.cli.common import (
     execute_graph_with_capture,
@@ -152,6 +153,9 @@ class FlowRegistry:
         self._store = store if store is not None else NullFlowStore()
         # Maps meta.id → store key when they differ (pre-placed files with human-readable names).
         self._store_keys: dict[str, str] = {}
+        # Lightweight metadata cache for store flows not yet fully loaded into _flows.
+        # Avoids re-reading JSON on every list_metas() call for multi-worker uploads.
+        self._store_meta_cache: dict[str, FlowMeta] = {}
 
     def _stamp(self, graph: Graph) -> None:
         if self._no_env_fallback:
@@ -173,6 +177,7 @@ class FlowRegistry:
             self._store.write(meta.id, raw_json)
         self._stamp(graph)
         self._flows[meta.id] = (graph, meta)
+        self._store_meta_cache.pop(meta.id, None)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
         if flow_id in self._flows:
@@ -183,6 +188,7 @@ class FlowRegistry:
         graph, meta = self._reconstruct(flow_id, raw_json)
         # Cache under the authoritative JSON id so requests by UUID find it.
         self._flows[meta.id] = (graph, meta)
+        self._store_meta_cache.pop(meta.id, None)
         if flow_id != meta.id:
             # Also keep the filename-stem alias so warm_from_store lookups hit.
             self._flows[flow_id] = (graph, meta)
@@ -190,18 +196,22 @@ class FlowRegistry:
             self._store_keys[meta.id] = flow_id
         return graph, meta
 
-    def _reconstruct(self, flow_id: str, raw_json: dict) -> tuple[Graph, FlowMeta]:
+    @staticmethod
+    def _meta_from_raw_json(flow_id: str, raw_json: dict) -> FlowMeta:
         actual_id = raw_json.get("id") or flow_id
-        graph = load_flow_from_json(raw_json)
-        graph.prepare()
-        graph.flow_id = actual_id
-        self._stamp(graph)
-        meta = FlowMeta(
+        return FlowMeta(
             id=actual_id,
             relative_path="<filesystem>",
             title=raw_json.get("name", actual_id),
             description=raw_json.get("description"),
         )
+
+    def _reconstruct(self, flow_id: str, raw_json: dict) -> tuple[Graph, FlowMeta]:
+        meta = self._meta_from_raw_json(flow_id, raw_json)
+        graph = load_flow_from_json(raw_json)
+        graph.prepare()
+        graph.flow_id = meta.id
+        self._stamp(graph)
         return graph, meta
 
     def warm_from_store(self) -> None:
@@ -223,19 +233,20 @@ class FlowRegistry:
                 seen.add(meta.id)
         for flow_id in self._store.list_ids():
             if flow_id not in self._flows:
+                # Check the lightweight metadata cache before reading from disk.
+                if flow_id in self._store_meta_cache:
+                    cached = self._store_meta_cache[flow_id]
+                    if cached.id not in seen:
+                        result.append(cached)
+                        seen.add(cached.id)
+                    continue
                 raw_json = self._store.read(flow_id)
                 if raw_json:
-                    actual_id = raw_json.get("id") or flow_id
-                    if actual_id not in seen:
-                        result.append(
-                            FlowMeta(
-                                id=actual_id,
-                                relative_path="<filesystem>",
-                                title=raw_json.get("name", actual_id),
-                                description=raw_json.get("description"),
-                            )
-                        )
-                        seen.add(actual_id)
+                    meta = self._meta_from_raw_json(flow_id, raw_json)
+                    if meta.id not in seen:
+                        self._store_meta_cache[flow_id] = meta
+                        result.append(meta)
+                        seen.add(meta.id)
         return result
 
     def remove(self, flow_id: str) -> bool:
@@ -247,11 +258,13 @@ class FlowRegistry:
             # Drop all cache keys that point to this flow (UUID and any filename alias).
             for k in [meta_id, store_key]:
                 self._flows.pop(k, None)
+                self._store_meta_cache.pop(k, None)
             self._store_keys.pop(meta_id, None)
             mem_had_it = True
         else:
             # Flow not in memory; derive store key best-effort.
             store_key = flow_id
+            self._store_meta_cache.pop(flow_id, None)
             mem_had_it = False
         store_had_it = self._store.delete(store_key)
         return mem_had_it or store_had_it
@@ -268,8 +281,20 @@ class UploadFlowRequest(BaseModel):
     name: str = Field(..., description="Human-readable name for the flow")
     data: dict = Field(..., description="Flow graph data — nodes and edges")
     description: str | None = Field(default=None, description="Optional flow description")
-    id: str | None = Field(default=None, description="Stable flow ID from Langflow export")
+    id: str | None = Field(default=None, description="Stable flow ID from Langflow export (must be a valid UUID)")
     replace: bool = Field(default=False, description="Overwrite the existing flow if the ID already exists")
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def validate_id_is_uuid(cls, v: object) -> object:
+        if v is None:
+            return v
+        try:
+            uuid.UUID(str(v))
+        except ValueError:
+            msg = f"id must be a valid UUID, got {v!r}"
+            raise ValueError(msg)  # noqa: B904
+        return str(v)
 
 
 class UploadFlowResponse(BaseModel):
@@ -403,6 +428,7 @@ def create_multi_serve_app(
         response_model=list[FlowMeta],
         tags=["info"],
         summary="List available flows",
+        dependencies=[Depends(verify_api_key)],
     )
     async def list_flows():
         return registry.list_metas()
@@ -451,7 +477,14 @@ def create_multi_serve_app(
         )
         # graph.prepare() must run before registry.add() — add() stamps
         # graph.context with no_env_fallback, and prepare() must not overwrite it.
-        registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
+        try:
+            registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
+        except ValueError:
+            # Another concurrent request registered the same ID between our get() check and add().
+            raise HTTPException(
+                status_code=409,
+                detail=f"Flow '{flow_id}' already exists. Pass replace=true to overwrite.",
+            ) from None
         return UploadFlowResponse(
             id=flow_id,
             name=body.name,
@@ -471,6 +504,22 @@ def create_multi_serve_app(
                 detail={"error": "flow not found", "flow_id": flow_id},
             )
         return result
+
+    @app.delete(
+        "/flows/{flow_id}",
+        status_code=204,
+        tags=["flows"],
+        summary="Remove a registered flow",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def delete_flow(flow_id: str) -> Response:
+        removed = registry.remove(flow_id)
+        if not removed:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "flow not found", "flow_id": flow_id},
+            )
+        return Response(status_code=204)
 
     @app.get(
         "/flows/{flow_id}/info",
