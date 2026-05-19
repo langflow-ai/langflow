@@ -5,7 +5,7 @@ import re
 import sqlite3
 import sys
 import time
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -48,6 +48,57 @@ class UnsupportedPostgreSQLVersionError(Exception):
 
 
 _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
+
+# Stable namespace for the schema-migration advisory lock. The lock serializes
+# concurrent ``alembic upgrade`` runs across workers so they do not race to
+# CREATE TYPE / CREATE TABLE on a fresh database. Picked once and never changed
+# so independent processes converge on the same lock; the value itself is
+# arbitrary, just has to fit in a Postgres bigint and not collide with other
+# advisory locks the application takes (currently none).
+_MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
+
+
+@contextmanager
+def _postgres_migration_lock(database_url: str):
+    """Hold a Postgres session-level advisory lock for the duration of the block.
+
+    Workers starting concurrently against a fresh PostgreSQL each call
+    ``command.upgrade("head")``; without coordination they race on
+    ``CREATE TYPE`` / ``CREATE TABLE`` and the losers fail with
+    ``UniqueViolation``. Holding a session-level advisory lock serialises the
+    upgrade so only one worker mutates the schema at a time; the others block
+    here and then find the schema already at head.
+
+    No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
+    runs single-process on it anyway).
+    """
+    if not database_url.startswith(("postgresql", "postgres")):
+        yield
+        return
+
+    # Normalise to a sync-compatible URL: strip async drivers so create_engine
+    # picks a sync driver, mirroring check_postgresql_version_sync above.
+    sync_url = database_url
+    if sync_url.startswith("postgres://"):
+        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
+    for async_driver in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(async_driver, "")
+
+    engine = sa.create_engine(sync_url)
+    try:
+        with engine.connect() as conn:
+            logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+            conn.execute(sa.text(f"SELECT pg_advisory_lock({_MIGRATION_ADVISORY_LOCK_ID})"))
+            try:
+                yield
+            finally:
+                logger.debug("Releasing migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+                # Session-level locks auto-release on connection close, but
+                # explicit unlock keeps the connection reusable if alembic
+                # internals ever hand us one back.
+                conn.execute(sa.text(f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"))
+    finally:
+        engine.dispose()
 
 
 def _check_version_row(version_num_str: str, version_str: str) -> None:
@@ -425,7 +476,9 @@ class DatabaseService(Service):
         buffer_context = (
             nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
         )
-        with buffer_context as buffer:
+        # The advisory lock serialises concurrent migration runs across workers
+        # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
