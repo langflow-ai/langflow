@@ -111,9 +111,7 @@ def test_vertex_cache_state_drops_component_instance():
         (set(), ["Notify-test-id"]),
     ],
 )
-def test_instantiate_component_reapplies_graph_output_cache_rules(
-    monkeypatch, cycle_vertices, graph_vertex_ids
-):
+def test_instantiate_component_reapplies_graph_output_cache_rules(monkeypatch, cycle_vertices, graph_vertex_ids):
     """Deserialized vertices should keep graph-level cache disabling rules."""
     output = Mock(cache=True)
     component = Mock()
