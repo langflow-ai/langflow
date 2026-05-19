@@ -4,7 +4,13 @@ slug: /file-system
 ---
 
 The **File System** component provides sandboxed filesystem access for agents.
-It includes five file I/O tools for agents: `read_file`, `write_file`, `edit_file`, `glob_search`, and `grep_search`.
+It includes five file I/O tools for agents: 
+
+* `read_file`
+* `write_file`
+* `edit_file`
+* `glob_search`
+* `grep_search`
 
 All operations are scoped to a base directory designated by the [`LANGFLOW_FS_TOOL_BASE_DIR`](/environment-variables) environment variable. The default location is `~/.langflow/fs_tool/fs_sandbox`.
 To use a different directory, set the location in `LANGFLOW_FS_TOOL_BASE_DIR` in your `.env` file.
@@ -33,9 +39,7 @@ Tool errors are returned to the agent as structured JSON:
    If `LANGFLOW_AUTO_LOGIN` is set to `false`, the scoped sub-folder for the agent is at `LANGFLOW_FS_TOOL_BASE_DIR/users/$HASH/projects/my-application`.
 
 4. Optionally, select **Read Only** to disable `write_file` and `edit_file` operations.
-5. In the **Playground**, send a message to test the connection. For example:
-
-   > List all files in my workspace.
+5. In the **Playground**, send a message to test the connection. For example, `List all files in my workspace`.
 
    The agent calls `glob_search` with `**/*` and returns the contents of the sandbox directory.
 
@@ -50,7 +54,8 @@ Tool errors are returned to the agent as structured JSON:
 
 ## Docker deployment
 
-When running Langflow in Docker, mount the sandbox directory as a persistent volume, so the pepper file used to derive per-user namespace hashes survives container restarts:
+When running Langflow in Docker, you must mount the sandbox directory as a persistent volume.
+This ensures that the pepper file used to derive per-user namespace hashes survives container restarts.
 
     ```yaml
     services:
