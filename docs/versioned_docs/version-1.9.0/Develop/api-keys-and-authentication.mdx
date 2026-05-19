@@ -454,9 +454,15 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 The following environment variables configure Server-Side Request Forgery (SSRF) protection for the [**API Request** component](/api-request).
 SSRF protection prevents requests to internal or private network resources, such as private IP ranges, loopback addresses, and cloud metadata endpoints.
 
+:::warning
+As of Langflow 1.9.3, SSRF protection is enabled by default and includes DNS rebinding prevention through IP pinning.
+
+If you are upgrading to Langflow 1.9.3 and your flows use the [**API Request** component](/api-request) to call resources that would be blocked by SSRF protection, add those hosts to `LANGFLOW_SSRF_ALLOWED_HOSTS` before upgrading to avoid disruption.
+:::
+
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}

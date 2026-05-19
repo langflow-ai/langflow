@@ -22,3 +22,9 @@ export const ENABLE_MCP_COMPOSER =
   import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";
 export const ENABLE_NEW_SIDEBAR = true;
 export const ENABLE_FETCH_CREDENTIALS = false;
+// Mode A only: gates the Bundle-header Reload action in the palette.  Off by
+// default until the bundle-list endpoint that populates extension_id per
+// bundle ships; until then the static SIDEBAR_BUNDLES has no reliable
+// extension id to send to /api/v1/extensions/{id}/bundles/{name}/reload.
+export const ENABLE_EXTENSION_RELOAD =
+  import.meta.env.LANGFLOW_EXTENSION_RELOAD_ENABLED === "true";

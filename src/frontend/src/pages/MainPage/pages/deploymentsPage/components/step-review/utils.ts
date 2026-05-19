@@ -5,6 +5,10 @@ import {
 import { normalizeWxoName } from "../../helpers/wxo-name";
 import type { ConnectionItem } from "../../types";
 import { getDefaultDeploymentToolName, UNKNOWN_FLOW_NAME } from "../../types";
+import {
+  INVALID_WXO_TOOL_NAME_MESSAGE,
+  isValidWxoName,
+} from "../../utils/wxo-name";
 import type { ReviewFlowItem } from "./types";
 
 function getToolNameForReview(
@@ -195,8 +199,12 @@ export function buildToolNameErrors({
   const batchNames = new Map<string, string>();
 
   for (const item of reviewFlows) {
+    if (!isValidWxoName(item.toolName)) {
+      errors.set(item.attachmentKey, INVALID_WXO_TOOL_NAME_MESSAGE);
+      continue;
+    }
+
     const normalized = normalizeWxoName(item.toolName).toLowerCase();
-    if (!normalized) continue;
 
     const firstAttachmentKey = batchNames.get(normalized);
     if (firstAttachmentKey) {
