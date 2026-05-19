@@ -76,10 +76,18 @@ class TestBuildToolkitBindsForceIsolation:
             return []
 
         for component_cls in (
-            fba.SearchComponentTypes, fba.DescribeComponentType, fba.DescribeFlowIO,
-            fba.GenerateComponent, fba.GetFieldValue, fba.ProposeFieldEdit,
-            fba.ProposePlan, fba.AddComponent, fba.RemoveComponent,
-            fba.ConnectComponents, fba.ConfigureComponent, fba.BuildFlowFromSpec,
+            fba.SearchComponentTypes,
+            fba.DescribeComponentType,
+            fba.DescribeFlowIO,
+            fba.GenerateComponent,
+            fba.GetFieldValue,
+            fba.ProposeFieldEdit,
+            fba.ProposePlan,
+            fba.AddComponent,
+            fba.RemoveComponent,
+            fba.ConnectComponents,
+            fba.ConfigureComponent,
+            fba.BuildFlowFromSpec,
             fba.RunFlow,
         ):
             monkeypatch.setattr(component_cls, "to_toolkit", fake_to_toolkit, raising=True)

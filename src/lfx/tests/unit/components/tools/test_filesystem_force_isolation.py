@@ -73,12 +73,18 @@ class TestForceIsolationOverridesAutoLogin:
     ) -> None:
         base = tmp_path / "base"
         alice = _make_component(
-            monkeypatch=monkeypatch, base_dir=base, auto_login=True,
-            user_id="user-alice", force_isolation=True,
+            monkeypatch=monkeypatch,
+            base_dir=base,
+            auto_login=True,
+            user_id="user-alice",
+            force_isolation=True,
         )
         bob = _make_component(
-            monkeypatch=monkeypatch, base_dir=base, auto_login=True,
-            user_id="user-bob", force_isolation=True,
+            monkeypatch=monkeypatch,
+            base_dir=base,
+            auto_login=True,
+            user_id="user-bob",
+            force_isolation=True,
         )
 
         alice._write_file("secret.md", "alice-owned")

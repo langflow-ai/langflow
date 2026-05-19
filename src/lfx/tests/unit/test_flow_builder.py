@@ -74,6 +74,17 @@ REGISTRY = {
             },
         },
     ),
+    "WithMeta": _make_template(
+        "With Meta",
+        template_fields={
+            "_type": "CustomComponent",  # non-dict reserved template entry
+            "input_value": {
+                "display_name": "Input",
+                "type": "str",
+                "value": "",
+            },
+        },
+    ),
     "OpenAIModel": _make_template(
         "OpenAI",
         outputs=[
@@ -201,6 +212,18 @@ class TestComponent:
         r = add_component(flow, "ChatInput", REGISTRY)
         with pytest.raises(ValueError, match="Unknown parameter"):
             configure_component(flow, r["id"], {"nonexistent_field": "val"})
+
+    def test_should_reject_when_param_targets_non_dict_template_entry(self):
+        # Bug I7: configure_component silently wrapped a non-dict reserved
+        # template entry (e.g. "_type") into {"value": ...}, corrupting the
+        # node. It must reject the key instead.
+        flow = _fresh_flow()
+        r = add_component(flow, "WithMeta", REGISTRY)
+        with pytest.raises(ValueError, match="not a configurable field"):
+            configure_component(flow, r["id"], {"_type": "Hijacked"})
+        node = flow["data"]["nodes"][0]
+        # The reserved entry must remain the original string, untouched.
+        assert node["data"]["node"]["template"]["_type"] == "CustomComponent"
 
     def test_get_component(self):
         flow = _fresh_flow()
