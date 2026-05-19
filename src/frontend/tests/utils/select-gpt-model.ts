@@ -106,7 +106,7 @@ export const selectGptModel = async (page: Page) => {
 
     const selectedOption = page.getByTestId(`${modelName}-option`);
     await expect(selectedOption).toBeVisible({ timeout: 30000 });
-    await selectedOption.click();
+    await selectedOption.dispatchEvent("click");
 
     if (i < gptModelDropdownCount - 1) {
       await unselectNodes(page);
