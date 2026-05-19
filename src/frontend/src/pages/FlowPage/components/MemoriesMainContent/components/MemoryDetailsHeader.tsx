@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/utils/utils";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -146,7 +147,10 @@ export function MemoryDetailsHeader({
           className="gap-2"
         >
           <span
-            className={`h-2 w-2 shrink-0 rounded-full ${memory.is_active ? "bg-accent-emerald-foreground" : "bg-muted-foreground"}`}
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              memory.is_active ? "bg-accent-emerald-foreground" : "bg-muted-foreground",
+            )}
           />
           Auto-capture
         </Button>
@@ -160,7 +164,7 @@ export function MemoryDetailsHeader({
         >
           <IconComponent
             name="RefreshCw"
-            className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            className={cn("h-4 w-4", isRefreshing && "animate-spin")}
           />
         </Button>
 

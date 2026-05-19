@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../helpers";
+
+const noop = () => {};
 import { KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoryKnowledgeBaseSectionProps } from "../types";
 
@@ -91,7 +93,7 @@ export function MemoryKnowledgeBaseSection({
                     >
                       <StringReader
                         editable={false}
-                        setValue={() => {}}
+                        setValue={noop}
                         string={doc.sender || "-"}
                       />
                     </TableCell>
@@ -101,7 +103,7 @@ export function MemoryKnowledgeBaseSection({
                     >
                       <StringReader
                         editable={false}
-                        setValue={() => {}}
+                        setValue={noop}
                         string={doc.job_id || "-"}
                       />
                     </TableCell>
@@ -111,7 +113,7 @@ export function MemoryKnowledgeBaseSection({
                     >
                       <StringReader
                         editable={false}
-                        setValue={() => {}}
+                        setValue={noop}
                         string={doc.content}
                       />
                     </TableCell>
@@ -121,7 +123,7 @@ export function MemoryKnowledgeBaseSection({
                     >
                       <StringReader
                         editable={false}
-                        setValue={() => {}}
+                        setValue={noop}
                         string={formatTimestamp(
                           doc.ingestion_timestamp || doc.timestamp,
                         )}
