@@ -1,127 +1,35 @@
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Loading from "@/components/ui/loading";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { cn } from "@/utils/utils";
 import type { ProviderAccount } from "../types";
+import ProviderCard from "./provider-card";
 
 interface ProvidersTableProps {
   providers: ProviderAccount[];
   deletingId?: string | null;
+  deploymentTotalsByProvider?: Record<string, number>;
+  onConfigureProvider?: (provider: ProviderAccount) => void;
   onDeleteProvider?: (provider: ProviderAccount) => void;
-}
-
-function truncateMiddle(text: string, maxLength = 50): string {
-  if (text.length <= maxLength) return text;
-  const half = Math.floor((maxLength - 3) / 2);
-  return `${text.slice(0, half)}...${text.slice(-half)}`;
-}
-
-function formatDate(iso: string | null) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 export default function ProvidersTable({
   providers,
   deletingId,
+  deploymentTotalsByProvider = {},
+  onConfigureProvider,
   onDeleteProvider,
 }: ProvidersTableProps) {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>URL</TableHead>
-          <TableHead>Provider Key</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead className="w-10" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {providers.map((provider) => {
-          const isDeleting = deletingId === provider.id;
-          return (
-            <TableRow
-              key={provider.id}
-              data-testid={`provider-row-${provider.id}`}
-              className={cn(isDeleting && "pointer-events-none opacity-50")}
-            >
-              <TableCell>
-                <span className="font-medium">{provider.name}</span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm text-muted-foreground">
-                  {typeof provider.provider_data?.url === "string"
-                    ? truncateMiddle(provider.provider_data.url)
-                    : "—"}
-                </span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm">{provider.provider_key}</span>
-              </TableCell>
-              <TableCell>
-                <span className="text-sm">
-                  {formatDate(provider.created_at)}
-                </span>
-              </TableCell>
-              <TableCell>
-                {isDeleting ? (
-                  <div className="flex h-8 w-8 items-center justify-center">
-                    <Loading size={16} className="text-muted-foreground" />
-                  </div>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        data-testid={`actions-provider-${provider.id}`}
-                        aria-label={`Actions for ${provider.name}`}
-                      >
-                        <ForwardedIconComponent
-                          name="EllipsisVertical"
-                          className="h-4 w-4"
-                        />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => onDeleteProvider?.(provider)}
-                      >
-                        <ForwardedIconComponent
-                          name="Trash2"
-                          className="mr-2 h-4 w-4"
-                        />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {providers.map((provider) => {
+        return (
+          <ProviderCard
+            key={provider.id}
+            provider={provider}
+            deploymentCount={deploymentTotalsByProvider[provider.id] ?? 0}
+            isDeleting={deletingId === provider.id}
+            onConfigure={onConfigureProvider}
+            onDelete={onDeleteProvider}
+          />
+        );
+      })}
+    </div>
   );
 }
