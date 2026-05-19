@@ -726,6 +726,55 @@ def test_serve_command_passes_workers_to_uvicorn():
     assert call_kwargs.get("factory") is True
 
 
+def test_serve_command_sets_startup_paths_env_for_multi_worker(tmp_path):
+    """serve_command must set LFX_SERVE_STARTUP_PATHS so each worker can reload flows."""
+    import json
+    import os
+    from unittest.mock import MagicMock, patch
+
+    from lfx.cli.commands import serve_command
+    from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    captured_env: dict = {}
+
+    def capture_env(*_a, **_kw):
+        captured_env.update(os.environ)
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps(flow_data))
+
+    with (
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+        patch("lfx.cli.commands.uvicorn.run", side_effect=capture_env),
+    ):
+        serve_command(
+            script_paths=[str(p)],
+            host="127.0.0.1",
+            port=9999,
+            workers=2,
+            verbose=False,
+            env_file=None,
+            log_level="warning",
+            flow_json=None,
+            flow_dir=None,
+            stdin=False,
+            check_variables=False,
+            no_env_fallback=False,
+        )
+
+    assert _SERVE_STARTUP_PATHS_ENV in captured_env, "LFX_SERVE_STARTUP_PATHS must be set before uvicorn.run()"
+    paths = json.loads(captured_env[_SERVE_STARTUP_PATHS_ENV])
+    assert len(paths) == 1
+    assert paths[0].endswith("flow.json"), f"expected flow.json in paths, got {paths}"
+    # Must be cleaned up after uvicorn exits
+    assert _SERVE_STARTUP_PATHS_ENV not in os.environ, "LFX_SERVE_STARTUP_PATHS must be cleaned up after server exits"
+
+
 def test_serve_command_warns_when_workers_gt1_without_flow_dir():
     """--workers > 1 without --flow-dir should emit a warning to stderr."""
     import json

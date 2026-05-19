@@ -350,10 +350,22 @@ def serve_command(
                     _SERVE_ENV_PREFIX,
                     _SERVE_FLOW_DIR_ENV,
                     _SERVE_NO_ENV_FALLBACK_ENV,
+                    _SERVE_STARTUP_PATHS_ENV,
                 )
 
                 os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
                 os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
+
+                # Pass startup file paths so each worker loads them into its own memory.
+                # For flow_json/stdin the parent already wrote a temp file; its path is
+                # in temp_file_to_cleanup, which outlives uvicorn.run() (cleaned up in
+                # the outer finally).
+                startup_paths: list[str] = []
+                if script_paths:
+                    startup_paths = [str(Path(p).resolve()) for p in script_paths]
+                elif temp_file_to_cleanup:
+                    startup_paths = [temp_file_to_cleanup]
+                os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths)
                 try:
                     uvicorn.run(
                         "lfx.cli.serve_app:create_serve_app",

@@ -955,6 +955,83 @@ class TestCreateServeApp:
         assert "/flows/flow-2/run" not in routes
 
 
+class TestCreateServeAppFactory:
+    """Tests for the create_serve_app() ASGI factory used by uvicorn workers."""
+
+    def test_create_serve_app_empty_start(self):
+        """create_serve_app() with no env vars produces an empty but functional app."""
+        import os
+        from unittest.mock import patch
+
+        from lfx.cli.serve_app import create_serve_app
+
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}, clear=False):  # pragma: allowlist secret
+            # Remove startup paths env if present
+            env = {k: v for k, v in os.environ.items() if not k.startswith("LFX_SERVE_")}
+            with patch.dict(os.environ, env, clear=True):
+                os.environ["LANGFLOW_API_KEY"] = "test-key"  # pragma: allowlist secret
+                app = create_serve_app()
+
+        routes = [r.path for r in app.routes]
+        assert "/health" in routes
+        assert "/flows" in routes
+        assert "/flows/upload/" in routes
+
+    def test_create_serve_app_loads_startup_paths(self, tmp_path):
+        """create_serve_app() must load flows listed in LFX_SERVE_STARTUP_PATHS."""
+        import json
+        import os
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV, create_serve_app
+
+        # Use the shared test flow file
+        src = Path(__file__).parent.parent.parent / "data" / "simple_chat_no_llm.json"
+        flow_path = tmp_path / "simple_chat.json"
+        flow_path.write_bytes(src.read_bytes())
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        env_override = {
+            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
+            _SERVE_STARTUP_PATHS_ENV: json.dumps([str(flow_path)]),
+        }
+
+        with (
+            patch.dict(os.environ, env_override),
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+        ):
+            app = create_serve_app()
+
+        # The flow must be in the registry — len > 0
+        assert app.state.registry is not None
+        assert len(app.state.registry) > 0, "worker must have the startup flow in its registry"
+
+    def test_create_serve_app_startup_paths_cleaned_from_env_by_caller(self):
+        """LFX_SERVE_STARTUP_PATHS must be consumed by create_serve_app() but not deleted —
+        cleanup is the caller's (serve_command's) responsibility via the prefix sweep."""
+        import json
+        import os
+        from unittest.mock import patch
+
+        from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV, create_serve_app
+
+        env_override = {
+            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
+            _SERVE_STARTUP_PATHS_ENV: json.dumps([]),
+        }
+
+        with patch.dict(os.environ, env_override):
+            # Empty paths list → falls through to else branch
+            app = create_serve_app()
+            # The env var should still be present during the call (not deleted inside)
+            assert _SERVE_STARTUP_PATHS_ENV in os.environ
+
+        assert len(app.state.registry) == 0
+
+
 class TestServeAppEndpoints:
     """Test the FastAPI endpoints."""
 

@@ -53,6 +53,7 @@ API_KEY_NAME = "x-api-key"
 _SERVE_ENV_PREFIX = "LFX_SERVE_"
 _SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
 _SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
+_SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -743,14 +744,51 @@ def create_serve_app() -> FastAPI:
     import os
     from pathlib import Path
 
+    import asyncio
+
     from lfx.cli.flow_store import FilesystemFlowStore, NullFlowStore
 
     flow_dir_str = os.environ.get(_SERVE_FLOW_DIR_ENV)
     no_env_fallback = os.environ.get(_SERVE_NO_ENV_FALLBACK_ENV, "0") == "1"
+    startup_paths_json = os.environ.get(_SERVE_STARTUP_PATHS_ENV, "")
+
     flow_dir = Path(flow_dir_str) if flow_dir_str else None
-
     flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
-    registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
-    registry.warm_from_store()
 
+    if startup_paths_json:
+        # Each worker independently loads startup flows from the original files into its
+        # own in-memory registry — no shared filesystem store required for startup flows.
+        import concurrent.futures
+
+        from lfx.cli.commands import build_registry_from_directory, build_registry_from_paths
+
+        startup_paths = [Path(p) for p in json.loads(startup_paths_json)]
+
+        # ``create_serve_app`` is called by uvicorn as an ASGI app factory while an
+        # event loop is already running in the worker process.  ``asyncio.run()``
+        # raises RuntimeError in that situation.  Running the coroutine in a fresh
+        # thread gives it a clean event loop with no interference.
+        if len(startup_paths) == 1 and startup_paths[0].is_dir():
+            coro = build_registry_from_directory(
+                startup_paths[0],
+                lambda _: None,
+                check_variables=False,
+                no_env_fallback=no_env_fallback,
+                store=flow_store,
+            )
+        else:
+            coro = build_registry_from_paths(
+                startup_paths,
+                lambda _: None,
+                check_variables=False,
+                no_env_fallback=no_env_fallback,
+                store=flow_store,
+            )
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            registry = pool.submit(asyncio.run, coro).result()
+    else:
+        registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
+
+    registry.warm_from_store()
     return create_multi_serve_app(registry=registry)
