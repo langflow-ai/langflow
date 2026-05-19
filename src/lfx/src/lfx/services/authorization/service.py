@@ -23,15 +23,18 @@ class AuthorizationService(BaseAuthorizationService):
     """
 
     def __init__(self) -> None:
+        """Mark the no-op service as ready immediately (no external resources)."""
         super().__init__()
         self.set_ready()
         logger.debug("Authorization service initialized (no-op)")
 
     @property
     def name(self) -> str:
+        """Return the canonical service-type name."""
         return ServiceType.AUTHORIZATION_SERVICE.value
 
     async def is_enabled(self) -> bool:
+        """Always return False — the no-op service never enforces."""
         return False
 
     async def enforce(
@@ -43,6 +46,7 @@ class AuthorizationService(BaseAuthorizationService):
         act: str,  # noqa: ARG002
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> bool:
+        """Always allow — the no-op default permits every request."""
         return True
 
     async def batch_enforce(
@@ -53,4 +57,5 @@ class AuthorizationService(BaseAuthorizationService):
         requests: Sequence[tuple[str, str]],
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[bool]:
+        """Return a True list matching the request count."""
         return [True] * len(requests)

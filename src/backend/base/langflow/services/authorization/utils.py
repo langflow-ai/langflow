@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
+    """Build the base context dict passed to authorization enforce calls."""
     return {"is_superuser": getattr(user, "is_superuser", False)}
 
 
@@ -68,4 +69,5 @@ async def ensure_flow_permission(
 
 
 def permission_denied_to_http(exc: InsufficientPermissionsError) -> HTTPException:
+    """Translate an InsufficientPermissionsError into a 403 HTTPException."""
     return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message)

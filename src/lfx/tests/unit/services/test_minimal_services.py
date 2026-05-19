@@ -282,12 +282,12 @@ class TestVariableService:
     @pytest.mark.asyncio
     async def test_get_wxo_bearer_alias_from_environment(self, variables):
         """Test that bearer aliases are synthesized from WXO access tokens."""
-        os.environ["wxo_demo_access_token"] = "token-123"
+        os.environ["WXO_DEMO_ACCESS_TOKEN"] = "token-123"  # noqa: S105
         try:
             value = await variables.get_variable("wxo_demo_bearer_token")
             assert value == "Bearer token-123"
         finally:
-            del os.environ["wxo_demo_access_token"]
+            del os.environ["WXO_DEMO_ACCESS_TOKEN"]
 
     @pytest.mark.asyncio
     async def test_get_variable_from_langflow_request_variables(self, variables):
@@ -320,24 +320,24 @@ class TestVariableService:
             del os.environ["LANGFLOW_REQUEST_VARIABLES"]
 
     @pytest.mark.asyncio
-    async def test_non_wxo_access_token_does_not_create_bearer_alias(self, variables):
-        """Test that generic access token names also expose bearer aliases."""
-        os.environ["demo_access_token"] = "token-456"
+    async def test_generic_access_token_exposes_bearer_alias(self, variables):
+        """Test that generic (non-WXO) access token names expose bearer aliases."""
+        os.environ["DEMO_ACCESS_TOKEN"] = "token-456"  # noqa: S105
         try:
             value = await variables.get_variable("demo_bearer_token")
             assert value == "Bearer token-456"
         finally:
-            del os.environ["demo_access_token"]
+            del os.environ["DEMO_ACCESS_TOKEN"]
 
     @pytest.mark.asyncio
     async def test_bearer_alias_not_listed_when_not_set_in_memory(self, variables):
         """Test that synthesized aliases are not persisted in in-memory variable list."""
-        os.environ["wxo_demo_access_token"] = "token-789"
+        os.environ["WXO_DEMO_ACCESS_TOKEN"] = "token-789"  # noqa: S105
         try:
             assert await variables.get_variable("wxo_demo_bearer_token") == "Bearer token-789"
             assert "wxo_demo_bearer_token" not in variables.list_variables()
         finally:
-            del os.environ["wxo_demo_access_token"]
+            del os.environ["WXO_DEMO_ACCESS_TOKEN"]
 
     @pytest.mark.asyncio
     async def test_token_access_token_alias_resolution_from_request_variables(self, variables):
@@ -359,13 +359,13 @@ class TestVariableService:
 
     @pytest.mark.asyncio
     async def test_global_var_alias_resolution(self, variables):
-        """Test x-langflow-global-var-* alias lookup."""
-        os.environ["x-langflow-global-var-access-token"] = "global-token"
+        """Test x-langflow-global-var-* alias lookup (header-name format is intentionally lowercase)."""
+        os.environ["x-langflow-global-var-access-token"] = "global-token"  # noqa: SIM112
         try:
             assert await variables.get_variable("access_token") == "global-token"
             assert await variables.get_variable("token") == "global-token"
         finally:
-            del os.environ["x-langflow-global-var-access-token"]
+            del os.environ["x-langflow-global-var-access-token"]  # noqa: SIM112
 
     @pytest.mark.asyncio
     async def test_teardown(self, variables):

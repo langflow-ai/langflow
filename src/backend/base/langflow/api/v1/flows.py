@@ -37,7 +37,6 @@ from langflow.api.v1.flows_helpers import (
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.authorization.utils import ensure_flow_permission
@@ -241,13 +240,13 @@ async def read_public_flow(
     session: DbSession,
     flow_id: UUID,
 ):
-    """Read a public flow."""
-    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
-    if access_type is not AccessTypeEnum.PUBLIC:
+    """Read a public flow without requiring authorization (public means public)."""
+    flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.access_type is not AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
-
-    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
+    return FlowRead.model_validate(flow, from_attributes=True)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
