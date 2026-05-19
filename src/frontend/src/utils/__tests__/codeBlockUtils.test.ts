@@ -124,7 +124,11 @@ describe("codeBlockUtils", () => {
 
       it("should_handle_null_props_gracefully", () => {
         // TypeScript would prevent this, but testing runtime safety
-        const result = isCodeBlock(undefined, null as any, "code");
+        const result = isCodeBlock(
+          undefined,
+          null as unknown as Record<string, unknown>,
+          "code",
+        );
         expect(result).toBe(false);
       });
 
