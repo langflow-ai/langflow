@@ -16,6 +16,7 @@ from lfx.utils.async_helpers import run_until_complete
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
 ) -> list[Message]:
     """Store a message in the memory.
 
@@ -23,6 +24,7 @@ async def astore_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -56,6 +58,10 @@ async def astore_message(
                     "Downstream code that expects a UUID may surface a confusing error."
                 )
         message.flow_id = str(flow_id)
+    if run_id:
+        if isinstance(run_id, UUID):
+            run_id = str(run_id)
+        message.run_id = str(run_id)
 
     # In lfx, we use the service architecture - this is a simplified implementation
     # that doesn't persist to database but maintains the message in memory
@@ -89,6 +95,7 @@ async def astore_message(
 def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -98,6 +105,7 @@ def store_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -105,7 +113,7 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
 
 
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:

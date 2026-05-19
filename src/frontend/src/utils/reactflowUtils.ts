@@ -257,7 +257,13 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
               )?.length ?? 0) <= 1) &&
             output.name === name,
         );
-        const output = outputBySelectedOutput ?? outputByFallback;
+        // Prefer the stored edge name (outputByFallback) over selected_output:
+        // mode-based components (e.g. Knowledge) keep both outputs in the class
+        // list, so trusting selected_output here silently rewrites edges to the
+        // wrong handle. selected_output is still the canonical pick for
+        // single-output dropdown components — fall back to it only when the
+        // stored handle name no longer matches any visible output.
+        const output = outputByFallback ?? outputBySelectedOutput;
 
         if (output) {
           const outputTypes =

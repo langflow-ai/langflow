@@ -184,11 +184,8 @@ class MemoryBaseService(Service):
             if mb is None:
                 return None
 
-            # Validate API key before committing if preprocessing will be active after the patch.
-            effective_preprocessing = patch.preprocessing if patch.preprocessing is not None else mb.preprocessing
-            effective_preproc_model = patch.preproc_model if patch.preproc_model is not None else mb.preproc_model
-            if effective_preprocessing:
-                _validate_preprocessing_api_key(user_id, effective_preproc_model)
+            if mb.preprocessing:
+                _validate_preprocessing_api_key(user_id, mb.preproc_model)
 
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)

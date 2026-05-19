@@ -584,9 +584,26 @@ jobs:
           uv venv test-env --seed
         shell: bash
 
-      # Wheel installation steps — install langflow-sdk before LFX (sdk is not yet on PyPI)
-      - name: Install langflow-sdk from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
+      # Wheel installation steps — install SDK and LFX together when both are present.
+      - name: Install SDK and LFX packages from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '') && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        run: |
+          ls -la ./sdk-dist/
+          find ./sdk-dist -name "*.whl" -type f
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          SDK_WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          LFX_WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$SDK_WHEEL_FILE" ] && [ -n "$LFX_WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$SDK_WHEEL_FILE" "$LFX_WHEEL_FILE"
+          else
+            echo "Missing wheel file in ./sdk-dist/ or ./lfx-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install SDK package from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '') && (inputs.lfx-artifact-name == '' && needs.build-if-needed.outputs.lfx-artifact-name == '')
         run: |
           WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
@@ -597,8 +614,25 @@ jobs:
           fi
         shell: bash
 
-      - name: Install langflow-sdk from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
+      - name: Install SDK and LFX packages from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '') && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        run: |
+          ls -la ./sdk-dist/
+          find ./sdk-dist -name "*.whl" -type f
+          ls -la ./lfx-dist/
+          find ./lfx-dist -name "*.whl" -type f
+          SDK_WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+          LFX_WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+          if [ -n "$SDK_WHEEL_FILE" ] && [ -n "$LFX_WHEEL_FILE" ]; then
+            uv pip install --prerelease=allow --python ./test-env/bin/python "$SDK_WHEEL_FILE" "$LFX_WHEEL_FILE"
+          else
+            echo "Missing wheel file in ./sdk-dist/ or ./lfx-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install SDK package from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '') && (inputs.lfx-artifact-name == '' && needs.build-if-needed.outputs.lfx-artifact-name == '')
         run: |
           WHEEL_FILE=$(find ./sdk-dist -name "*.whl" -type f | head -1)
           if [ -n "$WHEEL_FILE" ]; then
@@ -610,7 +644,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '') && (inputs.sdk-artifact-name == '' && needs.build-if-needed.outputs.sdk-artifact-name == '')
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -652,7 +686,7 @@ jobs:
         shell: bash
 
       - name: Install LFX package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '') && (inputs.sdk-artifact-name == '' && needs.build-if-needed.outputs.sdk-artifact-name == '')
         run: |
           ls -la ./lfx-dist/
           find ./lfx-dist -name "*.whl" -type f
@@ -701,11 +735,20 @@ jobs:
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
+              INSTALL_WHEELS=("$LFX_WHEEL")
+              SDK_WHEEL=""
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+              fi
+              if [ -n "$SDK_WHEEL" ]; then
+                echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
+                INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
+              fi
               NO_DEPS="--no-deps"
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$LFX_WHEEL"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -729,11 +772,20 @@ jobs:
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
+              INSTALL_WHEELS=("$LFX_WHEEL")
+              SDK_WHEEL=""
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+              fi
+              if [ -n "$SDK_WHEEL" ]; then
+                echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
+                INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
+              fi
               NO_DEPS="--no-deps"
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$LFX_WHEEL"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
             fi
           fi
 
