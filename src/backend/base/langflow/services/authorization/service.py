@@ -1,4 +1,4 @@
-"""Langflow authorization service (OSS default — fail-closed when enabled without enterprise plugin)."""
+"""Langflow authorization service (OSS default — allows all; enterprise plugin enforces RBAC)."""
 
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ if TYPE_CHECKING:
 
 
 class LangflowAuthorizationService(BaseAuthorizationService):
-    """OSS authorization service.
+    """OSS authorization service (pass-through).
 
-    When ``AUTHZ_ENABLED`` is False (default), all requests are allowed.
-    When True, only superusers pass (if ``AUTHZ_SUPERUSER_BYPASS``) until an enterprise
-    plugin registers a Casbin-backed implementation via ``lfx.services`` entry points.
+    ``ensure_*`` helpers still run when ``AUTHZ_ENABLED`` is True so routes stay wired,
+    but this implementation always allows. Register an enterprise
+    ``authorization_service`` (e.g. Casbin) via ``lfx.toml`` for real enforcement.
     """
 
     def __init__(self, settings_service: SettingsService) -> None:
@@ -47,32 +47,16 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         domain: str,  # noqa: ARG002
         obj: str,  # noqa: ARG002
         act: str,  # noqa: ARG002
-        context: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> bool:
-        if not self._authz_settings().AUTHZ_ENABLED:
-            return True
-
-        ctx = context or {}
-        return bool(
-            self._authz_settings().AUTHZ_SUPERUSER_BYPASS and ctx.get("is_superuser"),
-        )
+        return True
 
     async def batch_enforce(
         self,
         *,
-        user_id: UUID,
-        domain: str,
+        user_id: UUID,  # noqa: ARG002
+        domain: str,  # noqa: ARG002
         requests: Sequence[tuple[str, str]],
-        context: dict[str, Any] | None = None,
+        context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[bool]:
-        if not self._authz_settings().AUTHZ_ENABLED:
-            return [True] * len(requests)
-
-        allowed = await self.enforce(
-            user_id=user_id,
-            domain=domain,
-            obj="*",
-            act="*",
-            context=context,
-        )
-        return [allowed] * len(requests)
+        return [True] * len(requests)

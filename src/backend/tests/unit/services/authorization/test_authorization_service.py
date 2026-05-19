@@ -30,26 +30,8 @@ async def test_enforce_allows_all_when_disabled(authz_service):
 
 
 @pytest.mark.anyio
-async def test_enforce_denies_non_superuser_when_enabled():
-    settings = SimpleNamespace(
-        auth_settings=SimpleNamespace(
-            AUTHZ_ENABLED=True,
-            AUTHZ_SUPERUSER_BYPASS=True,
-        )
-    )
-    service = LangflowAuthorizationService(settings)
-    user_id = uuid4()
-    assert not await service.enforce(
-        user_id=user_id,
-        domain="*",
-        obj="flow:abc",
-        act="write",
-        context={"is_superuser": False},
-    )
-
-
-@pytest.mark.anyio
-async def test_enforce_allows_superuser_when_enabled_and_bypass():
+async def test_enforce_allows_non_superuser_when_enabled():
+    """OSS stub does not deny; enterprise Casbin replaces this service for enforcement."""
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             AUTHZ_ENABLED=True,
@@ -63,7 +45,7 @@ async def test_enforce_allows_superuser_when_enabled_and_bypass():
         domain="*",
         obj="flow:abc",
         act="write",
-        context={"is_superuser": True},
+        context={"is_superuser": False},
     )
 
 
