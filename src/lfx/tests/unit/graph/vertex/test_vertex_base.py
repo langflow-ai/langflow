@@ -95,7 +95,7 @@ def test_vertex_cache_state_drops_component_instance():
     assert state["custom_component"] is None
     assert state["built_object"] is None
     assert state["built_result"] is None
-    restored_vertex = pickle.loads(pickle.dumps(vertex))
+    restored_vertex = pickle.loads(pickle.dumps(vertex))  # noqa: S301 - trusted test fixture
 
     assert restored_vertex.custom_component is None
     assert isinstance(restored_vertex.built_object, UnbuiltObject)
