@@ -1047,4 +1047,198 @@ describe("ModelInputComponent", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("ModelInput filters", () => {
+    // Restore the suite-level default mocks before each test in this block —
+    // ``jest.clearAllMocks`` only clears call history, not implementations,
+    // so a ``mockReturnValue`` from one test would otherwise leak into the
+    // next.
+    beforeEach(() => {
+      (useGetEnabledModels as jest.Mock).mockImplementation(() => ({
+        data: { enabled_models: {} },
+        isLoading: false,
+        isFetching: false,
+      }));
+      (useGetModelProviders as jest.Mock).mockImplementation(() => ({
+        data: mockProvidersData,
+        isLoading: false,
+        isFetching: false,
+      }));
+    });
+
+    /**
+     * Build a defaultProps clone with the requested filter on the
+     * ModelInput's template entry (mirrors the backend ModelInput(filters=...)
+     * declaration the frontend renders against).
+     */
+    const propsWithFilter = (
+      filters: Record<string, unknown>,
+    ): BaseInputProps & ModelInputComponentType => ({
+      ...defaultProps,
+      nodeClass: {
+        ...defaultProps.nodeClass!,
+        template: {
+          ...defaultProps.nodeClass!.template,
+          model: {
+            ...defaultProps.nodeClass!.template.model,
+            filters,
+          } as Record<string, unknown> as never,
+        },
+      },
+    });
+
+    it("hides tool-incompatible models from the dropdown when filters declare tool_calling=true", async () => {
+      // ``beforeEach`` resets the mocks to the suite-level default before
+      // every filter-block test; ``mockReturnValue`` here re-points them at
+      // the test-specific Google Generative AI payload for this single
+      // case. The next test sees the default again.
+      (useGetEnabledModels as jest.Mock).mockReturnValue({
+        data: {
+          enabled_models: {
+            "Google Generative AI": {
+              "gemini-3.1-flash-lite": true,
+              "gemini-3.1-flash-image-preview": true,
+            },
+          },
+        },
+        isLoading: false,
+      });
+      (useGetModelProviders as jest.Mock).mockReturnValue({
+        data: [
+          {
+            provider: "Google Generative AI",
+            is_enabled: true,
+            is_configured: true,
+            icon: "GoogleGenerativeAI",
+            models: [
+              {
+                model_name: "gemini-3.1-flash-lite",
+                metadata: { model_type: "llm", tool_calling: true },
+              },
+              {
+                model_name: "gemini-3.1-flash-image-preview",
+                metadata: { model_type: "llm", tool_calling: false },
+              },
+            ],
+          },
+        ],
+        isLoading: false,
+      });
+
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...propsWithFilter({ tool_calling: true })}
+          options={[]}
+        />,
+      );
+
+      const trigger = screen.getByRole("combobox");
+      await user.click(trigger);
+
+      // Tool-calling-capable model must appear (via the augment loop).
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("gemini-3.1-flash-lite-option"),
+        ).toBeInTheDocument();
+      });
+      // Tool-incompatible model must be filtered out — even though the
+      // backend lists it as enabled and the provider is configured.
+      expect(
+        screen.queryByTestId("gemini-3.1-flash-image-preview-option"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("drops options whose metadata fails the declared filter", async () => {
+      const options: ModelOption[] = [
+        {
+          id: "claude-sonnet",
+          name: "claude-sonnet",
+          icon: "Anthropic",
+          provider: "Anthropic",
+          metadata: { tool_calling: true },
+        },
+        {
+          id: "image-only",
+          name: "image-only",
+          icon: "Anthropic",
+          provider: "Anthropic",
+          metadata: { tool_calling: false },
+        },
+      ];
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...propsWithFilter({ tool_calling: true })}
+          options={options}
+        />,
+      );
+
+      await user.click(screen.getByRole("combobox"));
+      await waitFor(() => {
+        expect(screen.getByTestId("claude-sonnet-option")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("image-only-option")).not.toBeInTheDocument();
+    });
+
+    it("treats a missing metadata key as a filter failure (conservative)", async () => {
+      const options: ModelOption[] = [
+        {
+          id: "claude-known-good",
+          name: "claude-known-good",
+          icon: "Anthropic",
+          provider: "Anthropic",
+          metadata: { tool_calling: true },
+        },
+        {
+          id: "no-metadata",
+          name: "no-metadata",
+          icon: "Anthropic",
+          provider: "Anthropic",
+          metadata: {},
+        },
+      ];
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...propsWithFilter({ tool_calling: true })}
+          options={options}
+        />,
+      );
+      await user.click(screen.getByRole("combobox"));
+      await waitFor(() => {
+        expect(
+          screen.getByTestId("claude-known-good-option"),
+        ).toBeInTheDocument();
+      });
+      // Conservative drop: metadata doesn't declare tool_calling at all,
+      // so we can't verify the constraint — better hide than risk a
+      // runtime crash from a non-tool-calling pick.
+      expect(
+        screen.queryByTestId("no-metadata-option"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not filter anything when no filters are declared", async () => {
+      const options: ModelOption[] = [
+        {
+          id: "any-model",
+          name: "any-model",
+          icon: "OpenAI",
+          provider: "OpenAI",
+          // Empty metadata — proves filter is a no-op when filters aren't declared.
+          metadata: {},
+        },
+      ];
+      const user = userEvent.setup();
+      // defaultProps has no filters on its nodeClass.template.model.
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={options} />,
+      );
+      await user.click(screen.getByRole("combobox"));
+      await waitFor(() => {
+        expect(screen.getByTestId("any-model-option")).toBeInTheDocument();
+      });
+    });
+  });
 });
