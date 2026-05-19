@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
-from lfx.components.tools._filesystem_isolation import (
+from lfx.components.files_and_knowledge._filesystem_isolation import (
     IsolationConfig,
     load_isolation_config,
 )
-from lfx.components.tools._filesystem_namespace import (
+from lfx.components.files_and_knowledge._filesystem_namespace import (
     compute_user_namespace,
     load_or_create_pepper,
 )

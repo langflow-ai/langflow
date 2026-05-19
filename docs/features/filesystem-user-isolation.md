@@ -418,8 +418,8 @@ The pepper path is always `<BASE>/.fs_pepper`. No env var to override it.
 | Type | Name | Purpose |
 |---|---|---|
 | Module | `lfx.services.deps.get_settings_service` | Read AUTO_LOGIN from `auth_settings`. |
-| Module | `lfx.components.tools._filesystem_isolation` | Resolve BASE_DIR + pepper path from env into immutable `IsolationConfig`. |
-| Module | `lfx.components.tools._filesystem_namespace` | Pepper persistence + user_id → namespace HMAC. |
+| Module | `lfx.components.files_and_knowledge._filesystem_isolation` | Resolve BASE_DIR + pepper path from env into immutable `IsolationConfig`. |
+| Module | `lfx.components.files_and_knowledge._filesystem_namespace` | Pepper persistence + user_id → namespace HMAC. |
 | Library | `langchain_core.tools.StructuredTool` | Wrap each operation as an Agent-callable tool. |
 | Library | `pydantic.BaseModel` | Per-tool Pydantic args schemas. |
 | Stdlib | `hashlib.sha256` + `hmac` | Namespace derivation. |
