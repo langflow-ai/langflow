@@ -92,7 +92,7 @@ def register(app: typer.Typer) -> None:
             session_id=session_id,
         )
 
-    @app.command(name="serve", help="Serve a flow as an API", no_args_is_help=True, rich_help_panel="Running")
+    @app.command(name="serve", help="Serve a flow as an API", rich_help_panel="Running")
     def serve_command_wrapper(
         script_paths: list[str] | None = typer.Argument(
             default=None,

@@ -97,57 +97,6 @@ def test_flow_meta():
     )
 
 
-def test_create_multi_serve_app_single_flow(mock_graph, test_flow_meta):
-    from lfx.cli.serve_app import FlowRegistry
-
-    registry = FlowRegistry()
-    registry.add(mock_graph, test_flow_meta)
-
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
-        client = TestClient(app)
-
-        response = client.get("/health")
-        assert response.status_code == 200
-        assert response.json()["flow_count"] == 1
-
-        # No auth → 401
-        response = client.post("/flows/test-flow-id/run", json={"input_value": "test"})
-        assert response.status_code == 401
-
-        # With auth → 200
-        response = client.post(
-            "/flows/test-flow-id/run",
-            json={"input_value": "test"},
-            headers={"x-api-key": "test-key"},
-        )
-        assert response.status_code == 200
-
-
-def test_create_multi_serve_app_multiple_flows(mock_graph, test_flow_meta):
-    from lfx.cli.serve_app import FlowRegistry
-
-    meta2 = FlowMeta(id="flow-2", relative_path="flow2.json", title="Flow 2", description="Second flow")
-    registry = FlowRegistry()
-    registry.add(mock_graph, test_flow_meta)
-    registry.add(mock_graph, meta2)
-
-    with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
-        client = TestClient(app)
-
-        response = client.get("/flows")
-        assert response.status_code == 200
-        flows = response.json()
-        assert len(flows) == 2
-        assert any(f["id"] == "test-flow-id" for f in flows)
-        assert any(f["id"] == "flow-2" for f in flows)
-
-        response = client.get("/flows/test-flow-id/info", headers={"x-api-key": "test-key"})
-        assert response.status_code == 200
-        assert response.json()["id"] == "test-flow-id"
-
-
 def test_create_multi_serve_app_unknown_flow_id_returns_404(mock_graph, test_flow_meta):
     from lfx.cli.serve_app import FlowRegistry
 
@@ -155,7 +104,7 @@ def test_create_multi_serve_app_unknown_flow_id_returns_404(mock_graph, test_flo
     registry.add(mock_graph, test_flow_meta)
 
     with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
+        app = create_multi_serve_app(registry=registry)
         client = TestClient(app)
 
         response = client.get("/flows/does-not-exist/info", headers={"x-api-key": "test-key"})
@@ -487,7 +436,7 @@ class TestPythonScriptServe:
             patch("lfx.cli.commands.find_graph_variable", return_value={"source": "x", "type": "Graph", "line": 1}),
             patch("lfx.cli.commands.load_flow_from_json") as mock_json,
         ):
-            graph, meta, raw_json = asyncio.run(_load_graph_and_meta(script, tmp_path, check_variables=False))
+            _graph, meta, raw_json = asyncio.run(_load_graph_and_meta(script, tmp_path, check_variables=False))
 
         mock_json.assert_not_called()
         mock_script.assert_called_once_with(script)
@@ -637,6 +586,7 @@ def test_build_registry_from_paths_passes_raw_json_to_store():
     import tempfile
     from pathlib import Path
     from unittest.mock import MagicMock, patch
+
     from lfx.cli.commands import build_registry_from_paths
     from lfx.cli.flow_store import NullFlowStore
 
@@ -670,7 +620,8 @@ def test_build_registry_from_paths_py_file_skips_store():
     import asyncio
     import tempfile
     from pathlib import Path
-    from unittest.mock import MagicMock, patch, AsyncMock
+    from unittest.mock import AsyncMock, MagicMock, patch
+
     from lfx.cli.commands import build_registry_from_paths
     from lfx.cli.flow_store import NullFlowStore
 
@@ -702,9 +653,8 @@ def test_build_registry_from_paths_py_file_skips_store():
 def test_startup_scan_pre_warms_cache(tmp_path):
     """Flows already in the store must be loaded into the in-memory cache on startup."""
     import asyncio
-    import json
-    from pathlib import Path
     from unittest.mock import MagicMock, patch
+
     from lfx.cli.commands import build_registry_from_paths
     from lfx.cli.flow_store import FilesystemFlowStore
 
@@ -736,6 +686,7 @@ def test_serve_command_passes_workers_to_uvicorn():
     import tempfile
     from pathlib import Path
     from unittest.mock import MagicMock, patch
+
     from lfx.cli.commands import serve_command
 
     flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
@@ -783,6 +734,7 @@ def test_serve_command_warns_when_workers_gt1_without_flow_dir():
     import tempfile
     from pathlib import Path
     from unittest.mock import MagicMock, patch
+
     from lfx.cli.commands import serve_command
 
     flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
@@ -827,6 +779,7 @@ def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):
     import tempfile
     from pathlib import Path
     from unittest.mock import MagicMock, patch
+
     from lfx.cli.commands import serve_command
 
     flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}

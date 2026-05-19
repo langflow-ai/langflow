@@ -32,7 +32,9 @@ class TestLoadFromEnvVarsNoFallback:
         ):
             result = load_from_env_vars(params, ["api_key"], context={"no_env_fallback": True})
         assert result["api_key"] is None
-        mock_getenv.assert_not_called()
+        # Only the credential variable must never be looked up — logger internals may call getenv
+        credential_lookups = [c for c in mock_getenv.call_args_list if c.args and c.args[0] == "MY_SECRET"]
+        assert not credential_lookups, f"os.getenv('MY_SECRET') must not be called, got: {credential_lookups}"
 
     def test_request_variables_win_even_with_flag_true(self):
         """request_variables always takes priority, even when no_env_fallback=True."""

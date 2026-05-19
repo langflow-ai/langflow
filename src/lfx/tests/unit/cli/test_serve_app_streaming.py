@@ -125,7 +125,7 @@ def multi_serve_app(mock_graphs, mock_metas, monkeypatch):
         registry = FlowRegistry()
         for flow_id, graph in mock_graphs.items():
             registry.add(graph, mock_metas[flow_id])
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
+        app = create_multi_serve_app(registry=registry)
 
         # Override the dependency after app creation
         def mock_verify_api_key(query_param: str | None = None, header_param: str | None = None) -> str:  # noqa: ARG001
@@ -432,7 +432,7 @@ class TestMultiServeStreaming:
         registry = FlowRegistry()
         for flow_id, graph in mock_graphs.items():
             registry.add(graph, mock_metas[flow_id])
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
+        app = create_multi_serve_app(registry=registry)
 
         from lfx.cli.serve_app import verify_api_key
 
@@ -486,7 +486,7 @@ class TestMultiServeStreaming:
         registry = FlowRegistry()
         for flow_id, graph in mock_graphs.items():
             registry.add(graph, mock_metas[flow_id])
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
+        app = create_multi_serve_app(registry=registry)
 
         from lfx.cli.serve_app import verify_api_key
 

@@ -77,7 +77,11 @@ class FilesystemFlowStore:
             msg = f"Invalid flow_id: {flow_id!r}"
             raise ValueError(msg)
         path = self._dir / f"{flow_id}.json"
-        path.resolve().relative_to(self._dir.resolve())  # raises ValueError if outside
+        try:
+            path.resolve().relative_to(self._dir.resolve())
+        except ValueError as exc:
+            msg = f"Invalid flow_id: {flow_id!r}"
+            raise ValueError(msg) from exc
         return path
 
     def write(self, flow_id: str, flow_json: dict) -> None:
@@ -97,9 +101,10 @@ class FilesystemFlowStore:
         path = self._safe_path(flow_id)
         try:
             path.unlink()
-            return True
         except FileNotFoundError:
             return False
+        else:
+            return True
 
     def list_ids(self) -> list[str]:
         return [p.stem for p in self._dir.glob("*.json")]

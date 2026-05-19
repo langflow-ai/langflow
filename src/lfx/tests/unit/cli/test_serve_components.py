@@ -177,10 +177,7 @@ class TestFastAPIAppCreation:
         registry = FlowRegistry()
         registry.add(create_real_graph(), meta)
 
-        def verbose_print(msg):
-            pass  # Real function
-
-        app = create_multi_serve_app(registry=registry, verbose_print=verbose_print)
+        app = create_multi_serve_app(registry=registry)
 
         assert app.title.startswith("LFX Multi-Flow Server")
         assert "1" in app.title  # Should show count
@@ -191,11 +188,8 @@ class TestFastAPIAppCreation:
         registry = FlowRegistry()
         registry.add(create_real_graph(), meta)
 
-        def verbose_print(msg):
-            pass  # Real function
-
         # Registry always keeps graphs and metas in sync — no mismatch possible
-        app = create_multi_serve_app(registry=registry, verbose_print=verbose_print)
+        app = create_multi_serve_app(registry=registry)
         assert app is not None
 
 
@@ -207,14 +201,9 @@ class TestFastAPIEndpoints:
         self.real_graph = create_real_graph()
         meta = FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow")
 
-        def verbose_print(msg):
-            pass  # Real function
-
-        self.verbose_print = verbose_print
-
         registry = FlowRegistry()
         registry.add(self.real_graph, meta)
-        self.app = create_multi_serve_app(registry=registry, verbose_print=self.verbose_print)
+        self.app = create_multi_serve_app(registry=registry)
 
         # Override the dependency for testing
         def mock_verify_key():
@@ -304,7 +293,7 @@ class TestErrorHandling:
         meta = FlowMeta(id="test", relative_path="test.json", title="Test")
         registry = FlowRegistry()
         registry.add(create_real_graph(), meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda msg: None)  # noqa: ARG005
+        app = create_multi_serve_app(registry=registry)
         app.dependency_overrides[verify_api_key] = lambda: "test-key"
         client = TestClient(app)
 
@@ -323,7 +312,7 @@ class TestErrorHandling:
         meta = FlowMeta(id="test", relative_path="test.json", title="Test")
         registry = FlowRegistry()
         registry.add(create_real_graph(), meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda msg: None)  # noqa: ARG005
+        app = create_multi_serve_app(registry=registry)
         app.dependency_overrides[verify_api_key] = lambda: "test-key"
         client = TestClient(app)
 
@@ -374,7 +363,7 @@ class TestIntegration:
 
             registry = FlowRegistry()
             registry.add(loaded_graph, meta)
-            app = create_multi_serve_app(registry=registry, verbose_print=mock_verbose_print)
+            app = create_multi_serve_app(registry=registry)
             app.dependency_overrides[_verify_api_key] = lambda: "test-key"
             client = TestClient(app)
 

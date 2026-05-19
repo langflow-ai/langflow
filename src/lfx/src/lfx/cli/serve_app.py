@@ -40,7 +40,7 @@ from lfx.log.logger import logger
 from lfx.utils.flow_validation import validate_flow_for_current_settings
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable
+    from collections.abc import AsyncGenerator
 
     from lfx.cli.flow_store import FlowStore
     from lfx.graph import Graph
@@ -144,11 +144,13 @@ class FlowRegistry:
     preventing credential resolution from falling back to ``os.environ``.
     """
 
-    def __init__(self, *, no_env_fallback: bool = False, store: "FlowStore | None" = None) -> None:
+    def __init__(self, *, no_env_fallback: bool = False, store: FlowStore | None = None) -> None:
         from lfx.cli.flow_store import NullFlowStore
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
         self._no_env_fallback = no_env_fallback
         self._store = store if store is not None else NullFlowStore()
+        # Maps meta.id → store key when they differ (pre-placed files with human-readable names).
+        self._store_keys: dict[str, str] = {}
 
     def _stamp(self, graph: Graph) -> None:
         if self._no_env_fallback:
@@ -158,6 +160,14 @@ class FlowRegistry:
         if not overwrite and meta.id in self._flows:
             msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
             raise ValueError(msg)
+        # If overwriting a flow that was loaded from a differently-named store file
+        # (e.g. prompt_one.json whose JSON id is a UUID), delete the old file and
+        # clear the alias so the new file becomes the single source of truth.
+        if overwrite:
+            old_store_key = self._store_keys.pop(meta.id, None)
+            if old_store_key is not None:
+                self._store.delete(old_store_key)
+                self._flows.pop(old_store_key, None)
         if raw_json is not None:
             self._store.write(meta.id, raw_json)
         self._stamp(graph)
@@ -170,18 +180,25 @@ class FlowRegistry:
         if raw_json is None:
             return None
         graph, meta = self._reconstruct(flow_id, raw_json)
-        self._flows[flow_id] = (graph, meta)
+        # Cache under the authoritative JSON id so requests by UUID find it.
+        self._flows[meta.id] = (graph, meta)
+        if flow_id != meta.id:
+            # Also keep the filename-stem alias so warm_from_store lookups hit.
+            self._flows[flow_id] = (graph, meta)
+            # Remember the store key so remove() can delete the right file.
+            self._store_keys[meta.id] = flow_id
         return graph, meta
 
     def _reconstruct(self, flow_id: str, raw_json: dict) -> tuple[Graph, FlowMeta]:
+        actual_id = raw_json.get("id") or flow_id
         graph = load_flow_from_json(raw_json)
         graph.prepare()
-        graph.flow_id = flow_id
+        graph.flow_id = actual_id
         self._stamp(graph)
         meta = FlowMeta(
-            id=flow_id,
+            id=actual_id,
             relative_path="<filesystem>",
-            title=raw_json.get("name", flow_id),
+            title=raw_json.get("name", actual_id),
             description=raw_json.get("description"),
         )
         return graph, meta
@@ -197,31 +214,49 @@ class FlowRegistry:
             self.get(flow_id)  # no-op if already cached; loads from store otherwise
 
     def list_metas(self) -> list[FlowMeta]:
-        result = [meta for _, meta in self._flows.values()]
-        cached_ids = set(self._flows)
+        seen: set[str] = set()
+        result: list[FlowMeta] = []
+        for _, meta in self._flows.values():
+            if meta.id not in seen:
+                result.append(meta)
+                seen.add(meta.id)
         for flow_id in self._store.list_ids():
-            if flow_id not in cached_ids:
+            if flow_id not in self._flows:
                 raw_json = self._store.read(flow_id)
                 if raw_json:
-                    result.append(FlowMeta(
-                        id=flow_id,
-                        relative_path="<filesystem>",
-                        title=raw_json.get("name", flow_id),
-                        description=raw_json.get("description"),
-                    ))
+                    actual_id = raw_json.get("id") or flow_id
+                    if actual_id not in seen:
+                        result.append(FlowMeta(
+                            id=actual_id,
+                            relative_path="<filesystem>",
+                            title=raw_json.get("name", actual_id),
+                            description=raw_json.get("description"),
+                        ))
+                        seen.add(actual_id)
         return result
 
     def remove(self, flow_id: str) -> bool:
-        store_had_it = self._store.delete(flow_id)
-        mem_had_it = flow_id in self._flows
-        if mem_had_it:
-            del self._flows[flow_id]
+        # Resolve the canonical meta id and store key.
+        entry = self._flows.get(flow_id)
+        if entry is not None:
+            meta_id = entry[1].id
+            store_key = self._store_keys.get(meta_id, meta_id)
+            # Drop all cache keys that point to this flow (UUID and any filename alias).
+            for k in [meta_id, store_key]:
+                self._flows.pop(k, None)
+            self._store_keys.pop(meta_id, None)
+            mem_had_it = True
+        else:
+            # Flow not in memory; derive store key best-effort.
+            store_key = flow_id
+            mem_had_it = False
+        store_had_it = self._store.delete(store_key)
         return mem_had_it or store_had_it
 
     def __len__(self) -> int:
-        # Returns the in-memory cache count. With a FilesystemFlowStore, flows on
-        # disk but not yet requested (cache-miss loaded) are not counted here.
-        return len(self._flows)
+        # Counts distinct flows. With a FilesystemFlowStore, flows on disk but not
+        # yet cache-miss loaded are not counted here.
+        return len({meta.id for _, meta in self._flows.values()})
 
 
 class UploadFlowRequest(BaseModel):
@@ -339,7 +374,6 @@ async def run_flow_generator_for_serve(
 def create_multi_serve_app(
     *,
     registry: FlowRegistry,
-    verbose_print: Callable[[str], None],  # noqa: ARG001
 ) -> FastAPI:
     """Create a FastAPI app exposing LFX flows via a mutable registry.
 
@@ -576,4 +610,4 @@ def create_serve_app() -> FastAPI:
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
     registry.warm_from_store()
 
-    return create_multi_serve_app(registry=registry, verbose_print=lambda _: None)
+    return create_multi_serve_app(registry=registry)

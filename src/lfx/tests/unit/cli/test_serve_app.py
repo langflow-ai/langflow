@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -164,7 +164,7 @@ class TestFlowRegistry:
             def write(self, flow_id, flow_json): pass
             def read(self, flow_id):
                 return raw if flow_id == "flow-from-store" else None
-            def delete(self, flow_id): return False
+            def delete(self, _flow_id): return False
             def list_ids(self): return ["flow-from-store"]
 
         mock_graph = MagicMock()
@@ -184,6 +184,121 @@ class TestFlowRegistry:
         with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("should use cache")):
             registry.get("flow-from-store")
 
+    def test_registry_get_uses_json_id_over_filename_stem(self):
+        """When JSON has a different id than the filename stem, meta.id uses the JSON id.
+
+        The flow is reachable by that UUID (not just the filename stem).
+        """
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {
+            "name": "prompt_one",
+            "id": json_uuid,
+            "data": {"nodes": [], "edges": []},
+        }
+
+        class StubStore:
+            def write(self, *_a): pass
+            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
+            def delete(self, *_a): return False
+            def list_ids(self): return ["prompt_one"]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            result = registry.get("prompt_one")
+
+        assert result is not None
+        _, meta = result
+        assert meta.id == json_uuid, "meta.id must come from the JSON id field"
+        assert meta.title == "prompt_one"
+        # flow must also be reachable by UUID without hitting the store again
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("should use cache")):
+            by_uuid = registry.get(json_uuid)
+        assert by_uuid is not None
+
+    def test_list_metas_deduplicates_filename_and_json_id_aliases(self):
+        """list_metas() must not return the same flow twice when it's cached under two keys."""
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        class StubStore:
+            def write(self, *_a): pass
+            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
+            def delete(self, *_a): return False
+            def list_ids(self): return ["prompt_one"]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("prompt_one")
+
+        metas = registry.list_metas()
+        assert len(metas) == 1, f"expected 1 meta, got {len(metas)}: {[m.id for m in metas]}"
+        assert metas[0].id == json_uuid
+
+    def test_overwrite_aliased_flow_removes_old_store_file_and_alias(self):
+        """add(overwrite=True) on a pre-placed aliased flow must delete the old file.
+
+        Clears the stem alias so new workers don't reconstruct the stale version.
+        """
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        old_raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+        deleted: list[str] = []
+        store_data: dict[str, dict] = {"prompt_one": old_raw}
+
+        class StubStore:
+            def write(self, fid, data): store_data[fid] = data
+            def read(self, fid): return store_data.get(fid)
+            def delete(self, fid):
+                existed = fid in store_data
+                store_data.pop(fid, None)
+                deleted.append(fid)
+                return existed
+            def list_ids(self): return list(store_data)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("prompt_one")  # loads and aliases
+
+        # Overwrite via add() (simulating POST /flows/upload/ with replace=True)
+        new_graph = MagicMock()
+        new_graph.context = {}
+        new_meta = FlowMeta(id=json_uuid, relative_path="<uploaded>", title="prompt_one v2", description=None)
+        new_raw = {"name": "prompt_one v2", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+        registry.add(new_graph, new_meta, overwrite=True, raw_json=new_raw)
+
+        # Old file must be deleted; new file written under the UUID
+        assert "prompt_one" in deleted, "old store file must be deleted on overwrite"
+        assert json_uuid in store_data, "new file must be written under the UUID"
+        assert "prompt_one" not in store_data, "old file must be gone from store"
+
+        # In-memory: stem alias gone, UUID key has new graph
+        assert registry.get(json_uuid)[0] is new_graph
+        assert "prompt_one" not in registry._flows, "stem alias must be cleared"
+
+        # Simulate a new worker: fresh registry warms from store
+        new_registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=new_graph):
+            new_registry.warm_from_store()
+        result = new_registry.get(json_uuid)
+        assert result is not None
+        assert result[1].title == "prompt_one v2", "new worker must serve the updated flow, not the old one"
+
     def test_registry_add_with_raw_json_writes_to_store(self):
         """add(raw_json=...) must write to store."""
         from unittest.mock import MagicMock
@@ -192,8 +307,8 @@ class TestFlowRegistry:
 
         class SpyStore:
             def write(self, flow_id, flow_json): written[flow_id] = flow_json
-            def read(self, flow_id): return None
-            def delete(self, flow_id): return False
+            def read(self, _flow_id): return None
+            def delete(self, _flow_id): return False
             def list_ids(self): return []
 
         registry = FlowRegistry(store=SpyStore())
@@ -213,8 +328,8 @@ class TestFlowRegistry:
 
         class SpyStore:
             def write(self, flow_id, flow_json): written[flow_id] = flow_json
-            def read(self, flow_id): return None
-            def delete(self, flow_id): return False
+            def read(self, _flow_id): return None
+            def delete(self, _flow_id): return False
             def list_ids(self): return []
 
         registry = FlowRegistry(store=SpyStore())
@@ -230,8 +345,8 @@ class TestFlowRegistry:
         deleted = []
 
         class SpyStore:
-            def write(self, *a): pass
-            def read(self, *a): return None
+            def write(self, *_a): pass
+            def read(self, *_a): return None
             def delete(self, flow_id):
                 deleted.append(flow_id)
                 return True
@@ -246,14 +361,12 @@ class TestFlowRegistry:
 
     def test_list_metas_includes_store_only_flows(self):
         """list_metas() must include flows that are in the store but not yet cached."""
-        from unittest.mock import MagicMock, patch
-
         raw = {"name": "Store-Only Flow", "description": None, "data": {}, "id": "store-only"}
 
         class StubStore:
-            def write(self, *a): pass
+            def write(self, *_a): pass
             def read(self, flow_id): return raw if flow_id == "store-only" else None
-            def delete(self, *a): return False
+            def delete(self, *_a): return False
             def list_ids(self): return ["store-only"]
 
         registry = FlowRegistry(store=StubStore())
@@ -263,12 +376,10 @@ class TestFlowRegistry:
 
     def test_registry_remove_store_only_flow_returns_true(self):
         """remove() must return True when the flow is in the store but not in memory."""
-        from unittest.mock import patch
-
         raw = {"name": "Store-Only", "data": {}, "id": "store-only"}
 
         class StubStore:
-            def write(self, *a): pass
+            def write(self, *_a): pass
             def read(self, flow_id): return raw if flow_id == "store-only" else None
             def delete(self, flow_id): return flow_id == "store-only"
             def list_ids(self): return ["store-only"]
@@ -277,6 +388,135 @@ class TestFlowRegistry:
         # do NOT call registry.get() first — flow is store-only, not in memory
         result = registry.remove("store-only")
         assert result is True
+
+    def test_remove_by_uuid_clears_both_aliases(self):
+        """remove(uuid) must remove the filename-stem alias too, not leave a dangling entry."""
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        class StubStore:
+            def __init__(self): self._deleted: set[str] = set()
+            def write(self, *_a): pass
+            def read(self, fid): return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+            def delete(self, fid):
+                existed = fid == "prompt_one" and fid not in self._deleted
+                self._deleted.add(fid)
+                return existed
+            def list_ids(self): return [f for f in ["prompt_one"] if f not in self._deleted]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("prompt_one")
+
+        result = registry.remove(json_uuid)
+        assert result is True
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("store already deleted")):
+            assert registry.get(json_uuid) is None, "flow must be gone by UUID"
+            assert registry.get("prompt_one") is None, "filename alias must be cleared too"
+        assert registry.list_metas() == [], "list_metas must not return the removed flow"
+
+    def test_remove_by_stem_clears_both_aliases(self):
+        """remove(stem) must remove the UUID alias too, not leave a dangling entry."""
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        deleted: list[str] = []
+
+        class StubStore:
+            def __init__(self): self._deleted: set[str] = set()
+            def write(self, *_a): pass
+            def read(self, fid): return None if fid in self._deleted else (raw if fid == "prompt_one" else None)
+            def delete(self, fid):
+                deleted.append(fid)
+                existed = fid == "prompt_one" and fid not in self._deleted
+                self._deleted.add(fid)
+                return existed
+            def list_ids(self): return [f for f in ["prompt_one"] if f not in self._deleted]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("prompt_one")
+
+        result = registry.remove("prompt_one")
+        assert result is True
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=AssertionError("store already deleted")):
+            assert registry.get(json_uuid) is None, "UUID alias must be cleared too"
+            assert registry.get("prompt_one") is None, "stem must be gone"
+        assert "prompt_one" in deleted, "must delete the correct file (by stem, not UUID)"
+
+    def test_list_metas_uncached_store_flow_uses_json_id(self):
+        """list_metas() uncached branch must use the JSON id, not the filename stem."""
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {}}
+
+        class StubStore:
+            def write(self, *_a): pass
+            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
+            def delete(self, *_a): return False
+            def list_ids(self): return ["prompt_one"]
+
+        registry = FlowRegistry(store=StubStore())
+        # Do NOT call registry.get() first — flow stays uncached in the store branch
+        metas = registry.list_metas()
+        assert len(metas) == 1
+        assert metas[0].id == json_uuid, "uncached list_metas must use JSON id, not filename stem"
+
+    def test_len_not_double_counted_with_aliases(self):
+        """len() must return 1 when a flow is cached under both filename stem and JSON UUID."""
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        class StubStore:
+            def write(self, *_a): pass
+            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
+            def delete(self, *_a): return False
+            def list_ids(self): return ["prompt_one"]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("prompt_one")
+
+        assert len(registry) == 1, f"expected 1 distinct flow, got {len(registry)}"
+
+    def test_warm_from_store_makes_flow_reachable_by_json_uuid(self):
+        """After warm_from_store(), a pre-placed file must be reachable by its JSON UUID."""
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        class StubStore:
+            def write(self, *_a): pass
+            def read(self, flow_id): return raw if flow_id == "prompt_one" else None
+            def delete(self, *_a): return False
+            def list_ids(self): return ["prompt_one"]
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=StubStore())
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.warm_from_store()
+
+        result = registry.get(json_uuid)
+        assert result is not None, "flow must be reachable by its JSON UUID after warm_from_store()"
+        _, meta = result
+        assert meta.id == json_uuid
 
 
 class TestSecurityFunctions:
@@ -353,7 +593,7 @@ class TestCreateServeApp:
         registry = FlowRegistry()
         registry.add(real_graph, mock_meta)
 
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
 
         routes = [route.path for route in app.routes]
         assert "/health" in routes
@@ -372,7 +612,7 @@ class TestCreateServeApp:
         registry.add(real_graph, mock_meta)
         registry.add(graph2, meta2)
 
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
 
         routes = [route.path for route in app.routes]
         assert "/flows/{flow_id}/run" in routes
@@ -442,7 +682,6 @@ class TestServeAppEndpoints:
 
         app = create_multi_serve_app(
             registry=registry,
-            verbose_print=Mock(),
         )
 
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
@@ -484,7 +723,6 @@ class TestServeAppEndpoints:
 
         app = create_multi_serve_app(
             registry=registry,
-            verbose_print=Mock(),
         )
 
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
@@ -564,7 +802,6 @@ class TestServeAppEndpoints:
         registry.add(real_graph_with_async, meta)
         app = create_multi_serve_app(
             registry=registry,
-            verbose_print=Mock(),
         )
         headers = {"x-api-key": "test-api-key"}
 
@@ -786,7 +1023,7 @@ class TestServeAppEndpoints:
         )
         registry = FlowRegistry()
         registry.add(real_graph_with_async, meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         captured: dict = {}
@@ -822,7 +1059,7 @@ class TestServeAppEndpoints:
         )
         registry = FlowRegistry()
         registry.add(real_graph_with_async, meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
@@ -856,7 +1093,7 @@ class TestServeAppEndpoints:
         )
         registry = FlowRegistry()
         registry.add(real_graph_with_async, meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         captured: dict = {}
@@ -895,7 +1132,7 @@ class TestServeAppEndpoints:
         )
         registry = FlowRegistry()
         registry.add(real_graph_with_async, meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         captured: dict = {}
@@ -934,7 +1171,7 @@ class TestServeAppEndpoints:
         )
         registry = FlowRegistry()
         registry.add(real_graph_with_async, meta)
-        app = create_multi_serve_app(registry=registry, verbose_print=Mock())
+        app = create_multi_serve_app(registry=registry)
         monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
 
         async def mock_execute_noop(graph, input_value, session_id=None):  # noqa: ARG001
@@ -1014,7 +1251,7 @@ class TestUploadEndpoint:
         from lfx.cli.serve_app import FlowRegistry
 
         registry = FlowRegistry()
-        app = create_multi_serve_app(registry=registry, verbose_print=lambda x: None)  # noqa: ARG005
+        app = create_multi_serve_app(registry=registry)
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}):  # pragma: allowlist secret
             yield TestClient(app)
 

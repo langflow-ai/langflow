@@ -9,6 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 import uvicorn
@@ -28,6 +29,9 @@ from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.load import load_flow_from_json
 
+if TYPE_CHECKING:
+    from lfx.cli.flow_store import FlowStore
+
 # Initialize console
 console = Console()
 
@@ -42,9 +46,9 @@ async def _build_serve_registry(
     stdin: bool,
     check_variables: bool,
     no_env_fallback: bool,
-    flow_store: "FlowStore",
+    flow_store: FlowStore,
     verbose_print,
-) -> tuple["FlowRegistry", str | None]:
+) -> tuple[FlowRegistry, str | None]:
     """Build the FlowRegistry from startup inputs.
 
     Returns (registry, temp_file_path_or_None). Caller must unlink the temp
@@ -144,7 +148,12 @@ def serve_command(
     ),
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
-    workers: int = typer.Option(1, "--workers", "-w", help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing."),
+    workers: int = typer.Option(
+        1,
+        "--workers",
+        "-w",
+        help="Number of uvicorn worker processes. Use with --flow-dir for multi-worker flow sharing.",
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
     env_file: Path | None = typer.Option(
         None,
@@ -182,8 +191,8 @@ def serve_command(
         "--check-variables/--no-check-variables",
         help="Check global variables for environment compatibility",
     ),
-    no_env_fallback: bool = typer.Option(  # noqa: FBT001, FBT003
-        False,
+    no_env_fallback: bool = typer.Option(
+        False,  # noqa: FBT003
         "--no-env-fallback/--env-fallback",
         help=(
             "Disable os.environ fallback for credential variables. "
@@ -288,7 +297,7 @@ def serve_command(
             port = get_free_port(port)
             verbose_print(f"Port in use; using {port} instead")
 
-        serve_app = create_multi_serve_app(registry=registry, verbose_print=verbose_print)
+        serve_app = create_multi_serve_app(registry=registry)
         verbose_print("🚀 Starting server...")
 
         protocol = "http"
@@ -373,13 +382,17 @@ async def _load_graph_and_meta(
         if errors:
             msg = f"Global variable validation failed for {path.name}: {'; '.join(errors)}"
             raise ValueError(msg)
-    flow_id = flow_id_from_path(path, root_dir)
+    path_flow_id = flow_id_from_path(path, root_dir)
+    # Prefer the JSON's own id so the startup ID matches what workers reconstruct
+    # from the store (which also prefers raw_json["id"]).  Fall back to the
+    # path-derived UUID when the JSON has no id (e.g. hand-written flows).
+    flow_id = (raw_json.get("id") if raw_json else None) or path_flow_id
     graph.flow_id = flow_id
     meta = FlowMeta(
         id=flow_id,
         relative_path=str(path.relative_to(root_dir)),
-        title=path.stem,
-        description=None,
+        title=(raw_json.get("name") or path.stem) if raw_json else path.stem,
+        description=(raw_json.get("description")) if raw_json else None,
     )
     return graph, meta, raw_json
 
@@ -390,7 +403,7 @@ async def build_registry_from_directory(
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
-    store: "FlowStore | None" = None,
+    store: FlowStore | None = None,
 ) -> FlowRegistry:
     """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive)."""
     from lfx.cli.flow_store import NullFlowStore
@@ -427,14 +440,14 @@ async def build_registry_from_paths(
     *,
     check_variables: bool,
     no_env_fallback: bool = False,
-    store: "FlowStore | None" = None,
+    store: FlowStore | None = None,
 ) -> FlowRegistry:
     """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
     from lfx.cli.flow_store import NullFlowStore
 
     # Use a shared root so same-named files in different directories get distinct IDs.
     common_root = (
-        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path(".")
+        Path(os.path.commonpath([str(p) for p in paths])) if len(paths) > 1 else paths[0].parent if paths else Path()
     )
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
     errors: list[str] = []
