@@ -76,6 +76,57 @@ def test_should_skip_history_items_with_blank_text() -> None:
     assert _content_text(messages[1]) == "hi"
 
 
+def test_should_preserve_history_message_when_text_is_blank_but_files_are_attached() -> None:
+    """An image-only message from a PRIOR turn must survive into the next turn's context.
+
+    Bug Gabriel flagged on PR #12992 (discussion r3259225755): the history loop skipped
+    any item with blank text via `_has_blank_text`, ignoring attached files. A saved
+    `Message(text="", files=[image])` (image-only upload from an earlier turn) was
+    therefore dropped, so the image silently disappeared from context on the next turn.
+    `_append_input` already guards this for the current turn (line 66); the history loop
+    must apply the same files-aware guard.
+    """
+    from unittest.mock import patch
+
+    history_image = Message(text="", sender=MESSAGE_SENDER_USER, files=["/tmp/prev.png"])
+    multimodal_payload: list = [
+        {"type": "text", "text": ""},
+        {"type": "image_url", "image_url": {"url": "https://example.invalid/prev.png"}},
+    ]
+    follow_up = Message(text="what is in that image?", sender=MESSAGE_SENDER_USER)
+
+    # Patch to_lc_message so we don't touch the filesystem; the contract under test is
+    # "the history loop keeps a blank-text item when files are attached", not how
+    # Message.to_lc_message resolves file paths.
+    with patch.object(Message, "to_lc_message", return_value=HumanMessage(content=multimodal_payload)):
+        messages = build_initial_messages(input_value=follow_up, chat_history=[history_image])
+
+    assert len(messages) == 2, "the image-only history message must NOT be skipped"
+    assert isinstance(messages[0], HumanMessage)
+    assert isinstance(messages[0].content, list), "must keep the multimodal list payload from the history image message"
+    assert any(part.get("type") == "image_url" for part in messages[0].content)
+
+
+def test_should_skip_history_message_when_text_is_blank_and_files_is_empty() -> None:
+    """Symmetry with the current-turn guard: only ATTACHED files keep a blank item alive.
+
+    A history `Message` with blank text and an empty files list must still be skipped —
+    the files-aware guard must not promote a fully blank message just because the
+    `files` attribute exists.
+    """
+    history = [
+        Message(text="", sender=MESSAGE_SENDER_USER, files=[]),
+        Message(text="real history", sender=MESSAGE_SENDER_AI),
+    ]
+    msg = Message(text="hi", sender=MESSAGE_SENDER_USER)
+
+    messages = build_initial_messages(input_value=msg, chat_history=history)
+
+    assert len(messages) == 2, "blank text + empty files history item must still be skipped"
+    assert _content_text(messages[0]) == "real history"
+    assert _content_text(messages[1]) == "hi"
+
+
 def test_should_emit_continue_message_when_input_is_none_and_history_is_empty() -> None:
     """Empty/None input must produce a deterministic prompt — never let blank reach the LLM.
 

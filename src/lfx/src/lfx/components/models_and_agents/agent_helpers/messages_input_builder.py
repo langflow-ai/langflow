@@ -26,7 +26,11 @@ def build_initial_messages(
 
     if chat_history is not None:
         for item in _normalize_history(chat_history):
-            if _has_blank_text(item):
+            # Mirror the current-turn guard in `_append_input`: a blank-text item is
+            # only truly empty when it ALSO has no files. An image-only message from a
+            # prior turn (text="", files=[image]) must survive — dropping it silently
+            # loses multimodal context on the next turn.
+            if _has_blank_text(item) and not getattr(item, "files", None):
                 continue
             converted = _safe_to_lc_message(item)
             if converted is not None:
