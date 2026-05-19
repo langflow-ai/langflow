@@ -26,6 +26,10 @@ on:
         description: "Name of the langflow-sdk package artifact"
         required: false
         type: string
+      bundles-artifact-name:
+        description: "Name of the bundles package artifact (contains every src/bundles/*/ wheel)"
+        required: false
+        type: string
       pre_release:
         description: "Whether this is a pre-release build"
         required: false
@@ -42,6 +46,7 @@ jobs:
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
       lfx-artifact-name: ${{ steps.set-names.outputs.lfx-artifact-name }}
       sdk-artifact-name: ${{ steps.set-names.outputs.sdk-artifact-name }}
+      bundles-artifact-name: ${{ steps.set-names.outputs.bundles-artifact-name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -74,6 +79,25 @@ jobs:
           uv build --wheel --out-dir dist
       - name: Build main package
         run: make build_langflow args="--wheel"
+      - name: Build bundle wheels
+        id: build-bundles
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            echo "bundles-found=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          echo "bundles-found=1" >> $GITHUB_OUTPUT
+          ls -la bundles-dist/
       - name: Upload lfx artifact
         uses: actions/upload-artifact@v6
         with:
@@ -94,6 +118,12 @@ jobs:
         with:
           name: adhoc-dist-main
           path: dist
+      - name: Upload bundles artifact
+        if: steps.build-bundles.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: adhoc-dist-bundles
+          path: bundles-dist
       - name: Set artifact names
         id: set-names
         run: |
@@ -101,6 +131,11 @@ jobs:
           echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
           echo "lfx-artifact-name=adhoc-dist-lfx" >> $GITHUB_OUTPUT
           echo "sdk-artifact-name=adhoc-dist-sdk" >> $GITHUB_OUTPUT
+          if [ "${{ steps.build-bundles.outputs.bundles-found }}" = "1" ]; then
+            echo "bundles-artifact-name=adhoc-dist-bundles" >> $GITHUB_OUTPUT
+          else
+            echo "bundles-artifact-name=" >> $GITHUB_OUTPUT
+          fi
 
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
@@ -215,6 +250,13 @@ jobs:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
 
+      - name: Download bundles package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
+          path: ./bundles-dist
+
       - name: Create fresh virtual environment
         run: |
           uv venv test-env --seed
@@ -274,6 +316,21 @@ jobs:
             uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install bundle packages from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        run: |
+          ls -la ./bundles-dist/
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${BUNDLE_WHEELS[@]}"
+          else
+            echo "No bundle wheels found in ./bundles-dist/"
             exit 1
           fi
         shell: bash
@@ -345,6 +402,21 @@ jobs:
             uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install bundle packages from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        run: |
+          ls -la ./bundles-dist/
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "${BUNDLE_WHEELS[@]}"
+          else
+            echo "No bundle wheels found in ./bundles-dist/"
             exit 1
           fi
         shell: bash
@@ -579,6 +651,13 @@ jobs:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
 
+      - name: Download bundles package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        uses: actions/download-artifact@v7
+        with:
+          name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
+          path: ./bundles-dist
+
       - name: Create fresh virtual environment
         run: |
           uv venv test-env --seed
@@ -671,6 +750,21 @@ jobs:
           fi
         shell: bash
 
+      - name: Install bundle packages from wheel (Windows)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        run: |
+          ls -la ./bundles-dist/
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
+            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${BUNDLE_WHEELS[@]}"
+          else
+            echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+        shell: bash
+
       - name: Install main package from wheel (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
@@ -709,6 +803,21 @@ jobs:
             uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
           else
             echo "No wheel file found in ./base-dist/"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Install bundle packages from wheel (Unix)
+        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        run: |
+          ls -la ./bundles-dist/
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -gt 0 ]; then
+            printf '%s\n' "${BUNDLE_WHEELS[@]}"
+            uv pip install --prerelease=allow --python ./test-env/bin/python "${BUNDLE_WHEELS[@]}"
+          else
+            echo "No bundle wheels found in ./bundles-dist/"
             exit 1
           fi
         shell: bash
