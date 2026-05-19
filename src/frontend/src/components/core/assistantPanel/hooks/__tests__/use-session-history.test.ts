@@ -229,7 +229,12 @@ describe("useSessionHistory", () => {
     it("should_not_auto_persist_while_a_message_is_streaming", () => {
       const messages = [
         createMessage({ content: "Create a flow" }),
-        createMessage({ id: "m2", role: "assistant", content: "", status: "streaming" }),
+        createMessage({
+          id: "m2",
+          role: "assistant",
+          content: "",
+          status: "streaming",
+        }),
       ];
 
       renderHook(() => useSessionHistory("s1", messages, mockLoadSession));

@@ -694,7 +694,10 @@ describe("useAssistantChat — skip-all", () => {
 
       const { result } = renderHook(() => useAssistantChat());
       await act(async () => {
-        await result.current.handleSend("create a component and a flow", TEST_MODEL);
+        await result.current.handleSend(
+          "create a component and a flow",
+          TEST_MODEL,
+        );
       });
       await flushTimers();
 
