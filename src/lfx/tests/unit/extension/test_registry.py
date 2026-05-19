@@ -1,4 +1,4 @@
-"""Service-layer tests for the read-only Extension registry (LE-1022).
+"""Service-layer tests for the read-only Extension registry.
 
 The acceptance criterion this file covers:
 
@@ -167,7 +167,7 @@ def test_duplicate_extension_id_raises_typed_error(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Immutability invariant (the core LE-1022 acceptance test)
+# Immutability invariant
 # ---------------------------------------------------------------------------
 
 _MUTATION_VERBS = ("uninstall", "disable", "enable", "install", "update_entry")
@@ -186,9 +186,8 @@ def _invoke_mutation_verb(registry: ExtensionRegistry, verb: str, extension_id: 
 def test_installed_extension_is_immutable(tmp_path: Path, verb: str) -> None:
     """Every mutation verb on an installed Extension raises immutability.
 
-    Drives the LE-1022 acceptance: the invariant is observable today via
-    the service surface, even though uninstall doesn't ship as a CLI verb
-    until B4.
+    The invariant is observable via the service surface, even though
+    uninstall doesn't ship as a CLI verb yet.
     """
     discovered = _make_discovered(
         extension_id="lfx-openai",

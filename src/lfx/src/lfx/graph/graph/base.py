@@ -1206,7 +1206,7 @@ class Graph:
                 migration_error.hint,
                 migration_error.message,
             )
-        # TODO(LE-1017): when the extension events pipeline lands, emit a
+        # TODO: when the extension events pipeline lands, emit a
         # single ``flow-migrated`` event per flow per session here using
         # ExtensionEventsService, plus one event per ``ExtensionError`` in
         # ``migration_report.errors`` so the frontend can surface the

@@ -1,4 +1,4 @@
-"""Tests for ``lfx.extension.dev_registry`` (LE-1016).
+"""Tests for ``lfx.extension.dev_registry``.
 
 Coverage:
     - register / list / unregister round-trip

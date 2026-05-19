@@ -104,13 +104,13 @@ def test_extension_app_help_smoke(runner: CliRunner) -> None:
     assert result.exit_code == 0
     assert "validate" in result.stdout
     assert "schema" in result.stdout
-    # LE-1016 commands also appear in help.
+    # Authoring commands also appear in help.
     assert "init" in result.stdout
     assert "dev" in result.stdout
 
 
 # ---------------------------------------------------------------------------
-# init (LE-1016)
+# init
 # ---------------------------------------------------------------------------
 
 
@@ -180,7 +180,7 @@ def test_init_accepts_explicit_id_and_name(runner: CliRunner, tmp_path: Path) ->
 
 
 # ---------------------------------------------------------------------------
-# dev (LE-1016)
+# dev
 # ---------------------------------------------------------------------------
 
 
@@ -305,20 +305,50 @@ def test_dev_launch_env_respects_author_reload_off_path() -> None:
 
 
 # ---------------------------------------------------------------------------
-# extension reload (LE-1018) -- argument validation
+# extension reload -- argument validation
 # ---------------------------------------------------------------------------
 
 
-def test_reload_requires_explicit_bundle(runner: CliRunner) -> None:
-    """The CLI must not silently default --bundle to the extension id.
-
-    The conventional install shape is ``lfx-<provider>`` ext_id with bundle
-    name ``<provider>``; defaulting bundle to the extension id would POST
-    to ``/extensions/lfx-foo/bundles/lfx-foo/reload`` which always 404s.
-    Until the LE-1019 list endpoint can resolve the single bundle for an
-    extension, --bundle is mandatory.
-    """
-    result = runner.invoke(app, ["extension", "reload", "lfx-pilot"])
+def test_reload_with_neither_id_nor_all_exits_2(runner: CliRunner) -> None:
+    """No positional id AND no ``--all`` is a usage error."""
+    result = runner.invoke(app, ["extension", "reload"])
     assert result.exit_code == 2
     msg = result.stderr or result.stdout
+    # The error message should mention both alternatives so the user
+    # knows what to do next.
+    assert "--all" in msg
+    assert "extension id" in msg
+
+
+def test_reload_all_rejects_extra_args(runner: CliRunner) -> None:
+    """``--all`` is mutually exclusive with an explicit id / bundle name."""
+    result = runner.invoke(app, ["extension", "reload", "--all", "lfx-pilot"])
+    assert result.exit_code == 2
+    msg = result.stderr or result.stdout
+    assert "--all" in msg
+
+
+def test_reload_id_not_in_local_discovery_errors_clean(runner: CliRunner, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Error cleanly when the extension is not locally installed.
+
+    With --bundle omitted, the CLI exits 1 with a typed message rather
+    than POSTing with a guessed bundle name.
+    """
+    # Force discovery to return nothing.
+    from lfx.cli import _extension_commands as commands
+
+    monkeypatch.setattr(
+        "lfx.extension.discover_all_extensions",
+        lambda: ([], []),
+    )
+    # Defensive: prevent the module-cached reference if any.
+    monkeypatch.setattr(
+        commands,
+        "_post_reload",
+        lambda **_kwargs: pytest.fail("should not POST when discovery fails"),
+    )
+    result = runner.invoke(app, ["extension", "reload", "lfx-not-installed"])
+    assert result.exit_code == 1
+    msg = result.stderr or result.stdout
+    assert "lfx-not-installed" in msg
     assert "--bundle" in msg

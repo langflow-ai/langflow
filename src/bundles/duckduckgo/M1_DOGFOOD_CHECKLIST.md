@@ -1,11 +1,12 @@
 # M1 dogfood checklist — `lfx-duckduckgo` pilot bundle
 
-> **Status:** :hourglass: **OPEN** — the runtime half of LE-1023 has not been signed off.
-> A non-Extension-team engineer must complete the steps below and paste the
-> filled-in checklist into the PR before merge. Until that happens, the M1
-> proof-of-delivery gate is incomplete even if every automated check is green.
+> **Status:** :hourglass: **OPEN** — the runtime half of the DuckDuckGo
+> pilot has not been signed off. A non-Extension-team engineer must
+> complete the steps below and paste the filled-in checklist into the
+> PR before merge. Until that happens, the M1 proof-of-delivery gate is
+> incomplete even if every automated check is green.
 
-Per the [Bundle Separation Developer Guide §6 LE-1023], the M1 proof-of-delivery
+Per the Bundle Separation Developer Guide, the M1 proof-of-delivery
 gate has two halves:
 
 1. **Deserialize + build pipeline (automated)** — lives in
@@ -36,7 +37,7 @@ look materially the same between the pre- and post-migration releases?"
 A unit-style integration test cannot answer that because it would have
 to span a Python environment swap and touch the live DuckDuckGo
 backend.  A real dogfood run by an engineer who is *not* on the
-Extension team is what actually closes LE-1023.
+Extension team is what actually closes the DuckDuckGo pilot.
 
 The checklist below is intentionally a template — fill it in, do not edit it
 in advance. A pre-checked checklist is not evidence.
@@ -95,10 +96,8 @@ in advance. A pre-checked checklist is not evidence.
          not "search results are deterministic."
 
 6. **Sign-off.**
-   - [ ] Paste this completed checklist as a comment on the LE-1023
-         ticket
-   - [ ] Cross-link the comment in the PR description under
-         "M1 dogfood evidence"
+   - [ ] Cross-link the completed checklist in the PR description
+         under "M1 dogfood evidence"
 
 ---
 

@@ -867,7 +867,7 @@ class TestWebhookEventsStreamAuth:
     ):
         """Regression test: cross-user access to /webhook-events/{id} returns 404, not 403.
 
-        This ensures no existence oracle (LE-639 compliance).
+        This ensures no existence oracle is exposed.
         """
         flow_id = added_webhook_test["id"]
         endpoint = f"api/v1/webhook-events/{flow_id}"

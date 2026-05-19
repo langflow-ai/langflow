@@ -1,9 +1,9 @@
 """Tests for the LANGFLOW_COMPONENTS_PATH pathsep-split behavior in settings.
 
-LE-1015 requires that ``LANGFLOW_COMPONENTS_PATH=/path/A:/path/B`` is parsed
-as two component paths rather than treated as one literal non-existent path.
-This test exercises the validator directly so it works without spinning up
-the full settings service.
+The extension loader requires that ``LANGFLOW_COMPONENTS_PATH=/path/A:/path/B``
+is parsed as two component paths rather than treated as one literal
+non-existent path.  This test exercises the validator directly so it works
+without spinning up the full settings service.
 """
 
 from __future__ import annotations
