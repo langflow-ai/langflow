@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { SIDEBAR_BUNDLES } from "@/utils/styleUtils";
+import { toTitleCase } from "@/utils/utils";
+import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import type { CategoryGroupProps } from "../types";
 import { CategoryDisclosure } from "./categoryDisclouse";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
@@ -66,12 +68,23 @@ export const CategoryGroup = memo(function CategoryGroup({
               return aIndex - bIndex;
             })
             .map(([categoryName]) => {
-              const item = CATEGORIES.find(
+              const curated = CATEGORIES.find(
                 (cat) => cat.name === categoryName,
-              ) ?? {
+              );
+              // Runtime-discovered bundles (and any uncategorised in-tree
+              // group such as ``codeagents`` / ``files_ingestion``) fall
+              // through to the fallback below.  Render the raw folder name
+              // as a humanised label (snake_case -> "Snake Case") and pick
+              // a generic ``Package`` icon when the category looks like an
+              // installed/registered extension; otherwise stay with the
+              // existing ``folder`` glyph so plain in-tree groups don't
+              // pretend to be extensions.
+              const isExtensionBundle =
+                deriveBundleExtensionId(categoryName, dataFilter) !== undefined;
+              const item = curated ?? {
                 name: categoryName,
-                icon: "folder",
-                display_name: categoryName,
+                icon: isExtensionBundle ? "Package" : "folder",
+                display_name: toTitleCase(categoryName) || categoryName,
               };
               return (
                 <CategoryDisclosure

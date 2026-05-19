@@ -1,14 +1,14 @@
+import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDeleteProviderAccount } from "@/controllers/API/queries/deployment-provider-accounts/use-delete-provider-account";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
@@ -21,44 +21,49 @@ const buildProviderDeleteParams = (id: string) => ({ provider_id: id });
 interface ProvidersContentProps {
   isLoading: boolean;
   providers: ProviderAccount[];
+  deploymentTotalsByProvider: Record<string, number>;
   addProviderOpen: boolean;
   setAddProviderOpen: (open: boolean) => void;
 }
 
 function ProvidersLoadingSkeleton() {
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>URL</TableHead>
-          <TableHead>Provider Key</TableHead>
-          <TableHead>Created</TableHead>
-          <TableHead className="w-10" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {Array.from({ length: 3 }).map((_, i) => (
-          <TableRow key={i}>
-            <TableCell>
-              <Skeleton className="h-4 w-32" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-48" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-24" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-4 w-24" />
-            </TableCell>
-            <TableCell>
-              <Skeleton className="h-6 w-6" />
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <Card key={i} className="border-border bg-background">
+          <CardHeader className="gap-4">
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-10 w-10 rounded-md" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="ml-auto h-4 w-24" />
+                <Skeleton className="ml-auto h-4 w-8" />
+              </div>
+            </div>
+            <Separator />
+          </CardContent>
+          <CardFooter className="gap-3">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 flex-1" />
+          </CardFooter>
+        </Card>
+      ))}
+    </div>
   );
 }
 
@@ -85,10 +90,13 @@ function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
 export default function ProvidersContent({
   isLoading,
   providers,
+  deploymentTotalsByProvider,
   addProviderOpen,
   setAddProviderOpen,
 }: ProvidersContentProps) {
   const { mutate: deleteProviderAccount } = useDeleteProviderAccount();
+  const [editingProvider, setEditingProvider] =
+    useState<ProviderAccount | null>(null);
 
   const providerDelete = useDeleteWithConfirmation(
     deleteProviderAccount,
@@ -106,6 +114,8 @@ export default function ProvidersContent({
       <ProvidersTable
         providers={providers}
         deletingId={providerDelete.deletingId}
+        deploymentTotalsByProvider={deploymentTotalsByProvider}
+        onConfigureProvider={setEditingProvider}
         onDeleteProvider={providerDelete.requestDelete}
       />
     );
@@ -116,6 +126,11 @@ export default function ProvidersContent({
       {content}
 
       <AddProviderModal open={addProviderOpen} setOpen={setAddProviderOpen} />
+      <AddProviderModal
+        open={!!editingProvider}
+        setOpen={(open) => !open && setEditingProvider(null)}
+        provider={editingProvider}
+      />
 
       <DeleteConfirmationModal
         open={!!providerDelete.target}

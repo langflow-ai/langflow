@@ -36,6 +36,10 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "WATSONX_APIKEY",
     "WATSONX_PROJECT_ID",
     "WATSONX_URL",
+    # OpenRouter variables
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_SITE_URL",
+    "OPENROUTER_APP_NAME",
 ]
 
 # Agentic experience specific variables
