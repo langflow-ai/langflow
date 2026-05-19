@@ -775,6 +775,57 @@ def test_serve_command_sets_startup_paths_env_for_multi_worker(tmp_path):
     assert _SERVE_STARTUP_PATHS_ENV not in os.environ, "LFX_SERVE_STARTUP_PATHS must be cleaned up after server exits"
 
 
+def test_serve_command_does_not_set_startup_paths_when_flow_dir_set(tmp_path):
+    """When --flow-dir is set, LFX_SERVE_STARTUP_PATHS must be empty.
+
+    Workers load startup flows via warm_from_store() (parent persisted them to
+    the store).  Sending file paths would cause each worker to re-load and re-write
+    them redundantly, and would break the .py restriction logic.
+    """
+    import json
+    import os
+    from unittest.mock import MagicMock, patch
+
+    from lfx.cli.commands import serve_command
+    from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV
+
+    flow_data = {"name": "Test", "description": "", "data": {"nodes": [], "edges": []}}
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+
+    captured_env: dict = {}
+
+    def capture_env(*_a, **_kw):
+        captured_env.update(os.environ)
+
+    p = tmp_path / "flow.json"
+    p.write_text(json.dumps(flow_data))
+
+    with (
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+        patch("lfx.cli.commands.uvicorn.run", side_effect=capture_env),
+    ):
+        serve_command(
+            script_paths=[str(p)],
+            host="127.0.0.1",
+            port=9999,
+            workers=2,
+            verbose=False,
+            env_file=None,
+            log_level="warning",
+            flow_json=None,
+            flow_dir=tmp_path / "store",  # flow_dir is set
+            stdin=False,
+            check_variables=False,
+            no_env_fallback=False,
+        )
+
+    assert _SERVE_STARTUP_PATHS_ENV in captured_env, "env var must still be set (to empty list)"
+    paths = json.loads(captured_env[_SERVE_STARTUP_PATHS_ENV])
+    assert paths == [], f"startup paths must be empty when flow_dir is set, got {paths}"
+
+
 def test_serve_command_warns_when_workers_gt1_without_flow_dir():
     """--workers > 1 without --flow-dir should emit a warning to stderr."""
     import json
@@ -856,6 +907,58 @@ def test_serve_command_rejects_py_with_multiple_workers(tmp_path):
             )
 
     assert any(".py" in msg and "cannot be used" in msg for msg in stderr_output), stderr_output
+
+
+def test_serve_command_allows_py_with_multiple_workers_no_flow_dir(tmp_path):
+    """.py files + --workers > 1 + no --flow-dir must be allowed.
+
+    Each worker reloads the .py via LFX_SERVE_STARTUP_PATHS since there is no
+    store.  The error only applies when --flow-dir is set (workers would skip
+    startup paths and warm_from_store, missing the .py flow entirely).
+    """
+    import json
+    import os
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from lfx.cli.commands import serve_command
+    from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV
+
+    script = tmp_path / "my_flow.py"
+    script.write_text("graph = None")
+
+    mock_graph = MagicMock()
+    mock_graph.context = {}
+    captured_env: dict = {}
+
+    def capture_env(*_a, **_kw):
+        captured_env.update(os.environ)
+
+    with (
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        patch("lfx.cli.commands.load_graph_from_script", new=AsyncMock(return_value=mock_graph)),
+        patch("lfx.cli.commands.find_graph_variable", return_value={"type": "assignment", "line": 1}),
+        patch("lfx.cli.commands.uvicorn.run", side_effect=capture_env),
+    ):
+        # Must NOT raise — .py without flow_dir is allowed for multi-worker
+        serve_command(
+            script_paths=[str(script)],
+            host="127.0.0.1",
+            port=9999,
+            workers=2,
+            verbose=False,
+            env_file=None,
+            log_level="warning",
+            flow_json=None,
+            flow_dir=None,  # no flow_dir — .py is allowed here
+            stdin=False,
+            check_variables=False,
+            no_env_fallback=False,
+        )
+
+    # LFX_SERVE_STARTUP_PATHS must contain the .py path so workers can reload it
+    assert _SERVE_STARTUP_PATHS_ENV in captured_env, "LFX_SERVE_STARTUP_PATHS must be set"
+    paths = json.loads(captured_env[_SERVE_STARTUP_PATHS_ENV])
+    assert any("my_flow.py" in p for p in paths), f"expected .py path in STARTUP_PATHS, got {paths}"
 
 
 def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):

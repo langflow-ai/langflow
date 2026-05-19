@@ -755,19 +755,21 @@ def create_serve_app() -> FastAPI:
     flow_dir = Path(flow_dir_str) if flow_dir_str else None
     flow_store = FilesystemFlowStore(flow_dir) if flow_dir else NullFlowStore()
 
-    if startup_paths_json:
-        # Each worker independently loads startup flows from the original files into its
-        # own in-memory registry — no shared filesystem store required for startup flows.
-        import concurrent.futures
+    startup_paths = [Path(p) for p in json.loads(startup_paths_json)] if startup_paths_json else []
 
-        from lfx.cli.commands import build_registry_from_directory, build_registry_from_paths
-
-        startup_paths = [Path(p) for p in json.loads(startup_paths_json)]
-
+    if startup_paths and not flow_dir:
+        # No shared store: each worker reloads startup flows from the original file paths.
+        # When flow_dir IS set the parent already persisted startup JSON flows to the store;
+        # workers pick them up via warm_from_store() below — no need to re-read files.
+        #
         # ``create_serve_app`` is called by uvicorn as an ASGI app factory while an
         # event loop is already running in the worker process.  ``asyncio.run()``
         # raises RuntimeError in that situation.  Running the coroutine in a fresh
         # thread gives it a clean event loop with no interference.
+        import concurrent.futures
+
+        from lfx.cli.commands import build_registry_from_directory, build_registry_from_paths
+
         if len(startup_paths) == 1 and startup_paths[0].is_dir():
             coro = build_registry_from_directory(
                 startup_paths[0],

@@ -260,15 +260,18 @@ def serve_command(
             err=True,
         )
 
-    if workers > 1 and script_paths:
+    if workers > 1 and flow_dir is not None and script_paths:
+        # With --flow-dir, workers skip LFX_SERVE_STARTUP_PATHS and rely on warm_from_store().
+        # .py files produce no raw_json so they can't be written to the store — workers would
+        # silently start without those flows.  Without --flow-dir workers re-execute the .py
+        # file directly from LFX_SERVE_STARTUP_PATHS, which works fine.
         py_paths = [p for p in script_paths if Path(p).suffix == ".py"]
         if py_paths:
             for p in py_paths:
                 typer.echo(
-                    f"Error: '{Path(p).name}' (.py) cannot be used with --workers > 1. "
-                    "Python graphs cannot be serialized to the filesystem store, so all workers "
-                    "except the one that handled startup would have an empty registry for those "
-                    "flows. Use a .json flow export or run with --workers 1.",
+                    f"Error: '{Path(p).name}' (.py) cannot be used with --workers > 1 and --flow-dir. "
+                    "Python graphs cannot be serialized to the store, so workers would start without "
+                    "those flows. Use a .json export, omit --flow-dir, or use --workers 1.",
                     err=True,
                 )
             raise typer.Exit(1)
@@ -314,7 +317,6 @@ def serve_command(
             port = get_free_port(port)
             verbose_print(f"Port in use; using {port} instead")
 
-        serve_app = create_multi_serve_app(registry=registry)
         verbose_print("🚀 Starting server...")
 
         protocol = "http"
@@ -346,6 +348,8 @@ def serve_command(
             if workers > 1:
                 # uvicorn requires an import string (not an app object) for multi-worker mode.
                 # Set env vars so each worker's create_serve_app() factory can reconstruct config.
+                # The parent's in-memory app is never passed to workers — each worker calls
+                # create_serve_app() fresh, so we skip building the app here.
                 from lfx.cli.serve_app import (
                     _SERVE_ENV_PREFIX,
                     _SERVE_FLOW_DIR_ENV,
@@ -356,16 +360,16 @@ def serve_command(
                 os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
                 os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
 
-                # Pass startup file paths so each worker loads them into its own memory.
-                # For flow_json/stdin the parent already wrote a temp file; its path is
-                # in temp_file_to_cleanup, which outlives uvicorn.run() (cleaned up in
-                # the outer finally).
-                startup_paths: list[str] = []
-                if script_paths:
-                    startup_paths = [str(Path(p).resolve()) for p in script_paths]
-                elif temp_file_to_cleanup:
-                    startup_paths = [temp_file_to_cleanup]
-                os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths)
+                # When flow_dir is set, startup flows are already in the store (written by
+                # _build_serve_registry above) so workers load them via warm_from_store().
+                # When flow_dir is NOT set, workers must re-read the original files.
+                startup_paths_for_workers: list[str] = []
+                if not flow_dir:
+                    if script_paths:
+                        startup_paths_for_workers = [str(Path(p).resolve()) for p in script_paths]
+                    elif temp_file_to_cleanup:
+                        startup_paths_for_workers = [temp_file_to_cleanup]
+                os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
                 try:
                     uvicorn.run(
                         "lfx.cli.serve_app:create_serve_app",
@@ -379,6 +383,7 @@ def serve_command(
                     for k in [k for k in list(os.environ) if k.startswith(_SERVE_ENV_PREFIX)]:
                         del os.environ[k]
             else:
+                serve_app = create_multi_serve_app(registry=registry)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")

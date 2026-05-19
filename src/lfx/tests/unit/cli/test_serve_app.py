@@ -1031,6 +1031,82 @@ class TestCreateServeAppFactory:
 
         assert len(app.state.registry) == 0
 
+    def test_create_serve_app_with_flow_dir_skips_startup_paths_uses_store(self, tmp_path):
+        """When flow_dir is set, create_serve_app() must NOT call build_registry_from_paths.
+
+        The parent already persisted startup flows to the store; workers load them via
+        warm_from_store() only.  Re-reading files would cause redundant store writes and
+        is wrong when the startup files are .py (can't be stored).
+        """
+        import json
+        import os
+        from pathlib import Path
+        from unittest.mock import MagicMock, call, patch
+
+        from lfx.cli.serve_app import (
+            _SERVE_FLOW_DIR_ENV,
+            _SERVE_STARTUP_PATHS_ENV,
+            create_serve_app,
+        )
+        from lfx.cli.flow_store import FilesystemFlowStore
+
+        # Pre-place a flow in the store (simulating what the parent did)
+        store = FilesystemFlowStore(tmp_path)
+        raw = {"name": "Pre-persisted", "description": None, "data": {"nodes": [], "edges": []}, "id": "pre-id"}
+        store.write("pre-id", raw)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        env_override = {
+            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
+            _SERVE_FLOW_DIR_ENV: str(tmp_path),
+            # Startup paths IS set but must be IGNORED since flow_dir is present
+            _SERVE_STARTUP_PATHS_ENV: json.dumps(["/some/startup/flow.json"]),
+        }
+
+        with (
+            patch.dict(os.environ, env_override),
+            patch("lfx.cli.commands.build_registry_from_paths") as mock_brfp,
+            patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph),
+        ):
+            app = create_serve_app()
+
+        # build_registry_from_paths must NOT have been called — flow_dir means use the store
+        mock_brfp.assert_not_called()
+        # Flow from the store must be in the registry (loaded via warm_from_store)
+        assert len(app.state.registry) == 1
+
+    def test_create_serve_app_without_flow_dir_loads_startup_paths_from_files(self, tmp_path):
+        """When flow_dir is NOT set, create_serve_app() must load startup flows from file paths."""
+        import json
+        import os
+        from pathlib import Path
+        from unittest.mock import MagicMock, patch
+
+        from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV, create_serve_app
+
+        src = Path(__file__).parent.parent.parent / "data" / "simple_chat_no_llm.json"
+        flow_path = tmp_path / "flow.json"
+        flow_path.write_bytes(src.read_bytes())
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        env_override = {
+            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
+            # No LFX_SERVE_FLOW_DIR — no flow_dir
+            _SERVE_STARTUP_PATHS_ENV: json.dumps([str(flow_path)]),
+        }
+
+        with (
+            patch.dict(os.environ, env_override),
+            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
+        ):
+            app = create_serve_app()
+
+        assert len(app.state.registry) == 1, "worker must have loaded the startup flow from the file path"
+
 
 class TestServeAppEndpoints:
     """Test the FastAPI endpoints."""
