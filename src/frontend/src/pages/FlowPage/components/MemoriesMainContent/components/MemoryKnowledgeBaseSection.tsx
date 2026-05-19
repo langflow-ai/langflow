@@ -49,12 +49,16 @@ export function MemoryKnowledgeBaseSection({
             <Loading size={32} className="text-primary" />
           </div>
         ) : !docsData?.documents?.length ? (
-          <div className="flex h-32 flex-col items-center justify-center text-center">
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <IconComponent
               name="Database"
-              className="mb-2 h-8 w-8 text-muted-foreground opacity-50"
+              className="h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-xs font-medium">No chunks yet.</p>
+            <p className="text-sm font-medium text-foreground">No chunks yet</p>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              Head to the Playground, run your flow, and chunks will start
+              appearing here automatically.
+            </p>
           </div>
         ) : (
           <Table>
