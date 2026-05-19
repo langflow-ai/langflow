@@ -404,6 +404,4 @@ async def test_build_flow_truly_no_action_still_guarded_regression():
             )
         )
 
-    assert any('"event": "error"' in e for e in events), (
-        f"a no-op build must still be guarded. Events: {events}"
-    )
+    assert any('"event": "error"' in e for e in events), f"a no-op build must still be guarded. Events: {events}"

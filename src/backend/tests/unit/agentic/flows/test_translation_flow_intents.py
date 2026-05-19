@@ -80,6 +80,7 @@ class TestManageFilesIntentDeclared:
             f"File-creation phrasings must not be classified as build_flow. Offending examples: {offenders}"
         )
 
+
 class TestFollowUpSessionContextRouting:
     """WS-1 / RC-1 — prompt teaches the classifier to use the session-context block for follow-ups."""
 

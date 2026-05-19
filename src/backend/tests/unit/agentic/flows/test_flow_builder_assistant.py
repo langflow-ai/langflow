@@ -194,9 +194,7 @@ class TestFlowBuilderPromptBehaviorContract:
         forbids_claim = (
             "never claim" in prompt_lower or "do not claim" in prompt_lower or "without actually" in prompt_lower
         )
-        assert forbids_claim, (
-            "Prompt must forbid claiming an action was done without calling the tool that performs it"
-        )
+        assert forbids_claim, "Prompt must forbid claiming an action was done without calling the tool that performs it"
 
     def test_should_instruct_reply_in_user_language(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()

@@ -20,9 +20,7 @@ class AgentRunModel(TypedDict):
     api_key_var: str | None
 
 
-_model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar(
-    "agentic_run_model", default=None
-)
+_model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar("agentic_run_model", default=None)
 
 
 def set_agent_run_model(provider: str | None, model_name: str | None, api_key_var: str | None) -> None:
