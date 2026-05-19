@@ -14,7 +14,7 @@ export default function ModelProvidersPage() {
           >
             {t("modelProviders.pageTitle")}
             <ForwardedIconComponent
-              name="Brain"
+              name="BrainCircuit"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>

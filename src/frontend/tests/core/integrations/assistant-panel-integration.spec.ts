@@ -1,7 +1,8 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { test, expect } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
 
 test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
   test.beforeEach(async ({ page }) => {
@@ -25,6 +26,7 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     await expect(page.getByTestId("assistant-model-selector")).toBeVisible({
       timeout: 15000,
     });
+    await selectAssistantOpenAiModel(page);
   });
 
   test("should answer a Q&A question with real LLM response", async ({

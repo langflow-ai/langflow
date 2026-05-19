@@ -5,7 +5,7 @@ Endpoints:
     GET    /memories                    - List (current user, paginated)
     GET    /memories/{id}               - Get one
     GET    /memories/{id}/sessions      - List sessions (tracked + untracked from MessageTable)
-    PATCH  /memories/{id}               - Update (name / threshold / auto_capture / preprocessing)
+    PATCH  /memories/{id}               - Update (name / threshold / auto_capture)
     DELETE /memories/{id}               - Delete (cancels active tasks + removes KB from disk)
     POST   /memories/{id}/flush        - Manual flush / trigger ingestion
     POST   /memories/{id}/regenerate    - Regenerate from mismatch
@@ -257,15 +257,17 @@ async def update_memory_base(
     current_user: CurrentActiveUser,
     patch: Annotated[MemoryBaseUpdate, Body(embed=False)] = ...,
 ) -> MemoryBaseRead:
-    """Update mutable parameters (threshold, auto_capture, preprocessing, etc.).
+    """Update mutable parameters (name, threshold, auto_capture).
 
     Threshold changes only take effect at the next auto-capture trigger.
     Any already-running ingestion task continues with its original arguments.
+    Preprocessing fields (preprocessing, preproc_model, preproc_instructions, preproc_kill_phrase)
+    are immutable after creation and cannot be patched.
     """
     try:
         mb = await get_memory_base_service().update(memory_base_id, user_id=current_user.id, patch=patch)
     except PreprocessingValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if mb is None:
         raise HTTPException(status_code=404, detail="Memory base not found")
     return MemoryBaseRead.model_validate(mb)
