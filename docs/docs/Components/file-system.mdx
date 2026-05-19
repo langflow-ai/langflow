@@ -4,7 +4,7 @@ slug: /file-system
 ---
 
 The **File System** component provides sandboxed filesystem access for agents.
-It includes five file I/O tools for agents: 
+It includes five file I/O tools for agents:
 
 * `read_file`
 * `write_file`
@@ -50,7 +50,7 @@ Tool errors are returned to the agent as structured JSON:
 |------|------|-------------|
 | `root_path` | String | Input parameter. Sub-folder inside the sandboxed workspace. Leave empty to use the workspace root. |
 | `read_only` | Boolean | Input parameter. If `true`, `write_file` and `edit_file` are disabled and not registered with the agent. Default: `false`. |
-| `metadata` | Data | Output parameter. A `JSON` object containing sandbox introspection data: `root_path`, `read_only`, `tools_registered`, `auto_login`, `mode`, `effective_root`, and `resolution_error`. |
+| `metadata` | Data | Output parameter. A fixed-structure `JSON` object that describes the sandbox configuration at build time and is independent of any file operation. The fields are `root_path`, `read_only`, `tools_registered`, `auto_login`, `mode` (`shared`, `isolated`, or `refused`), `effective_root`, and `resolution_error`. |
 
 ## Docker deployment
 
