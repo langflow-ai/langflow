@@ -37,10 +37,23 @@ def search_registry(
     query: str | None = None,
     category: str | None = None,
     output_type: str | None = None,
+    *,
+    include_legacy: bool = False,
 ) -> list[dict[str, Any]]:
-    """Search the registry by name/category/output_type. Pure function."""
+    """Search the registry by name/category/output_type. Pure function.
+
+    LEGACY components are excluded by default: the agent's discovery path
+    must not surface deprecated nodes (screenshot 5: a Legacy Calculator).
+    They stay reachable via ``describe_component`` by exact name, and an
+    explicit ``include_legacy=True`` opt-in still lists them.
+
+    BETA components ARE included (user decision 2026-05-18): they are
+    usable, just newer — only legacy is hidden.
+    """
     results = []
     for name, tmpl in sorted(registry.items()):
+        if not include_legacy and tmpl.get("legacy"):
+            continue
         cat = tmpl.get("category", "")
         if category and cat.lower() != category.lower():
             continue
@@ -135,4 +148,11 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         result["fields"] = fields
     if advanced_fields:
         result["advanced_fields"] = sorted(advanced_fields)
+    # Surface deprecation flags so the agent knows when it explicitly
+    # named a legacy/beta component (search_registry hides them, but the
+    # agent can still describe one by exact name).
+    if tmpl.get("legacy"):
+        result["legacy"] = True
+    if tmpl.get("beta"):
+        result["beta"] = True
     return result

@@ -33,6 +33,22 @@ export function applyFlowUpdate(
         const setEdges = useFlowStore.getState().setEdges;
         setNodes(flow.data.nodes as never[]);
         setEdges((flow.data.edges ?? []) as never[]);
+        // A whole-canvas replace lands the new flow wherever the old
+        // viewport happened to be (often off-screen). Frame it like the
+        // app's own flow-load path (PageComponent): a SINGLE deferred
+        // frame fires before React Flow has measured the new nodes, which
+        // produces the wrong/"weird" zoom — wait two frames so layout has
+        // settled, and bound the zoom so a tiny flow isn't over-zoomed.
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            useFlowStore.getState().reactFlowInstance?.fitView({
+              padding: { left: "20px", right: "20px", top: "80px" },
+              minZoom: 0.25,
+              maxZoom: 2,
+              duration: 250,
+            });
+          });
+        });
       }
       break;
     }

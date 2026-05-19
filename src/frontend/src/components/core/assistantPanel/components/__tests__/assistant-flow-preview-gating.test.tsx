@@ -264,6 +264,66 @@ describe("AssistantFlowPreview gating", () => {
     });
   });
 
+  describe("large-flow preview gating (> 7 components)", () => {
+    function previewWith(nodeCount: number) {
+      const nodes = Array.from({ length: nodeCount }, (_, i) => ({
+        id: `n${i}`,
+        position: { x: i * 100, y: 0 },
+        data: { type: `Comp${i}` },
+      }));
+      return {
+        flow: { name: "Big", data: { nodes, edges: [] } },
+        name: "Big",
+        nodeCount,
+        edgeCount: 0,
+        graph: "",
+      };
+    }
+
+    it("should_render_preview_canvas_when_7_or_fewer_components", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={previewWith(7)}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(screen.getByTestId("react-flow-mock")).toBeInTheDocument();
+      expect(screen.queryByText(/too many components/i)).not.toBeInTheDocument();
+    });
+
+    it("should_hide_preview_canvas_and_show_notice_when_more_than_7_components", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={previewWith(8)}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(screen.queryByTestId("react-flow-mock")).not.toBeInTheDocument();
+      expect(screen.getByText(/too many components/i)).toBeInTheDocument();
+    });
+
+    it("should_keep_action_buttons_even_when_preview_is_disabled", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={previewWith(20)}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-flow-add-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("assistant-flow-dismiss-button"),
+      ).toBeInTheDocument();
+    });
+  });
+
   describe("legacy path (no status prop)", () => {
     it("should_keep_legacy_add_to_flow_button_when_status_is_undefined", () => {
       // Backward compat: existing callers that don't pass status still get

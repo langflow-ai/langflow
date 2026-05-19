@@ -28,6 +28,10 @@ from langflow.agentic.helpers.sse import (
 )
 from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
 from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
+from langflow.agentic.services.agent_run_context import (
+    reset_agent_run_model,
+    set_agent_run_model,
+)
 from langflow.agentic.services.conversation_buffer import (
     ConversationTurn,
     get_conversation_buffer,
@@ -39,16 +43,20 @@ from langflow.agentic.services.flow_executor import (
     extract_response_text,
 )
 from langflow.agentic.services.flow_types import (
+    EDIT_CONTINUATION_INPUT,
     EXECUTION_RETRY_TEMPLATE,
     FLOW_BUILDER_ASSISTANT_FLOW,
     MAX_VALIDATION_RETRIES,
+    NO_ACTION_RETRY_TEMPLATE,
     OFF_TOPIC_REFUSAL_MESSAGE,
     PLAN_APPROVAL_INPUT,
     VALIDATION_RETRY_TEMPLATE,
     VALIDATION_UI_DELAY_SECONDS,
     FlowExecutionError,
 )
-from langflow.agentic.services.helpers.intent_classification import classify_intent
+from langflow.agentic.services.helpers.intent_classification import _looks_like_run_request, classify_intent
+from langflow.agentic.services.helpers.intent_context import build_intent_context
+from langflow.agentic.services.request_framing import decide_progress_step
 from langflow.agentic.services.user_components import register_user_component_if_valid
 from langflow.agentic.services.user_components_context import (
     reset_current_user_id,
@@ -57,8 +65,6 @@ from langflow.agentic.services.user_components_context import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine
-
-    from langflow.agentic.api.schemas import StepType
 
 
 def inject_conversation_history(*, user_id: str | None, session_id: str | None, input_value: str) -> str:
@@ -263,12 +269,15 @@ async def execute_flow_with_validation(
         current_input = VALIDATION_RETRY_TEMPLATE.format(error=validation.error, code=code)
         logger.info("Retrying with error context...")
 
-    # Safety return: the while loop always returns via internal checks above
+    # Reached only if the loop never executed a single attempt (e.g.
+    # max_retries < 0) — every in-loop path returns. `result` /
+    # `validation` are unbound here, so return a domain-meaningful error
+    # instead of crashing on an UnboundLocalError.
     return {
-        **result,
+        "result": "Component generation made no attempt (max_retries must be >= 0).",
         "validated": False,
-        "validation_error": validation.error,
-        "validation_attempts": attempt,
+        "validation_error": "no_attempt",
+        "validation_attempts": 0,
     }
 
 
@@ -308,10 +317,31 @@ async def execute_flow_with_validation_streaming(
 
     current_input = sanitization.sanitized_input
 
-    # Classify intent using LLM (handles multi-language support)
-    # This translates the input and determines if user wants to generate a component or ask a question
+    # Reset per-request state before any tool can run or the canvas is read.
+    reset_working_flow()
+    reset_file_events()
+    reset_tool_cache()
+
+    # Load the user's current canvas ONCE (this also seeds the working flow
+    # so the canvas tools can read/write it). The summary is reused below for
+    # both the intent-classifier context and the [Current flow on canvas]
+    # prefix — it must never be read twice (extra DB round-trip).
+    current_flow_summary = await _get_current_flow_summary(global_variables.get("FLOW_ID"))
+
+    # Give the intent classifier the session's recent turns + canvas state so
+    # a follow-up edit ("add a second agent", "use the SumComponent") routes
+    # to build_flow instead of falling back to question/off_topic and being
+    # answered with text. No turns + empty canvas → context is None and the
+    # classifier input is byte-identical to before (regression-safe).
+    recent_turns = get_conversation_buffer().get_recent(user_id, session_id) if user_id and session_id else []
+    intent_context = build_intent_context(recent_turns, current_flow_summary)
+
+    # Classify intent using LLM (handles multi-language support).
     # Use a separate session for intent classification to prevent
-    # TranslationFlow messages from contaminating the assistant's memory
+    # TranslationFlow messages from contaminating the assistant's memory.
+    # user_id is passed EXPLICITLY (the ContextVar is intentionally bound
+    # later, inside the main try/finally, so it can never leak past a
+    # pre-try exception — see TestCurrentUserIdContextVarIsolation).
     intent_result = await classify_intent(
         text=current_input,
         global_variables=global_variables,
@@ -319,42 +349,90 @@ async def execute_flow_with_validation_streaming(
         provider=provider,
         model_name=model_name,
         api_key_var=api_key_var,
+        context=intent_context,
     )
 
-    # Layer 4: Off-topic rejection (saves LLM API costs)
+    # Layer 4: Off-topic rejection (saves LLM API costs).
+    # This early-return is BEFORE the try/finally, and the canvas was
+    # already seeded into the working-flow ContextVar by
+    # _get_current_flow_summary above — reset it here so it doesn't leak
+    # to the next request on this asyncio task.
     if intent_result.intent == "off_topic":
         logger.info("Off-topic request detected, returning refusal")
+        reset_working_flow()
         yield format_complete_event({"result": OFF_TOPIC_REFUSAL_MESSAGE})
         return
 
-    # Route based on intent classification
+    # Route based on intent classification.
+    #
+    # Single-ask requests keep their dedicated paths UNCHANGED (pure
+    # generate_component → component path with its code-card UX; build_flow,
+    # manage_files, run_flow, question as before).
+    #
+    # A compound prompt ("create a component AND build a flow with it AND
+    # run it" → ``component_then_flow``) goes to the ONE agent loop: the
+    # FlowBuilderAssistant has the generate_component tool, so a single turn
+    # owns the whole inline request (generate → search → build → run). It is
+    # therefore a flow request, NOT a component request — no separate
+    # component path, no phase recursion.
+    is_compound = intent_result.intent == "component_then_flow"
     is_component_request = intent_result.intent == "generate_component"
-    is_flow_request = intent_result.intent == "build_flow"
+    is_flow_request = intent_result.intent == "build_flow" or is_compound
     is_document_request = intent_result.intent == "manage_files"
+    # Running/executing the existing flow is NOT a build or an edit — it must
+    # not go through the plan gate nor the no-action build guard. It shares
+    # the FlowBuilderAssistant toolkit only because that's where run_flow lives.
+    is_run_request = intent_result.intent == "run_flow"
     logger.info(f"Intent classification: {intent_result.intent}")
-
-    # Reset per-request state for each request
-    reset_working_flow()
-    reset_file_events()
-    reset_tool_cache()
 
     # Inject current flow context for all intents so the agent
     # can answer questions about or modify the user's canvas
-    current_flow_summary = await _get_current_flow_summary(global_variables.get("FLOW_ID"))
     if current_flow_summary:
         current_input = f"[Current flow on canvas:\n{current_flow_summary}\n]\n\n{current_input}"
+
+    # Tell the agent which language model(s) it can safely put on any Agent
+    # it builds — building an Agent without a model makes the run fail with
+    # "No model selected". The PREFERRED one is the model the assistant
+    # itself runs with (key guaranteed). We also list every provider whose
+    # API key is configured (provider-agnostic, detected from the env-built
+    # global variables — NO OpenAI bias). Omitted (input byte-identical to
+    # before) only when neither is available.
+    from langflow.agentic.services.flow_preparation import available_model_providers
+
+    _model_parts: list[str] = []
+    if provider and model_name:
+        _model_parts.append(f"preferred: provider={provider!r}, name={model_name!r}")
+    _avail = available_model_providers(global_variables)
+    if _avail:
+        _model_parts.append("providers with credentials configured: " + ", ".join(_avail))
+    if _model_parts:
+        current_input = (
+            f"[Available language models — configure any Agent's `model` field with one of "
+            f"these (prefer the one marked `preferred`) so the flow can run: "
+            f"{'; '.join(_model_parts)}]\n\n{current_input}"
+        )
 
     # Capture the original user prompt BEFORE history/canvas injection so we
     # can record it verbatim in the buffer at end-of-turn. The wrapped
     # input is what the LLM sees; the recorded user message is what the
     # user typed.
     original_user_input = sanitization.sanitized_input
+    # Whether a deferred follow-up (e.g. running the flow) was requested
+    # alongside an edit. The frontend uses this to decide whether approving
+    # a man-in-the-loop edit diff card should fire the continuation turn —
+    # a PURE edit must NOT (it spawned a duplicate-message glitch). Computed
+    # deterministically from the original input; never for the protocol
+    # signals themselves (avoids a continuation loop).
+    continuation_expected = _looks_like_run_request(original_user_input) and original_user_input.strip() not in (
+        PLAN_APPROVAL_INPUT,
+        EDIT_CONTINUATION_INPUT,
+    )
     current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 
     # Build-flow and manage_files both route to the FlowBuilderAssistant —
     # they share the same toolkit (canvas tools + filesystem). The step label
     # and the SSE drain semantics differ but the underlying agent does not.
-    if is_flow_request or is_document_request:
+    if is_flow_request or is_document_request or is_run_request:
         flow_filename = FLOW_BUILDER_ASSISTANT_FLOW
 
     # Create cancel event for propagating cancellation to flow executor
@@ -381,6 +459,9 @@ async def execute_flow_with_validation_streaming(
         # ``reset_current_user_id`` in the ``finally`` — otherwise a stale id
         # would leak to the next request on the same asyncio task.
         set_current_user_id(user_id)
+        # The generate_component tool re-runs the component-gen LLM flow
+        # mid-loop and needs the same provider/model the request used.
+        set_agent_run_model(provider, model_name, api_key_var)
 
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1
@@ -394,42 +475,19 @@ async def execute_flow_with_validation_streaming(
 
             logger.debug(f"Starting attempt {attempt}, is_disconnected provided: {is_disconnected is not None}")
 
-            # Step 1: Generating — step name AND user-facing message vary by
-            # intent so the frontend can show "Generating component..." vs
-            # "Generating flow..." instead of a generic "Generating response..."
-            # while the LLM is producing the answer.
-            #
-            # Flow requests have two distinct phases when in plan mode:
-            #   - planning: empty canvas + no prior approval → agent will call
-            #     propose_plan before build_flow. Surface this as
-            #     "Generating plan...".
-            #   - building: post-approval (user clicked Continue) or live edit
-            #     on a non-empty canvas → "Generating flow...".
-            if is_component_request:
-                step_name: StepType = "generating_component"
-                step_message = "Generating component..."
-            elif is_document_request:
-                step_name = "generating_document"
-                step_message = "Generating document..."
-            elif is_flow_request:
-                # The only fully reliable signal we have at this point is the
-                # plan-approval text the frontend sends when the user clicks
-                # Continue on a proposed plan. Before that, the agent may be
-                # planning OR live-editing — but for both UX is better served
-                # by "Generating plan..." than the previous catch-all
-                # "Generating flow...". Live-edit only shows the plan label
-                # for the brief window before the first tool event arrives
-                # and the inline build tasklist takes over.
-                is_plan_approval = original_user_input.strip() == PLAN_APPROVAL_INPUT
-                if is_plan_approval:
-                    step_name = "generating_flow"
-                    step_message = "Generating flow..."
-                else:
-                    step_name = "generating_plan"
-                    step_message = "Generating plan..."
-            else:
-                step_name = "generating"
-                step_message = "Generating response..."
+            # Step 1: Generating — the user-facing step/message varies by
+            # intent (component vs flow vs orchestration vs neutral). The
+            # decision is pure and recurring-bug-prone, so it lives in
+            # request_framing.decide_progress_step (unit-tested in
+            # isolation); the generator stays focused on streaming.
+            step_name, step_message = decide_progress_step(
+                is_component_request=is_component_request,
+                is_document_request=is_document_request,
+                is_run_request=is_run_request,
+                is_flow_request=is_flow_request,
+                is_compound=is_compound,
+                original_user_input=original_user_input,
+            )
             yield format_progress_event(
                 step_name,
                 attempt + 1,
@@ -471,6 +529,11 @@ async def execute_flow_with_validation_streaming(
                                 has_flow_updates = True
                                 if update.get("action") == "set_flow":
                                     saw_set_flow = True
+                                    # Compound pipeline: the user explicitly
+                                    # asked to clear+replace the canvas, so
+                                    # apply directly (no Continue gate).
+                                    if is_compound:
+                                        update["auto_apply"] = True
                                 yield format_flow_update_event(update)
                             # Drain file_written events the same way — each one
                             # becomes a card on the frontend message.
@@ -559,6 +622,8 @@ async def execute_flow_with_validation_streaming(
                 has_flow_updates = True
                 if update.get("action") == "set_flow":
                     saw_set_flow = True
+                    if is_compound:
+                        update["auto_apply"] = True
                 yield format_flow_update_event(update)
             # Drain any remaining file_written events emitted after the last token.
             for file_event in drain_file_events():
@@ -574,18 +639,24 @@ async def execute_flow_with_validation_streaming(
             # — no Continue gate, no intermediate "Document ready" line.
 
             if has_flow_updates:
-                # Build-from-scratch path only: signal the frontend to gate
-                # the destructive canvas replacement behind an explicit
-                # Continue/Dismiss step. Incremental-edit runs (no set_flow)
-                # skip this — they apply live as the events stream.
-                if is_flow_request and saw_set_flow:
+                # Build-from-scratch path: gate the destructive canvas
+                # replacement behind an explicit Continue/Dismiss step.
+                # Incremental-edit runs (no set_flow) skip this — they
+                # apply live as the events stream.
+                # Single-ask build_flow keeps the Continue/Dismiss gate.
+                # Compound auto-applies (the set_flow event carries
+                # auto_apply=True and the user already asked to replace
+                # the canvas) — no gate.
+                if is_flow_request and saw_set_flow and not is_compound:
                     yield format_progress_event(
                         "flow_proposal_ready",
                         attempt + 1,
                         total_attempts,
                         message="Flow ready — review and continue",
                     )
-                yield format_complete_event({**result, "has_flow": True})
+                yield format_complete_event(
+                    {**result, "has_flow": True, "continuation_expected": continuation_expected}
+                )
                 reset_working_flow()
                 return
 
@@ -601,14 +672,46 @@ async def execute_flow_with_validation_streaming(
                     node_count=len(flow_data["data"].get("nodes", [])),
                     edge_count=len(flow_data["data"].get("edges", [])),
                 )
-                yield format_complete_event({**result, "has_flow": True})
+                yield format_complete_event(
+                    {**result, "has_flow": True, "continuation_expected": continuation_expected}
+                )
                 return
+
+            # WS-2 / RC-2: a build/edit request (is_flow_request) that produced
+            # ZERO canvas mutations and no flow JSON means the agent only talked
+            # — it asked to confirm an action the user already requested, or
+            # claimed an action it never performed (report #1/#4, screenshots
+            # 2/6/7/8). Never pass that off as success: re-prompt the agent to
+            # actually call its tools; if it still does nothing after the
+            # retries, surface an explicit error instead of a misleading "done".
+            # Q&A (question) and read-only manage_files are excluded — a
+            # text-only answer is legitimate there.
+            if is_flow_request and not has_flow_updates:
+                if attempt >= total_attempts - 1:
+                    logger.warning(
+                        "assistant.build.no_action: build request produced no canvas changes after %d attempt(s)",
+                        total_attempts,
+                    )
+                    yield format_error_event(
+                        "I couldn't apply that change to the canvas. Please rephrase the request or try again."
+                    )
+                    return
+                yield format_progress_event(
+                    "retrying",
+                    attempt + 1,
+                    total_attempts,
+                    message="No canvas changes detected — retrying...",
+                )
+                current_input = NO_ACTION_RETRY_TEMPLATE.format(
+                    original_input=sanitization.sanitized_input,
+                )
+                continue
 
             # For Q&A responses, return immediately without code extraction/validation.
             # This prevents example code snippets in explanatory answers from being
             # mistakenly treated as component generation results.
             if not is_component_request:
-                yield format_complete_event(result)
+                yield format_complete_event({**result, "continuation_expected": continuation_expected})
                 return
 
             # Extract and validate component code from generation responses
@@ -787,6 +890,7 @@ async def execute_flow_with_validation_streaming(
         # Clear the per-request user binding so any background task that
         # inherits this context doesn't see a stale id.
         reset_current_user_id()
+        reset_agent_run_model()
         # Persist the completed turn to the session buffer so the next
         # request can inject it as context. Skips cancelled/errored runs
         # (final_response_text stays empty) and anonymous sessions.

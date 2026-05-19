@@ -10,6 +10,7 @@ StepType = Literal[
     "generating_component",  # LLM is generating component code
     "generating_plan",  # LLM is drafting a plan (precedes propose_plan / build_flow)
     "generating_flow",  # LLM is building a flow
+    "orchestrating",  # Single agent loop working a multi-ask request (component + flow + run)
     "generation_complete",  # LLM finished generating
     "extracting_code",  # Extracting Python code from response
     "validating",  # Validating component code

@@ -3,6 +3,7 @@ export type AgenticStepType =
   | "generating_component"
   | "generating_plan"
   | "generating_flow"
+  | "orchestrating"
   | "generation_complete"
   | "extracting_code"
   | "validating"
@@ -41,6 +42,10 @@ export interface AgenticCompleteData {
   validation_attempts?: number;
   validation_error?: string;
   has_flow?: boolean;
+  /** Backend-computed: a deferred step (e.g. run) was requested with an
+   * edit, so approving a man-in-the-loop edit should fire the continuation
+   * turn. Absent/false for a pure edit. */
+  continuation_expected?: boolean;
 }
 
 export interface AgenticFlowPreviewEvent {
@@ -64,6 +69,10 @@ export interface AgenticFlowUpdateEvent {
     | "select_output"
     | "set_connection_mode"
     | "propose_plan";
+  /** Backend sets this on a compound-pipeline set_flow so the canvas is
+   * replaced directly (the user already asked to clear+replace it) —
+   * no Continue/Dismiss proposal card. */
+  auto_apply?: boolean;
   [key: string]: unknown;
 }
 

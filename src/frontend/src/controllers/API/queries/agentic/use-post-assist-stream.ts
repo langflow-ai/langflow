@@ -157,8 +157,22 @@ export async function postAssistStream(
 
     // Process any remaining data in the buffer
     if (buffer.trim()) {
-      processSSELine(buffer.trim(), callbacks);
+      const result = processSSELine(buffer.trim(), callbacks);
+      if (result.done) {
+        return;
+      }
     }
+
+    // The reader ended without ever delivering a terminal event
+    // (complete/error/cancelled) — e.g. the connection dropped or the
+    // server crashed mid-build. Surface a terminal error so the caller
+    // clears the spinner and marks the turn failed instead of hanging
+    // forever on a half-applied canvas.
+    callbacks.onError?.({
+      event: "error",
+      message:
+        "The assistant connection ended unexpectedly before completing. Please try again.",
+    });
   } finally {
     await reader.cancel();
     reader.releaseLock();

@@ -29,6 +29,18 @@ TRANSLATION_FLOW = "translation_flow.py"
 # src/frontend/.../hooks/use-assistant-chat.ts.
 PLAN_APPROVAL_INPUT = "User approved the plan. Proceed with the build."
 
+# Verbatim text the frontend sends as a silent continuation turn once the
+# user resolves a man-in-the-loop edit diff card with >=1 applied change.
+# It lets the agent's "execution stack" survive the approval boundary so
+# it can finish the rest of the original request (e.g. running the flow
+# the user also asked for). Must stay byte-identical to
+# `EDIT_CONTINUATION_INPUT` in src/frontend/.../hooks/use-assistant-chat.ts.
+EDIT_CONTINUATION_INPUT = (
+    "The proposed canvas edits were applied. Continue with the remaining steps of my "
+    "previous request (for example, running the flow). If editing was the entire "
+    "request, just confirm briefly."
+)
+
 OFF_TOPIC_REFUSAL_MESSAGE = (
     "I appreciate your interest, but I'm the Langflow Assistant and can only help with "
     "Langflow-related topics such as building components, creating flows, configuring "
@@ -57,6 +69,18 @@ ORIGINAL REQUEST:
 
 Respond with a complete, valid Langflow component as a Python class extending Component, \
 inside a single ```python code block. Do not emit raw tool calls or partial JSON."""
+
+NO_ACTION_RETRY_TEMPLATE = """Your previous reply did not change the canvas. You only described \
+what you would do, or asked for confirmation of something the user already requested.
+
+ORIGINAL REQUEST:
+{original_input}
+
+Do it NOW by calling the canvas tools (propose_plan / build_flow / add_component / \
+connect_components / configure_component). Rules:
+- NEVER ask the user to confirm an action they already asked for — just perform it.
+- NEVER claim an action was done without actually calling the tool that does it.
+- Respond in the same language the user wrote in."""
 
 
 @dataclass

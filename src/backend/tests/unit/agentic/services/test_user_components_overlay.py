@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import secrets
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
+import lfx.custom.utils as lfx_utils
 import pytest
 from langflow.agentic.services.user_components import register_user_component
 from langflow.agentic.services.user_components_overlay import (
@@ -48,6 +50,37 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         lambda self: False,  # noqa: ARG005
     )
     return tmp_path
+
+
+class TestOverlayEntryCaching:
+    """Overlay entries are cached by (path, mtime, size).
+
+    Bug: every overlay lookup re-walked .components/ and re-ran
+    build_custom_component_template (instantiate + introspect) for every
+    file. SearchComponentTypes/Describe/Add/BuildFlow call the overlay
+    many times per turn, so an unchanged file must be built once and the
+    cache must invalidate when the file actually changes.
+    """
+
+    def test_overlay_built_once_then_rebuilt_when_file_changes(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        real_build = lfx_utils.build_custom_component_template
+
+        register_user_component(user_id="user-alice", class_name="SumComponent", code=SAMPLE_CODE)
+
+        with patch.object(lfx_utils, "build_custom_component_template", side_effect=real_build) as spy:
+            load_registry_with_user_overlay(user_id="user-alice")
+            load_registry_with_user_overlay(user_id="user-alice")
+            # Second lookup hits the cache — no re-introspection.
+            assert spy.call_count == 1
+
+            # The file genuinely changes → cache invalidates → rebuild.
+            register_user_component(
+                user_id="user-alice",
+                class_name="SumComponent",
+                code=SAMPLE_CODE.replace("Adds two numbers", "Adds two numbers v2"),
+            )
+            load_registry_with_user_overlay(user_id="user-alice")
+            assert spy.call_count == 2
 
 
 class TestRegistryOverlay:
@@ -118,6 +151,198 @@ class TestRegistryOverlay:
             assert code_field.get("value", "") == SAMPLE_CODE
         else:
             assert code_field == SAMPLE_CODE
+
+    def test_overlay_outputs_match_the_user_classs_real_output(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        # Production bug: a generated component whose output method/name is
+        # NOT the CustomComponent default (`output`/`build_output`) builds a
+        # node that declares `build_output`, so the run fails with
+        # "Attribute build_output not found in <Class>". The overlay must
+        # reflect the user class's ACTUAL outputs, not the base scaffold.
+        code = (
+            "from lfx.custom import Component\n"
+            "from lfx.io import MessageTextInput, Output\n"
+            "from lfx.schema import Message\n"
+            "\n"
+            "class PrimeChecker(Component):\n"
+            "    display_name = 'PrimeChecker'\n"
+            "    inputs = [MessageTextInput(name='value')]\n"
+            "    outputs = [Output(name='verdict', display_name='R', method='build_result')]\n"
+            "    def build_result(self) -> Message:\n"
+            "        return Message(text='ok')\n"
+        )
+        register_user_component(user_id="user-alice", class_name="PrimeChecker", code=code)
+
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+        entry = registry["PrimeChecker"]
+
+        methods = {o.get("method") for o in entry.get("outputs", [])}
+        names = {o.get("name") for o in entry.get("outputs", [])}
+        # The node must call the method the user's class actually defines —
+        # NOT the base CustomComponent default `build_output`.
+        assert "build_result" in methods, f"overlay outputs lost the real method: {entry.get('outputs')}"
+        assert "build_output" not in methods, (
+            f"overlay still forces the base default build_output: {entry.get('outputs')}"
+        )
+        assert "verdict" in names
+
+    def test_build_flow_node_uses_the_user_classs_real_output_method(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        # End-to-end proof for the production crash: a flow built via
+        # build_flow_from_spec with the user-aware registry must produce a
+        # node whose output method is the one the user's class defines
+        # (so the run engine doesn't raise "Attribute build_output not
+        # found in <Class>").
+        from lfx.graph.flow_builder.builder import build_flow_from_spec
+
+        code = (
+            "from lfx.custom import Component\n"
+            "from lfx.io import MessageTextInput, Output\n"
+            "from lfx.schema import Message\n"
+            "\n"
+            "class PrimeChecker(Component):\n"
+            "    display_name = 'PrimeChecker'\n"
+            "    inputs = [MessageTextInput(name='input_value')]\n"
+            "    outputs = [Output(name='verdict', display_name='R', method='build_result')]\n"
+            "    def build_result(self) -> Message:\n"
+            "        return Message(text='ok')\n"
+        )
+        register_user_component(user_id="user-alice", class_name="PrimeChecker", code=code)
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+
+        spec = (
+            "name: T\n"
+            "nodes:\n"
+            "  A: ChatInput\n"
+            "  B: PrimeChecker\n"
+            "  C: ChatOutput\n"
+            "edges:\n"
+            "  A.message -> B.input_value\n"
+            "  B.verdict -> C.input_value\n"
+        )
+        result = build_flow_from_spec(spec, registry=registry)
+        assert "error" not in result, result
+
+        nodes = result["flow"]["data"]["nodes"]
+        prime = next(n for n in nodes if n["data"]["type"] == "PrimeChecker")
+        methods = {o["method"] for o in prime["data"]["node"]["outputs"]}
+        assert "build_result" in methods, prime["data"]["node"]["outputs"]
+        assert "build_output" not in methods, prime["data"]["node"]["outputs"]
+
+    async def test_registered_component_actually_runs_in_a_flow(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        # THE production repro at the RUN level (not just the built node):
+        # register a component, build a flow with it via the user-aware
+        # registry, and actually execute it. Must NOT raise
+        # "Attribute build_output not found in <Class>" — the run must
+        # compile the node's real code and call a method that exists.
+        import uuid
+
+        from langflow.agentic.services.flow_run import run_working_flow
+        from lfx.graph.flow_builder.builder import build_flow_from_spec
+
+        code = (
+            "from math import isqrt\n"
+            "from lfx.custom import Component\n"
+            "from lfx.io import MessageTextInput, Output\n"
+            "from lfx.schema import Message\n"
+            "\n"
+            "class PrimeChecker(Component):\n"
+            "    display_name = 'PrimeChecker'\n"
+            "    inputs = [MessageTextInput(name='input_value', display_name='N', required=True)]\n"
+            "    outputs = [Output(name='output', display_name='Output', method='build_output')]\n"
+            "    def build_output(self) -> Message:\n"
+            "        n = int(str(self.input_value).strip().strip(chr(34)).strip())\n"
+            "        if n < 2:\n"
+            "            return Message(text=f'{n} is not prime.')\n"
+            "        for d in range(2, isqrt(n) + 1):\n"
+            "            if n % d == 0:\n"
+            "                return Message(text=f'{n} is not prime.')\n"
+            "        return Message(text=f'{n} is prime.')\n"
+        )
+        register_user_component(user_id="user-alice", class_name="PrimeChecker", code=code)
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+
+        spec = (
+            "name: T\n"
+            "nodes:\n"
+            "  A: ChatInput\n"
+            "  B: PrimeChecker\n"
+            "  C: ChatOutput\n"
+            "edges:\n"
+            "  A.message -> B.input_value\n"
+            "  B.output -> C.input_value\n"
+            "config:\n"
+            '  A.input_value: "14"\n'
+        )
+        built = build_flow_from_spec(spec, registry=registry)
+        assert "error" not in built, built
+
+        out = await run_working_flow(
+            flow_data=built["flow"],
+            flow_id=str(uuid.uuid4()),
+            user_id="user-alice",
+        )
+
+        assert "build_output not found" not in str(out), out
+        assert "error" not in out, f"run errored: {out}"
+        assert "is not prime" in out.get("result", ""), out
+
+    async def test_overlay_template_reflects_real_inputs_and_runs_with_config(
+        self,
+        isolated_sandbox: Path,  # noqa: ARG002
+    ) -> None:
+        # The production bug: a component declaring its own input (e.g.
+        # IntInput name='amount') got a generic scaffold node exposing only
+        # 'input_value'. So `config: A.amount: 14` failed ("Unknown
+        # parameter 'amount'"), the agent fell back to 'input_value' (which
+        # the code ignores), and the component ran with its default → wrong
+        # result. The overlay must introspect the REAL template.
+        import uuid
+
+        from langflow.agentic.services.flow_run import run_working_flow
+        from lfx.graph.flow_builder.builder import build_flow_from_spec
+
+        code = (
+            "from math import isqrt\n"
+            "from lfx.custom import Component\n"
+            "from lfx.io import IntInput, Output\n"
+            "from lfx.schema import Message\n"
+            "\n"
+            "class PrimeChecker(Component):\n"
+            "    display_name = 'PrimeChecker'\n"
+            "    inputs = [IntInput(name='amount', display_name='N', required=True, value=2)]\n"
+            "    outputs = [Output(name='output', display_name='Out', method='build_output')]\n"
+            "    def build_output(self) -> Message:\n"
+            "        n = int(self.amount)\n"
+            "        if n < 2:\n"
+            "            return Message(text=f'{n} is not prime')\n"
+            "        for d in range(2, isqrt(n) + 1):\n"
+            "            if n % d == 0:\n"
+            "                return Message(text=f'{n} is not prime')\n"
+            "        return Message(text=f'{n} is prime')\n"
+        )
+        register_user_component(user_id="user-alice", class_name="PrimeChecker", code=code)
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+
+        # The overlay entry's template must carry the REAL input field.
+        template = registry["PrimeChecker"]["template"]
+        assert "amount" in template, f"overlay lost the real input; has {list(template)}"
+
+        spec = (
+            "name: T\n"
+            "nodes:\n"
+            "  A: PrimeChecker\n"
+            "  B: ChatOutput\n"
+            "edges:\n"
+            "  A.output -> B.input_value\n"
+            "config:\n"
+            "  A.amount: 14\n"
+        )
+        built = build_flow_from_spec(spec, registry=registry)
+        assert "error" not in built, built
+
+        out = await run_working_flow(flow_data=built["flow"], flow_id=str(uuid.uuid4()), user_id="user-alice")
+        assert "error" not in out, out
+        # 14 is not prime — must reflect the CONFIGURED 14, not the default 2.
+        assert "14 is not prime" in out.get("result", ""), out
 
     def test_should_pick_up_overwritten_component(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         register_user_component(

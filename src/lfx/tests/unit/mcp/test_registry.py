@@ -182,3 +182,63 @@ class TestDescribeComponentToolMode:
         tool_output = next(o for o in result["outputs"] if o["name"] == "component_as_tool")
         assert "query" in tool_output["description"]
         assert "limit" in tool_output["description"]
+
+
+class TestSearchRegistryLegacyFilter:
+    """WS-5 / RC-5 — agent discovery must not surface LEGACY components.
+
+    Screenshot 5: a Legacy Calculator was added to a built flow. Legacy stays
+    describable by exact name so an explicit request still works.
+
+    Requirement CHANGED (user, 2026-05-18): BETA components ARE allowed in
+    search — only Legacy is hidden. The earlier "beta excluded" assertion is
+    intentionally inverted below, not deleted, to record the spec change.
+    """
+
+    def test_search_excludes_legacy_components_by_default(self) -> None:
+        registry = {
+            "Calculator": {"template": {}, "legacy": True, "category": "tools"},
+            "WebSearch": {"template": {}, "category": "tools"},
+        }
+        names = {r["type"] for r in search_registry(registry)}
+        assert "Calculator" not in names, "Legacy components must not appear in default search results"
+        assert "WebSearch" in names
+
+    def test_search_includes_beta_components_by_default(self) -> None:
+        # Spec change: beta is usable; the agent SHOULD see beta components.
+        registry = {
+            "BetaThing": {"template": {}, "beta": True, "category": "tools"},
+            "StableThing": {"template": {}, "category": "tools"},
+        }
+        names = {r["type"] for r in search_registry(registry)}
+        assert "BetaThing" in names, "Beta components must be visible in default search"
+        assert "StableThing" in names
+
+    def test_search_still_excludes_legacy_even_if_also_beta(self) -> None:
+        # A component flagged both legacy AND beta is still hidden (legacy wins).
+        registry = {
+            "OldBeta": {"template": {}, "legacy": True, "beta": True, "category": "tools"},
+        }
+        names = {r["type"] for r in search_registry(registry)}
+        assert "OldBeta" not in names
+
+    def test_search_includes_legacy_when_explicitly_requested(self) -> None:
+        registry = {"Calculator": {"template": {}, "legacy": True, "category": "tools"}}
+        names = {r["type"] for r in search_registry(registry, include_legacy=True)}
+        assert "Calculator" in names
+
+    def test_search_still_returns_non_legacy_components(self) -> None:
+        """Regression: the filter must not drop normal components."""
+        registry = {
+            "ChatInput": {"template": {}, "category": "inputs"},
+            "Agent": {"template": {}, "category": "agents"},
+        }
+        names = {r["type"] for r in search_registry(registry)}
+        assert names == {"ChatInput", "Agent"}
+
+    def test_describe_still_works_for_legacy_and_flags_it(self) -> None:
+        """A legacy component stays describable and the result flags it as legacy."""
+        registry = {"Calculator": {"template": {}, "legacy": True, "category": "tools"}}
+        result = describe_component(registry, "Calculator")
+        assert result["type"] == "Calculator"
+        assert result.get("legacy") is True

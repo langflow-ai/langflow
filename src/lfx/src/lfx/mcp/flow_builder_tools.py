@@ -7,6 +7,7 @@ so the assistant service can send real-time SSE updates to the frontend.
 
 from __future__ import annotations
 
+import asyncio
 from collections import deque
 from contextvars import ContextVar
 from typing import Any
@@ -96,9 +97,45 @@ def reset_working_flow() -> None:
     _get_flow_events().clear()
 
 
+def isolate_flow_run_context() -> None:
+    """Rebind the per-run flow ContextVars to FRESH values.
+
+    For a NESTED pipeline run (``GenerateComponent`` re-entering
+    ``execute_flow_with_validation`` mid agent-loop), the parent loop's
+    canvas/events must be invisible and untouchable. Unlike
+    ``reset_working_flow()`` — which ``.clear()``s the event deque that a
+    child context inherited *by reference* from the parent — this installs
+    a brand-new deque, so the nested run can neither drain the parent's
+    queued events nor wipe the parent's working flow.
+    """
+    _flow_events_var.set(deque())
+    _working_flow_var.set(None)
+    _current_flow_id_var.set(None)
+
+
 def _emit(action: str, **data: Any) -> None:
     """Push a flow_update event."""
     _get_flow_events().append({"action": action, **data})
+
+
+def _readable_preview(value: Any, limit: int = 120) -> str:
+    r"""One-line, human-readable rendering of a field value for a summary.
+
+    The full value is carried separately (``new_value``/the patch) for the
+    diff body — this is only the short headline. Uses ``repr()``-free
+    formatting (no surrounding quotes, no escaped ``\n``) and collapses all
+    whitespace so a multi-line system prompt doesn't blow up the card.
+    """
+    text = value if isinstance(value, str) else str(value)
+    # Collapse BOTH real control chars and their two-char escape sequences
+    # ("\\n"/"\\r"/"\\t") — LLMs emit either, and the card must never show
+    # a literal backslash-n.
+    for esc in ("\\n", "\\r", "\\t"):
+        text = text.replace(esc, " ")
+    text = " ".join(text.split())
+    if len(text) > limit:
+        text = text[: limit - 1].rstrip() + "…"
+    return text
 
 
 def _ensure_working_flow() -> dict:
@@ -263,6 +300,110 @@ class GetFieldValue(Component):
         return Data(data={"component_id": self.component_id, "field": self.field_name, "value": value})
 
 
+class DescribeFlowIO(Component):
+    """Deterministically resolve the flow's input/output/tool components.
+
+    Computed from the graph wiring — O(1) for the agent and exact at ANY
+    flow size, so the agent never has to scan `connections` by eye (which
+    mis-targets on large flows: e.g. editing a tool component instead of
+    the ChatInput). Call this to find which component "the input" means
+    BEFORE editing it.
+
+    Classification (by role in the edges, never by name):
+      - tool: a source whose every outgoing edge feeds a `tools` handle
+        (the `component_as_tool` wiring) — NOT the flow input.
+      - input: a node with NO incoming edges that is not a tool — its
+        `value_field` is the field to set ("input_value"/"input_text"/...).
+      - output: a sink (no outgoing edges), typically ChatOutput.
+    """
+
+    display_name = "Describe Flow IO"
+    description = (
+        "Return the flow's input components (and which field carries the run input), output "
+        "components, and tool components, computed from the canvas wiring. Use this to find "
+        "which component 'the input' / 'o input' refers to before editing it — never guess "
+        "from names. If there is more than one input, ask the user which one."
+    )
+    icon = "ArrowRightLeft"
+    name = "DescribeFlowIO"
+
+    inputs = [
+        MessageTextInput(
+            name="reason",
+            display_name="Reason",
+            info="Optional short note on why you are inspecting the flow IO (does not change anything).",
+            required=False,
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(name="result", display_name="Flow IO", method="describe_flow_io"),
+    ]
+
+    _VALUE_FIELDS = ("input_value", "input_text", "text")
+
+    def describe_flow_io(self) -> Data:
+        flow = _ensure_working_flow()
+        data = flow.get("data") or {}
+        nodes = data.get("nodes") or []
+        edges = data.get("edges") or []
+
+        def _nid(node: dict) -> str:
+            nd = node.get("data", {}) or {}
+            return nd.get("id", node.get("id", ""))
+
+        def _ntype(node: dict) -> str:
+            return (node.get("data", {}) or {}).get("type", "?")
+
+        def _template(node: dict) -> dict:
+            return (node.get("data", {}) or {}).get("node", {}).get("template", {}) or {}
+
+        incoming: dict[str, int] = {}
+        out_target_fields: dict[str, list] = {}
+        for edge in edges:
+            src = edge.get("source", "")
+            tgt = edge.get("target", "")
+            tgt_handle = (edge.get("data", {}) or {}).get("targetHandle", {})
+            field = tgt_handle.get("fieldName") if isinstance(tgt_handle, dict) else None
+            if tgt:
+                incoming[tgt] = incoming.get(tgt, 0) + 1
+            if src:
+                out_target_fields.setdefault(src, []).append(field)
+
+        inputs: list[dict] = []
+        outputs: list[dict] = []
+        tools: list[dict] = []
+        for node in nodes:
+            nid = _nid(node)
+            ntype = _ntype(node)
+            outs = out_target_fields.get(nid, [])
+            # A tool provider's every outgoing edge targets a `tools` input.
+            if outs and all(f == "tools" for f in outs):
+                tools.append({"id": nid, "type": ntype})
+                continue
+            if not outs:
+                outputs.append({"id": nid, "type": ntype})
+            if incoming.get(nid, 0) == 0:
+                tmpl = _template(node)
+                value_field = next((f for f in self._VALUE_FIELDS if isinstance(tmpl.get(f), dict)), None)
+                inputs.append({"id": nid, "type": ntype, "value_field": value_field})
+
+        def _fmt(items: list, *, with_field: bool = False) -> str:
+            if not items:
+                return "(none)"
+            parts = []
+            for it in items:
+                if with_field and it.get("value_field"):
+                    parts.append(f"{it['id']} ({it['type']}, set {it['value_field']})")
+                else:
+                    parts.append(f"{it['id']} ({it['type']})")
+            return ", ".join(parts)
+
+        text = f"inputs: {_fmt(inputs, with_field=True)}\noutputs: {_fmt(outputs)}\ntools: {_fmt(tools)}"
+        return Data(data={"inputs": inputs, "outputs": outputs, "tools": tools, "text": text})
+
+
 # ---------------------------------------------------------------------------
 # Propose edits (validated, user-reviewable)
 # ---------------------------------------------------------------------------
@@ -373,11 +514,12 @@ class ProposeFieldEdit(Component):
             field=self.field_name,
             old_value=old_value,
             new_value=self.new_value,
-            description=f"Set {self.field_name} to {self.new_value!r} on {component_type}",
+            description=f'Set {self.field_name} to "{_readable_preview(self.new_value)}" on {component_type}',
             patch=patch_ops,
         )
 
-        text = f"Proposed: set {self.field_name} = {self.new_value!r} on {component_type} (pending user approval)"
+        preview = _readable_preview(self.new_value)
+        text = f'Proposed: set {self.field_name} = "{preview}" on {component_type} (pending user approval)'
         return Data(data={"text": text})
 
 
@@ -501,6 +643,7 @@ class ConnectComponents(Component):
             source_node = _find_node(flow, self.source_id)
             if source_node is not None:
                 outputs = source_node.get("data", {}).get("node", {}).get("outputs", [])
+                output_names = {o.get("name") for o in outputs if isinstance(o, dict)}
                 if len(outputs) > 1:
                     # Frontend reads `data.selected_output` (top-level on the
                     # ReactFlow node) to decide which output handle is rendered
@@ -508,6 +651,20 @@ class ConnectComponents(Component):
                     # `data.node.selected_output` is invisible to the canvas.
                     source_node["data"]["selected_output"] = self.source_output
                     _emit("select_output", component_id=self.source_id, output_name=self.source_output)
+                else:
+                    # Single/zero output now (e.g. tool-mode collapsed the
+                    # outputs). A leftover `selected_output` from a prior
+                    # wiring would point at a removed output and the node
+                    # label would render "unconnected" — reconcile it.
+                    stale = source_node["data"].get("selected_output")
+                    if stale is not None and stale not in output_names:
+                        source_node["data"].pop("selected_output", None)
+                        if outputs:
+                            _emit(
+                                "select_output",
+                                component_id=self.source_id,
+                                output_name=outputs[0].get("name", ""),
+                            )
             return Data(
                 data={
                     "text": f"Connected {self.source_id}.{self.source_output} -> {self.target_id}.{self.target_input}",
@@ -715,7 +872,11 @@ class BuildFlowFromSpec(Component):
             result["text"] = error_msg
         elif "flow" in result:
             orphan_ids = _find_orphan_nodes(result["flow"])
-            if orphan_ids:
+            # A single-component flow has no edges by definition — it is a
+            # valid standalone flow (e.g. the agent built one component to
+            # run/inspect), NOT an orphan mistake. Only reject when 2+
+            # nodes exist but wiring is missing.
+            if orphan_ids and result.get("node_count", len(orphan_ids)) > 1:
                 # Reject orphan-bearing flows so the LLM retries instead of
                 # rendering an unconnected component on the user's canvas.
                 # The agent prompt explicitly forbids orphans; this is the
@@ -731,7 +892,16 @@ class BuildFlowFromSpec(Component):
                 f"Flow '{result['name']}' built successfully "
                 f"({result['node_count']} nodes, {result['edge_count']} edges)."
             )
-            _working_flow_var.set(result["flow"])
+            # Mutate the EXISTING working-flow dict in place instead of
+            # rebinding the ContextVar. A `.set()` rebind is invisible
+            # across tool-execution contexts, so a later `run_flow` tool
+            # call (different context) would still see the old empty flow
+            # ("There is no flow on the canvas to run"). In-place mutation
+            # of the shared object is visible everywhere — same proven
+            # pattern as `configure_component` (`fb_configure(flow, ...)`).
+            working = _ensure_working_flow()
+            working.clear()
+            working.update(result["flow"])
             _emit("set_flow", flow=result["flow"])
         return Data(data=result)
 
@@ -762,3 +932,204 @@ def _find_orphan_nodes(flow: dict) -> list[str]:
         if node_id and node_id not in connected:
             orphans.append(node_id)
     return orphans
+
+
+def _format_run_metrics(metrics: dict) -> str:
+    """Render run metrics as one human line the agent can repeat verbatim.
+
+    Always reports wall time; appends token usage only when an LLM was
+    actually involved (total > 0), so non-LLM flows don't read "0 tokens".
+    """
+    if not metrics:
+        return ""
+    duration = metrics.get("duration_seconds") or 0
+    parts = [f"Ran in {duration:g}s"]
+    total = metrics.get("total_tokens") or 0
+    if total:
+        in_tok = metrics.get("input_tokens") or 0
+        out_tok = metrics.get("output_tokens") or 0
+        parts.append(f"used {total} tokens ({in_tok} in / {out_tok} out)")
+    return f"({' · '.join(parts)})"
+
+
+class RunFlow(Component):
+    """Run the user's current canvas flow and return its result.
+
+    Executes the working flow exactly as it is on the canvas (honoring any
+    unsaved assistant edits) with the components' currently-configured
+    values — no input is invented. Vertex-build events are forwarded so the
+    canvas animates like a normal Run, and the result text is returned to
+    the agent so it can answer follow-up questions about it.
+
+    Decoupled from ``langflow`` via a late import (same pattern as
+    ``_load_registry_user_aware``): ``lfx`` may run without the backend.
+    """
+
+    display_name = "Run Flow"
+    description = (
+        "Execute the user's current flow on the canvas (with its configured values) and "
+        "return the result. Use when the user asks to run/test/execute the flow or asks "
+        "about what it produces. The canvas animates while it runs; the result comes back "
+        "so you can discuss it. Do not invent inputs; run it as configured."
+    )
+    icon = "Play"
+    name = "RunFlow"
+
+    inputs = [
+        MessageTextInput(
+            name="reason",
+            display_name="Reason",
+            info="Optional short note on why you are running the flow (does not change the run).",
+            required=False,
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(name="run_result", display_name="Run Result", method="run_flow"),
+    ]
+
+    async def run_flow(self) -> Data:
+        flow = _ensure_working_flow()
+        nodes = (flow.get("data") or {}).get("nodes") or []
+        if not nodes:
+            msg = "There is no flow on the canvas to run. Build or add components first."
+            return Data(data={"error": msg, "text": msg})
+
+        try:
+            from langflow.agentic.services.flow_run import run_working_flow
+        except ImportError:
+            msg = "Flow execution is not available in this environment."
+            return Data(data={"error": msg, "text": msg})
+
+        try:
+            from langflow.agentic.services.user_components_context import current_user_id
+
+            user_id = current_user_id()
+        except ImportError:
+            user_id = None
+
+        # The run engine (ChatOutput/session) requires a valid UUID flow id;
+        # a non-UUID placeholder makes the run fail with "badly formed
+        # hexadecimal UUID string". Fall back to a fresh uuid4 when the
+        # canvas has no persisted id yet.
+        from uuid import uuid4
+
+        flow_id = _current_flow_id_var.get() or str(uuid4())
+        result = await run_working_flow(flow_data=flow, flow_id=flow_id, user_id=user_id)
+        if "error" in result:
+            return Data(data={"error": result["error"], "text": result["error"]})
+        text = result.get("result", "")
+        metrics = result.get("metrics") or {}
+        summary = _format_run_metrics(metrics)
+        # The LLM only reads `text`, so the performance summary must be inline
+        # for the agent to be able to report time/tokens; `metrics` is kept
+        # structured for any programmatic use.
+        text_with_metrics = f"{text}\n\n{summary}" if summary else text
+        return Data(data={"text": text_with_metrics, "result": text, "metrics": metrics})
+
+
+class GenerateComponent(Component):
+    """Generate, validate and register a NEW custom Langflow component.
+
+    This is what lets ONE agent loop handle "create a component that does X
+    and use it in a flow" without an intent router or phase orchestration:
+    the agent calls this tool, then ``search_components`` finds the new
+    component by class name and ``build_flow``/``add_component`` use it.
+
+    Wraps the full backend pipeline (LLM generation → security scan → code
+    + runtime validation with retries → user-scoped registration). Lazily
+    imports ``langflow`` (same decoupling as ``RunFlow``): ``lfx`` may run
+    without the backend.
+    """
+
+    display_name = "Generate Component"
+    description = (
+        "Create a brand-new custom Langflow component from a natural-language description. "
+        "Use this when the user asks for a component/tool that does not exist yet. On success "
+        "the component is validated and registered — then call search_components to find it by "
+        "its class name and add it to the flow. Returns the generated component's class name."
+    )
+    icon = "Wand2"
+    name = "GenerateComponent"
+
+    inputs = [
+        MessageTextInput(
+            name="spec",
+            display_name="Spec",
+            info="Natural-language spec of the component to create (what it takes and what it returns).",
+            required=True,
+            tool_mode=True,
+        ),
+    ]
+
+    outputs = [
+        Output(name="result", display_name="Result", method="generate_component"),
+    ]
+
+    async def generate_component(self) -> Data:
+        spec = (self.spec or "").strip()
+        if not spec:
+            msg = "Describe the component to generate (what it takes as input and what it returns)."
+            return Data(data={"error": msg, "text": msg})
+
+        try:
+            from langflow.agentic.services.assistant_service import execute_flow_with_validation
+            from langflow.agentic.services.file_events import reset_file_events
+            from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
+        except ImportError:
+            msg = "Component generation is not available in this environment."
+            return Data(data={"error": msg, "text": msg})
+
+        try:
+            from langflow.agentic.services.agent_run_context import current_agent_run_model
+            from langflow.agentic.services.user_components_context import current_user_id
+
+            user_id = current_user_id()
+            model = current_agent_run_model() or {}
+        except ImportError:
+            user_id = None
+            model = {}
+
+        # Give the internal generation sub-flow a valid (ephemeral) flow id
+        # so its tracing doesn't log "Invalid flow_id ... None" and persist
+        # under a sentinel on every component generation.
+        from uuid import uuid4
+
+        from lfx.mcp.tool_cache import reset_tool_cache
+
+        flow_id = str(uuid4())
+
+        async def _isolated_generation() -> dict:
+            # This nested pipeline drains flow events and resets the
+            # working flow internally. Run it with fresh per-run state so
+            # it can neither steal the parent agent loop's queued events
+            # nor wipe the canvas the agent already built this turn.
+            isolate_flow_run_context()
+            reset_tool_cache()
+            reset_file_events()
+            return await execute_flow_with_validation(
+                flow_filename=LANGFLOW_ASSISTANT_FLOW,
+                input_value=spec,
+                global_variables={"FLOW_ID": flow_id},
+                user_id=user_id,
+                provider=model.get("provider"),
+                model_name=model.get("model_name"),
+                api_key_var=model.get("api_key_var"),
+            )
+
+        # asyncio.create_task runs the coroutine in a COPY of the current
+        # context; ContextVar writes inside it (incl. the isolate/reset
+        # calls above) do not propagate back to the parent agent loop.
+        result = await asyncio.create_task(_isolated_generation())
+
+        if result.get("validated"):
+            class_name = result.get("class_name", "")
+            text = (
+                f"Component '{class_name}' created, validated and registered. "
+                f"Now call search_components to find '{class_name}' and add it to the flow."
+            )
+            return Data(data={"text": text, "class_name": class_name, "component_code": result.get("component_code")})
+
+        err = result.get("validation_error") or result.get("result") or "Component generation failed."
+        return Data(data={"error": err, "text": err})

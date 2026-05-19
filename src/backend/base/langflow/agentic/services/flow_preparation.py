@@ -1,6 +1,8 @@
 """Flow data preparation and model injection."""
 
+import copy
 import json
+import logging
 from pathlib import Path
 
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
@@ -16,10 +18,35 @@ from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_ro
 # derived from the installed lfx package at runtime.
 LFX_COMPONENTS_PATH_SENTINEL = "./src/lfx/src/lfx/components/"
 
+logger = logging.getLogger(__name__)
+
 
 def get_provider_config(provider: str) -> dict | None:
     """Return provider metadata for backward compatibility with existing callers/tests."""
     return MODEL_PROVIDER_METADATA.get(provider)
+
+
+def available_model_providers(global_variables: dict[str, str] | None) -> list[str]:
+    """Return the model providers whose required API key is configured.
+
+    Provider-agnostic and deterministic: for each provider in
+    ``MODEL_PROVIDER_METADATA`` whose required secret variable
+    (e.g. ``OPENAI_API_KEY``, ``ANTHROPIC_API_KEY``, ``GROQ_API_KEY``) has
+    a non-empty value in ``global_variables`` (which the assistant builds
+    from the environment), include it. Order preserved from the metadata
+    so the caller can pick a stable default. No OpenAI bias — whatever the
+    user actually has keys for.
+    """
+    gv = global_variables or {}
+    providers: list[str] = []
+    for provider, meta in MODEL_PROVIDER_METADATA.items():
+        for var in meta.get("variables", []):
+            if var.get("required") and var.get("is_secret"):
+                key = var.get("variable_key")
+                if key and (gv.get(key) or "").strip():
+                    providers.append(provider)
+                break
+    return providers
 
 
 def inject_model_into_flow(
@@ -100,6 +127,15 @@ def inject_model_into_flow(
             template = node_data.get("node", {}).get("template", {})
             if "model" in template:
                 template["model"]["value"] = model_value
+            else:
+                # Silent skip here means the run later fails with an
+                # opaque "No model selected" — leave a diagnostic with
+                # the node id so the cause is traceable.
+                logger.warning(
+                    "assistant.inject_model.agent_missing_model_field node_id=%s provider=%s",
+                    node.get("id", "<unknown>"),
+                    provider,
+                )
             # Inject provider-specific fields (API key, URLs, project IDs)
             for field_name, field_value in provider_fields.items():
                 if field_name in template:
@@ -171,6 +207,32 @@ def inject_assistant_fs_root(flow_data: dict) -> dict:
     return flow_data
 
 
+# Parsed bundled-flow templates, keyed by path → ((mtime_ns, size),
+# parsed dict). The raw template is stable per file; re-reading +
+# json.loads on every request (and x4 on validation retries) was
+# blocking the event loop. A genuine file change (mtime/size) re-parses.
+_FLOW_TEMPLATE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
+
+
+def _load_flow_template(flow_path: Path) -> dict:
+    """Return a fresh deep copy of the parsed flow (cached by path+stat)."""
+    key = str(flow_path)
+    try:
+        stat = flow_path.stat()
+        sig = (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        # Can't stat → don't cache; fall back to a direct read.
+        return json.loads(flow_path.read_text(encoding="utf-8"))
+
+    cached = _FLOW_TEMPLATE_CACHE.get(key)
+    if cached is None or cached[0] != sig:
+        parsed = json.loads(flow_path.read_text(encoding="utf-8"))
+        _FLOW_TEMPLATE_CACHE[key] = (sig, parsed)
+        cached = (sig, parsed)
+    # Deep copy so per-request model injection never mutates the cache.
+    return copy.deepcopy(cached[1])
+
+
 def load_and_prepare_flow(
     flow_path: Path,
     provider: str | None,
@@ -179,7 +241,7 @@ def load_and_prepare_flow(
     provider_vars: dict[str, str] | None = None,
 ) -> str:
     """Load flow file and prepare JSON with model injection."""
-    flow_data = json.loads(flow_path.read_text())
+    flow_data = _load_flow_template(flow_path)
 
     if provider and model_name:
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)

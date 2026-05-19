@@ -5,10 +5,8 @@ import {
   ReactFlow,
   ReactFlowProvider,
 } from "@xyflow/react";
-import ELK from "elkjs/lib/elk.bundled.js";
 import { ArrowRight, Check, GitBranch, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { NODE_HEIGHT, NODE_WIDTH } from "@/constants/constants";
+import { useCallback, useMemo, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowProposalStatus } from "../assistant-panel.types";
 import {
@@ -19,10 +17,11 @@ import {
 const APPROVED_DISPLAY_DURATION_MS = 3000;
 
 /**
- * Above this many nodes a thumbnail-sized preview becomes an unreadable
- * tangle, so we skip rendering the mini-canvas and show a notice instead.
+ * Above this many components the thumbnail is an unreadable tangle, so the
+ * mini-canvas is skipped and a short notice is shown instead. The flow can
+ * still be added/replaced — only the visual preview is suppressed.
  */
-const MAX_PREVIEW_NODES = 8;
+const MAX_PREVIEW_NODES = 7;
 
 interface FlowPreviewData {
   flow: Record<string, unknown>;
@@ -54,30 +53,14 @@ interface AssistantFlowPreviewProps {
   onDismiss?: () => void;
 }
 
-// Preview nodes are sized to match the coordinate system that
-// `getLayoutedNodes` (ELK) uses internally (NODE_WIDTH x NODE_HEIGHT).
-// Keeping the rendered box proportional to the layout slot is what makes
-// `fitView` produce a clean, evenly-spaced thumbnail instead of nodes
-// collapsing into overlapping dots.
-const PREVIEW_NODE_WIDTH = NODE_WIDTH;
-const PREVIEW_NODE_HEIGHT = Math.round(NODE_HEIGHT / 5);
-
 const defaultNodeStyle = {
-  width: PREVIEW_NODE_WIDTH,
-  height: PREVIEW_NODE_HEIGHT,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "40px",
-  fontWeight: 600,
-  padding: "0 24px",
-  borderRadius: "24px",
+  fontSize: "11px",
+  fontWeight: 500,
+  padding: "4px 10px",
+  borderRadius: "8px",
   border: "1px solid var(--border)",
   background: "var(--background)",
   color: "var(--foreground)",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap" as const,
 };
 
 /** Extract ReactFlow-compatible nodes and edges from the flow data */
@@ -96,23 +79,24 @@ function extractReactFlowData(flow: Record<string, unknown>): {
           id?: string;
           source?: string;
           target?: string;
-          sourceHandle?: string;
-          targetHandle?: string;
         }[];
       }
     | undefined;
 
   if (!data?.nodes) return { nodes: [], edges: [] };
 
-  // Positions are intentionally NOT taken from the flow data: assistant-
-  // generated flows often ship with stacked/near-identical coordinates,
-  // which is what caused the overlapping mess. We let ELK lay them out.
+  // Scale down positions to fit the mini canvas
+  const positions = data.nodes.map((n) => n.position ?? { x: 0, y: 0 });
+  const maxX = Math.max(...positions.map((p) => p.x), 1);
+  const scale = 250 / maxX;
+
   const nodes: Node[] = data.nodes.map((n, i) => ({
     id: n.id || `node-${i}`,
     type: "default",
-    position: { x: 0, y: 0 },
-    width: PREVIEW_NODE_WIDTH,
-    height: PREVIEW_NODE_HEIGHT,
+    position: {
+      x: (n.position?.x ?? 0) * scale + 20,
+      y: (n.position?.y ?? 0) * scale + 30,
+    },
     data: { label: n.data?.type || "Unknown" },
     style: defaultNodeStyle,
     draggable: false,
@@ -124,56 +108,10 @@ function extractReactFlowData(flow: Record<string, unknown>): {
     source: e.source || "",
     target: e.target || "",
     animated: true,
-    style: { stroke: "var(--muted-foreground)", strokeWidth: 4 },
+    style: { stroke: "var(--muted-foreground)", strokeWidth: 1.5 },
   }));
 
   return { nodes, edges };
-}
-
-const elk = new ELK();
-
-/**
- * Lay the preview graph out left→right with elkjs.
- *
- * We call ELK directly (instead of `getLayoutedNodes` from layoutUtils)
- * because that helper derives ELK ports from typed node handles, which the
- * lightweight default ReactFlow nodes used here don't have — it throws and
- * the graph collapses to a single overlapping stack. A port-less layered
- * graph is robust and produces a clean pipeline thumbnail.
- */
-async function layoutPreviewNodes(
-  nodes: Node[],
-  edges: Edge[],
-): Promise<Node[]> {
-  const graph = {
-    id: "root",
-    layoutOptions: {
-      "elk.algorithm": "layered",
-      "elk.direction": "RIGHT",
-      "elk.spacing.nodeNode": "120",
-      "elk.layered.spacing.nodeNodeBetweenLayers": "180",
-      "elk.separateConnectedComponents": "true",
-    },
-    children: nodes.map((n) => ({
-      id: n.id,
-      width: PREVIEW_NODE_WIDTH,
-      height: PREVIEW_NODE_HEIGHT,
-    })),
-    edges: edges.map((e) => ({
-      id: e.id,
-      sources: [e.source],
-      targets: [e.target],
-    })),
-  };
-
-  const layouted = await elk.layout(graph);
-  return nodes.map((node) => {
-    const positioned = layouted.children?.find((c) => c.id === node.id);
-    return {
-      ...node,
-      position: { x: positioned?.x ?? 0, y: positioned?.y ?? 0 },
-    };
-  });
 }
 
 export function AssistantFlowPreview({
@@ -185,37 +123,14 @@ export function AssistantFlowPreview({
   const [showApproved, setShowApproved] = useState(false);
   const paste = useFlowStore((state) => state.paste);
 
-  const { nodes: baseNodes, edges } = useMemo(
+  const { nodes, edges } = useMemo(
     () => extractReactFlowData(flowPreview.flow),
     [flowPreview.flow],
   );
 
   // The reported node count is authoritative; fall back to the parsed nodes.
-  const nodeCount = flowPreview.nodeCount || baseNodes.length;
+  const nodeCount = flowPreview.nodeCount || nodes.length;
   const previewDisabled = nodeCount > MAX_PREVIEW_NODES;
-
-  // ELK runs async; start from the unpositioned nodes and swap them for the
-  // layouted result once it resolves. `fitView` re-frames on every change.
-  const [nodes, setNodes] = useState<Node[]>(baseNodes);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (baseNodes.length === 0 || previewDisabled) {
-      setNodes([]);
-      return;
-    }
-    setNodes(baseNodes);
-    layoutPreviewNodes(baseNodes, edges)
-      .then((layouted) => {
-        if (!cancelled) setNodes(layouted);
-      })
-      .catch(() => {
-        // Keep the unpositioned fallback; better than crashing the card.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [baseNodes, edges, previewDisabled]);
 
   const handleAddToFlow = useCallback(() => {
     const data = flowPreview.flow.data as
@@ -251,7 +166,7 @@ export function AssistantFlowPreview({
       </div>
 
       {/* Preview is skipped for large graphs — a thumbnail of that many
-          nodes is an unreadable tangle. */}
+          nodes is an unreadable tangle. The flow can still be added. */}
       {previewDisabled && (
         <div className="mb-3 w-fit rounded-md border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
           Preview disabled — too many components ({nodeCount}).
@@ -260,18 +175,13 @@ export function AssistantFlowPreview({
 
       {/* Mini flow canvas */}
       {!previewDisabled && nodes.length > 0 && (
-        <div className="mb-3 h-[160px] w-full overflow-hidden rounded-md bg-muted/30">
+        <div className="mb-3 h-[120px] w-full overflow-hidden rounded-md bg-muted/30">
           <ReactFlowProvider>
             <ReactFlow
-              // Remount once ELK positions land so `fitView` re-frames the
-              // laid-out graph instead of the initial (0,0) stack.
-              key={`${nodes.length}:${Math.round(nodes[0]?.position?.x ?? 0)}:${Math.round(
-                nodes[nodes.length - 1]?.position?.x ?? 0,
-              )}`}
               nodes={nodes}
               edges={edges}
               fitView
-              fitViewOptions={{ padding: 0.12 }}
+              fitViewOptions={{ padding: 0.3 }}
               nodesDraggable={false}
               nodesConnectable={false}
               elementsSelectable={false}

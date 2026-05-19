@@ -205,6 +205,53 @@ class TestQAResponse:
             assert len(complete_events) == 1
 
 
+class TestCompoundOrchestration:
+    """Compound prompt → the SINGLE agent loop, no phase recursion.
+
+    `component_then_flow` goes to the FlowBuilderAssistant (which has the
+    generate_component tool). ONE agent turn owns the whole inline request and
+    calls generate_component → search_components → build_flow → run_flow as
+    tools. Single-intent requests keep their existing dedicated paths
+    (covered by TestComponentGeneration / the build-flow tests).
+    """
+
+    @pytest.mark.asyncio
+    async def test_compound_routes_to_single_agent_loop_no_phase_recursion(self):
+        mock_stream = MagicMock(
+            side_effect=lambda **_kw: _make_flow_events([("end", {"result": "14 is not prime."})])()
+        )
+        mock_classify = AsyncMock(return_value=_make_intent("component_then_flow"))
+
+        with (
+            patch(f"{MODULE}.classify_intent", mock_classify),
+            patch(f"{MODULE}.execute_flow_file_streaming", mock_stream),
+            # The agent's build emits set_flow (it used build_flow as a tool).
+            patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow"}], [], []]),
+            patch(f"{MODULE}.extract_response_text", return_value="14 is not prime."),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect_events(
+                execute_flow_with_validation_streaming(
+                    flow_filename="TestFlow",
+                    input_value="create a prime checker component then build a flow with it and run it with 14",
+                    global_variables={},
+                    max_retries=1,
+                )
+            )
+
+        blob = "\n".join(events)
+        # Routed to the single FlowBuilderAssistant loop — NOT the component
+        # path, and NOT a second recursive turn.
+        assert mock_stream.call_count == 1, blob[:800]
+        assert mock_stream.call_args.kwargs["flow_filename"].startswith("flow_builder_assistant")
+        # The compound request never went through component-code validation
+        # (the agent owns component creation as a tool, in-loop).
+        assert not any('"validated"' in e for e in events), blob[:800]
+        completes = [e for e in events if '"event": "complete"' in e]
+        assert len(completes) == 1, blob[:800]
+        assert not any('"event": "error"' in e for e in events), blob[:800]
+
+
 class TestComponentGeneration:
     """Tests for component generation flow."""
 

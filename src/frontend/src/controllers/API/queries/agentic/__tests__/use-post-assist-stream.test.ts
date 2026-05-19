@@ -204,6 +204,29 @@ describe("event dispatch", () => {
     expect(onError).toHaveBeenCalledWith(errorEvent);
   });
 
+  it("should dispatch onError when the stream ends without a terminal event", async () => {
+    // Bug: a dropped connection / server crash mid-build ends the reader
+    // with no complete/error/cancelled. postAssistStream then resolved
+    // normally, so the caller never flipped isProcessing off → spinner
+    // stuck forever + ambiguous partial canvas.
+    const progressOnly: AgenticSSEEvent = {
+      event: "progress",
+      step: "building_flow",
+    } as unknown as AgenticSSEEvent;
+    mockFetch.mockResolvedValue(createSSEResponse(progressOnly));
+
+    const onError = jest.fn();
+    const onComplete = jest.fn();
+    await postAssistStream(
+      { flow_id: "f1", input_value: "" },
+      { onError, onComplete },
+    );
+
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].event).toBe("error");
+  });
+
   it("should dispatch onCancelled", async () => {
     const cancelledEvent: AgenticCancelledEvent = {
       event: "cancelled",

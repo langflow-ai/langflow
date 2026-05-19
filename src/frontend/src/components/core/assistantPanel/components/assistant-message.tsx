@@ -48,6 +48,7 @@ const RICH_LOADING_STEPS = [
   "generating_component",
   "generating_plan",
   "generating_flow",
+  "orchestrating",
   "extracting_code",
   "validating",
   "validation_failed",
@@ -91,12 +92,6 @@ export function AssistantMessageItem({
   skipApprovalGate = false,
   onAcknowledgeValidation,
 }: AssistantMessageItemProps) {
-  // Hidden messages bypass rendering entirely. Used by skip-all to drop
-  // the propose_plan turn's preamble so the chat reads as "user prompt →
-  // built flow" with nothing in between.
-  if (message.hidden) {
-    return null;
-  }
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
 
@@ -108,6 +103,14 @@ export function AssistantMessageItem({
   // override the random label with the static "Generating document..." so
   // the thinking dots match the input placeholder (no rotating noise).
   const randomThinking = useMemo(() => getRandomThinkingMessage(), []);
+
+  // Hidden messages bypass rendering entirely. Used by skip-all to drop
+  // the propose_plan turn's preamble so the chat reads as "user prompt →
+  // built flow" with nothing in between. Guard AFTER hooks so the hook
+  // count stays stable across renders (Rules of Hooks).
+  if (message.hidden) {
+    return null;
+  }
   const thinkingMessage =
     message.progress?.step === "generating_document"
       ? message.progress.message || "Generating document..."

@@ -226,6 +226,27 @@ describe("AssistantMessageItem", () => {
       expect(screen.getByTestId("loading-state")).toBeInTheDocument();
     });
 
+    it("should show the rich loading state during the 'orchestrating' step (compound pipeline)", () => {
+      // A compound (component_then_flow) request must surface the rich
+      // "Orchestrating..." indicator, NOT the generic thinking dots.
+      const message = createMessage({
+        role: "assistant",
+        content: "",
+        status: "streaming",
+        progress: {
+          step: "orchestrating",
+          message: "Orchestrating...",
+          attempt: 0,
+          maxAttempts: 3,
+        },
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(screen.getByTestId("loading-state")).toBeInTheDocument();
+      expect(screen.queryByText("Thinking...")).toBeNull();
+    });
+
     it("should NOT show rich loading state during 'generating_document' step (no streaming card for documents)", () => {
       // Decision: the manage_files path shows only the simple thinking dots
       // during the wait, then jumps directly to the file card. A rich
@@ -283,7 +304,7 @@ describe("AssistantMessageItem", () => {
       // straight to its final state.
       const message = createMessage({
         role: "assistant",
-        content: "Criei o arquivo DOCS.md.",
+        content: "Created the DOCS.md file.",
         status: "complete",
         progress: {
           step: "generating_document",
@@ -555,6 +576,41 @@ describe("AssistantMessageItem", () => {
 
       expect(screen.getByTestId("loading-state")).toBeInTheDocument();
       expect(screen.queryByTestId("component-result")).not.toBeInTheDocument();
+    });
+  });
+
+  // Bug: `if (message.hidden) return null` ran BEFORE useState/useMemo.
+  // Skip-all flips a rendered message to hidden, changing the hook count
+  // between renders — React: "Rendered fewer hooks than during the
+  // previous render", crashing the whole panel.
+  describe("hidden flag — hooks order (crash regression)", () => {
+    it("should_render_nothing_for_hidden_then_content_when_unhidden_without_crashing", () => {
+      const { container, rerender } = render(
+        <AssistantMessageItem
+          message={createMessage({
+            id: "msg-1",
+            content: "Working on the flow...",
+            status: "streaming",
+            hidden: true,
+          })}
+        />,
+      );
+      // Hidden: the guard still suppresses all output.
+      expect(container).toBeEmptyDOMElement();
+
+      expect(() =>
+        rerender(
+          <AssistantMessageItem
+            message={createMessage({
+              id: "msg-1",
+              content: "Working on the flow...",
+              status: "complete",
+            })}
+          />,
+        ),
+      ).not.toThrow();
+      // Unhidden on the SAME fiber: content renders (hooks stayed stable).
+      expect(screen.getByText("Working on the flow...")).toBeInTheDocument();
     });
   });
 });

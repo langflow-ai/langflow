@@ -35,6 +35,11 @@ jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => jest.fn(),
 }));
 
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@/stores/flowsManagerStore", () => {
   const fn = (selector: (state: { currentFlowId: string }) => unknown) =>
     selector({ currentFlowId: "test-flow-id" });
@@ -666,6 +671,38 @@ describe("useAssistantChat — skip-all", () => {
       // Default behavior: canvas untouched until the user clicks Continue.
       expect(mockSetNodes).not.toHaveBeenCalled();
       expect(mockSetEdges).not.toHaveBeenCalled();
+    });
+
+    it("should_auto_apply_set_flow_when_auto_apply_flag_is_set_even_with_skipAll_off", async () => {
+      // Compound pipeline: backend tags set_flow with auto_apply (the user
+      // asked to clear+replace the canvas). Must apply directly, no card,
+      // even though skip-all is OFF.
+      mockPostAssistStream.mockImplementationOnce(
+        async (_req: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            auto_apply: true,
+            flow: { data: { nodes: [{ id: "n1" }], edges: [{ id: "e1" }] } },
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "", validated: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+      await act(async () => {
+        await result.current.handleSend("create a component and a flow", TEST_MODEL);
+      });
+      await flushTimers();
+
+      expect(mockSetNodes).toHaveBeenCalled();
+      expect(mockSetEdges).toHaveBeenCalled();
+      expect(
+        result.current.messages.filter((m) => m.pendingFlowProposal),
+      ).toEqual([]);
     });
   });
 });

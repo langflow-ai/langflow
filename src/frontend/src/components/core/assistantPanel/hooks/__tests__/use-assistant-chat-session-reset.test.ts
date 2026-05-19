@@ -3,14 +3,22 @@ import { act, renderHook } from "@testing-library/react";
 import { useAssistantChat } from "../use-assistant-chat";
 
 /**
- * UC9 — Frontend wires POST /api/v1/agentic/sessions/reset to:
- *   - the initial mount of `useAssistantChat` (a brand-new session_id)
- *   - the explicit New session click (`handleClearHistory`)
- * but NOT to `loadSession` (user chose to continue prior work).
+ * WS-3 / RC-3 — session-scoped component lifetime.
  *
- * The reset call wipes the user's registered components on the backend
- * so each session starts with an empty registry overlay, mirroring the
- * "ephemeral per-session" mental model.
+ * Requirement CHANGED (decision 2026-05-15): user-generated components must
+ * survive a panel re-mount / page reload. They are wiped ONLY on an explicit
+ * "New session" (`handleClearHistory`), never on mount — otherwise a
+ * component generated in one turn vanishes before the next request can use
+ * it (report #3 "só funciona no 1º pedido", screenshot 2).
+ *
+ * So the reset endpoint (`POST /api/v1/agentic/sessions/reset`, which wipes
+ * the user's registered components) is wired to:
+ *   - the explicit New session click (`handleClearHistory`)  — YES
+ *   - the initial mount of `useAssistantChat`                — NO  (changed)
+ *   - `loadSession` (user chose to continue prior work)      — NO
+ *
+ * Why the old mount-wipe tests were replaced (not deleted to "go green"):
+ * the behavior they pinned is exactly the bug. See git history / PR.
  */
 
 jest.mock("@xyflow/react", () => ({
@@ -31,6 +39,11 @@ jest.mock(
 
 jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => jest.fn(),
+}));
+
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => {
@@ -98,23 +111,40 @@ describe("useAssistantChat — session reset wiring", () => {
     return undefined;
   }
 
-  it("should_call_reset_endpoint_on_initial_mount", () => {
+  it("should_NOT_call_reset_endpoint_on_initial_mount", () => {
+    // Components must survive a panel open. Wiping on mount is the bug.
     renderHook(() => useAssistantChat());
 
-    const call = findResetCall();
-    expect(call).toBeDefined();
-    // POST with credentials so the cookie chain authenticates.
-    expect(call?.init?.method).toBe("POST");
-    expect(call?.init?.credentials).toBe("include");
+    expect(findResetCall()).toBeUndefined();
   });
 
-  it("should_include_the_current_session_id_in_the_query_string", () => {
+  it("should_NOT_call_reset_endpoint_on_remount_so_components_survive_reload", () => {
+    const first = renderHook(() => useAssistantChat());
+    first.unmount();
+    fetchMock.mockClear();
+
+    // Re-mounting (panel reopen / page reload) must not wipe the user's
+    // registered components.
+    renderHook(() => useAssistantChat());
+
+    const callsToReset = fetchMock.mock.calls.filter(
+      ([url]) =>
+        typeof url === "string" && url.includes("agentic/sessions/reset"),
+    );
+    expect(callsToReset).toEqual([]);
+  });
+
+  it("should_include_the_session_id_in_the_query_string_on_clear_history", () => {
     const { result } = renderHook(() => useAssistantChat());
-    const expectedSessionId = result.current.sessionId;
+    fetchMock.mockClear();
+
+    act(() => {
+      result.current.handleClearHistory();
+    });
 
     const call = findResetCall();
     expect(call?.url).toContain(
-      `session_id=${encodeURIComponent(expectedSessionId)}`,
+      `session_id=${encodeURIComponent(result.current.sessionId)}`,
     );
   });
 

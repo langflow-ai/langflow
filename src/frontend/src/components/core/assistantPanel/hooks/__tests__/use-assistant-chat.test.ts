@@ -30,6 +30,11 @@ jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => mockAddComponent,
 }));
 
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@/stores/flowsManagerStore", () => {
   const fn = (selector: (state: { currentFlowId: string }) => unknown) =>
     selector({ currentFlowId: "test-flow-id" });
@@ -116,6 +121,32 @@ describe("useAssistantChat", () => {
       });
 
       expect(mockPostAssistStream).toHaveBeenCalledTimes(1);
+    });
+
+    // Bug: handleSend created a fresh AbortController without aborting the
+    // previous one. internal:true (skip-all bridge / edit-continuation)
+    // bypasses the isProcessing guard, so two SSE pumps run concurrently
+    // and the first reader is leaked.
+    it("should abort the previous in-flight stream when a new send starts", async () => {
+      // First stream stays in-flight (never resolves); the chained second
+      // send resolves so the test doesn't hang.
+      mockPostAssistStream.mockImplementationOnce(() => new Promise(() => {}));
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      act(() => {
+        result.current.handleSend("first message", TEST_MODEL);
+      });
+      const firstSignal = mockPostAssistStream.mock.calls[0][2] as AbortSignal;
+      expect(firstSignal.aborted).toBe(false);
+
+      await act(async () => {
+        await result.current.handleSend("second message", TEST_MODEL, {
+          internal: true,
+        });
+      });
+
+      expect(firstSignal.aborted).toBe(true);
     });
 
     it("should not send when model provider is null", async () => {

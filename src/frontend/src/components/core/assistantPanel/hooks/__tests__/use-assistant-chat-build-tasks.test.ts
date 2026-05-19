@@ -33,6 +33,11 @@ jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => jest.fn(),
 }));
 
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock("@/stores/flowsManagerStore", () => {
   const fn = (selector: (state: { currentFlowId: string }) => unknown) =>
     selector({ currentFlowId: "test-flow-id" });

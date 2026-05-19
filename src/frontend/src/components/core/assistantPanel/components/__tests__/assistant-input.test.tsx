@@ -111,6 +111,22 @@ describe("AssistantInput", () => {
       ).toBeInTheDocument();
     });
 
+    it("should show 'Orchestrating...' during 'orchestrating' step (compound request)", () => {
+      // A multi-ask prompt runs the single agent loop; the user must see a
+      // real indicator, not a generic rotating "Thinking..." placeholder.
+      render(
+        <AssistantInput
+          {...defaultProps}
+          isProcessing={true}
+          currentStep="orchestrating"
+        />,
+      );
+
+      expect(
+        screen.getByPlaceholderText("Orchestrating..."),
+      ).toBeInTheDocument();
+    });
+
     it("should show 'Generating document...' during 'generating_document' step", () => {
       // Regression guard: the manage_files intent must render a STATIC
       // intent-specific placeholder instead of falling back to the rotating

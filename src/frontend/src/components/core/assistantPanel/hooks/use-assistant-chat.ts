@@ -1,5 +1,5 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
 
 import { BASE_URL_API } from "@/customization/config-constants";
@@ -9,6 +9,7 @@ import {
   postAssistStream,
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -30,6 +31,15 @@ const AGENTIC_SESSION_PREFIX = "agentic_";
 const SKIP_ALL_COMMAND = "/skip-all";
 const SKIP_ALL_APPROVAL_TEXT =
   "User approved the plan. Proceed with the build.";
+// Backend protocol string (never user-authored). Sent as a silent
+// continuation turn once the user resolves a man-in-the-loop edit diff
+// card with at least one applied change, so the agent's "execution stack"
+// survives the approval boundary and it can finish the rest of the
+// original request (e.g. running the flow). Must stay byte-identical to
+// `EDIT_CONTINUATION_INPUT` in
+// src/backend/base/langflow/agentic/services/flow_types.py.
+const EDIT_CONTINUATION_INPUT =
+  "The proposed canvas edits were applied. Continue with the remaining steps of my previous request (for example, running the flow). If editing was the entire request, just confirm briefly.";
 
 /**
  * Fire-and-forget call to wipe the calling user's session-scoped state
@@ -63,7 +73,7 @@ interface UseAssistantChatReturn {
     messageId: string,
     actionId: string,
     status: "applied" | "dismissed",
-  ) => void;
+  ) => Promise<void>;
   handleApplyFlowProposal: (
     messageId: string,
     mode?: "replace" | "add",
@@ -143,21 +153,20 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
   const [sessionId, setSessionId] = useState<string>(sessionIdRef.current);
 
-  // Wipe registered components + conversation buffer for the calling
-  // user any time a brand-new session_id comes into existence — both
-  // on the initial mount (panel just opened) and on every New session
-  // click below. Loading a saved session (loadSession) explicitly does
-  // NOT trigger this, because the user opted to continue prior work.
-  // Synchronous fire on first render: useEffect with [] dependency
-  // runs once after mount; the missed-by-strict-mode-double-mount edge
-  // case is a no-op since the endpoint is idempotent.
-  useEffect(() => {
-    fireSessionReset(sessionIdRef.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // WS-3 / RC-3: components are session-scoped, NOT wiped on mount.
+  // A panel re-open / page reload must keep the user's generated
+  // components alive so a component made in one turn is still usable in
+  // the next request (report #3, screenshot 2). The registry is wiped
+  // ONLY on an explicit New session (`handleClearHistory`) — never here.
+  // `loadSession` also does not wipe (user is continuing prior work).
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
+  const saveFlow = useSaveFlow();
+  // Assistant-message ids that already fired their edit-approval
+  // continuation. A ref (not state) so the guard is visible synchronously
+  // within the same tick the diff card is resolved.
+  const continuedEditMsgIds = useRef<Set<string>>(new Set());
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
   // ReactFlow caches handle positions per node. When we mutate node data
   // that changes which handles are rendered or their position (e.g. flipping
@@ -306,6 +315,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
         ? buildRefinementInput(stashedPlan, content)
         : content;
 
+      // Abort any still-in-flight stream before starting a new one.
+      // internal:true sends (skip-all bridge / edit-continuation) bypass
+      // the isProcessing guard, so without this the previous SSE reader
+      // is leaked and two pumps mutate the same message concurrently.
+      abortControllerRef.current?.abort();
       abortControllerRef.current = new AbortController();
 
       const completedSteps: AgenticStepType[] = [];
@@ -419,8 +433,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
                 return;
               }
               if (event.action === "set_flow") {
-                if (skipAllRef.current) {
-                  // Skip-all: apply directly to the canvas using the event
+                if (skipAllRef.current || event.auto_apply === true) {
+                  // Skip-all OR a compound-pipeline auto-apply (the user
+                  // explicitly asked to clear+replace the canvas): apply
+                  // directly using the event
                   // payload — no proposal-card state, no setTimeout/queue
                   // race. The earlier "queue and drain in onComplete"
                   // approach was vulnerable to a stale-closure read of
@@ -533,6 +549,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
               updateMessage(assistantMessageId, () => ({
                 status: "complete" as const,
                 content: event.data.result || "",
+                // Whether approving a man-in-the-loop edit on THIS message
+                // should fire the continuation turn (a deferred run/test was
+                // requested). A pure edit leaves this false so approving it
+                // does NOT spawn a redundant second message.
+                continuationExpected: event.data.continuation_expected === true,
                 result: {
                   content: event.data.result || "",
                   validated: event.data.validated,
@@ -633,14 +654,48 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
 
   const handleUpdateFlowAction = useCallback(
-    (messageId: string, actionId: string, status: "applied" | "dismissed") => {
+    async (
+      messageId: string,
+      actionId: string,
+      status: "applied" | "dismissed",
+    ) => {
       updateMessage(messageId, (msg) => ({
         flowActions: msg.flowActions?.map((a) =>
           a.id === actionId ? { ...a, status } : a,
         ),
       }));
+
+      // Edit-approval continuation ("execution stack"): the diff card is a
+      // man-in-the-loop gate. Once every action on this message has left
+      // "pending" with >=1 applied, the agent's deferred steps (e.g. the
+      // run the user also asked for) must resume. The backend reads the
+      // working flow from the DB by flow_id, so the canvas MUST be
+      // persisted BEFORE the continuation turn or the run would see the
+      // pre-edit value. Fires exactly once per message; a dismiss-only
+      // resolution does not continue (the change was rejected).
+      const msg = messages.find((m) => m.id === messageId);
+      const actions = (msg?.flowActions ?? []).map((a) =>
+        a.id === actionId ? { ...a, status } : a,
+      );
+      if (actions.length === 0) return;
+      const stillPending = actions.some((a) => a.status === "pending");
+      const anyApplied = actions.some((a) => a.status === "applied");
+      if (stillPending || !anyApplied) return;
+      // Only resume when the original request actually deferred a step
+      // (e.g. "...and run it"). A pure edit must NOT spawn a second
+      // assistant message — backend computes this deterministically.
+      if (!msg?.continuationExpected) return;
+      if (continuedEditMsgIds.current.has(messageId)) return;
+      if (!lastModelRef.current) return;
+      continuedEditMsgIds.current.add(messageId);
+
+      await saveFlow();
+      await handleSend(EDIT_CONTINUATION_INPUT, lastModelRef.current, {
+        silent: true,
+        internal: true,
+      });
     },
-    [updateMessage],
+    [messages, updateMessage, saveFlow, handleSend],
   );
 
   const handleApplyFlowProposal = useCallback(

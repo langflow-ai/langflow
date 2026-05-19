@@ -159,6 +159,58 @@ def _format_root_error(exc: BaseException) -> str:
     return f"{error_type}: {error_msg}" if error_msg else error_type
 
 
+# Representative dummy values per declared input type. A non-empty string is
+# used for text because the screenshot-4 class of bug is an output method
+# that feeds a user string straight into ``Data(data=...)`` (which pydantic
+# requires to be a dict) — an empty string would not trip it.
+#
+# Only types with a SAFE, well-typed dummy are listed. Inputs whose type is
+# not here are deliberately left UNSET so they keep the original
+# missing-attribute → AttributeError → swallow behavior. Synthesizing a
+# wrong-typed value for a complex input (e.g. a string for a DictInput) would
+# make pydantic reject a perfectly valid component (false negative).
+_PROBE_BY_FIELD_TYPE: dict[str, object] = {
+    "str": "validation_probe",
+    "int": 1,
+    "float": 1.0,
+    "bool": True,
+    "dict": {},
+    "NestedDict": {},
+}
+
+
+def _synthesize_probe_inputs(cc_instance) -> dict[str, object]:
+    """Build representative values for every declared input.
+
+    Why: a component whose output method reads an input (e.g.
+    ``Data(data=self.animal_name[:3])``) never reaches the broken
+    construction when the sandbox sets no attributes — the missing
+    attribute raises ``AttributeError`` first and the schema bug is
+    masked (screenshot 4). Feeding each declared input a type-appropriate
+    dummy makes the output method actually run so pydantic surfaces the
+    real error.
+
+    Returns an empty dict when the component declares no inputs (the
+    no-input cases were already covered) or when inputs can't be read.
+    """
+    inputs = getattr(cc_instance, "inputs", None)
+    if not inputs:
+        return {}
+    probe: dict[str, object] = {}
+    for descriptor in inputs:
+        name = getattr(descriptor, "name", None)
+        if not name:
+            continue
+        field_type = getattr(descriptor, "field_type", None)
+        # FieldTypes is a str-valued enum (e.g. FieldTypes.TEXT == "str").
+        key = getattr(field_type, "value", field_type)
+        if key in _PROBE_BY_FIELD_TYPE:
+            probe[name] = _PROBE_BY_FIELD_TYPE[key]
+        # Unknown/complex types are intentionally left unset — see the
+        # _PROBE_BY_FIELD_TYPE rationale (avoid false rejections).
+    return probe
+
+
 async def _execute_output_methods_for_validation(cc_instance) -> str | None:
     """Invoke every output method and surface pydantic-schema failures only.
 
@@ -167,18 +219,22 @@ async def _execute_output_methods_for_validation(cc_instance) -> str | None:
     when a method constructs a schema object with the wrong shape, e.g.
     ``Data(data=[list])`` or ``Message(sender=<not-a-string>)``).
 
-    Non-schema runtime errors (network failures, missing inputs, auth problems)
-    are **intentionally swallowed**: a correct component can still fail
-    execution in the validation sandbox for environmental reasons, and we must
-    not mark it as broken on that basis. The retry loop in assistant_service
-    consumes only the schema errors this helper returns.
+    Output methods are exercised with synthesized representative inputs (see
+    ``_synthesize_probe_inputs``) so input-dependent schema bugs surface
+    instead of being masked by an ``AttributeError`` for a missing input.
+
+    Non-schema runtime errors (network failures, auth problems) are
+    **intentionally swallowed**: a correct component can still fail execution
+    in the validation sandbox for environmental reasons, and we must not mark
+    it as broken on that basis. The retry loop in assistant_service consumes
+    only the schema errors this helper returns.
 
     Note: uses ``_build_results`` directly instead of the public ``build_results``
     because the latter emits events via ``send_error`` and relies on a
     tracing/event manager that the validation sandbox does not wire up.
     """
     try:
-        cc_instance.set_attributes({})
+        cc_instance.set_attributes(_synthesize_probe_inputs(cc_instance))
     except ValidationError as exc:
         return _format_root_error(exc)
     except (AttributeError, TypeError, ValueError):

@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from langflow.agentic.services.flow_preparation import (
     LFX_COMPONENTS_PATH_SENTINEL,
+    available_model_providers,
     inject_assistant_fs_root,
     inject_lfx_components_path,
     inject_model_into_flow,
@@ -27,6 +28,36 @@ OPENAI_CONFIG = {
     "variable_name": "OPENAI_API_KEY",
     "icon": "OpenAI",
 }
+
+
+class TestAvailableModelProviders:
+    """Provider-agnostic detection of which providers have credentials.
+
+    No OpenAI bias — whatever keys the user actually has in the
+    (env-built) global variables.
+    """
+
+    def test_detects_only_providers_with_a_configured_key(self):
+        assert available_model_providers({"ANTHROPIC_API_KEY": "sk-x"}) == ["Anthropic"]
+        result = available_model_providers({"OPENAI_API_KEY": "a", "GROQ_API_KEY": "b"})
+        assert "OpenAI" in result
+        assert "Groq" in result
+        assert "Anthropic" not in result
+
+    def test_empty_or_blank_keys_yield_no_providers(self):
+        assert available_model_providers({}) == []
+        assert available_model_providers(None) == []
+        assert available_model_providers({"OPENAI_API_KEY": ""}) == []
+        # A whitespace-only key is NOT a configured key — the provider
+        # would otherwise be picked and fail at run with an auth error.
+        assert available_model_providers({"OPENAI_API_KEY": "   "}) == []
+        assert available_model_providers({"ANTHROPIC_API_KEY": "\t\n"}) == []
+
+    def test_does_not_hardcode_openai(self):
+        # Only Google configured → OpenAI must NOT appear.
+        result = available_model_providers({"GOOGLE_API_KEY": "k"})
+        assert "Google Generative AI" in result
+        assert "OpenAI" not in result
 
 
 def _make_flow_data(node_types=None):
@@ -148,6 +179,37 @@ class TestInjectModelIntoFlow:
         # Should not raise, template remains without model
         assert "model" not in result["data"]["nodes"][0]["data"]["node"]["template"]
 
+    def test_should_warn_when_an_agent_node_has_no_model_field(self, caplog):
+        # Bug: injection was silently skipped for an Agent whose template
+        # lacked 'model' (older serialized flow), and the function still
+        # reported success — the run then failed with an opaque
+        # "No model selected". It must at least leave a diagnostic.
+        flow_data = {
+            "data": {
+                "nodes": [
+                    {"id": "agent-7", "data": {"type": "Agent", "node": {"template": {}}}},
+                ]
+            }
+        }
+        with (
+            patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG),
+            caplog.at_level("WARNING"),
+        ):
+            inject_model_into_flow(flow_data, "OpenAI", "gpt-4o")
+
+        assert "agent_missing_model_field" in caplog.text
+        assert "agent-7" in caplog.text
+
+    def test_should_not_warn_on_the_normal_agent_path(self, caplog):
+        flow_data = _make_flow_data(["Agent"])
+        with (
+            patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG),
+            caplog.at_level("WARNING"),
+        ):
+            inject_model_into_flow(flow_data, "OpenAI", "gpt-4o")
+
+        assert "agent_missing_model_field" not in caplog.text
+
 
 class TestLoadAndPrepareFlow:
     """Tests for load_and_prepare_flow."""
@@ -164,6 +226,39 @@ class TestLoadAndPrepareFlow:
         result = json.loads(result_json)
         model_val = result["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
         assert model_val[0]["name"] == "gpt-4o"
+
+    def test_should_parse_the_flow_file_once_and_reuse_it_across_requests(self, tmp_path):
+        # Bug: load_and_prepare_flow read + json.loads the bundled flow on
+        # EVERY request (and x4 on validation retries) on the event loop.
+        # The raw parsed template is stable per file → parse once, cached
+        # by (path, mtime); a genuine file change re-parses.
+        import pathlib
+
+        flow_data = _make_flow_data(["Agent"])
+        flow_file = tmp_path / "assistant.json"
+        flow_file.write_text(json.dumps(flow_data))
+
+        real_read_text = pathlib.Path.read_text
+        calls = {"n": 0}
+
+        def counting_read_text(self, *args, **kwargs):
+            if str(self) == str(flow_file):
+                calls["n"] += 1
+            return real_read_text(self, *args, **kwargs)
+
+        with patch.object(pathlib.Path, "read_text", counting_read_text):
+            a = load_and_prepare_flow(flow_file, None, None, None)
+            b = load_and_prepare_flow(flow_file, None, None, None)
+            assert calls["n"] == 1  # second call served from cache
+
+            # Per-call result is independent (no shared mutable cache).
+            assert json.loads(a) == json.loads(b)
+
+            # A genuine file change must invalidate the cache.
+            changed = _make_flow_data(["Agent", "ChatInput"])
+            flow_file.write_text(json.dumps(changed))
+            load_and_prepare_flow(flow_file, None, None, None)
+            assert calls["n"] == 2
 
     def test_should_return_original_when_no_provider(self, tmp_path):
         """Should return original JSON when provider is None."""

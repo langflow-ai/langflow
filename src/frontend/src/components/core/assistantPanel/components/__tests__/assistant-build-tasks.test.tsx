@@ -64,4 +64,29 @@ describe("AssistantBuildTasks", () => {
     render(<AssistantBuildTasks tasks={tasks} />);
     expect(screen.getByText(/Removed ChatInput-abc/i)).toBeInTheDocument();
   });
+
+  // Build tasks are pure RESULTS (completed ops, no human-in-the-loop), so
+  // they must NOT be wrapped in the bordered "card" box — just compact text
+  // lines with a green check. The box is reserved for gated/HITL cards.
+  it("should_render_compact_without_a_bordered_box", () => {
+    const { container } = render(
+      <AssistantBuildTasks
+        tasks={[makeTask({ action: "configure", componentId: "Agent-xyz" })]}
+      />,
+    );
+    const root = container.firstChild as HTMLElement;
+    expect(root.className).not.toMatch(/\bborder\b/);
+    expect(root.className).not.toMatch(/bg-muted/);
+  });
+
+  it("should_keep_a_green_check_per_task", () => {
+    const { container } = render(
+      <AssistantBuildTasks
+        tasks={[makeTask({ action: "configure", componentId: "Agent-xyz" })]}
+      />,
+    );
+    expect(
+      container.querySelector(".text-accent-emerald-foreground"),
+    ).not.toBeNull();
+  });
 });

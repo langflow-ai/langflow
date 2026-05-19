@@ -19,6 +19,7 @@ const GENERATING_STEPS: AgenticStepType[] = [
   "generating_component",
   "generating_plan",
   "generating_flow",
+  "orchestrating",
   "generating_document",
 ];
 
@@ -30,6 +31,7 @@ const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
   generating_component: "Generating component...",
   generating_plan: "Generating plan...",
   generating_flow: "Generating flow...",
+  orchestrating: "Orchestrating...",
   generating_document: "Generating document...",
 };
 

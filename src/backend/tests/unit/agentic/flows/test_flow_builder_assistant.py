@@ -71,6 +71,86 @@ class TestFlowBuilderPrompt:
             "Prompt examples must show how to set field values via the `config:` block."
         )
 
+    def test_should_teach_the_edit_continuation_contract(self):
+        """After an approved edit, the silent continuation turn must make the
+        agent finish the original request (e.g. run) WITHOUT re-editing or
+        re-planning. Drift between the protocol string and the prompt's
+        recognizer phrase would break the whole 'execution stack'.
+        """  # noqa: D205
+        from langflow.agentic.services.flow_types import EDIT_CONTINUATION_INPUT
+
+        # The prompt must quote enough of the protocol string for the agent
+        # to recognize the signal (cross-consistency with the constant).
+        recognizer = "The proposed canvas edits were applied. Continue with the remaining steps"
+        assert recognizer in EDIT_CONTINUATION_INPUT
+        assert recognizer in FLOW_BUILDER_PROMPT
+
+        lower = FLOW_BUILDER_PROMPT.lower()
+        # It must instruct: don't re-edit / don't propose_plan on continuation.
+        assert "do not re-propose" in lower or "do not re-apply" in lower
+        # It must instruct: perform the originally-requested follow-up (run).
+        assert "run_flow" in FLOW_BUILDER_PROMPT
+        # It must instruct: brief confirmation + stop when edit was the whole ask.
+        assert "one-line confirmation" in lower or "confirm" in lower
+
+    def test_should_require_a_model_on_any_agent_that_will_run(self):
+        """Production bug: built a flow with an Agent but no model →
+        run failed "No model selected". The prompt must make configuring
+        the Agent's model mandatory before running.
+        """  # noqa: D205
+        lower = FLOW_BUILDER_PROMPT.lower()
+        assert "no model selected" in lower
+        assert "available language model" in lower
+        assert "never run a flow whose agent has no model" in lower
+
+    def test_should_run_in_same_turn_after_a_directly_applied_edit(self):
+        """Production bug: for "change X and run", the agent used
+        configure_component (applies immediately, NO approval gate) but then
+        deferred the run as if waiting for an approval that never comes.
+        Only propose_field_edit is man-in-the-loop; direct-apply edit tools
+        must be followed by run_flow in the SAME turn.
+        """  # noqa: D205
+        lower = FLOW_BUILDER_PROMPT.lower()
+        # The prompt must name the immediate-apply tools and tie them to a
+        # same-turn run when the user also asked to run.
+        assert "configure_component" in FLOW_BUILDER_PROMPT
+        assert "same turn" in lower
+        # It must call out that only propose_field_edit defers (the gate).
+        assert "propose_field_edit" in FLOW_BUILDER_PROMPT
+        # It must forbid the "I'll run once the edits are applied" stall for
+        # the direct path.
+        assert "nothing to wait for" in lower or "do not defer" in lower
+
+    def test_should_resolve_target_component_by_role_not_name(self):
+        """Production bug: "mude o input" → agent edited a custom tool
+        component instead of the flow's ChatInput, so the run used the old
+        value. The prompt must pin "the input" to ChatInput.input_value
+        (resolved via connections), never a tool/custom component.
+        """  # noqa: D205
+        lower = FLOW_BUILDER_PROMPT.lower()
+        assert "targeting the right component" in lower
+        # Must resolve deterministically via the dedicated tool, not by
+        # eyeballing connections / matching names.
+        assert "describe_flow_io" in FLOW_BUILDER_PROMPT
+        assert "value_field" in FLOW_BUILDER_PROMPT
+        # A tools-wired / custom component is explicitly NEVER the flow input.
+        assert "never" in lower
+        assert "tool" in lower
+        # Ambiguity (more than one input) must be asked, not guessed.
+        assert "more than one input" in lower
+        assert "ask the user" in lower
+
+    def test_should_self_verify_run_reflects_the_edit(self):
+        """The agent must detect "edited X but the run still shows the OLD
+        value" (it targeted the wrong component) and self-correct once,
+        instead of reporting a contradictory success.
+        """  # noqa: D205
+        lower = FLOW_BUILDER_PROMPT.lower()
+        assert "old value" in lower
+        assert "self-correction" in lower or "run once more" in lower
+        # Must not present it as success when the change had no effect.
+        assert "do not report success" in lower or "wrong component" in lower
+
     def test_should_instruct_to_swap_model_via_configure_component(self):
         """When the user says 'change the model to X', the agent must update
         the Agent's `model` field via configure_component instead of adding
@@ -92,10 +172,79 @@ class TestFlowBuilderPrompt:
         assert '"name"' in FLOW_BUILDER_PROMPT, "Prompt must show the `name` key of the model field value."
 
 
+class TestFlowBuilderPromptBehaviorContract:
+    """WS-2 / RC-2 — prompt forbids the hallucination/confirmation anti-pattern.
+
+    Production (screenshots 2/6/7/8): the agent asked to confirm an action the
+    user already requested, or claimed an action without calling the tool. It
+    must also keep the reply in the user's language (report #7).
+    """
+
+    def test_should_forbid_asking_confirmation_for_already_requested_action(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "confirm" in prompt_lower or "confirmation" in prompt_lower, (
+            "Prompt must address the 'asking to confirm an already-requested action' anti-pattern"
+        )
+        assert "never ask" in prompt_lower or "do not ask" in prompt_lower or "without asking" in prompt_lower, (
+            "Prompt must explicitly forbid asking the user to confirm an action they already requested"
+        )
+
+    def test_should_forbid_claiming_action_without_calling_the_tool(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        forbids_claim = (
+            "never claim" in prompt_lower or "do not claim" in prompt_lower or "without actually" in prompt_lower
+        )
+        assert forbids_claim, (
+            "Prompt must forbid claiming an action was done without calling the tool that performs it"
+        )
+
+    def test_should_instruct_reply_in_user_language(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "same language" in prompt_lower or "user's language" in prompt_lower, (
+            "Prompt must instruct the agent to reply in the language the user wrote in (report #7)"
+        )
+
+
+class TestFlowBuilderPromptUserComponents:
+    """WS-3 / RC-3 — prompt tells the agent user-generated components are registered and searchable.
+
+    They are discoverable via search_components by class name, so the agent
+    uses them in build_flow instead of refusing ("custom components must be
+    added manually outside the flow builder" — screenshot 2).
+    """
+
+    def test_should_mention_user_generated_components_are_registered(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "search_components" in prompt_lower
+        assert (
+            "user-generated" in prompt_lower
+            or "user-created" in prompt_lower
+            or "previously generated component" in prompt_lower
+            or "components you generated" in prompt_lower
+        ), "Prompt must state that components the user generated this session are searchable by class name"
+
+    def test_should_forbid_refusing_to_use_user_components_in_a_flow(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "manually" in prompt_lower, (
+            "Prompt must explicitly counter the 'must be added manually outside the flow builder' refusal"
+        )
+
+
+class TestFlowBuilderPromptLegacyComponents:
+    """WS-5 / RC-5 — prompt tells the agent not to use legacy/beta components unless asked."""
+
+    def test_should_warn_against_legacy_components(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "legacy" in prompt_lower, (
+            "Prompt must instruct the agent not to add legacy/beta components unless explicitly requested"
+        )
+
+
 class TestFlowBuilderPromptProposePlan:
-    """The agent must call propose_plan as its FIRST tool when building a NEW
-    flow, so the user sees a markdown summary and can Continue or refine
-    before any canvas work happens.
+    """propose_plan is OPTIONAL — used only for genuinely ambiguous or
+    large/destructive whole-canvas replacements. Clear/specified requests
+    (including multi-step ones) are executed directly, no plan gate. When a
+    plan IS proposed the Continue/Dismiss loop still applies.
     """  # noqa: D205
 
     def test_should_mention_propose_plan_tool(self):
@@ -103,16 +252,16 @@ class TestFlowBuilderPromptProposePlan:
             "Prompt must reference the propose_plan tool so the LLM knows to use it."
         )
 
-    def test_should_require_propose_plan_before_other_build_tools(self):
-        # The instruction must make it unambiguous that in BUILD mode the
-        # agent's first tool call is propose_plan — search/describe/build_flow
-        # only run after the user approves.
+    def test_should_make_propose_plan_optional_not_mandatory(self):
         prompt_lower = FLOW_BUILDER_PROMPT.lower()
-        assert "propose_plan" in prompt_lower
-        # Look for an explicit "first" / "before" / "do not call" cue tied to BUILD mode.
-        assert ("first" in prompt_lower) or ("before" in prompt_lower), (
-            "Prompt must say propose_plan runs first/before other tools in BUILD mode."
-        )
+        # The new contract: optional, reserved for ambiguous/destructive.
+        assert "optional" in prompt_lower
+        assert "ambiguous" in prompt_lower or "destructive" in prompt_lower
+        # And it must NOT carry the old mandatory-first wording.
+        assert "always your first tool call" not in prompt_lower
+        assert "mandatory in build mode" not in prompt_lower
+        # It must tell the agent to act directly for clear requests.
+        assert "directly" in prompt_lower
 
     def test_should_explain_user_continue_vs_dismiss_loop(self):
         # After propose_plan, the next user turn is either an approval signal or
@@ -124,6 +273,33 @@ class TestFlowBuilderPromptProposePlan:
         assert "dismiss" in prompt_lower or "refine" in prompt_lower or "feedback" in prompt_lower, (
             "Prompt must describe what to do when the user dismisses/refines the plan."
         )
+
+
+class TestRunFlowToolWiring:
+    """The agent must be able to run the canvas flow and discuss the result."""
+
+    async def test_toolkit_should_include_run_flow_tool(self):
+        from langflow.agentic.flows.flow_builder_assistant import build_toolkit
+
+        tools = await build_toolkit()
+        names = {getattr(t, "name", None) for t in tools}
+        assert "run_flow" in names, f"run_flow must be in the toolkit, got: {sorted(n for n in names if n)}"
+
+    def test_prompt_should_document_run_flow(self):
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "run_flow" in prompt_lower, "Prompt must describe the run_flow tool"
+        assert "run" in prompt_lower, "Prompt must mention running"
+        assert "result" in prompt_lower, "Prompt must say run_flow returns the result for the agent to discuss"
+
+    def test_prompt_should_say_run_is_not_a_build_no_plan_gate(self):
+        """A run calls run_flow directly — never propose_plan (the "rode o flow → Generating plan…" bug)."""
+        prompt_lower = FLOW_BUILDER_PROMPT.lower()
+        assert "not a build" in prompt_lower or "is not build" in prompt_lower, (
+            "Prompt must state running the flow is NOT a build"
+        )
+        # The run_flow guidance must forbid propose_plan for a pure run.
+        assert "propose_plan" in prompt_lower
+        assert "run_flow" in prompt_lower
 
 
 class TestProposePlanInToolkit:

@@ -32,6 +32,173 @@ class TestSearchComponentTypes:
         assert result.data["count"] > 100
 
 
+def _node(nid, ntype, template=None):
+    return {"data": {"id": nid, "type": ntype, "node": {"template": template or {}}}}
+
+
+def _edge(src, src_handle, tgt, tgt_field):
+    return {
+        "source": src,
+        "target": tgt,
+        "data": {
+            "sourceHandle": {"name": src_handle},
+            "targetHandle": {"fieldName": tgt_field},
+        },
+    }
+
+
+# Mirrors the production screenshot: ChatInput("Cat") -> Agent.input_value,
+# AnimalSoundComponent (custom tool) -> Agent.tools, Agent -> ChatOutput.
+_IO_FLOW = {
+    "name": "Animal Sound",
+    "data": {
+        "nodes": [
+            _node("ChatInput-1", "ChatInput", {"input_value": {"value": "Cat"}}),
+            _node("Agent-1", "Agent", {}),
+            _node("AnimalSoundComponent-oIAUY", "AnimalSoundComponent", {"animal_name": {"value": "cat"}}),
+            _node("ChatOutput-1", "ChatOutput", {}),
+        ],
+        "edges": [
+            _edge("ChatInput-1", "message", "Agent-1", "input_value"),
+            _edge("AnimalSoundComponent-oIAUY", "component_as_tool", "Agent-1", "tools"),
+            _edge("Agent-1", "response", "ChatOutput-1", "input_value"),
+        ],
+    },
+}
+
+
+class TestDescribeFlowIO:
+    """Deterministic flow I/O resolution — O(1) for the agent, exact at any size.
+
+    Refutes the production bug where 'mude o input' edited the
+    AnimalSoundComponent tool instead of the ChatInput.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        reset_working_flow()
+
+    def _run(self):
+        from lfx.mcp.flow_builder_tools import DescribeFlowIO
+
+        init_working_flow(_IO_FLOW, "flow-io-1")
+        return DescribeFlowIO().describe_flow_io().data
+
+    def test_identifies_chatinput_as_the_only_input_with_value_field(self):
+        data = self._run()
+        inputs = data["inputs"]
+        assert [i["id"] for i in inputs] == ["ChatInput-1"]
+        assert inputs[0]["type"] == "ChatInput"
+        # The agent must know exactly which field to set.
+        assert inputs[0]["value_field"] == "input_value"
+
+    def test_excludes_tool_wired_custom_component_from_inputs(self):
+        data = self._run()
+        ids = {i["id"] for i in data["inputs"]}
+        assert "AnimalSoundComponent-oIAUY" not in ids
+        # It is surfaced as a tool so the agent knows it is NOT the input.
+        assert "AnimalSoundComponent-oIAUY" in {t["id"] for t in data["tools"]}
+
+    def test_identifies_sink_as_output(self):
+        data = self._run()
+        assert [o["id"] for o in data["outputs"]] == ["ChatOutput-1"]
+
+    def test_text_summary_is_present_for_the_agent(self):
+        data = self._run()
+        assert "text" in data
+        assert "ChatInput-1" in data["text"]
+
+    def test_empty_canvas_returns_empty_io_not_error(self):
+        from lfx.mcp.flow_builder_tools import DescribeFlowIO
+
+        init_working_flow({"name": "e", "data": {"nodes": [], "edges": []}}, "f")
+        data = DescribeFlowIO().describe_flow_io().data
+        assert data["inputs"] == []
+        assert data["outputs"] == []
+        assert "error" not in data
+
+
+class TestProposeFieldEditReadableSummary:
+    r"""The diff card summary must stay human-readable.
+
+    Production bug: a multi-line system_prompt was rendered with repr()
+    (`'...\n...'`), so the card showed literal backslash-n and quotes.
+    The full value is still carried in `new_value` for the diff body —
+    only the one-line summary is collapsed/truncated.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        reset_working_flow()
+
+    def test_summary_is_single_line_unescaped_and_capped(self):
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, drain_flow_events
+
+        init_working_flow(_IO_FLOW, "flow-io-1")
+        multiline = "You are an assistant.\nUse the tool.\n- rule one\n- rule two " + ("x" * 300)
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value=multiline)
+        result = edit.propose_field_edit()
+        assert "error" not in result.data, result.data
+
+        text = result.data["text"]
+        # No raw newlines and no repr-escaped backslash-n in the summary.
+        assert "\n" not in text
+        assert "\\n" not in text
+        assert "You are an assistant." in text
+
+        ev = drain_flow_events()[-1]
+        assert ev["action"] == "edit_field"
+        desc = ev["description"]
+        assert "\n" not in desc
+        assert "\\n" not in desc
+        assert "You are an assistant." in desc
+        # Long value is truncated with an ellipsis (card stays compact).
+        assert "…" in desc
+        assert len(desc) < len(multiline)
+        # The FULL value is still carried for the diff body / patch.
+        assert ev["new_value"] == multiline
+
+    def test_literal_backslash_n_is_also_collapsed(self):
+        # Robust regardless of whether the LLM emitted REAL newlines or the
+        # two-char escape sequence "\\n" — the card must never show "\n".
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, drain_flow_events
+
+        init_working_flow(_IO_FLOW, "flow-io-1")
+        literal = "You are an assistant.\\nUse the tool.\\n- rule one\\t- rule two"
+
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value=literal)
+        result = edit.propose_field_edit()
+        assert "error" not in result.data, result.data
+
+        ev = drain_flow_events()[-1]
+        assert "\\n" not in ev["description"]
+        assert "\\t" not in ev["description"]
+        assert "\\n" not in result.data["text"]
+        assert "You are an assistant. Use the tool." in ev["description"]
+        # Full value still preserved for the diff body / patch.
+        assert ev["new_value"] == literal
+
+    def test_short_value_is_shown_in_full(self):
+        from lfx.mcp.flow_builder_tools import ProposeFieldEdit, drain_flow_events
+
+        init_working_flow(_IO_FLOW, "flow-io-1")
+        edit = ProposeFieldEdit()
+        edit.set(component_id="ChatInput-1", field_name="input_value", new_value="Dog")
+        result = edit.propose_field_edit()
+        assert "error" not in result.data, result.data
+
+        ev = drain_flow_events()[-1]
+        assert "Dog" in ev["description"]
+        assert "…" not in ev["description"]
+
+
 class TestDescribeComponentType:
     def test_describe_known_component(self):
         comp = DescribeComponentType()
@@ -55,6 +222,52 @@ class TestBuildFlowFromSpec:
         result = comp.build_flow()
         assert "built successfully" in result.data["text"]
         assert "flow" in result.data
+
+    def test_build_mutates_working_flow_in_place_not_rebind(self):
+        # Production bug: build_flow did `_working_flow_var.set(new_dict)`
+        # (REBIND). A ContextVar rebind is invisible across tool-execution
+        # contexts, so run_flow (a separate tool call) saw the OLD empty
+        # working flow → "There is no flow on the canvas to run". It must
+        # mutate the SAME bound dict in place (like configure_component),
+        # so the built flow is visible to a later run_flow in any context.
+        from lfx.mcp.flow_builder_tools import _ensure_working_flow
+
+        reset_working_flow()
+        init_working_flow({"name": "X", "data": {"nodes": [], "edges": []}}, "fid")
+        bound = _ensure_working_flow()  # the object every context shares
+        assert not bound["data"]["nodes"]
+
+        comp = BuildFlowFromSpec()
+        comp.set(spec="name: Test\nnodes:\n  A: ChatInput\n  B: ChatOutput\nedges:\n  A.message -> B.input_value")
+        result = comp.build_flow()
+        assert "built successfully" in result.data["text"], result.data
+
+        # Same object, mutated in place — NOT a rebind to a new dict.
+        assert get_working_flow() is bound, "build_flow rebound the ContextVar instead of mutating in place"
+        assert len(bound["data"]["nodes"]) == 2, bound["data"]["nodes"]
+
+    def test_single_node_spec_is_not_rejected_as_orphan(self):
+        # Bug: a legitimate 1-component spec (no edges possible) was
+        # rejected by the orphan guard, dead-ending the agent into an
+        # unsatisfiable replan loop.
+        reset_working_flow()
+        comp = BuildFlowFromSpec()
+        comp.set(spec="name: Solo\nnodes:\n  A: ChatInput")
+        result = comp.build_flow()
+
+        assert "error" not in result.data, result.data
+        assert "built successfully" in result.data["text"], result.data
+        assert "flow" in result.data
+
+    def test_multi_node_spec_with_no_edges_still_rejected_as_orphan(self):
+        # The guard must still catch a genuine mistake: 2+ nodes, no wiring.
+        reset_working_flow()
+        comp = BuildFlowFromSpec()
+        comp.set(spec="name: Bad\nnodes:\n  A: ChatInput\n  B: ChatOutput")
+        result = comp.build_flow()
+
+        assert "error" in result.data
+        assert "orphan" in result.data["text"].lower()
 
     def test_build_error_returns_text(self):
         reset_working_flow()
@@ -125,16 +338,18 @@ class TestBuildFlowFromSpec:
         assert "built successfully" in result.data["text"]
 
     def test_build_should_pass_when_single_node_has_no_edges_only_if_lone(self):
-        # Edge case: a 1-node spec is technically all-orphans, but it is a
-        # malformed flow regardless — the validator can still reject it for
-        # the same reason. Pin the chosen behavior.
+        # Corrected contract (was pinning the orphan-rejection BUG): a lone
+        # 1-node spec has no edges by definition and is a valid standalone
+        # flow (the agent legitimately builds one component to run/inspect).
+        # It must NOT be rejected as an orphan — see
+        # test_single_node_spec_is_not_rejected_as_orphan.
         reset_working_flow()
         comp = BuildFlowFromSpec()
         comp.set(spec="name: Lone\nnodes:\n  A: ChatInput\n")
         result = comp.build_flow()
 
-        assert "error" in result.data
-        assert "orphan" in result.data["error"].lower()
+        assert "error" not in result.data, result.data
+        assert "built successfully" in result.data["text"]
 
 
 class TestProposePlan:
@@ -556,6 +771,49 @@ class TestConnectComponents:
         events = drain_flow_events()
         assert all(e["action"] != "select_output" for e in events), (
             "ChatInput has only one output — no select_output event should fire"
+        )
+
+    def test_connect_reconciles_a_stale_selected_output(self):
+        # Bug: if the source carried a `selected_output` naming an output
+        # that no longer exists (e.g. tool-mode collapsed the outputs),
+        # connect_components left it dangling — the node label pointed at
+        # a removed output. A connect must never leave selected_output
+        # naming a non-existent output.
+        from lfx.mcp.flow_builder_tools import _ensure_working_flow, _find_node
+
+        reset_working_flow()
+
+        add1 = AddComponent()
+        add1.set(component_type="ChatInput")
+        src_id = add1.add_component().data["id"]
+        add2 = AddComponent()
+        add2.set(component_type="ChatOutput")
+        tgt_id = add2.add_component().data["id"]
+        drain_flow_events()
+
+        flow = _ensure_working_flow()
+        src = _find_node(flow, src_id)
+        assert src is not None
+        # Simulate a leftover selection from a prior wiring/tool-mode swap.
+        src["data"]["selected_output"] = "ghost_output"
+
+        conn = ConnectComponents()
+        conn.set(
+            source_id=src_id,
+            source_output="message",
+            target_id=tgt_id,
+            target_input="input_value",
+        )
+        result = conn.connect_components()
+        assert "error" not in result.data, result.data
+
+        src_after = _find_node(_ensure_working_flow(), src_id)
+        output_names = {
+            o.get("name") for o in src_after["data"].get("node", {}).get("outputs", []) if isinstance(o, dict)
+        }
+        stale = src_after["data"].get("selected_output")
+        assert stale is None or stale in output_names, (
+            f"selected_output {stale!r} is not a real output of the source ({output_names})"
         )
 
 

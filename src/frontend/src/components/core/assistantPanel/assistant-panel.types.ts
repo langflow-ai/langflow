@@ -31,6 +31,10 @@ export interface AssistantMessage {
     graph: string;
   };
   flowActions?: FlowAction[];
+  /** A deferred follow-up (e.g. run) was requested alongside an edit, so
+   * approving a man-in-the-loop edit on this message resumes via the
+   * continuation turn. False for a pure edit (no redundant 2nd message). */
+  continuationExpected?: boolean;
   pendingFlowProposal?: PendingFlowProposal;
   flowProposalStatus?: FlowProposalStatus;
   pendingPlanProposal?: PendingPlanProposal;

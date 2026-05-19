@@ -17,26 +17,27 @@ interface AssistantBuildTasksProps {
  */
 export function AssistantBuildTasks({ tasks }: AssistantBuildTasksProps) {
   if (tasks.length === 0) return null;
+  // No bordered box: these are pure results (completed ops, no
+  // human-in-the-loop), so they render as compact lines — text with a
+  // green check beside it. The card box is reserved for gated/HITL UIs.
   return (
-    <div className="my-2 rounded-md border border-border bg-muted/20 p-2">
-      <ul className="flex flex-col gap-1">
-        {tasks.map((task) => (
-          <li
-            key={`${task.action}-${
-              task.componentId ?? `${task.sourceId}->${task.targetId}`
-            }-${task.receivedAt}`}
-            data-testid={`assistant-build-task-${task.action}-${
-              task.componentId ?? task.sourceId ?? "unknown"
-            }`}
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            {renderIcon(task)}
-            <span className="flex-1">{renderLabel(task)}</span>
-            <Check className="h-3.5 w-3.5 text-accent-emerald-foreground" />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="my-2 flex flex-col gap-1">
+      {tasks.map((task) => (
+        <li
+          key={`${task.action}-${
+            task.componentId ?? `${task.sourceId}->${task.targetId}`
+          }-${task.receivedAt}`}
+          data-testid={`assistant-build-task-${task.action}-${
+            task.componentId ?? task.sourceId ?? "unknown"
+          }`}
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
+          {renderIcon(task)}
+          <span>{renderLabel(task)}</span>
+          <Check className="h-3.5 w-3.5 text-accent-emerald-foreground" />
+        </li>
+      ))}
+    </ul>
   );
 }
 

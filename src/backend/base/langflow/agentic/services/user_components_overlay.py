@@ -18,18 +18,18 @@ Design constraints:
       the agent on subsequent runs.
     - Files that fail to load are silently skipped — one bad component
       must not break the overlay for the rest.
-    - No template introspection at overlay time: we reuse the base
-      ``CustomComponent`` template (which carries a ``code`` field) and
-      graft the user's source into it. The agent and the canvas treat
-      the resulting node as a CustomComponent, with the user's code
-      already embedded. This avoids running ``build_custom_component_template``
-      on every overlay call — heavy and would import user code into the
-      assistant process.
+    - Real introspection (``build_custom_component_template``) is done
+      once per file and cached by ``(path, mtime, size)``. The MCP tools
+      hit the overlay many times per turn; an unchanged file is built
+      once, and a genuine edit (re-registration changes mtime/size)
+      invalidates the cached entry. The scaffold-graft is a fallback
+      when introspection fails.
 """
 
 from __future__ import annotations
 
 import copy
+from collections import OrderedDict
 from typing import TYPE_CHECKING
 
 from lfx.graph.flow_builder.builder import load_local_registry
@@ -49,6 +49,24 @@ from langflow.agentic.services.user_components_context import current_user_id
 # fall back to ``None`` if the platform's CustomComponent entry was
 # stripped from the build — overlay degrades to no-op rather than crash.
 _BASE_CUSTOM_TEMPLATE_KEY = "CustomComponent"
+
+# Built overlay entries keyed by file path → ((mtime_ns, size), entry).
+# Bounded (LRU) so many users/components can't grow it without limit.
+_OVERLAY_ENTRY_CACHE: OrderedDict[str, tuple[tuple[int, int], dict]] = OrderedDict()
+_OVERLAY_CACHE_MAXSIZE = 512
+
+
+def _cache_overlay_entry(cache_key: str, sig: tuple[int, int], entry: dict) -> dict:
+    """Store a deep copy under (key, sig) and return the entry unchanged.
+
+    A copy is cached so a downstream consumer mutating the returned dict
+    can never poison a future cache hit.
+    """
+    _OVERLAY_ENTRY_CACHE[cache_key] = (sig, copy.deepcopy(entry))
+    _OVERLAY_ENTRY_CACHE.move_to_end(cache_key)
+    if len(_OVERLAY_ENTRY_CACHE) > _OVERLAY_CACHE_MAXSIZE:
+        _OVERLAY_ENTRY_CACHE.popitem(last=False)
+    return entry
 
 
 def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
@@ -127,6 +145,13 @@ def _build_overlay_entry(py_file: Path, base_template: dict) -> dict | None:
     except OSError as exc:
         logger.debug("Skipping %s: stat failed: %s", py_file.name, exc)
         return None
+    sig = (stat.st_mtime_ns, stat.st_size)
+    cache_key = str(py_file)
+    cached = _OVERLAY_ENTRY_CACHE.get(cache_key)
+    if cached is not None and cached[0] == sig:
+        _OVERLAY_ENTRY_CACHE.move_to_end(cache_key)
+        return copy.deepcopy(cached[1])
+
     if stat.st_size > MAX_COMPONENT_SOURCE_BYTES:
         logger.warning(
             "Skipping %s: size %d exceeds %d",
@@ -160,20 +185,83 @@ def _build_overlay_entry(py_file: Path, base_template: dict) -> dict | None:
         logger.debug("Skipping %s: not parseable Python", py_file.name)
         return None
 
+    # PRIMARY: build the REAL template by introspecting the component —
+    # exactly what the normal create-component "Add to canvas" path does
+    # (Component(_code=code) + build_custom_component_template). This makes
+    # the node's inputs, outputs, base_classes and output-types match the
+    # actual class, so `config: A.<real_input>` works and the run calls a
+    # method that exists. The scaffold-graft below is only a resilience
+    # fallback. (The code is already validated+executed by Layer-2
+    # generation, so instantiating it here crosses no new boundary.)
+    try:
+        from lfx.custom import Component
+        from lfx.custom.utils import build_custom_component_template
+
+        template_dict, _instance = build_custom_component_template(Component(_code=code))
+        template_dict["display_name"] = class_name
+        template_dict.setdefault("category", base_template.get("category", "custom_component"))
+    except Exception as exc:  # noqa: BLE001 — one bad component must not break the overlay
+        logger.debug("Real template build failed for %s; using scaffold: %s", py_file.name, exc)
+    else:
+        return _cache_overlay_entry(cache_key, sig, template_dict)
+
+    # FALLBACK: graft the code onto the base CustomComponent scaffold and
+    # patch outputs from the AST (no code execution) so a build that
+    # couldn't introspect still calls the right method.
     entry = copy.deepcopy(base_template)
     entry["display_name"] = class_name
-    # The template's "code" field is a dict wrapper {"value": str, ...}
-    # in the live registry. Mutate the value in place rather than
-    # rebuilding the wrapper (preserves other fields like "show",
-    # "advanced", "field_type", etc. that the canvas relies on).
     code_field = entry.get("template", {}).get("code")
     if isinstance(code_field, dict):
         code_field["value"] = code
     else:
-        # Shouldn't happen with the current CustomComponent template,
-        # but stay resilient if the platform ever flattens the field.
         entry.setdefault("template", {})["code"] = {"value": code}
-    return entry
+    real_outputs = _extract_outputs_from_ast(code, class_name)
+    if real_outputs:
+        base_out = (entry.get("outputs") or [{}])[0]
+        entry["outputs"] = [
+            {**copy.deepcopy(base_out), "name": name, "method": method, "display_name": display_name or name}
+            for (name, method, display_name) in real_outputs
+        ]
+    return _cache_overlay_entry(cache_key, sig, entry)
+
+
+def _extract_outputs_from_ast(code: str, class_name: str) -> list[tuple[str, str, str | None]] | None:
+    """Parse ``outputs = [Output(name=..., method=...)]`` from the class.
+
+    Returns ``[(name, method, display_name|None), ...]`` for the target
+    class, or ``None`` when it can't be determined (caller keeps the base
+    scaffold). Pure AST — never imports or executes the user's code.
+    """
+    import ast
+
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return None
+
+    def _kw(call: ast.Call, key: str) -> str | None:
+        for kw in call.keywords:
+            if kw.arg == key and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                return kw.value.value
+        return None
+
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.ClassDef) and node.name == class_name):
+            continue
+        for stmt in node.body:
+            if not (isinstance(stmt, ast.Assign) and any(getattr(t, "id", None) == "outputs" for t in stmt.targets)):
+                continue
+            if not isinstance(stmt.value, ast.List):
+                return None
+            outputs: list[tuple[str, str, str | None]] = []
+            for elt in stmt.value.elts:
+                if isinstance(elt, ast.Call) and getattr(elt.func, "id", None) == "Output":
+                    name = _kw(elt, "name")
+                    method = _kw(elt, "method")
+                    if name and method:
+                        outputs.append((name, method, _kw(elt, "display_name")))
+            return outputs or None
+    return None
 
 
 def _is_safe_overlay_name(name: str) -> bool:
