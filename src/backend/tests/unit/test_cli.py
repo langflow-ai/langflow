@@ -347,9 +347,16 @@ def test_ensure_multi_worker_safe_allows_single_worker():
     ensure_multi_worker_safe(num_workers=1)
 
 
+def _settings_service_with_queue(queue_type: str) -> SimpleNamespace:
+    return SimpleNamespace(settings=SimpleNamespace(job_queue_type=queue_type))
+
+
 def test_ensure_multi_worker_safe_refuses_multiple_workers():
     """Default in-memory queue + workers > 1 must refuse to start."""
-    with pytest.raises(RuntimeError) as exc_info:
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
         ensure_multi_worker_safe(num_workers=3)
 
     msg = str(exc_info.value)
@@ -359,7 +366,10 @@ def test_ensure_multi_worker_safe_refuses_multiple_workers():
 
 def test_ensure_multi_worker_safe_error_lists_workarounds():
     """Error must point operators at concrete fixes, not just describe the bug."""
-    with pytest.raises(RuntimeError) as exc_info:
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
         ensure_multi_worker_safe(num_workers=3)
 
     msg = str(exc_info.value)
@@ -370,3 +380,9 @@ def test_ensure_multi_worker_safe_error_lists_workarounds():
     # event_delivery=direct works but cannot be enforced at startup, so it's a
     # note, not a "pick one of" option — call that out explicitly.
     assert "event_delivery=direct" in msg
+
+
+def test_ensure_multi_worker_safe_allows_redis_queue():
+    """Redis-backed job queue shares state across workers; multi-worker is safe."""
+    with patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("redis")):
+        ensure_multi_worker_safe(num_workers=4)

@@ -233,10 +233,16 @@ def ensure_multi_worker_safe(num_workers: int) -> None:
     configure a shared queue anyway; this check refuses to start because the
     process cannot know which delivery mode every future client will pick.
 
+    Skipped entirely when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` is configured —
+    Redis-backed queues share state across workers and support every delivery
+    mode, so the race the check guards against cannot occur.
+
     Only called on the Gunicorn (Linux) path — the direct-uvicorn path on
     Windows/macOS clamps workers to 1, so the race cannot occur there.
     """
     if num_workers <= 1:
+        return
+    if get_settings_service().settings.job_queue_type == "redis":
         return
     msg = (
         f"Refusing to start with {num_workers} workers and the default in-memory "
