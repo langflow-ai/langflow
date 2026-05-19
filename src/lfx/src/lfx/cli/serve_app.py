@@ -26,7 +26,7 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
 from fastapi import Depends, FastAPI, HTTPException, Response, Security
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -156,6 +156,9 @@ class FlowRegistry:
         # Lightweight metadata cache for store flows not yet fully loaded into _flows.
         # Avoids re-reading JSON on every list_metas() call for multi-worker uploads.
         self._store_meta_cache: dict[str, FlowMeta] = {}
+        # Flow IDs whose source of truth is the store. These are re-verified against
+        # the store in get() / list_metas() to catch cross-worker deletes.
+        self._store_sourced: set[str] = set()
 
     def _stamp(self, graph: Graph) -> None:
         if self._no_env_fallback:
@@ -175,12 +178,32 @@ class FlowRegistry:
                 self._flows.pop(old_store_key, None)
         if raw_json is not None:
             self._store.write(meta.id, raw_json)
+            if getattr(self._store, "is_persistent", False):
+                self._store_sourced.add(meta.id)
         self._stamp(graph)
         self._flows[meta.id] = (graph, meta)
         self._store_meta_cache.pop(meta.id, None)
 
+    def _evict(self, meta_id: str) -> None:
+        """Remove all in-memory traces of a store-sourced flow (e.g. deleted by another worker)."""
+        store_key = self._store_keys.pop(meta_id, meta_id)
+        for k in {meta_id, store_key}:
+            self._flows.pop(k, None)
+            self._store_meta_cache.pop(k, None)
+        self._store_sourced.discard(meta_id)
+
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
         if flow_id in self._flows:
+            _, meta = self._flows[flow_id]
+            # Cross-worker stale check: if this flow came from the store, verify it
+            # hasn't been deleted by another worker since we cached it.
+            # Use _store_keys to find the real store key (which may be a filename stem
+            # rather than the JSON UUID for pre-placed flows).
+            if meta.id in self._store_sourced:
+                store_key = self._store_keys.get(meta.id, meta.id)
+                if self._store.read(store_key) is None:
+                    self._evict(meta.id)
+                    return None
             return self._flows[flow_id]
         raw_json = self._store.read(flow_id)
         if raw_json is None:
@@ -212,6 +235,8 @@ class FlowRegistry:
         graph.prepare()
         graph.flow_id = meta.id
         self._stamp(graph)
+        if getattr(self._store, "is_persistent", False):
+            self._store_sourced.add(meta.id)
         return graph, meta
 
     def warm_from_store(self) -> None:
@@ -227,11 +252,19 @@ class FlowRegistry:
     def list_metas(self) -> list[FlowMeta]:
         seen: set[str] = set()
         result: list[FlowMeta] = []
+        store_ids = set(self._store.list_ids())
         for _, meta in self._flows.values():
-            if meta.id not in seen:
-                result.append(meta)
-                seen.add(meta.id)
-        for flow_id in self._store.list_ids():
+            if meta.id in seen:
+                continue
+            # Skip flows deleted by another worker (still in our cache but gone from store).
+            # Use the real store key (may be a filename stem for pre-placed flows).
+            if meta.id in self._store_sourced:
+                store_key = self._store_keys.get(meta.id, meta.id)
+                if store_key not in store_ids:
+                    continue
+            result.append(meta)
+            seen.add(meta.id)
+        for flow_id in store_ids:
             if flow_id not in self._flows:
                 # Check the lightweight metadata cache before reading from disk.
                 if flow_id in self._store_meta_cache:
@@ -260,11 +293,13 @@ class FlowRegistry:
                 self._flows.pop(k, None)
                 self._store_meta_cache.pop(k, None)
             self._store_keys.pop(meta_id, None)
+            self._store_sourced.discard(meta_id)
             mem_had_it = True
         else:
             # Flow not in memory; derive store key best-effort.
             store_key = flow_id
             self._store_meta_cache.pop(flow_id, None)
+            self._store_sourced.discard(flow_id)
             mem_had_it = False
         store_had_it = self._store.delete(store_key)
         return mem_had_it or store_had_it
@@ -535,7 +570,7 @@ def create_multi_serve_app(
     @app.post(
         "/flows/{flow_id}/run",
         response_model=RunResponse,
-        responses={404: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+        responses={404: {"model": ErrorResponse}, 500: {"model": RunResponse}},
         tags=["flows"],
         summary="Execute flow",
         dependencies=[Depends(verify_api_key)],
@@ -556,13 +591,16 @@ def create_multi_serve_app(
 
             if not result_data.get("success", True):
                 error_message = result_data.get("result", result_data.get("text", "No response generated"))
-                return RunResponse(
-                    result=error_message,
-                    success=False,
-                    logs=logs
-                    or (f"Flow execution completed but no valid result was produced.\nResult data: {result_data}"),
-                    type="error",
-                    component=result_data.get("component", ""),
+                return JSONResponse(
+                    status_code=500,
+                    content=RunResponse(
+                        result=error_message,
+                        success=False,
+                        logs=logs
+                        or f"Flow execution completed but no valid result was produced.\nResult data: {result_data}",
+                        type="error",
+                        component=result_data.get("component", ""),
+                    ).model_dump(),
                 )
             return RunResponse(
                 result=result_data.get("result", result_data.get("text", "")),
@@ -576,12 +614,15 @@ def create_multi_serve_app(
             error_message = f"Flow execution failed: {exc!s}"
             logger.error(f"Error running flow {flow_id}: {exc}")
             logger.debug(f"Full traceback for flow {flow_id}:\n{error_traceback}")
-            return RunResponse(
-                result=error_message,
-                success=False,
-                logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
-                type="error",
-                component="",
+            return JSONResponse(
+                status_code=500,
+                content=RunResponse(
+                    result=error_message,
+                    success=False,
+                    logs=f"ERROR: {error_message}\n\nFull traceback:\n{error_traceback}",
+                    type="error",
+                    component="",
+                ).model_dump(),
             )
 
     @app.post(

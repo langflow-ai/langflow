@@ -243,6 +243,84 @@ class TestFlowRegistry:
         metas_after = registry.list_metas()
         assert not any(m.id == "gone-id" for m in metas_after)
 
+    def test_list_metas_skips_store_sourced_flow_deleted_by_other_worker(self):
+        """list_metas() must not return a flow that another worker deleted from the store."""
+        raw = {"name": "Shared", "data": {"nodes": [], "edges": []}, "id": "shared-id"}
+
+        class DeletableStore:
+            is_persistent = True
+
+            def __init__(self):
+                self._data = {"shared-id": raw}
+
+            def write(self, fid, v):
+                self._data[fid] = v
+
+            def read(self, fid):
+                return self._data.get(fid)
+
+            def delete(self, fid):
+                return bool(self._data.pop(fid, None))
+
+            def list_ids(self):
+                return list(self._data)
+
+        store = DeletableStore()
+        registry = FlowRegistry(store=store)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        # Load flow into registry via get() — simulates warm_from_store on startup
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get("shared-id")
+
+        assert any(m.id == "shared-id" for m in registry.list_metas())
+
+        # Another worker deletes the file — simulate by removing from the store directly
+        store.delete("shared-id")
+
+        # list_metas() must now exclude the stale entry
+        assert not any(m.id == "shared-id" for m in registry.list_metas())
+
+    def test_get_evicts_stale_store_sourced_flow(self):
+        """get() must return None and evict the entry when the store file was deleted by another worker."""
+        raw = {"name": "Evictable", "data": {"nodes": [], "edges": []}, "id": "evict-id"}
+
+        class DeletableStore:
+            is_persistent = True
+
+            def __init__(self):
+                self._data = {"evict-id": raw}
+
+            def write(self, fid, v):
+                self._data[fid] = v
+
+            def read(self, fid):
+                return self._data.get(fid)
+
+            def delete(self, fid):
+                return bool(self._data.pop(fid, None))
+
+            def list_ids(self):
+                return list(self._data)
+
+        store = DeletableStore()
+        registry = FlowRegistry(store=store)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            assert registry.get("evict-id") is not None
+
+        # Another worker deletes the file
+        store.delete("evict-id")
+
+        # get() must now return None and evict the stale entry
+        assert registry.get("evict-id") is None
+        assert "evict-id" not in registry._flows
+
     def test_registry_get_uses_json_id_over_filename_stem(self):
         """When JSON has a different id than the filename stem, meta.id uses the JSON id.
 
@@ -982,7 +1060,7 @@ class TestServeAppEndpoints:
                 headers=headers,
             )
 
-        assert response.status_code == 200
+        assert response.status_code == 500
         assert response.json()["success"] is False
         assert "custom components are not allowed" in response.json()["result"]
         mock_execute.assert_not_called()
@@ -1026,13 +1104,11 @@ class TestServeAppEndpoints:
                 "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
             )
 
-        assert response.status_code == 200  # Returns 200 with error in response body
+        assert response.status_code == 500
         data = response.json()
         assert data["success"] is False
-        # serve_app error handling returns "Flow execution failed: {error}"
         assert data["result"] == "Flow execution failed: Flow execution failed"
         assert data["type"] == "error"
-        # The error message should be in the logs
         assert "ERROR: Flow execution failed" in data["logs"]
 
     def test_run_endpoint_no_results(self, app_client):
@@ -1052,7 +1128,7 @@ class TestServeAppEndpoints:
                 "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
             )
 
-        assert response.status_code == 200
+        assert response.status_code == 500
         data = response.json()
         assert data["result"] == "No response generated"
         assert data["success"] is False
@@ -1073,11 +1149,8 @@ class TestServeAppEndpoints:
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
             patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
         ):
-            response = app_client.post(
-                "/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers
-            )
+            app_client.post("/flows/00000000-0000-0000-0000-000000000001/run", json=request_data, headers=headers)
 
-        assert response.status_code == 200
         assert captured["session_id"] == "my-conversation"
 
     def test_stream_endpoint_forwards_session_id(self, app_client):
@@ -1189,13 +1262,12 @@ class TestServeAppEndpoints:
             patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
             TestClient(app) as client,
         ):
-            response = client.post(
+            client.post(
                 "/flows/00000000-0000-0000-0000-000000000001/run",
                 json={"input_value": "hello", "global_vars": {"MY_API_KEY": "secret-value"}},
                 headers=headers,
             )
 
-        assert response.status_code == 200
         assert captured["request_variables"] == {"MY_API_KEY": "secret-value"}
 
     def test_run_endpoint_global_vars_do_not_mutate_registry_graph(self, real_graph_with_async, monkeypatch):
@@ -1571,6 +1643,62 @@ class TestUploadEndpoint:
 
         assert response.status_code == 409
         assert "already exists" in response.json()["detail"]
+
+    # ------------------------------------------------------------------
+    # Execution failures return HTTP 500 not HTTP 200
+    # ------------------------------------------------------------------
+
+    def test_run_execution_exception_returns_500(self, app_with_empty_registry, valid_flow_data):
+        """An unhandled exception during graph execution must produce HTTP 500, not 200."""
+        upload = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Failing Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert upload.status_code == 201
+        flow_id = upload.json()["id"]
+
+        with patch(
+            "lfx.cli.serve_app.execute_graph_with_capture",
+            side_effect=RuntimeError("boom"),
+        ):
+            response = app_with_empty_registry.post(
+                f"/flows/{flow_id}/run",
+                json={"input_value": "hi"},
+                headers={"x-api-key": "test-key"},
+            )
+
+        assert response.status_code == 500
+        body = response.json()
+        assert body["success"] is False
+        assert "boom" in body["result"]
+
+    def test_run_flow_failure_result_returns_500(self, app_with_empty_registry, valid_flow_data):
+        """A flow that returns success=False in its result must also produce HTTP 500."""
+        upload = app_with_empty_registry.post(
+            "/flows/upload/",
+            json={"name": "Bad Result Flow", "data": valid_flow_data},
+            headers={"x-api-key": "test-key"},
+        )
+        assert upload.status_code == 201
+        flow_id = upload.json()["id"]
+
+        with (
+            patch("lfx.cli.serve_app.execute_graph_with_capture", return_value=([], "")),
+            patch(
+                "lfx.cli.serve_app.extract_result_data",
+                return_value={"success": False, "result": "flow failed", "type": "error"},
+            ),
+        ):
+            response = app_with_empty_registry.post(
+                f"/flows/{flow_id}/run",
+                json={"input_value": "hi"},
+                headers={"x-api-key": "test-key"},
+            )
+
+        assert response.status_code == 500
+        body = response.json()
+        assert body["success"] is False
 
     # ------------------------------------------------------------------
     # GET /flows requires authentication

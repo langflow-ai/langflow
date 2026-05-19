@@ -40,6 +40,15 @@ class FlowStore(Protocol):
         """Return all stored flow IDs."""
         ...
 
+    def exists(self, flow_id: str) -> bool:
+        """Return True if the store has a record for *flow_id*."""
+        ...
+
+    @property
+    def is_persistent(self) -> bool:
+        """True if writes are visible to other processes (e.g. filesystem store)."""
+        ...
+
 
 class NullFlowStore:
     """No-op store — flows live in worker memory only (default)."""
@@ -55,6 +64,13 @@ class NullFlowStore:
 
     def list_ids(self) -> list[str]:
         return []
+
+    def exists(self, _flow_id: str) -> bool:
+        return False
+
+    @property
+    def is_persistent(self) -> bool:
+        return False
 
 
 class FilesystemFlowStore:
@@ -109,3 +125,10 @@ class FilesystemFlowStore:
 
     def list_ids(self) -> list[str]:
         return [p.stem for p in self._dir.glob("*.json")]
+
+    def exists(self, flow_id: str) -> bool:
+        return self._safe_path(flow_id).exists()
+
+    @property
+    def is_persistent(self) -> bool:
+        return True
