@@ -128,7 +128,8 @@ const useAddFlow = () => {
           resolve(createdFlow.id);
         },
         onError: (error) => {
-          if (error?.response?.data?.detail[0]?.type === UUID_PARSING_ERROR) {
+          const detail = error?.response?.data?.detail;
+          if (Array.isArray(detail) && detail[0]?.type === UUID_PARSING_ERROR) {
             setNoticeData({
               title: FOLDER_NOT_FOUND_ERROR,
             });
