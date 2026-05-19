@@ -37,7 +37,7 @@ function ApiInterceptor() {
   );
 
   const { mutate: mutationLogout } = useLogout();
-  const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
+  const { mutateAsync: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
 
@@ -86,17 +86,31 @@ function ApiInterceptor() {
             return Promise.reject(error);
           }
 
-          await tryToRenewAccessToken(error);
+          try {
+            await tryToRenewAccessToken(error);
+          } catch {
+            // Refresh failed (already logged + logout dispatched in the
+            // helper). Reject with the original error so callers see a
+            // clean failure instead of a swallowed undefined response.
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
+          // Refresh succeeded — replay the original request and resolve
+          // the interceptor with its response so the caller transparently
+          // gets the retried result. Without this, callers used to
+          // resolve with ``undefined`` after a successful refresh because
+          // the interceptor fell through without returning the retried
+          // response.
+          await clearBuildVerticesState(error);
+          return await remakeRequest(error);
         }
 
         await clearBuildVerticesState(error);
 
-        // Always reject so the caller (or React Query retry logic) can
-        // surface the failure. Previously this dropped through for
-        // AUTO_LOGIN auth errors and resolved with `undefined`, leaving
-        // callers stuck reading `response.data` off an undefined response —
-        // which produced infinite "Loading models…" spinners on fresh
-        // installs whose auto-login cookie hadn't reached protected endpoints.
+        // Non-recoverable failure path: always reject so callers and
+        // React Query see a real error rather than an undefined response.
+        // This used to silently swallow auth errors under AUTO_LOGIN,
+        // producing infinite "Loading models…" spinners on fresh installs.
         return Promise.reject(error);
       },
     );
@@ -206,17 +220,14 @@ function ApiInterceptor() {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(undefined, {
-      onSuccess: async () => {
-        setAuthenticationErrorCount(0);
-        await remakeRequest(error);
-      },
-      onError: (error) => {
-        console.error(error);
-        mutationLogout();
-        return Promise.reject("Authentication error");
-      },
-    });
+    try {
+      await mutationRenewAccessToken(undefined);
+      setAuthenticationErrorCount(0);
+    } catch (refreshError) {
+      console.error(refreshError);
+      mutationLogout();
+      throw refreshError;
+    }
   }
 
   async function clearBuildVerticesState(error) {
@@ -232,14 +243,11 @@ function ApiInterceptor() {
   async function remakeRequest(error: AxiosError) {
     const originalRequest = error.config as AxiosRequestConfig;
 
-    try {
-      // Browser automatically sends cookies with the request
-      // No need to manually add Authorization header
-      const response = await axios.request(originalRequest);
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
+    // Return the full AxiosResponse so when this value resolves the
+    // outer interceptor promise, callers see a normal axios response and
+    // can read ``response.data`` as usual. Returning ``response.data``
+    // here would double-unwrap and produce ``undefined`` at the call site.
+    return axios.request(originalRequest);
   }
 
   return null;

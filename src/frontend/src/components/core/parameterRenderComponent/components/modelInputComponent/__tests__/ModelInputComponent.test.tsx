@@ -1113,6 +1113,47 @@ describe("ModelInputComponent", () => {
       expect(refetchEnabled).toHaveBeenCalledTimes(1);
     });
 
+    it("keeps the working dropdown when a background refetch errors but stale data is preserved", async () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      // Background refetch failed, but TanStack Query preserved stale data
+      // for both queries — we should NOT regress to the error UI.
+      mockedProviders.mockReturnValue({
+        data: mockProvidersData,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("transient refetch failure"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+        isFetching: false,
+        error: new Error("transient refetch failure"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      // Error UI is hidden because stale data is still usable.
+      expect(
+        screen.queryByTestId("model-input-load-failed"),
+      ).not.toBeInTheDocument();
+
+      // The combobox is still interactive — open it and confirm providers render.
+      const combobox = screen.getByRole("combobox");
+      await user.click(combobox);
+      await waitFor(() => {
+        expect(screen.getByText("OpenAI")).toBeInTheDocument();
+      });
+    });
+
     it("falls back to the loading spinner while an error refetch is in flight", () => {
       const mockedProviders = useGetModelProviders as jest.MockedFunction<
         typeof useGetModelProviders

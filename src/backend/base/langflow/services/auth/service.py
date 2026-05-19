@@ -140,6 +140,14 @@ class AuthService(BaseAuthService):
             if superuser is None:
                 msg = "Superuser not found"
                 raise InvalidCredentialsError(msg)
+            # Mirror the active-user enforcement that token and API-key
+            # auth paths apply. ``CurrentActiveUser`` re-checks this for HTTP
+            # routes, but ``get_current_user_for_sse``/websocket dependencies
+            # call ``authenticate_with_credentials`` directly, so we must
+            # reject inactive superusers here too.
+            if not superuser.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
             logger.warning(AUTO_LOGIN_WARNING)
             return superuser
 

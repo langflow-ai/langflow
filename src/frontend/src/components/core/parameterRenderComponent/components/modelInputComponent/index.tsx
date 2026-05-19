@@ -132,7 +132,18 @@ export default function ModelInputComponent({
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
   const isFetching = isFetchingProviders || isFetchingEnabledModels;
-  const hasLoadError = !!(providersError || enabledModelsError) && !isFetching;
+  // Only surface the retry UI when a query failed AND it has no usable data
+  // to fall back on. TanStack Query exposes ``data`` alongside ``error`` for
+  // refetch failures (the providers hook explicitly preserves stale data on
+  // error), so a transient background-refetch error should not replace a
+  // working dropdown with the "couldn't load models" affordance. We also
+  // wait until any in-flight refetch settles to avoid flicker.
+  const providersUnusable =
+    !!providersError && (!providersData || providersData.length === 0);
+  const enabledModelsUnusable =
+    !!enabledModelsError && enabledModelsData === undefined;
+  const hasInitialLoadError =
+    !isFetching && (providersUnusable || enabledModelsUnusable);
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -611,12 +622,14 @@ export default function ModelInputComponent({
     return null;
   }
 
-  // Surface a retry affordance whenever the underlying queries failed and
-  // we're not currently refetching. Without this the dropdown silently
-  // stays empty (or, before the api interceptor fix, looped on
-  // "Loading models…" indefinitely) when the auth/model endpoints reject
-  // the request — leaving the user with no way to recover from the UI.
-  if (hasLoadError) {
+  // Surface a retry affordance only when the queries failed AND we have no
+  // usable data to display. Without this the dropdown silently stays empty
+  // (or, before the api interceptor fix, looped on "Loading models…"
+  // indefinitely) when the auth/model endpoints reject the initial request.
+  // We deliberately ignore refetch errors that leave stale data intact so a
+  // transient background refresh failure doesn't replace a working dropdown
+  // with the error state.
+  if (hasInitialLoadError) {
     return <div className="w-full">{renderErrorButton()}</div>;
   }
 

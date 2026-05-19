@@ -190,6 +190,31 @@ async def test_authenticate_with_credentials_auto_login_skip_missing_superuser_r
 
 
 @pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN fallback must enforce ``is_active`` like token/API-key paths.
+
+    ``CurrentActiveUser`` re-checks this for HTTP routes, but SSE/websocket
+    dependencies delegate directly to ``authenticate_with_credentials``, so
+    the active-user guard must live in this method.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(InactiveUserError),
+    ):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
 async def test_create_refresh_token_requires_refresh_type(auth_service: AuthService):
     invalid_refresh = auth_service.create_token({"sub": str(uuid4()), "type": "access"}, timedelta(minutes=1))
 
