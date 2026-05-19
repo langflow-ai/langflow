@@ -29,7 +29,8 @@ The following parameters are shared across both modes.
 | mode | Mode | Input parameter. Tab selector that switches the component between **Ingest** and **Retrieve** modes. |
 | knowledge_base | Knowledge | Input parameter. Select the knowledge base to ingest data into or retrieve data from. |
 
-### Ingest mode parameters
+<Tabs>
+<TabItem value="ingest" label="Ingest mode">
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -40,7 +41,8 @@ The following parameters are shared across both modes.
 | allow_duplicates | Allow Duplicates | Input parameter. If enabled, allows duplicate rows in the knowledge base. Default: Disabled (false). |
 | metadata_json | Metadata | Input parameter. Optional JSON object of user metadata applied to every chunk in this run (for example, `{"tag": "invoice", "year": "2026"}`). This metadata is compatible with the **Metadata Filter** parameter in Retrieve mode. Malformed JSON is ignored with a warning. |
 
-### Retrieve mode parameters
+</TabItem>
+<TabItem value="retrieve" label="Retrieve mode">
 
 | Name | Display Name | Info |
 |------|--------------|------|
@@ -50,6 +52,9 @@ The following parameters are shared across both modes.
 | include_metadata | Include Metadata | Input parameter. Whether to include all metadata in the output. If enabled, each output row includes all metadata and content. If disabled, only the content is returned. Default: Enabled (true). |
 | include_embeddings | Include Embeddings | Input parameter. Whether to include raw embedding vectors in the output. Only applicable when **Include Metadata** is enabled. Default: Disabled (false). |
 | metadata_filter | Metadata Filter | Input parameter. Optional JSON object of key/value pairs to filter results by user metadata (for example, `{"tag": "invoice"}` or `{"tag": ["invoice", "audit"]}` for OR-of-values matching). Backends without native filtering apply the match client-side after retrieval. |
+
+</TabItem>
+</Tabs>
 
 ## Use the Knowledge Base component in a flow
 
