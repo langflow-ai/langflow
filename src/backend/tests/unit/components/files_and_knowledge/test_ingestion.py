@@ -122,8 +122,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # configured active DB Provider on first render.
         assert backend_input.value == {}
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_settings_service")
-    @patch("lfx.components.files_and_knowledge.ingestion.encrypt_api_key")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_settings_service")
+    @patch("lfx.components.files_and_knowledge.knowledge.encrypt_api_key")
     def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
         """Test building embedding metadata."""
         component = component_class(**default_kwargs)
@@ -221,7 +221,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma to avoid actual vector store operations
-        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             mock_chroma_instance.get.return_value = {"metadatas": []}
             mock_chroma.return_value = mock_chroma_instance
@@ -246,7 +246,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         config_list = default_kwargs["column_config"]
 
         # Mock Chroma with existing hash
-        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
             # Simulate existing document with same hash
             existing_hash = "some_existing_hash"
             mock_chroma_instance = MagicMock()
@@ -254,7 +254,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             mock_chroma.return_value = mock_chroma_instance
 
             # Mock hashlib to return the existing hash for first row
-            with patch("lfx.components.files_and_knowledge.ingestion.hashlib.sha256") as mock_hash:
+            with patch("lfx.components.files_and_knowledge.knowledge.hashlib.sha256") as mock_hash:
                 mock_hash_obj = MagicMock()
                 mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
                 mock_hash.return_value = mock_hash_obj
@@ -280,7 +280,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_build_kb_info_success(self, mock_get_embeddings, component_class, default_kwargs):
         """Test successful KB info building."""
         component = component_class(**default_kwargs)
@@ -312,7 +312,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_update_build_config_new_kb(self, mock_get_embeddings, component_class, default_kwargs):
         """Test updating build config for new knowledge base creation."""
         component = component_class(**default_kwargs)
@@ -343,7 +343,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert mock_save_metadata.call_args.kwargs["backend_type"] == "chroma"
         assert mock_save_metadata.call_args.kwargs["backend_config"] == {}
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_update_build_config_new_kb_persists_backend_selection(
         self, mock_get_embeddings, component_class, default_kwargs
     ):
@@ -383,7 +383,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"
         assert mock_create_record.call_args.kwargs["backend_config"]["text_field"] == "content"
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
         """Test that Message input is accepted and converted to DataFrame."""
         # Replace the DataFrame input with a Message
@@ -417,7 +417,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Invalid knowledge base name"):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_build_kb_info_with_new_format_metadata(
         self, mock_get_embeddings, component_class, default_kwargs, tmp_path, active_user
     ):
@@ -465,13 +465,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             # Simulate all rows as already-existing duplicates in the store
             mock_chroma_instance.get.return_value = {"metadatas": [{"_id": "hash_1"}, {"_id": "hash_2"}]}
             mock_chroma.return_value = mock_chroma_instance
 
-            with patch("lfx.components.files_and_knowledge.ingestion.hashlib.sha256") as mock_hash:
+            with patch("lfx.components.files_and_knowledge.knowledge.hashlib.sha256") as mock_hash:
                 mock_hash_obj = MagicMock()
                 # Return hashes that match the existing IDs above
                 mock_hash_obj.hexdigest.side_effect = ["hash_1", "hash_2"]
@@ -495,8 +495,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(RuntimeError, match="No embedding model configuration found"):
             await component.build_kb_info()
 
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embedding_model_options")
-    @patch("lfx.components.files_and_knowledge.ingestion.get_embeddings")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embedding_model_options")
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_build_kb_info_old_format_unrecognized_model(
         self,
         mock_get_embeddings,  # noqa: ARG002
@@ -588,7 +588,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         config_list = default_kwargs["column_config"]
 
-        with patch("lfx.components.files_and_knowledge.ingestion.Chroma") as mock_chroma:
+        with patch("lfx.components.files_and_knowledge.knowledge.Chroma") as mock_chroma:
             mock_chroma_instance = MagicMock()
             mock_chroma_instance.get.return_value = {"metadatas": []}
             mock_chroma.return_value = mock_chroma_instance

@@ -100,7 +100,8 @@ def build_schema() -> dict[str, Any]:
         "Reserved field names that are deferred to a future milestone "
         "are absent from this schema and are listed under ``x-deferred-fields``; "
         "manifests that set them are rejected via ``additionalProperties: false``. "
-        "See https://docs.langflow.org/extensions/manifest for the author's guide."
+        "See https://docs.langflow.org/extensions-manifest for the field-by-field reference "
+        "and https://docs.langflow.org/extensions-author-guide for the author's guide."
     )
     return schema
 
