@@ -39,7 +39,7 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.authorization.utils import ensure_flow_permission
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -97,7 +97,9 @@ async def create_flow(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        await ensure_flow_permission(current_user, "create")
+        await ensure_flow_permission(
+            current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
+        )
         return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except HTTPException:
         raise
@@ -193,9 +195,11 @@ async def read_flow(
     if user_flow := await _read_flow(session, flow_id, current_user.id):
         await ensure_flow_permission(
             current_user,
-            "read",
+            FlowAction.READ,
             flow_id=flow_id,
             flow_user_id=user_flow.user_id,
+            workspace_id=user_flow.workspace_id,
+            folder_id=user_flow.folder_id,
         )
         # Convert to FlowRead while session is still active to avoid detached instance errors
         return FlowRead.model_validate(user_flow, from_attributes=True)
@@ -266,9 +270,11 @@ async def update_flow(
 
         await ensure_flow_permission(
             current_user,
-            "write",
+            FlowAction.WRITE,
             flow_id=flow_id,
             flow_user_id=db_flow.user_id,
+            workspace_id=db_flow.workspace_id,
+            folder_id=db_flow.folder_id,
         )
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
@@ -332,6 +338,15 @@ async def upsert_flow(
             if existing_flow.user_id != current_user.id:
                 raise HTTPException(status_code=404, detail="Flow not found")
 
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.WRITE,
+                flow_id=flow_id,
+                flow_user_id=existing_flow.user_id,
+                workspace_id=existing_flow.workspace_id,
+                folder_id=existing_flow.folder_id,
+            )
+
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow
             # also uses exclude_none=True for update_data.
@@ -366,6 +381,9 @@ async def upsert_flow(
             status_code = 200
         else:
             # CREATE path - flow doesn't exist
+            await ensure_flow_permission(
+                current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
+            )
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -406,9 +424,11 @@ async def delete_flow(
         raise HTTPException(status_code=404, detail="Flow not found")
     await ensure_flow_permission(
         current_user,
-        "delete",
+        FlowAction.DELETE,
         flow_id=flow_id,
         flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
     )
     await retry_flow_operation_on_deployment_guard(
         db=session,
@@ -427,6 +447,7 @@ async def create_flows(
     current_user: CurrentActiveUser,
 ):
     """Create multiple new flows."""
+    await ensure_flow_permission(current_user, FlowAction.CREATE)
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
     requested_ids = [f.id for f in flow_list.flows if f.id is not None]
@@ -467,6 +488,7 @@ async def upload_file(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs)."""
+    await ensure_flow_permission(current_user, FlowAction.CREATE, folder_id=folder_id)
     if file is None:
         raise HTTPException(status_code=400, detail="No file provided")
 
@@ -552,6 +574,15 @@ async def delete_multiple_flows(
                 await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
             ).all()
             for flow in flows_to_delete:
+                await ensure_flow_permission(
+                    user,
+                    FlowAction.DELETE,
+                    flow_id=flow.id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=flow.workspace_id,
+                    folder_id=flow.folder_id,
+                )
+            for flow in flows_to_delete:
                 await cascade_delete_flow(db, flow.id)
             await db.flush()
             return len(flows_to_delete)
@@ -589,6 +620,16 @@ async def download_multiple_file(
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
+
+    for flow in flows:
+        await ensure_flow_permission(
+            user,
+            FlowAction.READ,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
 
     return _build_flows_download_response(flows)
 

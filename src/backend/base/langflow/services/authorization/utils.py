@@ -2,22 +2,100 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import asyncio
+from typing import TYPE_CHECKING, Any, TypeVar
+from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 
+from langflow.services.authorization.actions import FlowAction
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
-    from uuid import UUID
+    from collections.abc import Callable
 
     from langflow.services.auth.exceptions import InsufficientPermissionsError
     from langflow.services.database.models.user.model import User, UserRead
 
 
+T = TypeVar("T")
+
+# Audit result strings — kept here so callers and tests share the vocabulary.
+_AUDIT_ALLOW = "allow"
+_AUDIT_DENY = "deny"
+_AUDIT_OWNER_OVERRIDE = "owner_override"
+
+
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
     """Build the base context dict passed to authorization enforce calls."""
     return {"is_superuser": getattr(user, "is_superuser", False)}
+
+
+def _coerce_action(act: FlowAction | str) -> str:
+    """Return the string value of a FlowAction or pass through a raw string."""
+    return act.value if isinstance(act, FlowAction) else act
+
+
+def _split_obj(obj: str) -> tuple[str | None, UUID | None]:
+    """Parse an authz obj key like 'flow:abc' into (resource_type, resource_id).
+
+    Wildcards (``flow:*``) and unparseable ids return None for ``resource_id``
+    so audit rows are still written with the right ``resource_type``.
+    """
+    if ":" not in obj:
+        return None, None
+    resource_type, _, suffix = obj.partition(":")
+    if not suffix or suffix == "*":
+        return resource_type, None
+    try:
+        return resource_type, UUID(suffix)
+    except (ValueError, TypeError):
+        return resource_type, None
+
+
+async def audit_decision(
+    *,
+    user_id: UUID | None,
+    action: str,
+    obj: str,
+    result: str,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Write an AuthzAuditLog row, fire-and-forget.
+
+    Schedules an asyncio task and returns immediately. Failures inside the task
+    are logged but never propagate to the caller so audit writes can never
+    block a real API response.
+    """
+    settings = get_settings_service()
+    auth_settings = settings.auth_settings
+    if not auth_settings.AUTHZ_ENABLED or not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True):
+        return
+
+    resource_type, resource_id = _split_obj(obj)
+
+    async def _write() -> None:
+        try:
+            from langflow.services.database.models.auth import AuthzAuditLog
+            from langflow.services.deps import session_scope
+
+            async with session_scope() as session:
+                session.add(
+                    AuthzAuditLog(
+                        user_id=user_id,
+                        action=action,
+                        resource_type=resource_type,
+                        resource_id=resource_id,
+                        result=result,
+                        details=details,
+                    )
+                )
+        except Exception:  # noqa: BLE001 — audit must never raise into the request path
+            logger.exception("Failed to write AuthzAuditLog row")
+
+    # Bare create_task is the langflow convention (see main.py:135, main.py:173).
+    asyncio.create_task(_write())  # noqa: RUF006 — fire-and-forget audit task
 
 
 async def ensure_permission(
@@ -28,7 +106,10 @@ async def ensure_permission(
     act: str,
     context: dict[str, Any] | None = None,
 ) -> None:
-    """Raise HTTP 403 if the user is not allowed to perform the action."""
+    """Raise HTTP 403 if the user is not allowed to perform the action.
+
+    Writes an audit row on both allow and deny paths.
+    """
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED:
         return
@@ -42,6 +123,18 @@ async def ensure_permission(
         act=act,
         context=merged_context,
     )
+
+    audit_details = {"domain": domain}
+    if "flow_user_id" in merged_context and merged_context["flow_user_id"] is not None:
+        audit_details["flow_user_id"] = str(merged_context["flow_user_id"])
+    await audit_decision(
+        user_id=user.id,
+        action=f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act,
+        obj=obj,
+        result=_AUDIT_ALLOW if allowed else _AUDIT_DENY,
+        details=audit_details,
+    )
+
     if not allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -49,23 +142,109 @@ async def ensure_permission(
         )
 
 
+def _resolve_flow_domain(workspace_id: UUID | None, folder_id: UUID | None) -> str:
+    """Pick the most specific Casbin domain for a flow check.
+
+    Precedence (outer → inner):
+      1. ``workspace:{workspace_id}`` when a workspace is set,
+      2. ``project:{folder_id}`` when a folder is set,
+      3. ``"*"`` when neither is set.
+
+    Enterprise Casbin policies link the two via ``g2`` (e.g.
+    ``g2, project:xyz, workspace:abc``) so a workspace-scoped role
+    grant automatically applies to every project inside it.
+    """
+    if workspace_id is not None:
+        return f"workspace:{workspace_id}"
+    if folder_id is not None:
+        return f"project:{folder_id}"
+    return "*"
+
+
 async def ensure_flow_permission(
     user: User | UserRead,
-    act: str,
+    act: FlowAction | str,
     *,
     flow_id: UUID | None = None,
     flow_user_id: UUID | None = None,
-    domain: str = "*",
+    workspace_id: UUID | None = None,
+    folder_id: UUID | None = None,
+    domain: str | None = None,
 ) -> None:
-    """Check flow-scoped permission (e.g. flow:read, flow:write)."""
+    """Check flow-scoped permission with workspace/project domain + owner override.
+
+    The flow owner is always allowed (audited as ``owner_override``). Otherwise
+    delegates to :func:`ensure_permission` with the canonical Casbin tuple
+    ``(user, domain, obj=flow:{id}|flow:*, act=<FlowAction>)`` where the domain
+    follows the precedence in :func:`_resolve_flow_domain`. Both
+    ``workspace_id`` and ``folder_id`` are forwarded in the context dict so the
+    enterprise plugin can use whichever fits its policy model.
+    """
     obj = f"flow:{flow_id}" if flow_id else "flow:*"
+    act_str = _coerce_action(act)
+    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, folder_id)
+
+    # Owner override: a flow owner can always operate on their own flow.
+    if flow_user_id is not None and getattr(user, "id", None) == flow_user_id:
+        settings = get_settings_service()
+        if settings.auth_settings.AUTHZ_ENABLED:
+            await audit_decision(
+                user_id=user.id,
+                action=f"flow:{act_str}",
+                obj=obj,
+                result=_AUDIT_OWNER_OVERRIDE,
+                details={"domain": resolved_domain},
+            )
+        return
+
     await ensure_permission(
         user,
-        domain=domain,
+        domain=resolved_domain,
         obj=obj,
-        act=act,
-        context={"flow_user_id": flow_user_id},
+        act=act_str,
+        context={
+            "flow_user_id": flow_user_id,
+            "workspace_id": workspace_id,
+            "folder_id": folder_id,
+        },
     )
+
+
+async def filter_visible_resources(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    candidates: list[T],
+    key: Callable[[T], UUID] | None = None,
+    domain: str = "*",
+    act: FlowAction | str = FlowAction.READ,
+) -> list[T]:
+    """Return the subset of `candidates` that the user is allowed to read.
+
+    No-op when ``AUTHZ_ENABLED=false`` — returns the input list unchanged.
+    Plumbing for list endpoints; the OSS pass-through always returns the full
+    list, so calling this is safe to add ahead of enterprise plugin rollout.
+    """
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED or not candidates:
+        return candidates
+
+    extractor = key if key is not None else _default_resource_id_getter
+    authz = get_authorization_service()
+    act_str = _coerce_action(act)
+    requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in candidates]
+    results = await authz.batch_enforce(
+        user_id=user.id,
+        domain=domain,
+        requests=requests,
+        context=_auth_context(user),
+    )
+    return [item for item, allowed in zip(candidates, results, strict=True) if allowed]
+
+
+def _default_resource_id_getter(item: Any) -> UUID:
+    """Default key extractor used by filter_visible_resources."""
+    return item.id
 
 
 def permission_denied_to_http(exc: InsufficientPermissionsError) -> HTTPException:
