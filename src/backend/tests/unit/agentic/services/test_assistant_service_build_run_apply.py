@@ -108,9 +108,7 @@ class TestBuildAndRunAlwaysApplies:
             drain_batches=[[dict(SET_FLOW)], [dict(FLOW_RAN)], []],
             stream=_two_token_stream,
         )
-        assert _has_auto_applied_set_flow(events), (
-            f"late run must re-apply the proposed flow to the canvas. {events}"
-        )
+        assert _has_auto_applied_set_flow(events), f"late run must re-apply the proposed flow to the canvas. {events}"
         assert not _has_proposal_gate(events)
 
     @pytest.mark.asyncio

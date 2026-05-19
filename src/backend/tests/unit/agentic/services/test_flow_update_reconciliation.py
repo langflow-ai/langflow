@@ -46,9 +46,7 @@ class TestSameBatchBuildAndRun:
     """set_flow and flow_ran drained together → set_flow auto-applies."""
 
     def test_set_flow_then_flow_ran_same_batch_auto_applies(self):
-        events, auto_apply, saw_set_flow, saw_run, _last, applied = _reconcile(
-            [dict(SET_FLOW), dict(FLOW_RAN)]
-        )
+        events, auto_apply, saw_set_flow, saw_run, _last, applied = _reconcile([dict(SET_FLOW), dict(FLOW_RAN)])
         set_flow_events = [e for e in events if e.get("action") == "set_flow"]
         assert len(set_flow_events) == 1
         assert set_flow_events[0]["auto_apply"] is True
@@ -102,12 +100,20 @@ class TestLateRunReconciliation:
         _ev1, a1, s1, r1, l1, ap1 = _reconcile([dict(SET_FLOW)])
         _ev2, a2, s2, r2, l2, ap2 = _reconcile(
             [dict(FLOW_RAN)],
-            auto_apply_flow=a1, saw_set_flow=s1, saw_run=r1, last_set_flow=l1, set_flow_applied=ap1,
+            auto_apply_flow=a1,
+            saw_set_flow=s1,
+            saw_run=r1,
+            last_set_flow=l1,
+            set_flow_applied=ap1,
         )
         # A THIRD drain (empty / trailing) must NOT re-emit set_flow again.
         ev3, *_ = _reconcile(
             [],
-            auto_apply_flow=a2, saw_set_flow=s2, saw_run=r2, last_set_flow=l2, set_flow_applied=ap2,
+            auto_apply_flow=a2,
+            saw_set_flow=s2,
+            saw_run=r2,
+            last_set_flow=l2,
+            set_flow_applied=ap2,
         )
         assert not [e for e in ev3 if e.get("action") == "set_flow"], (
             "set_flow must be applied exactly once, never duplicated"
@@ -127,7 +133,7 @@ class TestNoRegression:
     def test_compound_auto_apply_unchanged(self):
         # Compound already sets auto_apply_flow=True up front; behaviour
         # must be identical (set_flow applied, single emit).
-        events, *_ , applied = _reconcile([dict(SET_FLOW)], auto_apply_flow=True)
+        events, *_, applied = _reconcile([dict(SET_FLOW)], auto_apply_flow=True)
         set_flow_events = [e for e in events if e.get("action") == "set_flow"]
         assert len(set_flow_events) == 1
         assert set_flow_events[0]["auto_apply"] is True
