@@ -409,6 +409,49 @@ If you are the administrator, sign in with a superuser account, or restart Langf
 
 For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
+### PermissionError on `/app/langflow/secret_key` at startup
+
+The Langflow container runs as a non-root user (`uid=1000`).
+The Langflow image pre-creates `/app/langflow` with that user as the owner, so a new
+`langflow-data` named volume inherits the correct ownership.
+If you ran an earlier image build that did not pre-create this directory, the named
+volume was initialized as `root:root` and the non-root container user cannot
+write `secret_key` into it, and the error `PermissionError: [Errno 13]` on `/app/langflow/secret_key` appears.
+
+This commonly affects rootful Docker daemons such as Docker Desktop.
+Podman with rootless user-namespace mapping does not reproduce the issue.
+
+To preserve the `langflow-postgres` data while resetting only the `langflow-data` volume, do the following:
+
+1. Stop the container and find the exact volume name for `langflow-data`.
+This command lists the volumes, and then searches for `langflow-data`.
+
+    ```sh
+    docker compose down
+    docker compose config --volumes
+    docker volume ls | grep langflow-data
+    ```
+
+2. Once you have confirmed the exact volume name, remove only that volume:
+
+    ```sh
+    docker volume rm LANGFLOW_DATA_VOLUME_NAME
+    docker compose pull
+    docker compose up -d
+    ```
+
+Alternatively, if you don't need to preserve the `langflow-postgres` data volume, you can pull the latest container image instead.
+
+:::warning
+This method removes all data, including the `langflow-postgres` data volume.
+:::
+
+```sh
+docker compose down -v
+docker compose pull
+docker compose up -d
+```
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -600,40 +643,6 @@ RUN apt-get update && apt-get install -y libgl1 libglib2.0-0
 These dependencies are required by Docling for document processing operations.
 
 For more information about customizing Docker images, see [Customize the Langflow Docker image with your own code](/deployment-docker#customize-the-langflow-docker-image).
-
-## PermissionError on `/app/langflow/secret_key` at startup
-
-The Langflow container runs as a non-root user (`uid=1000`).
-The Langflow image pre-creates `/app/langflow` with that user as the owner, so a new
-`langflow-data` named volume inherits the correct ownership.
-If you ran an earlier image build that did **not** pre-create this directory, the named
-volume was initialized as `root:root` and the non-root container user cannot
-write `secret_key` into it, and the error `PermissionError: [Errno 13]` on `/app/langflow/secret_key` appears.
-
-This commonly affects rootful Docker daemons such as Docker Desktop.
-Podman with rootless user-namespace mapping does not reproduce the issue.
-
-To recover, recreate the volume from scratch using a current image:
-
-:::warning
-This method removes all data, including the `langflow-postgres` data volume.
-:::
-
-```sh
-docker compose down -v
-docker compose pull
-docker compose up -d
-```
-
-To preserve the `langflow-postgres` data while resetting only the
-`langflow-data` configuration volume, remove the `langflow-data` volume by name instead:
-
-```sh
-docker compose down
-docker volume rm "$(basename "$PWD")_langflow-data"
-docker compose pull
-docker compose up -d
-```
 
 ## Custom components and integrations issues
 
