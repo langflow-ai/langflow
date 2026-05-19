@@ -7,6 +7,7 @@
 
 // Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
+
 import i18n, { loadLanguage } from "./i18n";
 
 describe("loadLanguage", () => {
@@ -49,5 +50,13 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+
+  it("is a no-op for unsupported languages (does not attempt to import)", async () => {
+    const spy = jest.spyOn(i18n, "addResourceBundle");
+    await expect(loadLanguage("pl")).resolves.toBeUndefined();
+    expect(spy).not.toHaveBeenCalled();
+    expect(i18n.hasResourceBundle("pl", "translation")).toBe(false);
+    spy.mockRestore();
   });
 });
