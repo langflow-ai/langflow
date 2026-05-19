@@ -380,6 +380,13 @@ class BaseConfigResponse(BaseModel):
     voice_mode_available: bool
     frontend_timeout: int
     mcp_base_url: str
+    # Mode A only: gates the palette Bundle-header Reload action.  Surfaced
+    # at runtime so the packaged frontend (built once with the env var
+    # default) can still light up the button when an operator turns the
+    # backend reload route on -- the build-time Vite flag gates first-paint,
+    # but ``lfx extension dev`` and ``--env-file LANGFLOW_ENABLE_EXTENSION_RELOAD=true``
+    # opt in after the build is frozen, so the UI consults this field too.
+    enable_extension_reload: bool
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -409,6 +416,7 @@ class PublicConfigResponse(BaseConfigResponse):
             voice_mode_available=settings.voice_mode_available,
             frontend_timeout=settings.frontend_timeout,
             mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
         )
 
@@ -463,6 +471,7 @@ class ConfigResponse(BaseConfigResponse):
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             mcp_base_url=settings.mcp_base_url,
+            enable_extension_reload=settings.enable_extension_reload,
             webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",

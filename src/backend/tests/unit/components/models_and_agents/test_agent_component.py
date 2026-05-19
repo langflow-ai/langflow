@@ -183,7 +183,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert watsonx_url_input.show is False
         assert project_id_input.show is False
 
-    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.base.models.unified_models.get_language_model_options")
     async def test_update_build_config_shows_watsonx_fields(self, mock_opts, component_class, default_kwargs):
         """Test that update_build_config shows WatsonX fields when IBM WatsonX is selected."""
         from lfx.schema.dotdict import dotdict
@@ -220,7 +220,7 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert updated_config["base_url_ibm_watsonx"]["required"] is False
         assert updated_config["project_id"]["required"] is False
 
-    @patch("lfx.components.models_and_agents.agent.get_language_model_options")
+    @patch("lfx.base.models.unified_models.get_language_model_options")
     async def test_update_build_config_hides_watsonx_fields_for_other_providers(
         self, mock_opts, component_class, default_kwargs
     ):
