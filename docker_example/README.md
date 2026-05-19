@@ -83,36 +83,3 @@ Fresh installs are unaffected.
 ## Switching to a Specific LangFlow Version
 
 If you want to use a specific version of LangFlow, you can modify the `image` field under the `langflow` service in the Docker Compose file. For example, to use version 1.0-alpha, change `langflowai/langflow:latest` to `langflowai/langflow:1.0-alpha`.
-
-## Troubleshooting
-
-### `PermissionError: [Errno 13]` on `/app/langflow/secret_key` at startup
-
-The Langflow container runs as a non-root user (`uid=1000`). The Langflow image
-pre-creates `/app/langflow` with that user as the owner so a freshly created
-`langflow-data` named volume inherits the correct ownership. If you ran an
-earlier image build that did **not** pre-create this directory, the named
-volume was initialized as `root:root` and the non-root container user cannot
-write `secret_key`, `profile_pictures/`, etc. into it.
-
-This commonly affects rootful Docker daemons (Linux native, Docker Desktop for
-Mac/Windows). Podman with rootless user-namespace mapping does not reproduce
-the issue.
-
-To recover, recreate the volume from scratch using a current image:
-
-```sh
-docker compose down -v       # WARNING: also wipes the postgres data volume
-docker compose pull
-docker compose up -d
-```
-
-If you need to preserve the `langflow-postgres` data while resetting only the
-Langflow config volume, remove that single volume by name instead:
-
-```sh
-docker compose down
-docker volume rm "$(basename "$PWD")_langflow-data"
-docker compose pull
-docker compose up -d
-```
