@@ -1,203 +1,147 @@
 # AGENTS.md
 
-This file provides guidance to AI coding agents when working with code in this repository.
+Guidance for AI coding agents working in this repository.
 
-## Project Overview
+> **Before you write code, read [docs/agents/PHILOSOPHY.md](./docs/agents/PHILOSOPHY.md).** Most off-narrative work comes from skipping it.
 
-Langflow is a visual workflow builder for AI-powered agents. It has a Python/FastAPI backend, React/TypeScript frontend, and a lightweight executor CLI (lfx).
+## What Langflow is
+
+Langflow is a **visual flow builder first**. Users drag components onto a canvas, wire them together, and either run the resulting flow in the Playground, deploy it as an API, or expose it as an MCP server. Saved flows are persistent JSON artifacts running in production — backwards compatibility for components is non-negotiable.
+
+The repo is three Python packages and one frontend:
+
+- **`lfx`** (`src/lfx/`): the executor core. Component base classes, the graph engine, and built-in components live here. Should not depend on `langflow` or `langflow-base` — see [docs/agents/ARCHITECTURE.md](./docs/agents/ARCHITECTURE.md) for the ~14 known violations to fix-not-extend.
+- **`langflow-base`** (`src/backend/base/langflow/`): the platform. FastAPI routes, auth, persistence, alembic, services. May import `lfx`.
+- **`langflow`**: the integration distribution that ships everything together.
+- **`frontend`** (`src/frontend/`): React 19 + TypeScript + Vite + Zustand + `@xyflow/react`. Talks to the backend over HTTP/WebSocket only.
+
+Dependencies flow one way: `frontend → langflow → langflow-base → lfx`. See [docs/agents/ARCHITECTURE.md](./docs/agents/ARCHITECTURE.md).
+
+## Non-negotiable tenets
+
+These are extracted from [PHILOSOPHY.md](./docs/agents/PHILOSOPHY.md). The full file has the rest; these are the ones every change must respect.
+
+1. **Flows are user artifacts.** Component class names, `name` attributes, input/output names, and input types are frozen once shipped. Mark old components `legacy=True` instead of editing.
+2. **Every backend feature must land on the canvas.** If it can't be a component or a property of one, it's an SDK feature and belongs in `lfx`, not `langflow-base`.
+3. **Components are the unit of work.** Don't add a route, store, or service unless a component or UI page consumes it.
+4. **Visible data flow beats clever magic.** Pass data through inputs and outputs. No hidden globals or side-channel state.
+5. **Composition over capability.** One job per component. Split before you add a tenth input.
+6. **It is not a fix without evidence.** Adding error handling, retries, type widening, or skipping a flaky test does not constitute a fix.
+
+## Documentation map
+
+Read the file that matches your task before you write code.
+
+| Topic | File | When to read |
+|---|---|---|
+| Project story, design tenets | [docs/agents/PHILOSOPHY.md](./docs/agents/PHILOSOPHY.md) | Before any non-trivial change |
+| Package boundaries, where code goes, API versioning | [docs/agents/ARCHITECTURE.md](./docs/agents/ARCHITECTURE.md) | Before adding a file or endpoint |
+| Component dev: scope, breaking changes, conventions, icons | [docs/agents/COMPONENTS.md](./docs/agents/COMPONENTS.md) | Before adding or editing a component |
+| User-facing contracts: flow JSON, REST API, MCP, env vars | [docs/agents/CONTRACTS.md](./docs/agents/CONTRACTS.md) | Before changing anything user-visible |
+| Test patterns, fixtures, mocking policy | [docs/agents/TESTING.md](./docs/agents/TESTING.md) | Before writing or changing tests |
+| Don't/do rules, "fixes that aren't," before-claiming-done checklist | [docs/agents/ANTI-PATTERNS.md](./docs/agents/ANTI-PATTERNS.md) | Before claiming work is done |
 
 ## Prerequisites
 
-- **Python:** 3.10-3.13
-- **uv:** >=0.4 (Python package manager)
-- **Node.js:** >=20.19.0 (v22.12 LTS recommended)
+- **Python:** 3.10–3.13
+- **uv:** ≥0.4 (always use `uv run` for Python commands)
+- **Node.js:** ≥20.19.0 (v22.12 LTS recommended)
 - **npm:** v10.9+
-- **make:** For build coordination
+- **make:** for build coordination
 
-## Common Commands
+## Common commands
 
-### Development Setup
+### Development setup
+
 ```bash
 make init              # Install all dependencies + pre-commit hooks
 make run_cli           # Build and run Langflow (http://localhost:7860)
 make run_clic          # Clean build and run (use when frontend issues occur)
 ```
 
-### Development Mode (Hot Reload)
+### Development mode (hot reload)
+
 ```bash
 make backend           # FastAPI on port 7860 (terminal 1)
 make frontend          # Vite dev server on port 3000 (terminal 2)
 ```
 
-For component development, enable dynamic loading:
+For component development with dynamic loading:
+
 ```bash
 LFX_DEV=1 make backend                    # Load all components dynamically
 LFX_DEV=mistral,openai make backend       # Load only specific modules
 ```
 
-### Code Quality
+### Code quality
+
 ```bash
-make format_backend    # Format Python (ruff) - run FIRST before lint
+make format_backend    # Format Python (ruff) — run FIRST before lint
 make format_frontend   # Format TypeScript (biome)
 make format            # Both
 make lint              # mypy type checking
 ```
 
 ### Testing
-```bash
-make unit_tests                    # Backend unit tests (pytest, parallel)
-make unit_tests async=false        # Sequential tests
-uv run pytest path/to/test.py      # Single test file
-uv run pytest path/to/test.py::test_name  # Single test
 
-make test_frontend                 # Jest unit tests
-make tests_frontend                # Playwright e2e tests
+```bash
+make unit_tests                            # Backend unit tests (pytest, parallel)
+make unit_tests async=false                # Sequential
+uv run pytest path/to/test.py              # Single test file
+uv run pytest path/to/test.py::test_name   # Single test
+
+make test_frontend                         # Jest unit tests
+make tests_frontend                        # Playwright e2e tests
+
+# lfx tests specifically — run uv sync inside src/lfx (not src/lfx/src/lfx)
+cd src/lfx && uv sync && uv run pytest
+
+# Sub-package tests (langflow-base, lfx) — sync that package's dev group first,
+# otherwise dev-only deps like fakeredis stay uninstalled.
+uv sync --group dev --package langflow-base
 ```
 
-### Database Migrations
+See [docs/agents/TESTING.md](./docs/agents/TESTING.md) for fixtures, base classes, and the graph testing pattern.
+
+### Database migrations
+
 ```bash
 make alembic-revision message="Description"  # Create migration
-make alembic-upgrade                         # Apply migrations
-make alembic-downgrade                       # Rollback one version
+make alembic-upgrade                          # Apply migrations
+make alembic-downgrade                        # Rollback one version
 ```
 
-## Architecture
+Never edit a past migration. Run `test_database.py` sequentially after any DB change.
 
-### Monorepo Structure
-```
-src/
-├── backend/
-│   ├── base/langflow/     # Core backend package (langflow-base)
-│   │   ├── api/           # FastAPI routes (v1/, v2/)
-│   │   ├── components/    # Built-in Langflow components
-│   │   ├── services/      # Service layer (auth, database, cache, etc.)
-│   │   ├── graph/         # Flow graph execution engine
-│   │   └── custom/        # Custom component framework
-│   └── tests/             # Backend tests
-├── frontend/              # React/TypeScript UI
-│   └── src/
-│       ├── components/    # UI components
-│       ├── stores/        # Zustand state management
-│       └── icons/         # Component icons
-└── lfx/                   # Lightweight executor CLI
-```
+### Version management
 
-### Key Packages
-- **langflow**: Main package with all integrations
-- **langflow-base**: Core framework (api, services, graph engine)
-- **lfx**: Standalone CLI for running flows (`lfx serve`, `lfx run`)
-
-### Service Layer
-Backend services in `src/backend/base/langflow/services/`:
-- `auth/` - Authentication
-- `database/` - SQLAlchemy models and migrations
-- `cache/` - Caching layer
-- `storage/` - File storage
-- `tracing/` - Observability integrations
-
-## Component Development
-
-Components live in `src/backend/base/langflow/components/`. To add a new component:
-
-1. Create component class inheriting from `Component`
-2. Define `display_name`, `description`, `icon`, `inputs`, `outputs`
-3. Add to `__init__.py` (alphabetical order)
-4. Run with `LFX_DEV=1 make backend` for hot reload
-
-**IMPORTANT:** Changing a component's class name is a breaking change and should never be done. The class name serves as an identifier used to match components in saved flows and to flag them for updates in the UI. Renaming it will break existing flows that use that component.
-
-### Component Structure
-```python
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
-
-class MyComponent(Component):
-    display_name = "My Component"
-    description = "What it does"
-    icon = "component-icon"  # Lucide icon name or custom
-
-    inputs = [
-        MessageTextInput(name="input_value", display_name="Input"),
-    ]
-    outputs = [
-        Output(display_name="Output", name="output", method="process"),
-    ]
-
-    def process(self) -> Message:
-        # Component logic
-        return Message(text=self.input_value)
-```
-
-### Component Testing
-Tests go in `src/backend/tests/unit/components/`. Use base classes:
-- `ComponentTestBaseWithClient` - Components needing API access
-- `ComponentTestBaseWithoutClient` - Pure logic components
-
-Required fixtures: `component_class`, `default_kwargs`, `file_names_mapping`
-
-## Frontend Development
-
-- **React 19** + TypeScript + Vite
-- **Zustand** for state management
-- **@xyflow/react** for graph visualization
-- **Tailwind CSS** for styling
-
-### Custom Icons
-1. Create SVG component in `src/frontend/src/icons/YourIcon/`
-2. Export with `forwardRef` and `isDark` prop support
-3. Add to `lazyIconImports.ts`
-4. Set `icon = "YourIcon"` in Python component
-
-## Testing Notes
-
-- `@pytest.mark.api_key_required` - Tests requiring external API keys
-- `@pytest.mark.no_blockbuster` - Skip blockbuster plugin
-- Database tests may fail in batch but pass individually
-- Pre-commit hooks require `uv run git commit`
-- Always use `uv run` when running Python commands
-- When running tests inside a sub-package (e.g. `langflow-base`, `lfx`), sync that package's dev group first: `uv sync --group dev --package langflow-base`. The default `uv sync` only resolves the top-level workspace and may leave dev-only test deps (e.g. `fakeredis`) uninstalled.
-
-### Graph Testing Pattern
-
-Proper Graph tests follow this pattern:
-1. Build graph with connected components
-2. Connect them via `.set()` calls
-3. Call `async_start` and iterate over the results
-4. Validate the results
-
-### Testing Best Practices
-
-- Avoid mocking in tests when possible
-- Prefer real integrations for more reliable tests
-
-## Version Management
 ```bash
 make patch v=1.5.0  # Update version across all packages
 ```
 
-This updates: `pyproject.toml`, `src/backend/base/pyproject.toml`, `src/frontend/package.json`
+## Pre-commit workflow
 
-## Pre-commit Workflow
+Pre-commit hooks run ruff and biome automatically on `git commit`, so manual formatting isn't required. To avoid an extra commit cycle:
 
-Pre-commit hooks run ruff and biome automatically on `git commit`, so manual
-formatting is not required. To avoid an extra commit cycle when you have many
-changes:
-
-1. Run `make format_backend` once before staging - fixes most ruff issues up front.
+1. Run `make format_backend` once before staging — fixes most ruff issues up front.
 2. Run `uv run git commit` (the `uv run` ensures pre-commit finds the right Python).
 3. If you touched backend code, run `make unit_tests` locally for faster feedback than CI.
 
-## Pull Request Guidelines
+## Pull request guidelines
 
-- Follow [semantic commit conventions](https://www.conventionalcommits.org/)
-- Reference any issues fixed (e.g., `Fixes #1234`)
-- Ensure all tests pass before submitting
+- Follow [semantic commit conventions](https://www.conventionalcommits.org/).
+- Reference issues fixed (`Fixes #1234`).
+- Target the active `release-X.Y.Z` branch, not `main`. See [CONTRIBUTING.md](./CONTRIBUTING.md).
+- Don't push or open PRs without explicit user direction.
+- No "Generated with Claude Code" / `Co-Authored-By: Claude` trailers.
+- No test-plan checklists or Jira links in PR descriptions.
 
 ## Documentation
 
 Documentation uses Docusaurus and lives in `docs/`:
+
 ```bash
 cd docs
 yarn install
-yarn start        # Dev server on port 3000 (prompts for 3001 if 3000 is in use)
+yarn start        # Dev server on port 3000 (3001 if 3000 is in use)
 ```
