@@ -436,15 +436,26 @@ class TracingService(Service):
             yield self
             return
         trace_context.all_inputs[trace_name] |= inputs or {}
-        await trace_context.traces_queue.put((self._start_component_traces, (component_trace_context, trace_context)))
+        # Start component spans synchronously so OTEL context can attach on this task.
+        self._start_component_traces(component_trace_context, trace_context)
+
+        phoenix_tracer = trace_context.tracers.get("arize_phoenix")
+        phoenix_context_token = None
+        if phoenix_tracer is not None and phoenix_tracer.ready and hasattr(phoenix_tracer, "activate_component_span"):
+            phoenix_context_token = phoenix_tracer.activate_component_span(component_trace_context.trace_id)
+
         try:
             yield self
         except Exception as e:
+            if phoenix_context_token is not None and hasattr(phoenix_tracer, "deactivate_component_span"):
+                phoenix_tracer.deactivate_component_span(component_trace_context.trace_id)
             await trace_context.traces_queue.put(
                 (self._end_component_traces, (component_trace_context, trace_context, e))
             )
             raise
         else:
+            if phoenix_context_token is not None and hasattr(phoenix_tracer, "deactivate_component_span"):
+                phoenix_tracer.deactivate_component_span(component_trace_context.trace_id)
             await trace_context.traces_queue.put(
                 (self._end_component_traces, (component_trace_context, trace_context, None))
             )

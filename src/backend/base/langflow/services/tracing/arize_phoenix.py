@@ -15,6 +15,7 @@ from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
+from opentelemetry import context, trace
 from opentelemetry.sdk.trace.export import SpanProcessor
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
 from opentelemetry.trace import Span, Status, StatusCode, use_span
@@ -111,6 +112,8 @@ class ArizePhoenixTracer(BaseTracer):
                 self.propagator.inject(carrier=self.carrier)
 
             self.child_spans: dict[str, Span] = {}
+            self._context_tokens: dict[str, object] = {}
+            self._current_component_id: str | None = None
 
         except Exception as e:  # noqa: BLE001
             logger.error("[Arize/Phoenix] Error Setting Up Tracer: %s", str(e), exc_info=True)
@@ -205,16 +208,29 @@ class ArizePhoenixTracer(BaseTracer):
             )
             return False
 
-        try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
+        # LangChain spans are recorded via PhoenixCallbackHandler to avoid duplicate spans
+        # from global LangChainInstrumentor and to nest under component spans.
+        use_instrumentor = os.getenv("ARIZE_PHOENIX_USE_INSTRUMENTOR", "false").lower() in {
+            "true",
+            "t",
+            "yes",
+            "y",
+            "1",
+        }
+        if use_instrumentor:
+            try:
+                from openinference.instrumentation.langchain import LangChainInstrumentor
 
-            LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
-        except ImportError:
-            logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
-                "Please install it with `pip install openinference-instrumentation-langchain`."
-            )
-            return False
+                LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
+                self._langchain_instrumentor_enabled = True
+            except ImportError:
+                logger.exception(
+                    "[Arize/Phoenix] Could not import LangChainInstrumentor."
+                    "Please install it with `pip install openinference-instrumentation-langchain`."
+                )
+                return False
+        else:
+            self._langchain_instrumentor_enabled = False
 
         return True
 
@@ -232,10 +248,10 @@ class ArizePhoenixTracer(BaseTracer):
         if not self._ready:
             return
 
-        span_context = self.propagator.extract(carrier=self.carrier)
+        parent_context = trace.set_span_in_context(self.root_span)
         child_span = self.tracer.start_span(
             name=trace_name,
-            context=span_context,
+            context=parent_context,
             start_time=self._get_current_timestamp(),
         )
 
@@ -264,6 +280,63 @@ class ArizePhoenixTracer(BaseTracer):
             self.chat_output_value = processed_inputs["input_value"]
 
         self.child_spans[trace_id] = child_span
+        self._current_component_id = trace_id
+
+    def activate_component_span(self, trace_id: str) -> object | None:
+        """Attach the component span as the active OTEL context on the current task."""
+        component_span = self.child_spans.get(trace_id)
+        if component_span is None:
+            return None
+        ctx = trace.set_span_in_context(component_span)
+        token = context.attach(ctx)
+        self._context_tokens[trace_id] = token
+        self._current_component_id = trace_id
+        return token
+
+    def deactivate_component_span(self, trace_id: str) -> None:
+        """Detach the component span context."""
+        token = self._context_tokens.pop(trace_id, None)
+        if token is not None:
+            context.detach(token)
+        if self._current_component_id == trace_id:
+            self._current_component_id = None
+
+    def start_langchain_span(
+        self,
+        name: str,
+        span_kind: str,
+        inputs: dict[str, Any],
+        parent_span: Span | None = None,
+    ) -> Span:
+        """Start a LangChain child span under the given or current parent."""
+        parent = parent_span
+        if parent is None:
+            current = trace.get_current_span()
+            parent = current if current.get_span_context().is_valid else self.root_span
+
+        span = self.tracer.start_span(
+            name=name,
+            context=trace.set_span_in_context(parent),
+            start_time=self._get_current_timestamp(),
+        )
+        span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, span_kind)
+        if inputs:
+            span.set_attribute(SpanAttributes.INPUT_VALUE, self._safe_json_dumps(inputs))
+            span.set_attribute(SpanAttributes.INPUT_MIME_TYPE, OpenInferenceMimeTypeValues.JSON.value)
+        return span
+
+    def end_langchain_span(
+        self,
+        span: Span,
+        outputs: dict[str, Any] | None = None,
+        error: BaseException | None = None,
+    ) -> None:
+        """End a LangChain child span."""
+        if outputs:
+            span.set_attribute(SpanAttributes.OUTPUT_VALUE, self._safe_json_dumps(outputs))
+            span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE, OpenInferenceMimeTypeValues.JSON.value)
+        self._set_span_status(span, error)
+        span.end(end_time=self._get_current_timestamp())
 
     @override
     def end_trace(
@@ -294,7 +367,9 @@ class ArizePhoenixTracer(BaseTracer):
 
         self._set_span_status(child_span, error)
         child_span.end(end_time=self._get_current_timestamp())
-        self.child_spans.pop(trace_id)
+        self.child_spans.pop(trace_id, None)
+        if self._current_component_id == trace_id:
+            self._current_component_id = None
 
     @override
     def end(
@@ -321,15 +396,16 @@ class ArizePhoenixTracer(BaseTracer):
 
             self._set_span_status(self.root_span, error)
             self.root_span.end(end_time=self._get_current_timestamp())
-        try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
+        if getattr(self, "_langchain_instrumentor_enabled", False):
+            try:
+                from openinference.instrumentation.langchain import LangChainInstrumentor
 
-            LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
-        except ImportError:
-            logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
-                "Please install it with `pip install openinference-instrumentation-langchain`."
-            )
+                LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
+            except ImportError:
+                logger.exception(
+                    "[Arize/Phoenix] Could not import LangChainInstrumentor."
+                    "Please install it with `pip install openinference-instrumentation-langchain`."
+                )
 
     def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""
@@ -410,8 +486,24 @@ class ArizePhoenixTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        """Returns the LangChain callback handler if applicable."""
-        return None
+        """Returns a LangChain callback that nests spans under the active component."""
+        if not self._ready or getattr(self, "_langchain_instrumentor_enabled", False):
+            return None
+
+        from langflow.services.tracing.phoenix_callback import PhoenixCallbackHandler
+        from langflow.services.tracing.service import component_context_var
+
+        parent_span = None
+        component_context = component_context_var.get(None)
+        if component_context:
+            parent_span = self.child_spans.get(component_context.trace_id)
+        elif self._current_component_id:
+            parent_span = self.child_spans.get(self._current_component_id)
+
+        if parent_span is None:
+            return None
+
+        return PhoenixCallbackHandler(self, parent_span=parent_span)
 
     def close(self):
         """Flush tracer provider spans safely before shutdown."""
