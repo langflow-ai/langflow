@@ -642,8 +642,13 @@ def test_build_registry_from_paths_py_file_skips_store():
     assert written == {}
 
 
-def test_startup_scan_pre_warms_cache(tmp_path):
-    """Flows already in the store must be loaded into the in-memory cache on startup."""
+def test_startup_scan_store_flows_accessible_lazily(tmp_path):
+    """build_registry_from_paths() does NOT call warm_from_store() — that is serve_command's job.
+
+    Pre-existing store flows are NOT eagerly loaded by the builder but are counted
+    via list_metas() and accessible on first get().  serve_command adds the
+    warm_from_store() call for single-worker mode after build_registry_from_paths returns.
+    """
     import asyncio
     from unittest.mock import MagicMock, patch
 
@@ -651,10 +656,8 @@ def test_startup_scan_pre_warms_cache(tmp_path):
     from lfx.cli.flow_store import FilesystemFlowStore
 
     store = FilesystemFlowStore(tmp_path)
-    store.write(
-        "pre-existing-id",
-        {"name": "Pre-existing", "description": None, "data": {"nodes": [], "edges": []}, "id": "pre-existing-id"},
-    )
+    raw = {"name": "Pre-existing", "description": None, "data": {"nodes": [], "edges": []}, "id": "pre-existing-id"}
+    store.write("pre-existing-id", raw)
 
     mock_graph = MagicMock()
     mock_graph.context = {}
@@ -662,9 +665,17 @@ def test_startup_scan_pre_warms_cache(tmp_path):
     with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
         registry = asyncio.run(build_registry_from_paths([], lambda _: None, check_variables=False, store=store))
 
-    assert "pre-existing-id" in registry._flows, (
-        "Startup scan must pre-warm the in-memory cache; flow should be in _flows immediately after build"
-    )
+    # Builder does NOT eagerly pre-warm — that's serve_command's responsibility
+    assert "pre-existing-id" not in registry._flows
+
+    # Counted by len() / list_metas() even before warm_from_store() is called
+    assert len(registry) == 1
+
+    # Accessible via get() which triggers lazy load (simulating serve_command's warm_from_store)
+    with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+        result = registry.get("pre-existing-id")
+    assert result is not None
+    assert result[1].title == "Pre-existing"
 
 
 def test_serve_command_passes_workers_to_uvicorn():
@@ -758,6 +769,44 @@ def test_serve_command_warns_when_workers_gt1_without_flow_dir():
     assert any("--flow-dir" in msg for msg in stderr_output), (
         f"Expected a warning mentioning --flow-dir, got: {stderr_output}"
     )
+
+
+def test_serve_command_rejects_py_with_multiple_workers(tmp_path):
+    """.py startup files must be rejected when --workers > 1 (cannot persist to store)."""
+    import os
+    from unittest.mock import patch
+
+    from lfx.cli.commands import serve_command
+
+    script = tmp_path / "my_flow.py"
+    script.write_text("graph = None")
+
+    stderr_output = []
+
+    with (
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        patch("lfx.cli.commands.uvicorn.run"),
+        patch("typer.echo", side_effect=lambda msg, **kw: stderr_output.append(msg) if kw.get("err") else None),
+    ):
+        from click.exceptions import Exit as ClickExit
+
+        with pytest.raises(ClickExit):
+            serve_command(
+                script_paths=[str(script)],
+                host="127.0.0.1",
+                port=9999,
+                workers=2,
+                verbose=False,
+                env_file=None,
+                log_level="warning",
+                flow_json=None,
+                flow_dir=tmp_path / "flows",
+                stdin=False,
+                check_variables=False,
+                no_env_fallback=False,
+            )
+
+    assert any(".py" in msg and "cannot be used" in msg for msg in stderr_output), stderr_output
 
 
 def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):

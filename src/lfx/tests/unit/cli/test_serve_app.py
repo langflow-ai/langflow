@@ -88,10 +88,12 @@ class TestFlowRegistry:
         assert ids == {"a", "b"}
 
     def test_duplicate_add_raises_without_overwrite(self):
+        from lfx.cli.serve_app import FlowAlreadyRegisteredError
+
         registry = FlowRegistry()
         meta = self._make_meta("flow-1")
         registry.add(MagicMock(), meta)
-        with pytest.raises(ValueError, match="already registered"):
+        with pytest.raises(FlowAlreadyRegisteredError, match="already registered"):
             registry.add(MagicMock(), meta)
 
     def test_duplicate_add_replaces_with_overwrite(self):
@@ -106,6 +108,50 @@ class TestFlowRegistry:
         registry = FlowRegistry()
         assert len(registry) == 0
         registry.add(MagicMock(), self._make_meta("x"))
+        assert len(registry) == 1
+
+    def test_len_counts_store_only_flows(self):
+        """len() must include flows that are in the store but not yet cache-loaded."""
+        raw = {"name": "Store-Only", "data": {}, "id": "store-only-id"}
+
+        class StubStore:
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "store-only-id" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["store-only-id"]
+
+        registry = FlowRegistry(store=StubStore())
+        # Nothing in memory yet — but len() must still report 1 via list_metas().
+        assert len(registry) == 1
+
+    def test_len_not_double_counted_memory_and_store(self):
+        """len() must not double-count a flow that's both in memory and in the store."""
+        raw = {"name": "Shared", "data": {}, "id": "shared-id"}
+
+        class StubStore:
+            def write(self, *_a):
+                pass
+
+            def read(self, flow_id):
+                return raw if flow_id == "shared-id" else None
+
+            def delete(self, *_a):
+                return False
+
+            def list_ids(self):
+                return ["shared-id"]
+
+        registry = FlowRegistry(store=StubStore())
+        graph = MagicMock()
+        graph.context = {}
+        registry.add(graph, self._make_meta("shared-id"))
         assert len(registry) == 1
 
     def test_remove_existing(self):
@@ -660,6 +706,65 @@ class TestFlowRegistry:
             assert registry.get(json_uuid) is None, "UUID alias must be cleared too"
             assert registry.get("prompt_one") is None, "stem must be gone"
         assert "prompt_one" in deleted, "must delete the correct file (by stem, not UUID)"
+
+    def test_remove_deletes_both_stem_and_uuid_files_for_cross_worker_propagation(self):
+        """remove() must delete both the stem file and UUID file so that any worker
+        — regardless of which key its stale check uses — sees the deletion.
+
+        Scenario: flow-dir has my-flow.json (pre-placed) and {uuid}.json (written by add()).
+        Worker A deletes by UUID; Worker B cached by stem alias.  Both files must be gone.
+        """
+        from unittest.mock import MagicMock, patch
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        raw = {"name": "my-flow", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+
+        store_data: dict[str, dict] = {
+            "my-flow": raw,       # pre-placed stem file
+            json_uuid: raw,       # UUID file written by add() at startup
+        }
+        deleted: list[str] = []
+
+        class DualKeyStore:
+            is_persistent = True  # required to trigger the stem-scan path in remove()
+
+            def write(self, fid, v):
+                store_data[fid] = v
+
+            def read(self, fid):
+                return store_data.get(fid)
+
+            def delete(self, fid):
+                deleted.append(fid)
+                existed = fid in store_data
+                store_data.pop(fid, None)
+                return existed
+
+            def list_ids(self):
+                return list(store_data)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+
+        registry = FlowRegistry(store=DualKeyStore())
+
+        # Worker A: loaded via UUID (no stem alias created)
+        with patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph):
+            registry.get(json_uuid)
+
+        # Stale-check key for Worker A is UUID (no alias)
+        assert registry._store_keys.get(json_uuid) is None
+
+        # Worker A deletes by UUID
+        result = registry.remove(json_uuid)
+        assert result is True
+
+        # Both the UUID file AND the stem file must be deleted
+        assert json_uuid in deleted, "UUID-keyed file must be deleted"
+        assert "my-flow" in deleted, (
+            "stem-keyed file must also be deleted so workers with stem alias don't pass stale check"
+        )
+        assert not store_data, "store must be empty after remove()"
 
     def test_list_metas_uncached_store_flow_uses_json_id(self):
         """list_metas() uncached branch must use the JSON id, not the filename stem."""
@@ -1621,7 +1726,9 @@ class TestUploadEndpoint:
         assert response.json()["description"] == "my desc"
 
     def test_upload_concurrent_conflict_returns_409_not_500(self, app_with_empty_registry, valid_flow_data):
-        """registry.add() raising ValueError (concurrent race) must surface as 409, not 500."""
+        """registry.add() raising FlowAlreadyRegisteredError (concurrent race) must surface as 409, not 500."""
+        from lfx.cli.serve_app import FlowAlreadyRegisteredError
+
         mock_graph = MagicMock()
         mock_graph.prepare = MagicMock()
         mock_graph.context = {}
@@ -1632,7 +1739,7 @@ class TestUploadEndpoint:
             patch("lfx.cli.serve_app.FlowRegistry.get", return_value=None),
             patch(
                 "lfx.cli.serve_app.FlowRegistry.add",
-                side_effect=ValueError("Flow 'x' is already registered. Pass overwrite=True to replace it."),
+                side_effect=FlowAlreadyRegisteredError("Flow 'x' is already registered. Pass overwrite=True to replace it."),
             ),
         ):
             response = app_with_empty_registry.post(

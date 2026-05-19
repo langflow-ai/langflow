@@ -50,8 +50,9 @@ if TYPE_CHECKING:
 API_KEY_NAME = "x-api-key"
 
 # Constants for app factory env vars (used by uvicorn worker processes)
-_SERVE_FLOW_DIR_ENV = "LFX_SERVE_FLOW_DIR"
-_SERVE_NO_ENV_FALLBACK_ENV = "LFX_SERVE_NO_ENV_FALLBACK"
+_SERVE_ENV_PREFIX = "LFX_SERVE_"
+_SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
+_SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -73,6 +74,10 @@ def verify_api_key(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
     return provided_key
+
+
+class FlowAlreadyRegisteredError(ValueError):
+    """Raised by FlowRegistry.add() when a flow ID is already registered and overwrite=False."""
 
 
 class FlowMeta(BaseModel):
@@ -140,6 +145,22 @@ class FlowRegistry:
     - ``FilesystemFlowStore("/mnt/lfx-flows")``: same code, cross-pod if the
       path is a PVC mount.
 
+    **Per-request stale check (FilesystemFlowStore only)**
+
+    Every call to :meth:`get` for a store-backed flow does one
+    ``FlowStore.read()`` to verify the file still exists.  This is how DELETE
+    propagates across workers: the deleting worker removes the file; the next
+    inbound request on any other worker calls ``get()``, finds ``None``, evicts
+    the cached entry, and returns 404.
+
+    On a local SSD this overhead is a single ``stat``-equivalent and is
+    negligible.  On a **network volume** (NFS, CIFS, or a Kubernetes PVC backed
+    by a networked storage class) each read call crosses the network, which can
+    add measurable latency per request.  If you are running on such a mount and
+    latency matters, prefer ``/tmp/lfx-flows`` (local tmpfs) for single-pod
+    worker sharing and accept that cross-pod DELETE propagation is eventual
+    (next request per pod) rather than immediate.
+
     When ``no_env_fallback=True``, every graph registered via ``add()`` has
     ``graph.context['no_env_fallback']`` set to ``True`` at registration time,
     preventing credential resolution from falling back to ``os.environ``.
@@ -167,7 +188,7 @@ class FlowRegistry:
     def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False, raw_json: dict | None = None) -> None:
         if not overwrite and meta.id in self._flows:
             msg = f"Flow '{meta.id}' is already registered. Pass overwrite=True to replace it."
-            raise ValueError(msg)
+            raise FlowAlreadyRegisteredError(msg)
         # If overwriting a flow that was loaded from a differently-named store file
         # (e.g. prompt_one.json whose JSON id is a UUID), delete the old file and
         # clear the alias so the new file becomes the single source of truth.
@@ -296,18 +317,40 @@ class FlowRegistry:
             self._store_sourced.discard(meta_id)
             mem_had_it = True
         else:
-            # Flow not in memory; derive store key best-effort.
+            # Flow not in memory; derive both the stem key (flow_id) and the UUID from the file.
             store_key = flow_id
             self._store_meta_cache.pop(flow_id, None)
             self._store_sourced.discard(flow_id)
             mem_had_it = False
+            meta_id = flow_id  # best-effort default; overridden below if we can read the file
+            raw = self._store.read(flow_id)
+            if raw:
+                meta_id = raw.get("id") or flow_id
+
         store_had_it = self._store.delete(store_key)
+        # Ensure cross-worker DELETE propagation: delete BOTH the primary store key
+        # and any alternate-keyed file so that workers whose in-memory stale-check
+        # uses a different key also see the deletion on their next request.
+        if store_key != meta_id:
+            # Alias known: primary key was a stem, UUID-keyed file may also exist.
+            self._store.delete(meta_id)
+        elif store_had_it and getattr(self._store, "is_persistent", False):
+            # Primary key IS the UUID: scan for any stem-keyed file with the same
+            # "id" field (e.g. a pre-placed my-flow.json alongside {uuid}.json).
+            # Only needed for persistent stores; NullFlowStore has no other files.
+            for stem_id in self._store.list_ids():
+                if stem_id == meta_id:
+                    continue  # already deleted above
+                stem_raw = self._store.read(stem_id)
+                if stem_raw and stem_raw.get("id") == meta_id:
+                    self._store.delete(stem_id)
         return mem_had_it or store_had_it
 
     def __len__(self) -> int:
-        # Counts distinct flows. With a FilesystemFlowStore, flows on disk but not
-        # yet cache-miss loaded are not counted here.
-        return len({meta.id for _, meta in self._flows.values()})
+        # Delegates to list_metas() so store-only flows (not yet cache-loaded) are
+        # counted. list_metas() caches metadata after the first disk read, so
+        # repeated calls (e.g. /health) are cheap after the first.
+        return len(self.list_metas())
 
 
 class UploadFlowRequest(BaseModel):
@@ -514,7 +557,7 @@ def create_multi_serve_app(
         # graph.context with no_env_fallback, and prepare() must not overwrite it.
         try:
             registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
-        except ValueError:
+        except FlowAlreadyRegisteredError:
             # Another concurrent request registered the same ID between our get() check and add().
             raise HTTPException(
                 status_code=409,
@@ -545,6 +588,13 @@ def create_multi_serve_app(
         status_code=204,
         tags=["flows"],
         summary="Remove a registered flow",
+        description=(
+            "Remove a flow from this worker's registry and from the backing store (if any). "
+            "**Multi-worker note:** the store file is deleted immediately, but other workers "
+            "continue to serve the cached copy until their next stale check "
+            "(triggered by an incoming request for that flow). "
+            "This is the same eventual-consistency window that applies to uploads."
+        ),
         dependencies=[Depends(verify_api_key)],
     )
     async def delete_flow(flow_id: str) -> Response:

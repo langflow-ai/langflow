@@ -260,6 +260,19 @@ def serve_command(
             err=True,
         )
 
+    if workers > 1 and script_paths:
+        py_paths = [p for p in script_paths if Path(p).suffix == ".py"]
+        if py_paths:
+            for p in py_paths:
+                typer.echo(
+                    f"Error: '{Path(p).name}' (.py) cannot be used with --workers > 1. "
+                    "Python graphs cannot be serialized to the filesystem store, so all workers "
+                    "except the one that handled startup would have an empty registry for those "
+                    "flows. Use a .json flow export or run with --workers 1.",
+                    err=True,
+                )
+            raise typer.Exit(1)
+
     # Determine display name for startup panel
     if flow_json is not None:
         source_display = "inline JSON"
@@ -290,11 +303,12 @@ def serve_command(
 
         if flow_dir:
             if workers == 1:
-                # Single-worker: warm the cache now so the startup panel shows the real flow count.
-                # Multi-worker: each worker calls warm_from_store() inside create_serve_app(); the
-                # parent process can't know the count, so we leave the panel at 0 for that case.
+                # Single-worker: warm now so the startup panel shows the real count and the
+                # first request to any pre-existing flow doesn't pay a cold-load penalty.
+                # Multi-worker: each worker warms inside create_serve_app(); the parent can't
+                # safely warm and pass graphs across processes, so we skip it here.
                 registry.warm_from_store()
-            verbose_print(f"✓ Flow store pre-warmed from {flow_dir} ({len(registry)} flows in cache)")
+            verbose_print(f"✓ Flow store at {flow_dir} ({len(registry)} flows available)")
 
         if is_port_in_use(port, host):
             port = get_free_port(port)
@@ -332,18 +346,26 @@ def serve_command(
             if workers > 1:
                 # uvicorn requires an import string (not an app object) for multi-worker mode.
                 # Set env vars so each worker's create_serve_app() factory can reconstruct config.
-                from lfx.cli.serve_app import _SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV
+                from lfx.cli.serve_app import (
+                    _SERVE_ENV_PREFIX,
+                    _SERVE_FLOW_DIR_ENV,
+                    _SERVE_NO_ENV_FALLBACK_ENV,
+                )
 
                 os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
                 os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
-                uvicorn.run(
-                    "lfx.cli.serve_app:create_serve_app",
-                    host=host,
-                    port=port,
-                    workers=workers,
-                    log_level=log_level,
-                    factory=True,
-                )
+                try:
+                    uvicorn.run(
+                        "lfx.cli.serve_app:create_serve_app",
+                        host=host,
+                        port=port,
+                        workers=workers,
+                        log_level=log_level,
+                        factory=True,
+                    )
+                finally:
+                    for k in [k for k in list(os.environ) if k.startswith(_SERVE_ENV_PREFIX)]:
+                        del os.environ[k]
             else:
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
@@ -434,7 +456,13 @@ async def build_registry_from_directory(
     no_env_fallback: bool = False,
     store: FlowStore | None = None,
 ) -> FlowRegistry:
-    """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive)."""
+    """Build a FlowRegistry by scanning *dir_path* for ``*.json`` files (non-recursive).
+
+    Callers that want pre-existing store flows (e.g. from a prior run) to be
+    reachable are responsible for calling ``registry.warm_from_store()`` after
+    this returns.  ``serve_command`` does this in the right place; calling it
+    here too would cause double-loading when ``store`` backs the same directory.
+    """
     from lfx.cli.flow_store import NullFlowStore
 
     json_files = sorted(dir_path.glob("*.json"))
@@ -444,7 +472,6 @@ async def build_registry_from_directory(
 
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
     await _populate_registry(json_files, dir_path, registry, verbose_print, check_variables=check_variables)
-    registry.warm_from_store()
     return registry
 
 
@@ -456,7 +483,12 @@ async def build_registry_from_paths(
     no_env_fallback: bool = False,
     store: FlowStore | None = None,
 ) -> FlowRegistry:
-    """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths."""
+    """Build a FlowRegistry from an explicit list of ``.json`` or ``.py`` paths.
+
+    Callers that want pre-existing store flows to be reachable are responsible
+    for calling ``registry.warm_from_store()`` after this returns.
+    ``serve_command`` does this in the right place.
+    """
     from lfx.cli.flow_store import NullFlowStore
 
     # Use a shared root so same-named files in different directories get distinct IDs.
@@ -465,5 +497,4 @@ async def build_registry_from_paths(
     )
     registry = FlowRegistry(no_env_fallback=no_env_fallback, store=store or NullFlowStore())
     await _populate_registry(paths, common_root, registry, verbose_print, check_variables=check_variables)
-    registry.warm_from_store()
     return registry
