@@ -464,7 +464,7 @@
                   },
                   {
                     "name": "OpenDsStar",
-                    "version": null
+                    "version": "1.0.26"
                   }
                 ],
                 "total_dependencies": 4
@@ -1101,7 +1101,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.195.0"
+                    "version": "2.196.0"
                   }
                 ],
                 "total_dependencies": 4
@@ -2097,7 +2097,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
@@ -2568,7 +2568,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.8"
+                    "version": "1.5.9"
                   },
                   {
                     "name": "langchain_community",
@@ -3029,7 +3029,7 @@
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.8"
+                    "version": "1.5.9"
                   },
                   {
                     "name": "langchain_community",
@@ -5223,7 +5223,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "pandas",
@@ -5247,7 +5247,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.195.0"
+                    "version": "2.196.0"
                   }
                 ],
                 "total_dependencies": 7
