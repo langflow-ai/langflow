@@ -7,7 +7,6 @@ import { SIDEBAR_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoriesSidebarProps } from "../types";
 
 export function MemoriesSidebar({
-  memories,
   filteredMemories,
   memoriesSearch,
   setMemoriesSearch,
@@ -49,14 +48,6 @@ export function MemoriesSidebar({
             Create
           </Button>
         </div>
-        {(memories?.length ?? 0) > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {(() => {
-              const count = memories!.length;
-              return `${count} ${count === 1 ? "memory" : "memories"}`;
-            })()}
-          </p>
-        )}
       </div>
 
       <div className="p-4">
