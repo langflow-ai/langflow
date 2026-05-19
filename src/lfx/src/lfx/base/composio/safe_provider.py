@@ -39,7 +39,7 @@ else:
     # keyword (e.g. Outlook's "from") hits inspect.Parameter's validation and
     # raises ValueError. Expand the set to the full Python keyword list once at
     # import time so _substitute_reserved_python_keywords handles all of them.
-    _composio_lc_provider._python_reserved = set(keyword.kwlist)
+    _composio_lc_provider._python_reserved = set(keyword.kwlist)  # noqa: SLF001
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -217,7 +217,7 @@ def _patch_identifier_substitution_once() -> None:
     import re as _re
 
     _invalid_char_re = _re.compile(r"[^a-zA-Z0-9_]")
-    original_substitute = _composio_lc_provider._substitute_reserved_python_keywords
+    original_substitute = _composio_lc_provider._substitute_reserved_python_keywords  # noqa: SLF001
 
     def safe_substitute(schema: dict) -> tuple:
         schema, keywords = original_substitute(schema)
@@ -235,7 +235,7 @@ def _patch_identifier_substitution_once() -> None:
             keywords[clean_name] = p_name
         return schema, keywords
 
-    _composio_lc_provider._substitute_reserved_python_keywords = safe_substitute
+    _composio_lc_provider._substitute_reserved_python_keywords = safe_substitute  # noqa: SLF001
     _composio_lc_provider._lfx_identifier_patched = True  # noqa: SLF001
 
 
