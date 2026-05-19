@@ -122,18 +122,7 @@ class GuardrailsComponent(Component):
         Output(display_name="Pass", name="pass_result", method="pass_message", group_outputs=True, types=["Message"]),
         Output(display_name="Fail", name="failed_result", method="fail_message", group_outputs=True, types=["Message"]),
         Output(
-            display_name="Pass Data",
-            name="pass_data_result",
-            method="pass_data",
-            group_outputs=True,
-            types=["Data"],
-        ),
-        Output(
-            display_name="Fail Data",
-            name="failed_data_result",
-            method="fail_data",
-            group_outputs=True,
-            types=["Data"],
+            display_name="Result Data", name="data_result", method="result_data", group_outputs=True, types=["Data"]
         ),
     ]
 
@@ -598,11 +587,9 @@ Now analyze the user input above and respond according to the instructions:"""
 
         if validation_passed:
             self.stop("failed_result")
-            self.stop("failed_data_result")
             payload = {"text": self._extracted_text, "result": "pass"}
         else:
             self.stop("pass_result")
-            self.stop("pass_data_result")
             payload = {
                 "text": self._extracted_text,
                 "result": "fail",
@@ -625,16 +612,7 @@ Now analyze the user input above and respond according to the instructions:"""
             return Message(text="")
         return Message(text=payload.get("justification", ""), error=True)
 
-    def pass_data(self) -> Data:
-        """Return pass metadata as hidden Data output."""
-        validation_passed, payload = self._process_validation()
-        if not validation_passed:
-            return Data(data={})
-        return Data(data=payload)
-
-    def fail_data(self) -> Data:
-        """Return fail metadata as hidden Data output."""
-        validation_passed, payload = self._process_validation()
-        if validation_passed:
-            return Data(data={})
+    def result_data(self) -> Data:
+        """Return structured result data for both pass and fail outcomes."""
+        _validation_passed, payload = self._process_validation()
         return Data(data=payload)

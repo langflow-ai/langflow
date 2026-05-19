@@ -319,8 +319,7 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert [(output.name, output.types) for output in visible_outputs] == [
             ("pass_result", ["Message"]),
             ("failed_result", ["Message"]),
-            ("pass_data_result", ["Data"]),
-            ("failed_data_result", ["Data"]),
+            ("data_result", ["Data"]),
         ]
 
     def test_no_outputs_are_hidden_by_default(self):
@@ -373,7 +372,6 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == ""
         component.stop.assert_any_call("pass_result")
-        component.stop.assert_any_call("pass_data_result")
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
     def test_fail_message_returns_empty_on_success(self, mock_get_llm, mock_llm, default_kwargs):
@@ -388,65 +386,36 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == ""
         component.stop.assert_any_call("failed_result")
-        component.stop.assert_any_call("failed_data_result")
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_pass_data_returns_data_on_success(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that pass_data returns Data with text when validation passes."""
+    def test_result_data_returns_pass_payload_on_success(self, mock_get_llm, mock_llm, default_kwargs):
+        """Test that result_data returns Data with pass payload when validation passes."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
         component._pre_run_setup()
         component.stop = MagicMock()
 
-        result = component.pass_data()
+        result = component.result_data()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "pass"
         assert result.data.get("text") == default_kwargs["input_text"]
+        assert "justification" not in result.data
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_pass_data_returns_empty_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
-        """Test that pass_data returns empty Data when validation fails."""
+    def test_result_data_returns_fail_payload_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
+        """Test that result_data returns Data with fail payload when validation fails."""
         mock_get_llm.return_value = mock_llm_detect_violation
         component = GuardrailsComponent(**default_kwargs)
         component._pre_run_setup()
         component.stop = MagicMock()
 
-        result = component.pass_data()
-
-        assert isinstance(result, Data)
-        assert result.data == {}
-        component.stop.assert_any_call("pass_result")
-        component.stop.assert_any_call("pass_data_result")
-
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_fail_data_returns_data_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
-        """Test that fail_data returns Data with justification when validation fails."""
-        mock_get_llm.return_value = mock_llm_detect_violation
-        component = GuardrailsComponent(**default_kwargs)
-        component._pre_run_setup()
-        component.stop = MagicMock()
-
-        result = component.fail_data()
+        result = component.result_data()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "fail"
+        assert result.data.get("text") == default_kwargs["input_text"]
         assert "justification" in result.data
-
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_fail_data_returns_empty_on_success(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that fail_data returns empty Data when validation passes."""
-        mock_get_llm.return_value = mock_llm
-        component = GuardrailsComponent(**default_kwargs)
-        component._pre_run_setup()
-        component.stop = MagicMock()
-
-        result = component.fail_data()
-
-        assert isinstance(result, Data)
-        assert result.data == {}
-        component.stop.assert_any_call("failed_result")
-        component.stop.assert_any_call("failed_data_result")
 
     # ===================
     # Custom Guardrail Tests
