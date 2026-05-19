@@ -335,7 +335,7 @@ def test_validate_provider_uses_requested_model_name():
 
 
 def test_validate_openrouter_happy_path():
-    """Validation passes when ``GET /api/v1/models`` returns 200.
+    """Validation passes when ``GET /api/v1/auth/key`` returns 200.
 
     Patches ``requests.get`` on the actually-imported module (not via
     ``sys.modules``) so the test stays correct if the lazy import inside
@@ -355,7 +355,10 @@ def test_validate_openrouter_happy_path():
 
     mock_get.assert_called_once()
     call = mock_get.call_args
-    assert call.args[0] == "https://openrouter.ai/api/v1/models"
+    # ``/api/v1/auth/key`` is auth-required (returns 401 on invalid bearer).
+    # The previous ``/api/v1/models`` URL is a public endpoint that returns
+    # 200 for any auth, so it could never detect an invalid key.
+    assert call.args[0] == "https://openrouter.ai/api/v1/auth/key"
     assert call.kwargs["headers"]["Authorization"].startswith("Bearer ")
 
 
@@ -374,6 +377,34 @@ def test_validate_openrouter_raises_on_401():
             "OpenRouter",
             {"OPENROUTER_API_KEY": "dummy-openrouter-bad"},  # pragma: allowlist secret
         )
+
+
+def test_validate_openrouter_uses_auth_endpoint_not_public_models_endpoint():
+    """Regression: the validation endpoint must be auth-required.
+
+    OpenRouter's ``/api/v1/models`` returns 200 regardless of the Authorization
+    header (it is a public catalog). The previous implementation called that
+    endpoint, so invalid keys were accepted silently and the credential save
+    flow returned 201 instead of the documented 400. This test pins the URL to
+    an auth-required endpoint so a future refactor cannot regress it.
+    """
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    response = MagicMock()
+    response.status_code = 200
+    response.raise_for_status.return_value = None
+
+    with patch.object(requests, "get", return_value=response) as mock_get:
+        validate_model_provider_key(
+            "OpenRouter",
+            {"OPENROUTER_API_KEY": "dummy-openrouter-key"},  # pragma: allowlist secret
+        )
+
+    call_url = mock_get.call_args.args[0]
+    assert call_url != "https://openrouter.ai/api/v1/models", (
+        "OpenRouter /api/v1/models is public — using it for validation cannot detect invalid keys"
+    )
+    assert call_url.startswith("https://openrouter.ai/api/v1/")
 
 
 def test_validate_openrouter_network_error_raises_value_error():
