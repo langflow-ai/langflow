@@ -354,8 +354,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
+    validation_model = model_name or first_model
+
     # For providers that need a model to test credentials
-    if not first_model and provider in [
+    if not validation_model and provider in [
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
@@ -370,7 +372,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm = ChatOpenAI(api_key=api_key, model_name=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Anthropic":
@@ -379,7 +381,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
-            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Google Generative AI":
@@ -388,7 +390,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
-            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
@@ -402,7 +404,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
-                model_id=first_model,
+                model_id=validation_model,
                 project_id=project_id,
                 params={"max_new_tokens": 1},
             )

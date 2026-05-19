@@ -305,6 +305,35 @@ def test_validate_openrouter_no_key_returns_silently():
     validate_model_provider_key("OpenRouter", {})
 
 
+def test_validate_provider_uses_requested_model_name():
+    """Dynamic catalog order must not change which model a toggle validates."""
+    from types import SimpleNamespace
+
+    from lfx.base.models.unified_models import validate_model_provider_key
+
+    calls = []
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            calls.append(kwargs)
+
+        def invoke(self, _prompt):
+            return "ok"
+
+    catalog = [{"provider": "OpenAI", "models": [{"model_name": "gpt-5.5-pro"}]}]
+    with (
+        patch.dict("sys.modules", {"langchain_openai": SimpleNamespace(ChatOpenAI=FakeChatOpenAI)}),
+        patch("lfx.base.models.unified_models.model_catalog.get_unified_models_detailed", return_value=catalog),
+    ):
+        validate_model_provider_key(
+            "OpenAI",
+            {"OPENAI_API_KEY": "dummy-openai-key"},  # pragma: allowlist secret
+            model_name="gpt-4o-mini",
+        )
+
+    assert calls[0]["model_name"] == "gpt-4o-mini"
+
+
 def test_validate_openrouter_happy_path():
     """Validation passes when ``GET /api/v1/models`` returns 200.
 
