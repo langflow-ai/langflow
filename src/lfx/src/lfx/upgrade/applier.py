@@ -41,21 +41,30 @@ def apply_safe_upgrades(
 
     registry = build_registry_lookup(all_types_dict)
     updated = copy.deepcopy(flow_data)
-    count = 0
-
-    for node in updated.get("nodes", []):
-        node_id = node.get("data", {}).get("id") or node.get("id")
-        if node_id not in safe_ids:
-            continue
-        component_type = node["data"].get("type", "")
-        entry = registry.get(component_type)
-        if not entry:
-            continue
-        registry_code_field = entry.get("template", {}).get("code")
-        new_code = registry_code_field.get("value") if isinstance(registry_code_field, dict) else None
-        if new_code is None:
-            continue
-        node["data"]["node"]["template"]["code"]["value"] = new_code
-        count += 1
+    count = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
 
     return (updated, count) if return_count else updated
+
+
+def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, dict]) -> int:
+    """Walk top-level nodes and (one level of) nested flow nodes, applying safe upgrades.
+
+    Mirrors check_flow_compatibility's recursion into ``node.data.node.flow.data.nodes``
+    so safe-upgradeable nodes inside grouped components are written, not silently skipped.
+    """
+    count = 0
+    for node in nodes:
+        node_id = node.get("data", {}).get("id") or node.get("id")
+        if node_id in safe_ids:
+            component_type = node.get("data", {}).get("type", "")
+            entry = registry.get(component_type)
+            if entry:
+                registry_code_field = entry.get("template", {}).get("code")
+                new_code = registry_code_field.get("value") if isinstance(registry_code_field, dict) else None
+                if new_code is not None:
+                    node["data"]["node"]["template"]["code"]["value"] = new_code
+                    count += 1
+        nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+        if nested:
+            count += _apply_to_nodes(nested, safe_ids, registry)
+    return count

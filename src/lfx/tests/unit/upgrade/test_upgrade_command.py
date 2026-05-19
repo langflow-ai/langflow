@@ -171,9 +171,13 @@ def test_upgrade_outer_envelope_flow_finds_nodes(tmp_path):
 
 
 def test_upgrade_outer_envelope_write_updates_inner_nodes(tmp_path):
-    """--write on an outer-envelope flow must update nodes inside data.nodes."""
+    """--write on an outer-envelope flow must update nodes inside data.nodes AND preserve envelope metadata."""
     envelope_flow = {
         "name": "My Flow",
+        "description": "envelope flow",
+        "endpoint_name": "my-endpoint",
+        "is_component": False,
+        "tags": ["fixture"],
         "data": {
             "nodes": [
                 {
@@ -203,7 +207,12 @@ def test_upgrade_outer_envelope_write_updates_inner_nodes(tmp_path):
 
     assert result.exit_code == 0
     written = json.loads(f.read_text())
-    # The written file is the unwrapped graph (the data key's content)
-    nodes = written.get("nodes", [])
-    assert nodes, "Expected nodes in written output"
+    # The envelope must be preserved on write so the flow remains re-importable into Langflow.
+    assert written.get("name") == "My Flow"
+    assert written.get("description") == "envelope flow"
+    assert written.get("endpoint_name") == "my-endpoint"
+    assert written.get("is_component") is False
+    assert written.get("tags") == ["fixture"]
+    nodes = written.get("data", {}).get("nodes", [])
+    assert nodes, "Expected nodes inside data.nodes"
     assert nodes[0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE

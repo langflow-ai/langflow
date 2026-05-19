@@ -1484,7 +1484,10 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outer_envelope_file(self, tmp_path):
-        """Exported flows use an outer envelope {"name":..., "data":{...}}; the checker must unwrap it before inspecting nodes."""
+        """Exported flows use an outer envelope; the checker must unwrap it before inspecting nodes.
+
+        Shape: {"name":..., "data": {"nodes": [...], "edges": [...]}}.
+        """
         import json as _json
 
         envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
@@ -1525,3 +1528,89 @@ class TestUpgradeFlowOption:
             mock_cache.all_types_dict = self._registry()
             with pytest.raises(RunError, match="Unknown --upgrade-flow"):
                 await run_flow(flow_json=flow_json, upgrade_flow="typo")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_file_loads_successfully(self, tmp_path):
+        """Happy path: --upgrade-flow=safe on an envelope file must proceed to load.
+
+        Regression: when the upgrade block unwrapped the envelope and handed the inner
+        dict to aload_flow_from_json, the loader raised ``KeyError: 'data'`` because it
+        expects the envelope shape. The fix re-attaches the (possibly upgraded) inner
+        graph to the envelope before loading.
+        """
+        import json as _json
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(envelope))
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_cache.all_types_dict = self._registry()
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(script_path=f, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            # Loader must receive the envelope shape, not the unwrapped inner dict.
+            assert "data" in loaded_arg, f"loader got unwrapped dict (KeyError regression): {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+            # Envelope metadata must be preserved.
+            assert loaded_arg.get("name") == "My Flow"
+            assert loaded_arg.get("description") == "x"
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_flat_file_loads_successfully(self, tmp_path):
+        """Flat-shape file with --upgrade-flow=safe must still reach the loader without crashing."""
+        import json as _json
+
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(self._flow_dict(code=self.NODE_CODE)))
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_cache.all_types_dict = self._registry()
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(script_path=f, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            # For flat input, the loader receives the upgraded flat dict.
+            assert "nodes" in loaded_arg
+            assert loaded_arg["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
