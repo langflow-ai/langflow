@@ -118,10 +118,16 @@ export const useProviderConfiguration = ({
     useGetModelProviders(
       { includeDeprecated: true },
       {
-        refetchInterval:
-          syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
-            ? 10000
-            : false,
+        // Issue #13137: the previous 10s ``refetchInterval`` polled
+        // ``/api/v1/models`` continuously while the Ollama card was
+        // selected. Each backend call serially probed every Ollama model
+        // (GET /api/tags + POST /api/show per model), so with many models
+        // the request took longer than the interval and the queue grew
+        // unbounded. The catalog already refreshes on credential save and
+        // disconnect via ``invalidateProviderQueries``, so the timer is
+        // unnecessary — leaving it removed makes the list update on
+        // demand instead of on a fixed schedule.
+        refetchInterval: false,
         staleTime: 1000 * 30, // 30 seconds
       },
     );
@@ -531,17 +537,36 @@ export const useProviderConfiguration = ({
   const handleDisconnect = useCallback(async () => {
     if (!syncedSelectedProvider) return;
 
-    const variableName =
-      PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
-    if (!variableName) return;
+    // Resolve every variable key associated with this provider so
+    // multi-variable providers (e.g. OpenRouter's API key + attribution
+    // headers, IBM WatsonX's apikey + project_id + url) are fully removed.
+    // The dynamic ``providerVariables`` list comes from
+    // ``GET /api/v1/models/provider-variable-mapping`` and is the source of
+    // truth; fall back to the deprecated ``PROVIDER_VARIABLE_MAPPING`` only
+    // when the API call has not resolved yet (or the provider is missing
+    // from the dynamic mapping for some reason).
+    const variableKeys = new Set<string>();
+    for (const v of providerVariables) {
+      if (v.variable_key) variableKeys.add(v.variable_key);
+    }
+    if (variableKeys.size === 0) {
+      const staticKey =
+        PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+      if (staticKey) variableKeys.add(staticKey);
+    }
 
-    const existingVariable = globalVariables.find(
-      (v) => v.name === variableName,
+    const variablesToDelete = globalVariables.filter((v) =>
+      variableKeys.has(v.name),
     );
-    if (!existingVariable) return;
+    if (variablesToDelete.length === 0) return;
 
     try {
-      await deleteGlobalVariable({ id: existingVariable.id });
+      // Delete in parallel — backend already cleans up per-provider enabled
+      // and disabled model lists on the primary credential delete, so order
+      // does not matter.
+      await Promise.all(
+        variablesToDelete.map((v) => deleteGlobalVariable({ id: v.id })),
+      );
 
       hasUserMadeChangesRef.current = true;
       setSuccessData({
@@ -561,6 +586,7 @@ export const useProviderConfiguration = ({
     }
   }, [
     syncedSelectedProvider,
+    providerVariables,
     globalVariables,
     deleteGlobalVariable,
     setSuccessData,

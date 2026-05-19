@@ -70,9 +70,16 @@ export default function DeploymentsPage() {
     providerIdsToQuery,
     providerMap,
   } = useProviderFilter(providers);
+  const providerIdsForActiveTab =
+    activeSubTab === "providers"
+      ? providers.map((provider) => provider.id)
+      : providerIdsToQuery;
 
-  const { deployments, isLoading: isLoadingDeployments } =
-    useGetDeploymentsByProviders(providerIdsToQuery, currentFolderId);
+  const {
+    deployments,
+    deploymentTotalsByProvider,
+    isLoading: isLoadingDeployments,
+  } = useGetDeploymentsByProviders(providerIdsForActiveTab, currentFolderId);
 
   const showEnvironmentToolbar = providers.length > 1 && !isLoadingProviders;
 
@@ -82,7 +89,7 @@ export default function DeploymentsPage() {
       : !isLoadingProviders && !isLoadingDeployments && deployments.length > 0;
 
   return (
-    <div className="flex flex-col gap-4 pt-4">
+    <div className="flex flex-col gap-10 pt-4">
       <div className="flex min-h-10 items-center justify-between">
         <SubTabToggle activeTab={activeSubTab} onTabChange={setActiveSubTab} />
         {showHeaderButton && (
@@ -105,17 +112,6 @@ export default function DeploymentsPage() {
           </Button>
         )}
       </div>
-
-      {providers.length > 1 && activeSubTab === "providers" && (
-        <div
-          className="flex h-8 min-h-8 shrink-0 items-center gap-2"
-          data-testid="deployments-shared-toolbar"
-        >
-          <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-            These environments are used when you create or run deployments.
-          </p>
-        </div>
-      )}
 
       {showEnvironmentToolbar && activeSubTab === "deployments" && (
         <div
@@ -143,8 +139,9 @@ export default function DeploymentsPage() {
 
       {activeSubTab === "providers" && (
         <ProvidersContent
-          isLoading={isLoadingProviders}
+          isLoading={isLoadingProviders || isLoadingDeployments}
           providers={providers}
+          deploymentTotalsByProvider={deploymentTotalsByProvider}
           addProviderOpen={addProviderOpen}
           setAddProviderOpen={setAddProviderOpen}
         />

@@ -883,8 +883,14 @@ class FileSystemToolComponent(Component):
 
         if resolved.is_dir():
             return {"error": f"Path is a directory, not a file: {path}", "path": path}
-        if not resolved.parent.exists():
-            return {"error": f"Parent directory does not exist: {path}", "path": path}
+        # Auto-create missing parent directories. `_validate_path` has already
+        # confirmed `resolved` lies inside the sandbox root, so every ancestor
+        # of `resolved.parent` is also inside the root — `mkdir(parents=True)`
+        # cannot escape the sandbox.
+        try:
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            return {"error": f"Cannot create parent directory: {exc.strerror or exc}", "path": path}
 
         existed = resolved.exists()
         try:
@@ -985,6 +991,23 @@ class FileSystemToolComponent(Component):
         }
 
     def _glob_search(self, pattern: str, path: str | None = None) -> dict:
+        # Empty patterns make ``Path.glob`` raise ``ValueError`` instead of
+        # returning an empty match list, which would propagate uncaught and
+        # crash the agent. Surface a structured error instead.
+        if not pattern or not pattern.strip():
+            return {"error": "Pattern must not be empty", "pattern": pattern, "path": path}
+        # Reject traversal segments in the pattern itself. Without this guard,
+        # ``base.glob("../*")`` walks one directory up; one of the resulting
+        # paths (``<base>/../<base_basename>``) resolves back to ``base`` and
+        # is surfaced to the agent as ``"."`` — a silent, misleading hit.
+        # ``PureWindowsPath`` splits on both ``/`` and ``\`` so the check
+        # covers Windows-authored patterns as well.
+        if any(part == ".." for part in PureWindowsPath(pattern).parts):
+            return {
+                "error": "Pattern must not contain '..' (path traversal not allowed)",
+                "pattern": pattern,
+                "path": path,
+            }
         try:
             root_resolved = self._validate_root()
             base = self._validate_path(path) if path else root_resolved
