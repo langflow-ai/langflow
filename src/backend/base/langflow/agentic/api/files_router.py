@@ -128,6 +128,12 @@ async def get_file(
 
     fs = FileSystemToolComponent()
     fs._user_id = str(current_user.id)  # noqa: SLF001 — bind sandbox to caller
+    # B1: this endpoint carries an authenticated user identity and must
+    # always resolve a per-user sandbox root, even under AUTO_LOGIN=True
+    # (otherwise two users on a shared deployment read the same `shared/`
+    # tree). The agent's write tools set the same flag in build_toolkit so
+    # write and read paths resolve to the SAME users/<hash>/ root.
+    fs._force_isolation = True  # noqa: SLF001 — security: see filesystem._validate_root
     try:
         resolved = fs._validate_path(path)  # noqa: SLF001 — public sandbox entry
     except PermissionError as exc:

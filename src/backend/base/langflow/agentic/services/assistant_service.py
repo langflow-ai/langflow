@@ -136,26 +136,58 @@ def record_conversation_turn(
     )
 
 
-async def _get_current_flow_summary(flow_id: str | None) -> str | None:
-    """Build a spec-like summary and initialize working flow from the user's canvas."""
+async def _get_current_flow_summary(flow_id: str | None, *, user_id: str | None = None) -> str | None:
+    """Build a spec-like summary and initialize working flow from the user's canvas.
+
+    The caller's ``user_id`` is required to enforce ownership: the canvas
+    summary is injected into the prompt, so loading another user's flow here
+    is an information-disclosure (IDOR) vector. A flow is only used when it is
+    unowned or owned by the caller.
+    """
     if not flow_id:
         return None
-    try:
-        from uuid import UUID
 
+    from uuid import UUID
+
+    try:
+        flow_uuid = UUID(flow_id)
+    except ValueError:
+        # A malformed/forged flow id is not an operational failure — there is
+        # simply no canvas context to load. Distinct from a DB error below.
+        logger.debug("Skipping canvas context: flow_id is not a valid UUID")
+        return None
+
+    try:
         from lfx.services.deps import session_scope
 
         from langflow.services.database.models.flow import Flow
 
         async with session_scope() as session:
-            flow = await session.get(Flow, UUID(flow_id))
-            if flow and flow.data:
-                flow_dict = {"name": flow.name, "data": flow.data}
-                # Initialize working flow so tools can read/write the actual canvas
-                init_working_flow(flow_dict, flow_id)
-                return flow_to_spec_summary(flow_dict)
-    except Exception:  # noqa: BLE001
-        logger.debug("Could not load current flow for context", exc_info=True)
+            flow = await session.get(Flow, flow_uuid)
+            if not flow or not flow.data:
+                return None
+            # Ownership: deny only when the flow has an owner that differs from
+            # the caller. Unowned flows (AUTO_LOGIN / shared) and no-caller
+            # contexts keep the prior behavior — this closes the IDOR without
+            # regressing single-user setups.
+            if flow.user_id is not None and user_id is not None and str(flow.user_id) != str(user_id):
+                logger.warning(
+                    "agentic.flow_summary.ownership_denied",
+                    extra={"flow_id": flow_id, "user_id": user_id},
+                )
+                return None
+            flow_dict = {"name": flow.name, "data": flow.data}
+            # Initialize working flow so tools can read/write the actual canvas
+            init_working_flow(flow_dict, flow_id)
+            return flow_to_spec_summary(flow_dict)
+    except Exception as exc:  # noqa: BLE001
+        # Why: best-effort context loader on the critical chat path — any
+        # operational failure must degrade gracefully (no canvas context)
+        # rather than break the user's request, but stays visible at warning.
+        logger.warning(
+            "agentic.flow_summary.load_failed",
+            extra={"flow_id": flow_id, "error_type": type(exc).__name__},
+        )
     return None
 
 
@@ -402,7 +434,7 @@ async def execute_flow_with_validation_streaming(
     # so the canvas tools can read/write it). The summary is reused below for
     # both the intent-classifier context and the [Current flow on canvas]
     # prefix — it must never be read twice (extra DB round-trip).
-    current_flow_summary = await _get_current_flow_summary(global_variables.get("FLOW_ID"))
+    current_flow_summary = await _get_current_flow_summary(global_variables.get("FLOW_ID"), user_id=user_id)
 
     # Give the intent classifier the session's recent turns + canvas state so
     # a follow-up edit ("add a second agent", "use the SumComponent") routes

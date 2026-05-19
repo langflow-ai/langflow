@@ -1,5 +1,6 @@
 """Intent classification for assistant requests."""
 
+import asyncio
 import json
 import re
 
@@ -14,6 +15,11 @@ from langflow.agentic.services.flow_types import (
     TRANSLATION_FLOW,
     IntentResult,
 )
+
+# An intent call is a network round-trip to a slow, unreliable LLM. Without an
+# explicit bound a hung provider stalls the whole SSE request indefinitely.
+# Generous enough for a small classification call + cold starts, but finite.
+INTENT_CLASSIFICATION_TIMEOUT_SECONDS = 30.0
 
 # Pattern to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
 _MARKDOWN_JSON_RE = re.compile(r"```(?:json)?\s*\n?(.*?)\n?```", re.DOTALL)
@@ -107,15 +113,18 @@ async def classify_intent(
 
     try:
         logger.debug("Classifying intent and translating text")
-        result = await execute_flow_file(
-            flow_filename=TRANSLATION_FLOW,
-            input_value=flow_input,
-            global_variables=global_variables,
-            verbose=False,
-            user_id=user_id,
-            provider=provider,
-            model_name=model_name,
-            api_key_var=api_key_var,
+        result = await asyncio.wait_for(
+            execute_flow_file(
+                flow_filename=TRANSLATION_FLOW,
+                input_value=flow_input,
+                global_variables=global_variables,
+                verbose=False,
+                user_id=user_id,
+                provider=provider,
+                model_name=model_name,
+                api_key_var=api_key_var,
+            ),
+            timeout=INTENT_CLASSIFICATION_TIMEOUT_SECONDS,
         )
 
         response_text = extract_response_text(result)
@@ -147,8 +156,6 @@ async def classify_intent(
 
                 # Fallback 3: look for intent as a quoted JSON value
                 # Use strict patterns to avoid matching prompt-echoes
-                import re
-
                 intent_match = re.search(
                     r'["\']intent["\']\s*:\s*["\']'
                     r"(generate_component|build_flow|run_flow|component_then_flow|off_topic)[\"']",
@@ -162,6 +169,12 @@ async def classify_intent(
                 logger.warning("Intent flow returned non-JSON, treating as question")
                 return _finalize(response_text, "question", text)
 
+        return _finalize(text, "question", text)
+    except asyncio.TimeoutError:
+        logger.warning(
+            "intent.classification.timeout: TranslationFlow exceeded %ss, defaulting to question",
+            INTENT_CLASSIFICATION_TIMEOUT_SECONDS,
+        )
         return _finalize(text, "question", text)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"Intent classification failed, defaulting to question: {e}")

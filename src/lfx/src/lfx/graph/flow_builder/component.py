@@ -132,10 +132,19 @@ def configure_component(
             available = [k for k in template if isinstance(template[k], dict)]
             msg = f"Unknown parameter '{key}' on component '{component_id}'. Available: {available}"
             raise ValueError(msg)
-        if isinstance(template[key], dict):
-            template[key]["value"] = value
-        else:
-            template[key] = {"value": value}
+        if not isinstance(template[key], dict):
+            # Reserved non-field entries (e.g. "_type", metadata strings) are not
+            # configurable; wrapping them would corrupt the node. Reject instead.
+            available = [k for k in template if isinstance(template[k], dict)]
+            msg = (
+                f"Parameter '{key}' on component '{component_id}' is not a configurable "
+                f"field (reserved template entry). Available: {available}"
+            )
+            # Why: this function's contract raises ValueError for every config
+            # error (see sibling check + test_configure_unknown_field_raises);
+            # callers catch ValueError. TypeError would break that contract.
+            raise ValueError(msg)  # noqa: TRY004
+        template[key]["value"] = value
 
 
 def get_component(flow: dict, component_id: str) -> dict:

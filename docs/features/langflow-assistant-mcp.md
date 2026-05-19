@@ -9,6 +9,8 @@
 > **2026-05-12 revision** folds in: refining-plan UX (`Dismiss` → revisable state with `Reset`), the `/skip-all` power-user preference (persistent, header badge, gate bypass), per-request tool result caching, inline build-task checklist, per-session conversation history (server-side ring buffer), shell-style input command history, the **per-user user-components registry** that lets validated-generated Components round-trip into `build_flow` requests, and the **dual Add/Replace action on flow proposals** that lets the user choose between additive merge (default, non-destructive) and full canvas replacement (legacy semantic). Each is treated as a first-class capability in the sections below — not an addendum.
 >
 > **2026-05-19 revision** records the **single-agent-loop pivot**: the assistant is now ONE agent (`flow_builder_assistant.py`) plus an MCP toolkit — the Claude Code / Codex pattern — not separate sub-agents and not the older multi-phase orchestration bolt-ons (those were retired). Single-thing requests are byte-identical to before; multi-thing prompts are handled by the *same* loop chaining tools. It adds three MCP tools — `GenerateComponent` (re-enters the full component validation pipeline mid-loop and registers the user component so `SearchComponentTypes` finds it), `DescribeFlowIO` (deterministically classifies a flow's inputs/outputs/tool components from the actual wiring), and `RunFlow` (executes the working/canvas flow and returns the result plus **run metrics** — `duration_seconds` via `perf_counter`, `input_tokens`/`output_tokens`/`total_tokens` via `extract_graph_token_usage`; all run *visual feedback* code was removed, only run + result remain). It also folds in: **edit + run continuation** (approve proposed canvas edits → frontend saves the flow → silently re-sends the byte-identical `EDIT_CONTINUATION_INPUT` so the same request finishes deferred steps such as run, gated by `continuation_expected` so it never fires spuriously), **provider-agnostic in-flow model selection** (`available_model_providers(global_variables)` — any provider with a configured key, no OpenAI obligation; prompt injects `[Available language models …]` and forbids running an Agent with no model; new `agent_run_context` ContextVar carries provider/model/api_key_var), the **orchestrating indicator** (`request_framing.decide_progress_step` chooses the progress label — compound or build+run → step `orchestrating` / "Orchestrating..."; the run-detector moved from a pre-LLM override to a post-LLM rescue), a **real-introspection user-component overlay** (`build_custom_component_template(Component(_code=code))` — fixes the "Attribute build_output not found" run crash and wrong-output scaffolds), the **in-place working-flow mutation** fix (`build_flow` mutates the working-flow ContextVar in place, never `.set()`-rebinds, so the run engine sees the canvas — fixes "There is no flow on the canvas to run"), and **optional `propose_plan`** (the agent only stops for a plan on large/ambiguous changes). Each is treated as a first-class capability in the sections below — not an addendum.
+>
+> **2026-05-19 (later same day)** adds two deterministic, LLM/language-agnostic guarantees: (1) **build+run lands on the canvas** — `RunFlow` emits an internal `flow_ran` signal on a successful run and a pure `_reconcile_flow_updates` helper auto-applies a built flow whenever it was also run this turn (running a flow the user cannot see is contradictory), retiring the fragile `_looks_like_run_request` prompt regex that broke on every paraphrase ("rode ele" / "run it") and produced the recurring "agent says it did, but didn't" bug; (2) **a run-time code-security gate** — `run_working_flow` AST-scans every node's inline component `code` (`_scan_flow_component_code` → `scan_code_security`) and **refuses to run** on any violation, closing the bypass where code that never went through the generation pipeline (inline `build_flow` code, `.components/` overlay, imported flow) could still `exec`. The shared `code_security.py` denylist was widened to block secret/env exfiltration (`os.environ`, `os.getenv`/`os.putenv`), raw file access (`open()`, `breakpoint()`), and dunder sandbox escapes (`__subclasses__`/`__globals__`/`__builtins__`/`__bases__`/`__mro__`/`__code__`/`__closure__`). See ADR-MCP-039 and ADR-MCP-040.
 
 ---
 
@@ -84,7 +86,7 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 
 | Term | Definition | Code Reference |
 |------|------------|----------------|
-| **MCP Flow Builder Tools** | A bundle of `lfx.custom.Component` subclasses exposed to the Agent as a toolkit. Each tool mutates the per-request working flow and emits an action event. | `src/lfx/src/lfx/mcp/flow_builder_tools.py` |
+| **MCP Flow Builder Tools** | A bundle of `lfx.custom.Component` subclasses exposed to the Agent as a toolkit. Each tool mutates the per-request working flow and emits an action event. Split by responsibility: `_state.py` (per-request working flow + emit + drain + node-shape utilities), `read_tools.py` (Search/Describe/GetFieldValue/DescribeFlowIO — pure reads), `edit_tools.py` (ProposeFieldEdit — validated user-reviewable edits), `mutate_tools.py` (Add/Remove/Connect/Configure — push events), `run_tools.py` (ProposePlan/BuildFlowFromSpec/RunFlow/GenerateComponent — orchestration). The package `__init__.py` is re-exports only, so existing `from lfx.mcp.flow_builder_tools import X` imports are unchanged. | `src/lfx/src/lfx/mcp/flow_builder_tools/` |
 | **WorkingFlow** | The per-request, in-memory dict representation of the user's flow held in a `ContextVar`. Tools read and write it; it is reset between requests. NOT the user's persisted canvas — it is the agent's scratchpad initialized from the canvas. | `_working_flow_var`, `init_working_flow()`, `get_working_flow()`, `reset_working_flow()` |
 | **FlowUpdateAction** | The discrete edit operation a tool emits (`add_component`, `remove_component`, `connect`, `configure`, `set_flow`, `edit_field`, `select_output`, `set_connection_mode`). Serialized into SSE `flow_update` events. | `_emit(action, **data)`, `AgenticFlowUpdateEvent.action` |
 | **FlowEvent Queue** | A `deque[dict]` in a `ContextVar` that tools push action events into and the streaming service drains between LLM tokens. | `_flow_events_var`, `drain_flow_events()` |
@@ -99,7 +101,7 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 | **build_flow intent** | TranslationFlow output that routes to `FlowBuilderAssistant` instead of the component-generation flow. | `IntentResult.intent == "build_flow"` |
 | **CurrentFlowSummary** | Spec-like text snapshot of the user's existing canvas prepended to the user input as `[Current flow on canvas: ...]`. Lets the agent reason about edits. Also initializes the WorkingFlow. | `_get_current_flow_summary()` |
 | **OrphanNode** | A node in a `BuildFlowFromSpec` result with no incident edges. The tool rejects specs containing one to prevent broken canvases. | `_find_orphan_nodes()` |
-| **Auto-Layout** | After every `add_component` / `remove_component`, node positions are recomputed by the layout helper so the canvas stays readable as the agent works. | `_layout_flow()` in `flow_builder_tools.py` |
+| **Auto-Layout** | After every `add_component` / `remove_component`, node positions are recomputed by the layout helper so the canvas stays readable as the agent works. | `_layout_flow()` in `flow_builder_tools/` |
 | **flow_proposal_ready** | The progress step the backend emits *only* when at least one `set_flow` was observed during the run. The frontend uses it to render the Continue/Dismiss card. | `format_progress_event("flow_proposal_ready", ...)`, `saw_set_flow` flag |
 | **flow_preview event** | SSE event carrying the full flow JSON + node/edge counts + ASCII graph, used to render the mini-canvas preview. Distinct from `flow_update`. | `format_flow_preview_event`, `AgenticFlowPreviewEvent` |
 | **Tail Updates** | Defensive buffer for `flow_update` events that arrive *after* a `set_flow` in the same run. Per prompt this shouldn't happen, but if it does they replay on Continue. | `PendingFlowProposal.tailUpdates` |
@@ -108,7 +110,7 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 | **MCPToolPayload** | Telemetry event logged for every MCP tool invocation (tool name, success, duration, error type). | `_tracked` decorator in `lfx/mcp/server.py` |
 | **batch action** | An MCP tool that executes multiple actions sequentially, with `$N.field` reference resolution for chaining outputs to inputs. | `batch()` in `lfx/mcp/server.py` |
 | **manage_files intent** | TranslationFlow output that routes a request through the same `FlowBuilderAssistant` flow but signals the frontend to render the "Generating document..." thinking label instead of "Generating flow...". | `TRANSLATION_PROMPT` examples, `IntentResult.intent == "manage_files"` |
-| **FileSystemTool** | The sandboxed filesystem toolkit (`read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`) added to the FlowBuilderAssistant's toolkit. Every path is RELATIVE to the user's per-user sandbox root (`<BASE_DIR>/users/<hash(user_id)>/` or `<BASE_DIR>/shared/` under AUTO_LOGIN). | `FileSystemToolComponent` in `lfx/components/tools/filesystem.py` |
+| **FileSystemTool** | The sandboxed filesystem toolkit (`read_file`, `write_file`, `edit_file`, `glob_search`, `grep_search`) added to the FlowBuilderAssistant's toolkit. Every path is RELATIVE to the user's per-user sandbox root `<BASE_DIR>/users/<hash(user_id)>/`. **The agentic toolkit forces per-user isolation** (`_force_isolation=True`) regardless of the global `AUTO_LOGIN` setting, so the `/agentic/files` read endpoint and the agent's write tools always resolve to the same per-user root and a multi-user deployment under default AUTO_LOGIN cannot leak files cross-tenant. The shared `<BASE_DIR>/shared/` path is still used when `FileSystemToolComponent` is instantiated outside the agentic toolkit (e.g. embedded in a non-agentic flow under AUTO_LOGIN). | `FileSystemToolComponent` in `lfx/components/tools/filesystem.py`; agentic wiring in `agentic/api/files_router.py` + `agentic/flows/flow_builder_assistant.py` |
 | **FileEvent Queue** | A second `ContextVar`-scoped `deque` parallel to the FlowEvent queue. Tools wrapped by `wrap_file_tool_with_event` push `file_written` entries; the streaming service drains between LLM tokens. Allocates the deque on the parent context so child asyncio tasks inherit the same instance by reference (matches the proven `flow_builder_tools` pattern). | `_file_events_var`, `emit_file_event()`, `drain_file_events()`, `reset_file_events()` |
 | **wrap_file_tool_with_event** | Wraps a `FileSystemToolComponent` `StructuredTool` so its successful response triggers an `emit_file_event` with the file's `path`, `size`, and (for `write_file`) the inline `content`. Errors and unparseable responses are passed through unchanged and emit nothing. | `wrap_file_tool_with_event()` in `agentic/services/file_events.py` |
 | **WrittenFile** | Frontend representation of a file the agent persisted. Stored on the `AssistantMessage` in arrival order. Carries the inline content so the modal/Download work without a second HTTP fetch. | `WrittenFile` (TS interface), `AssistantMessage.writtenFiles` |
@@ -157,10 +159,13 @@ Terms below extend the glossary in `langflow-assistant.md`. Where a term overlap
 | **Flow-proposal apply mode** | Tri-button action set on the proposal card: **Add to canvas** (primary, additive — merges nodes/edges into existing canvas with collision-safe ID remap + bounding-box offset), **Replace canvas** (secondary, destructive — the legacy `setNodes(proposal.nodes)` semantic), **Dismiss** (no canvas change). The Hook `handleApplyFlowProposal(messageId, mode)` accepts `"add" \| "replace"`; default is `"replace"` to preserve backwards-compat with code paths that omit the arg. | `AssistantFlowPreview`, `handleApplyFlowProposal` |
 | **`mergeFlowIntoCanvas`** | Pure helper that produces the additive merge result. Three responsibilities: (1) remap proposal node IDs that collide with existing canvas IDs (preserves the `<ComponentType>-` prefix so downstream type-splitting code still works); (2) rewrite proposal edges so `source`/`target` track the remap, plus remap any edge ID collisions; (3) offset proposal nodes' positions to the right of the existing canvas's bounding box with a fixed gap. Empty existing canvas → return proposal as-is. | `helpers/merge-flow-into-canvas.ts` |
 | **Single-Agent Loop** | The 2026-05-19 architecture: ONE agent (`FlowBuilderAssistant`) plus the MCP toolkit, iterating tool calls until done — the Claude Code / Codex pattern. Multi-thing prompts are handled by the same loop chaining tools; the older separate sub-agents and multi-phase orchestration bolt-ons were retired. Single-thing requests are byte-identical to the prior behavior. | `flow_builder_assistant.py`, `src/backend/base/langflow/agentic/ARCHITECTURE.md` |
-| **`GenerateComponent`** | MCP tool that re-enters the **full component validation pipeline** mid-loop, registers the resulting user component, and returns its `class_name` so a subsequent `SearchComponentTypes` finds it. The single-loop equivalent of the standalone `generate_component` intent, callable as a step inside a compound build. | `GenerateComponent` (class) in `src/lfx/src/lfx/mcp/flow_builder_tools.py:1000` |
-| **`DescribeFlowIO`** | MCP tool that deterministically classifies a flow's inputs / outputs / tool components from the *actual wiring* (not guess-by-name). Scales to large flows where name heuristics break. Replaces the older name-based IO guessing. | `DescribeFlowIO` (class) in `flow_builder_tools.py:286` |
-| **`RunFlow`** | MCP tool that executes the working / canvas flow and returns the result plus `RunMetrics`. The agent uses it to actually run what it built. All "run visual feedback" UI was removed — only the run and its result remain. | `RunFlow` (class) in `flow_builder_tools.py:923`; `run_working_flow()` in `agentic/services/flow_run.py:133` |
+| **`GenerateComponent`** | MCP tool that re-enters the **full component validation pipeline** mid-loop, registers the resulting user component, and returns its `class_name` so a subsequent `SearchComponentTypes` finds it. The single-loop equivalent of the standalone `generate_component` intent, callable as a step inside a compound build. | `GenerateComponent` (class) in `src/lfx/src/lfx/mcp/flow_builder_tools/` |
+| **`DescribeFlowIO`** | MCP tool that deterministically classifies a flow's inputs / outputs / tool components from the *actual wiring* (not guess-by-name). Scales to large flows where name heuristics break. Replaces the older name-based IO guessing. | `DescribeFlowIO` (class) in `flow_builder_tools/` |
+| **`RunFlow`** | MCP tool that executes the working / canvas flow and returns the result plus `RunMetrics`. The agent uses it to actually run what it built. All "run visual feedback" UI was removed — only the run and its result remain. | `RunFlow` (class) in `flow_builder_tools/`; `run_working_flow()` in `agentic/services/flow_run.py:133` |
 | **`RunMetrics`** | The metrics dict `RunFlow` returns: `{duration_seconds, input_tokens, output_tokens, total_tokens}`. Duration measured with `perf_counter`; token counts summed across graph vertices by `extract_graph_token_usage`. | `extract_graph_token_usage()` in `agentic/services/flow_run.py:65` |
+| **`flow_ran`** | An **internal-only** `flow_update` action emitted by `RunFlow` exactly once on a *successful* run (never on error or empty canvas). It is the deterministic, LLM/language-agnostic anchor for "the agent built **and** ran the flow this turn → apply it to the canvas". Never forwarded to the frontend (the canvas has no reducer for it). | `_emit("flow_ran", …)` in `flow_builder_tools/` |
+| **`_reconcile_flow_updates`** | Pure, unit-testable helper in `assistant_service` that decides which `flow_update` events to forward. A `flow_ran` anywhere in (or after) a batch auto-applies the matching `set_flow` (`auto_apply=True`), skipping the Continue gate — regardless of event ordering (two-pass + idempotent late re-emit). Strictly additive over the compound/regex path; takes **no** prompt argument by contract (LLM-agnostic). Replaces the prompt-wording regex for the build+run decision. | `_reconcile_flow_updates()` in `agentic/services/assistant_service.py:284` |
+| **`scan_code_security` / run-time gate** | Deterministic AST scanner (`code_security.py`) with a denylist of forbidden calls/attrs/modules (secret-env exfiltration, raw file access, dunder sandbox escapes). `run_working_flow` invokes it on **every node's inline `code`** before building/`exec`ing the graph (`_scan_flow_component_code`) and returns a refusal instead of running on any violation. | `scan_code_security()` in `agentic/helpers/code_security.py:181`; `_scan_flow_component_code()` in `agentic/services/flow_run.py:134` |
 | **`OrchestratingStep`** | The progress step / label (`orchestrating` / "Orchestrating...") shown for compound or build+run prompts, chosen by `decide_progress_step`. Distinct from `generating_flow` (single build) and `generating_document`. | `request_framing.decide_progress_step` (returns `"orchestrating", "Orchestrating..."`) |
 | **`EditContinuation`** | The mechanism that lets a single request finish deferred steps after a human-gated canvas edit: the user approves proposed edits → the frontend saves the flow → it silently re-sends the byte-identical `EDIT_CONTINUATION_INPUT` so the *same* request resumes (e.g. runs the flow). Bypasses the intent classifier (exact-string match) and only fires when a deferred step actually existed (`continuation_expected` gating). `configure_component` direct-apply runs in the same turn. | `EDIT_CONTINUATION_INPUT` / `PLAN_APPROVAL_INPUT` (byte-identical FE/BE), `continuation_expected` gate |
 | **`decide_progress_step`** | Pure, unit-testable selector that maps the request shape (compound / build+run / continuation / plan-approval / neutral) to a `(step, label)` pair. The run-detector that used to override intent pre-LLM is now consumed here as a post-LLM rescue only. | `decide_progress_step()` in `src/backend/base/langflow/agentic/services/request_framing.py:20` |
@@ -269,7 +274,7 @@ Per-session conversation history injected into the agent's prompt to give contin
 
 Validated Component classes that the assistant generated for the user, persisted into the user's existing FS sandbox so subsequent `build_flow` requests can address them by class name.
 
-- **Root**: directory `<sandbox>/.components/` where `<sandbox>` is `<BASE_DIR>/users/<hash(user_id)>/` in isolated mode or `<BASE_DIR>/shared/` in AUTO_LOGIN mode.
+- **Root**: directory `<sandbox>/.components/` where `<sandbox>` is `<BASE_DIR>/users/<hash(user_id)>/`. The agentic surface always resolves the per-user root (via `FileSystemToolComponent._force_isolation`), even under `AUTO_LOGIN=True`, so the registered Components are always scoped to the authenticated user.
 - **Entries**: one `<ClassName>.py` per registered Component. UTF-8 source code, written atomically (tmp + `Path.replace`).
 - **Value Objects**:
   - `MAX_CLASS_NAME_LENGTH` (64) — Windows-portability cap.
@@ -337,6 +342,8 @@ The base Assistant event table still applies. The MCP integration adds:
 | `progress` step `orchestrating` | `decide_progress_step` resolves the request as compound or build+run | standard progress payload — label "Orchestrating..." | Frontend shows the "Orchestrating..." indicator instead of "Generating flow..." for multi-step prompts. |
 | **derived** `RunMetricsSurfaced` (in-band) | `RunFlow.run_flow()` completes a run | `{duration_seconds, input_tokens, output_tokens, total_tokens}` returned in the tool result (NOT a separate SSE event — no run visual-feedback channel) | The agent reads the metrics back as a tool result and may summarize them in its chat reply. |
 | **derived** `EditContinuationTurn` (server-side) | User approves proposed canvas edits → frontend saves the flow → silently re-sends the byte-identical `EDIT_CONTINUATION_INPUT` | the same `session_id`; exact-string body bypasses the intent classifier | The *same* logical request resumes and finishes its deferred steps (e.g. `RunFlow`). Only fires when a deferred step existed (`continuation_expected`), preventing the prior duplicate-message glitch. |
+| `flow_update` (action=`flow_ran`) **internal-only** | `RunFlow.run_flow()` completes a *successful* run | `{flow_id}` | **Never forwarded to the frontend.** Consumed by `_reconcile_flow_updates`: a `flow_ran` this turn forces the matching `set_flow` to be applied to the canvas (`auto_apply=True`), bypassing the Continue gate — for every event ordering (two-pass + idempotent late re-emit). |
+| **derived** `UnsafeCodeRunBlocked` (server-side) | `run_working_flow` scans a node's inline `code` and `scan_code_security` reports a violation | `{error: "Refused to run: unsafe component code detected — …"}` (in-band; logged `assistant.run_flow.blocked_unsafe_code`) | The flow is **never built or `exec`'d**; the agent receives the refusal as the tool result and reports it. Closes the bypass for code that skipped the generation-time scan. |
 
 ---
 
@@ -882,11 +889,11 @@ The base Assistant event table still applies. The MCP integration adds:
 - **And** the tool returns `{"error": "Path component '.components' is reserved", "path": ".components/SumComponent.py"}` to the agent (no exception leaks).
 - **Same** for `write_file`, `edit_file`, `glob_search`, `grep_search`. The reservation is case-insensitive (`.COMPONENTS`, `.Components` all rejected via `casefold()`).
 
-### Scenario: User Component — privilege asymmetry preserved across modes
+### Scenario: User Component — per-user isolation preserved across modes
 
-- **Given** AUTO_LOGIN=True (shared mode).
-- **When** the assistant generates a Component for any authenticated session.
-- **Then** `register_user_component` resolves to `<BASE_DIR>/shared/.components/<ClassName>.py` (same `shared/` root the FS tool uses for files).
+- **Given** AUTO_LOGIN=True (default).
+- **When** the assistant generates a Component for an authenticated session bound to `user-alice`.
+- **Then** `register_user_component` resolves to `<BASE_DIR>/users/<hash("user-alice")>/.components/<ClassName>.py`. The agentic write surface forces `_force_isolation=True`, so the path is per-user even under AUTO_LOGIN (closing the cross-tenant overlay leak that the old shared-root behavior allowed in multi-user AUTO_LOGIN deployments).
 - **And** the agent's FS tools still cannot see `.components/` (the reservation applies in both modes).
 - **And** the overlay still merges into the registry returned to the calling user.
 
@@ -1069,6 +1076,23 @@ The base Assistant event table still applies. The MCP integration adds:
 - **Then** it sees the just-built flow because `build_flow` mutated the existing ContextVar value **in place** (it never `.set()`-rebinds the ContextVar).
 - **And** the run does **not** fail with "There is no flow on the canvas to run".
 
+### Scenario: Build + run lands on the canvas regardless of how the user phrased it
+
+- **Given** the user asks to build a flow **and** run it, using any wording or language ("crie um flow … rode ele", "build it and run it", "make a flow then execute it").
+- **When** the agent builds the flow (`set_flow`) and runs it (`RunFlow` emits the internal `flow_ran` signal on success).
+- **Then** `_reconcile_flow_updates` applies the built flow to the canvas (`auto_apply=True`), bypassing the Continue gate — because running a flow the user cannot see is contradictory.
+- **And** this holds for **every** event ordering (`flow_ran` before or after `set_flow`, same batch or a later batch — two-pass + idempotent late re-emit).
+- **And** the decision uses **no** prompt-wording regex, so paraphrases never break it (this retires the recurring "agent says it built and ran it on the canvas, but the canvas only shows a proposal card" bug).
+- **And** a build-only request with no run still produces a gated proposal card (strictly additive — existing behavior unchanged).
+
+### Scenario: RunFlow refuses to run unsafe component code
+
+- **Given** a working/canvas flow whose node carries inline component `code` that was **not** vetted by the generation-time scan (inline `build_flow` code, a `.components/` overlay class, or an imported flow).
+- **And** that code references a denylisted construct (`os.environ`, `os.getenv`/`os.putenv`, `open()`, `breakpoint()`, or a dunder sandbox escape such as `__subclasses__`/`__globals__`/`__builtins__`).
+- **When** the agent calls `RunFlow`.
+- **Then** `run_working_flow` AST-scans every node's `code` (`_scan_flow_component_code` → `scan_code_security`) **before** building or `exec`ing the graph and returns `"Refused to run: unsafe component code detected — …"`.
+- **And** the graph is never built and the code is never executed; the refusal is deterministic and independent of which LLM produced the code.
+
 ---
 
 ## 5. Architecture Decision Records
@@ -1104,7 +1128,7 @@ Hold per-request state in `contextvars.ContextVar`:
 - ContextVar semantics are subtle. Code paths that spawn threads (not tasks) would not see the value — but the Assistant streaming pipeline is fully async.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:31-77` — ContextVar declarations + helpers.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — ContextVar declarations + helpers.
 - `src/backend/base/langflow/agentic/services/assistant_service.py:247` — `reset_working_flow()` at start of request.
 
 ---
@@ -1239,7 +1263,7 @@ async for event_type, event_data in flow_generator:
 - A tool that emits many events but no tokens between them would batch them up. In practice each tool emits one or two actions per call, and the LLM produces tool-call boundary tokens around each call.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:48-77` — emit and drain.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — emit and drain.
 - `src/backend/.../assistant_service.py:329-346` — drain loop in the streaming pipeline.
 
 ---
@@ -1266,7 +1290,7 @@ LLMs can produce flow specs where a component is declared but never wired. The r
 - Single-node "flows" (only valid in pathological cases) cannot be built. This is acceptable.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:632-655` — `_find_orphan_nodes()` and the orphan check in `build_flow()`.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `_find_orphan_nodes()` and the orphan check in `build_flow()`.
 
 ---
 
@@ -1682,7 +1706,7 @@ Integration: `SearchComponentTypes.search_components` and `DescribeComponentType
 
 **Key Files:**
 - `src/lfx/src/lfx/mcp/tool_cache.py`.
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py` — `search_components` / `describe_component` wrappers.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `search_components` / `describe_component` wrappers.
 - `src/backend/.../assistant_service.py:253` — `reset_tool_cache()` in the request boundary.
 - `src/backend/tests/unit/agentic/services/test_tool_cache.py` — 16 tests covering hits, misses, dedup, LRU, error non-caching, ContextVar isolation.
 
@@ -1969,7 +1993,7 @@ The overlay function walks `<sandbox>/.components/*.py`, grafts each onto the pl
 **Key Files:**
 - `src/backend/base/langflow/agentic/services/user_components_overlay.py` — overlay function + `load_registry_for_current_user()`.
 - `src/backend/base/langflow/agentic/services/user_components_context.py` — `ContextVar` + setters.
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py` — `_load_registry_user_aware()` helper used by Search / Describe / AddComponent.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `_load_registry_user_aware()` helper used by Search / Describe / AddComponent.
 - `src/lfx/src/lfx/graph/flow_builder/builder.py` — `build_flow_from_spec(spec, registry=None)` accepts injection.
 - `src/backend/base/langflow/agentic/services/assistant_service.py` — `set_current_user_id` at request start + reset in `finally`.
 
@@ -2211,7 +2235,7 @@ A compound prompt may need a brand-new custom component *before* a flow can be b
 
 #### Decision
 
-Add a `GenerateComponent` MCP tool (`flow_builder_tools.py:1000`) that re-enters the **full component validation pipeline** mid-loop, registers the resulting user component (reusing the ADR-MCP-026 best-effort hook), and returns its `class_name`. A subsequent `SearchComponentTypes` then finds the freshly registered class so the same loop can `build_flow` with it.
+Add a `GenerateComponent` MCP tool (`flow_builder_tools/`) that re-enters the **full component validation pipeline** mid-loop, registers the resulting user component (reusing the ADR-MCP-026 best-effort hook), and returns its `class_name`. A subsequent `SearchComponentTypes` then finds the freshly registered class so the same loop can `build_flow` with it.
 
 #### Consequences
 
@@ -2223,7 +2247,7 @@ Add a `GenerateComponent` MCP tool (`flow_builder_tools.py:1000`) that re-enters
 - A mid-loop generation costs the full validation latency inside the agent's turn; acceptable for the compound use case.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:1000` — `GenerateComponent`.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `GenerateComponent`.
 - `src/backend/base/langflow/agentic/services/user_components.py` — registration reuse.
 
 ---
@@ -2238,7 +2262,7 @@ To wire or run a flow the agent needs to know which components are inputs, outpu
 
 #### Decision
 
-Add a `DescribeFlowIO` MCP tool (`flow_builder_tools.py:286`) that classifies inputs / outputs / tool components **deterministically from the actual wiring** (edges and handles), not from names. It scales with the number of components.
+Add a `DescribeFlowIO` MCP tool (`flow_builder_tools/`) that classifies inputs / outputs / tool components **deterministically from the actual wiring** (edges and handles), not from names. It scales with the number of components.
 
 #### Consequences
 
@@ -2250,7 +2274,7 @@ Add a `DescribeFlowIO` MCP tool (`flow_builder_tools.py:286`) that classifies in
 - Requires the working flow to be wired (it reads edges); for a bare node list it reports what wiring exists.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:286` — `DescribeFlowIO`.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `DescribeFlowIO`.
 
 ---
 
@@ -2264,7 +2288,7 @@ After building a flow the agent should be able to actually run it and report wha
 
 #### Decision
 
-Add a `RunFlow` MCP tool (`flow_builder_tools.py:923` → `run_working_flow()` in `agentic/services/flow_run.py:133`) that executes the working/canvas flow and returns the result plus a metrics dict `{duration_seconds, input_tokens, output_tokens, total_tokens}`. `duration_seconds` is measured with `perf_counter`; token counts are summed across graph vertices by `extract_graph_token_usage` (`flow_run.py:65`). **All run visual-feedback code was removed** — only the run and its result/metrics remain; the agent may summarize the metrics in its chat reply.
+Add a `RunFlow` MCP tool (`flow_builder_tools/` → `run_working_flow()` in `agentic/services/flow_run.py:160`) that executes the working/canvas flow and returns the result plus a metrics dict `{duration_seconds, input_tokens, output_tokens, total_tokens}`. `duration_seconds` is measured with `perf_counter`; token counts are summed across graph vertices by `extract_graph_token_usage` (`flow_run.py:65`). **All run visual-feedback code was removed** — only the run and its result/metrics remain; the agent may summarize the metrics in its chat reply. On a *successful* run `RunFlow` also emits the internal `flow_ran` signal consumed by ADR-MCP-039, and `run_working_flow` first passes every node's inline `code` through the run-time security gate of ADR-MCP-040 (refusing to run on any violation).
 
 #### Consequences
 
@@ -2276,7 +2300,7 @@ Add a `RunFlow` MCP tool (`flow_builder_tools.py:923` → `run_working_flow()` i
 - No live progress during the run; for a long run the user only sees the final result. Acceptable given the glitchy alternative.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py:923` — `RunFlow`.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `RunFlow`.
 - `src/backend/base/langflow/agentic/services/flow_run.py:65,133` — `extract_graph_token_usage`, `run_working_flow`.
 
 ---
@@ -2358,7 +2382,7 @@ Mandating a plan card before *every* build added a click and a round-trip even f
 - "When is a build large/ambiguous enough to warrant a plan?" is a prompt-level judgment by the LLM, not a hard rule. Acceptable; the `set_flow` gate remains the hard safety net.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py` — `ProposePlan` (now optional in prompt usage).
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `ProposePlan` (now optional in prompt usage).
 - `src/backend/base/langflow/agentic/flows/flow_builder_assistant.py` — prompt guidance.
 
 ---
@@ -2411,8 +2435,70 @@ The overlay now performs **real introspection**: `build_custom_component_templat
 - All working-flow writers must respect the in-place contract (documented here and in ADR-MCP-012). A future writer that rebinds would reintroduce the bug.
 
 **Key Files:**
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py` — `build_flow` in-place mutation.
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `build_flow` in-place mutation.
 - `src/backend/base/langflow/agentic/services/flow_run.py` — run engine reads the shared working flow.
+
+---
+
+### ADR-MCP-039: Deterministic Build+Run Canvas Application (`flow_ran` + `_reconcile_flow_updates`)
+
+**Status**: Accepted (supersedes the `_looks_like_run_request` prompt regex for the build+run apply decision)
+
+#### Context
+
+When a user asked to **build a flow and run it**, whether the built flow was applied to the canvas (vs. left as a gated Continue/Dismiss proposal) was decided by `_looks_like_run_request(prompt)` — a regex requiring `flow|fluxo` near a run verb. Any paraphrase or other language ("rode ele", "run it", "execute isso") missed the regex → no auto-apply → the flow stayed a proposal card while the agent had actually run it in memory and truthfully reported the result. The agent's message then *appeared* to lie ("built and ran it on the canvas") because the canvas never changed. This was recurring and frustrating, and it directly violated the project's LLM/language-agnostic principle: a behavior decision must never depend on guessing the user's wording.
+
+#### Decision
+
+Decide by the **real action**, not by parsing the prompt:
+
+1. `RunFlow` emits an internal `flow_ran` `flow_update` action exactly once on a *successful* run (never on error or empty canvas) — it fires on the action, independent of wording/language/model.
+2. A pure, side-effect-free `_reconcile_flow_updates(...)` helper in `assistant_service` (no prompt argument by contract) decides which events to forward. If the agent both built (`set_flow`) and ran (`flow_ran`) the flow this turn, the `set_flow` is emitted with `auto_apply=True` and the Continue gate is skipped. It is correct for **every ordering**: a `flow_ran` anywhere in a batch pre-applies the `set_flow`; a `set_flow` proposed in an earlier batch is idempotently re-emitted with `auto_apply` once `flow_ran` arrives; a `set_flow_applied` guard prevents double-emit. `flow_ran` is never forwarded to the frontend.
+3. Strictly additive: the compound path and build-only-stays-gated behavior are unchanged. The LLM's prose is **not** rewritten by regex (that would be language-dependent and false-positive-prone).
+
+#### Consequences
+
+**Benefits:**
+- The recurring "agent says it built+ran it on the canvas, but it didn't" bug is structurally impossible — the decision is deterministic and LLM/language-agnostic.
+- Pure helper is exhaustively unit-testable across every event ordering; the fix landed RED→GREEN with zero regression (988 agentic + 112 lfx green).
+
+**Trade-offs:**
+- One more internal event type to keep filtered out of the frontend stream (covered by tests asserting it is never forwarded).
+
+**Key Files:**
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `_emit("flow_ran", flow_id=…)` on successful run.
+- `src/backend/base/langflow/agentic/services/assistant_service.py:284` — `_reconcile_flow_updates`; wired at both drain sites (`:628`, `:733`).
+- `src/backend/tests/unit/agentic/services/test_flow_update_reconciliation.py`, `test_assistant_service_build_run_apply.py`, `test_run_flow_tool.py::TestRunFlowEmitsRanSignal` — the regression battery.
+
+---
+
+### ADR-MCP-040: Run-Time Code-Security Gate on `RunFlow` + Widened Denylist
+
+**Status**: Accepted (complements the generation-time scan of ADR-010 in `langflow-assistant.md`)
+
+#### Context
+
+The component-generation pipeline AST-scans LLM-produced code, but a flow can reach the run engine carrying inline component `code` that **never went through that scan**: `build_flow` with inline code, a `.components/` user-overlay class, or an imported flow. `run_working_flow` `exec`s that code when it builds the graph, so an unscanned malicious node was a real bypass. Separately, the shared `code_security.py` denylist was too narrow to catch the high-value abuses (secret/env exfiltration, sandbox escapes).
+
+#### Decision
+
+1. **Run-time gate**: before building/`exec`ing the graph, `run_working_flow` calls `_scan_flow_component_code(payload)` which runs `scan_code_security` on every node's inline `code`. Any violation returns `"Refused to run: unsafe component code detected — …"` (logged `assistant.run_flow.blocked_unsafe_code`) and the graph is **never built**. Deterministic; independent of which LLM produced the code.
+2. **Widened denylist** (surgical, in `code_security.py`): block secret/env exfiltration (`os.environ`, `os.getenv`/`os.putenv` — components must use Langflow's variable/secret service), raw file access (`open()`, `breakpoint()`), and dunder sandbox escapes (`__subclasses__`/`__globals__`/`__builtins__`/`__bases__`/`__mro__`/`__code__`/`__closure__`). HTTP (`requests`/`socket`/`urllib`) was **deliberately not banned** — it would break legitimate API components and contradicts an existing design test; the focus is the crown jewels (secrets/env + escapes), keeping false positives near zero.
+
+#### Consequences
+
+**Benefits:**
+- Code that skipped generation-time scanning can no longer run; the bypass is closed at the single `exec` chokepoint.
+- The gate is deterministic and LLM-agnostic — exactly the defense that holds when a weaker model emits unsafe code.
+
+**Trade-offs:**
+- This remains a **denylist**, not a true sandbox (real non-denylist sandboxing is a larger, separate effort — flagged, not delivered here). A determined attacker with a novel construct outside the list is not stopped; the design targets the high-value, low-false-positive cases.
+- Prompt-injection-classification widening (input-side, not code-execution) was intentionally left out of scope to avoid blocking legitimate prompts.
+
+**Key Files:**
+- `src/backend/base/langflow/agentic/helpers/code_security.py:181` — `scan_code_security`; denylist tables (`:115` `_SecurityChecker`).
+- `src/backend/base/langflow/agentic/services/flow_run.py:134,160` — `_scan_flow_component_code`, gate in `run_working_flow`.
+- `src/backend/tests/unit/agentic/.../test_code_security.py`, `test_flow_run.py` — RED→GREEN, zero regression.
 
 ---
 
@@ -2552,7 +2638,7 @@ Failures are swallowed client-side (`try/catch` in `fireSessionReset`) — the u
 | `visualize_flow_graph`, `get_flow_ascii_diagram`, `get_flow_text_representation`, `get_flow_structure_summary` | `flow_id` | Visualization helpers. |
 | `get_flow_component_details`, `get_flow_component_field_value`, `update_flow_component_field`, `list_flow_component_fields` | `flow_id`, `component_id`, … | Per-component operations against persisted flows. |
 
-#### In-process Flow Builder Tools (`lfx/mcp/flow_builder_tools.py`)
+#### In-process Flow Builder Tools (`lfx/mcp/flow_builder_tools/`)
 
 These are not externally callable via MCP transport — they are imported directly into `FlowBuilderAssistant`.
 

@@ -430,7 +430,19 @@ async def build_toolkit() -> list:
 
     # Sandboxed filesystem tools. We instantiate a fresh component per build so
     # each request gets its own ``bound_user_id`` capture inside ``_get_tools``.
+    # B1: bind the request's user identity AND force per-user isolation BEFORE
+    # ``_get_tools`` runs (it captures bound_user_id once for the tool's lifetime).
+    # The agentic ContextVar is set in assistant_service before this flow's
+    # ``get_graph`` runs, so it's reliably available here. Mirrors
+    # files_router.get_file — write and read paths resolve to the same
+    # users/<hash(user_id)>/ root regardless of AUTO_LOGIN.
+    from langflow.agentic.services.user_components_context import current_user_id
+
     fs = FileSystemToolComponent()
+    _request_user_id = current_user_id()
+    if _request_user_id:
+        fs._user_id = _request_user_id  # noqa: SLF001 — bind sandbox to caller
+        fs._force_isolation = True  # noqa: SLF001 — security: see filesystem._validate_root
     fs_tools = await fs._get_tools()  # noqa: SLF001 — public toolkit entry by design
     for tool in fs_tools:
         if tool.name in {"write_file", "edit_file"}:

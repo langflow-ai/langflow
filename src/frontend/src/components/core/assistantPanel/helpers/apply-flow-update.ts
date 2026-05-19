@@ -19,6 +19,22 @@ import useFlowStore from "@/stores/flowStore";
 
 type UpdateNodeInternals = ReturnType<typeof useUpdateNodeInternals>;
 
+// I6: SSE flow_update events come from the assistant stream (LLM-driven) and
+// are untrusted. Cast-and-write lets a malformed payload corrupt the canvas
+// with no signal — these predicates reject the event before any store mutation.
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+const isNonEmptyString = (v: unknown): v is string =>
+  typeof v === "string" && v.length > 0;
+const isNodeShape = (v: unknown): v is Record<string, unknown> =>
+  isPlainObject(v) && isNonEmptyString((v as Record<string, unknown>).id);
+
+const warnDrop = (action: string, reason: string): void => {
+  // Visible at the dev console; lets protocol drift surface instead of
+  // silently corrupting the canvas.
+  console.warn(`[applyFlowUpdate] dropped ${action}: ${reason}`);
+};
+
 export function applyFlowUpdate(
   event: AgenticFlowUpdateEvent,
   updateNodeInternals: UpdateNodeInternals,
@@ -28,11 +44,21 @@ export function applyFlowUpdate(
       const flow = event.flow as {
         data?: { nodes?: unknown[]; edges?: unknown[] };
       };
-      if (flow?.data?.nodes) {
+      const nodes = flow?.data?.nodes;
+      const edges = flow?.data?.edges;
+      if (!Array.isArray(nodes)) {
+        warnDrop("set_flow", "flow.data.nodes is not an array");
+        break;
+      }
+      if (edges !== undefined && !Array.isArray(edges)) {
+        warnDrop("set_flow", "flow.data.edges is not an array");
+        break;
+      }
+      {
         const setNodes = useFlowStore.getState().setNodes;
         const setEdges = useFlowStore.getState().setEdges;
-        setNodes(flow.data.nodes as never[]);
-        setEdges((flow.data.edges ?? []) as never[]);
+        setNodes(nodes as never[]);
+        setEdges((edges ?? []) as never[]);
         // A whole-canvas replace lands the new flow wherever the old
         // viewport happened to be (often off-screen). Frame it like the
         // app's own flow-load path (PageComponent): a SINGLE deferred
@@ -53,25 +79,33 @@ export function applyFlowUpdate(
       break;
     }
     case "add_component": {
-      const node = event.node as Record<string, unknown>;
-      if (node) {
-        const setNodes = useFlowStore.getState().setNodes;
-        setNodes((prev) => [...prev, node as never]);
+      const node = event.node;
+      if (!isNodeShape(node)) {
+        warnDrop("add_component", "node is not an object with a string id");
+        break;
       }
+      const setNodes = useFlowStore.getState().setNodes;
+      setNodes((prev) => [...prev, node as never]);
       break;
     }
     case "connect": {
-      const edge = event.edge as Record<string, unknown>;
-      if (edge) {
-        const setEdges = useFlowStore.getState().setEdges;
-        setEdges((prev) => [...prev, edge as never]);
-        // Refresh both endpoints so ReactFlow reconciles handle positions
-        // and renders the new edge between them.
-        const src = edge.source as string | undefined;
-        const tgt = edge.target as string | undefined;
-        if (src) updateNodeInternals(src);
-        if (tgt) updateNodeInternals(tgt);
+      const edge = event.edge;
+      if (!isPlainObject(edge)) {
+        warnDrop("connect", "edge is not an object");
+        break;
       }
+      const src = edge.source;
+      const tgt = edge.target;
+      if (!isNonEmptyString(src) || !isNonEmptyString(tgt)) {
+        warnDrop("connect", "edge.source/target missing or not strings");
+        break;
+      }
+      const setEdges = useFlowStore.getState().setEdges;
+      setEdges((prev) => [...prev, edge as never]);
+      // Refresh both endpoints so ReactFlow reconciles handle positions
+      // and renders the new edge between them.
+      updateNodeInternals(src);
+      updateNodeInternals(tgt);
       break;
     }
     case "remove_component": {

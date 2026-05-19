@@ -123,7 +123,7 @@ async def test_should_not_leak_working_flow_when_off_topic_after_canvas_seed(fre
 
     reset_working_flow()
 
-    async def fake_summary(_flow_id):
+    async def fake_summary(_flow_id, *, user_id=None):  # user_id added for ownership check (finding I2)
         from lfx.mcp.flow_builder_tools import init_working_flow
 
         init_working_flow({"data": {"nodes": [{"id": "Agent-1"}], "edges": []}}, "flow-1")
@@ -157,7 +157,7 @@ async def test_should_load_current_flow_summary_only_once_per_request(fresh_buff
     mock_classify = AsyncMock(return_value=IntentResult(intent="question", translation="hi"))
     summary_calls = 0
 
-    async def fake_summary(_flow_id):
+    async def fake_summary(_flow_id, *, user_id=None):  # user_id added for ownership check (finding I2)
         nonlocal summary_calls
         summary_calls += 1
 

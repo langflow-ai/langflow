@@ -90,10 +90,10 @@ This context owns:
 | **OffTopic** | Intent classification for questions unrelated to Langflow (other tools, general knowledge) | `"off_topic"`, `OFF_TOPIC_REFUSAL_MESSAGE` |
 | **RuntimeValidation** | Second-phase validation that instantiates the component class to catch import/runtime errors | `validate_component_runtime()`, `build_custom_component_template()` |
 | **AgenticSessionPrefix** | `agentic_` prefix on session IDs to isolate Assistant sessions from Playground | `AGENTIC_SESSION_PREFIX` |
-| **SingleAgentLoop** | The assistant is one agent (`flow_builder_assistant.py`) plus an MCP toolkit; the same loop chains tools for multi-thing prompts instead of spawning sub-agents (Claude Code / Codex pattern) | `flow_builder_assistant.py`, `src/lfx/src/lfx/mcp/flow_builder_tools.py` |
-| **GenerateComponent** | MCP tool that re-enters the full component validation pipeline mid-loop, registers the user component, and returns `class_name` so `SearchComponentTypes` can find it | `GenerateComponent` (`flow_builder_tools.py`) |
-| **DescribeFlowIO** | MCP tool that deterministically classifies a flow's inputs/outputs/tool components from the actual wiring (scalable for large flows; replaces guess-by-name) | `DescribeFlowIO` (`flow_builder_tools.py`) |
-| **RunFlow** | MCP tool that executes the canvas flow and returns the result plus run metrics | `RunFlow` (`flow_builder_tools.py`), `agentic/services/flow_run.py` |
+| **SingleAgentLoop** | The assistant is one agent (`flow_builder_assistant.py`) plus an MCP toolkit; the same loop chains tools for multi-thing prompts instead of spawning sub-agents (Claude Code / Codex pattern) | `flow_builder_assistant.py`, `src/lfx/src/lfx/mcp/flow_builder_tools/` |
+| **GenerateComponent** | MCP tool that re-enters the full component validation pipeline mid-loop, registers the user component, and returns `class_name` so `SearchComponentTypes` can find it | `GenerateComponent` (`flow_builder_tools/`) |
+| **DescribeFlowIO** | MCP tool that deterministically classifies a flow's inputs/outputs/tool components from the actual wiring (scalable for large flows; replaces guess-by-name) | `DescribeFlowIO` (`flow_builder_tools/`) |
+| **RunFlow** | MCP tool that executes the canvas flow and returns the result plus run metrics | `RunFlow` (`flow_builder_tools/`), `agentic/services/flow_run.py` |
 | **RunMetrics** | `{duration_seconds, input_tokens, output_tokens, total_tokens}` returned by `RunFlow`; duration via `perf_counter`, tokens via `extract_graph_token_usage` over graph vertices | `agentic/services/flow_run.py`, `extract_graph_token_usage` |
 | **OrchestratingStep** | Progress step/label ("Orchestrating...") chosen for compound or build+run prompts; the run detector is a post-LLM rescue, not a pre-LLM override | `agentic/services/request_framing.py::decide_progress_step` |
 | **EditContinuation** | After the user approves proposed canvas edits, the frontend saves the flow then silently re-sends `EDIT_CONTINUATION_INPUT` so the SAME request finishes deferred steps; only fires when a deferred step existed (`continuation_expected`) | `EDIT_CONTINUATION_INPUT`, `continuation_expected` |
@@ -679,11 +679,12 @@ Add a second validation phase (`validate_component_runtime`) that attempts to in
 - The retry loop includes runtime error context, improving LLM's ability to self-correct
 
 **Trade-offs:**
-- Runtime validation executes the generated code (mitigated by prior security scan)
+- Runtime validation executes the generated code (mitigated by the prior `scan_code_security` AST scan — its denylist was widened to block secret/env exfiltration `os.environ`/`os.getenv`/`os.putenv`, raw file access `open()`/`breakpoint()`, and dunder sandbox escapes `__subclasses__`/`__globals__`/`__builtins__`/…; HTTP is intentionally allowed to keep legitimate API components working). Note this is a denylist, not a true sandbox.
 - Slightly slower validation per attempt (~100ms overhead)
 
 **Key Files:**
 - `src/backend/.../agentic/helpers/validation.py` — `validate_component_runtime()`
+- `src/backend/.../agentic/helpers/code_security.py` — `scan_code_security()` denylist (shared with the run-time gate; see ADR-MCP-040 in `langflow-assistant-mcp.md` — `run_working_flow` re-scans every node's inline code before `exec` to close the bypass for code that skipped generation-time scanning)
 - `src/backend/.../agentic/services/assistant_service.py` — calls runtime validation after AST passes
 
 ---
@@ -803,7 +804,7 @@ Session history is stored in browser `localStorage` (key: `langflow-assistant-se
 The assistant had grown into a multi-phase orchestrator with separate sub-agents per phase. This added coordination overhead, divergent prompts, and made compound requests ("make a component, build a flow with it, and run it") brittle. Tools like Claude Code and Codex demonstrate that a single agent with a good toolkit handles multi-step work more reliably.
 
 #### Decision
-Collapse the assistant into ONE agent (`flow_builder_assistant.py`) plus an MCP toolkit (`src/lfx/src/lfx/mcp/flow_builder_tools.py`). Single-thing requests behave exactly as before (byte-identical experience). When the user asks for multiple things in one prompt, the SAME single loop chains the tools (orchestration) — no separate sub-agents are spawned.
+Collapse the assistant into ONE agent (`flow_builder_assistant.py`) plus an MCP toolkit (`src/lfx/src/lfx/mcp/flow_builder_tools/`). Single-thing requests behave exactly as before (byte-identical experience). When the user asks for multiple things in one prompt, the SAME single loop chains the tools (orchestration) — no separate sub-agents are spawned.
 
 #### Consequences
 
@@ -818,7 +819,7 @@ Collapse the assistant into ONE agent (`flow_builder_assistant.py`) plus an MCP 
 
 **Key Files:**
 - `src/backend/.../agentic/flows/flow_builder_assistant.py` — the single agent
-- `src/lfx/src/lfx/mcp/flow_builder_tools.py` — `GenerateComponent`, `DescribeFlowIO`, `RunFlow`
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `GenerateComponent`, `DescribeFlowIO`, `RunFlow`
 - `src/backend/base/langflow/agentic/ARCHITECTURE.md` — end-to-end diagrams
 
 ---

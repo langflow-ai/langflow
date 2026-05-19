@@ -105,6 +105,20 @@ export function AssistantMessageItem({
   // the thinking dots match the input placeholder (no rotating noise).
   const randomThinking = useMemo(() => getRandomThinkingMessage(), []);
 
+  // Detect component code in streaming content (handles misclassified intent
+  // when the LLM emits a component class without a generating_component step).
+  // R5: regex was running on every render (every streaming chunk) — memoize so
+  // the test only runs when the inputs that drive it actually change. Hook
+  // MUST live above the `if (message.hidden) return null` early return below
+  // to keep the hook count stable (Rules of Hooks).
+  const contentLooksLikeComponentCode = useMemo(
+    () =>
+      isStreaming &&
+      !!message.content &&
+      /```python[\s\S]*class\s+\w+.*Component/.test(message.content),
+    [isStreaming, message.content],
+  );
+
   // Hidden messages bypass rendering entirely. Used by skip-all to drop
   // the propose_plan turn's preamble so the chat reads as "user prompt →
   // built flow" with nothing in between. Guard AFTER hooks so the hook
@@ -116,13 +130,6 @@ export function AssistantMessageItem({
     message.progress?.step === "generating_document"
       ? message.progress.message || "Generating document..."
       : randomThinking;
-
-  // Detect component code in streaming content (handles misclassified intent
-  // when the LLM emits a component class without a generating_component step).
-  const contentLooksLikeComponentCode =
-    isStreaming &&
-    message.content &&
-    /```python[\s\S]*class\s+\w+.*Component/.test(message.content);
 
   // True when the rich loading state (component or flow build) should render
   // instead of the simple thinking indicator.

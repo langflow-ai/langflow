@@ -98,7 +98,7 @@ class TestStreamingEmitsFileWrittenEvents:
         )
 
         # Stub _get_current_flow_summary so we don't touch the DB.
-        async def fake_summary(_flow_id):
+        async def fake_summary(_flow_id, *, user_id=None):  # user_id added for ownership check (finding I2)
             return None
 
         monkeypatch.setattr(
@@ -159,7 +159,7 @@ class TestStreamingEmitsFileWrittenEvents:
             fake_flow_streaming,
         )
 
-        async def fake_summary(_flow_id):
+        async def fake_summary(_flow_id, *, user_id=None):  # user_id added for ownership check (finding I2)
             return None
 
         monkeypatch.setattr(

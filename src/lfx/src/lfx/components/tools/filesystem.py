@@ -488,6 +488,19 @@ class FileSystemToolComponent(Component):
         would let a write land in a different user's namespace while this
         check still passed for the original user.
         """
+        # When force_isolation is set, every invocation MUST carry the user_id
+        # that was captured at binding time — AUTO_LOGIN does not relax the
+        # check here, otherwise the per-user root in _validate_root would be
+        # reached with the wrong identity.
+        if getattr(self, "_force_isolation", False):
+            current = self._resolve_user_id()
+            if current and current == bound_user_id:
+                return current, None
+            return None, {
+                "error": (
+                    "tool/user-id mismatch: this tool was bound to a different user session and cannot be reused"
+                ),
+            }
         if self._resolve_auto_login():
             return bound_user_id, None
         current = self._resolve_user_id()
@@ -695,11 +708,25 @@ class FileSystemToolComponent(Component):
         """Resolve and authorize the effective sandbox root.
 
         Dispatch:
-          - AUTO_LOGIN=True             → <BASE>/shared/<sub_path>
-          - AUTO_LOGIN=False + user_id  → <BASE>/users/<hash(user_id)>/<sub_path>
-          - AUTO_LOGIN=False + no user  → PermissionError (caught by callers)
+          - ``_force_isolation=True``    → <BASE>/users/<hash(user_id)>/<sub_path>
+          - AUTO_LOGIN=True              → <BASE>/shared/<sub_path>
+          - AUTO_LOGIN=False + user_id   → <BASE>/users/<hash(user_id)>/<sub_path>
+          - any mode with no user_id     → PermissionError (caught by callers)
+
+        ``_force_isolation`` exists for callers that carry an authenticated
+        user identity and need per-user isolation regardless of the global
+        AUTO_LOGIN flag (e.g. the agentic file router + the agent's write
+        tools). It defaults to False so other call sites keep their current
+        AUTO_LOGIN-driven behavior unchanged.
         """
         config = self._isolation_config()
+
+        if getattr(self, "_force_isolation", False):
+            user_id = self._resolve_user_id()
+            if not user_id:
+                msg = "FileSystemTool requires an authenticated user when _force_isolation is set"
+                raise PermissionError(msg)
+            return self._isolated_user_root(config=config, user_id=user_id)
 
         if self._resolve_auto_login():
             return self._shared_root(config=config)
