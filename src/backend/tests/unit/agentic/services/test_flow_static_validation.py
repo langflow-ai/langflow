@@ -26,13 +26,9 @@ def _fake_result(*, errors=(), warnings=()):
 
     res = ValidationResult(path=Path("x"))
     for msg, node in errors:
-        res.issues.append(
-            ValidationIssue(level=2, severity="error", node_id=node, node_name=node, message=msg)
-        )
+        res.issues.append(ValidationIssue(level=2, severity="error", node_id=node, node_name=node, message=msg))
     for msg in warnings:
-        res.issues.append(
-            ValidationIssue(level=1, severity="warning", node_id=None, node_name=None, message=msg)
-        )
+        res.issues.append(ValidationIssue(level=1, severity="warning", node_id=None, node_name=None, message=msg))
     return res
 
 
