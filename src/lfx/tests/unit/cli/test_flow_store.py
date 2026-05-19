@@ -76,10 +76,10 @@ class TestFilesystemFlowStore:
 
     def test_rejects_path_traversal_flow_id(self, tmp_path):
         store = FilesystemFlowStore(tmp_path)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid flow_id"):
             store.write("../escape", {"name": "bad"})
 
     def test_rejects_slash_in_flow_id(self, tmp_path):
         store = FilesystemFlowStore(tmp_path)
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Invalid flow_id"):
             store.write("a/b", {"name": "bad"})
