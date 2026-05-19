@@ -16,6 +16,8 @@ from langflow.schema.serialize import UUIDstr
 
 
 class ShareScope(str, Enum):
+    """Audience of an AuthzShare row (private = owner only, public = anyone)."""
+
     PRIVATE = "private"
     TEAM = "team"
     USER = "user"
@@ -23,6 +25,8 @@ class ShareScope(str, Enum):
 
 
 class SharePermissionLevel(str, Enum):
+    """Level of access granted by an AuthzShare row."""
+
     READ = "read"
     WRITE = "write"
     EXECUTE = "execute"
@@ -53,7 +57,7 @@ class AuthzRole(SQLModel, table=True):  # type: ignore[call-arg]
     name: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
     is_system: bool = Field(default=False)
-    permissions: list[str] = Field(default_factory=list, sa_column=Column(sa.JSON))
+    permissions: list[str] = Field(default_factory=list, sa_column=Column(sa.JSON, nullable=False))
     parent_role_id: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="SET NULL"), nullable=True),
@@ -68,6 +72,8 @@ class AuthzRole(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
+    """Binds a user to a role within an optional domain (global/org/workspace)."""
+
     __tablename__ = "authz_role_assignment"
     __table_args__ = (
         UniqueConstraint(
@@ -96,6 +102,8 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzTeam(SQLModel, table=True):  # type: ignore[call-arg]
+    """Logical grouping of users for share scopes and bulk role assignments."""
+
     __tablename__ = "authz_team"
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
@@ -108,6 +116,8 @@ class AuthzTeam(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
+    """Membership row linking a user to an AuthzTeam."""
+
     __tablename__ = "authz_team_member"
     __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_authz_team_member"),)
 
@@ -123,6 +133,8 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
+    """Resource share record granting access at a specific scope/permission level."""
+
     __tablename__ = "authz_share"
     __table_args__ = (
         UniqueConstraint(
@@ -147,6 +159,8 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]
+    """Optimistic edit lock that prevents concurrent edits to the same flow."""
+
     __tablename__ = "authz_edit_lock"
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
@@ -161,6 +175,8 @@ class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
+    """Append-only audit row produced by every authorization decision."""
+
     __tablename__ = "authz_audit_log"
     __table_args__ = (
         Index("ix_authz_audit_log_user_timestamp", "user_id", "timestamp"),

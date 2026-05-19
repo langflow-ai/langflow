@@ -25,6 +25,7 @@ class LangflowAuthorizationService(BaseAuthorizationService):
     """
 
     def __init__(self, settings_service: SettingsService) -> None:
+        """Initialize the service with a reference to the live settings service."""
         super().__init__()
         self.settings_service = settings_service
         self.set_ready()
@@ -32,12 +33,15 @@ class LangflowAuthorizationService(BaseAuthorizationService):
 
     @property
     def name(self) -> str:
+        """Return the canonical service-type name."""
         return ServiceType.AUTHORIZATION_SERVICE.value
 
     def _authz_settings(self):
+        """Return the live AuthSettings snapshot from the settings service."""
         return self.settings_service.auth_settings
 
     async def is_enabled(self) -> bool:
+        """Return True when AUTHZ_ENABLED is set in AuthSettings."""
         return self._authz_settings().AUTHZ_ENABLED
 
     async def enforce(
@@ -49,6 +53,7 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         act: str,  # noqa: ARG002
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> bool:
+        """Always allow — enterprise plugin overrides this for real enforcement."""
         return True
 
     async def batch_enforce(
@@ -59,4 +64,5 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         requests: Sequence[tuple[str, str]],
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[bool]:
+        """Return a True list matching the request count."""
         return [True] * len(requests)

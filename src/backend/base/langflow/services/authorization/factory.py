@@ -22,9 +22,11 @@ class AuthorizationServiceFactory(ServiceFactory):
     service_class: type[LangflowAuthorizationService]
 
     def __init__(self) -> None:
+        """Bind the factory to the LangflowAuthorizationService implementation."""
         from langflow.services.authorization.service import LangflowAuthorizationService
 
         super().__init__(LangflowAuthorizationService)
 
     def create(self, settings_service: SettingsService) -> BaseAuthorizationService:
+        """Build a LangflowAuthorizationService using the injected settings service."""
         return self.service_class(settings_service)
