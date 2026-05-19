@@ -105,9 +105,7 @@ def _has_breaking_change(registry_entry: dict, node_info: dict) -> bool:
     user_template = node_info.get("template") or {}
     if orig_template and not _template_keys_equal(orig_template, user_template):
         return True
-    if orig_template and not _input_types_contained(orig_template, user_template):
-        return True
-    return False
+    return bool(orig_template) and not _input_types_contained(orig_template, user_template)
 
 
 def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:

@@ -112,5 +112,39 @@ def test_apply_returns_count_of_updated_nodes():
     registry = _registry(code=REGISTRY_CODE)
     report = check_flow_compatibility(flow, registry)
 
+    _, count = apply_safe_upgrades(flow, registry, report, return_count=True)
+    assert count == 1
+
+
+def test_apply_updates_nested_flow_safe_node_code():
+    """Safe upgrades inside a grouped component's nested flow must be written, not skipped.
+
+    Counterpart to test_nested_flow_nodes_are_classified in test_checker.py: the checker
+    classifies nested nodes, so the applier must also write them, otherwise the report
+    advertises a safe upgrade that never actually lands on disk.
+    """
+    nested = _node(code=NODE_CODE)
+    nested["id"] = "nested-1"
+    nested["data"]["id"] = "nested-1"
+    outer = {
+        "id": "group-1",
+        "data": {
+            "id": "group-1",
+            "type": "SomeGrouping",
+            "node": {
+                "display_name": "Group",
+                "template": {},
+                "outputs": [],
+                "flow": {"data": {"nodes": [nested], "edges": []}},
+            },
+        },
+    }
+    flow = _flow(outer)
+    registry = _registry(code=REGISTRY_CODE)
+    report = check_flow_compatibility(flow, registry)
+    assert any(n.node_id == "nested-1" and n.status == "outdated_safe" for n in report.nodes)
+
     updated, count = apply_safe_upgrades(flow, registry, report, return_count=True)
     assert count == 1
+    written = updated["nodes"][0]["data"]["node"]["flow"]["data"]["nodes"][0]
+    assert written["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
