@@ -91,13 +91,16 @@ async def test_run_flow_intent_does_not_trip_no_action_guard():
 
 @pytest.mark.asyncio
 async def test_flow_request_does_not_show_false_planning_label():
-    """No false PLANNING label for a possibly-direct edit.
+    """No false PLANNING *message* for a possibly-direct edit.
 
     User bug: the frontend showed "Generating plan..." (PLANNING) but the
     agent then changed the value directly with no plan card. The backend
     cannot know BUILD-vs-EDIT at label time, so it must NOT emit the
-    misleading ``generating_plan`` step — a neutral ``generating`` step is
-    used; the real plan card still appears on an actual propose_plan event.
+    misleading ``generating_plan`` step nor a "Generating plan..."
+    message. UX requirement change: the STEP is now the rich
+    ``generating_flow`` (so the frontend renders the flow icon/card
+    immediately, parity with ``generating_component``) but the MESSAGE
+    stays NEUTRAL ("Working on the flow...") — step != message.
     """
     with (
         patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_intent("build_flow")),
@@ -118,10 +121,15 @@ async def test_flow_request_does_not_show_false_planning_label():
         )
 
     assert not any('"generating_plan"' in e for e in events), (
-        f"must not show a false PLANNING label for a possibly-direct edit. {events}"
+        f"must not emit the misleading PLANNING step for a possibly-direct edit. {events}"
     )
-    assert any('"step": "generating"' in e for e in events), (
-        f"a neutral generating step must be emitted instead. {events}"
+    # The rich `generating_flow` step IS used (icon/card parity with
+    # generating_component) — but the message must NOT promise planning.
+    assert any('"step": "generating_flow"' in e for e in events), (
+        f"the rich generating_flow step must be emitted. {events}"
+    )
+    assert not any("Generating plan" in e for e in events), (
+        f"must not show a false 'Generating plan...' message. {events}"
     )
 
 

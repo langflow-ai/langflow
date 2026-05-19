@@ -37,8 +37,14 @@ def _step(**kw):
             {"is_component_request": True, "is_flow_request": True, "is_compound": True},
             ("generating_component", "Generating component..."),
         ),
-        # plain flow request (no run/approval/continuation) → neutral
-        ({"is_flow_request": True}, ("generating", "Working on the flow...")),
+        # plain flow request (no run/approval/continuation) → the RICH
+        # `generating_flow` step (so the frontend shows the Langflow flow
+        # icon/card immediately, same as `generating_component`), but with
+        # a NEUTRAL message — at this point we still can't promise
+        # "Generating plan..." (the agent may direct-edit). Requirement
+        # change: a fresh build_flow must NOT fall back to the generic
+        # random "Processing..." thinking indicator.
+        ({"is_flow_request": True}, ("generating_flow", "Working on the flow...")),
         # compound → orchestrating
         ({"is_flow_request": True, "is_compound": True}, ("orchestrating", "Orchestrating...")),
         # build_flow that ALSO asks to run → orchestrating

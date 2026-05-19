@@ -22,6 +22,7 @@ const FLOW_BUILD_ICON_STEPS = new Set([
   "searching_components",
   "generating_plan",
   "generating_flow",
+  "generating_document",
   "orchestrating",
   "building_flow",
   "flow_built",
@@ -150,7 +151,10 @@ function AssistantLoadingStateComponent({
 
   if (isFlowBuildIconMode) {
     return (
-      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+      <div
+        data-testid="assistant-flow-loading-icon-mode"
+        className="flex items-center gap-2 text-sm font-medium text-foreground"
+      >
         <LangflowDrawingIcon size={24} />
         <span>{progress.message || "Working..."}</span>
       </div>

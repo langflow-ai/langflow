@@ -48,6 +48,7 @@ const RICH_LOADING_STEPS = [
   "generating_component",
   "generating_plan",
   "generating_flow",
+  "generating_document",
   "orchestrating",
   "extracting_code",
   "validating",

@@ -247,11 +247,14 @@ describe("AssistantMessageItem", () => {
       expect(screen.queryByText("Thinking...")).toBeNull();
     });
 
-    it("should NOT show rich loading state during 'generating_document' step (no streaming card for documents)", () => {
-      // Decision: the manage_files path shows only the simple thinking dots
-      // during the wait, then jumps directly to the file card. A rich
-      // loading card that morphs into the file card looked like a glitch
-      // ("ele esta aparecendo como se fosse um streaming e depois virando").
+    it("should show the rich loading state during 'generating_document' step (parity with component/flow)", () => {
+      // UX requirement change (user request): documents must get the SAME
+      // rich UI as generating_component / generating_flow — not the
+      // generic dotted "Generating document..." thinking line. The earlier
+      // anti-glitch concern (a bordered streaming card morphing into the
+      // file card) is addressed by using the icon-only minimal mode
+      // (animated Langflow glyph), NOT the bordered streaming card — see
+      // the assistant-loading-state icon-mode test.
       const message = createMessage({
         role: "assistant",
         content: "",
@@ -266,8 +269,8 @@ describe("AssistantMessageItem", () => {
 
       render(<AssistantMessageItem message={message} />);
 
-      // Rich loading card must NOT mount for generating_document.
-      expect(screen.queryByTestId("loading-state")).toBeNull();
+      // Rich loading state mounts (it renders icon-only mode internally).
+      expect(screen.getByTestId("loading-state")).toBeInTheDocument();
     });
 
     it("should render the file card stack when no progress is present (fall-through after Continue)", () => {

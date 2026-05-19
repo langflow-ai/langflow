@@ -60,5 +60,10 @@ def decide_progress_step(
             return "generating", "Continuing..."
         if is_plan_approval:
             return "generating_flow", "Generating flow..."
-        return "generating", "Working on the flow..."
+        # Fresh build_flow: use the RICH `generating_flow` step so the
+        # frontend renders the flow icon/card immediately (parity with
+        # `generating_component`) — but keep the message NEUTRAL: at this
+        # point the agent may still direct-edit instead of planning, so
+        # "Generating plan..." would over-promise. Step != message here.
+        return "generating_flow", "Working on the flow..."
     return "generating", "Generating response..."
