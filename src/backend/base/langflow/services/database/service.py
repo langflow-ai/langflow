@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sqlite3
 import sys
@@ -56,6 +57,59 @@ _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), curre
 # arbitrary, just has to fit in a Postgres bigint and not collide with other
 # advisory locks the application takes (currently none).
 _MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
+_MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
+_MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+
+
+def _migration_lock_timeout_s() -> float:
+    raw = os.getenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S")
+    if raw is None:
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning(
+            "Ignoring invalid LANGFLOW_MIGRATION_LOCK_TIMEOUT_S=%r; falling back to %.0fs.",
+            raw,
+            _MIGRATION_LOCK_DEFAULT_TIMEOUT_S,
+        )
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+
+
+def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
+    """Acquire the advisory lock with a bounded wait, logging progress.
+
+    Blocking ``pg_advisory_lock`` has no upper bound and ``lock_timeout`` does
+    not apply to advisory locks, so a worker hung mid-migration would silently
+    block every other worker forever. Instead poll ``pg_try_advisory_lock`` with
+    a configurable timeout and log when we're waiting, so operators see why
+    boot is stuck.
+    """
+    if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+        return
+
+    timeout = _migration_lock_timeout_s()
+    logger.info(
+        "Migration advisory lock %s held by another worker; waiting up to %.0fs.",
+        lock_id,
+        timeout,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(_MIGRATION_LOCK_POLL_INTERVAL_S)
+        if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+            logger.info("Acquired migration advisory lock %s after waiting.", lock_id)
+            return
+
+    msg = (
+        f"Could not acquire migration advisory lock {lock_id} within "
+        f"{timeout:.0f}s. Another worker is likely hung mid-migration. "
+        "Investigate the worker holding the lock or restart the deployment "
+        "with a single worker so migrations can run cleanly. Override the "
+        "wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds) if your migration "
+        "legitimately needs longer."
+    )
+    raise RuntimeError(msg)
 
 
 @contextmanager
@@ -66,8 +120,9 @@ def _postgres_migration_lock(database_url: str):
     ``command.upgrade("head")``; without coordination they race on
     ``CREATE TYPE`` / ``CREATE TABLE`` and the losers fail with
     ``UniqueViolation``. Holding a session-level advisory lock serialises the
-    upgrade so only one worker mutates the schema at a time; the others block
-    here and then find the schema already at head.
+    upgrade so only one worker mutates the schema at a time; the others wait
+    here (bounded, with progress logging) and then find the schema already at
+    head.
 
     No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
     runs single-process on it anyway).
@@ -88,7 +143,7 @@ def _postgres_migration_lock(database_url: str):
     try:
         with engine.connect() as conn:
             logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
-            conn.execute(sa.text(f"SELECT pg_advisory_lock({_MIGRATION_ADVISORY_LOCK_ID})"))
+            _acquire_migration_lock_or_raise(conn, _MIGRATION_ADVISORY_LOCK_ID)
             try:
                 yield
             finally:
