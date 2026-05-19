@@ -1,6 +1,6 @@
 [project]
-name = "lfx-duckduckgo"
-version = "0.1.0"
+name = "lfx-duckduckgo-nightly"
+version = "0.1.0.dev39"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle (LE-1023 pilot)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -15,7 +15,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 # range that includes the BUNDLE_API_VERSION=1 contract; langchain-community
 # is the same range the lfx tree uses to keep co-installation lockstep.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx-nightly==0.5.0.dev39",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
 ]
@@ -30,7 +30,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 # path to the package containing ``extension.json`` -- the loader walks
 # ``importlib.metadata.files()`` from there to find the manifest.
 [project.entry-points."langflow.extensions"]
-lfx-duckduckgo = "lfx_duckduckgo"
+lfx-duckduckgo-nightly = "lfx_duckduckgo"
 
 [build-system]
 requires = ["hatchling"]
