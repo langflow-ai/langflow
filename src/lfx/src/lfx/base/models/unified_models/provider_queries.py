@@ -18,6 +18,7 @@ from lfx.base.models.openai_constants import (
     OPENAI_EMBEDDING_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
 )
+from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 
 
@@ -30,22 +31,49 @@ def get_model_provider_metadata() -> dict:
 model_provider_metadata = get_model_provider_metadata()
 
 
+_STATIC_MODELS_DETAILED: list[list[dict]] = [
+    ANTHROPIC_MODELS_DETAILED,
+    OPENAI_MODELS_DETAILED,
+    OPENAI_EMBEDDING_MODELS_DETAILED,
+    GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
+    GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
+    OLLAMA_MODELS_DETAILED,
+    OLLAMA_EMBEDDING_MODELS_DETAILED,
+    OPENROUTER_MODELS_DETAILED,
+    WATSONX_MODELS_DETAILED,
+]
+
+
 @lru_cache(maxsize=1)
 def get_models_detailed() -> list[list[dict]]:
-    """Return grouped static model metadata from provider constants."""
-    return [
-        ANTHROPIC_MODELS_DETAILED,
-        OPENAI_MODELS_DETAILED,
-        OPENAI_EMBEDDING_MODELS_DETAILED,
-        GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
-        GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
-        OLLAMA_MODELS_DETAILED,
-        OLLAMA_EMBEDDING_MODELS_DETAILED,
-        WATSONX_MODELS_DETAILED,
-    ]
+    """Return grouped model metadata, preferring the models.dev override.
+
+    When ``lfx.base.models.models_dev_catalog`` has an active snapshot
+    installed (loaded from disk or fetched from models.dev at startup),
+    apply its overrides on top of the bundled static lists. Providers the
+    snapshot doesn't cover keep their bundled rows; live-fetched providers
+    (Ollama, IBM WatsonX, OpenRouter) keep theirs too because
+    ``replace_with_live_models`` overrides at read time, downstream of this
+    function. ``get_models_detailed.cache_clear()`` must be called whenever
+    a new snapshot is installed.
+    """
+    # Lazy import to avoid a circular dependency on application startup
+    # (models_dev_catalog imports from this module transitively via
+    # invalidate_catalog_cache).
+    from lfx.base.models.models_dev_catalog import apply_models_dev_overrides, get_active_snapshot
+
+    snapshot = get_active_snapshot()
+    if snapshot is None:
+        return _STATIC_MODELS_DETAILED
+    return apply_models_dev_overrides(_STATIC_MODELS_DETAILED, snapshot)
 
 
-MODELS_DETAILED = get_models_detailed()
+# NOTE: ``MODELS_DETAILED`` is a back-compat binding for callers that imported
+# it before ``get_models_detailed()`` existed. It reflects the **static**
+# baseline only — once a models.dev snapshot installs at startup, in-process
+# consumers must call ``get_models_detailed()`` (which honours the override and
+# benefits from ``cache_clear()``) to see fresh data.
+MODELS_DETAILED = _STATIC_MODELS_DETAILED
 
 
 @lru_cache(maxsize=1)
@@ -93,18 +121,18 @@ def _get_all_provider_specific_field_names() -> set[str]:
 
 def get_model_providers() -> list[str]:
     """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+    return sorted({md.get("provider", "Unknown") for group in get_models_detailed() for md in group})
 
 
 def get_provider_for_model_name(model_name: str) -> str:
-    """Return the provider for a model name by searching MODELS_DETAILED.
+    """Return the provider for a model name by searching the active catalog.
 
     Retained for backwards compatibility with components authored against the
     pre-refactor ``unified_models`` module (e.g. flows exported from 1.8.x).
     """
     if not model_name or not isinstance(model_name, str):
         return ""
-    for group in MODELS_DETAILED:
+    for group in get_models_detailed():
         for md in group:
             if md.get("name") == model_name:
                 return md.get("provider", "") or ""

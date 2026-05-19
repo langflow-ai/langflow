@@ -234,8 +234,7 @@ test(
 
     await expect(page.getByTestId("provider-row-prov-1")).toBeVisible();
 
-    await page.getByTestId("actions-provider-prov-1").click();
-    await page.getByText("Delete").click();
+    await page.getByTestId("delete-provider-prov-1").click();
 
     await expect(
       page.getByTestId("btn_delete_delete_confirmation_modal"),
@@ -293,8 +292,7 @@ test(
 
     await expect(page.getByTestId("provider-row-prov-1")).toBeVisible();
 
-    await page.getByTestId("actions-provider-prov-1").click();
-    await page.getByText("Delete").click();
+    await page.getByTestId("delete-provider-prov-1").click();
 
     await expect(
       page.getByTestId("btn_cancel_delete_confirmation_modal"),

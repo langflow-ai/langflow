@@ -75,7 +75,7 @@ const CanvasControls = ({
       >
         <div className="group relative">
           <span
-            className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-pink-600 px-1 py-0.5 text-[9px] font-medium leading-none text-white transition-all duration-200 ${assistantSidebarOpen ? "hidden" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"}`}
+            className={`absolute -top-4 -left-1 z-10 flex items-center gap-0.5 rounded bg-accent-pink-foreground px-1 py-0.5 text-[9px] font-medium leading-none text-primary-foreground transition-all duration-200 ${assistantSidebarOpen ? "hidden" : "opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100"}`}
           >
             <ForwardedIconComponent name="Sparkles" className="h-2.5 w-2.5" />
             New

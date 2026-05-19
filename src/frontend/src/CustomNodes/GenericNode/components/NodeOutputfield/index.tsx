@@ -53,6 +53,16 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
 
+// Extension components carry a namespaced ``data.type`` of the form
+// ``ext:<bundle>:<ClassName>@<slot>``.  The inspect-button test IDs
+// historically read ``output-inspection-<title>-<ClassName>``; without this
+// strip, extension components would yield verbose IDs containing ``:`` and
+// ``@`` that diverge from the built-in convention.
+const classNameFromType = (type: string): string => {
+  const match = type.match(/^ext:[^:]+:([^@]+)@.+$/);
+  return match?.[1] ?? type;
+};
+
 const InspectButton = memo(
   forwardRef(
     (
@@ -80,7 +90,7 @@ const InspectButton = memo(
       <Button
         ref={ref}
         disabled={disabled}
-        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
         unstyled
         onClick={onClick}
       >

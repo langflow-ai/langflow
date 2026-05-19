@@ -7,14 +7,19 @@ CLI.  It performs four passes:
        (:func:`~lfx.extension.manifest.load_manifest`).
     2. **Path-safety**: bundle paths must resolve inside the extension root,
        no ``..``, no absolute paths, no symlinks that escape the bundle dir.
-    3. **AST-level inspection** of every ``*.py`` file in the bundle:
+    3. **AST-level hygiene lint** of every ``*.py`` file in the bundle:
        syntax check, presence of at least one ``Component`` subclass with a
        declared ``build`` method, rejection of top-level wildcard imports,
-       flag of top-level I/O primitives (``open``, ``socket``, ``subprocess``,
-       ``os.system``).
+       flag of top-level dynamic-evaluation primitives (``open``, ``socket``,
+       ``subprocess``, ``os.system``, ``exec``, ``eval``, ``__import__``,
+       ``compile``).  **This is best-effort lint, not a security sandbox**:
+       it only catches literal name patterns and is trivially bypassable by
+       obfuscation (``getattr``, base64, aliasing).  Operators must still
+       treat third-party bundles as untrusted code.
     4. **(opt-in)** ``--execute-imports``: forks a subprocess with a temporary
-       Langflow state dir and no inherited server state, imports each bundle
-       module, and reports failures.  Never invoked in automated paths.
+       Langflow state dir, a strict env allowlist, and no inherited server
+       state, imports each bundle module, and reports failures.  Still
+       executes arbitrary Python; see the CLI help for the trust caveat.
 
 The validator NEVER imports the bundle's own code in-process; that's what
 ``--execute-imports`` is for, and the ticket is explicit that even then it
@@ -33,6 +38,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
+from lfx.extension._paths import is_within
 from lfx.extension.errors import (
     ExtensionError,
     ExtensionErrorCollection,
@@ -49,11 +55,28 @@ from lfx.extension.manifest import (
 # AST inspection sentinels
 # ---------------------------------------------------------------------------
 
-# Names of top-level I/O primitives that, when called at module import time,
-# are considered side effects.  This list is intentionally short and
-# conservative: false positives here are easy to silence (move the call into
-# a function); false negatives are how malicious bundles slip through.
-_IO_NAMES: frozenset[str] = frozenset({"open", "socket", "subprocess"})
+# Names of top-level I/O / dynamic-evaluation primitives that, when called
+# at module import time, are considered side effects.  This list is a
+# best-effort hygiene lint, not a security boundary: an attacker who wants
+# to evade detection can trivially do so (``getattr(os, "sys"+"tem")``,
+# base64, aliased imports).  False positives here are easy to silence
+# (move the call into a function); false negatives are an accepted limitation
+# of static literal-name matching.
+_IO_NAMES: frozenset[str] = frozenset(
+    {
+        "open",
+        "socket",
+        "subprocess",
+        # Dynamic-evaluation primitives. A bundle that calls these at module
+        # top level either has a real bug or is doing something the reviewer
+        # should see; flagging them is consistent with the "import-safe
+        # modules only" contract documented in BUNDLE_API.md.
+        "exec",
+        "eval",
+        "compile",
+        "__import__",
+    }
+)
 
 # ``os.system``-style attribute calls handled separately so we can preserve
 # the dotted location string in the error.
@@ -71,6 +94,11 @@ _IO_DOTTED_NAMES: frozenset[tuple[str, str]] = frozenset(
         ("subprocess", "check_output"),
         ("socket", "socket"),
         ("socket", "create_connection"),
+        # Dynamic-import attribute calls. ``importlib.import_module(...)``
+        # at module top level is a common obfuscation vector that the simple
+        # ``__import__`` name match misses.
+        ("importlib", "import_module"),
+        ("importlib", "__import__"),
     }
 )
 
@@ -231,8 +259,11 @@ def _validate_manifest_phase(root: Path, report: ValidateReport) -> ManifestSour
     if isinstance(bundles, list) and len(bundles) > 1:
         report.errors.add_error(
             ExtensionError(
-                code="multi-bundle-deferred-in-this-milestone",
-                message=(f"Manifest declares {len(bundles)} bundles; v0 accepts exactly one."),
+                code="multi-bundle-unsupported",
+                message=(
+                    f"Manifest declares {len(bundles)} bundles; v0 accepts exactly one. "
+                    "Multi-bundle support is deferred to a future milestone."
+                ),
                 location=f"{source_path}:bundles",
                 hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
             )
@@ -306,10 +337,8 @@ def _resolve_bundle_path(root: Path, bundle_path: str) -> tuple[Path | None, Ext
             hint="Make sure the bundle path resolves to a directory under the manifest.",
         )
 
-    root_resolved = root.resolve(strict=False)
-    try:
-        resolved.relative_to(root_resolved)
-    except ValueError:
+    if not is_within(resolved, root):
+        root_resolved = root.resolve(strict=False)
         return None, ExtensionError(
             code="path-escape",
             message=(
@@ -376,8 +405,68 @@ def _is_component_class(node: ast.ClassDef) -> bool:
 
 
 def _has_build_method(node: ast.ClassDef) -> bool:
-    """Return True if the class body declares a ``build`` callable."""
-    return any(isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name == "build" for item in node.body)
+    """Return True if the class body declares an invocable entry-point.
+
+    Langflow Components reach the runtime in two shapes:
+
+    1. A literal ``build`` method on the class (the original convention).
+    2. A method named in an ``Output(method="...")`` declaration in the
+       class-level ``outputs = [...]`` assignment.  This is the more
+       common modern shape: a component can declare multiple outputs that
+       each call a different method.  Neither DuckDuckGo nor arXiv ships a
+       literal ``build``; both are valid.
+
+    The validator accepts either form.  If a class declares
+    ``Output(method="X")`` but no ``def X(...)`` in the class body,
+    that's still flagged -- it would crash at run-time anyway.
+    """
+    method_names = {item.name for item in node.body if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    if "build" in method_names:
+        return True
+    return any(invocable in method_names for invocable in _output_method_names(node))
+
+
+def _output_method_names(node: ast.ClassDef) -> set[str]:
+    """Collect method names referenced by ``Output(method="...")`` calls in the class body.
+
+    Walks the class-level assignment ``outputs = [...]`` and pulls the
+    string value of every ``method=`` keyword argument on a call whose
+    callee is the name ``Output`` (or anything ending in ``Output``).
+    Static analysis only -- if the list is built dynamically, we miss
+    those names and the literal-``build`` fallback still applies.
+    """
+    names: set[str] = set()
+    for item in node.body:
+        if isinstance(item, ast.Assign):
+            targets = item.targets
+            value = item.value
+        elif isinstance(item, ast.AnnAssign):
+            if item.value is None:
+                continue
+            targets = [item.target]
+            value = item.value
+        else:
+            continue
+        if not any(isinstance(t, ast.Name) and t.id == "outputs" for t in targets):
+            continue
+        for sub in ast.walk(value):
+            if not isinstance(sub, ast.Call):
+                continue
+            callee = sub.func
+            if isinstance(callee, ast.Name):
+                callee_name = callee.id
+            elif isinstance(callee, ast.Attribute):
+                callee_name = callee.attr
+            else:
+                continue
+            if callee_name != "Output" and not callee_name.endswith("Output"):
+                continue
+            for kw in sub.keywords:
+                if kw.arg != "method":
+                    continue
+                if isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+                    names.add(kw.value.value)
+    return names
 
 
 def _find_top_level_io(tree: ast.AST) -> list[tuple[int, str]]:
@@ -510,14 +599,9 @@ def _scan_bundle(bundle_name: str, bundle_root: Path, errors: ExtensionErrorColl
     symlinked ``vendored/`` subdir is fine, but a symlink to ``/etc/passwd``
     triggers ``path-escape`` and is excluded from the scan).
     """
-    bundle_root_resolved = bundle_root.resolve(strict=True)
     py_files: list[Path] = []
     for path in bundle_root.rglob("*.py"):
-        # Symlink-escape check.
-        try:
-            resolved = path.resolve(strict=False)
-            resolved.relative_to(bundle_root_resolved)
-        except (OSError, ValueError):
+        if not is_within(path, bundle_root):
             errors.add_error(
                 ExtensionError(
                     code="path-escape",
@@ -567,6 +651,60 @@ def _scan_bundle(bundle_name: str, bundle_root: Path, errors: ExtensionErrorColl
 # Pass 4 (opt-in): subprocess --execute-imports
 # ---------------------------------------------------------------------------
 
+# Environment variables that the import probe is allowed to inherit.  This is
+# an allowlist (not a denylist) so untrusted bundle code cannot read cloud /
+# CI credentials at import time even though the probe is running in a
+# subprocess.  ``--execute-imports`` is best-effort hygiene, not a sandbox:
+# the bundle code still executes Python with full process privileges, so
+# stripping credential-bearing env vars is the minimum we can do to prevent
+# trivial exfiltration by a top-level import.
+_SUBPROCESS_ENV_ALLOWLIST: frozenset[str] = frozenset(
+    {
+        # Required so Python itself can locate its stdlib, find shared libs,
+        # resolve user-locale fallbacks, and locate UTF-8 codecs on Windows.
+        "PATH",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "LC_COLLATE",
+        "LC_MESSAGES",
+        "LC_NUMERIC",
+        "LC_TIME",
+        "LC_MONETARY",
+        "PYTHONIOENCODING",
+        "PYTHONUTF8",
+        "SYSTEMROOT",  # Windows: needed by os.path
+        "WINDIR",  # Windows: needed by some libraries
+        "TEMP",  # Windows TMP fallback
+        "TMP",  # Windows TMP fallback
+        "USERPROFILE",  # Windows HOME fallback
+        # Common locale subset for non-glibc systems
+        "TZ",
+    }
+)
+
+
+def _build_probe_env(tmp_path: Path) -> dict[str, str]:
+    """Return the env mapping passed to the validate probe subprocess.
+
+    Allowlist approach: only well-known, non-credential-bearing variables
+    inherit from the parent environment.  HOME, TMPDIR, and
+    LANGFLOW_CONFIG_DIR are pinned to the throwaway temp directory so a
+    misbehaving bundle cannot read or pollute the developer's real
+    Langflow state.  Cloud credentials (AWS_*, OPENAI_API_KEY, GITHUB_TOKEN,
+    ...) are intentionally NOT in the allowlist; without this, a malicious
+    bundle's top-level import would read them and could exfiltrate.
+    """
+    env = {key: value for key, value in os.environ.items() if key in _SUBPROCESS_ENV_ALLOWLIST}
+    env["HOME"] = str(tmp_path)
+    env["TMPDIR"] = str(tmp_path)
+    env["LANGFLOW_CONFIG_DIR"] = str(tmp_path / "config")
+    # PATH is required for sys.executable to resolve loadable shared libraries
+    # on macOS / Linux; if the parent has no PATH, fall back to a minimal one.
+    if not env.get("PATH"):
+        env["PATH"] = "/usr/bin:/bin"
+    return env
+
 
 _PROBE_SCRIPT_TEMPLATE = """
 import importlib.util
@@ -605,17 +743,21 @@ def _run_execute_imports(
 ) -> None:
     """Run the bundle's modules in a clean subprocess and report failures.
 
-    Network sandboxing is out of scope for v0 (per the ticket).  We still:
+    This is best-effort hygiene, not a security sandbox:
         - launch with a fresh CWD so the bundle can't pick up local config,
-        - clear LANGFLOW_* env vars so the bundle can't read server state,
+        - inherit an allowlist of env vars only (see ``_SUBPROCESS_ENV_ALLOWLIST``)
+          so cloud / CI credentials cannot leak into untrusted bundle import,
         - point HOME / temp dirs at a throwaway directory.
+
+    Network sandboxing is out of scope for v0 (per the ticket).  The bundle
+    code still executes Python with full subprocess privileges, so do NOT
+    rely on this for security review of untrusted code; treat it as a
+    best-effort lint that surfaces import-time errors and prevents the most
+    obvious credential leak.
     """
     with tempfile.TemporaryDirectory(prefix="lfx-extension-probe-") as tmp:
         tmp_path = Path(tmp)
-        env = {k: v for k, v in os.environ.items() if not k.startswith(("LANGFLOW_", "LFX_"))}
-        env["HOME"] = str(tmp_path)
-        env["TMPDIR"] = str(tmp_path)
-        env["LANGFLOW_CONFIG_DIR"] = str(tmp_path / "config")
+        env = _build_probe_env(tmp_path)
 
         script = _PROBE_SCRIPT_TEMPLATE.format(bundle_root=str(bundle_root))
         try:

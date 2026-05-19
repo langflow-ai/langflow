@@ -1,0 +1,175 @@
+# Advisory-only check: flags PRs that change source code (.py / .ts / .tsx)
+# without touching any test file. It NEVER fails and is NOT a required check,
+# so it cannot block other jobs or the merge — it only posts a sticky PR
+# comment + job summary so the author knows tests appear to be missing.
+name: Test Coverage Advisor
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Dedicated concurrency group so this never cancels or queues behind CI.
+concurrency:
+  group: test-coverage-advisor-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  advise:
+    name: Test Coverage Advisor
+    # Skip drafts to avoid noise; they re-run on "ready_for_review".
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          # Full history so merge-base against the PR target works.
+          fetch-depth: 0
+
+      - name: Detect missing tests
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          git fetch --no-tags --depth=50 origin "$BASE_REF" || true
+          MERGE_BASE=$(git merge-base HEAD "origin/$BASE_REF" || git rev-parse HEAD~1)
+
+          echo "BASE_REF=$BASE_REF"
+          echo "MERGE_BASE=$MERGE_BASE"
+
+          CHANGED=$(git diff --name-only --diff-filter=ACMR "$MERGE_BASE"...HEAD || true)
+          echo "=== Changed files ==="
+          echo "$CHANGED"
+
+          # --- Backend Python ---------------------------------------------
+          # Source: .py under src/backend or src/lfx, excluding tests,
+          # migrations and dunder/init plumbing.
+          PY_SRC=$(echo "$CHANGED" \
+            | grep -E '^(src/backend|src/lfx)/.*\.py$' \
+            | grep -Ev '(^|/)tests?/' \
+            | grep -Ev '(^|/)(test_[^/]+|conftest)\.py$' \
+            | grep -Ev '/alembic/versions/' \
+            | grep -Ev '/__init__\.py$' \
+            || true)
+          PY_TEST=$(echo "$CHANGED" \
+            | grep -E '\.py$' \
+            | grep -E '((^|/)tests?/|(^|/)test_[^/]+\.py$|(^|/)conftest\.py$)' \
+            || true)
+
+          # --- Frontend TS/TSX --------------------------------------------
+          # Source: .ts/.tsx under src/frontend/src, excluding *.test.* /
+          # *.spec.* / __tests__ and type declaration files.
+          FE_SRC=$(echo "$CHANGED" \
+            | grep -E '^src/frontend/src/.*\.(ts|tsx)$' \
+            | grep -Ev '\.(test|spec)\.(ts|tsx)$' \
+            | grep -Ev '(^|/)__tests__/' \
+            | grep -Ev '\.d\.ts$' \
+            || true)
+          FE_TEST=$(echo "$CHANGED" \
+            | grep -E '\.(ts|tsx)$' \
+            | grep -E '(^src/frontend/tests/|\.(test|spec)\.(ts|tsx)$|(^|/)__tests__/)' \
+            || true)
+
+          need_be=false
+          need_fe=false
+          [ -n "$PY_SRC" ] && [ -z "$PY_TEST" ] && need_be=true
+          [ -n "$FE_SRC" ] && [ -z "$FE_TEST" ] && need_fe=true
+
+          {
+            echo "need_be=$need_be"
+            echo "need_fe=$need_fe"
+          } >> "$GITHUB_OUTPUT"
+
+          # Multiline outputs for the comment body.
+          {
+            echo "py_src<<EOF"
+            echo "$PY_SRC"
+            echo "EOF"
+            echo "fe_src<<EOF"
+            echo "$FE_SRC"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build advisory message
+        id: msg
+        shell: bash
+        run: |
+          set -euo pipefail
+          NEED_BE="${{ steps.detect.outputs.need_be }}"
+          NEED_FE="${{ steps.detect.outputs.need_fe }}"
+
+          BODY_FILE="$(mktemp)"
+          echo '<!-- test-coverage-advisor -->' > "$BODY_FILE"
+
+          if [ "$NEED_BE" != "true" ] && [ "$NEED_FE" != "true" ]; then
+            {
+              echo '### ✅ Test Coverage Advisor'
+              echo
+              echo 'No source changes detected without accompanying tests. Thanks for keeping coverage up! 🎉'
+              echo
+              echo '> _Advisory check only — never blocks merge._'
+            } >> "$BODY_FILE"
+          else
+            {
+              echo '### ⚠️ Test Coverage Advisor — tests appear to be missing'
+              echo
+              echo 'This PR changes source code but does **not** add or modify any test files.'
+              echo 'This is an **advisory** check: it will **not** block this PR or any other job —'
+              echo 'please add tests if the change is testable.'
+              echo
+            } >> "$BODY_FILE"
+            if [ "$NEED_BE" = "true" ]; then
+              {
+                echo '#### Backend (Python) — no `test_*.py` / `tests/` change found'
+                echo '```'
+                echo '${{ steps.detect.outputs.py_src }}'
+                echo '```'
+              } >> "$BODY_FILE"
+            fi
+            if [ "$NEED_FE" = "true" ]; then
+              {
+                echo '#### Frontend (TS/TSX) — no `*.test.*` / `*.spec.*` / `tests/` change found'
+                echo '```'
+                echo '${{ steps.detect.outputs.fe_src }}'
+                echo '```'
+              } >> "$BODY_FILE"
+            fi
+            {
+              echo
+              echo '> _Advisory check only — it always passes and is never a required status._'
+            } >> "$BODY_FILE"
+          fi
+
+          # Mirror into the run's Job Summary (works even on fork PRs).
+          cat "$BODY_FILE" >> "$GITHUB_STEP_SUMMARY"
+
+          echo "body_file=$BODY_FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Find existing advisory comment
+        id: find
+        uses: peter-evans/find-comment@v3
+        continue-on-error: true
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+          body-includes: "<!-- test-coverage-advisor -->"
+
+      - name: Upsert advisory comment
+        uses: peter-evans/create-or-update-comment@v4
+        # Fork PRs get a read-only token — don't fail the run if so.
+        continue-on-error: true
+        with:
+          comment-id: ${{ steps.find.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: ${{ steps.msg.outputs.body_file }}
+          edit-mode: replace
+
+      - name: Always succeed
+        # Explicit: this job never blocks anything.
+        run: 'echo "Advisory check complete — this status is informational only."'
