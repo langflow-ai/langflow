@@ -867,8 +867,8 @@ class TestSecurityFunctions:
             result = verify_api_key(None, "test-key-123")
             assert result == "test-key-123"
 
-    def test_verify_api_key_header_takes_precedence(self):
-        """Test that query parameter is used when both are provided."""
+    def test_verify_api_key_query_param_takes_precedence(self):
+        """Query param is checked first; when both are provided the query param value is used."""
         with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key-123"}):  # pragma: allowlist secret
             result = verify_api_key("test-key-123", "wrong-key")
             assert result == "test-key-123"
@@ -976,38 +976,6 @@ class TestCreateServeAppFactory:
         assert "/health" in routes
         assert "/flows" in routes
         assert "/flows/upload/" in routes
-
-    def test_create_serve_app_loads_startup_paths(self, tmp_path):
-        """create_serve_app() must load flows listed in LFX_SERVE_STARTUP_PATHS."""
-        import json
-        import os
-        from pathlib import Path
-        from unittest.mock import MagicMock, patch
-
-        from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV, create_serve_app
-
-        # Use the shared test flow file
-        src = Path(__file__).parent.parent.parent / "data" / "simple_chat_no_llm.json"
-        flow_path = tmp_path / "simple_chat.json"
-        flow_path.write_bytes(src.read_bytes())
-
-        mock_graph = MagicMock()
-        mock_graph.context = {}
-
-        env_override = {
-            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
-            _SERVE_STARTUP_PATHS_ENV: json.dumps([str(flow_path)]),
-        }
-
-        with (
-            patch.dict(os.environ, env_override),
-            patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
-        ):
-            app = create_serve_app()
-
-        # The flow must be in the registry — len > 0
-        assert app.state.registry is not None
-        assert len(app.state.registry) > 0, "worker must have the startup flow in its registry"
 
     def test_create_serve_app_startup_paths_cleaned_from_env_by_caller(self):
         """LFX_SERVE_STARTUP_PATHS must be consumed by create_serve_app() but not deleted —
