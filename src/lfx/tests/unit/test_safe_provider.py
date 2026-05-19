@@ -14,8 +14,7 @@ from __future__ import annotations
 import keyword
 import sys
 import types
-from unittest.mock import MagicMock, patch
-
+from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # Helpers – build a minimal fake composio_langchain.provider module so the
@@ -59,6 +58,7 @@ class TestSanitizeSchema:
 
     def _get_fn(self):
         from lfx.base.composio.safe_provider import _sanitize_schema
+
         return _sanitize_schema
 
     def test_adds_object_type_when_properties_present(self):
@@ -116,6 +116,7 @@ class TestSafeSubstituteLogic:
     def _make_safe_substitute(self, fake_mod=None):
         """Build safe_substitute using the real implementation logic."""
         import re as _re
+
         _invalid_char_re = _re.compile(r"[^a-zA-Z0-9_]")
 
         if fake_mod is None:
@@ -184,7 +185,7 @@ class TestSafeSubstituteLogic:
         schema = {"properties": {"a-b": {"type": "string"}, "a_b": {"type": "integer"}}}
         schema, keywords = sub(schema)
         assert "a-b" not in schema["properties"]
-        assert "a_b" in schema["properties"]   # original survives
+        assert "a_b" in schema["properties"]  # original survives
         assert "a_b_" in schema["properties"]  # renamed version
         assert keywords["a_b_"] == "a-b"
 
@@ -235,6 +236,7 @@ class TestPatchIdentifierSubstitutionOnce:
             patch("lfx.base.composio.safe_provider._composio_lc_provider", fake_mod),
         ):
             from lfx.base.composio import safe_provider
+
             # Reset sentinel so the patch runs fresh
             if hasattr(fake_mod, "_lfx_identifier_patched"):
                 del fake_mod._lfx_identifier_patched
@@ -262,6 +264,7 @@ class TestPatchIdentifierSubstitutionOnce:
             patch("lfx.base.composio.safe_provider._composio_lc_provider", fake_mod),
         ):
             from lfx.base.composio import safe_provider
+
             safe_provider._patch_identifier_substitution_once()
         # Function should not be re-wrapped
         assert fake_mod._substitute_reserved_python_keywords is patched_once
@@ -279,6 +282,7 @@ class TestPatchIdentifierSubstitutionOnce:
         original = fake_mod._substitute_reserved_python_keywords
         with patch("lfx.base.composio.safe_provider._COMPOSIO_AVAILABLE", False):
             from lfx.base.composio import safe_provider
+
             safe_provider._patch_identifier_substitution_once()
         assert fake_mod._substitute_reserved_python_keywords is original
 
@@ -290,7 +294,8 @@ class TestPatchIdentifierSubstitutionOnce:
 
 class TestPythonReservedExpansion:
     """The _python_reserved set on composio_langchain.provider is expanded to
-    the full Python keyword list at import time when composio is available."""
+    the full Python keyword list at import time when composio is available.
+    """
 
     def test_from_is_in_expanded_reserved_set(self):
         fake_mod = _make_fake_lc_provider()

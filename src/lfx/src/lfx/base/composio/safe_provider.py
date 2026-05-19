@@ -20,10 +20,10 @@ import keyword
 from typing import TYPE_CHECKING, Any
 
 try:
+    import composio_langchain.provider as _composio_lc_provider
     from composio.core.models import _files as _composio_files
     from composio.core.models._files import FileHelper
     from composio.utils import shared as _composio_shared
-    import composio_langchain.provider as _composio_lc_provider
     from composio_langchain import LangchainProvider
 except ImportError:  # composio extra not installed; module becomes a no-op
     _composio_files = None  # type: ignore[assignment]
@@ -215,6 +215,7 @@ def _patch_identifier_substitution_once() -> None:
         return
 
     import re as _re
+
     _invalid_char_re = _re.compile(r"[^a-zA-Z0-9_]")
     original_substitute = _composio_lc_provider._substitute_reserved_python_keywords
 
