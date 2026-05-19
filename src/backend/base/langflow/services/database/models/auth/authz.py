@@ -57,7 +57,7 @@ class AuthzRole(SQLModel, table=True):  # type: ignore[call-arg]
     name: str = Field(index=True, unique=True)
     description: str | None = Field(default=None)
     is_system: bool = Field(default=False)
-    permissions: list[str] = Field(default_factory=list, sa_column=Column(sa.JSON))
+    permissions: list[str] = Field(default_factory=list, sa_column=Column(sa.JSON, nullable=False))
     parent_role_id: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="SET NULL"), nullable=True),
