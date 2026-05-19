@@ -45,6 +45,7 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
+  modelType: modelTypeProp,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -111,9 +112,10 @@ export default function ModelInputComponent({
   });
 
   const modelType =
-    nodeClass?.template?.model?.model_type === "language"
+    modelTypeProp ??
+    (nodeClass?.template?.model?.model_type === "language"
       ? "llm"
-      : "embeddings";
+      : "embeddings");
 
   // Declarative metadata filters from the backend ModelInput (e.g. Agent
   // declares ``filters={"tool_calling": True}``). The backend already
