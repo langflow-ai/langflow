@@ -1047,4 +1047,102 @@ describe("ModelInputComponent", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  describe("Error / Retry", () => {
+    it("renders the retry button and hides the loading spinner when providers query errors", () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 403"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: {} },
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByTestId("model-input-load-failed")).toBeInTheDocument();
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
+    });
+
+    it("invokes both refetch functions when the retry button is clicked", async () => {
+      const refetchProviders = jest.fn();
+      const refetchEnabled = jest.fn();
+
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 401"),
+        refetch: refetchProviders,
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 401"),
+        refetch: refetchEnabled,
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      await user.click(screen.getByTestId("model-input-load-failed"));
+
+      expect(refetchProviders).toHaveBeenCalledTimes(1);
+      expect(refetchEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("falls back to the loading spinner while an error refetch is in flight", () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      // Errors are present but a refetch is currently in flight — we don't
+      // want the user to see the error UI flicker while we're retrying.
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: true,
+        error: new Error("transient"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: {} },
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("model-input-load-failed"),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

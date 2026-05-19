@@ -124,6 +124,25 @@ class AuthService(BaseAuthService):
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
 
+        # AUTO_LOGIN parity with _api_key_security_impl: when AUTO_LOGIN is
+        # enabled and the operator has explicitly opted in via
+        # skip_auth_auto_login, fall back to the superuser instead of
+        # rejecting the request. Without this, ``get_current_user``-protected
+        # endpoints reject unauthenticated requests even though API-key
+        # endpoints accept them, breaking ADK/dev integrations that rely on
+        # AUTO_LOGIN.
+        auth_settings = self.settings.auth_settings
+        if auth_settings.AUTO_LOGIN and auth_settings.skip_auth_auto_login:
+            if not auth_settings.SUPERUSER:
+                msg = "Missing first superuser credentials"
+                raise InvalidCredentialsError(msg)
+            superuser = await get_user_by_username(db, auth_settings.SUPERUSER)
+            if superuser is None:
+                msg = "Superuser not found"
+                raise InvalidCredentialsError(msg)
+            logger.warning(AUTO_LOGIN_WARNING)
+            return superuser
+
         # No credentials provided
         msg = "No authentication credentials provided"
         raise MissingCredentialsError(msg)

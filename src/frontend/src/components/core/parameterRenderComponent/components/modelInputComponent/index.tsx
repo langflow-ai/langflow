@@ -119,14 +119,20 @@ export default function ModelInputComponent({
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    error: providersError,
+    refetch: refetchProviders,
   } = useGetModelProviders({});
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    error: enabledModelsError,
+    refetch: refetchEnabledModels,
   } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
+  const isFetching = isFetchingProviders || isFetchingEnabledModels;
+  const hasLoadError = !!(providersError || enabledModelsError) && !isFetching;
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -500,6 +506,30 @@ export default function ModelInputComponent({
     </Button>
   );
 
+  const handleRetryLoad = useCallback(() => {
+    void refetchProviders();
+    void refetchEnabledModels();
+  }, [refetchProviders, refetchEnabledModels]);
+
+  const renderErrorButton = () => (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+      data-testid="model-input-load-failed"
+      onClick={handleRetryLoad}
+    >
+      <span className="flex items-center gap-2 truncate text-left">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+        />
+        <span className="truncate">{t("modelInput.loadFailed")}</span>
+      </span>
+      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
+    </Button>
+  );
+
   const renderFooterButton = (
     label: string,
     icon: string,
@@ -579,6 +609,15 @@ export default function ModelInputComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  // Surface a retry affordance whenever the underlying queries failed and
+  // we're not currently refetching. Without this the dropdown silently
+  // stays empty (or, before the api interceptor fix, looped on
+  // "Loading models…" indefinitely) when the auth/model endpoints reject
+  // the request — leaving the user with no way to recover from the UI.
+  if (hasLoadError) {
+    return <div className="w-full">{renderErrorButton()}</div>;
   }
 
   // Show loading indicator only when actually loading data, not when options are genuinely empty

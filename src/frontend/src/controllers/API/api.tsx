@@ -8,7 +8,6 @@ import { useEffect } from "react";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
-import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
 import {
   getAxiosWithCredentials,
   getFetchCredentials,
@@ -92,9 +91,13 @@ function ApiInterceptor() {
 
         await clearBuildVerticesState(error);
 
-        if (!isAuthenticationError) {
-          return Promise.reject(error);
-        }
+        // Always reject so the caller (or React Query retry logic) can
+        // surface the failure. Previously this dropped through for
+        // AUTO_LOGIN auth errors and resolved with `undefined`, leaving
+        // callers stuck reading `response.data` off an undefined response —
+        // which produced infinite "Loading models…" spinners on fresh
+        // installs whose auto-login cookie hadn't reached protected endpoints.
+        return Promise.reject(error);
       },
     );
 
@@ -356,9 +359,9 @@ async function performStreamingRequest({
         await onData(data);
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (onNetworkError) {
-      onNetworkError(e);
+      onNetworkError(e as Error);
     } else {
       throw e;
     }
