@@ -248,7 +248,7 @@ class TestFlowBuilderToolsIntegration:
         # Two back-to-back calls. The underlying registry walk should
         # happen ONCE per (tool_name, args). We assert this via a side
         # channel: patching the inner load_local_registry to count calls.
-        import lfx.mcp.flow_builder_tools.read_tools as fbt  # Patch the module that actually resolves the symbol (B2 split)
+        import lfx.mcp.flow_builder_tools.read_tools as fbt  # B2: patch the resolution site
 
         calls = 0
         original = fbt._load_registry_user_aware
@@ -273,7 +273,7 @@ class TestFlowBuilderToolsIntegration:
         tool = DescribeComponentType()
         tool.component_type = "ChatInput"
 
-        import lfx.mcp.flow_builder_tools.read_tools as fbt  # Patch the module that actually resolves the symbol (B2 split)
+        import lfx.mcp.flow_builder_tools.read_tools as fbt  # B2: patch the resolution site
 
         calls = 0
         original = fbt._load_registry_user_aware
@@ -297,7 +297,7 @@ class TestFlowBuilderToolsIntegration:
 
         tool = DescribeComponentType()
 
-        import lfx.mcp.flow_builder_tools.read_tools as fbt  # Patch the module that actually resolves the symbol (B2 split)
+        import lfx.mcp.flow_builder_tools.read_tools as fbt  # B2: patch the resolution site
 
         calls = 0
         original = fbt._load_registry_user_aware
@@ -325,7 +325,7 @@ class TestFlowBuilderToolsIntegration:
         tool = DescribeComponentType()
         tool.component_type = "ChatInput"
 
-        import lfx.mcp.flow_builder_tools.read_tools as fbt  # Patch the module that actually resolves the symbol (B2 split)
+        import lfx.mcp.flow_builder_tools.read_tools as fbt  # B2: patch the resolution site
 
         calls = 0
         original = fbt._load_registry_user_aware
