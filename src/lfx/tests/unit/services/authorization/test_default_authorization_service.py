@@ -1,0 +1,86 @@
+"""Tests for the default LFX AuthorizationService (no-op allow-all implementation)."""
+
+from __future__ import annotations
+
+from uuid import uuid4
+
+import pytest
+from lfx.services.authorization.base import BaseAuthorizationService
+from lfx.services.authorization.service import AuthorizationService
+
+
+@pytest.fixture
+def service() -> AuthorizationService:
+    """Build a fresh default authorization service."""
+    return AuthorizationService()
+
+
+def test_service_is_ready_and_named(service: AuthorizationService) -> None:
+    """The default service initializes ready and uses the canonical service name."""
+    assert service.ready is True
+    assert service.name == "authorization_service"
+
+
+def test_service_subclasses_base(service: AuthorizationService) -> None:
+    """The default implementation conforms to the BaseAuthorizationService contract."""
+    assert isinstance(service, BaseAuthorizationService)
+
+
+@pytest.mark.asyncio
+async def test_is_enabled_returns_false(service: AuthorizationService) -> None:
+    """The LFX default reports authorization as disabled."""
+    assert await service.is_enabled() is False
+
+
+@pytest.mark.asyncio
+async def test_enforce_returns_true_for_any_input(service: AuthorizationService) -> None:
+    """Default enforce permits every request regardless of arguments."""
+    user_id = uuid4()
+    assert (
+        await service.enforce(
+            user_id=user_id,
+            domain="*",
+            obj="flow:xyz",
+            act="write",
+        )
+        is True
+    )
+    assert (
+        await service.enforce(
+            user_id=user_id,
+            domain="other",
+            obj="project:1",
+            act="delete",
+            context={"is_superuser": False},
+        )
+        is True
+    )
+
+
+@pytest.mark.asyncio
+async def test_batch_enforce_returns_all_true_for_any_length(service: AuthorizationService) -> None:
+    """batch_enforce returns a True list matching the request count, for any length."""
+    user_id = uuid4()
+
+    empty = await service.batch_enforce(user_id=user_id, domain="*", requests=[])
+    assert empty == []
+
+    single = await service.batch_enforce(user_id=user_id, domain="*", requests=[("flow:a", "read")])
+    assert single == [True]
+
+    requests = [(f"flow:{i}", "read") for i in range(5)]
+    five = await service.batch_enforce(user_id=user_id, domain="*", requests=requests)
+    assert five == [True, True, True, True, True]
+
+
+@pytest.mark.asyncio
+async def test_get_allowed_actions_returns_full_list(service: AuthorizationService) -> None:
+    """get_allowed_actions returns every requested action when default service is used."""
+    actions = ["read", "write", "delete", "execute"]
+    result = await service.get_allowed_actions(
+        user_id=uuid4(),
+        domain="*",
+        obj="flow:abc",
+        actions=actions,
+    )
+    assert result == actions
