@@ -118,10 +118,16 @@ export const useProviderConfiguration = ({
     useGetModelProviders(
       { includeDeprecated: true },
       {
-        refetchInterval:
-          syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
-            ? 10000
-            : false,
+        // Issue #13137: the previous 10s ``refetchInterval`` polled
+        // ``/api/v1/models`` continuously while the Ollama card was
+        // selected. Each backend call serially probed every Ollama model
+        // (GET /api/tags + POST /api/show per model), so with many models
+        // the request took longer than the interval and the queue grew
+        // unbounded. The catalog already refreshes on credential save and
+        // disconnect via ``invalidateProviderQueries``, so the timer is
+        // unnecessary — leaving it removed makes the list update on
+        // demand instead of on a fixed schedule.
+        refetchInterval: false,
         staleTime: 1000 * 30, // 30 seconds
       },
     );

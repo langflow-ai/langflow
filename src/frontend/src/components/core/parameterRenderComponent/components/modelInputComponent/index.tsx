@@ -115,6 +115,41 @@ export default function ModelInputComponent({
       ? "llm"
       : "embeddings";
 
+  // Declarative metadata filters from the backend ModelInput (e.g. Agent
+  // declares ``filters={"tool_calling": True}``). The backend already
+  // applies this to ``options``, but the augment loop below adds models
+  // from ``useGetModelProviders`` (which is *not* filter-aware), so without
+  // this re-check the picker re-introduces tool-incompatible models
+  // alongside the backend-filtered list. Conservative: when a filter key
+  // is set but the candidate's metadata doesn't carry that key at all, the
+  // candidate fails the check — we'd rather drop an undeclared model than
+  // surface one that crashes at run time.
+  const modelFilters = useMemo(() => {
+    const raw = (
+      nodeClass?.template?.model as
+        | { filters?: Record<string, unknown> }
+        | undefined
+    )?.filters;
+    if (!raw || typeof raw !== "object") return undefined;
+    const entries = Object.entries(raw).filter(
+      ([, v]) => v !== null && v !== undefined,
+    );
+    if (entries.length === 0) return undefined;
+    return Object.fromEntries(entries) as Record<string, unknown>;
+  }, [nodeClass]);
+
+  const passesModelFilters = useCallback(
+    (metadata: Record<string, unknown> | undefined | null): boolean => {
+      if (!modelFilters) return true;
+      if (!metadata) return false;
+      for (const [key, expected] of Object.entries(modelFilters)) {
+        if (metadata[key] !== expected) return false;
+      }
+      return true;
+    },
+    [modelFilters],
+  );
+
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
@@ -177,6 +212,20 @@ export default function ModelInputComponent({
         }
       }
 
+      // Defensive filter pass. The backend's update_build_config already
+      // applies ``filters`` to ``options``, but stale saved flows (template
+      // persisted before the filter shipped) can deliver a build_config
+      // that hasn't been filter-corrected yet. Apply the same filter here
+      // so a tool-incompatible saved model can't surface even when
+      // ``options`` includes it.
+      if (
+        !passesModelFilters(
+          option.metadata as Record<string, unknown> | undefined,
+        )
+      ) {
+        continue;
+      }
+
       if (!grouped[provider]) {
         grouped[provider] = [];
       }
@@ -209,15 +258,23 @@ export default function ModelInputComponent({
           // Only include models whose declared type matches this component.
           // Older metadata without ``model_type`` is allowed through so we
           // don't regress providers that haven't adopted the tag yet.
-          const modelMetadataType = (
-            model.metadata as Record<string, unknown> | undefined
-          )?.model_type;
+          const modelMetadata = (model.metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const modelMetadataType = modelMetadata.model_type;
           if (
             typeof modelMetadataType === "string" &&
             modelMetadataType !== modelType
           ) {
             continue;
           }
+
+          // Apply the declarative filter (e.g. tool_calling=True for the
+          // Agent picker). Without this, every enabled model from
+          // ``useGetModelProviders`` re-enters the dropdown regardless of
+          // capability and re-introduces the bug the backend filter fixed.
+          if (!passesModelFilters(modelMetadata)) continue;
 
           const key = `${providerName}::${modelName}`;
           if (seen.has(key)) continue;
@@ -230,7 +287,7 @@ export default function ModelInputComponent({
             name: modelName,
             icon: providerInfo.icon || "Bot",
             provider: providerName,
-            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+            metadata: modelMetadata,
           });
         }
       }
@@ -262,7 +319,14 @@ export default function ModelInputComponent({
     }
 
     return grouped;
-  }, [options, enabledModelsData, providersData, modelType, value]);
+  }, [
+    options,
+    enabledModelsData,
+    providersData,
+    modelType,
+    value,
+    passesModelFilters,
+  ]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(

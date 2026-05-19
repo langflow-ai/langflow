@@ -260,6 +260,14 @@ serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
+# duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
+# Public consumers should install lfx-duckduckgo directly (pip-installing
+# langflow-base no longer pulls in ddgs by default).  The extra remains
+# defined here so docker/build_and_push_base.Dockerfile can route ddgs
+# through the locked sync (``uv sync --extra duckduckgo``) instead of an
+# unpinned ``uv pip install ddgs`` that would silently drift across
+# rebuilds.  Keep the version range in lockstep with the bundle's
+# pyproject so the lockfile resolves a single ddgs version.
 duckduckgo = ["ddgs>=9.0.0"]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
@@ -422,7 +430,8 @@ complete = [
     "langflow-base[google-api]",
     "langflow-base[wikipedia]",
     "langflow-base[fake-useragent]",
-    "langflow-base[duckduckgo]",
+    # duckduckgo was an extra of langflow-base; the LE-1023 pilot moved it
+    # to the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
     "langflow-base[yfinance]",
     "langflow-base[wolframalpha]",
     "langflow-base[pyarrow]",
