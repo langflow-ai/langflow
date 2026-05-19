@@ -75,9 +75,7 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item, index) => (
           <div key={item.id}>
-            {index === 4 && (
-              <Separator className="mx-auto my-1 w-5" />
-            )}
+            {index === 4 && <Separator className="mx-auto my-1 w-5" />}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton
