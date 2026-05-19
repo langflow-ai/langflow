@@ -15,7 +15,9 @@ jest.mock("@/stores/flowStore", () => {
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const flowStoreState = (
-  require("@/stores/flowStore") as { default: { getState: () => { setNodes: jest.Mock } } }
+  require("@/stores/flowStore") as {
+    default: { getState: () => { setNodes: jest.Mock } };
+  }
 ).default.getState();
 
 const LONG =
@@ -70,10 +72,7 @@ function renderValueCard() {
     status: "pending" as const,
   };
   render(
-    <FlowEditCarousel
-      actions={[action as never]}
-      onUpdateAction={jest.fn()}
-    />,
+    <FlowEditCarousel actions={[action as never]} onUpdateAction={jest.fn()} />,
   );
 }
 
@@ -139,9 +138,7 @@ describe("FlowEditCarousel — Accept All applies patches (data-loss regression)
     const onUpdateAction = jest.fn();
     render(
       <FlowEditCarousel
-        actions={
-          [patchedAction("a1", 0), patchedAction("a2", 1)] as never
-        }
+        actions={[patchedAction("a1", 0), patchedAction("a2", 1)] as never}
         onUpdateAction={onUpdateAction}
       />,
     );
@@ -205,9 +202,7 @@ describe("FlowEditCard — long description collapsing", () => {
     expect(
       screen.getByRole("button", { name: /show less/i }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /show more/i }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /show more/i })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /show less/i }));
     expect(

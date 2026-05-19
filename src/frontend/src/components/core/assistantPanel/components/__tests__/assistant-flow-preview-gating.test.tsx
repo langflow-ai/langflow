@@ -290,7 +290,9 @@ describe("AssistantFlowPreview gating", () => {
         />,
       );
       expect(screen.getByTestId("react-flow-mock")).toBeInTheDocument();
-      expect(screen.queryByText(/too many components/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/too many components/i),
+      ).not.toBeInTheDocument();
     });
 
     it("should_hide_preview_canvas_and_show_notice_when_more_than_7_components", () => {

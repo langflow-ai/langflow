@@ -142,7 +142,9 @@ async function proposeEditsTurn(n: number, continuationExpected = true) {
   return hook;
 }
 
-function assistantMsgId(result: { current: { messages: { id: string; role: string }[] } }) {
+function assistantMsgId(result: {
+  current: { messages: { id: string; role: string }[] };
+}) {
   return result.current.messages.find((m) => m.role === "assistant")!.id;
 }
 
