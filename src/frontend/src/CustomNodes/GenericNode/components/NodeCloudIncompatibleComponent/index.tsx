@@ -5,7 +5,7 @@ export default function NodeCloudIncompatibleComponent() {
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-3 border-b bg-muted p-2 px-4 py-2",
+        "box-border flex w-full max-w-full items-center gap-3 overflow-hidden rounded-t-[inherit] border-b bg-muted px-4 py-2",
       )}
       data-testid="cloud-incompatible-banner"
     >
