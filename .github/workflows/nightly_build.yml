@@ -297,11 +297,11 @@ jobs:
     secrets: inherit
   db-migration-validation:
     name: Run DB Migration Validation
-    needs: [release-nightly-build]
+    needs: [create-nightly-tag, release-nightly-build]
     if: ${{ github.repository == 'langflow-ai/langflow' && always() && needs.release-nightly-build.result == 'success' }}
     uses: ./.github/workflows/db-migration-validation.yml
     with:
-      nightly_tag: langflowai/langflow-nightly:latest
+      nightly_tag: ${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
 
