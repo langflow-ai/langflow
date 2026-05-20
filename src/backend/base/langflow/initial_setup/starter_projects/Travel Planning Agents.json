@@ -798,6 +798,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",
