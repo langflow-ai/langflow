@@ -5,15 +5,24 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.ibm.db2_sql import DB2SQLComponent
+    from lfx.components.ibm.db2_vector import DB2VectorStoreComponent
     from lfx.components.ibm.watsonx import WatsonxAIComponent
     from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
 _dynamic_imports = {
     "WatsonxAIComponent": "watsonx",
     "WatsonxEmbeddingsComponent": "watsonx_embeddings",
+    "DB2VectorStoreComponent": "db2_vector",
+    "DB2SQLComponent": "db2_sql",
 }
 
-__all__ = ["WatsonxAIComponent", "WatsonxEmbeddingsComponent"]
+__all__ = [
+    "DB2SQLComponent",
+    "DB2VectorStoreComponent",
+    "WatsonxAIComponent",
+    "WatsonxEmbeddingsComponent",
+]
 
 
 def __getattr__(attr_name: str) -> Any:
