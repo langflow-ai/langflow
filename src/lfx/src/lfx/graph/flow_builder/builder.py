@@ -61,13 +61,22 @@ def load_local_registry() -> dict[str, dict]:
     return registry
 
 
-def build_flow_from_spec(spec: str) -> dict[str, Any]:
+def build_flow_from_spec(
+    spec: str,
+    registry: dict[str, dict] | None = None,
+) -> dict[str, Any]:
     """Build a flow dict from a text spec. Returns the flow or errors.
+
+    The ``registry`` argument lets callers (notably the MCP flow-builder
+    tools) inject a user-aware registry overlay — base components plus
+    Components the calling user has registered into their sandbox. When
+    omitted, falls back to the bundled base registry only.
 
     On success: {"flow": <flow_dict>, "name": str, "node_count": int, "edge_count": int}
     On failure: {"error": str, "details": str}
     """
-    registry = load_local_registry()
+    if registry is None:
+        registry = load_local_registry()
 
     try:
         parsed = parse_flow_spec(spec)

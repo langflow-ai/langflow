@@ -23,6 +23,34 @@ def _generate_id(component_type: str) -> str:
     return f"{component_type}-{suffix}"
 
 
+def _normalize_outputs(node_data: dict) -> None:
+    """Backfill required Output fields the bundled registry sometimes omits.
+
+    The local registry index (``_assets/component_index.json``) was built from
+    component definitions that didn't always serialize every Output field.
+    Downstream consumers — the canvas serializer, the ``/custom_component/update``
+    endpoint, the LFX dataclass deserializer — expect the full 13-field Output
+    shape (see ``lfx.template.field.base.Output``). Partial entries crash with
+    ``string indices must be integers, not 'str'`` when a serializer tries to
+    walk what it thinks is a dict but the deserializer left as a string.
+
+    Fills the missing fields with the safe defaults real saved outputs use, so
+    flows built via ``build_flow_from_spec`` load on the canvas without the
+    "Error while updating the Component" toast.
+
+    Idempotent.
+    """
+    outputs = node_data.get("outputs")
+    if not isinstance(outputs, list):
+        return
+    for output in outputs:
+        if not isinstance(output, dict):
+            continue
+        output.setdefault("hidden", False)
+        output.setdefault("options", None)
+        output.setdefault("required_inputs", None)
+
+
 def _make_node(
     component_type: str,
     registry: dict[str, dict],
@@ -43,6 +71,7 @@ def _make_node(
         raise ValueError(msg)
 
     node_data = copy.deepcopy(registry[component_type])
+    _normalize_outputs(node_data)
 
     return {
         "id": cid,
@@ -103,10 +132,19 @@ def configure_component(
             available = [k for k in template if isinstance(template[k], dict)]
             msg = f"Unknown parameter '{key}' on component '{component_id}'. Available: {available}"
             raise ValueError(msg)
-        if isinstance(template[key], dict):
-            template[key]["value"] = value
-        else:
-            template[key] = {"value": value}
+        if not isinstance(template[key], dict):
+            # Reserved non-field entries (e.g. "_type", metadata strings) are not
+            # configurable; wrapping them would corrupt the node. Reject instead.
+            available = [k for k in template if isinstance(template[k], dict)]
+            msg = (
+                f"Parameter '{key}' on component '{component_id}' is not a configurable "
+                f"field (reserved template entry). Available: {available}"
+            )
+            # Why: this function's contract raises ValueError for every config
+            # error (see sibling check + test_configure_unknown_field_raises);
+            # callers catch ValueError. TypeError would break that contract.
+            raise ValueError(msg)  # noqa: TRY004
+        template[key]["value"] = value
 
 
 def get_component(flow: dict, component_id: str) -> dict:

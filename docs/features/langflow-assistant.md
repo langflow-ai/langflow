@@ -2,8 +2,23 @@
 
 > Generated on: 2026-01-21
 > Updated on: 2026-03-30
+> Updated on: 2026-05-19
 > Status: Draft
 > Owner: Engineering Team
+
+> **2026-05-19 revision** — Single-agent-loop pivot (Claude Code / Codex pattern):
+> the assistant is now ONE agent + an MCP toolkit instead of a multi-phase
+> orchestrator. New MCP tools `GenerateComponent`, `DescribeFlowIO`, and
+> `RunFlow`; run metrics surfaced on completion; edit+run continuation gating;
+> provider-agnostic in-flow model selection (no OpenAI obligation); an
+> "Orchestrating..." progress step for multi-step prompts. Single-thing
+> requests are byte-identical to the previous experience.
+
+> **Companion docs**: end-to-end architecture (with Mermaid sequence/flow
+> diagrams) lives at
+> `src/backend/base/langflow/agentic/ARCHITECTURE.md`. This document covers the
+> product/feature-level model; refer to ARCHITECTURE.md for the internal
+> single-agent-loop and MCP tool wiring.
 
 ---
 
@@ -75,6 +90,16 @@ This context owns:
 | **OffTopic** | Intent classification for questions unrelated to Langflow (other tools, general knowledge) | `"off_topic"`, `OFF_TOPIC_REFUSAL_MESSAGE` |
 | **RuntimeValidation** | Second-phase validation that instantiates the component class to catch import/runtime errors | `validate_component_runtime()`, `build_custom_component_template()` |
 | **AgenticSessionPrefix** | `agentic_` prefix on session IDs to isolate Assistant sessions from Playground | `AGENTIC_SESSION_PREFIX` |
+| **SingleAgentLoop** | The assistant is one agent (`flow_builder_assistant.py`) plus an MCP toolkit; the same loop chains tools for multi-thing prompts instead of spawning sub-agents (Claude Code / Codex pattern) | `flow_builder_assistant.py`, `src/lfx/src/lfx/mcp/flow_builder_tools/` |
+| **GenerateComponent** | MCP tool that re-enters the full component validation pipeline mid-loop, registers the user component, and returns `class_name` so `SearchComponentTypes` can find it | `GenerateComponent` (`flow_builder_tools/`) |
+| **DescribeFlowIO** | MCP tool that deterministically classifies a flow's inputs/outputs/tool components from the actual wiring (scalable for large flows; replaces guess-by-name) | `DescribeFlowIO` (`flow_builder_tools/`) |
+| **RunFlow** | MCP tool that executes the canvas flow and returns the result plus run metrics | `RunFlow` (`flow_builder_tools/`), `agentic/services/flow_run.py` |
+| **RunMetrics** | `{duration_seconds, input_tokens, output_tokens, total_tokens}` returned by `RunFlow`; duration via `perf_counter`, tokens via `extract_graph_token_usage` over graph vertices | `agentic/services/flow_run.py`, `extract_graph_token_usage` |
+| **OrchestratingStep** | Progress step/label ("Orchestrating...") chosen for compound or build+run prompts; the run detector is a post-LLM rescue, not a pre-LLM override | `agentic/services/request_framing.py::decide_progress_step` |
+| **EditContinuation** | After the user approves proposed canvas edits, the frontend saves the flow then silently re-sends `EDIT_CONTINUATION_INPUT` so the SAME request finishes deferred steps; only fires when a deferred step existed (`continuation_expected`) | `EDIT_CONTINUATION_INPUT`, `continuation_expected` |
+| **ComponentThenFlow** | Compound intent: make a component, build a flow with it, then run it — handled by the single agent loop in one request | `component_then_flow` (`translation_flow.py` / `intent_classification.py`) |
+| **AvailableModelProviders** | Detects providers that actually have a configured key and injects an `[Available language models ...]` block into the prompt; no fixed OpenAI/Anthropic obligation for the flow's Agent node | `available_model_providers(global_variables)` (`agentic/services/flow_preparation.py`) |
+| **PlanApproval** | `PLAN_APPROVAL_INPUT` is a byte-identical FE/BE protocol string matched exactly and bypassing the classifier; `propose_plan` is optional (only large/ambiguous changes stop for a plan card) | `PLAN_APPROVAL_INPUT`, `propose_plan` |
 
 ---
 
@@ -152,6 +177,9 @@ The frontend implements automatic model selection to ensure a valid model is alw
 | `ValidationSucceeded` | Code compiled and instantiated | `{class_name, code}` | Assistant Service |
 | `ValidationFailed` | Code failed to compile/instantiate | `{error, code, class_name?}` | Assistant Service (triggers retry) |
 | `ComponentApproved` | User clicked "Add to Canvas" | `{component_code, class_name}` | Canvas (adds node) |
+| `OrchestratingStarted` | Compound or build+run prompt detected (post-LLM rescue) | `{step: "orchestrating", message: "Orchestrating..."}` | Frontend UI (SSE) |
+| `RunMetricsSurfaced` | `RunFlow` finished executing the canvas flow | `{duration_seconds, input_tokens, output_tokens, total_tokens}` (folded into the `complete` payload) | Frontend UI (SSE) |
+| `EditContinuationResent` | User approved proposed canvas edits and a deferred step existed | `EDIT_CONTINUATION_INPUT` re-sent on the SAME request (`continuation_expected: true`) | Assistant Service |
 
 ---
 
@@ -325,6 +353,55 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **But** the message has `completedSteps` containing component generation steps
 - **When** the content contains a Python class extending Component in a code block
 - **Then** the frontend should extract and display it as a component card
+
+### Scenario: Compound prompt — create a component, build a flow with it, and run it
+- **Given** the assistant panel is open
+- **When** I enter "Create a component that reverses text, build a flow that uses it, and run it"
+- **Then** the intent should be classified as "component_then_flow" (compound)
+- **And** I should see the "Orchestrating..." progress step
+- **And** the SAME single agent loop should chain the tools: `GenerateComponent` → build the flow → `RunFlow`
+- **And** no separate sub-agents should be spawned
+- **And** I should see the run result followed by run metrics
+
+### Scenario: Provider-agnostic in-flow model auto-pick (no OpenAI obligation)
+- **Given** the assistant panel is open
+- **And** only a non-OpenAI provider (e.g., Anthropic or Groq) has a configured API key
+- **When** I ask the assistant to build a flow containing an Agent node
+- **Then** the prompt should include an `[Available language models ...]` block listing only providers with a configured key
+- **And** the Agent node should be wired with a provider that actually has a key (no forced OpenAI/Anthropic)
+- **And** the assistant must NOT run an Agent that has no model configured
+
+### Scenario: Orchestrating indicator on multi-step prompts
+- **Given** the assistant panel is open
+- **When** I enter a prompt that asks to both build a flow and run it
+- **Then** `decide_progress_step` should select the `orchestrating` step
+- **And** I should see an "Orchestrating..." progress label (not just "Generating...")
+- **And** the run detection should occur as a post-LLM rescue, not a pre-LLM keyword override
+
+### Scenario: Run metrics shown after a run
+- **Given** the assistant has just executed a flow via `RunFlow`
+- **When** the run completes
+- **Then** the completion payload should include `duration_seconds`, `input_tokens`, `output_tokens`, and `total_tokens`
+- **And** the duration should be measured with `perf_counter`
+- **And** the token counts should be aggregated from the graph vertices via `extract_graph_token_usage`
+- **And** the agent should report these metrics in its reply
+- **And** there should be NO separate "run visual feedback" UI (only run + result + metrics)
+
+### Scenario: Edit + run continuation after approval
+- **Given** the assistant proposed canvas edits and the user is asked to approve them
+- **And** a deferred step exists (e.g., running the flow after the edit)
+- **When** I approve the proposed edits
+- **Then** the frontend should save the flow first
+- **And** then silently re-send `EDIT_CONTINUATION_INPUT` on the SAME request
+- **And** the deferred step (running the flow) should complete in that continuation
+- **And** if NO deferred step existed (`continuation_expected` is false), no continuation should fire (prevents the duplicate-message glitch)
+
+### Scenario: propose_plan is optional
+- **Given** the assistant panel is open
+- **When** I ask for a small, unambiguous flow change
+- **Then** the agent should apply it directly without stopping for a plan card
+- **When** I ask for a large or ambiguous change
+- **Then** the agent should stop and present a plan card for approval (`PLAN_APPROVAL_INPUT`)
 
 ### Scenario: Clear conversation history
 - **Given** I have multiple messages in the chat
@@ -602,11 +679,12 @@ Add a second validation phase (`validate_component_runtime`) that attempts to in
 - The retry loop includes runtime error context, improving LLM's ability to self-correct
 
 **Trade-offs:**
-- Runtime validation executes the generated code (mitigated by prior security scan)
+- Runtime validation executes the generated code (mitigated by the prior `scan_code_security` AST scan — its denylist was widened to block secret/env exfiltration `os.environ`/`os.getenv`/`os.putenv`, raw file access `open()`/`breakpoint()`, and dunder sandbox escapes `__subclasses__`/`__globals__`/`__builtins__`/…; HTTP is intentionally allowed to keep legitimate API components working). Note this is a denylist, not a true sandbox.
 - Slightly slower validation per attempt (~100ms overhead)
 
 **Key Files:**
 - `src/backend/.../agentic/helpers/validation.py` — `validate_component_runtime()`
+- `src/backend/.../agentic/helpers/code_security.py` — `scan_code_security()` denylist (shared with the run-time gate; see ADR-MCP-040 in `langflow-assistant-mcp.md` — `run_working_flow` re-scans every node's inline code before `exec` to close the bypass for code that skipped generation-time scanning)
 - `src/backend/.../agentic/services/assistant_service.py` — calls runtime validation after AST passes
 
 ---
@@ -718,6 +796,175 @@ Session history is stored in browser `localStorage` (key: `langflow-assistant-se
 
 ---
 
+### ADR-016: Single-Agent-Loop over Multi-Phase Orchestration
+
+**Status**: Accepted (supersedes the multi-phase orchestrator approach)
+
+#### Context
+The assistant had grown into a multi-phase orchestrator with separate sub-agents per phase. This added coordination overhead, divergent prompts, and made compound requests ("make a component, build a flow with it, and run it") brittle. Tools like Claude Code and Codex demonstrate that a single agent with a good toolkit handles multi-step work more reliably.
+
+#### Decision
+Collapse the assistant into ONE agent (`flow_builder_assistant.py`) plus an MCP toolkit (`src/lfx/src/lfx/mcp/flow_builder_tools/`). Single-thing requests behave exactly as before (byte-identical experience). When the user asks for multiple things in one prompt, the SAME single loop chains the tools (orchestration) — no separate sub-agents are spawned.
+
+#### Consequences
+
+**Benefits:**
+- One prompt, one loop — simpler to reason about and to evolve
+- Compound requests handled natively by tool chaining
+- No cross-sub-agent state divergence
+
+**Trade-offs:**
+- The single prompt must encode targeting/self-verification discipline (see ADR-021)
+- Long tool chains accumulate context within one loop
+
+**Key Files:**
+- `src/backend/.../agentic/flows/flow_builder_assistant.py` — the single agent
+- `src/lfx/src/lfx/mcp/flow_builder_tools/` — `GenerateComponent`, `DescribeFlowIO`, `RunFlow`
+- `src/backend/base/langflow/agentic/ARCHITECTURE.md` — end-to-end diagrams
+
+---
+
+### ADR-017: Provider-Agnostic In-Flow Model Selection
+
+**Status**: Accepted (clarifies/supersedes the provider-preference part of ADR-014 and the §3 "Model Selection Behavior" / `ModelProviderConfiguration` provider-preference invariant)
+
+#### Context
+The §3 `ModelProviderConfiguration` invariant and the "Model Selection Behavior" note state a hard preference order "Anthropic > OpenAI > Google Generative AI > Groq" and imply a provider fallback obligation for the *in-flow Agent model*. In practice, forcing a fixed order (especially an OpenAI obligation) fails when only a different provider has a configured key.
+
+#### Decision
+`available_model_providers(global_variables)` in `agentic/services/flow_preparation.py` detects providers that actually have a configured key. The prompt injects an `[Available language models ...]` block and forbids running an Agent that has no model.
+
+Clarification of the older text (the original text is intentionally **not deleted**): the *assistant's own* model is preferred when available; for the **flow's Agent node**, any provider with a configured key may be used — there is **no fixed OpenAI/Anthropic obligation** and no fixed provider-preference order.
+
+#### Consequences
+
+**Benefits:**
+- Works with any single configured provider (no OpenAI requirement)
+- The Agent node is never wired without a usable model
+- Prompt is grounded in the user's real provider configuration
+
+**Trade-offs:**
+- Model choice for the flow's Agent is less deterministic across users
+
+**Key Files:**
+- `src/backend/.../agentic/services/flow_preparation.py` — `available_model_providers()`
+
+---
+
+### ADR-018: Optional propose_plan
+
+**Status**: Accepted
+
+#### Context
+Previously the agent stopped for a plan card on essentially every flow build, which slowed down small/unambiguous edits and added an extra approval round-trip.
+
+#### Decision
+`propose_plan` is now OPTIONAL. The agent only stops for a plan card on large or ambiguous changes; small unambiguous changes are applied directly. Plan approval still uses the byte-identical `PLAN_APPROVAL_INPUT` protocol string (matched exactly, bypassing the classifier).
+
+#### Consequences
+
+**Benefits:**
+- Faster path for routine edits
+- Plan card reserved for cases where it actually adds value
+
+**Trade-offs:**
+- Heuristic decides "large/ambiguous"; occasional mismatch with user expectation
+
+---
+
+### ADR-019: Run Metrics Extraction
+
+**Status**: Accepted
+
+#### Context
+After the assistant runs a flow, users want to know how long it took and how many tokens it consumed. Earlier "run visual feedback" UI added complexity without surfacing concrete numbers.
+
+#### Decision
+`RunFlow` returns `{duration_seconds, input_tokens, output_tokens, total_tokens}`. Duration is measured with `perf_counter`; tokens are aggregated via `extract_graph_token_usage` over the graph vertices (`agentic/services/flow_run.py`). All "run visual feedback" code was removed — only run + result + metrics remain.
+
+#### Consequences
+
+**Benefits:**
+- Accurate, comparable duration (monotonic clock, not wall-clock)
+- Token usage is read from the actual graph vertices, not estimated
+- Simpler surface (no separate run-feedback UI)
+
+**Trade-offs:**
+- Token counts depend on vertices exposing usage; components that don't report usage contribute zero
+
+**Key Files:**
+- `src/backend/.../agentic/services/flow_run.py` — `perf_counter` duration, `extract_graph_token_usage`
+
+---
+
+### ADR-020: Edit + Run Continuation Gating
+
+**Status**: Accepted (extends ADR for assistant edit-approval continuation)
+
+#### Context
+When the user approves proposed canvas edits, deferred steps (e.g., running the flow) must still complete on the SAME request. An earlier implementation re-sent the continuation unconditionally, causing a duplicate-message glitch when there was nothing deferred.
+
+#### Decision
+After approval the frontend saves the flow, then silently re-sends `EDIT_CONTINUATION_INPUT` (byte-identical FE/BE protocol string, matched exactly, bypassing the classifier) so the same request finishes deferred steps. `configure_component` direct-apply now runs in the same turn. Continuation only fires if a deferred step actually existed, gated by `continuation_expected`.
+
+#### Consequences
+
+**Benefits:**
+- Deferred run completes seamlessly after edit approval
+- No duplicate assistant message when nothing was deferred
+
+**Trade-offs:**
+- Frontend and backend must keep the protocol string byte-identical
+
+---
+
+### ADR-021: Real Introspection for User Component Overlay & In-Place Working-Flow ContextVar
+
+**Status**: Accepted
+
+#### Context
+The user component overlay scaffolded outputs by guessing, causing run crashes like "Attribute build_output not found" and wrong-output scaffolds. Separately, `build_flow` rebinding the working-flow ContextVar via `.set()` meant the run engine did not see the canvas ("There is no flow on the canvas to run").
+
+#### Decision
+1. The overlay now does REAL introspection via `build_custom_component_template(Component(_code=code))` (`agentic/services/user_components_overlay.py`), reflecting the class's real `Output` method (AST-derived).
+2. `build_flow` mutates the working-flow ContextVar IN PLACE (never `.set()` rebind) so the run engine sees the canvas. New ContextVars: `agent_run_context` (provider/model/api_key_var) and `_current_flow_id_var`.
+3. The prompt has an explicit targeting rule (act on the right component) plus self-verification after acting.
+
+#### Consequences
+
+**Benefits:**
+- Fixes "Attribute build_output not found" and wrong-output scaffolds
+- Run engine reliably sees the freshly built flow
+- Agent acts on the intended component and verifies its own actions
+
+**Key Files:**
+- `src/backend/.../agentic/services/user_components_overlay.py` — real introspection
+- `src/backend/.../agentic/services/agent_run_context.py` — `agent_run_context`, `_current_flow_id_var`
+
+---
+
+### ADR-022: Frontend — Replace-Canvas fitView & Edit Diff Card Readability
+
+**Status**: Accepted
+
+#### Context
+"Replace canvas" left the new flow off-screen, and the flow-edit diff card was hard to read (raw `\n`, missing "Show more", misaligned Accept/Dismiss).
+
+#### Decision
+1. `Replace canvas` performs a proper `fitView` via a double `requestAnimationFrame` (`apply-flow-update.ts`).
+2. The flow-edit diff card renders without raw `\n`, restores "Show more", and aligns Accept/Dismiss to the GHOST green button pattern used by the other cards.
+
+#### Consequences
+
+**Benefits:**
+- Replaced flow is visible and framed immediately
+- Diff card is readable and visually consistent with sibling cards
+
+**Key Files:**
+- `src/frontend/.../apply-flow-update.ts` — double-rAF `fitView`
+
+---
+
 ## 6. Technical Specification
 
 ### 6.1 Dependencies
@@ -758,7 +1005,7 @@ Event: `progress`
 ```json
 {
   "event": "progress",
-  "step": "generating_component | generating | extracting_code | validating | validated | validation_failed | retrying",
+  "step": "generating_component | generating | extracting_code | validating | validated | validation_failed | retrying | orchestrating",
   "attempt": 0,
   "max_attempts": 3,
   "message": "string - Human-readable status message",
@@ -785,7 +1032,14 @@ Event: `complete`
     "validated": true,
     "class_name": "UppercaseComponent",
     "component_code": "class UppercaseComponent(Component):...",
-    "validation_attempts": 1
+    "validation_attempts": 1,
+    "continuation_expected": "boolean - Optional. True when a deferred step exists and the frontend should silently re-send EDIT_CONTINUATION_INPUT after saving the flow",
+    "run_metrics": {
+      "duration_seconds": "number - Optional. perf_counter-measured run duration (present when RunFlow executed)",
+      "input_tokens": "integer - Optional. Aggregated via extract_graph_token_usage over graph vertices",
+      "output_tokens": "integer - Optional.",
+      "total_tokens": "integer - Optional."
+    }
   }
 }
 ```
@@ -968,6 +1222,12 @@ No dedicated feature flags are currently implemented. The assistant is always en
 - [ ] Verify validation failure shows friendly message with collapsible error details
 - [ ] Verify attempt counter shows correct "Attempt X of 3" (never exceeds max)
 - [ ] Test with IBM WatsonX or Ollama provider and verify it works
+- [ ] Submit a compound prompt ("create a component, build a flow with it, and run it") and verify the single loop chains the tools and returns a run result
+- [ ] Configure ONLY a non-OpenAI provider and verify a flow's Agent node is wired with that provider (no forced OpenAI/Anthropic)
+- [ ] Run a flow and verify run metrics (duration_seconds + token counts) are shown after completion
+- [ ] Approve proposed canvas edits with a deferred run and verify it continues on the same request (no duplicate message); verify no continuation fires when nothing was deferred
+- [ ] Use "Replace canvas" and verify the new flow is framed via fitView (visible, not off-screen)
+- [ ] Verify a multi-step prompt shows the "Orchestrating..." progress label
 
 ---
 
@@ -1027,6 +1287,15 @@ C4Container
 ```
 
 ### 9.3 Component Flow Diagram
+
+> **Note (2026-05-19):** the pipeline is now a single agent loop
+> (`flow_builder_assistant.py`) plus an MCP toolkit
+> (`GenerateComponent`, `DescribeFlowIO`, `RunFlow`). The diagram below still
+> describes the feature-level intent → generate → validate → run flow (which is
+> byte-identical for single-thing requests); for multi-thing/compound prompts
+> the SAME loop chains the tools. The full single-agent-loop + MCP wiring
+> diagrams live in `src/backend/base/langflow/agentic/ARCHITECTURE.md` — the
+> existing diagrams here are intentionally left as-is.
 
 ```mermaid
 flowchart TD

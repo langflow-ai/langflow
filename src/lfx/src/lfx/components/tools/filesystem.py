@@ -47,10 +47,21 @@ _pinned_user_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar
 )
 
 
-# Reserved on-disk segment for future HMAC sidecar trees (L3 in the plan).
-# We block it now so first-mover writes don't poison a namespace we will rely
-# on later — agents must never see or touch this directory.
+# Reserved on-disk segments inside every user namespace.
+#
+# `.lfsig` is the forward hook for an HMAC sidecar tree (L3 in the FS plan).
+# `.components` is the storage location for user-generated component code
+# (written by a privileged backend helper after Layer-2 code validation;
+# read by the registry overlay so build_flow / search_components see the
+# user's custom types). Allowing the agent's FS tools to touch either
+# directory would either poison a security-critical namespace or let the
+# agent plant arbitrary code into its own executable namespace.
+#
+# Kept as a singular constant for backwards-compat with prior message text
+# ("Path component '.lfsig' is reserved") and as a tuple for the actual
+# check — both names point at the same casefold set.
 RESERVED_SEGMENT = ".lfsig"
+RESERVED_SEGMENTS: tuple[str, ...] = (".lfsig", ".components")
 
 
 def _default_config_dir() -> Path:
@@ -477,6 +488,19 @@ class FileSystemToolComponent(Component):
         would let a write land in a different user's namespace while this
         check still passed for the original user.
         """
+        # When force_isolation is set, every invocation MUST carry the user_id
+        # that was captured at binding time — AUTO_LOGIN does not relax the
+        # check here, otherwise the per-user root in _validate_root would be
+        # reached with the wrong identity.
+        if getattr(self, "_force_isolation", False):
+            current = self._resolve_user_id()
+            if current and current == bound_user_id:
+                return current, None
+            return None, {
+                "error": (
+                    "tool/user-id mismatch: this tool was bound to a different user session and cannot be reused"
+                ),
+            }
         if self._resolve_auto_login():
             return bound_user_id, None
         current = self._resolve_user_id()
@@ -684,11 +708,25 @@ class FileSystemToolComponent(Component):
         """Resolve and authorize the effective sandbox root.
 
         Dispatch:
-          - AUTO_LOGIN=True             → <BASE>/shared/<sub_path>
-          - AUTO_LOGIN=False + user_id  → <BASE>/users/<hash(user_id)>/<sub_path>
-          - AUTO_LOGIN=False + no user  → PermissionError (caught by callers)
+          - ``_force_isolation=True``    → <BASE>/users/<hash(user_id)>/<sub_path>
+          - AUTO_LOGIN=True              → <BASE>/shared/<sub_path>
+          - AUTO_LOGIN=False + user_id   → <BASE>/users/<hash(user_id)>/<sub_path>
+          - any mode with no user_id     → PermissionError (caught by callers)
+
+        ``_force_isolation`` exists for callers that carry an authenticated
+        user identity and need per-user isolation regardless of the global
+        AUTO_LOGIN flag (e.g. the agentic file router + the agent's write
+        tools). It defaults to False so other call sites keep their current
+        AUTO_LOGIN-driven behavior unchanged.
         """
         config = self._isolation_config()
+
+        if getattr(self, "_force_isolation", False):
+            user_id = self._resolve_user_id()
+            if not user_id:
+                msg = "FileSystemTool requires an authenticated user when _force_isolation is set"
+                raise PermissionError(msg)
+            return self._isolated_user_root(config=config, user_id=user_id)
 
         if self._resolve_auto_login():
             return self._shared_root(config=config)
@@ -781,19 +819,25 @@ class FileSystemToolComponent(Component):
             raise PermissionError(msg)
         if portability_error := _check_windows_portability(path):
             raise PermissionError(portability_error)
-        # Block the reserved signing tree (L3 hook). We forbid traversal even
-        # by users with valid credentials — agents and humans both — because
-        # the integrity guarantee depends on this directory being unreachable
-        # from the public tool surface.
+        # Block the reserved segments (`.lfsig` integrity hook, `.components`
+        # registered-user-component store). We forbid traversal even by users
+        # with valid credentials — agents and humans both — because the
+        # privilege model depends on these directories being unreachable from
+        # the public tool surface.
         # Compare case-insensitively: APFS and NTFS resolve `.LFSIG` to the
         # same directory as `.lfsig`, so a case-sensitive equality check
         # lets uppercase variants slip past the reservation on those
         # filesystems. `casefold` is the locale-aware lowercase used for
         # caseless string comparison — broader than `.lower()`.
-        reserved_fold = RESERVED_SEGMENT.casefold()
-        if any(part.casefold() == reserved_fold for part in PureWindowsPath(path).parts):
-            msg = f"Path component {RESERVED_SEGMENT!r} is reserved"
-            raise PermissionError(msg)
+        reserved_folds = {seg.casefold() for seg in RESERVED_SEGMENTS}
+        for part in PureWindowsPath(path).parts:
+            folded = part.casefold()
+            if folded in reserved_folds:
+                # Surface the canonical segment name (with leading dot) so
+                # error messages stay stable across modes and OSes.
+                canonical = next(seg for seg in RESERVED_SEGMENTS if seg.casefold() == folded)
+                msg = f"Path component {canonical!r} is reserved"
+                raise PermissionError(msg)
         root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):

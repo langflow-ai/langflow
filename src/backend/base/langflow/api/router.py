@@ -97,9 +97,13 @@ include_deployment_router(router_v1)
 
 # Agentic flow execution - lazy import to avoid circular dependency
 def _include_agentic_router():
+    from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
+    from langflow.agentic.api.sessions_router import router as agentic_sessions_router
 
     router_v1.include_router(agentic_router)
+    router_v1.include_router(agentic_files_router)
+    router_v1.include_router(agentic_sessions_router)
 
 
 _include_agentic_router()

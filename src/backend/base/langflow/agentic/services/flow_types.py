@@ -17,9 +17,33 @@ STREAMING_EVENT_TIMEOUT_SECONDS = 300.0
 
 # Assistant configuration
 MAX_VALIDATION_RETRIES = 3
+# Hard cost ceiling for the post-build flow-validation loop. Each attempt
+# is deterministic (Tier-1 static + Tier-2 graph build, zero LLM tokens);
+# the only LLM cost is the agent's own fix turn between attempts.
+MAX_FLOW_VALIDATION_ATTEMPTS = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
+FLOW_BUILDER_ASSISTANT_FLOW = "flow_builder_assistant"
 TRANSLATION_FLOW = "translation_flow.py"
+
+# Verbatim text the frontend sends when the user clicks Continue on a
+# proposed plan (manual approve or skip-all auto-approve). Used to switch
+# the "Generating plan..." indicator into "Generating flow..." on the
+# follow-up turn. Must stay in sync with `SKIP_ALL_APPROVAL_TEXT` in
+# src/frontend/.../hooks/use-assistant-chat.ts.
+PLAN_APPROVAL_INPUT = "User approved the plan. Proceed with the build."
+
+# Verbatim text the frontend sends as a silent continuation turn once the
+# user resolves a man-in-the-loop edit diff card with >=1 applied change.
+# It lets the agent's "execution stack" survive the approval boundary so
+# it can finish the rest of the original request (e.g. running the flow
+# the user also asked for). Must stay byte-identical to
+# `EDIT_CONTINUATION_INPUT` in src/frontend/.../hooks/use-assistant-chat.ts.
+EDIT_CONTINUATION_INPUT = (
+    "The proposed canvas edits were applied. Continue with the remaining steps of my "
+    "previous request (for example, running the flow). If editing was the entire "
+    "request, just confirm briefly."
+)
 
 OFF_TOPIC_REFUSAL_MESSAGE = (
     "I appreciate your interest, but I'm the Langflow Assistant and can only help with "
@@ -50,13 +74,25 @@ ORIGINAL REQUEST:
 Respond with a complete, valid Langflow component as a Python class extending Component, \
 inside a single ```python code block. Do not emit raw tool calls or partial JSON."""
 
+NO_ACTION_RETRY_TEMPLATE = """Your previous reply did not change the canvas. You only described \
+what you would do, or asked for confirmation of something the user already requested.
+
+ORIGINAL REQUEST:
+{original_input}
+
+Do it NOW by calling the canvas tools (propose_plan / build_flow / add_component / \
+connect_components / configure_component). Rules:
+- NEVER ask the user to confirm an action they already asked for — just perform it.
+- NEVER claim an action was done without actually calling the tool that does it.
+- Respond in the same language the user wrote in."""
+
 
 @dataclass
 class IntentResult:
     """Result from intent classification flow."""
 
     translation: str
-    intent: str  # "generate_component", "question", or "off_topic"
+    intent: str  # "generate_component", "build_flow", "manage_files", "question", or "off_topic"
 
 
 @dataclass
