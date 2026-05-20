@@ -133,11 +133,7 @@ class LangWatchTracer(OTLPTracerBase):
                         _shared_provider = provider
 
             self._client = langwatch
-
-            # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
-            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
-
-            get_http_instrumentation_manager().enable(self.tracer_provider)
+            self._enable_http_context_propagation(_shared_provider)
         except ImportError as e:
             logger.exception(f"{e}")
             return False
@@ -218,9 +214,7 @@ class LangWatchTracer(OTLPTracerBase):
                 # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
 
-        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
-
-        get_http_instrumentation_manager().disable()
+        self._disable_http_context_propagation()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values

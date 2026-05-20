@@ -148,6 +148,28 @@ class OTLPTracerBase(BaseTracer):
                 result[key] = value
         return result
 
+    def _enable_http_context_propagation(self, provider: Any) -> None:
+        """Enable W3C TraceContext propagation on outgoing HTTP requests.
+
+        Uses reference counting - safe to call multiple times. Each enable()
+        must be paired with a disable() call.
+
+        Args:
+            provider: The TracerProvider to use for instrumentation.
+        """
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().enable(provider)
+
+    def _disable_http_context_propagation(self) -> None:
+        """Disable HTTP context propagation (decrements ref count).
+
+        Only actually uninstruments when the reference count reaches zero.
+        """
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
+
     def close(self) -> None:
         """Flush spans safely before shutdown.
 
