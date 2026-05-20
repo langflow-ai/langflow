@@ -97,7 +97,7 @@ def iter_bundle_python_files(bundle_root: Path) -> Iterator[Path]:
 DEFAULT_MODULE_NAMESPACE: str = "_lfx_ext"
 """Default top-level package name for bundle modules in ``sys.modules``.
 
-Reload (LE-1018) overrides this with ``__reload_staging__.<reload_id>`` so a
+Reload overrides this with ``__reload_staging__.<reload_id>`` so a
 parallel load lands in an isolated namespace and Stage 3 can swap it in
 atomically without ever touching the live modules.
 """
@@ -117,7 +117,7 @@ def module_name_for(
     the leading underscore-prefixed package keeps these out of the regular
     import namespace so a bundle named ``json`` doesn't shadow the stdlib.
     Reload supplies a ``__reload_staging__.<id>`` namespace so Stage 1 lands
-    in an isolated subtree of ``sys.modules`` (LE-1018).
+    in an isolated subtree of ``sys.modules``.
     """
     rel = file_path.relative_to(bundle_root).with_suffix("")
     dotted = ".".join(rel.parts)
@@ -153,8 +153,8 @@ def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modul
     # entry under the same synthetic ``_lfx_ext.<slot>.<bundle>...`` name
     # with no cleanup. Consumers holding a previous LoadedComponent.klass
     # keep the old class object across reloads, so isinstance checks against
-    # newly-loaded instances will return False. LE-1018 reload owns the
-    # invalidation: it must scrub registry entries (and the matching
+    # newly-loaded instances will return False. The reload pipeline owns
+    # the invalidation: it must scrub registry entries (and the matching
     # ``_lfx_ext.<slot>.<bundle>.*`` sys.modules namespace) before calling
     # back into this loader. Absolute imports only between bundle modules;
     # relative imports unsupported.

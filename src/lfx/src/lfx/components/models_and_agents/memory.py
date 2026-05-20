@@ -1,8 +1,10 @@
 from typing import Any, cast
+from uuid import UUID
 
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import data_to_text
 from lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
+from lfx.log.logger import logger
 from lfx.memory import aget_messages, astore_message
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -11,6 +13,106 @@ from lfx.schema.message import Message
 from lfx.template.field.base import Output
 from lfx.utils.component_utils import set_current_fields, set_field_display
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_USER
+
+# Cap on rows we will pull from the DB when the caller has not supplied an
+# explicit ``n_messages`` limit. This is a guardrail against unbounded fetches
+# (DB pressure, memory) on sessions that accumulate huge histories. The
+# trade-off is that sessions with more rows than this cap will not surface
+# their oldest messages when no ``n_messages`` is set. See ``aget_messages``
+# usage sites below for how this interacts with ordering.
+MAX_CHAT_HISTORY_FETCH_LIMIT = 10_000
+
+
+def _coerce_flow_id_to_uuid(flow_id: str | UUID | None) -> UUID | None:
+    """Coerce a graph flow_id (typically str) to UUID for DB filtering.
+
+    Returns ``None`` when ``flow_id`` is missing or cannot be parsed. The
+    caller then falls back to the previous **unscoped** retrieval, which
+    re-introduces the cross-flow leak that motivated PR #13087. We emit a
+    structured ``error`` log on that path (rather than ``warning``) so
+    observability can alert on it — see issue #13059 / PR #13087.
+    """
+    if flow_id is None or flow_id == "":
+        return None
+    if isinstance(flow_id, UUID):
+        return flow_id
+    try:
+        return UUID(str(flow_id))
+    except (ValueError, TypeError, AttributeError):
+        # Loud, structured signal — this path means chat history is being
+        # served without flow-scoping, which is the privacy bug PR #13087
+        # was created to close. Anything matching this event is a candidate
+        # for an observability alert.
+        logger.error(
+            "memory_flow_id_unscoped: flow_id %r is not a valid UUID; "
+            "chat history will NOT be scoped by flow_id. This re-enables "
+            "cross-flow leakage (issue #13059) for this request.",
+            flow_id,
+            extra={"event": "memory_flow_id_unscoped", "flow_id_repr": repr(flow_id)},
+        )
+        return None
+
+
+def _safe_graph_flow_id(component: Component) -> str | UUID | None:
+    """Best-effort lookup of the component's graph flow_id.
+
+    ``Component.graph`` is a property that reaches into ``self._vertex.graph``;
+    when a MemoryComponent is constructed ad-hoc (e.g. by the Agent component
+    via ``MemoryComponent(**self.get_base_args())``), ``_vertex`` is ``None`` and
+    accessing the property raises ``AttributeError``. Swallow that here so
+    retrieval falls back to the previous unscoped behavior rather than crashing.
+    """
+    try:
+        graph = component.graph
+    except AttributeError:
+        return None
+    return getattr(graph, "flow_id", None)
+
+
+async def aget_agent_chat_history(
+    *,
+    session_id: str | UUID | None,
+    flow_id: str | UUID | None,
+    context_id: str | None = None,
+    n_messages: int | None = None,
+) -> list[Message]:
+    """Fetch chat history for an agent, scoped to a single flow.
+
+    Centralizes the contract previously implemented by
+    ``MemoryComponent.retrieve_messages`` for agent callers:
+
+    * Returns ``[]`` when ``n_messages == 0`` (memory explicitly disabled).
+      Without this short-circuit, the bounded query would still execute and
+      the caller's ``messages[-0:]`` would return everything.
+    * Scopes by ``flow_id`` (coerced to ``UUID``) so default playground
+      session names cannot leak history across flows (issue #13059).
+    * Returns up to ``n_messages`` most recent messages in ascending order.
+      Queries in ``DESC`` order with ``limit=n_messages`` so sessions with
+      more than ``MAX_CHAT_HISTORY_FETCH_LIMIT`` rows still see the genuine
+      most-recent slice, not the chronological first window.
+    """
+    if n_messages == 0:
+        return []
+    fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT
+    messages = await aget_messages(
+        session_id=session_id,
+        context_id=context_id,
+        flow_id=_coerce_flow_id_to_uuid(flow_id),
+        limit=fetch_limit,
+        order="DESC",
+    )
+    if not n_messages and len(messages) == MAX_CHAT_HISTORY_FETCH_LIMIT:
+        # We hit the unbounded-fetch ceiling. The caller will likely see
+        # stale "most-recent" history. Flag this so on-call has something
+        # to grep when a user reports forgotten context.
+        logger.warning(
+            "memory_chat_history_limit_reached: hit MAX_CHAT_HISTORY_FETCH_LIMIT=%d "
+            "without an explicit n_messages; older messages were not returned.",
+            MAX_CHAT_HISTORY_FETCH_LIMIT,
+            extra={"event": "memory_chat_history_limit_reached"},
+        )
+    # ``aget_messages`` returned DESC; reverse to ASC for the agent's prompt.
+    return list(reversed(messages))
 
 
 class MemoryComponent(Component):
@@ -194,13 +296,18 @@ class MemoryComponent(Component):
             if message.sender:
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            await astore_message(message, flow_id=self.graph.flow_id)
+            # Single coerced scope used for both the write and the read-back,
+            # so a missing/ad-hoc ``_vertex`` cannot crash the write half while
+            # the read half degrades gracefully. See PR #13087 review I1.
+            flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
+            await astore_message(message, flow_id=flow_id_scope)
             stored_messages = (
                 await aget_messages(
                     session_id=message.session_id,
                     context_id=message.context_id,
                     sender_name=message.sender_name,
                     sender=message.sender,
+                    flow_id=flow_id_scope,
                 )
                 or []
             )
@@ -250,17 +357,34 @@ class MemoryComponent(Component):
                 expected_type = MESSAGE_SENDER_AI if sender_type == MESSAGE_SENDER_AI else MESSAGE_SENDER_USER
                 stored = [m for m in stored if m.type == expected_type]
         else:
-            # For internal memory, we always fetch the last N messages by ordering by DESC
+            # For internal memory, fetch the last N messages by ordering DESC at the
+            # DB layer so sessions with more than ``MAX_CHAT_HISTORY_FETCH_LIMIT``
+            # rows still return the genuine most-recent slice rather than the
+            # chronological first window. See PR #13087 review I2.
+            #
+            # Scope by flow_id so default session names (e.g. "New Session 0") do not
+            # leak chat history across unrelated flows. See issue #13059.
+            flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
+            fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT
             stored = await aget_messages(
                 sender=sender_type,
                 sender_name=sender_name,
                 session_id=session_id,
                 context_id=context_id,
-                limit=10000,
-                order=order,
+                flow_id=flow_id_scope,
+                limit=fetch_limit,
+                order="DESC",
             )
-            if n_messages:
-                stored = stored[-n_messages:]  # Get last N messages
+            if not n_messages and len(stored) == MAX_CHAT_HISTORY_FETCH_LIMIT:
+                logger.warning(
+                    "memory_chat_history_limit_reached: hit MAX_CHAT_HISTORY_FETCH_LIMIT=%d "
+                    "without an explicit n_messages; older messages were not returned.",
+                    MAX_CHAT_HISTORY_FETCH_LIMIT,
+                    extra={"event": "memory_chat_history_limit_reached"},
+                )
+            # Honor the user-selected order: we fetched DESC, reverse if ASC requested.
+            if order == "ASC":
+                stored = list(reversed(stored))
 
         # self.status = stored
         return cast("Data", stored)

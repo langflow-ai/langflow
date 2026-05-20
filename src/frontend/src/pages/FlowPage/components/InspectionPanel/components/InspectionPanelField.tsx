@@ -135,7 +135,7 @@ export default function InspectionPanelField({
                 </ShadTooltip>
               )}
               {showAdvanced && (
-                <ShadTooltip content="Add to canvas">
+                <ShadTooltip content={t("node.addToCanvas")}>
                   <button
                     className="ml-1 cursor-pointer text-placeholder hover:text-foreground"
                     onClick={handleToggleVisibility}

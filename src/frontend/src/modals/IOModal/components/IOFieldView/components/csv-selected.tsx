@@ -6,15 +6,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../../../components/ui/select";
+import { useTranslation } from "react-i18next";
 
 export default function CsvSelect({ node, handleChangeSelect }): JSX.Element {
+  const { t } = useTranslation();
   return (
     <>
       <div className="flex justify-between">
         Expand the output to see the CSV
       </div>
       <div className="flex items-center justify-between pt-5">
-        <span>CSV separator </span>
+        <span>{t("modal.csvSeparator")} </span>
         <Select
           value={node.data.node.template.separator.value}
           onValueChange={(e) => handleChangeSelect(e)}

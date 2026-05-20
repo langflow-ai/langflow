@@ -140,10 +140,10 @@ def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
 def test_lfx_arxiv_ships_manifest() -> None:
     """``importlib.metadata`` can find ``extension.json`` for the installed dist.
 
-    This is the contract LE-1022's :func:`load_installed_extensions` reads
-    at server startup; if the wheel doesn't include the manifest, the
-    bundle never registers and the AC ("pip install langflow still pulls
-    in the pilot bundle as before") fails silently.
+    This is the contract :func:`load_installed_extensions` reads at
+    server startup; if the wheel doesn't include the manifest, the bundle
+    never registers and ``pip install langflow`` silently fails to pull
+    in the pilot bundle.
     """
     try:
         dist = importlib_metadata.distribution("lfx-arxiv")

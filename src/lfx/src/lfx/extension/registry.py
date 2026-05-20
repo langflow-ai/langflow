@@ -1,4 +1,4 @@
-"""Read-only Extension registry for production-install sources (LE-1022).
+"""Read-only Extension registry for production-install sources.
 
 Where :mod:`lfx.extension.discovery` *finds* manifest-shipping packages
 and seed directories, this module *registers* them: it owns the in-memory
@@ -24,10 +24,9 @@ update) raises :class:`ExtensionImmutableError` carrying a typed
 ``installed-extension-immutable`` or ``seed-directory-immutable``.
 
 Mutation verbs are exposed at the *service* layer here so the invariant
-is testable today (LE-1022 acceptance), but the **CLI** uninstall surface
-ships in B4 follow-up.  Routes that try to mount these as HTTP handlers
-are blocked by the router-trust CI guard (LE-1017); see
-``langflow-extension-system-design.md`` for the full trust model.
+is testable today, but the **CLI** uninstall surface is a follow-up.
+Routes that try to mount these as HTTP handlers are blocked by the
+router-trust CI guard.
 """
 
 from __future__ import annotations
@@ -55,11 +54,11 @@ if TYPE_CHECKING:
 class LoadStatus(str, Enum):
     """Lifecycle state surfaced through ``lfx extension list``.
 
-    Discovery alone produces ``DISCOVERED``; the loader (LE-1015) flips
+    Discovery alone produces ``DISCOVERED``; the component loader flips
     entries to ``LOADED`` once their components register, and to
     ``FAILED`` on any per-bundle import error.  Keeping the enum here --
     rather than in the loader -- means ``extension list`` can render the
-    full life-cycle without a circular import once both subsystems land.
+    full life-cycle without a circular import.
     """
 
     DISCOVERED = "discovered"
@@ -276,7 +275,7 @@ class ExtensionRegistry:
     def mark_loaded(self, extension_id: str) -> Extension:
         """Flip an entry's :attr:`load_status` to ``LOADED``.
 
-        Used by the loader (LE-1015) once a bundle's components have
+        Used by the component loader once a bundle's components have
         successfully registered.  This is *not* a mutation of the
         immutability surface -- the install record itself is unchanged;
         we're recording the side effect of loading the install.
@@ -345,7 +344,7 @@ class ExtensionRegistry:
 
         Production install in this milestone is ``pip install`` in a
         Dockerfile, never a runtime call.  The router-trust CI guard
-        (LE-1017) blocks any HTTP handler that tries to mount this verb.
+        blocks any HTTP handler that tries to mount this verb.
         """
         self._refuse_mutation(extension_id, verb="install")
 
