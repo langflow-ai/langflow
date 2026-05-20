@@ -11,21 +11,21 @@ export default function ReviewPhaseSkeletonContent() {
 
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="gap-2">
         <DialogTitle className="text-xl font-semibold">
           {t("deployments.updateDeployment")}
         </DialogTitle>
-        <DialogDescription className="text-sm">
+        <DialogDescription className="text-sm leading-5">
           {t("deployments.updateDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
 
       <div
-        className="flex min-h-52 flex-col gap-5"
+        className="flex min-h-52 flex-col gap-6"
         data-testid="review-loading-skeleton"
       >
         <div className="space-y-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/70">
             {t("deployments.agentTypeLabel")} {t("deployments.deployment")}
           </div>
           <div className="flex items-center gap-3">
@@ -35,7 +35,7 @@ export default function ReviewPhaseSkeletonContent() {
           </div>
         </div>
 
-        <Skeleton className="h-14 rounded-lg" />
+        <Skeleton className="h-12 rounded-lg" />
 
         <div className="space-y-3">
           <div className="space-y-2">
@@ -49,11 +49,11 @@ export default function ReviewPhaseSkeletonContent() {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map((row) => (
               <div
                 key={row}
-                className="rounded-lg border border-border px-4 py-3"
+                className="rounded-lg border border-muted px-4 py-3"
               >
                 <div className="flex min-h-10 items-center gap-4">
                   <Skeleton className="h-5 w-5 rounded-full" />

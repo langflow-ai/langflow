@@ -6,8 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioSelectItem } from "@/pages/MainPage/pages/deploymentsPage/components/radio-select-item";
 import type { DeploymentType } from "@/pages/MainPage/pages/deploymentsPage/types";
 import { cn } from "@/utils/utils";
 import ReviewPhaseSkeletonContent from "./review-phase-skeleton";
@@ -55,18 +54,18 @@ export default function ReviewPhaseContent({
 
   return (
     <>
-      <DialogHeader>
+      <DialogHeader className="gap-2">
         <DialogTitle className="text-xl font-semibold">
           {t("deployments.updateDeployment")}
         </DialogTitle>
-        <DialogDescription className="text-sm">
+        <DialogDescription className="text-sm leading-5">
           {t("deployments.updateDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-6">
         <div className="space-y-4">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/70">
             {deploymentTypeLabel} {t("deployments.deployment")}:{" "}
             <span>{attachment.deployment_name}</span>
           </div>
@@ -90,9 +89,9 @@ export default function ReviewPhaseContent({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg border border-accent-blue-foreground/50 bg-accent-blue-muted/20 px-4 py-4 text-accent-blue-foreground">
+        <div className="flex items-center gap-3 rounded-lg border border-deployment-callout-border bg-deployment-callout px-4 py-3 text-deployment-callout-foreground">
           <ForwardedIconComponent name="Info" className="h-5 w-5 shrink-0" />
-          <p className="text-sm leading-6">
+          <p className="text-sm leading-5">
             {t("deployments.replaceVersionNotice", {
               current: currentVersionTag,
               next: newVersionTag,
@@ -112,40 +111,41 @@ export default function ReviewPhaseContent({
             </p>
           </div>
 
-          <RadioGroup
-            value={attachment.provider_snapshot_id}
-            onValueChange={onSelectAttachment}
-            className="gap-3"
-          >
+          <div className="grid gap-2">
             {attachments.map((item) => {
               const isSelected =
                 attachment.provider_snapshot_id === item.provider_snapshot_id;
 
               return (
-                <Label
+                <RadioSelectItem
                   key={item.provider_snapshot_id}
-                  htmlFor={`attachment-${item.provider_snapshot_id}`}
+                  name="deployment-attachment"
+                  value={item.provider_snapshot_id}
+                  selected={isSelected}
+                  onChange={() => onSelectAttachment(item.provider_snapshot_id)}
                   className={cn(
-                    "flex min-h-16 cursor-pointer items-center gap-4 rounded-lg border px-4 py-3 transition-colors",
+                    "min-h-16 rounded-lg px-4 py-3",
                     isSelected
-                      ? "border-muted-foreground bg-muted"
-                      : "border-border hover:border-muted-foreground/70 hover:bg-muted/40",
+                      ? "border-border bg-muted"
+                      : "border-muted hover:border-border hover:bg-muted/40",
                   )}
+                  indicatorClassName={cn(
+                    "h-4 w-4",
+                    isSelected
+                      ? "border-primary bg-primary"
+                      : "border-border bg-muted",
+                  )}
+                  dotClassName="h-2 w-2 bg-background"
                 >
-                  <RadioGroupItem
-                    value={item.provider_snapshot_id}
-                    id={`attachment-${item.provider_snapshot_id}`}
-                    className="h-5 w-5"
-                  />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">
                       {item.tool_name}
                     </div>
-                    <div className="truncate text-xs font-medium text-muted-foreground">
+                    <div className="truncate text-xs font-medium text-muted-foreground/70">
                       {isSelected ? (
                         <>
                           {t("deployments.currentDeploymentTarget")}{" "}
-                          <span className="text-muted-foreground">•</span>{" "}
+                          <span className="text-muted-foreground/70">•</span>{" "}
                           <span className="font-medium text-warning">
                             {t("deployments.willBeReplacedByVersion", {
                               next: newVersionTag,
@@ -160,10 +160,10 @@ export default function ReviewPhaseContent({
                   <span className="shrink-0 text-sm font-semibold text-muted-foreground">
                     {item.current_version_tag}
                   </span>
-                </Label>
+                </RadioSelectItem>
               );
             })}
-          </RadioGroup>
+          </div>
 
           {!hasManyAttachments && (
             <p className="sr-only">{t("deployments.singleAttachmentTarget")}</p>
@@ -171,12 +171,12 @@ export default function ReviewPhaseContent({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-3">
         <Button variant="ghost" onClick={onCancel} disabled={isBusy}>
           {t("deployments.cancel")}
         </Button>
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={onBack} disabled={isBusy}>
+          <Button variant="secondary" onClick={onBack} disabled={isBusy}>
             {t("deployments.back")}
           </Button>
           <Button onClick={onConfirm} disabled={isBusy} ignoreTitleCase>
@@ -196,9 +196,9 @@ function VersionSummaryCard({
   value: string;
 }) {
   return (
-    <div className="flex min-h-16 items-center justify-center rounded-lg bg-muted px-4">
+    <div className="flex h-16 items-center justify-center rounded-lg bg-muted px-4">
       <div className="space-y-2 text-center">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <div className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/70">
           {label}
         </div>
         <div className="text-sm font-semibold">{value}</div>
