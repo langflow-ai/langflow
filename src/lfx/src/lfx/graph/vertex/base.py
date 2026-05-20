@@ -229,7 +229,9 @@ class Vertex:
         state["_lock"] = None  # Locks are not serializable
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
-        state["custom_component"] = None  # custom_component may carry unpicklable state (e.g. thread-local, console objects)
+        state["custom_component"] = (
+            None  # custom_component may carry unpicklable state (e.g. thread-local, console objects)
+        )
         return state
 
     def __setstate__(self, state):
