@@ -16,6 +16,13 @@ from .provider_queries import MODELS_DETAILED, model_provider_metadata
 if TYPE_CHECKING:
     from uuid import UUID
 
+# Providers that curate their default models explicitly via ``default=True`` in
+# the catalog, rather than the position-based first-N fallback. HuggingFace ships
+# bundled GGUF models that download when enabled, so it pins a single default
+# instead of auto-enabling every catalogued repo (which would mean surprise
+# downloads / disk usage).
+EXPLICIT_DEFAULT_PROVIDERS = {"HuggingFace"}
+
 
 def get_unified_models_detailed(
     providers: list[str] | None = None,
@@ -96,21 +103,16 @@ def get_unified_models_detailed(
         )
 
     # Mark default models per provider:
-    #   - If the catalog set ``default=True`` on any entry for the provider,
-    #     trust that as the explicit allow-list (only those stay default-on).
-    #     Used by providers like HuggingFace where we ship one bundled model
-    #     and don't want every catalogued repo auto-enabled (which would
-    #     trigger surprise downloads / disk usage).
-    #   - Otherwise fall back to position-based first-N defaults so legacy
-    #     catalogs (OpenAI, Anthropic, Ollama, ...) keep their pre-PR
-    #     behavior without each one needing to opt-in explicitly.
-    default_model_count = 5  # Used only as the fallback for catalogs without explicit defaults.
+    #   - Providers in ``EXPLICIT_DEFAULT_PROVIDERS`` curate their defaults via
+    #     ``default=True`` in the catalog; only those entries stay default-on.
+    #   - Every other provider falls back to position-based first-N defaults so
+    #     legacy catalogs (OpenAI, Anthropic, Ollama, ...) keep prior behavior.
+    default_model_count = 5  # Used only as the fallback for non-explicit providers.
 
     for prov, models in provider_map.items():
-        catalog_explicit = any(m["metadata"].get("default") is True for m in models)
-        if catalog_explicit:
+        if prov in EXPLICIT_DEFAULT_PROVIDERS:
             for model in models:
-                # Normalize: only entries the catalog flagged stay True.
+                # Only entries the catalog flagged stay default-on.
                 model["metadata"]["default"] = model["metadata"].get("default") is True
         else:
             for i, model in enumerate(models):
