@@ -199,6 +199,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -211,6 +212,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_base.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -270,6 +272,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -282,6 +285,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -334,6 +338,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           build-args: |
             LANGFLOW_IMAGE=langflowai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
           file: ./docker/build_and_push_backend.Dockerfile
@@ -355,6 +360,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           build-args: |
             LANGFLOW_IMAGE=ghcr.io/langflow-ai/langflow:${{ steps.version.outputs.version }}-${{ matrix.arch }}
           file: ./docker/build_and_push_backend.Dockerfile
@@ -409,6 +415,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -428,6 +435,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/frontend/build_and_push_frontend.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -487,6 +495,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -499,6 +508,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_ep.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -558,6 +568,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.docker_tags }}
           platforms: linux/${{ matrix.arch }}
@@ -570,6 +581,7 @@ jobs:
         with:
           context: .
           push: ${{ inputs.push_to_registry }}
+          pull: true
           file: ./docker/build_and_push_with_extras.Dockerfile
           tags: ${{ steps.tags.outputs.ghcr_tags }}
           platforms: linux/${{ matrix.arch }}
