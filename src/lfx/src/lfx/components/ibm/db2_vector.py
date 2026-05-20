@@ -113,7 +113,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         DropdownInput(
             name="search_type",
             display_name="Search Type",
-            options=["Similarity", "MMR"],
+            options=["Similarity", "MMR", "similarity_score_threshold"],
             value="Similarity",
             advanced=True,
             info="Type of search to perform",
@@ -163,6 +163,52 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         # Return DataFrame wrapping the Data objects
         # DataFrame constructor will handle Data objects properly
         return DataFrame(results)
+
+    def _add_documents_to_vector_store(self, vector_store) -> None:
+        """Adds documents to the Vector Store - SIMPLIFIED like Chroma."""
+        from copy import deepcopy
+
+        if not self.ingest_data:
+            self.status = ""
+            return
+
+        # Convert DataFrame to Data if needed using parent's method
+        ingest_data = self._prepare_ingest_data()
+
+        # Get existing documents for duplicate checking (simplified)
+        stored_documents_without_id = []
+        if not self.allow_duplicates:
+            # TODO: Implement db2_collection_to_data utility
+            # For now, skip duplicate checking to match Chroma's approach
+            stored_data = []
+            for value in deepcopy(stored_data):
+                if hasattr(value, "id"):
+                    del value.id
+                stored_documents_without_id.append(value)
+
+        # Process only Data objects (like Chroma)
+        documents = []
+        for _input in ingest_data or []:
+            if isinstance(_input, Data):
+                if _input not in stored_documents_without_id:
+                    documents.append(_input.to_lc_document())
+            else:
+                msg = "Vector Store Inputs must be Data objects."
+                raise TypeError(msg)
+
+        # Add documents with metadata filtering (like Chroma)
+        if documents and self.embedding is not None:
+            self.log(f"Adding {len(documents)} documents to the Vector Store.")
+            try:
+                from langchain_community.vectorstores.utils import filter_complex_metadata
+
+                filtered_documents = filter_complex_metadata(documents)
+                vector_store.add_documents(filtered_documents)
+            except ImportError:
+                self.log("Warning: Could not import filter_complex_metadata. Adding documents without filtering.")
+                vector_store.add_documents(documents)
+        else:
+            self.log("No documents to add to the Vector Store.")
 
     @check_cached_vector_store
     def build_vector_store(self):  # type: ignore[override]
@@ -238,222 +284,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
             self.log(f"Connected to DB2 table: {validated_table_name}")
 
-            # Add documents if provided
-            if self.ingest_data:
-                import json
-
-                import pandas as pd
-                from langchain_core.documents import Document
-
-                self.log(f"Starting data ingestion ({len(self.ingest_data)} items)")
-
-                # OPTIMIZATION: Get existing document hashes if duplicate checking is enabled
-                # Use hash-based comparison instead of fetching all text content
-                stored_doc_hashes = set()
-                if not self.allow_duplicates:
-                    try:
-                        import hashlib
-
-                        cursor = connection.cursor()
-                        # Only fetch text for hash comparison, more efficient than storing all text
-                        query = f'SELECT {vector_store.column_names["text"]} FROM "{validated_table_name}"'  # noqa: S608
-                        cursor.execute(query)
-                        for row in cursor.fetchall():
-                            if row[0]:
-                                # Create hash of text content for efficient comparison
-                                # Using MD5 for fast hashing of content (not for security)
-                                text_hash = hashlib.md5(str(row[0]).encode()).hexdigest()  # noqa: S324
-                                stored_doc_hashes.add(text_hash)
-                        cursor.close()
-                        self.log(f"Found {len(stored_doc_hashes)} existing documents")
-                    except Exception:  # noqa: BLE001
-                        self.log("Warning: Could not check for duplicates")
-
-                documents = []
-                for idx, data in enumerate(self.ingest_data):
-                    # Reduced logging - only log every 100 items or first/last
-                    if idx == 0 or idx == len(self.ingest_data) - 1 or (idx + 1) % 100 == 0:
-                        self.log(f"Processing item {idx + 1}/{len(self.ingest_data)}")
-                    if isinstance(data, Data):
-                        doc = data.to_lc_document()
-                        documents.append(doc)
-                    elif isinstance(data, Document):
-                        # Preserve existing metadata
-                        documents.append(data)
-                    elif isinstance(data, pd.DataFrame):
-                        # Handle pandas DataFrame - extract metadata from columns
-                        for _, row in data.iterrows():
-                            # Separate text content from metadata fields
-                            metadata = {}
-                            text_parts = []
-
-                            for col_name, val in row.items():
-                                # Common metadata fields to extract
-                                if col_name.lower() in ["brand", "category", "price", "product_id", "tenant_id", "id"]:
-                                    if pd.notna(val):
-                                        metadata[col_name] = val
-                                elif col_name.lower() in ["description", "text", "content"]:
-                                    # These are text content fields
-                                    if pd.notna(val):
-                                        text_parts.append(str(val))
-                                else:
-                                    # Other fields go to text
-                                    try:
-                                        if pd.notna(val):
-                                            text_parts.append(str(val))
-                                    except (ValueError, TypeError):
-                                        text_parts.append(str(val))
-
-                            text = " ".join(text_parts) if text_parts else ""
-                            doc = Document(page_content=text, metadata=metadata)
-                            documents.append(doc)
-                    elif isinstance(data, pd.Series):
-                        # Handle pandas Series - convert each value to a document
-                        for val in data:
-                            try:
-                                if pd.notna(val):
-                                    doc = Document(page_content=str(val), metadata={})
-                                    documents.append(doc)
-                            except (ValueError, TypeError):
-                                doc = Document(page_content=str(val), metadata={})
-                                documents.append(doc)
-                    elif isinstance(data, dict):
-                        # Handle JSON/dict objects - extract metadata intelligently
-                        metadata = {}
-                        text_content = None
-
-                        # Extract known metadata fields
-                        for key in ["brand", "category", "price", "product_id", "tenant_id", "id"]:
-                            if key in data:
-                                metadata[key] = data[key]
-
-                        # Extract text content
-                        if "description" in data:
-                            text_content = data["description"]
-                        elif "text" in data:
-                            text_content = data["text"]
-                        elif "content" in data:
-                            text_content = data["content"]
-                        else:
-                            # Use entire dict as text if no specific text field
-                            text_content = json.dumps(data)
-
-                        doc = Document(page_content=text_content, metadata=metadata)
-                        documents.append(doc)
-                    elif hasattr(data, "text"):
-                        # Handle Message or any object with text attribute
-                        metadata = {}
-                        if hasattr(data, "metadata"):
-                            # Convert metadata to plain dict to ensure JSON serializability
-                            if isinstance(data.metadata, dict):
-                                metadata = dict(data.metadata)
-                            elif hasattr(data.metadata, "__dict__"):
-                                metadata = dict(data.metadata.__dict__)
-                        doc = Document(page_content=data.text, metadata=metadata)
-                        documents.append(doc)
-                    elif isinstance(data, str):
-                        # Check if it's CSV content
-                        if "," in data and "\n" in data:
-                            # Likely CSV - try to parse it
-                            try:
-                                import io
-
-                                df = pd.read_csv(io.StringIO(data))
-                                self.log(f"Detected CSV format with {len(df)} rows")
-
-                                # Process as DataFrame
-                                for _, row in df.iterrows():
-                                    metadata = {}
-                                    text_parts = []
-
-                                    for col_name, val in row.items():
-                                        if col_name.lower() in [
-                                            "brand",
-                                            "category",
-                                            "price",
-                                            "rating",
-                                            "product_id",
-                                            "tenant_id",
-                                            "id",
-                                        ]:
-                                            if pd.notna(val):
-                                                # Convert to Python native types for JSON serialization
-                                                if isinstance(val, (pd.Int64Dtype, pd.Float64Dtype)):
-                                                    metadata[col_name] = float(val)
-                                                elif isinstance(val, (int, float)):
-                                                    metadata[col_name] = val
-                                                else:
-                                                    metadata[col_name] = str(val)
-                                        elif col_name.lower() in ["description", "text", "content"]:
-                                            if pd.notna(val):
-                                                text_parts.append(str(val))
-                                        # Other fields go to text
-                                        elif pd.notna(val):
-                                            text_parts.append(str(val))
-
-                                    text = " ".join(text_parts) if text_parts else ""
-                                    doc = Document(page_content=text, metadata=metadata)
-                                    documents.append(doc)
-                            except (ValueError, pd.errors.ParserError) as e:
-                                self.log(f"Failed to parse as CSV: {e}, treating as plain text")
-                                doc = Document(page_content=data, metadata={})
-                                documents.append(doc)
-                        else:
-                            # Handle plain strings
-                            doc = Document(page_content=data, metadata={})
-                            documents.append(doc)
-
-                if documents:
-                    self.log(f"Prepared {len(documents)} documents for ingestion")
-
-                    # OPTIMIZATION: Filter out duplicates using hash-based comparison
-                    if not self.allow_duplicates and stored_doc_hashes:
-                        import hashlib
-
-                        original_count = len(documents)
-                        filtered_docs = []
-                        for doc in documents:
-                            # Using MD5 for fast hashing of content (not for security)
-                            doc_hash = hashlib.md5(doc.page_content.encode()).hexdigest()  # noqa: S324
-                            if doc_hash not in stored_doc_hashes:
-                                filtered_docs.append(doc)
-                        documents = filtered_docs
-                        filtered_count = original_count - len(documents)
-                        if filtered_count > 0:
-                            self.log(f"Filtered out {filtered_count} duplicate documents")
-
-                    if documents:
-                        try:
-                            self.log(f"Adding {len(documents)} documents to table '{validated_table_name}'")
-                            vector_store.add_documents(documents)
-                            self.log(f"Successfully ingested {len(documents)} documents")
-                        except ValueError as e:
-                            error_msg = str(e)
-                            if "dimension mismatch" in error_msg.lower():
-                                # Provide clear guidance on dimension mismatch
-                                msg = (
-                                    f"Embedding dimension mismatch detected. {error_msg}\n\n"
-                                    f"To fix: Use a different table name or ensure your embedding model "
-                                    f"produces the same dimension as the existing table."
-                                )
-                                raise ValueError(msg) from e
-                            raise
-                        except RuntimeError as e:
-                            error_msg = str(e)
-                            if "VECTOR" in error_msg and "cannot be CAST" in error_msg:
-                                # DB2 vector dimension mismatch error
-                                msg = (
-                                    "DB2 vector dimension mismatch: The table was created with a different "
-                                    "vector dimension. Use a different table name or recreate the table."
-                                )
-                                raise ValueError(msg) from e
-                            # SECURITY: Use safe error messages
-                            safe_msg = create_safe_error_message(e, "during document insertion")
-                            raise RuntimeError(safe_msg) from e
-                    else:
-                        self.log("All documents were duplicates - skipped")
-                else:
-                    self.log("No documents to process")
+            # Add documents if provided - SIMPLIFIED like Chroma
+            self._add_documents_to_vector_store(vector_store)
         except Exception:
             # Ensure connection is closed on error
             connection.close()
@@ -502,6 +334,12 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 query=query_text,
                 k=self.number_of_results,
             )
+        elif self.search_type == "similarity_score_threshold":
+            docs_and_scores = vector_store.similarity_search_with_relevance_scores(
+                query=query_text,
+                k=self.number_of_results,
+            )
+            docs = [doc for doc, _score in docs_and_scores]
         else:  # MMR
             docs = vector_store.max_marginal_relevance_search(
                 query=query_text,
