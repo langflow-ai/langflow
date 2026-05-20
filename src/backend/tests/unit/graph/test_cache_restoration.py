@@ -16,9 +16,15 @@ Reset vertex.built = False when cache restoration fails, so build()
 runs fully and sets vertex.result correctly.
 """
 
+import asyncio
+import threading
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import dill
 import pytest
+from lfx.graph import Graph
+from lfx.graph.vertex.base import Vertex
 
 
 class TestCacheRestorationBuiltFlagReset:
@@ -149,6 +155,37 @@ class TestCacheRestorationBuiltFlagReset:
 
         # Assert - build() should NOT return early
         assert should_return_early is False, "build() should continue with reset built flag"
+
+
+def test_redis_graph_cache_serialization_omits_runtime_component_state():
+    graph = Graph(flow_id="flow-with-runtime-component-state")
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "model-node",
+            "_lock": None,
+            "built_object": "cached-object",
+            "built_result": {"result": "cached-result"},
+            "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
+            "full_data": {"id": "model-node"},
+        }
+    )
+    graph.vertices = [vertex]
+    graph._vertices = [vertex.full_data]
+
+    with pytest.raises(TypeError, match="cannot pickle"):
+        dill.dumps(vertex.__dict__, recurse=True)
+
+    restored = dill.loads(dill.dumps(graph, recurse=True))  # noqa: S301 - trusted local regression fixture
+    restored_vertex = restored.vertices[0]
+
+    assert restored.flow_id == graph.flow_id
+    assert restored_vertex.id == vertex.id
+    assert restored_vertex.full_data == vertex.full_data
+    assert restored_vertex.built_object == "cached-object"
+    assert restored_vertex.built_result == {"result": "cached-result"}
+    assert restored_vertex.custom_component is None
+    assert isinstance(restored_vertex.lock, asyncio.Lock)
 
 
 class TestCacheRestorationSuccessCase:
