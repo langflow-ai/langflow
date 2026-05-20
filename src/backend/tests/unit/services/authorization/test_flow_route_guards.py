@@ -96,6 +96,71 @@ def test_download_multiple_file_guards_each_flow(routes):
     assert actions == {"FlowAction.READ"}
 
 
+def _kwarg_source(call: ast.Call, kw_name: str) -> str | None:
+    """Return the unparsed source of a keyword arg, or None if absent."""
+    for kw in call.keywords:
+        if kw.arg == kw_name:
+            return ast.unparse(kw.value)
+    return None
+
+
+def _is_inside_for_loop_over(func: ast.AsyncFunctionDef, call: ast.Call, iter_attr: str) -> bool:
+    """Return True if *call* is inside a `for ... in <something>.<iter_attr>` loop in *func*."""
+    for node in ast.walk(func):
+        if not isinstance(node, ast.For):
+            continue
+        iter_src = ast.unparse(node.iter)
+        if not iter_src.endswith(f".{iter_attr}"):
+            continue
+        for sub in ast.walk(node):
+            if sub is call:
+                return True
+    return False
+
+
+def test_create_flows_guards_each_flow_with_its_destination(routes):
+    """POST /batch/ must call ensure_flow_permission per flow with that flow's own scope.
+
+    A caller-supplied batch can target multiple workspace_id/folder_id values, so a
+    single coarse check at the route boundary would let unauthorized destinations slip
+    through. Each call must pass ``workspace_id=flow.workspace_id`` and
+    ``folder_id=flow.folder_id`` and live inside an iteration over ``flow_list.flows``.
+    """
+    func = routes["create_flows"]
+    calls = _ensure_flow_permission_calls(func)
+    assert calls, "create_flows lost its ensure_flow_permission call"
+    assert {_action_arg(c) for c in calls} == {"FlowAction.CREATE"}
+    scoped_calls = [
+        c
+        for c in calls
+        if _kwarg_source(c, "workspace_id") == "flow.workspace_id"
+        and _kwarg_source(c, "folder_id") == "flow.folder_id"
+        and _is_inside_for_loop_over(func, c, "flows")
+    ]
+    assert scoped_calls, (
+        "create_flows must call ensure_flow_permission inside a per-flow loop with flow.workspace_id and flow.folder_id"
+    )
+
+
+def test_upload_file_guards_each_flow_with_effective_destination(routes):
+    """POST /upload/ adds a per-flow check after parsing.
+
+    `_upsert_flow_list` lets the query ``folder_id`` override each flow's folder_id but
+    preserves each flow's workspace_id, so the per-flow check must use
+    ``workspace_id=flow.workspace_id`` and live inside a loop over ``flow_list.flows``.
+    """
+    func = routes["upload_file"]
+    calls = _ensure_flow_permission_calls(func)
+    assert calls, "upload_file lost its ensure_flow_permission call"
+    assert "FlowAction.CREATE" in {_action_arg(c) for c in calls}
+    scoped_calls = [
+        c
+        for c in calls
+        if _kwarg_source(c, "workspace_id") == "flow.workspace_id" and _is_inside_for_loop_over(func, c, "flows")
+    ]
+    assert scoped_calls, "upload_file must call ensure_flow_permission inside a per-flow loop with flow.workspace_id"
+
+
 def test_no_bare_string_actions_remain(routes):
     """No flow-route guard should use a bare string action — the enum is now canonical."""
     offenders: list[str] = []

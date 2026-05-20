@@ -447,7 +447,16 @@ async def create_flows(
     current_user: CurrentActiveUser,
 ):
     """Create multiple new flows."""
-    await ensure_flow_permission(current_user, FlowAction.CREATE)
+    # Per-flow CREATE check: each flow's destination (workspace_id + folder_id) is
+    # caller-supplied, so we must authorize the actual target instead of trusting
+    # a single coarse check at the route boundary.
+    for flow in flow_list.flows:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.CREATE,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
     requested_ids = [f.id for f in flow_list.flows if f.id is not None]
@@ -543,6 +552,19 @@ async def upload_file(
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"
     # arrays and create FlowVersion entries for each imported flow.
+
+    # Per-flow CREATE check on the effective destination. _upsert_flow_list lets
+    # the query `folder_id` override each flow's `folder_id`, but it preserves
+    # each flow's `workspace_id`, so a payload could otherwise route flows into
+    # workspaces the caller has no create permission on.
+    for flow in flow_list.flows:
+        effective_folder_id = folder_id if folder_id is not None else flow.folder_id
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.CREATE,
+            workspace_id=flow.workspace_id,
+            folder_id=effective_folder_id,
+        )
 
     try:
         return await _upsert_flow_list(
