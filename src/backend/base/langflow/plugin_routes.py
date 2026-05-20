@@ -96,6 +96,10 @@ class _PluginAppWrapper:
         self._check_and_reserve(path, set(methods))
         return self._app.add_api_route(path, endpoint, **kwargs)
 
+    def add_middleware(self, middleware_class, **kwargs):
+        """Allow plugins to register ASGI middleware on the host app."""
+        self._app.add_middleware(middleware_class, **kwargs)
+
 
 def load_plugin_routes(app: FastAPI) -> None:
     """Discover and register additional routers from enterprise plugins.
