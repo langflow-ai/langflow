@@ -27,7 +27,7 @@ _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
     "ChatHuggingFace": (
         "lfx.base.models.huggingface_chat_model",
         "ChatHuggingFace",
-        "langchain-openai",
+        "langchain-community",
     ),
 }
 

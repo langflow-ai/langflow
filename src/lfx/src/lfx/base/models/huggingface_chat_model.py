@@ -18,14 +18,18 @@ The catalog now stores GGUF repo ids; ``download_model`` pulls a single
 from __future__ import annotations
 
 import os
+import threading
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from langchain_core.language_models.chat_models import BaseChatModel
 
 # Disable huggingface_hub's accelerated/multi-threaded download backends
 # *before* the library is imported anywhere in this process. xet and
 # hf_transfer both spawn worker threads/processes that have triggered
 # SIGSEGV inside forked uvicorn workers on macOS arm64. The plain
-# single-threaded HTTP path is more than fast enough for ~270MB GGUFs.
+# single-threaded HTTP path is more than fast enough for these GGUF files.
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 os.environ.setdefault("HF_HUB_ENABLE_HF_TRANSFER", "0")
 os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
@@ -49,13 +53,6 @@ GGUF_FILENAME_BY_REPO: dict[str, str] = {
 HF_CACHE_DIR = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub"
 
 
-def _set_hf_token(api_key: str | None) -> None:
-    """Forward an HF token to the env vars huggingface_hub looks at."""
-    if api_key:
-        os.environ.setdefault("HUGGINGFACEHUB_API_TOKEN", api_key)
-        os.environ.setdefault("HF_TOKEN", api_key)
-
-
 def _pick_gguf_filename(repo_id: str) -> str:
     """Pick a sensible default GGUF file when the catalog hasn't pinned one.
 
@@ -71,38 +68,47 @@ def _pick_gguf_filename(repo_id: str) -> str:
 
 # In-process cache: building a Llama model is expensive (mmap + warmup),
 # so reuse the same instance across calls for a given (path, settings).
-_LLAMA_CACHE: dict[tuple, Any] = {}
+# Inference runs in ``asyncio.to_thread``, so the check-build-store has to
+# be locked or two concurrent requests could each load the model.
+_LLAMA_CACHE: dict[tuple, BaseChatModel] = {}
+_LLAMA_CACHE_LOCK = threading.Lock()
 
 
-def _get_or_build_chat_llamacpp(model_path: str, *, temperature: float | None, max_tokens: int | None) -> Any:
+def _get_or_build_chat_llamacpp(model_path: str, *, temperature: float | None, max_tokens: int | None) -> BaseChatModel:
     cache_key = (model_path, temperature, max_tokens)
-    if cache_key in _LLAMA_CACHE:
-        return _LLAMA_CACHE[cache_key]
+    cached = _LLAMA_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
 
-    try:
-        from langchain_community.chat_models.llamacpp import ChatLlamaCpp
-    except ImportError as exc:
-        msg = (
-            "Local HuggingFace inference uses the llama-cpp-python backend. "
-            "Install it with: uv pip install 'langflow-base[llama-cpp]' langchain-community."
-        )
-        raise ImportError(msg) from exc
+    with _LLAMA_CACHE_LOCK:
+        cached = _LLAMA_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
 
-    kwargs: dict[str, Any] = {
-        "model_path": model_path,
-        "n_ctx": 2048,
-        "n_threads": max(1, (os.cpu_count() or 2) - 1),
-        "n_gpu_layers": 0,  # CPU-only by default; metal/cuda is opt-in via env tuning
-        "verbose": False,
-    }
-    if temperature is not None:
-        kwargs["temperature"] = float(temperature)
-    if max_tokens is not None:
-        kwargs["max_tokens"] = int(max_tokens)
+        try:
+            from langchain_community.chat_models.llamacpp import ChatLlamaCpp
+        except ImportError as exc:
+            msg = (
+                "Local HuggingFace inference uses the llama-cpp-python backend. "
+                "Install it with: uv pip install 'langflow-base[llama-cpp]' langchain-community."
+            )
+            raise ImportError(msg) from exc
 
-    llm = ChatLlamaCpp(**kwargs)
-    _LLAMA_CACHE[cache_key] = llm
-    return llm
+        kwargs: dict[str, Any] = {
+            "model_path": model_path,
+            "n_ctx": 2048,
+            "n_threads": max(1, (os.cpu_count() or 2) - 1),
+            "n_gpu_layers": 0,  # CPU-only by default; metal/cuda is opt-in via env tuning
+            "verbose": False,
+        }
+        if temperature is not None:
+            kwargs["temperature"] = float(temperature)
+        if max_tokens is not None:
+            kwargs["max_tokens"] = int(max_tokens)
+
+        llm = ChatLlamaCpp(**kwargs)
+        _LLAMA_CACHE[cache_key] = llm
+        return llm
 
 
 def build_local_chat_huggingface(
@@ -111,13 +117,12 @@ def build_local_chat_huggingface(
     api_key: str | None = None,
     temperature: float | None = None,
     max_tokens: int | None = None,
-) -> Any:
+) -> BaseChatModel:
     """Construct a chat model backed by a local llama-cpp-python instance.
 
     Downloads the GGUF file if missing, then loads (or reuses) a cached
     ``ChatLlamaCpp`` pointed at the local path.
     """
-    _set_hf_token(api_key)
     filename = _pick_gguf_filename(model_id)
     model_path = _ensure_gguf_cached(model_id, filename, api_key=api_key)
     return _get_or_build_chat_llamacpp(str(model_path), temperature=temperature, max_tokens=max_tokens)
@@ -129,10 +134,12 @@ def _ensure_gguf_cached(repo_id: str, filename: str, *, api_key: str | None) -> 
     Tries an in-process ``hf_hub_download`` first. If that crashes or
     fails, retries the same call inside an isolated subprocess so a hard
     crash (SIGSEGV from xet/torch transitive imports) cannot take down
-    the parent uvicorn worker.
+    the parent uvicorn worker. Unrecoverable errors (bad token, gated or
+    missing repo/file) propagate immediately instead of being retried.
     """
     try:
         from huggingface_hub import hf_hub_download
+        from huggingface_hub.errors import EntryNotFoundError, GatedRepoError, RepositoryNotFoundError
     except ImportError as exc:
         msg = (
             "Downloading HuggingFace models requires the 'huggingface_hub' package. "
@@ -140,10 +147,13 @@ def _ensure_gguf_cached(repo_id: str, filename: str, *, api_key: str | None) -> 
         )
         raise ImportError(msg) from exc
 
-    _set_hf_token(api_key)
     try:
-        path = hf_hub_download(repo_id=repo_id, filename=filename)
+        path = hf_hub_download(repo_id=repo_id, filename=filename, token=api_key or None)
         return Path(path)
+    except (EntryNotFoundError, GatedRepoError, RepositoryNotFoundError):
+        # These fail the same way in a subprocess; surface them directly
+        # instead of paying for a pointless retry with a confusing error.
+        raise
     except Exception as exc:  # noqa: BLE001
         from lfx.log.logger import logger
 
@@ -237,15 +247,21 @@ def list_installed_models() -> list[str]:
     if not HF_CACHE_DIR.exists():
         return []
     installed: list[str] = []
-    for entry in HF_CACHE_DIR.iterdir():
-        if not entry.is_dir() or not entry.name.startswith("models--"):
-            continue
-        # Only count repos that actually contain a .gguf file we can load.
-        snapshots = entry / "snapshots"
-        if snapshots.exists() and any(snapshots.rglob("*.gguf")):
-            parts = entry.name[len("models--") :].split("--")
-            if len(parts) >= 2:  # noqa: PLR2004
-                installed.append("/".join(parts))
+    try:
+        for entry in HF_CACHE_DIR.iterdir():
+            if not entry.is_dir() or not entry.name.startswith("models--"):
+                continue
+            # Only count repos that actually contain a .gguf file we can load.
+            snapshots = entry / "snapshots"
+            if snapshots.exists() and any(snapshots.rglob("*.gguf")):
+                parts = entry.name[len("models--") :].split("--")
+                if len(parts) >= 2:  # noqa: PLR2004
+                    installed.append("/".join(parts))
+    except OSError as exc:
+        from lfx.log.logger import logger
+
+        logger.warning("Could not read HuggingFace cache dir %s: %s", HF_CACHE_DIR, exc)
+        return []
     installed.sort()
     return installed
 

@@ -908,7 +908,7 @@ def test_handle_model_input_update_calls_apply_provider_config_when_model_select
             component, build_config, field_value=selected_model, field_name="model", get_options_func=get_options
         )
 
-        mock_apply.assert_called_once_with(build_config, "OpenAI")
+        mock_apply.assert_called_once_with(build_config, "OpenAI", user_id=component.user_id)
 
 
 def test_handle_model_input_update_watsonx_embedding_shows_special_fields():
@@ -1075,7 +1075,7 @@ def test_handle_model_input_update_custom_model_field_name():
         )
 
         # Should call apply_provider_variable_config with the correct provider
-        mock_apply.assert_called_once_with(result, "OpenAI")
+        mock_apply.assert_called_once_with(result, "OpenAI", user_id=component.user_id)
 
     # Should have updated the embedding_model field
     assert "embedding_model" in result
@@ -1108,7 +1108,7 @@ def test_handle_model_input_update_custom_field_name_reads_default_from_correct_
             model_field_name="my_model",
         )
 
-        mock_apply.assert_called_once_with(result, "OpenAI")
+        mock_apply.assert_called_once_with(result, "OpenAI", user_id=component.user_id)
 
 
 # ---------------------------------------------------------------------------

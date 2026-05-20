@@ -69,11 +69,9 @@ def apply_provider_variable_config_to_build_config(
 
     provider_vars = unified_models_module.get_provider_all_variables(provider)
 
-    """
-    First hides all provider-specific fields (so switching e.g. IBM -> OpenAI
-    does not leave IBM fields visible), then shows and configures only the
-    current provider's fields.
-    """
+    # First hides all provider-specific fields (so switching e.g. IBM -> OpenAI
+    # does not leave IBM fields visible), then shows and configures only the
+    # current provider's fields.
     all_provider_fields = _get_all_provider_specific_field_names()
     for field_name in all_provider_fields:
         if field_name in build_config:

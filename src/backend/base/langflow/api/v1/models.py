@@ -698,7 +698,7 @@ async def _maybe_schedule_huggingface_downloads(
     session: DbSession,
     current_user: CurrentActiveUser,
 ) -> None:
-    """Kick off background ``snapshot_download`` for newly-enabled HF models.
+    """Kick off background ``hf_hub_download`` for newly-enabled HF models.
 
     No-op for non-HuggingFace providers and for toggle-off updates. Failures
     here are logged but never bubble up — a download problem must not block

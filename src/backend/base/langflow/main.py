@@ -151,14 +151,14 @@ async def _prefetch_default_huggingface_model() -> None:
     """Best-effort warm-up of the HF Hub cache for the bundled default model.
 
     **Opt-in** via ``LANGFLOW_PREFETCH_HF_DEFAULT=true`` (also accepts
-    ``1``/``yes``). Default is OFF because the underlying
-    ``huggingface_hub.snapshot_download`` path has triggered worker SIGSEGV
-    on macOS arm64 + Python 3.12, and a crashing prefetch combined with
-    uvicorn auto-reload produces a server crash loop.
+    ``1``/``yes``). Default is OFF because the underlying HuggingFace
+    download path has triggered worker SIGSEGV on macOS arm64 + Python
+    3.12, and a crashing prefetch combined with uvicorn auto-reload
+    produces a server crash loop.
 
     When enabled, runs as a background task during lifespan startup. Uses
-    ``huggingface_hub.snapshot_download`` (no torch import) and downloads
-    only the weights / tokenizer files we actually need.
+    ``huggingface_hub.hf_hub_download`` (no torch import) and downloads
+    only the single GGUF weight file we actually need.
     """
     if os.environ.get("LANGFLOW_PREFETCH_HF_DEFAULT", "").lower() not in {"1", "true", "yes"}:
         return
@@ -347,16 +347,17 @@ def get_lifespan(*, fix_migration=False, version=None):
             #
             # Without this, the *first* invocation of a flow that uses the
             # local HF provider would block the request thread for tens of
-            # seconds while transformers pulls ~720MB to ~/.cache/huggingface.
-            # Pre-downloading at startup keeps the cache warm so the first
-            # real inference only pays the load+inference cost.
+            # seconds while the GGUF weight file (~400MB) downloads to
+            # ~/.cache/huggingface. Pre-downloading at startup keeps the
+            # cache warm so the first real inference only pays the
+            # load+inference cost.
             #
-            # Uses huggingface_hub.snapshot_download exclusively — torch is
+            # Uses huggingface_hub.hf_hub_download exclusively — torch is
             # not imported here, so this can never trigger the macOS arm64
             # SIGSEGV that affects the inference path.
             #
-            # Skippable via LANGFLOW_SKIP_HF_DEFAULT_DOWNLOAD=true; failures
-            # are logged but never block startup.
+            # Opt-in via LANGFLOW_PREFETCH_HF_DEFAULT=true; failures are
+            # logged but never block startup.
             hf_prefetch_task = asyncio.create_task(_prefetch_default_huggingface_model())
 
             # v1 and project MCP server context managers
