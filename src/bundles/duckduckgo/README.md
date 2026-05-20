@@ -2,10 +2,10 @@
 
 DuckDuckGo Search component as a standalone Langflow Extension Bundle.
 
-This is the LE-1023 (B1) pilot — the first provider extracted from
-`lfx.components.<provider>` into a separate distribution.  The bundle
-ships a single component, `DuckDuckGoSearchComponent`, which performs
-DuckDuckGo web searches via `langchain-community`.
+This is the first provider extracted from `lfx.components.<provider>`
+into a separate distribution.  The bundle ships a single component,
+`DuckDuckGoSearchComponent`, which performs DuckDuckGo web searches
+via `langchain-community`.
 
 ## Install
 

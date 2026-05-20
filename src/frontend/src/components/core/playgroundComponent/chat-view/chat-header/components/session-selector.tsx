@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
@@ -43,6 +44,7 @@ export function SessionSelector({
   onToggleSelect,
   showCheckbox = false,
 }: SessionSelectorProps) {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const { mutate: updateSessionName } = useUpdateSessionName();
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
@@ -155,7 +157,7 @@ export function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate bg-transparent text-mmd">
-                  {isDefaultSession ? "Default Session" : session}
+                  {isDefaultSession ? t("chat.defaultSession") : session}
                 </span>
               </div>
             </ShadTooltip>
@@ -174,7 +176,7 @@ export function SessionSelector({
           sideOffset={4}
           contentClassName="z-[100] [&>div.p-1]:!h-auto [&>div.p-1]:!min-h-0"
           isVisible={true}
-          tooltipContent="More options"
+          tooltipContent={t("playgroundComponent.moreOptions")}
           tooltipSide="left"
           open={menuOpen}
           onOpenChange={onMenuOpenChange}

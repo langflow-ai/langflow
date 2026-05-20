@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -64,6 +65,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
   name,
   nodeClass,
 }) => {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [fieldValues, setFieldValues] = useState<
     Record<string, DialogFieldValue>
@@ -185,7 +187,9 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
           : "Knowledge Base";
 
       setSuccessData({
-        title: `Knowledge Base "${knowledgeBaseName}" created successfully!`,
+        title: t("success.knowledgeBaseNodeCreated", {
+          name: knowledgeBaseName,
+        }),
       });
 
       onCreated?.(knowledgeBaseName);
@@ -240,7 +244,7 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
 
     if (missingRequiredFields.length > 0) {
       handleErrorData({
-        title: "Missing required fields",
+        title: t("errors.missingRequiredFields"),
         list: missingRequiredFields,
       });
       return;

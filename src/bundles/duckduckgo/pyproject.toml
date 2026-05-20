@@ -1,7 +1,7 @@
 [project]
 name = "lfx-duckduckgo"
 version = "0.1.0"
-description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle (LE-1023 pilot)."
+description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "MIT" }
@@ -26,9 +26,11 @@ Documentation = "https://docs.langflow.org/extensions"
 Repository = "https://github.com/langflow-ai/langflow"
 
 # Manifest-shipping distributions are discovered via the
-# ``langflow.extensions`` entry-point (LE-1022).  The value is the dotted
-# path to the package containing ``extension.json`` -- the loader walks
-# ``importlib.metadata.files()`` from there to find the manifest.
+# ``langflow.extensions`` entry-point.  The value is the dotted path
+# to the package containing ``extension.json`` -- the loader walks
+# ``importlib.metadata.files()`` from there to find the manifest, and
+# falls back to this entry-point for editable installs whose dist.files
+# only surfaces dist-info entries.
 [project.entry-points."langflow.extensions"]
 lfx-duckduckgo = "lfx_duckduckgo"
 

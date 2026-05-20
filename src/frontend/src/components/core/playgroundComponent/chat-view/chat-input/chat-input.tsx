@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useChatFileUpload } from "@/shared/hooks/use-chat-file-upload";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -25,6 +26,7 @@ export default function ChatInput({
   isDragging,
   sendMessage,
 }: ChatInputProps): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -60,7 +62,7 @@ export default function ChatInput({
   const handleAudioError = useCallback(
     (error: string) => {
       setErrorData({
-        title: "Voice Input Error",
+        title: t("chat.voiceInputError"),
         list: [error],
       });
     },

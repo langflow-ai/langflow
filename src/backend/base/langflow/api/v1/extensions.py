@@ -1,13 +1,13 @@
-"""Extension System HTTP surface (LE-1018: reload).
+"""Extension System HTTP surface: reload.
 
 Currently exposes a single endpoint, ``POST /extensions/{extension_id}/bundles/{bundle_name}/reload``,
-which drives the LE-1018 atomic-swap pipeline against the process-default
+which drives the atomic-swap reload pipeline against the process-default
 :class:`~lfx.extension.bundle_registry.BundleRegistry`.
 
-LE-1019 (UI) and LE-1020 (migration) will add list / status / migrate
-endpoints alongside this one.  Mode A only -- in Mode B/C the path is to
-rebuild the Docker image, and the runtime guard at the request layer
-short-circuits with 404 when ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` is off.
+Future list / status / migrate endpoints will live alongside this one.
+Mode A only -- in Mode B/C the path is to rebuild the Docker image, and
+the runtime guard at the request layer short-circuits with 404 when
+``LANGFLOW_ENABLE_EXTENSION_RELOAD`` is off.
 """
 
 from __future__ import annotations

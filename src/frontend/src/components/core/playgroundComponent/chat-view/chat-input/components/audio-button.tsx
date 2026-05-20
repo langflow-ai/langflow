@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const AudioButton = ({
   onStopRecording,
   isSupported,
 }: AudioButtonProps) => {
+  const { t } = useTranslation();
   const isRecording = recordingState === "recording";
   const isProcessing = recordingState === "processing";
   const isDisabled = isBuilding || isProcessing || !isSupported;
@@ -33,10 +35,10 @@ const AudioButton = ({
   };
 
   const getTooltipContent = () => {
-    if (!isSupported) return "Voice input not supported in this browser";
-    if (isRecording) return "Stop recording";
-    if (isProcessing) return "Processing...";
-    return "Voice input";
+    if (!isSupported) return t("chat.voiceInputNotSupported");
+    if (isRecording) return t("chat.stopRecording");
+    if (isProcessing) return t("chat.processingAudio");
+    return t("chat.voiceInput");
   };
 
   return (

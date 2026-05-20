@@ -1,4 +1,4 @@
-"""Tests for the LE-1018 reload CLI: HTTP client + ``lfx extension reload``."""
+"""Tests for the reload CLI: HTTP client + ``lfx extension reload``."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""End-to-end CLI tests for ``lfx extension list`` (LE-1022).
+"""End-to-end CLI tests for ``lfx extension list``.
 
 The list command reads from the live importlib metadata + the
 seed-directory environment.  We override the seed directory through the

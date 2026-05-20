@@ -329,7 +329,7 @@ export function StepConfiguration({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[260px]">
-                          Configure column behavior for the knowledge base.
+                          {t("knowledge.configureColumns")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

@@ -138,9 +138,9 @@ def list_command(
     """Print every Extension currently visible to production discovery.
 
     Read-only.  Mutation verbs (enable, disable, install, uninstall) are
-    intentionally absent in this milestone; they ship in B3/B4 follow-up
-    epics, and the router-trust CI guard (LE-1017) blocks them from
-    sneaking in via HTTP routes.
+    intentionally absent in this milestone; they ship in follow-up work,
+    and the router-trust CI guard blocks them from sneaking in via HTTP
+    routes.
 
     Output (text mode) is one row per Extension::
 
@@ -271,21 +271,21 @@ def list_command(
 
 @extension_app.command(
     name="reload",
-    help="Trigger an atomic-swap reload for an installed Bundle (LE-1018).",
+    help="Trigger an atomic-swap reload for an installed Bundle.",
 )
 def reload_command(
-    extension_id: str = typer.Argument(
-        ...,
-        help="ID of the extension whose Bundle should be reloaded (e.g. lfx-pilot).",
+    extension_id: str | None = typer.Argument(
+        None,
+        help=("ID of the extension whose Bundle should be reloaded (e.g. lfx-arxiv). Omit when passing --all."),
     ),
     bundle: str | None = typer.Option(
         None,
         "--bundle",
         "-b",
         help=(
-            "Bundle name to reload.  Required until the LE-1019 list endpoint "
-            "ships -- the conventional shape is extension id 'lfx-<provider>' "
-            "with bundle name '<provider>', so we cannot safely default."
+            "Bundle name to reload.  Optional: when omitted, the bundle "
+            "name is resolved from the local extension discovery (the "
+            "same source ``lfx extension list`` uses)."
         ),
     ),
     target: str | None = typer.Option(
@@ -308,44 +308,55 @@ def reload_command(
     reload_all: bool = typer.Option(
         False,  # noqa: FBT003 - typer Option requires positional default
         "--all",
-        help=(
-            "Reload every installed Bundle. Requires the LE-1019 list endpoint and is not yet wired in this milestone."
-        ),
+        help="Reload every locally-discovered Bundle.",
     ),
 ) -> None:
     """POST to the reload endpoint and surface the typed result.
 
+    Resolution strategy:
+        * ``--all`` reloads every Bundle visible to local discovery
+          (``discover_all_extensions``); ``extension_id`` is ignored.
+        * Otherwise, ``extension_id`` is required.  If ``--bundle`` is
+          omitted, the bundle name is looked up from local discovery.
+        * ``--bundle`` always wins when explicitly passed -- useful when
+          the local install isn't visible to the running server, or when
+          you want to target a bundle by name without re-running discovery.
+
     Exit codes:
-        0 -- reload succeeded and the registry now reflects the new code.
-        1 -- reload failed (broken bundle, source missing, name mismatch,
-             or the dev server returned a typed error).
-        2 -- argument error (e.g. ``--all`` requested before LE-1019 lands).
+        0 -- reload(s) succeeded.
+        1 -- one or more reloads failed (broken bundle, source missing,
+             name mismatch, transport error, or local discovery turned up
+             nothing for the requested extension).
+        2 -- argument error (e.g. neither ``extension_id`` nor ``--all``).
     """
-    from lfx.cli._extension_reload_client import reload_via_http
-    from lfx.extension.errors import ExtensionError, format_extension_error
-
-    if reload_all:
-        typer.echo(
-            "extension reload --all requires the LE-1019 list endpoint and is not yet implemented in this milestone.",
-            err=True,
-        )
-        raise typer.Exit(code=2)
-
     if output_format not in {"text", "json"}:
         typer.echo("Invalid --format. Expected one of: text, json.", err=True)
         raise typer.Exit(code=2)
 
-    if not bundle:
+    if reload_all:
+        if extension_id is not None or bundle is not None:
+            typer.echo(
+                "extension reload --all does not take an extension id or --bundle; "
+                "pass only --all to reload every locally-discovered Bundle.",
+                err=True,
+            )
+            raise typer.Exit(code=2)
+        _reload_all(target=target, api_key=api_key, output_format=output_format)
+        return
+
+    if extension_id is None:
         typer.echo(
-            "extension reload requires --bundle until the LE-1019 list endpoint "
-            "ships.  Pass --bundle <name>; conventional shape is "
-            "lfx-<provider> ext_id with <provider> as the bundle name.",
+            "extension reload requires an extension id (e.g. `lfx extension reload lfx-arxiv`), "
+            "or pass --all to reload every locally-discovered Bundle.",
             err=True,
         )
         raise typer.Exit(code=2)
 
-    bundle_name = bundle
-    response = reload_via_http(
+    bundle_name = bundle or _resolve_bundle_from_discovery(extension_id)
+    if bundle_name is None:
+        raise typer.Exit(code=1)
+
+    response = _post_reload(
         target=target,
         api_key=api_key,
         extension_id=extension_id,
@@ -356,15 +367,75 @@ def reload_command(
         typer.echo(json.dumps(response.payload, indent=2, sort_keys=True))
         raise typer.Exit(code=response.exit_code())
 
+    _render_reload_text(response, extension_id=extension_id, bundle_name=bundle_name)
+    raise typer.Exit(code=response.exit_code())
+
+
+def _resolve_bundle_from_discovery(extension_id: str) -> str | None:
+    """Look up the single bundle name for ``extension_id`` via local discovery.
+
+    Returns the bundle name on success, or ``None`` and prints a typed
+    error on stderr when the extension is not locally installed or when
+    discovery surfaces multiple bundles (a future-shape we do not yet
+    support; v0 ships one bundle per extension).
+    """
+    from lfx.extension import discover_all_extensions
+
+    extensions, _errors = discover_all_extensions()
+    matches = [ext for ext in extensions if ext.extension_id == extension_id]
+    if not matches:
+        typer.echo(
+            f"extension reload: no locally-discovered extension {extension_id!r}.\n"
+            "  - Run `lfx extension list` to see what is installed locally.\n"
+            "  - If the bundle is installed only on the remote server, "
+            "pass --bundle <name> explicitly.",
+            err=True,
+        )
+        return None
+    if len(matches) > 1:
+        # Can happen if two seed roots ship the same id; registry usually
+        # de-dupes via shadow-error, but be defensive at the CLI layer.
+        bundles = sorted({ext.bundle_name for ext in matches})
+        typer.echo(
+            f"extension reload: extension {extension_id!r} resolves to multiple bundles "
+            f"({', '.join(bundles)}); pass --bundle <name> to disambiguate.",
+            err=True,
+        )
+        return None
+    return matches[0].bundle_name
+
+
+def _post_reload(
+    *,
+    target: str | None,
+    api_key: str | None,
+    extension_id: str,
+    bundle_name: str,
+):
+    """Thin wrapper around :func:`reload_via_http` for symmetry with --all."""
+    from lfx.cli._extension_reload_client import reload_via_http
+
+    return reload_via_http(
+        target=target,
+        api_key=api_key,
+        extension_id=extension_id,
+        bundle_name=bundle_name,
+    )
+
+
+def _render_reload_text(response, *, extension_id: str, bundle_name: str) -> None:
+    """Render a single reload response in text mode (success or failure)."""
+    from lfx.extension.errors import ExtensionError, format_extension_error
+
     if response.ok:
         added = response.payload.get("components_added") or []
         removed = response.payload.get("components_removed") or []
-        typer.echo(f"reload: ok bundle={bundle_name}")
+        typer.echo(f"reload: ok extension={extension_id} bundle={bundle_name}")
         if added:
             typer.echo(f"  added:   {', '.join(added)}")
         if removed:
             typer.echo(f"  removed: {', '.join(removed)}")
-        raise typer.Exit(code=0)
+        return
 
     # Failure path: render typed errors when present, fall back to status text.
     raw_errors = response.payload.get("errors") or []
@@ -397,10 +468,81 @@ def reload_command(
         rendered_any = True
     if not rendered_any:
         typer.echo(
-            f"reload: failed (HTTP {response.status} bundle={bundle_name})",
+            f"reload: failed (HTTP {response.status} extension={extension_id} bundle={bundle_name})",
             err=True,
         )
-    raise typer.Exit(code=1)
+
+
+def _reload_all(*, target: str | None, api_key: str | None, output_format: str) -> None:
+    """Reload every locally-discovered Bundle, aggregating results.
+
+    Sequential by design: a parallel sweep would race for the registry's
+    per-bundle reload lock, and the cost of N sequential POSTs is dominated
+    by per-bundle import time on the server, not by round-trip latency.
+
+    Exits 0 when every reload succeeds (or there were no bundles to reload);
+    exits 1 if any reload failed.
+    """
+    from lfx.extension import discover_all_extensions
+
+    extensions, _errors = discover_all_extensions()
+
+    if output_format == "json":
+        results = []
+        any_failed = False
+        for ext in extensions:
+            response = _post_reload(
+                target=target,
+                api_key=api_key,
+                extension_id=ext.extension_id,
+                bundle_name=ext.bundle_name,
+            )
+            results.append(
+                {
+                    "extension_id": ext.extension_id,
+                    "bundle_name": ext.bundle_name,
+                    "status": response.status,
+                    "ok": response.ok,
+                    "payload": response.payload,
+                }
+            )
+            if not response.ok:
+                any_failed = True
+        typer.echo(json.dumps({"results": results}, indent=2, sort_keys=True))
+        raise typer.Exit(code=1 if any_failed else 0)
+
+    if not extensions:
+        typer.echo(
+            "extension reload --all: no locally-discovered bundles to reload.\n"
+            "  - Run `lfx extension list` to confirm what is installed.",
+        )
+        return
+
+    any_failed = False
+    successes = 0
+    failures = 0
+    for ext in extensions:
+        response = _post_reload(
+            target=target,
+            api_key=api_key,
+            extension_id=ext.extension_id,
+            bundle_name=ext.bundle_name,
+        )
+        _render_reload_text(
+            response,
+            extension_id=ext.extension_id,
+            bundle_name=ext.bundle_name,
+        )
+        if response.ok:
+            successes += 1
+        else:
+            failures += 1
+            any_failed = True
+
+    typer.echo("")
+    typer.echo(f"extension reload --all: {successes} ok, {failures} failed.")
+    if any_failed:
+        raise typer.Exit(code=1)
 
 
 @extension_app.command(
@@ -475,7 +617,7 @@ def init_command(
 ) -> None:
     """Create a runnable extension skeleton you can iterate on with ``dev``.
 
-    Acceptance criteria for this command (LE-1016):
+    Acceptance criteria for this command:
 
       - ``init <target>`` followed immediately by ``validate <target>``
         passes with zero errors.

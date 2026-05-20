@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { formatSeconds } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
@@ -21,6 +22,7 @@ export default function MessageMetadata({
   usage,
   timestamp,
 }: MessageMetadataProps): JSX.Element | null {
+  const { t } = useTranslation();
   const hasDuration = typeof duration === "number" && duration > 0;
   const totalTokens = usage?.total_tokens;
   const hasTokens = typeof totalTokens === "number" && totalTokens > 0;
@@ -31,19 +33,19 @@ export default function MessageMetadata({
     <div className="flex flex-col gap-1">
       {timestamp && (
         <div className="flex items-center text-xxs text-secondary-foreground">
-          <div>Last run:</div>
+          <div>{t("chat.lastRun")}</div>
           <div className="ml-1">{timestamp}</div>
         </div>
       )}
       {hasDuration && (
         <div className="flex items-center text-xxs text-secondary-foreground">
-          <div>Duration:</div>
+          <div>{t("chat.duration")}</div>
           <div className="ml-auto">{formatSeconds(duration)}</div>
         </div>
       )}
       {usage?.input_tokens != null && (
         <div className="flex items-center text-xxs text-secondary-foreground">
-          <div>Input:</div>
+          <div>{t("chat.inputLabel")}</div>
           <div className="ml-auto flex items-center gap-1 font-mono text-xs">
             <ForwardedIconComponent name="Coins" className="h-3 w-3" />
             {formatTokenCount(usage.input_tokens)}
@@ -52,7 +54,7 @@ export default function MessageMetadata({
       )}
       {usage?.output_tokens != null && (
         <div className="flex items-center text-xxs text-secondary-foreground">
-          <div>Output:</div>
+          <div>{t("chat.outputLabel")}</div>
           <div className="ml-auto flex items-center gap-1 font-mono text-xs">
             <ForwardedIconComponent name="Coins" className="h-3 w-3" />
             {formatTokenCount(usage.output_tokens)}

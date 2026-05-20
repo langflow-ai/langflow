@@ -381,16 +381,16 @@ describe("SidebarSegmentedNav", () => {
       tooltip: "sidebar.nav.versionHistory",
     });
     expect(NAV_ITEMS[4]).toEqual({
-      id: "traces",
-      icon: "Activity",
-      label: "sidebar.nav.traces",
-      tooltip: "sidebar.nav.traces",
-    });
-    expect(NAV_ITEMS[5]).toEqual({
       id: "memories",
       icon: "BrainCog",
       label: "Memories",
       tooltip: "Memories",
+    });
+    expect(NAV_ITEMS[5]).toEqual({
+      id: "traces",
+      icon: "Activity",
+      label: "sidebar.nav.traces",
+      tooltip: "sidebar.nav.traces",
     });
   });
 

@@ -1,8 +1,8 @@
-"""Tests for ``lfx.extension.init_template`` (LE-1016).
+"""Tests for ``lfx.extension.init_template``.
 
 Coverage:
     - Basic template renders a manifest that round-trips through the
-      LE-1014 validator with zero errors (AC #1).
+      manifest validator with zero errors (AC #1).
     - Generated test file is a syntactically valid pytest module that
       imports + executes (AC #2).
     - Unknown ``--template`` value (e.g. ``full``) returns a typed

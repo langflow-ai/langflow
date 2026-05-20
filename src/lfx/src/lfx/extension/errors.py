@@ -70,7 +70,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "inline-path-missing",
         "inline-path-unreadable",
         "bundle-json-invalid",
-        # init / dev CLI codes (LE-1016)
+        # init / dev CLI codes
         "extension-target-exists",
         "extension-target-invalid",
         "local-extension-missing",
@@ -80,14 +80,14 @@ ERROR_CODES: frozenset[str] = frozenset(
         "migration-table-invalid",
         "component-not-found-with-hint",
         "component-name-ambiguous",
-        # Production install / discovery (LE-1022)
+        # Production install / discovery
         "installed-extension-immutable",
         "seed-directory-immutable",
         "seed-directory-not-found",
         "seed-bundle-shadowed",
         "bundle-shadowed",
         "duplicate-extension-id",
-        # Reload-specific codes (LE-1018)
+        # Reload-specific codes
         "reload-in-progress",
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
