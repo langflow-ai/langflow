@@ -111,6 +111,7 @@ class ArizePhoenixTracer(BaseTracer):
                 self.propagator.inject(carrier=self.carrier)
 
             self.child_spans: dict[str, Span] = {}
+            self._context_tokens: dict[str, object] = {}
 
         except Exception as e:  # noqa: BLE001
             logger.error("[Arize/Phoenix] Error Setting Up Tracer: %s", str(e), exc_info=True)
@@ -263,6 +264,13 @@ class ArizePhoenixTracer(BaseTracer):
         elif component_name == "ChatOutput":
             self.chat_output_value = processed_inputs["input_value"]
 
+        # Attach child span to OTel context so LangChain auto-instrumented
+        # spans (via LangChainInstrumentor) become children of this span
+        from opentelemetry import context as otel_context
+        from opentelemetry.trace import set_span_in_context
+
+        self._context_tokens[trace_id] = otel_context.attach(set_span_in_context(child_span))
+
         self.child_spans[trace_id] = child_span
 
     @override
@@ -293,6 +301,14 @@ class ArizePhoenixTracer(BaseTracer):
             child_span.set_attribute("logs", self._safe_json_dumps(processed_logs))
 
         self._set_span_status(child_span, error)
+
+        # Detach from OTel context before ending the span
+        token = self._context_tokens.pop(trace_id, None)
+        if token is not None:
+            from opentelemetry import context as otel_context
+
+            otel_context.detach(token)
+
         child_span.end(end_time=self._get_current_timestamp())
         self.child_spans.pop(trace_id)
 
