@@ -66,6 +66,40 @@ describe("useCreateMemoryModal", () => {
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
+  it("requires preprocessing instructions when preprocessing is enabled", () => {
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    act(() => {
+      result.current.setName("My Memory");
+      result.current.setSelectedEmbeddingModel([
+        {
+          id: "text-embedding-3-small",
+          name: "text-embedding-3-small",
+          provider: "OpenAI",
+        } as any,
+      ]);
+      result.current.setPreprocessingEnabled(true);
+      result.current.setSelectedPreprocessingModel([
+        { id: "gpt-4o-mini", name: "gpt-4o-mini", provider: "OpenAI" } as any,
+      ]);
+      // deliberately leave preprocessingPrompt empty
+    });
+
+    act(() => {
+      result.current.handleSubmit();
+    });
+
+    expect(mockSetErrorData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Validation error",
+        list: ["Please provide preprocessing instructions"],
+      }),
+    );
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
   it("submits valid payload", () => {
     const { result } = renderHook(() =>
       useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
