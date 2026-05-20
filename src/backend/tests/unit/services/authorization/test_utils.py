@@ -297,18 +297,21 @@ async def test_ensure_flow_permission_wildcard_domain_when_neither_set(monkeypat
     assert service.calls[0]["domain"] == "*"
 
 
-def test_resolve_flow_domain_precedence():
+def test_resolve_casbin_domain_precedence():
     """Unit test the precedence rule directly (project > workspace > '*').
 
     Project is more specific than workspace; passing it lets workspace grants
     flow down via Casbin g2 inheritance while keeping project-scoped grants
-    visible to the enforcer.
+    visible to the enforcer. Helper renamed from ``_resolve_flow_domain`` to
+    ``_resolve_casbin_domain`` because it serves flows AND deployments.
     """
-    ws, folder = uuid4(), uuid4()
-    assert authz_utils._resolve_flow_domain(workspace_id=ws, folder_id=folder) == f"project:{folder}"
-    assert authz_utils._resolve_flow_domain(workspace_id=ws, folder_id=None) == f"workspace:{ws}"
-    assert authz_utils._resolve_flow_domain(workspace_id=None, folder_id=folder) == f"project:{folder}"
-    assert authz_utils._resolve_flow_domain(workspace_id=None, folder_id=None) == "*"
+    ws, scope = uuid4(), uuid4()
+    assert authz_utils._resolve_casbin_domain(workspace_id=ws, scope_id=scope) == f"project:{scope}"
+    assert authz_utils._resolve_casbin_domain(workspace_id=ws, scope_id=None) == f"workspace:{ws}"
+    assert authz_utils._resolve_casbin_domain(workspace_id=None, scope_id=scope) == f"project:{scope}"
+    assert authz_utils._resolve_casbin_domain(workspace_id=None, scope_id=None) == "*"
+    # Backward-compatible alias still resolves to the same function.
+    assert authz_utils._resolve_flow_domain is authz_utils._resolve_casbin_domain
 
 
 @pytest.mark.anyio

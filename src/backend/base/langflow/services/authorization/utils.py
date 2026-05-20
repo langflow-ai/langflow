@@ -26,6 +26,9 @@ _AUDIT_ALLOW = "allow"
 _AUDIT_DENY = "deny"
 _AUDIT_OWNER_OVERRIDE = "owner_override"
 
+# Context keys that name the resource owner — used by audit-detail extraction.
+_OWNER_CONTEXT_KEYS = ("flow_user_id", "deployment_user_id", "project_user_id")
+
 
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
     """Build the base context dict passed to authorization enforce calls."""
@@ -129,7 +132,7 @@ async def ensure_permission(
     )
 
     audit_details = {"domain": domain}
-    for owner_key in ("flow_user_id", "deployment_user_id"):
+    for owner_key in _OWNER_CONTEXT_KEYS:
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
     await audit_decision(
@@ -147,11 +150,15 @@ async def ensure_permission(
         )
 
 
-def _resolve_flow_domain(workspace_id: UUID | None, folder_id: UUID | None) -> str:
-    """Pick the most specific Casbin domain for a flow check.
+def _resolve_casbin_domain(workspace_id: UUID | None, scope_id: UUID | None) -> str:
+    """Pick the most specific Casbin domain for a resource check.
+
+    ``scope_id`` is the folder/project id for flows and deployments, or ``None``
+    when the resource itself is the project (the project helper passes ``None``
+    so the domain falls back to workspace).
 
     Precedence (inner → outer):
-      1. ``project:{folder_id}`` when a folder is set,
+      1. ``project:{scope_id}`` when set,
       2. ``workspace:{workspace_id}`` when only a workspace is set,
       3. ``"*"`` when neither is set.
 
@@ -165,11 +172,56 @@ def _resolve_flow_domain(workspace_id: UUID | None, folder_id: UUID | None) -> s
     forwarded in the enforce context for plugins that prefer ABAC-style
     matchers.
     """
-    if folder_id is not None:
-        return f"project:{folder_id}"
+    if scope_id is not None:
+        return f"project:{scope_id}"
     if workspace_id is not None:
         return f"workspace:{workspace_id}"
     return "*"
+
+
+# Backward-compatible alias for callers/tests that imported the old name.
+_resolve_flow_domain = _resolve_casbin_domain
+
+
+async def _ensure_resource_permission(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    resource_id: UUID | None,
+    owner_id: UUID | None,
+    act_str: str,
+    resolved_domain: str,
+    extra_context: dict[str, Any],
+) -> None:
+    """Shared core for the per-resource ``ensure_*_permission`` helpers.
+
+    Builds the canonical ``{resource_type}:{id}|*`` object key, short-circuits
+    on owner override (audited as ``owner_override``), and otherwise delegates
+    to ``ensure_permission``. ``extra_context`` is forwarded verbatim — callers
+    own the key names so each resource type's audit row stays self-describing.
+    """
+    obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
+
+    # Owner override: a resource owner can always operate on their own resource.
+    if owner_id is not None and getattr(user, "id", None) == owner_id:
+        settings = get_settings_service()
+        if settings.auth_settings.AUTHZ_ENABLED:
+            await audit_decision(
+                user_id=user.id,
+                action=f"{resource_type}:{act_str}",
+                obj=obj,
+                result=_AUDIT_OWNER_OVERRIDE,
+                details={"domain": resolved_domain},
+            )
+        return
+
+    await ensure_permission(
+        user,
+        domain=resolved_domain,
+        obj=obj,
+        act=act_str,
+        context=extra_context,
+    )
 
 
 async def ensure_flow_permission(
@@ -185,35 +237,20 @@ async def ensure_flow_permission(
     """Check flow-scoped permission with workspace/project domain + owner override.
 
     The flow owner is always allowed (audited as ``owner_override``). Otherwise
-    delegates to :func:`ensure_permission` with the canonical Casbin tuple
+    delegates through :func:`ensure_permission` with the canonical Casbin tuple
     ``(user, domain, obj=flow:{id}|flow:*, act=<FlowAction>)`` where the domain
-    follows the precedence in :func:`_resolve_flow_domain`. Both
-    ``workspace_id`` and ``folder_id`` are forwarded in the context dict so the
-    enterprise plugin can use whichever fits its policy model.
+    follows :func:`_resolve_casbin_domain`. Both ``workspace_id`` and
+    ``folder_id`` are forwarded in the context dict so the enterprise plugin
+    can use whichever fits its policy model.
     """
-    obj = f"flow:{flow_id}" if flow_id else "flow:*"
-    act_str = _coerce_action(act)
-    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, folder_id)
-
-    # Owner override: a flow owner can always operate on their own flow.
-    if flow_user_id is not None and getattr(user, "id", None) == flow_user_id:
-        settings = get_settings_service()
-        if settings.auth_settings.AUTHZ_ENABLED:
-            await audit_decision(
-                user_id=user.id,
-                action=f"flow:{act_str}",
-                obj=obj,
-                result=_AUDIT_OWNER_OVERRIDE,
-                details={"domain": resolved_domain},
-            )
-        return
-
-    await ensure_permission(
+    await _ensure_resource_permission(
         user,
-        domain=resolved_domain,
-        obj=obj,
-        act=act_str,
-        context={
+        resource_type="flow",
+        resource_id=flow_id,
+        owner_id=flow_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, folder_id),
+        extra_context={
             "flow_user_id": flow_user_id,
             "workspace_id": workspace_id,
             "folder_id": folder_id,
@@ -236,28 +273,14 @@ async def ensure_deployment_permission(
     Deployments use ``project_id`` (folder row) for the Casbin project domain, same as
     flows use ``folder_id``. The deployment owner may always access their deployment.
     """
-    obj = f"deployment:{deployment_id}" if deployment_id else "deployment:*"
-    act_str = _coerce_action(act)
-    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, project_id)
-
-    if deployment_user_id is not None and getattr(user, "id", None) == deployment_user_id:
-        settings = get_settings_service()
-        if settings.auth_settings.AUTHZ_ENABLED:
-            await audit_decision(
-                user_id=user.id,
-                action=f"deployment:{act_str}",
-                obj=obj,
-                result=_AUDIT_OWNER_OVERRIDE,
-                details={"domain": resolved_domain},
-            )
-        return
-
-    await ensure_permission(
+    await _ensure_resource_permission(
         user,
-        domain=resolved_domain,
-        obj=obj,
-        act=act_str,
-        context={
+        resource_type="deployment",
+        resource_id=deployment_id,
+        owner_id=deployment_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, project_id),
+        extra_context={
             "deployment_user_id": deployment_user_id,
             "workspace_id": workspace_id,
             "project_id": project_id,
@@ -278,31 +301,17 @@ async def ensure_project_permission(
 
     Projects are the OSS persistent name for folders. The Casbin object is
     ``project:{project_id}`` (or ``project:*`` for list/create). The domain
-    resolves to ``workspace:{workspace_id}`` when set, otherwise ``*``.
-    The project owner is always allowed (audited as ``owner_override``).
+    resolves to ``workspace:{workspace_id}`` when set, otherwise ``*`` — the
+    project itself is the resource, not the scope.
     """
-    obj = f"project:{project_id}" if project_id else "project:*"
-    act_str = _coerce_action(act)
-    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, None)
-
-    if project_user_id is not None and getattr(user, "id", None) == project_user_id:
-        settings = get_settings_service()
-        if settings.auth_settings.AUTHZ_ENABLED:
-            await audit_decision(
-                user_id=user.id,
-                action=f"project:{act_str}",
-                obj=obj,
-                result=_AUDIT_OWNER_OVERRIDE,
-                details={"domain": resolved_domain},
-            )
-        return
-
-    await ensure_permission(
+    await _ensure_resource_permission(
         user,
-        domain=resolved_domain,
-        obj=obj,
-        act=act_str,
-        context={
+        resource_type="project",
+        resource_id=project_id,
+        owner_id=project_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, None),
+        extra_context={
             "project_user_id": project_user_id,
             "workspace_id": workspace_id,
         },
