@@ -1530,6 +1530,35 @@ class TestUpgradeFlowOption:
                 await run_flow(flow_json=flow_json, upgrade_flow="typo")
 
     @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_inline_json(self):
+        """--flow-json with an outer envelope must have its nodes inspected, not silently pass with zero nodes."""
+        import json as _json
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+        flow_json = _json.dumps(envelope)
+
+        with patch("lfx.interface.components.component_cache") as mock_cache:
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="incompatible components"):
+                await run_flow(flow_json=flow_json, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_stdin(self):
+        """--stdin with an outer envelope must have its nodes inspected, not silently pass with zero nodes."""
+        import json as _json
+        from io import StringIO
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("sys.stdin", StringIO(_json.dumps(envelope))),
+        ):
+            mock_cache.all_types_dict = self._registry()
+            with pytest.raises(RunError, match="incompatible components"):
+                await run_flow(stdin=True, upgrade_flow="check")
+
+    @pytest.mark.asyncio
     async def test_upgrade_flow_safe_envelope_file_loads_successfully(self, tmp_path):
         """Happy path: --upgrade-flow=safe on an envelope file must proceed to load.
 

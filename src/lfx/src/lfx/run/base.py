@@ -158,7 +158,8 @@ async def run_flow(
         if verbosity > 0:
             sys.stderr.write("Processing inline JSON content...\n")
         try:
-            flow_dict = json.loads(flow_json)
+            raw = json.loads(flow_json)
+            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
             if verbosity > 0:
                 sys.stderr.write("JSON content is valid\n")
         except json.JSONDecodeError as e:
@@ -178,7 +179,8 @@ async def run_flow(
                 error_msg = "No content received from stdin"
                 output_error(error_msg, verbose=verbose)
                 raise RunError(error_msg, None)
-            flow_dict = json.loads(stdin_content)
+            raw = json.loads(stdin_content)
+            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
             if verbosity > 0:
                 sys.stderr.write("JSON content from stdin is valid\n")
         except json.JSONDecodeError as e:
@@ -264,7 +266,7 @@ async def run_flow(
                 sys.stderr.write("Loading graph from JSON content...\n")
             from lfx.load import aload_flow_from_json
 
-            graph = await aload_flow_from_json(flow_dict, disable_logs=not verbose)
+            graph = await aload_flow_from_json({"data": flow_dict}, disable_logs=not verbose)
         # Handle file path
         elif script_path is not None:
             if not script_path.exists():
