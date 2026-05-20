@@ -8,7 +8,12 @@ const mockMutate = jest.fn();
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: (s: { setErrorData: jest.Mock; setSuccessData: jest.Mock }) => unknown) =>
+  default: (
+    selector: (s: {
+      setErrorData: jest.Mock;
+      setSuccessData: jest.Mock;
+    }) => unknown,
+  ) =>
     selector({
       setErrorData: mockSetErrorData,
       setSuccessData: mockSetSuccessData,
@@ -83,7 +88,11 @@ describe("useCreateMemoryModal", () => {
       ]);
       result.current.setPreprocessingEnabled(true);
       result.current.setSelectedPreprocessingModel([
-        { id: "gpt-4o-mini", name: "gpt-4o-mini", provider: "OpenAI" } as ModelOption,
+        {
+          id: "gpt-4o-mini",
+          name: "gpt-4o-mini",
+          provider: "OpenAI",
+        } as ModelOption,
       ]);
       // deliberately leave preprocessingPrompt empty
     });
@@ -118,7 +127,11 @@ describe("useCreateMemoryModal", () => {
       result.current.setBatchSizeInput("5");
       result.current.setPreprocessingEnabled(true);
       result.current.setSelectedPreprocessingModel([
-        { id: "gpt-4o-mini", name: "gpt-4o-mini", provider: "OpenAI" } as ModelOption,
+        {
+          id: "gpt-4o-mini",
+          name: "gpt-4o-mini",
+          provider: "OpenAI",
+        } as ModelOption,
       ]);
       result.current.setPreprocessingPrompt("summarize");
     });
