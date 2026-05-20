@@ -153,13 +153,29 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     """Resource share record granting access at a specific scope/permission level."""
 
     __tablename__ = "authz_share"
+    # ``target_id`` is naturally NULL for PRIVATE/PUBLIC scopes (no specific target)
+    # and a UUID for TEAM/USER scopes. A plain UNIQUE that includes target_id lets
+    # duplicates slip past the NULL=NULL rule, so use two partial unique indexes:
+    # one for targeted shares and one for the untargeted PRIVATE/PUBLIC case.
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_authz_share_targeted",
             "resource_type",
             "resource_id",
             "scope",
             "target_id",
-            name="uq_authz_share_resource_target",
+            unique=True,
+            postgresql_where=text("target_id IS NOT NULL"),
+            sqlite_where=text("target_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_authz_share_untargeted",
+            "resource_type",
+            "resource_id",
+            "scope",
+            unique=True,
+            postgresql_where=text("target_id IS NULL"),
+            sqlite_where=text("target_id IS NULL"),
         ),
     )
 

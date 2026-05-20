@@ -263,6 +263,143 @@ async def test_authz_share_persists(authz_async_session: AsyncSession):
 
 
 @pytest.mark.anyio
+async def test_authz_share_blocks_duplicate_targeted(authz_async_session: AsyncSession):
+    """Two USER shares with the same (resource, scope, target_id) must conflict.
+
+    Covered by the ``uq_authz_share_targeted`` partial unique index
+    (WHERE target_id IS NOT NULL).
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="dupe_sharer", password=_TEST_PASSWORD)
+    target = User(username="dupe_target", password=_TEST_PASSWORD)
+    authz_async_session.add_all([user, target])
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+    await authz_async_session.refresh(target)
+
+    flow = Flow(name="dupe-shared-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.USER.value,
+            target_id=target.id,
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    await authz_async_session.commit()
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.USER.value,
+            target_id=target.id,
+            permission_level=SharePermissionLevel.WRITE.value,
+            created_by=user.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_share_blocks_duplicate_untargeted(authz_async_session: AsyncSession):
+    """Two PUBLIC shares on the same resource must conflict despite NULL target_id.
+
+    Regression for PR #13153 review: the original
+    UNIQUE(resource_type, resource_id, scope, target_id) constraint did not
+    catch this because NULL != NULL in SQL. Covered by the
+    ``uq_authz_share_untargeted`` partial unique index (WHERE target_id IS NULL).
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="public_sharer", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    flow = Flow(name="public-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.PUBLIC.value,
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    await authz_async_session.commit()
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.PUBLIC.value,
+            permission_level=SharePermissionLevel.WRITE.value,
+            created_by=user.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_share_allows_distinct_targets(authz_async_session: AsyncSession):
+    """Same (resource, scope) shared with two different users must persist."""
+    user = User(username="multi_share_owner", password=_TEST_PASSWORD)
+    alice = User(username="alice_target", password=_TEST_PASSWORD)
+    bob = User(username="bob_target", password=_TEST_PASSWORD)
+    authz_async_session.add_all([user, alice, bob])
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+    await authz_async_session.refresh(alice)
+    await authz_async_session.refresh(bob)
+
+    flow = Flow(name="multi-share-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.USER.value,
+            target_id=alice.id,
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.USER.value,
+            target_id=bob.id,
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    await authz_async_session.commit()
+
+    rows = (await authz_async_session.exec(select(AuthzShare).where(AuthzShare.resource_id == flow.id))).all()
+    assert len(rows) == 2
+
+
+@pytest.mark.anyio
 async def test_authz_edit_lock_persists(authz_async_session: AsyncSession):
     """AuthzEditLock persists with an expiry timestamp tied to a flow + user."""
     user = User(username="lock_holder", password=_TEST_PASSWORD)
