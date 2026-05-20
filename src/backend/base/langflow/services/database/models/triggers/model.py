@@ -210,3 +210,75 @@ class TriggerJob(TriggerJobBase, table=True):  # type: ignore[call-arg]
         # scan over ``scheduled_at`` once it filters on ``status``.
         sa.Index("ix_trigger_job_status_scheduled_at", "status", "scheduled_at"),
     )
+
+
+# --------------------------------------------------------------------------- #
+#  API schemas                                                                 #
+# --------------------------------------------------------------------------- #
+# Kept inline with the table model, matching the convention used by
+# ``flow.model`` and ``variable.model``. The route handlers import these
+# names directly from the package.
+
+
+class TriggerCreate(SQLModel):
+    """Body of ``POST /api/v1/triggers``.
+
+    ``user_id`` is taken from the authenticated principal — not the body.
+    """
+
+    flow_id: UUID
+    name: str
+    cron_expression: str
+    timezone: str = "UTC"
+    payload: dict[str, Any] | None = None
+    max_attempts: int = 3
+    is_active: bool = True
+    trigger_type: TriggerType = TriggerType.CRON
+
+
+class TriggerUpdate(SQLModel):
+    """Body of ``PATCH /api/v1/triggers/{id}``.
+
+    Every field optional so the client can send a sparse patch.
+    """
+
+    name: str | None = None
+    cron_expression: str | None = None
+    timezone: str | None = None
+    payload: dict[str, Any] | None = None
+    max_attempts: int | None = None
+    is_active: bool | None = None
+
+
+class TriggerRead(SQLModel):
+    """Response shape for trigger reads. Excludes nothing — all columns are
+    safe to surface (no secrets stored on this table)."""
+
+    id: UUID
+    flow_id: UUID
+    user_id: UUID
+    name: str
+    trigger_type: TriggerType
+    cron_expression: str | None
+    timezone: str
+    payload: dict[str, Any] | None
+    max_attempts: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class TriggerJobRead(SQLModel):
+    """Response shape for trigger-job history queries."""
+
+    id: UUID
+    trigger_id: UUID
+    status: JobStatus
+    scheduled_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    attempt: int
+    max_attempts: int
+    error: str | None
+    run_job_id: UUID | None
+    created_at: datetime
