@@ -1262,6 +1262,7 @@ class TestWorkflowBackgroundQueueing:
             task_kwargs = mock_task_service.fire_and_forget_task.call_args.kwargs
 
             assert hasattr(task_func, "delay")
+            assert task_func.name == "langflow.worker.run_workflow_job"
             assert "graph" not in task_kwargs
             assert task_kwargs["graph_data"] == flow_data
             assert task_kwargs["flow_id"] == str(flow_id)

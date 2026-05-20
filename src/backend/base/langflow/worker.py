@@ -74,6 +74,7 @@ async def _run_workflow_job(
     session_id: str | None,
     request_variables: dict[str, str] | None = None,
 ) -> None:
+    """Reconstruct and execute a workflow graph inside the Celery worker process."""
     from copy import deepcopy
 
     from lfx.graph.graph.base import Graph
