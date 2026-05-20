@@ -190,3 +190,63 @@ class LangflowClient:
             await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
         except Exception:  # noqa: BLE001
             logger.warning("Failed to post flow event (flow_id=%s, type=%s)", flow_id, event_type, exc_info=True)
+
+    async def list_flow_components(self, flow_id: str) -> list[dict[str, Any]]:
+        """List a flow's components with their inputs/outputs and handle types.
+
+        Each item: {id, type, display_name, description, position,
+        inputs: [{name, display_name, type, input_types, required, advanced, show, value}],
+        outputs: [{name, display_name, method, types}]}.
+        """
+        return await self.get(f"/flows/{flow_id}/components")
+
+    async def list_flow_edges(self, flow_id: str) -> list[dict[str, Any]]:
+        """List a flow's edges with source/target endpoints and handle types.
+
+        Each item: {id, source, target, source_output, target_input,
+        source_types, target_types}.
+        """
+        return await self.get(f"/flows/{flow_id}/edges")
+
+    async def add_flow_component(
+        self,
+        flow_id: str,
+        component_type: str,
+        *,
+        component_id: str | None = None,
+        position: dict[str, float] | None = None,
+    ) -> dict[str, Any]:
+        """Append a component to a flow. Returns the resulting ComponentSummary.
+
+        ``component_type`` must be a known type in the catalog (see GET /all).
+        ``component_id`` lets the caller pin a specific node id; otherwise the
+        server generates one. ``position`` defaults to (0, 0) on the server.
+        """
+        body: dict[str, Any] = {"type": component_type}
+        if component_id is not None:
+            body["component_id"] = component_id
+        if position is not None:
+            body["position"] = position
+        return await self.post(f"/flows/{flow_id}/components", json_data=body)
+
+    async def add_flow_edge(
+        self,
+        flow_id: str,
+        source: str,
+        source_output: str,
+        target: str,
+        target_input: str,
+    ) -> dict[str, Any]:
+        """Connect two components in a flow. Returns the resulting EdgeSummary.
+
+        The server validates type compatibility between source output and
+        target input (HTTP 400 on mismatch). Idempotent: a duplicate connect
+        returns the existing edge.
+        """
+        body = {
+            "source": source,
+            "source_output": source_output,
+            "target": target,
+            "target_input": target_input,
+        }
+        return await self.post(f"/flows/{flow_id}/edges", json_data=body)
