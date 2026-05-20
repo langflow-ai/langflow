@@ -287,7 +287,11 @@ class ArizePhoenixTracer(BaseTracer):
 
         logs_dicts = [log if isinstance(log, dict) else log.model_dump() for log in logs]
         processed_logs = (
-            self._convert_to_arize_phoenix_types({log.get("name"): log for log in logs_dicts}) if logs else {}
+            self._convert_to_arize_phoenix_types(
+                {f"log_{i}_{log.get('name', '')}": log for i, log in enumerate(logs_dicts)}
+            )
+            if logs
+            else {}
         )
         if processed_logs:
             child_span.set_attribute("logs", self._safe_json_dumps(processed_logs))
