@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 from lfx.cli.script_loader import extract_structured_result
 from lfx.events.event_manager import EventManager, create_default_event_manager
+from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
@@ -58,7 +59,12 @@ async def _run_graph_with_events(
         graph.prepare()
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-        results = [result async for result in graph.async_start(inputs=inputs, event_manager=event_manager)]
+        results = [
+            payload
+            async for payload in get_default_coordinator().stream(
+                graph, initial_inputs=inputs, event_manager=event_manager
+            )
+        ]
         execution_result.result = extract_structured_result(results)
     except Exception as e:  # noqa: BLE001
         execution_result.error = e
@@ -130,7 +136,7 @@ async def execute_flow_file(
         graph.prepare()
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
-        results = [result async for result in graph.async_start(inputs=inputs)]
+        results = [payload async for payload in get_default_coordinator().stream(graph, initial_inputs=inputs)]
         return extract_structured_result(results)
 
     except HTTPException:

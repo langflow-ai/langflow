@@ -3,6 +3,7 @@
 from collections import deque
 from typing import TYPE_CHECKING
 
+from lfx.execution import get_default_coordinator
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:
@@ -266,7 +267,7 @@ async def execute_loop_body(
             # Execute subgraph and collect results
             # Pass event_manager so UI receives events from subgraph execution
             results = []
-            async for result in iteration_subgraph.async_start(event_manager=event_manager):
+            async for result in get_default_coordinator().stream(iteration_subgraph, event_manager=event_manager):
                 results.append(result)
                 # Stop all on error (as per design decision)
                 if hasattr(result, "valid") and not result.valid:

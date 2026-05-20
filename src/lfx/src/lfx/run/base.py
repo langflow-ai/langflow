@@ -15,6 +15,7 @@ from lfx.cli.script_loader import (
     load_graph_from_script,
 )
 from lfx.cli.validation import validate_global_variables_for_env
+from lfx.execution import get_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
@@ -363,8 +364,11 @@ async def run_flow(
         # fall through to os.environ on miss instead of erroring the build).
         fallback_to_env_vars = resolve_fallback_to_env_vars()
 
-        async for result in graph.async_start(
-            inputs, event_manager=event_manager, fallback_to_env_vars=fallback_to_env_vars
+        async for result in get_default_coordinator().stream(
+            graph,
+            initial_inputs=inputs,
+            event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         ):
             result_count += 1
             if verbosity > 0:
