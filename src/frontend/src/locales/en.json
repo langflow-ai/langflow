@@ -1561,6 +1561,8 @@
   "memory.searchMemories": "Search memories...",
   "memory.selectEmbeddingModel": "Select embedding model",
   "memory.selectPreprocessingModel": "Select preprocessing model",
+  "memory.preprocessingModel": "Preprocessing model:",
+  "memory.preprocessingInstructions": "Preprocessing instructions:",
   "memory.senderLabel": "Sender:",
   "memory.sessionFilter": "Session filter",
   "memory.sessionLabel": "Session:",
