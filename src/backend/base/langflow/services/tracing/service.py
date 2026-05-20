@@ -206,6 +206,7 @@ class TracingService(Service):
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
+            session_id=trace_context.session_id,
         )
 
     def _initialize_opik_tracer(self, trace_context: TraceContext) -> None:
