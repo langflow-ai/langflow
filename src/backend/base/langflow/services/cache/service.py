@@ -345,11 +345,12 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         await self._upsert(key, value, lock)
 
     async def _upsert(self, key, value, lock: asyncio.Lock | None = None) -> None:
-        existing_value = await self.get(key, lock)
-        if existing_value is not None and isinstance(existing_value, dict) and isinstance(value, dict):
-            existing_value.update(value)
-            value = existing_value
-        await self.set(key, value, lock)
+        async with lock or self.lock:
+            existing_value = await self._get(key)
+            if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
+                existing_value.update(value)
+                value = existing_value
+            await self._set(key, value)
 
     async def contains(self, key) -> bool:
         return key in self.cache

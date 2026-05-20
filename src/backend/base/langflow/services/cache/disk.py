@@ -85,7 +85,7 @@ class AsyncDiskCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         if existing_value is not CACHE_MISS and isinstance(existing_value, dict) and isinstance(value, dict):
             existing_value.update(value)
             value = existing_value
-        await self.set(key, value)
+        await self._set(key, value)
 
     async def contains(self, key) -> bool:
         return await asyncio.to_thread(self.cache.__contains__, key)
