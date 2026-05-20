@@ -29,7 +29,7 @@ from langflow.api.v1.chat import build_flow_and_stream
 from langflow.memory import aadd_messagetables
 from langflow.schema.properties import Properties
 from langflow.services.auth.utils import get_current_user_for_websocket
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service, session_scope
@@ -517,9 +517,11 @@ message_tasks: dict[str, asyncio.Task] = {}
 last_sender_by_session: defaultdict[str, str | None] = defaultdict(lambda: None)
 
 
-async def get_flow_desc_from_db(flow_id: str) -> Flow:
+async def get_flow_desc_from_db(flow_id: str, user_id: UUID | None = None) -> Flow:
     async with session_scope() as session:
         stmt = select(Flow).where(Flow.id == UUID(flow_id))
+        if user_id is not None:
+            stmt = stmt.where((Flow.user_id == user_id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
         result = await session.exec(stmt)
         flow = result.scalar_one_or_none()
         if not flow:
@@ -733,7 +735,7 @@ async def flow_as_tool_websocket(
         if current_user is None or openai_key is None:
             return
         try:
-            flow_description = await get_flow_desc_from_db(flow_id)
+            flow_description = await get_flow_desc_from_db(flow_id, user_id=current_user.id)
             flow_tool = {
                 "name": "execute_flow",
                 "type": "function",
