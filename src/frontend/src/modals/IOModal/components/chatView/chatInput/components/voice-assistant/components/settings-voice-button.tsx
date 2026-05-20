@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,10 @@ const SettingsVoiceButton = ({
   isRecording,
   setShowSettingsModal,
 }: SettingsVoiceButtonProps) => {
+  const { t } = useTranslation();
   return (
     <>
-      <ShadTooltip content="Audio Settings" side="top">
+      <ShadTooltip content={t("voice.audioSettings")} side="top">
         <div>
           <Button
             className={`btn-playground-actions cursor-pointer text-muted-foreground hover:text-primary`}

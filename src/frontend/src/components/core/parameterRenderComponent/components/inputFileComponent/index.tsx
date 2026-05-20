@@ -100,7 +100,7 @@ export default function InputFileComponent({
                       onError: (error) => {
                         console.error(t("errors.uploadFile"));
                         setErrorData({
-                          title: "Error uploading file",
+                          title: t("errors.upload"),
                           list: [error.response?.data?.detail],
                         });
                       },

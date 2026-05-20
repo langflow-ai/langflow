@@ -19,10 +19,10 @@ maintainers = [
 dependencies = [
     "langflow-base[complete]>=0.10.0",
     # langflow-extensions:bundle-deps-start
-    # Bundle pilot (LE-1023): lfx-duckduckgo ships the DuckDuckGoSearchComponent
+    # Bundle pilot: lfx-duckduckgo ships the DuckDuckGoSearchComponent
     # as a standalone Extension distribution.  Listed as a regular dep so
-    # ``pip install langflow`` still pulls the component in -- the AC for B1
-    # is "no user-visible change at install time".
+    # ``pip install langflow`` still pulls the component in -- there must
+    # be no user-visible change at install time.
     "lfx-duckduckgo>=0.1.0",
     # Second pilot port (validates src/bundles/PORTING.md): lfx-arxiv ships
     # ArXivComponent as a standalone Bundle.  Same regular-dep rationale --

@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 
 @pytest.fixture

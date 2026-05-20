@@ -1,4 +1,4 @@
-"""HTTP client helper for ``lfx extension reload`` (LE-1018).
+"""HTTP client helper for ``lfx extension reload``.
 
 Kept separate from the typer command so the request/response shape can be
 unit-tested without spinning up a full CLI invocation.  The CLI command

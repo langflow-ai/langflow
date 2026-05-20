@@ -5,8 +5,8 @@ Langflow's loader discovers ``extension.json`` shipped alongside this
 ``__init__.py`` and registers ``DuckDuckGoSearchComponent`` under the
 namespaced ID ``ext:duckduckgo:DuckDuckGoSearchComponent@official``.
 
-LE-1023 (B1) pilot: the first provider extracted from
-``lfx.components.<provider>`` into a standalone Bundle.
+The first provider extracted from ``lfx.components.<provider>`` into
+a standalone Bundle.
 """
 
 from lfx_duckduckgo.components.duckduckgo.duck_duck_go_search_run import (
