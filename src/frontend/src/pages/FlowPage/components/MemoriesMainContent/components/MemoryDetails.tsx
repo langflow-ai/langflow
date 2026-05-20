@@ -1,9 +1,11 @@
+import { useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/utils/utils";
 import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
@@ -28,6 +30,7 @@ export function MemoryDetails({
   hasNextSessionsPage,
   isFetchingNextSessionsPage,
 }: MemoryDetailsProps) {
+  const [configOpen, setConfigOpen] = useState(false);
   const pendingLabel =
     memory.batch_size > 1 ? "Pending (this batch)" : "Pending Messages";
   const pendingValue =
@@ -64,7 +67,7 @@ export function MemoryDetails({
             icon="Clock"
           />
 
-          <Popover>
+          <Popover open={configOpen} onOpenChange={setConfigOpen}>
             <PopoverTrigger asChild>
               <div className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-muted/50">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
@@ -81,7 +84,10 @@ export function MemoryDetails({
                 </div>
                 <IconComponent
                   name="ChevronDown"
-                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                    configOpen && "rotate-180",
+                  )}
                 />
               </div>
             </PopoverTrigger>

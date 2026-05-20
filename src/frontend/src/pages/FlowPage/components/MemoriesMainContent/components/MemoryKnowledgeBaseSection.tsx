@@ -12,11 +12,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../helpers";
-
-const noop = () => {};
-
 import { KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoryKnowledgeBaseSectionProps } from "../types";
+
+const noop = () => {};
 
 export function MemoryKnowledgeBaseSection({
   docsData,
