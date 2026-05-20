@@ -244,10 +244,13 @@ async def _run_one(
     decision = rows_written[-1]["result"] if rows_written else "skipped"
     audit_action = rows_written[-1]["action"] if rows_written else ""
     obj = rows_written[-1]["obj"] if rows_written else (f"flow:{flow_id}" if guard.has_flow_id else "flow:*")
+    # Reach for the audited domain first; only fall back when no audit row was written
+    # (rare — AUTHZ_ENABLED is forced True in dry-run). The fallback mirrors what
+    # `_resolve_flow_domain` would emit given both ids: project wins.
     domain = (
         rows_written[-1]["details"].get("domain", "")
         if rows_written and isinstance(rows_written[-1].get("details"), dict)
-        else f"workspace:{workspace_id}"
+        else f"project:{folder_id}"
     )
 
     return DryRunResult(

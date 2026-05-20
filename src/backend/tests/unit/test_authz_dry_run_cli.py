@@ -180,11 +180,17 @@ def test_deny_writes_blocks_writes_allows_reads():
             assert row.decision == "deny", row
 
 
-def test_domain_is_workspace_prefixed():
-    """The recorded domain uses the workspace:{uuid} form for in-scope scenarios."""
+def test_domain_is_project_prefixed():
+    """The recorded domain uses the project:{uuid} form for in-scope scenarios.
+
+    ``_resolve_flow_domain`` prefers project over workspace because Casbin g2
+    inheritance is directional — passing the more specific domain lets both
+    workspace-scoped and project-scoped grants match. The dry-run CLI passes
+    both ids on every scenario, so every audited row resolves to ``project:``.
+    """
     rows = asyncio.run(_run_all(StubPolicy.ALLOW_ALL))
-    workspace_rows = [r for r in rows if r.domain.startswith("workspace:")]
-    assert workspace_rows, "expected at least one row with a workspace domain"
+    project_rows = [r for r in rows if r.domain.startswith("project:")]
+    assert project_rows, "expected at least one row with a project domain"
 
 
 # --------------------------------------------------------------------------- #
