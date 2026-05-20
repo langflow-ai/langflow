@@ -47,9 +47,9 @@ def _tz_aware_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _tz_column(*, nullable: bool = False) -> Column:
+def _tz_column(*, nullable: bool = False, index: bool = False) -> Column:
     """Return a ``DateTime(timezone=True)`` column — keeps the type consistent."""
-    return Column(sa.DateTime(timezone=True), nullable=nullable)
+    return Column(sa.DateTime(timezone=True), nullable=nullable, index=index)
 
 
 class CasbinRule(SQLModel, table=True):  # type: ignore[call-arg]
@@ -201,11 +201,11 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # partial unique indexes (which match on the lowercase form).
         CheckConstraint(
             "scope IN ('private', 'team', 'user', 'public')",
-            name="ck_authz_share_scope_enum",
+            name="scope_enum",
         ),
         CheckConstraint(
             "permission_level IN ('read', 'write', 'execute', 'admin')",
-            name="ck_authz_share_permission_enum",
+            name="permission_enum",
         ),
         # Targeted (TEAM/USER) shares require a target_id; untargeted
         # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
@@ -214,7 +214,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
             "OR (scope IN ('private', 'public') AND target_id IS NULL)",
-            name="ck_authz_share_scope_target_consistency",
+            name="scope_target_consistency",
         ),
         Index(
             "uq_authz_share_targeted",
@@ -291,4 +291,4 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
     resource_id: UUIDstr | None = Field(default=None)
     result: str = Field()
     details: dict | None = Field(default=None, sa_column=Column(sa.JSON))
-    timestamp: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    timestamp: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column(index=True))
