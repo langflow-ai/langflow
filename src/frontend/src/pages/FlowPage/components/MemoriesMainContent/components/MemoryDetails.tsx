@@ -105,7 +105,7 @@ export function MemoryDetails({
                 {memory.embedding_provider && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-muted-foreground">
-                       {t("memory.providerLabel")}
+                      {t("memory.providerLabel")}
                     </span>
                     <span className="text-foreground">
                       {memory.embedding_provider}
@@ -122,7 +122,7 @@ export function MemoryDetails({
                 )}
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-muted-foreground">
-                     {t("memory.preprocessing")}
+                    {t("memory.preprocessing")}
                   </span>
                   <span className="text-foreground">
                     {memory.preprocessing_enabled ? "Enabled" : "Disabled"}
@@ -131,7 +131,7 @@ export function MemoryDetails({
                 {memory.preprocessing_enabled && memory.preprocessing_model && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-muted-foreground">
-                     {t("memory.preprocessingModel")} 
+                      {t("memory.preprocessingModel")}
                     </span>
                     <span className="text-foreground">
                       {memory.preprocessing_model}

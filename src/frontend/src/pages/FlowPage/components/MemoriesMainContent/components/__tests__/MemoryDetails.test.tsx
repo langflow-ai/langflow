@@ -121,7 +121,9 @@ describe("MemoryDetails — Config popover", () => {
     // t("memory.modelLabel") = "Model:"
     expect(screen.getByText("Model:")).toBeInTheDocument();
     const modelValues = screen.getAllByText("text-embedding-3-small");
-    expect(modelValues.some((el) => el.className.includes("text-foreground"))).toBe(true);
+    expect(
+      modelValues.some((el) => el.className.includes("text-foreground")),
+    ).toBe(true);
   });
 
   it("shows preprocessing as Disabled when preprocessing_enabled is false", () => {
@@ -187,9 +189,7 @@ describe("MemoryDetails — Config popover", () => {
       />,
     );
     // t("memory.preprocessingModel") = "Preprocessing model:"
-    expect(
-      screen.queryByText("Preprocessing model:"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Preprocessing model:")).not.toBeInTheDocument();
   });
 
   it("shows Preprocessing Model when preprocessing is enabled and model is set", () => {
@@ -237,9 +237,7 @@ describe("MemoryDetails — Config popover", () => {
       />,
     );
     // t("memory.preprocessingInstructions") = "Preprocessing instructions:"
-    expect(
-      screen.getByText("Preprocessing instructions:"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Preprocessing instructions:")).toBeInTheDocument();
     expect(screen.getByText("Summarise briefly.")).toBeInTheDocument();
   });
 
