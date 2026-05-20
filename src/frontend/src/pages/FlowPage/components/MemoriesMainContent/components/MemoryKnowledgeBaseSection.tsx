@@ -1,8 +1,8 @@
 import type { UIEvent } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import StringReader from "@/components/common/stringReaderComponent";
 import Loading from "@/components/ui/loading";
-import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
