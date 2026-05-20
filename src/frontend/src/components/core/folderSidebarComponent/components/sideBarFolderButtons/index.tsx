@@ -383,6 +383,10 @@ const SideBarFoldersButtonsComponent = ({
     _navigate("/assets/knowledge-bases");
   };
 
+  const handleTriggersNavigation = () => {
+    _navigate("/triggers");
+  };
+
   return (
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
@@ -521,6 +525,15 @@ const SideBarFoldersButtonsComponent = ({
             >
               <ForwardedIconComponent name="File" className="h-4 w-4" />
               {t("sidebar.myFiles")}
+            </SidebarMenuButton>
+            <SidebarMenuButton
+              onClick={handleTriggersNavigation}
+              size="md"
+              className="text-sm"
+              data-testid="sidebar-nav-triggers"
+            >
+              <ForwardedIconComponent name="Clock" className="h-4 w-4" />
+              {t("sidebar.triggers")}
             </SidebarMenuButton>
           </div>
         </SidebarFooter>

@@ -29,6 +29,7 @@ import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
+import TriggersPage from "./pages/MainPage/pages/triggersPage";
 import SourceChunksPage from "./pages/MainPage/pages/knowledgePage/sourceChunksPage/SourceChunksPage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
@@ -142,6 +143,7 @@ const router = createBrowserRouter(
                       element={<HomePage key="mcp" type="mcp" />}
                     />
                   </Route>
+                  <Route path="triggers" element={<TriggersPage />} />
                 </Route>
                 <Route path="settings" element={<SettingsPage />}>
                   <Route
