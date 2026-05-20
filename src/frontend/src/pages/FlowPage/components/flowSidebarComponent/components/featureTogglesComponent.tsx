@@ -9,6 +9,15 @@ const FeatureToggles = ({
   setShowLegacy,
   cloudOnly,
   setCloudOnly,
+  cloudOnlyLocked = false,
+}: {
+  showBeta: boolean;
+  setShowBeta: (v: boolean) => void;
+  showLegacy: boolean;
+  setShowLegacy: (v: boolean) => void;
+  cloudOnly: boolean;
+  setCloudOnly: (v: boolean) => void;
+  cloudOnlyLocked?: boolean;
 }) => {
   const { t } = useTranslation();
   const toggles = [
@@ -19,6 +28,7 @@ const FeatureToggles = ({
       badgeVariant: "purpleStatic" as const,
       testId: "sidebar-beta-switch",
       prefix: "Show",
+      disabled: false,
     },
     {
       label: t("sidebar.legacyLabel"),
@@ -27,6 +37,7 @@ const FeatureToggles = ({
       badgeVariant: "secondaryStatic" as const,
       testId: "sidebar-legacy-switch",
       prefix: "Show",
+      disabled: false,
     },
     {
       label: "Cloud",
@@ -35,6 +46,7 @@ const FeatureToggles = ({
       badgeVariant: "emerald" as const,
       testId: "sidebar-cloud-only-switch",
       prefix: "Only",
+      disabled: cloudOnlyLocked,
     },
   ];
 
@@ -53,6 +65,7 @@ const FeatureToggles = ({
           <Switch
             checked={toggle.checked}
             onCheckedChange={toggle.onChange}
+            disabled={toggle.disabled}
             data-testid={toggle.testId}
             className="scale-90"
           />

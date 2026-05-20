@@ -16,11 +16,13 @@ jest.mock("@/components/ui/badge", () => ({
 }));
 
 jest.mock("@/components/ui/switch", () => ({
-  Switch: ({ checked, onCheckedChange, "data-testid": testId }: any) => (
+  Switch: ({ checked, onCheckedChange, disabled, "data-testid": testId }: any) => (
     <button
       data-testid={testId || "switch"}
-      onClick={() => onCheckedChange(!checked)}
+      onClick={() => !disabled && onCheckedChange(!checked)}
       aria-checked={checked}
+      aria-disabled={disabled}
+      disabled={disabled}
       role="switch"
     >
       {checked ? "ON" : "OFF"}
@@ -334,6 +336,30 @@ describe("FeatureToggles", () => {
       expect(mockSetShowBeta).not.toHaveBeenCalled();
       expect(mockSetShowLegacy).not.toHaveBeenCalled();
     });
+
+    it("should disable the Cloud switch when cloudOnlyLocked is true", () => {
+      render(<FeatureToggles {...defaultProps} cloudOnly={true} cloudOnlyLocked={true} />);
+
+      const cloudSwitch = screen.getByTestId("sidebar-cloud-only-switch");
+      expect(cloudSwitch).toBeDisabled();
+    });
+
+    it("should not call setCloudOnly when locked switch is clicked", async () => {
+      const user = userEvent.setup();
+      render(<FeatureToggles {...defaultProps} cloudOnly={true} cloudOnlyLocked={true} />);
+
+      const cloudSwitch = screen.getByTestId("sidebar-cloud-only-switch");
+      await user.click(cloudSwitch);
+
+      expect(mockSetCloudOnly).not.toHaveBeenCalled();
+    });
+
+    it("should not disable other switches when cloudOnlyLocked is true", () => {
+      render(<FeatureToggles {...defaultProps} cloudOnlyLocked={true} />);
+
+      expect(screen.getByTestId("sidebar-beta-switch")).not.toBeDisabled();
+      expect(screen.getByTestId("sidebar-legacy-switch")).not.toBeDisabled();
+    });
   });
 
   describe("Badge Configuration", () => {
@@ -390,6 +416,8 @@ describe("FeatureToggles", () => {
         setShowBeta: undefined as any,
         showLegacy: false,
         setShowLegacy: undefined as any,
+        cloudOnly: false,
+        setCloudOnly: undefined as any,
       };
 
       expect(() => {

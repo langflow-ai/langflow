@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+export type { ModelOption } from "./types";
+
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { CLOUD_INCOMPATIBLE_PROVIDERS } from "@/constants/cloud-incompatible-providers";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";

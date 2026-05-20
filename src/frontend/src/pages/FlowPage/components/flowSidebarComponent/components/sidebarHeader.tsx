@@ -25,6 +25,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   setShowLegacy,
   cloudOnly,
   setCloudOnly,
+  cloudOnlyLocked,
   searchInputRef,
   isInputFocused,
   search,
@@ -75,6 +76,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
               setShowLegacy={setShowLegacy}
               cloudOnly={cloudOnly}
               setCloudOnly={setCloudOnly}
+              cloudOnlyLocked={cloudOnlyLocked}
             />
           </DisclosureContent>
         </Disclosure>
@@ -118,6 +120,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
               setShowLegacy={setShowLegacy}
               cloudOnly={cloudOnly}
               setCloudOnly={setCloudOnly}
+              cloudOnlyLocked={cloudOnlyLocked}
             />
           </DisclosureContent>
         </Disclosure>

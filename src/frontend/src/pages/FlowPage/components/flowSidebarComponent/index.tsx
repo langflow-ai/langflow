@@ -248,7 +248,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const showBetaStorage = getBooleanFromStorage("showBeta", true);
   const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
-  const { cloudOnly, setCloudOnly: handleSetCloudOnly } = useCloudModeStore();
+  const { cloudOnly, setCloudOnly: handleSetCloudOnly, isLocked: cloudOnlyLocked } = useCloudModeStore();
 
   // Debounced search value for filtering
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -743,6 +743,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   setShowLegacy={handleSetShowLegacy}
                   cloudOnly={cloudOnly}
                   setCloudOnly={handleSetCloudOnly}
+                  cloudOnlyLocked={cloudOnlyLocked}
                   searchInputRef={searchInputRef}
                   isInputFocused={isSearchFocused}
                   search={search}

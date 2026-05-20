@@ -86,6 +86,7 @@ export interface SidebarHeaderComponentProps {
   setShowLegacy: (show: boolean) => void;
   cloudOnly: boolean;
   setCloudOnly: (show: boolean) => void;
+  cloudOnlyLocked?: boolean;
   searchInputRef: React.RefObject<HTMLInputElement | null>;
   isInputFocused: boolean;
   search: string;
