@@ -1,0 +1,8 @@
+# For ingest_docs.py only. Install with: pip install -r requirements-ingest.txt
+python-dotenv>=1.0.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+langchain-text-splitters>=0.3.0
+pgvector>=0.2.0
+psycopg2-binary>=2.9.0
