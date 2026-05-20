@@ -1,14 +1,12 @@
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
-// Add this line to declare Node.js global variables
+// biome-ignore lint/suspicious/noExplicitAny: process not in tsconfig scope for test files
 declare const process: any;
-declare const __dirname: string;
+
 withEventDeliveryModes(
   "Vector Store RAG",
   { tag: ["@release", "@starter-projects"] },
@@ -16,18 +14,6 @@ withEventDeliveryModes(
     test.skip(
       !process?.env?.OPENAI_API_KEY,
       "OPENAI_API_KEY required to run this test",
-    );
-
-    test.skip(
-      !process?.env?.ASTRA_DB_APPLICATION_TOKEN,
-      "ASTRA_DB_APPLICATION_TOKEN required to run this test",
-    );
-
-    // AstraDB Cassandra driver causes infinite retry loops on Windows
-    // (system_virtual_schema permission errors) leading to shard timeouts
-    test.skip(
-      process.platform === "win32",
-      "AstraDB driver is not compatible with Windows CI",
     );
 
     await awaitBootstrapTest(page);
@@ -43,254 +29,90 @@ withEventDeliveryModes(
 
     await initialGPTsetup(page);
 
-    await disableInspectPanel(page);
-
-    await page.waitForSelector('[data-testid="title-Astra DB"]', {
-      timeout: 3000,
-    });
-
-    await page.waitForTimeout(500);
-
-    adjustScreenView(page);
-
-    // Astra DB tokens
-    await page
-      .getByTestId("popover-anchor-input-token")
-      .nth(0)
-      .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
-
-    await page
-      .locator('[data-testid="dropdown_str_database_name"]')
-      .nth(0)
-      .waitFor({
-        timeout: 15000,
-        state: "visible",
-      });
-
-    let databaseDropdownCount = await page
-      .locator('[data-testid="dropdown_str_database_name"]')
-      .nth(0)
-      .count();
-
-    while (databaseDropdownCount === 0) {
-      await page
-        .getByTestId("popover-anchor-input-token")
-        .nth(0)
-        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
-
-      await page.waitForTimeout(2000);
-
-      await page
-        .locator('[data-testid="dropdown_str_database_name"]')
-        .nth(0)
-        .waitFor({
-          timeout: 15000,
-          state: "visible",
-        });
-
-      databaseDropdownCount = await page
-        .locator('[data-testid="dropdown_str_database_name"]')
-        .nth(0)
-        .count();
-    }
-
-    await page.waitForTimeout(2000);
-
-    await page.getByTestId("dropdown_str_database_name").nth(0).click();
-
-    await page.waitForTimeout(2000);
-
-    let langflowCount = await page
-      .locator('[data-testid="langflow-0-option"]')
-      .count();
-
-    while (langflowCount === 0) {
-      await page.waitForTimeout(1000);
-      await page.getByTestId("icon-RefreshCcw").click();
-
-      await page.getByTestId("dropdown_str_database_name").nth(0).click();
-
-      await page.waitForTimeout(1000);
-
-      langflowCount = await page
-        .locator('[data-testid="langflow-0-option"]')
-        .count();
-    }
-
-    await page.locator('[data-testid="langflow-0-option"]').nth(0).waitFor({
-      timeout: 15000,
-      state: "visible",
-    });
-
-    await page.getByTestId("langflow-0-option").nth(0).click();
-
-    await page
-      .locator('[data-testid="dropdown_str_collection_name"]')
-      .nth(0)
-      .waitFor({
-        timeout: 15000,
-        state: "visible",
-      });
-
-    await page.waitForTimeout(2000);
-
-    await page.getByTestId("dropdown_str_collection_name").nth(0).click();
-
-    await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
-      timeout: 15000,
-      state: "visible",
-    });
-
-    await page.getByTestId("fe_tests-0-option").nth(0).click();
-
-    await page
-      .getByTestId("popover-anchor-input-token")
-      .nth(1)
-      .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
-
-    await page
-      .locator('[data-testid="dropdown_str_database_name"]')
-      .nth(1)
-      .waitFor({
-        timeout: 15000,
-        state: "visible",
-      });
-
-    databaseDropdownCount = await page
-      .locator('[data-testid="dropdown_str_database_name"]')
-      .nth(0)
-      .count();
-
-    while (databaseDropdownCount === 0) {
-      await page
-        .getByTestId("popover-anchor-input-token")
-        .nth(0)
-        .fill(process.env.ASTRA_DB_APPLICATION_TOKEN ?? "");
-
-      await page.waitForTimeout(2000);
-
-      await page
-        .locator('[data-testid="dropdown_str_database_name"]')
-        .nth(1)
-        .waitFor({
-          timeout: 15000,
-          state: "visible",
-        });
-
-      databaseDropdownCount = await page
-        .locator('[data-testid="dropdown_str_database_name"]')
-        .nth(0)
-        .count();
-    }
-
-    await page.getByTestId("dropdown_str_database_name").nth(1).click();
-
-    await page.waitForTimeout(2000);
-
-    langflowCount = await page
-      .locator('[data-testid="langflow-0-option"]')
-      .count();
-
-    while (langflowCount === 0) {
-      await page.waitForTimeout(1000);
-      await page.getByTestId("icon-RefreshCcw").click();
-
-      const loadingOptions = page.getByText("Loading options...");
-      await loadingOptions.waitFor({ state: "visible", timeout: 30000 });
-
-      if (await loadingOptions.isVisible()) {
-        await expect(loadingOptions).toBeHidden({ timeout: 120000 });
-      }
-
-      await page.getByTestId("dropdown_str_database_name").nth(1).click();
-
-      await page.waitForTimeout(1000);
-
-      langflowCount = await page
-        .locator('[data-testid="langflow-0-option"]')
-        .count();
-    }
-
-    await page.getByTestId("langflow-0-option").nth(0).click();
-
-    await page.waitForTimeout(2000);
-
-    await page
-      .locator('[data-testid="dropdown_str_collection_name"]')
-      .nth(1)
-      .waitFor({
-        timeout: 15000 * 3,
-        state: "visible",
-      });
-
-    await page.getByTestId("dropdown_str_collection_name").nth(1).click();
-
-    await page.waitForTimeout(2000);
-
-    await page.locator('[data-testid="fe_tests-0-option"]').nth(0).waitFor({
-      timeout: 15000,
-      state: "visible",
-    });
-
-    await page.getByTestId("fe_tests-0-option").nth(0).click();
-
-    await page.getByTestId("input-file-component").last().click();
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("drag-files-component").last().click();
-
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(
-      path.join(__dirname, "../../assets/test_file.txt"),
-    );
-    await page.getByText("test_file.txt").last().isVisible();
-    await page.waitForSelector("text=file uploaded successfully", {
+    // Confirm the template uses native Knowledge components (no AstraDB)
+    await expect(page.getByTestId("title-Knowledge Ingestion")).toBeVisible({
       timeout: 10000,
     });
-    await page.waitForTimeout(3000);
-    await page.getByTestId("select-files-modal-button").click();
-    await page.getByTestId("button_run_astra db").last().click();
-    await page.waitForSelector("text=built successfully", {
-      timeout: 60000 * 2,
+    await expect(page.getByTestId("title-Knowledge Base")).toBeVisible();
+    await expect(page.getByTestId("title-Astra DB")).toHaveCount(0);
+
+    // Upload a test file to the File component
+    await uploadFile(page, "test_file.txt");
+
+    // --- Load Data flow: create a knowledge base and ingest the file ---
+
+    // Scope to the KnowledgeIngestion node to avoid ambiguity with the
+    // KnowledgeBase node, which shares the same dropdown testid.
+    const knowledgeIngestionNode = page.locator(".react-flow__node", {
+      has: page.getByTestId("title-Knowledge Ingestion"),
     });
 
+    await knowledgeIngestionNode
+      .getByTestId("dropdown_str_knowledge_base")
+      .click();
+
+    // Click "Create new knowledge" to open the creation dialog
+    await page.getByText("Create new knowledge").click();
+
+    // Fill in the knowledge base name
+    await page
+      .getByTestId("popover-anchor-input-01_new_kb_name")
+      .fill("test-kb-rag");
+
+    // Choose the first available embedding model (requires OpenAI key set via
+    // initialGPTsetup → selectGptModel → manage-model-providers)
+    await page.getByTestId("model_embedding_model").click();
+    await page.waitForSelector('[role="listbox"]', { timeout: 10000 });
+    await page.getByRole("listbox").getByRole("option").first().click();
+
+    // Submit the dialog — button text comes from functionality: "create"
+    await page.getByRole("button", { name: "create", exact: true }).click();
+
+    await page.waitForSelector("text=created successfully", { timeout: 30000 });
+
+    // Run KnowledgeIngestion to ingest the uploaded file into the new KB
+    await page.getByTestId("button_run_knowledge ingestion").click();
+    await page.waitForSelector("text=built successfully", {
+      timeout: 120000,
+    });
+
+    // --- Retriever flow: select the KB and run the RAG pipeline ---
+
+    const knowledgeBaseNode = page.locator(".react-flow__node", {
+      has: page.getByTestId("title-Knowledge Base"),
+    });
+
+    // Refresh the KB list so the newly ingested KB appears
+    await knowledgeBaseNode.getByTestId("dropdown_str_knowledge_base").click();
+    await page.getByTestId("refresh-dropdown-list-knowledge_base").click();
+    await page.waitForTimeout(1000);
+    await knowledgeBaseNode.getByTestId("dropdown_str_knowledge_base").click();
+    await page.getByTestId("test-kb-rag-0-option").click();
+
+    // Run the full RAG pipeline
     await page.getByTestId("button_run_chat output").click();
     await page.waitForSelector("text=built successfully", {
-      timeout: 60000 * 2,
+      timeout: 120000,
     });
+
+    // --- Playground: verify context-aware retrieval ---
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 60000,
     });
-    await page.getByTestId("input-chat-playground").last().fill("hello");
-    await page.getByTestId("input-chat-playground").last().click();
+
+    await page
+      .getByTestId("input-chat-playground")
+      .last()
+      .fill("what is the text in the file?");
     await page.keyboard.press("Enter");
 
-    await page
-      .getByText("This is a test file.", { exact: true })
-      .last()
-      .isVisible();
-    await page.getByTestId("chat-header-more-menu").last().click();
-    await page.getByLabel("Message logs").click();
-    await page.getByText("timestamp", { exact: true }).last().isVisible();
-    await page.getByText("text", { exact: true }).last().isVisible();
-    await page.getByText("sender", { exact: true }).last().isVisible();
-    await page.getByText("sender_name", { exact: true }).last().isVisible();
-    await page.getByText("session_id", { exact: true }).last().isVisible();
-    await page.getByText("files", { exact: true }).last().isVisible();
-    await page.getByRole("gridcell").last().isVisible();
-    await page.getByRole("checkbox").first().click();
-    await page.getByTestId("delete-row-button").last().click();
-    await page
-      .getByText("No Data Available", { exact: true })
-      .last()
-      .isVisible();
-    await page.getByText("Close").last().click();
-
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 60000,
+    // The test file contains "this is a test file" — verify retrieval works
+    await page.waitForSelector("text=this is a test file", {
+      timeout: 120000,
     });
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    await expect(page.getByText("this is a test file").last()).toBeVisible();
   },
-  { timeout: 60000 },
+  { timeout: 120000 },
 );
