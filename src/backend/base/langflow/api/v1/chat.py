@@ -204,6 +204,12 @@ async def build_flow(
     # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
     # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
     # since build is a valid operation on shared flows.
+    #
+    # Phase 3 prerequisite: the owner-OR-public filter below short-circuits an
+    # enterprise execute-grant on a non-owned private flow. Cross-user build
+    # support requires share-aware loading (load by id, then check via the
+    # plugin, then convert deny to 404 for UUID-privacy) which lands with the
+    # `authz_share` CRUD work. See `langflow.services.authorization.utils`.
     async with session_scope() as session:
         stmt = (
             select(Flow)

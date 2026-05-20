@@ -119,6 +119,8 @@ The Casbin request shape is `(subject, domain, object, action)`:
 
 Use `langflow authz dry-run` to simulate a built-in policy against the live audit table without enabling enforcement.
 
+**Phase 1/2 contract — owner-scoped fetch:** the route guards above sit on top of fetch helpers (`_read_flow`, `get_flow_for_api_key_user`, `get_deployment`, project reads in `projects.py`) that still scope queries by `current_user.id`. That means even with an enterprise plugin registered, a share grant on a non-owned flow / folder / deployment **still returns 404 at the fetch layer before the guard can authorize**. Cross-user enforcement (the case where a non-owner with a share grant can read/write/execute a resource) lands in Phase 3 alongside `authz_share` CRUD APIs and share-aware fetch helpers that load by id first and convert plugin denies to 404 to preserve UUID-privacy. The current guards exist, are wired, and emit audit rows — but the cross-user reachability they enable is a Phase 3 prerequisite, not a Phase 1/2 deliverable.
+
 ## Component Development
 
 Components live in `src/backend/base/langflow/components/`. To add a new component:

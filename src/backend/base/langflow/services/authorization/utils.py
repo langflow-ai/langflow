@@ -1,4 +1,26 @@
-"""Authorization helpers for API routes."""
+"""Authorization helpers for API routes.
+
+Phase 1 contract (this PR)
+---------------------------
+
+Route guards (``ensure_flow_permission``, ``ensure_deployment_permission``,
+``ensure_project_permission``) sit on top of fetch helpers that still scope
+queries by ``current_user.id`` — see ``_read_flow`` in ``flows_helpers.py``,
+``get_flow_for_api_key_user`` in ``endpoints.py``, ``get_deployment`` in
+``deployment.crud``, and the owner-scoped folder reads in ``projects.py``.
+
+That means an enterprise plugin which would otherwise grant a non-owner
+shared / read / write / execute access to a flow, folder, or deployment
+**still returns 404 at the fetch layer before** ``ensure_*_permission`` can
+authorize the request. Cross-user enforcement therefore lands in Phase 3
+alongside ``authz_share`` CRUD APIs and the share-aware fetch helpers that
+load by id first and convert plugin denies to 404 to preserve UUID-privacy.
+
+In Phase 1 the OSS pass-through allows all and the owner-scoped fetch is the
+only effective gate; in Phase 2 (this PR) the guards exist, are wired, and
+emit audit rows, but cross-user access is not yet reachable. See PR #13153
+description and the Phase 3 prerequisite captured in the planning notes.
+"""
 
 from __future__ import annotations
 

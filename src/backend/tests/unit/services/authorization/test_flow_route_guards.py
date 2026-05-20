@@ -261,18 +261,21 @@ def test_get_note_translations_is_owner_scoped_and_guarded(routes):
 
 
 def test_read_flows_list_uses_filter_visible_resources(routes):
-    """GET /flows/ list endpoint applies filter_visible_resources (Phase B).
+    """GET /flows/ applies filter_visible_resources on BOTH the get_all and paginated paths.
 
     The list helper drops items the user can't read. In OSS pass-through it
     returns the input unchanged; the enterprise plugin uses batch_enforce to
     honor role + share grants. Per-item ensure_flow_permission is intentionally
     NOT used here — filtering is the right primitive for list endpoints.
+
+    Asserting **two** filter_visible_resources calls catches the earlier gap
+    where only the get_all branch was filtered and the paginated branch
+    (``get_all=False``) returned the raw ``apaginate`` result unfiltered.
     """
     func = routes["read_flows"]
     # No per-item ensure_flow_permission (would 403 on the first unauthorized item).
     assert _ensure_flow_permission_calls(func) == []
 
-    # filter_visible_resources must be called exactly once.
     filter_calls = [
         node
         for node in ast.walk(func)
@@ -282,7 +285,9 @@ def test_read_flows_list_uses_filter_visible_resources(routes):
             or (isinstance(node.func, ast.Attribute) and node.func.attr == "filter_visible_resources")
         )
     ]
-    assert len(filter_calls) == 1, f"expected exactly one filter_visible_resources call, got {len(filter_calls)}"
+    assert len(filter_calls) == 2, (
+        f"expected two filter_visible_resources calls (get_all + paginated branches), got {len(filter_calls)}"
+    )
 
 
 # ----------------------------------------------------------------------------- #

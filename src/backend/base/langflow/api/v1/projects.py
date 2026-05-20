@@ -249,6 +249,8 @@ async def read_project(
     search: str = "",
 ):
     try:
+        # Phase 3 prerequisite: owner-scoped fetch shadows enterprise share
+        # grants on non-owned projects; see langflow.services.authorization.utils.
         project = (
             await session.exec(
                 select(Folder)

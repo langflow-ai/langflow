@@ -189,7 +189,21 @@ async def read_flows(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
             )
-            return await apaginate(session, stmt, params=params)
+            page = await apaginate(session, stmt, params=params)
+
+        # Apply the same authz filter the get_all branch uses so both modes of
+        # this endpoint behave consistently. OSS pass-through returns the page
+        # items unchanged; an enterprise plugin filters per-flow. ``page.total``
+        # may overcount denied items — a fully accurate count requires
+        # SQL-level prefiltering via authz_share (Phase 3 work).
+        page.items = await filter_visible_resources(
+            current_user,
+            resource_type="flow",
+            candidates=list(page.items),
+            domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+            act=FlowAction.READ,
+        )
+        return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
 
     except Exception as e:
         import logging as _logging
@@ -206,6 +220,9 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
+    # Phase 3 prerequisite: `_read_flow` filters by `current_user.id`, so an
+    # enterprise share grant on a non-owned flow 404s here before the guard
+    # below can permit it. See `langflow.services.authorization.utils`.
     if user_flow := await _read_flow(session, flow_id, current_user.id):
         await ensure_flow_permission(
             current_user,
