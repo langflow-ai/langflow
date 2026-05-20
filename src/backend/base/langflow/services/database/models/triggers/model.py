@@ -251,8 +251,10 @@ class TriggerUpdate(SQLModel):
 
 
 class TriggerRead(SQLModel):
-    """Response shape for trigger reads. Excludes nothing — all columns are
-    safe to surface (no secrets stored on this table)."""
+    """Response shape for trigger reads.
+
+    All columns are safe to surface — no secrets are stored on this table.
+    """
 
     id: UUID
     flow_id: UUID

@@ -32,6 +32,7 @@ single bad trigger never takes the worker down.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
@@ -82,9 +83,9 @@ def _retry_delay(attempt: int) -> timedelta:
 
 
 async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
-    """Atomically pick the next eligible ``trigger_job`` row and flip it
-    to ``in_progress``.
+    """Atomically claim the next eligible ``trigger_job`` row.
 
+    Flips the chosen row to ``in_progress``.
     On Postgres, uses ``FOR UPDATE SKIP LOCKED`` so multiple workers
     can run concurrently without ever handing the same row to two
     workers. On SQLite, uses an optimistic ``UPDATE ... WHERE status =
@@ -174,8 +175,10 @@ async def _load_trigger_and_flow(
     session: AsyncSession,
     trigger_id: UUID,
 ) -> tuple[Trigger, Flow, User] | None:
-    """Return the trigger + its flow + its owning user, or ``None`` if any
-    of the three was deleted between claim and dispatch."""
+    """Return the trigger plus its flow and owning user.
+
+    Returns ``None`` if any of the three was deleted between claim and dispatch.
+    """
     trigger = (await session.exec(select(Trigger).where(Trigger.id == trigger_id))).first()
     if trigger is None:
         return None
@@ -393,10 +396,8 @@ async def trigger_worker_loop(stop_event: asyncio.Event) -> None:
 
 async def _sleep_with_stop(stop_event: asyncio.Event, seconds: float) -> None:
     """Sleep but wake immediately if the stop event is set."""
-    try:
+    with contextlib.suppress(asyncio.TimeoutError):
         await asyncio.wait_for(stop_event.wait(), timeout=seconds)
-    except asyncio.TimeoutError:  # noqa: PERF203 — TimeoutError is the happy path
-        pass
 
 
 # --------------------------------------------------------------------------- #

@@ -11,7 +11,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
-
 from langflow.services.triggers.scheduler import (
     InvalidTriggerConfigError,
     next_fire_time_utc,
@@ -64,8 +63,10 @@ def test_dst_spring_forward_skips_phantom_local_time():
 
 
 def test_cron_rolls_into_next_day():
-    """09:00 Europe/London cron with reference at noon UTC should land
-    on the next day's 09:00 London time (=08:00 UTC in BST)."""
+    """09:00 Europe/London cron with reference at noon UTC rolls forward.
+
+    Lands on the next day's 09:00 London time (=08:00 UTC in BST).
+    """
     after = datetime(2026, 5, 20, 12, 0, tzinfo=timezone.utc)
     result = next_fire_time_utc(
         cron_expression="0 9 * * *",
@@ -99,8 +100,10 @@ def test_validate_trigger_config_bundles_both_checks():
 
 
 def test_next_fire_time_with_default_after_returns_future():
-    """When ``after`` is omitted the function uses ``utcnow``; the
-    returned datetime must be strictly later than the call instant."""
+    """Omitting ``after`` should default to ``utcnow``.
+
+    The returned datetime must be strictly later than the call instant.
+    """
     before_call = datetime.now(timezone.utc)
     result = next_fire_time_utc(cron_expression="* * * * *", timezone_name="UTC")
     assert result > before_call

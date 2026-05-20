@@ -21,9 +21,8 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import JSONB
-
 from langflow.utils import migration
+from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = "tg01a2b3c4d5"  # pragma: allowlist secret

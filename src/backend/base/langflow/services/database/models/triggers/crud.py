@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import update
 from sqlmodel import col, select
@@ -18,6 +17,8 @@ from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.triggers.model import Trigger, TriggerJob
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 

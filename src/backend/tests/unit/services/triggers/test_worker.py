@@ -13,13 +13,12 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
-from sqlmodel import select
-
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.triggers import Trigger, TriggerJob, TriggerType
 from langflow.services.database.models.user.model import User
 from langflow.services.triggers import worker as worker_module
+from sqlmodel import select
 
 
 def _utcnow() -> datetime:
@@ -154,8 +153,9 @@ async def test_finalize_success_marks_completed_and_enqueues_next_for_recurring(
             ),
         )
     ).all()
-    assert len(list(queued)) == 1
-    assert list(queued)[0].id != job.id
+    queued_list = list(queued)
+    assert len(queued_list) == 1
+    assert queued_list[0].id != job.id
 
 
 @pytest.mark.asyncio
@@ -218,9 +218,11 @@ async def test_finalize_failure_enqueues_retry_when_budget_remains(async_session
 
 @pytest.mark.asyncio
 async def test_finalize_failure_at_max_attempts_enqueues_only_next_cron(async_session):
-    """When the retry budget is exhausted, the failed row stays FAILED
-    and the only queued follow-up is the next cron fire — not another
-    retry of the same attempt chain."""
+    """When the retry budget is exhausted, the failed row stays FAILED.
+
+    The only queued follow-up is the next cron fire — never another retry
+    of the same attempt chain.
+    """
     user, flow = await _seed_user_and_flow(async_session)
     trigger = await _make_trigger(async_session, user=user, flow=flow, max_attempts=2)
     job = await _enqueue_job(async_session, trigger=trigger, attempt=2)
