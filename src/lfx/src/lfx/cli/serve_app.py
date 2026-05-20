@@ -539,7 +539,7 @@ def create_multi_serve_app(
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
 
-        flow_id = body.id or flow_id_from_content(body.data)
+        flow_id = body.id or str(uuid.uuid4())
 
         if registry.get(flow_id) is not None and not body.replace:
             raise HTTPException(

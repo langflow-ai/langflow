@@ -26,7 +26,7 @@ from lfx.cli.common import (
     is_port_in_use,
 )
 from lfx.cli.script_loader import find_graph_variable, load_graph_from_script
-from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
+from lfx.cli.serve_app import FlowAlreadyRegisteredError, FlowMeta, FlowRegistry, create_multi_serve_app
 from lfx.load import load_flow_from_json
 
 if TYPE_CHECKING:
@@ -111,7 +111,7 @@ async def _build_serve_registry(
             except ValueError as e:
                 typer.echo(f"Error: {e}", err=True)
                 raise typer.Exit(1) from e
-            verbose_print(f"✓ Loaded {len(registry)} flow(s) from directory {dir_path}")
+            verbose_print(f"Loaded {len(registry)} flow(s) from directory {dir_path}")
         else:
             non_supported = [p for p in resolved if p.suffix not in {".json", ".py"}]
             if non_supported:
@@ -227,9 +227,9 @@ def serve_command(
 
     try:
         api_key = get_api_key()
-        verbose_print("✓ LANGFLOW_API_KEY is configured")
+        verbose_print("LANGFLOW_API_KEY is configured")
     except ValueError as e:
-        typer.echo(f"✗ {e}", err=True)
+        typer.echo(str(e), err=True)
         typer.echo("Set the LANGFLOW_API_KEY environment variable before serving.", err=True)
         raise typer.Exit(1) from e
 
@@ -311,26 +311,29 @@ def serve_command(
                 # Multi-worker: each worker warms inside create_serve_app(); the parent can't
                 # safely warm and pass graphs across processes, so we skip it here.
                 registry.warm_from_store()
-            verbose_print(f"✓ Flow store at {flow_dir} ({len(registry)} flows available)")
+            verbose_print(f"Flow store at {flow_dir} ({len(registry)} flows available)")
 
         if is_port_in_use(port, host):
             port = get_free_port(port)
             verbose_print(f"Port in use; using {port} instead")
 
-        verbose_print("🚀 Starting server...")
+        verbose_print("Starting server...")
 
         protocol = "http"
         access_host = get_best_access_host(host)
         masked_key = f"{api_key[:API_KEY_MASK_LENGTH]}..." if len(api_key) > API_KEY_MASK_LENGTH else "***"
+        server_line = f"{protocol}://{access_host}:{port}"
+        if access_host != host:
+            server_line += f"  [dim](bound to {host}:{port})[/dim]"
 
         console.print()
         console.print(
             Panel.fit(
-                f"[bold green]🎯 LFX Server Started![/bold green]\n\n"
+                f"[bold green]LFX Server Ready[/bold green]\n\n"
                 f"[bold]Source:[/bold] {source_display}\n"
                 f"[bold]Flows:[/bold] {len(registry)}\n"
                 f"[bold]Workers:[/bold] {workers}\n"
-                f"[bold]Server:[/bold] {protocol}://{access_host}:{port}\n"
+                f"[bold]Server:[/bold] {server_line}\n"
                 f"[bold]API Key:[/bold] {masked_key}\n\n"
                 f"[dim]List flows:[/dim]\n"
                 f"[blue]{protocol}://{access_host}:{port}/flows[/blue]\n\n"
@@ -386,10 +389,10 @@ def serve_command(
                 serve_app = create_multi_serve_app(registry=registry)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
-            verbose_print("\n👋 Server stopped")
+            verbose_print("\nServer stopped")
             raise typer.Exit(0) from None
         except Exception as e:
-            verbose_print(f"✗ Failed to start server: {e}")
+            verbose_print(f"Failed to start server: {e}")
             raise typer.Exit(1) from e
 
     finally:
@@ -457,7 +460,9 @@ async def _populate_registry(
         try:
             graph, meta, raw_json = await _load_graph_and_meta(path, root_dir, check_variables=check_variables)
             registry.add(graph, meta, raw_json=raw_json)
-            verbose_print(f"✓ Loaded flow '{meta.title}' (id={meta.id})")
+            verbose_print(f"Loaded flow '{meta.title}' (id={meta.id})")
+        except FlowAlreadyRegisteredError:
+            verbose_print(f"Skipping duplicate flow id={meta.id} from {path.name}")
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{path.name}: {exc}")
     if errors:
