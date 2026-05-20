@@ -4,33 +4,30 @@ import json
 import math
 import os
 import types
-from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from lfx.log.logger import logger
 from opentelemetry import trace
-from opentelemetry.trace import Span, use_span
+from opentelemetry.trace import use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from traceloop.sdk import Traceloop
 from traceloop.sdk.instruments import Instruments
 from typing_extensions import override
 
-from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.otlp_base import OTLPTracerBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain_core.callbacks.base import BaseCallbackHandler
-    from opentelemetry.propagators.textmap import CarrierT
-    from opentelemetry.trace import Span
+    from langchain.callbacks.base import BaseCallbackHandler
 
     from langflow.graph.vertex.base import Vertex
     from langflow.services.tracing.schema import Log
 
 
-class TraceloopTracer(BaseTracer):
+class TraceloopTracer(OTLPTracerBase):
     """Traceloop tracer for Langflow."""
 
     def __init__(
@@ -42,13 +39,13 @@ class TraceloopTracer(BaseTracer):
         user_id: str | None = None,
         session_id: str | None = None,
     ):
+        super().__init__()
         self.trace_id = trace_id
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
         self.user_id = user_id
         self.session_id = session_id
-        self.child_spans: dict[str, Span] = {}
 
         if not self._validate_configuration():
             self._ready = False
@@ -64,11 +61,11 @@ class TraceloopTracer(BaseTracer):
                 api_endpoint=os.getenv("TRACELOOP_BASE_URL", "https://api.traceloop.com"),
             )
             self._ready = True
-            self._tracer = trace.get_tracer("langflow")
+            self.tracer = trace.get_tracer("langflow")
             self.propagator = TraceContextTextMapPropagator()
-            self.carrier: CarrierT = {}
+            self.carrier = {}
 
-            self.root_span = self._tracer.start_span(
+            self.root_span = self.tracer.start_span(
                 name=trace_name,
                 start_time=self._get_current_timestamp(),
             )
@@ -79,10 +76,6 @@ class TraceloopTracer(BaseTracer):
         except Exception:  # noqa: BLE001
             logger.debug("Error setting up Traceloop tracer", exc_info=True)
             self._ready = False
-
-    @property
-    def ready(self) -> bool:
-        return self._ready
 
     def _validate_configuration(self) -> bool:
         api_key = os.getenv("TRACELOOP_API_KEY", "").strip()
@@ -151,11 +144,11 @@ class TraceloopTracer(BaseTracer):
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
     ) -> None:
-        if not self.ready:
+        if not self.ready or self.tracer is None:
             return
 
         span_context = self.propagator.extract(carrier=self.carrier)
-        child_span = self._tracer.start_span(
+        child_span = self.tracer.start_span(
             name=trace_name,
             context=span_context,
             start_time=self._get_current_timestamp(),
@@ -165,8 +158,8 @@ class TraceloopTracer(BaseTracer):
             "trace_id": trace_id,
             "trace_name": trace_name,
             "trace_type": trace_type,
-            "inputs": json.dumps(self._convert_to_traceloop_dict(inputs), default=str),
-            **self._convert_to_traceloop_dict(metadata or {}),
+            "inputs": json.dumps(self._convert_to_otlp_dict(inputs), default=str),
+            **self._convert_to_otlp_dict(metadata or {}),
         }
         if vertex and vertex.id is not None:
             attributes["vertex_id"] = vertex.id
@@ -190,9 +183,9 @@ class TraceloopTracer(BaseTracer):
         child_span = self.child_spans.pop(trace_id)
 
         if outputs:
-            child_span.set_attribute("outputs", json.dumps(self._convert_to_traceloop_dict(outputs), default=str))
+            child_span.set_attribute("outputs", json.dumps(self._convert_to_otlp_dict(outputs), default=str))
         if logs:
-            child_span.set_attribute("logs", json.dumps(self._convert_to_traceloop_dict(list(logs)), default=str))
+            child_span.set_attribute("logs", json.dumps(self._convert_to_otlp_dict(list(logs)), default=str))
         if error:
             child_span.record_exception(error)
 
@@ -206,11 +199,11 @@ class TraceloopTracer(BaseTracer):
         error: Exception | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        if not self.ready:
+        if not self.ready or self.root_span is None:
             return
 
-        safe_outputs = self._convert_to_traceloop_dict(outputs)
-        safe_metadata = self._convert_to_traceloop_dict(metadata or {})
+        safe_outputs = self._convert_to_otlp_dict(outputs)
+        safe_metadata = self._convert_to_otlp_dict(metadata or {})
 
         self.root_span.set_attributes(
             {
@@ -225,21 +218,15 @@ class TraceloopTracer(BaseTracer):
 
         self.root_span.end()
 
-    @staticmethod
-    def _get_current_timestamp() -> int:
-        return int(datetime.now(timezone.utc).timestamp() * 1_000_000_000)
-
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         return None
 
     def close(self):
+        """Flush tracer provider spans safely before shutdown."""
         try:
             provider = trace.get_tracer_provider()
             if hasattr(provider, "force_flush"):
                 provider.force_flush(timeout_millis=3000)
         except (ValueError, RuntimeError, OSError) as e:
             logger.warning(f"Error flushing spans: {e}")
-
-    def __del__(self):
-        self.close()
