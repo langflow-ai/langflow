@@ -22,21 +22,21 @@ class TestLoadIsolationConfig:
     """``load_isolation_config`` reads env vars into a frozen ``IsolationConfig``."""
 
     def test_should_default_base_dir_under_default_config_dir_when_env_var_unset(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)
 
         assert config.base_dir == (tmp_path / "fs_sandbox").resolve()
 
     def test_should_derive_pepper_path_under_base_dir(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)
 
         assert config.pepper_path == (tmp_path / "fs_sandbox" / ".fs_pepper").resolve()
 
     def test_should_override_base_dir_when_env_var_is_set(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         custom_base = tmp_path / "custom_root"
         env = {"LANGFLOW_FS_TOOL_BASE_DIR": str(custom_base)}
@@ -46,7 +46,7 @@ class TestLoadIsolationConfig:
         assert config.base_dir == custom_base.resolve()
 
     def test_should_track_pepper_path_under_overridden_base_dir(self, tmp_path: Path) -> None:
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         custom_base = tmp_path / "custom_root"
         env = {"LANGFLOW_FS_TOOL_BASE_DIR": str(custom_base)}
@@ -59,7 +59,7 @@ class TestLoadIsolationConfig:
         # Empty env var must NOT make the component fail closed at config-read
         # time — falling back to the default keeps OSS / desktop installs alive
         # when an operator clears the var without thinking.
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         env = {"LANGFLOW_FS_TOOL_BASE_DIR": ""}
 
@@ -71,7 +71,7 @@ class TestLoadIsolationConfig:
         # The config is read once per call and threaded through every helper;
         # mutating it mid-flight would invite TOCTOU bugs where one operation
         # sees one base_dir and another sees a different one.
-        from lfx.components.tools._filesystem_isolation import load_isolation_config
+        from lfx.components.files_and_knowledge._filesystem_isolation import load_isolation_config
 
         config = load_isolation_config(env={}, default_config_dir=tmp_path)
 
