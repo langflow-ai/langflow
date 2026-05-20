@@ -113,7 +113,7 @@ Route guards live in `langflow.services.authorization.utils`:
 
 The Casbin request shape is `(subject, domain, object, action)`:
 - subject = `user:{uuid}`
-- domain = `workspace:{uuid}` → `project:{uuid}` → `*` (resolved by `_resolve_flow_domain`)
+- domain = `project:{uuid}` → `workspace:{uuid}` → `*` (resolved by `_resolve_flow_domain`; the more specific domain wins so project-scoped grants match directly while workspace-scoped grants still flow down via Casbin `g2` inheritance)
 - object = `flow:{uuid}` / `deployment:{uuid}` / `project:{uuid}` / `flow:*` / etc.
 - action = `read` / `write` / `create` / `delete` / `execute` / `deploy`
 
