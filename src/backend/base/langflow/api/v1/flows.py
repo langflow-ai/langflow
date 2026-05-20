@@ -277,6 +277,23 @@ async def update_flow(
             folder_id=db_flow.folder_id,
         )
 
+        # Destination check: if the payload moves the flow into a new
+        # workspace/folder, the caller must also be authorized to write at the
+        # destination scope. ``_patch_flow`` applies payload values via
+        # ``model_dump(exclude_unset=True, exclude_none=True)``, so None means
+        # "no change" and falls back to the existing scope.
+        target_workspace_id = flow.workspace_id if flow.workspace_id is not None else db_flow.workspace_id
+        target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow.folder_id
+        if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.WRITE,
+                flow_id=flow_id,
+                flow_user_id=db_flow.user_id,
+                workspace_id=target_workspace_id,
+                folder_id=target_folder_id,
+            )
+
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
         folder_id_will_change = (
@@ -346,6 +363,23 @@ async def upsert_flow(
                 workspace_id=existing_flow.workspace_id,
                 folder_id=existing_flow.folder_id,
             )
+
+            # Destination check (see update_flow above): if the payload moves
+            # the flow into a new workspace/folder, also authorize WRITE at the
+            # destination. ``_update_existing_flow`` applies payload values via
+            # ``model_dump(exclude_unset=True, exclude_none=True)``, so None
+            # means "keep existing" and a non-None differing value means "move".
+            target_workspace_id = flow.workspace_id if flow.workspace_id is not None else existing_flow.workspace_id
+            target_folder_id = flow.folder_id if flow.folder_id is not None else existing_flow.folder_id
+            if target_workspace_id != existing_flow.workspace_id or target_folder_id != existing_flow.folder_id:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=existing_flow.user_id,
+                    workspace_id=target_workspace_id,
+                    folder_id=target_folder_id,
+                )
 
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow

@@ -161,6 +161,48 @@ def test_upload_file_guards_each_flow_with_effective_destination(routes):
     assert scoped_calls, "upload_file must call ensure_flow_permission inside a per-flow loop with flow.workspace_id"
 
 
+def _has_destination_check(
+    func: ast.AsyncFunctionDef,
+    *,
+    target_workspace_kw: str,
+    target_folder_kw: str,
+) -> bool:
+    """Return True if *func* has a WRITE ensure_flow_permission call with the destination kwargs."""
+    for call in _ensure_flow_permission_calls(func):
+        if _action_arg(call) != "FlowAction.WRITE":
+            continue
+        ws = _kwarg_source(call, "workspace_id")
+        fld = _kwarg_source(call, "folder_id")
+        if ws == target_workspace_kw and fld == target_folder_kw:
+            return True
+    return False
+
+
+def test_update_flow_authorizes_destination_on_move(routes):
+    """PATCH /flows/{flow_id} must authorize the destination on workspace/folder change.
+
+    Without this, a caller could write to a flow in scope A and move it into
+    scope B even when they lack permission to write at B (e.g., share-based
+    access in Phase 3 or workspace-scoped roles in enterprise).
+    """
+    func = routes["update_flow"]
+    assert _has_destination_check(
+        func,
+        target_workspace_kw="target_workspace_id",
+        target_folder_kw="target_folder_id",
+    ), "update_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
+
+
+def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
+    """PUT /flows/{flow_id} (update branch) must authorize the destination on move."""
+    func = routes["upsert_flow"]
+    assert _has_destination_check(
+        func,
+        target_workspace_kw="target_workspace_id",
+        target_folder_kw="target_folder_id",
+    ), "upsert_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
+
+
 def test_no_bare_string_actions_remain(routes):
     """No flow-route guard should use a bare string action — the enum is now canonical."""
     offenders: list[str] = []
