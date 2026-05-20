@@ -26,10 +26,7 @@ import type {
   ProviderCredentials,
   SelectedFlowVersion,
 } from "../types";
-import {
-  createDeploymentToolNameScopeId,
-  getSelectedFlowVersionKey,
-} from "../types";
+import { getDeploymentDisplayName, getSelectedFlowVersionKey } from "../types";
 
 interface DeploymentStepperInitialState {
   projectId?: string;
@@ -101,7 +98,6 @@ interface DeploymentStepperContextType {
   setToolNameByFlow: Dispatch<SetStateAction<Map<string, string>>>;
   /** Original tool names from provider before this edit session (edit mode). Key = attachment key. */
   initialToolNameByFlow: Map<string, string>;
-  defaultToolNameScopeId: string | null;
   /** Attachment keys that were already attached before this edit session (edit mode). */
   preExistingFlowIds: Set<string>;
   /** Attachment keys that were originally attached but the user chose to detach (edit mode). */
@@ -112,12 +108,6 @@ interface DeploymentStepperContextType {
   // Tool name validation
   hasToolNameErrors: boolean;
   setHasToolNameErrors: Dispatch<SetStateAction<boolean>>;
-
-  // Agent name validation
-  hasAgentNameErrors: boolean;
-  setHasAgentNameErrors: Dispatch<SetStateAction<boolean>>;
-  isAgentNameValidationPending: boolean;
-  setIsAgentNameValidationPending: Dispatch<SetStateAction<boolean>>;
 
   // Deploy / Update
   needsProviderAccountCreation: boolean;
@@ -160,7 +150,7 @@ export function DeploymentStepperProvider({
     editingDeployment?.type ?? "agent",
   );
   const [deploymentName, setDeploymentName] = useState(
-    editingDeployment?.name ?? "",
+    getDeploymentDisplayName(editingDeployment),
   );
   const [deploymentDescription, setDeploymentDescription] = useState(
     editingDeployment?.description ?? "",
@@ -189,11 +179,6 @@ export function DeploymentStepperProvider({
   const [toolNameByFlow, setToolNameByFlow] = useState<Map<string, string>>(
     normalizedInitialToolNames,
   );
-  const [defaultToolNameScopeId] = useState<string | null>(() =>
-    isEditMode
-      ? (editingDeployment?.id ?? createDeploymentToolNameScopeId())
-      : createDeploymentToolNameScopeId(),
-  );
   const [attachedConnectionByFlow, setAttachedConnectionByFlow] = useState<
     Map<string, string[]>
   >(normalizedInitialConnections);
@@ -201,12 +186,8 @@ export function DeploymentStepperProvider({
   const [hasToolNameErrors, setHasToolNameErrors] = useState(false);
   const trimmedDeploymentName = deploymentName.trim();
   const hasDeploymentNameFormatError =
-    trimmedDeploymentName !== "" && !/^\p{L}/u.test(trimmedDeploymentName);
-  const isDeploymentNameValid =
-    trimmedDeploymentName !== "" && !hasDeploymentNameFormatError;
-  const [hasAgentNameErrors, setHasAgentNameErrors] = useState(false);
-  const [isAgentNameValidationPending, setIsAgentNameValidationPending] =
-    useState(false);
+    deploymentName !== "" && trimmedDeploymentName === "";
+  const isDeploymentNameValid = trimmedDeploymentName !== "";
 
   // Edit mode: track which pre-existing flows the user wants to detach.
   const [removedFlowIds, setRemovedFlowIds] = useState<Set<string>>(new Set());
@@ -280,12 +261,7 @@ export function DeploymentStepperProvider({
       );
     }
     if (logical === 2) {
-      return (
-        isDeploymentNameValid &&
-        selectedLlm.trim() !== "" &&
-        !hasAgentNameErrors &&
-        !isAgentNameValidationPending
-      );
+      return isDeploymentNameValid && selectedLlm.trim() !== "";
     }
     if (logical === 3) {
       // In edit mode, user can proceed without new attachments (may just change desc/LLM).
@@ -307,8 +283,6 @@ export function DeploymentStepperProvider({
     selectedVersionByFlow,
     isEditMode,
     hasToolNameErrors,
-    hasAgentNameErrors,
-    isAgentNameValidationPending,
   ]);
 
   const handleNext = useCallback(() => {
@@ -365,7 +339,6 @@ export function DeploymentStepperProvider({
       buildDeploymentPayloadValue({
         attachedConnectionByFlow,
         connections,
-        defaultToolNameScopeId,
         deploymentDescription,
         deploymentName,
         deploymentType,
@@ -380,7 +353,6 @@ export function DeploymentStepperProvider({
     [
       attachedConnectionByFlow,
       connections,
-      defaultToolNameScopeId,
       deploymentDescription,
       deploymentName,
       deploymentType,
@@ -398,8 +370,8 @@ export function DeploymentStepperProvider({
       return buildDeploymentUpdatePayloadValue({
         attachedConnectionByFlow,
         connections,
-        defaultToolNameScopeId,
         deploymentDescription,
+        deploymentName,
         editingDeployment,
         initialConnectionsByFlow,
         initialToolNameByFlow,
@@ -413,8 +385,8 @@ export function DeploymentStepperProvider({
     }, [
       attachedConnectionByFlow,
       connections,
-      defaultToolNameScopeId,
       deploymentDescription,
+      deploymentName,
       editingDeployment,
       initialConnectionsByFlow,
       initialToolNameByFlow,
@@ -460,7 +432,6 @@ export function DeploymentStepperProvider({
       toolNameByFlow,
       setToolNameByFlow,
       initialToolNameByFlow,
-      defaultToolNameScopeId,
       attachedConnectionByFlow,
       setAttachedConnectionByFlow,
       preExistingFlowIds,
@@ -469,10 +440,6 @@ export function DeploymentStepperProvider({
       handleUndoRemoveFlow,
       hasToolNameErrors,
       setHasToolNameErrors,
-      hasAgentNameErrors,
-      setHasAgentNameErrors,
-      isAgentNameValidationPending,
-      setIsAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,
@@ -502,15 +469,12 @@ export function DeploymentStepperProvider({
       handleSelectVersion,
       toolNameByFlow,
       initialToolNameByFlow,
-      defaultToolNameScopeId,
       attachedConnectionByFlow,
       preExistingFlowIds,
       removedFlowIds,
       handleRemoveAttachedFlow,
       handleUndoRemoveFlow,
       hasToolNameErrors,
-      hasAgentNameErrors,
-      isAgentNameValidationPending,
       needsProviderAccountCreation,
       buildProviderAccountPayload,
       buildDeploymentPayload,

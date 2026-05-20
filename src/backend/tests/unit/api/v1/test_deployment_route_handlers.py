@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.deployments import DeploymentTelemetryCtx
-from langflow.api.v1.mappers.deployments.contracts import ProviderDeploymentMetadata, ProviderSnapshotBinding
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding, truncate_deployment_description
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -44,6 +44,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentGetResult,
     DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ItemResult,
     SnapshotItem,
@@ -170,6 +171,7 @@ class TestCreateDeploymentRollback:
         adapter = AsyncMock()
         create_result = DeploymentCreateResult(
             id="provider-dep-1",
+            type=DeploymentType.AGENT,
             provider_result={"app_ids": ["cfg-1"], "tools_with_refs": [{"tool_id": "tool-1", "source_ref": "fv-1"}]},
         )
         adapter.create.return_value = create_result
@@ -228,7 +230,7 @@ class TestCreateDeploymentRollback:
         pa = _fake_provider_account()
         mock_get_pa.return_value = pa
         adapter = AsyncMock()
-        create_result = DeploymentCreateResult(id="provider-dep-1")
+        create_result = DeploymentCreateResult(id="provider-dep-1", type=DeploymentType.AGENT)
         adapter.create.return_value = create_result
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
@@ -297,7 +299,10 @@ class TestCreateDeploymentExistingAgent:
         mapper = MagicMock()
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
         mapper.util_create_flow_version_ids.return_value = []
-        mapper.util_create_result_from_existing_resource.return_value = DeploymentCreateResult(id="existing-agent-1")
+        mapper.util_create_result_from_existing_resource.return_value = DeploymentCreateResult(
+            id="existing-agent-1",
+            type=DeploymentType.AGENT,
+        )
         deployment_to_create = SimpleNamespace(resource_key="existing-agent-1")
         mapper.resolve_deployment_model_from_existing_resource_for_create.return_value = deployment_to_create
         mock_get_mapper.return_value = mapper
@@ -737,10 +742,10 @@ class TestListDeploymentsMetadataSync:
 
             def extract_metadata_for_list(self, provider_view):
                 return {
-                    str(item.id): ProviderDeploymentMetadata(
-                        display_name=item.provider_data["display_name"],
-                        description=item.provider_data["description"],
-                    )
+                    str(item.id): {
+                        "display_name": item.provider_data["display_name"],
+                        "description": truncate_deployment_description(item.provider_data["description"]),
+                    }
                     for item in provider_view.deployments
                 }
 
@@ -784,8 +789,8 @@ class TestListDeploymentsMetadataSync:
 
         def _apply_metadata_batch(*_args, **kwargs):
             update = kwargs["deployment_updates"][0]
-            update.langflow_db_row.description = update.description
             update.langflow_db_row.display_name = update.display_name
+            update.langflow_db_row.description = update.description
 
         mock_get_pa.return_value = pa
         mock_resolve_adapter.return_value = AsyncMock()
@@ -1713,7 +1718,7 @@ class TestUpdateDeploymentRollback:
         update_result = DeploymentUpdateResult(id="provider-dep-1")
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mapper.resolve_deployment_update_kwargs.return_value = {"display_name": "renamed", "description": None}
+        mapper.resolve_kwargs_for_metadata_update.return_value = {"description": None}
         mapper.shape_deployment_update_result.return_value = MagicMock()
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -1767,7 +1772,7 @@ class TestUpdateDeploymentRollback:
         update_result = DeploymentUpdateResult(id="provider-dep-1")
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mapper.resolve_deployment_update_kwargs.return_value = {"display_name": "renamed", "description": None}
+        mapper.resolve_kwargs_for_metadata_update.return_value = {"description": None}
         mapper.shape_deployment_update_result.return_value = MagicMock()
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -1825,7 +1830,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         update_result = DeploymentUpdateResult(id="provider-dep-1")
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mapper.resolve_deployment_update_kwargs.return_value = {"display_name": "renamed", "description": None}
+        mapper.resolve_kwargs_for_metadata_update.return_value = {"description": None}
         mapper.shape_deployment_update_result.return_value = MagicMock()
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -1885,7 +1890,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         update_result = DeploymentUpdateResult(id="provider-dep-1")
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
-        mapper.resolve_deployment_update_kwargs.return_value = {"display_name": "renamed", "description": None}
+        mapper.resolve_kwargs_for_metadata_update.return_value = {"description": None}
         mapper.shape_deployment_update_result.return_value = MagicMock()
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -1941,6 +1946,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         update_result = DeploymentUpdateResult(id="provider-dep-1")
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.resolve_kwargs_for_metadata_update.return_value = {}
         mapper.shape_deployment_update_result.return_value = MagicMock()
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -1977,7 +1983,7 @@ class TestUpdateDeploymentMetadataPersistence:
     @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_explicit_null_description_is_persisted(
+    async def test_provider_update_metadata_is_persisted_from_adapter_result(
         self,
         mock_resolve_amm,
         mock_resolve_fvp,  # noqa: ARG002
@@ -1986,15 +1992,15 @@ class TestUpdateDeploymentMetadataPersistence:
         mock_apply_patch,  # noqa: ARG002
         mock_update_db,
     ):
-        """PATCH should persist an explicitly-cleared description alongside other spec updates."""
+        """PATCH should persist provider-returned metadata, even when the DB row is stale."""
         from langflow.api.v1.deployments import update_deployment
 
         dep_row = _fake_deployment_row(display_name="old-name", description="old-description")
         updated_row = _fake_deployment_row(
             id=dep_row.id,
             resource_key=dep_row.resource_key,
-            display_name="renamed",
-            description=None,
+            display_name="provider-renamed",
+            description="provider-description",
             deployment_provider_account_id=dep_row.deployment_provider_account_id,
             project_id=dep_row.project_id,
         )
@@ -2004,7 +2010,10 @@ class TestUpdateDeploymentMetadataPersistence:
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
-        mapper.resolve_deployment_update_kwargs.return_value = {"display_name": "renamed", "description": None}
+        mapper.resolve_kwargs_for_metadata_update.return_value = {
+            "display_name": "provider-renamed",
+            "description": "provider-description",
+        }
         mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_update_db.return_value = updated_row
 
@@ -2028,9 +2037,9 @@ class TestUpdateDeploymentMetadataPersistence:
 
         mock_update_db.assert_awaited_once()
         update_kwargs = mock_update_db.call_args.kwargs
-        assert update_kwargs["display_name"] == "renamed"
-        assert "description" in update_kwargs
-        assert update_kwargs["description"] is None
+        assert update_kwargs["display_name"] == "provider-renamed"
+        assert update_kwargs["description"] == "provider-description"
+        mapper.resolve_kwargs_for_metadata_update.assert_called_once_with(update_result)
 
 
 # ---------------------------------------------------------------------------
@@ -2139,7 +2148,7 @@ class TestGetDeploymentSync:
 
             def extract_metadata_for_get(self, get_result):
                 _ = get_result
-                return SimpleNamespace(display_name=dep_row.display_name, description=dep_row.description)
+                return {"display_name": dep_row.display_name, "description": dep_row.description}
 
             def extract_snapshot_bindings_for_get(self, get_result, *, resource_key: str):
                 return [
@@ -2206,10 +2215,10 @@ class TestGetDeploymentSync:
 
             def extract_metadata_for_get(self, get_result):
                 data = get_result.model_dump()["provider_data"]
-                return ProviderDeploymentMetadata(
-                    display_name=data["display_name"],
-                    description=data["description"],
-                )
+                return {
+                    "display_name": data["display_name"],
+                    "description": truncate_deployment_description(data["description"]),
+                }
 
             def extract_snapshot_bindings_for_get(self, get_result, *, resource_key: str):
                 _ = (get_result, resource_key)
@@ -2277,10 +2286,10 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
-        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
-            display_name=dep_row.display_name,
-            description=dep_row.description,
-        )
+        mapper.extract_metadata_for_get.return_value = {
+            "display_name": dep_row.display_name,
+            "description": dep_row.description,
+        }
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_count_att.return_value = 1
@@ -2317,10 +2326,10 @@ class TestGetDeploymentSync:
         provider_deployment.model_dump.return_value = {}
         adapter.get.return_value = provider_deployment
         mapper.extract_snapshot_bindings_for_get.side_effect = NotImplementedError("not supported")
-        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
-            display_name=dep_row.display_name,
-            description=dep_row.description,
-        )
+        mapper.extract_metadata_for_get.return_value = {
+            "display_name": dep_row.display_name,
+            "description": dep_row.description,
+        }
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
 
@@ -2361,10 +2370,10 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
-        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
-            display_name=dep_row.display_name,
-            description=dep_row.description,
-        )
+        mapper.extract_metadata_for_get.return_value = {
+            "display_name": dep_row.display_name,
+            "description": dep_row.description,
+        }
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_count_att.return_value = 2
@@ -2404,10 +2413,10 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key=dep_row.resource_key, snapshot_id="snap-1")
         ]
-        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
-            display_name=dep_row.display_name,
-            description=dep_row.description,
-        )
+        mapper.extract_metadata_for_get.return_value = {
+            "display_name": dep_row.display_name,
+            "description": dep_row.description,
+        }
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_delete_unbound.side_effect = RuntimeError("sync failed")
@@ -2445,10 +2454,10 @@ class TestGetDeploymentSync:
         mapper.extract_snapshot_bindings_for_get.return_value = [
             ProviderSnapshotBinding(resource_key="agent-rk-1", snapshot_id="snap-1")
         ]
-        mapper.extract_metadata_for_get.return_value = SimpleNamespace(
-            display_name=dep_row.display_name,
-            description=dep_row.description,
-        )
+        mapper.extract_metadata_for_get.return_value = {
+            "display_name": dep_row.display_name,
+            "description": dep_row.description,
+        }
         mapper.shape_deployment_get_data.return_value = None
         mock_resolve.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
         mock_count_att.return_value = 1
@@ -2722,7 +2731,7 @@ class TestCreateDeploymentProjectValidation:
         pa = _fake_provider_account()
         mock_get_pa.return_value = pa
         adapter = AsyncMock()
-        create_result = DeploymentCreateResult(id="prov-1")
+        create_result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         adapter.create.return_value = create_result
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()

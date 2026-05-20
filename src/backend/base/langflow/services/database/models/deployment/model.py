@@ -40,6 +40,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
         )
     )
+    # TODO: Add DB-level length enforcement for provider-synced display_name and description.
     display_name: str = Field(description="Deployment name synced from the provider.")
     description: str | None = Field(
         default=None,

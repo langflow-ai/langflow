@@ -20,7 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
-import { type Deployment, type DeploymentType } from "../types";
+import {
+  type Deployment,
+  type DeploymentType,
+  getDeploymentDisplayName,
+} from "../types";
 import DeploymentExpandedRow from "./deployment-expanded-row";
 
 interface DeploymentsTableProps {
@@ -112,6 +116,7 @@ export default function DeploymentsTable({
           const isDeleting = deletingId === deployment.id;
           const isExpanded = expandedIds.has(deployment.id);
           const hasAttachments = deployment.attached_count > 0;
+          const displayName = getDeploymentDisplayName(deployment);
           return (
             <Fragment key={deployment.id}>
               <TableRow
@@ -123,12 +128,7 @@ export default function DeploymentsTable({
               >
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{deployment.name}</span>
-                    {deployment.description && (
-                      <span className="text-xs text-muted-foreground">
-                        {deployment.description}
-                      </span>
-                    )}
+                    <span className="font-medium">{displayName}</span>
                   </div>
                 </TableCell>
                 <TableCell>
@@ -162,12 +162,14 @@ export default function DeploymentsTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {providerMap[deployment.provider_id ?? ""] ?? "—"}
+                    {providerMap[deployment.provider_id] ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {formatDate(deployment.updated_at)}
+                    {deployment.updated_at
+                      ? formatDate(deployment.updated_at)
+                      : "—"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -177,7 +179,7 @@ export default function DeploymentsTable({
                     className="h-8 w-8"
                     data-testid={`test-deployment-${deployment.id}`}
                     aria-label={t("deployments.testDeploymentAriaLabel", {
-                      name: deployment.name,
+                      name: displayName,
                     })}
                     onClick={() => onTestDeployment(deployment)}
                   >
@@ -197,7 +199,7 @@ export default function DeploymentsTable({
                           size="icon"
                           className="h-8 w-8"
                           data-testid={`actions-deployment-${deployment.id}`}
-                          aria-label={`Actions for ${deployment.name}`}
+                          aria-label={`Actions for ${displayName}`}
                         >
                           <ForwardedIconComponent
                             name="EllipsisVertical"

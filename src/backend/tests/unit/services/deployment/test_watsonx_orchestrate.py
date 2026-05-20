@@ -564,7 +564,7 @@ async def test_update_rejects_legacy_top_level_config_section(monkeypatch):
 @pytest.mark.anyio
 async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_agent = FakeAgentClient({"id": "dep-1", "display_name": "Existing Agent", "tools": ["tool-1"]})
     fake_tool = FakeToolClient(
         [
             {"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}},
@@ -611,6 +611,7 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
     assert result.provider_result.created_app_ids == []
     assert result.provider_result.created_snapshot_ids == []
     assert result.provider_result.added_snapshot_ids == ["tool-3"]
+    assert result.provider_result.display_name == "Existing Agent"
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3"]
     _, updated_tool_payload = fake_tool.update_calls[0]
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
@@ -983,7 +984,7 @@ async def test_update_provider_data_put_tools_with_llm_updates_agent(monkeypatch
 @pytest.mark.anyio
 async def test_update_provider_data_creates_raw_tools_without_operations(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_agent = FakeAgentClient({"id": "dep-1", "display_name": "Existing Agent", "tools": ["tool-1"]})
     fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
     fake_connections = FakeConnectionsClient()
     fake_clients = SimpleNamespace(
@@ -1038,6 +1039,7 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
 
     assert captured["tool_bindings"][0].connections == {}
     assert result.provider_result is not None
+    assert result.provider_result.display_name == "Existing Agent"
     assert result.provider_result.created_snapshot_ids == ["new-tool-raw-1"]
     assert result.provider_result.added_snapshot_ids == ["new-tool-raw-1"]
     assert fake_connections.create_calls == []
@@ -1789,7 +1791,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
         db=object(),
         deployment_spec=BaseDeploymentData(
             name=_agent_technical_name(),
-            description="desc",
+            description="   ",
             type=DeploymentType.AGENT,
         ),
         plan=plan,
@@ -1800,9 +1802,11 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.agent.create_calls
     assert fake_clients.agent.create_calls[0]["name"] == _agent_technical_name()
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
+    assert fake_clients.agent.create_calls[0]["description"] == "Langflow deployment my deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
     assert result.agent_id == "dep-created"
+    assert result.description == "Langflow deployment my deployment"
     assert result.app_ids == ["cfg"]
     assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [("created-tool-1", ["cfg"])]
     assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [
@@ -1849,11 +1853,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
     async def mock_create_agent_deployment(
         *,
         clients,  # noqa: ARG001
-        tool_ids,  # noqa: ARG001
-        agent_name,  # noqa: ARG001
-        agent_display_name,  # noqa: ARG001
-        description,  # noqa: ARG001
-        llm,  # noqa: ARG001
+        payload,  # noqa: ARG001
     ):
         msg = "create failed"
         raise RuntimeError(msg)
@@ -2541,15 +2541,18 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     assert fake_clients.agent.create_calls[0]["description"] == "desc"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
-    assert result.config_id is None
-    assert result.snapshot_ids == []
     assert result.provider_result is not None
     provider_result = (
         result.provider_result.model_dump() if hasattr(result.provider_result, "model_dump") else result.provider_result
     )
     assert provider_result["app_ids"] == ["cfg"]
+    assert "deployment_name" not in provider_result
+    assert "description" not in provider_result
     assert provider_result["tool_app_bindings"] == [{"tool_id": "created-tool-1", "app_ids": ["cfg"]}]
     assert provider_result["tools_with_refs"] == [{"source_ref": "fv-create-service-1", "tool_id": "created-tool-1"}]
+    assert result.type == DeploymentType.AGENT
+    assert result.name == "langflow_my_deployment_abcdef12"
+    assert result.description == "desc"
 
 
 @pytest.mark.anyio
@@ -3554,7 +3557,7 @@ async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch
         user_id="user-1",
         deployment_id="dep-created",
         provider_result={
-            "deployment_name": "agent_api_name",
+            "display_name": "Agent Display Name",
             "app_ids": ["cfg"],
             "tools_with_refs": [
                 {"source_ref": "fv-1", "tool_id": "tool-1"},
@@ -5663,13 +5666,23 @@ async def test_update_deployment_display_name_and_description_renames_technical_
     assert payload["name"] == "langflow_new_name_abcdef12"
     assert payload["description"] == "new desc"
     assert result.provider_result is not None
-    assert result.provider_result.deployment_name == payload["name"]
+    assert result.provider_result.name == payload["name"]
+    assert result.provider_result.display_name == "new name"
+    assert result.provider_result.description == "new desc"
 
 
 @pytest.mark.anyio
 async def test_update_deployment_technical_name_still_uses_explicit_spec_name(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "name": "provider_agent_name", "tools": []})
+    fake_agent = FakeAgentClient(
+        {
+            "id": "dep-1",
+            "name": "provider_agent_name",
+            "display_name": "old label",
+            "description": "provider desc",
+            "tools": [],
+        }
+    )
     fake_clients = SimpleNamespace(
         agent=fake_agent,
         tool=FakeToolClient([]),
@@ -5694,7 +5707,9 @@ async def test_update_deployment_technical_name_still_uses_explicit_spec_name(mo
     _, payload = fake_agent.update_calls[0]
     assert payload == {"display_name": "!!!", "name": "new_technical_name"}
     assert result.provider_result is not None
-    assert result.provider_result.deployment_name == "new_technical_name"
+    assert result.provider_result.name == "new_technical_name"
+    assert result.provider_result.display_name == "!!!"
+    assert result.provider_result.description == "provider desc"
 
 
 @pytest.mark.anyio
@@ -5999,7 +6014,9 @@ async def test_list_llms_invalid_payload_raises_deployment_error(monkeypatch):
 @pytest.mark.anyio
 async def test_update_spec_only_description_sends_update(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "name": "existing_agent", "display_name": "Existing Agent", "tools": []}
+    )
     fake_clients = SimpleNamespace(
         agent=fake_agent,
     )
@@ -6020,6 +6037,8 @@ async def test_update_spec_only_description_sends_update(monkeypatch):
     _, payload = fake_agent.update_calls[0]
     assert payload == {"description": "only desc"}
     assert "name" not in payload
+    assert result.provider_result is not None
+    assert result.provider_result.display_name == "Existing Agent"
 
 
 # ---------------------------------------------------------------------------
@@ -6484,11 +6503,14 @@ async def test_create_agent_deployment_maps_agent_conflict_with_structured_resou
     with pytest.raises(ResourceConflictError) as exc_info:
         await create_core_module.create_agent_deployment(
             clients=fake_clients,
-            tool_ids=["tool-1"],
-            agent_name="my_agent",
-            agent_display_name="My Agent",
-            description="desc",
-            llm=TEST_WXO_LLM,
+            payload={
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "tools": ["tool-1"],
+                "style": "default",
+                "llm": TEST_WXO_LLM,
+            },
         )
 
     assert exc_info.value.resource == "agent"

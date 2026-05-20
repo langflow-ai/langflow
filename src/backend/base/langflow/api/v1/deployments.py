@@ -544,11 +544,10 @@ async def create_deployment(
     try:
         if should_create_provider_resource:
             deployment_to_create = deployment_mapper.resolve_deployment_model_for_create(
-                payload=payload,
+                result=provider_create_result,
                 user_id=current_user.id,
                 project_id=project_id,
                 deployment_provider_account_id=provider_id,
-                resource_key=str(provider_create_result.id),
             )
         else:
             deployment_to_create = deployment_mapper.resolve_deployment_model_from_existing_resource_for_create(
@@ -1275,7 +1274,7 @@ async def update_deployment(
             db=session,
         )
 
-        update_kwargs = deployment_mapper.resolve_deployment_update_kwargs(payload)
+        update_kwargs = deployment_mapper.resolve_kwargs_for_metadata_update(update_result)
         if update_kwargs:
             deployment_row = await update_deployment_db(
                 session,

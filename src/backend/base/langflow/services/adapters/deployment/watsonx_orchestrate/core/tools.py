@@ -275,13 +275,6 @@ def create_wxo_flow_tool(
     """
     # provider_data might break tool runtime expectations with unexpected top-level keys
     flow_definition = flow_payload.model_dump(exclude={"provider_data"})
-    logger.debug(
-        "create_wxo_flow_tool: flow name='%s', id='%s', connections=%s",
-        flow_definition.get("name"),
-        flow_definition.get("id"),
-        connections,
-    )
-
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
         msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
@@ -290,6 +283,14 @@ def create_wxo_flow_tool(
 
     tool_display_name = flow_provider_data.tool_display_name
     technical_tool_name = flow_provider_data.tool_name
+    logger.debug(
+        "create_wxo_flow_tool",
+        langflow_flow_name=flow_definition.get("name"),
+        flow_id=flow_definition.get("id"),
+        tool_name=technical_tool_name,
+        tool_display_name=tool_display_name,
+        connection_app_ids=sorted(connections),
+    )
 
     flow_definition.update(
         {
@@ -324,10 +325,11 @@ def create_wxo_flow_tool(
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
     logger.debug(
-        "create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s",
-        tool_payload.get("name"),
-        project_id,
-        tool_payload.get("binding", {}).get("langflow"),
+        "create_wxo_flow_tool_payload",
+        tool_name=tool_payload.get("name"),
+        tool_display_name=tool_payload.get("display_name"),
+        project_id=project_id,
+        binding=tool_payload.get("binding", {}).get("langflow"),
     )
 
     artifacts: bytes = build_langflow_artifact_bytes(

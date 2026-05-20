@@ -82,7 +82,6 @@ from .contracts import (
     CreatedSnapshotIds,
     CreateSnapshotBindings,
     FlowVersionPatch,
-    ProviderDeploymentMetadata,
     ProviderSnapshotBinding,
     UpdateSnapshotBindings,
 )
@@ -382,11 +381,10 @@ class BaseDeploymentMapper:
     def resolve_deployment_model_for_create(
         self,
         *,
-        payload: DeploymentCreateRequest,
+        result: DeploymentCreateResult,
         user_id: UUID,
         project_id: UUID,
         deployment_provider_account_id: UUID,
-        resource_key: str,
     ) -> Deployment:
         """Assemble the DB model for a deployment create.
 
@@ -394,7 +392,7 @@ class BaseDeploymentMapper:
         The base mapper has no provider-agnostic source for required DB fields
         such as the display label.
         """
-        _ = (payload, user_id, project_id, deployment_provider_account_id, resource_key)
+        _ = (result, user_id, project_id, deployment_provider_account_id)
         msg = "This deployment provider is not configured for creating local deployment records."
         raise NotImplementedError(msg)
 
@@ -412,13 +410,13 @@ class BaseDeploymentMapper:
         msg = "This deployment provider is not configured for onboarding existing deployment resources."
         raise NotImplementedError(msg)
 
-    def resolve_deployment_update_kwargs(self, payload: DeploymentUpdateRequest) -> dict[str, Any]:
-        """Assemble DB update kwargs for a deployment update request.
+    def resolve_kwargs_for_metadata_update(self, result: DeploymentUpdateResult) -> dict[str, Any]:
+        """Assemble Deployment metadata update kwargs from a provider update result.
 
-        Provider mappers own request-specific metadata extraction. The base
+        Provider mappers own provider-result metadata extraction. The base
         mapper has no provider-agnostic source for mutable DB cache fields.
         """
-        _ = payload
+        _ = result
         msg = "This deployment provider is not configured for updating local deployment metadata."
         raise NotImplementedError(msg)
 
@@ -658,8 +656,8 @@ class BaseDeploymentMapper:
     def extract_metadata_for_list(
         self,
         provider_view: DeploymentListResult,
-    ) -> dict[str, ProviderDeploymentMetadata]:
-        """Extract provider-owned display metadata for local row sync."""
+    ) -> dict[str, dict[str, Any]]:
+        """Resolve resource_key -> CRUD kwargs for local metadata sync."""
         _ = provider_view
         msg = "This deployment provider is not configured for syncing metadata for multiple deployments."
         raise NotImplementedError(msg)
@@ -667,8 +665,8 @@ class BaseDeploymentMapper:
     def extract_metadata_for_get(
         self,
         get_result: DeploymentGetResult,
-    ) -> ProviderDeploymentMetadata:
-        """Extract provider-owned display metadata for local row sync."""
+    ) -> dict[str, Any]:
+        """Resolve CRUD kwargs for local metadata sync from a provider GET result."""
         _ = get_result
         msg = "This deployment provider is not configured for syncing metadata for a deployment."
         raise NotImplementedError(msg)

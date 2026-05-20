@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.deployment.crud import (
+    DeploymentMetadataUpdate,
     create_deployment,
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
@@ -13,6 +14,7 @@ from langflow.services.database.models.deployment.crud import (
     list_deployments_page,
     update_deployment,
     update_deployment_metadata,
+    update_deployment_metadata_batch,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import (
@@ -26,7 +28,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 )
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
-from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH, DeploymentType
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -487,14 +489,27 @@ async def test_update_deployment_metadata_preserves_updated_at(
     await db.refresh(row)
     original_updated_at = row.updated_at
 
-    updated = await update_deployment_metadata(
-        db,
-        user_id=user.id,
-        deployment=row,
-        display_name="provider name",
-        description="provider desc",
-    )
+    with patch("langflow.services.database.models.deployment.crud.logger.info") as mock_logger_info:
+        updated = await update_deployment_metadata(
+            db,
+            user_id=user.id,
+            deployment=row,
+            display_name="provider name",
+            description="provider desc",
+        )
     assert updated is row
+    mock_logger_info.assert_called_once_with(
+        "sync_deployment_metadata_db_write",
+        user_id=str(user.id),
+        deployment_id=str(row.id),
+        provider_account_id=str(provider_account.id),
+        provider_resource_key="rk-metadata-sync",
+        changed_fields=["display_name", "description"],
+        previous_display_name_length=len("original"),
+        next_display_name_length=len("provider name"),
+        previous_description_length=len("old desc"),
+        next_description_length=len("provider desc"),
+    )
     assert row.display_name == "provider name"
     assert row.description == "provider desc"
     await db.commit()
@@ -504,6 +519,112 @@ async def test_update_deployment_metadata_preserves_updated_at(
     assert fetched.display_name == "provider name"
     assert fetched.description == "provider desc"
     assert fetched.updated_at == original_updated_at
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_skips_when_truncated_provider_description_is_unchanged(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    truncated_description = "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-noop",
+        display_name="original",
+        description=truncated_description,
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(row)
+
+    with (
+        patch.object(db, "exec", wraps=db.exec) as mock_exec,
+        patch("langflow.services.database.models.deployment.crud.logger.info") as mock_logger_info,
+    ):
+        updated = await update_deployment_metadata(
+            db,
+            user_id=user.id,
+            deployment=row,
+            display_name="original",
+            description=truncated_description,
+        )
+
+    assert updated is row
+    mock_exec.assert_not_called()
+    mock_logger_info.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_batch_logs_actual_db_writes_only(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    changed_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-batch-changed",
+        display_name="changed",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    unchanged_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-batch-unchanged",
+        display_name="unchanged",
+        description="same desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(changed_row)
+    await db.refresh(unchanged_row)
+
+    with patch("langflow.services.database.models.deployment.crud.logger.info") as mock_logger_info:
+        await update_deployment_metadata_batch(
+            db,
+            user_id=user.id,
+            deployment_updates=[
+                DeploymentMetadataUpdate(
+                    langflow_db_row=changed_row,
+                    display_name="provider changed",
+                    description="new desc",
+                ),
+                DeploymentMetadataUpdate(
+                    langflow_db_row=unchanged_row,
+                    display_name="unchanged",
+                    description="same desc",
+                ),
+            ],
+        )
+
+    mock_logger_info.assert_called_once_with(
+        "sync_deployment_metadata_batch_db_write",
+        user_id=str(user.id),
+        update_count=1,
+        updates=[
+            {
+                "deployment_id": str(changed_row.id),
+                "provider_account_id": str(provider_account.id),
+                "provider_resource_key": "rk-metadata-batch-changed",
+                "changed_fields": ["display_name", "description"],
+                "previous_display_name_length": len("changed"),
+                "next_display_name_length": len("provider changed"),
+                "previous_description_length": len("old desc"),
+                "next_description_length": len("new desc"),
+            }
+        ],
+    )
+    await db.refresh(changed_row)
+    await db.refresh(unchanged_row)
+    assert changed_row.display_name == "provider changed"
+    assert changed_row.description == "new desc"
+    assert unchanged_row.display_name == "unchanged"
+    assert unchanged_row.description == "same desc"
 
 
 @pytest.mark.asyncio

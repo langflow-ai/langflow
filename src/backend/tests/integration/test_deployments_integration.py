@@ -7,7 +7,7 @@ import pytest
 from fastapi import HTTPException
 from langflow.api.v1.deployments import list_deployments
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
-from langflow.api.v1.mappers.deployments.contracts import ProviderDeploymentMetadata
+from langflow.api.v1.mappers.deployments.contracts import truncate_deployment_description
 from langflow.services.database.models.deployment.crud import create_deployment
 from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_db
 from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
@@ -95,20 +95,23 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
         _ = get_result, resource_key
         return []
 
+    def extract_list_item_provider_data(self, provider_view):
+        return {str(item.id): dict(item.provider_data) for item in provider_view.deployments}
+
     def extract_metadata_for_list(self, provider_view):
         return {
-            str(item.id): ProviderDeploymentMetadata(
-                display_name=item.provider_data["display_name"],
-                description=item.provider_data["description"],
-            )
+            str(item.id): {
+                "display_name": item.provider_data["display_name"],
+                "description": truncate_deployment_description(item.provider_data["description"]),
+            }
             for item in provider_view.deployments
         }
 
     def extract_metadata_for_get(self, get_result):
-        return ProviderDeploymentMetadata(
-            display_name=get_result.provider_data["display_name"],
-            description=get_result.provider_data["description"],
-        )
+        return {
+            "display_name": get_result.provider_data["display_name"],
+            "description": truncate_deployment_description(get_result.provider_data["description"]),
+        }
 
     def shape_deployment_get_data(self, provider_data):
         return provider_data if isinstance(provider_data, dict) else None
@@ -520,14 +523,12 @@ async def test_list_deployments_syncs_provider_metadata_in_db(async_session, act
                 params=SimpleNamespace(page=1, size=20),
                 deployment_type=None,
                 load_from_provider=False,
-                names=None,
             )
         await async_session.commit()
 
         fetched = await get_deployment_db(async_session, user_id=active_user.id, deployment_id=deployment.id)
         assert fetched is not None
         assert response.total == 1
-        assert response.deployments[0].display_name == "Provider display name"
         assert response.deployments[0].description == "Provider description"
         assert fetched.display_name == "Provider display name"
         assert fetched.description == "Provider description"
