@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
+.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic ollama_up ollama_down load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -233,9 +233,26 @@ lint: install_backend ## run linters
 
 
 
-run_clic: clean_frontend_build install_frontend install_backend build_frontend ## run the CLI with fresh frontend build
+ollama_up: ## start a local Ollama with granite4:350m for the bundled model provider
+	@bash scripts/setup/ollama_bootstrap.sh
+
+ollama_down: ## stop and remove the bundled Ollama container (keeps the model volume)
+	@engine=""; \
+	for c in docker podman; do \
+		if command -v $$c >/dev/null 2>&1 && $$c info >/dev/null 2>&1; then engine=$$c; break; fi; \
+	done; \
+	if [ -z "$$engine" ]; then echo 'No usable container engine (docker/podman) found.'; exit 0; fi; \
+	if $$engine ps -a --format '{{.Names}}' 2>/dev/null | grep -Fxq langflow-ollama; then \
+		echo "Stopping langflow-ollama container ($$engine)..."; \
+		$$engine rm -f langflow-ollama >/dev/null; \
+	else \
+		echo 'No langflow-ollama container found.'; \
+	fi
+
+run_clic: clean_frontend_build install_frontend install_backend build_frontend ollama_up ## run the CLI with fresh frontend build
 	@echo 'Running the CLI with fresh frontend build'
-	@uv run langflow run \
+	@OLLAMA_BASE_URL=$${OLLAMA_BASE_URL:-http://localhost:11434} \
+	uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
@@ -243,9 +260,10 @@ run_clic: clean_frontend_build install_frontend install_backend build_frontend #
 		$(if $(env),--env-file $(env),) \
 		$(if $(filter false,$(open_browser)),--no-open-browser)
 
-run_cli: install_frontend install_backend build_frontend ## run the CLI quickly (without cleaning build cache)
+run_cli: install_frontend install_backend build_frontend ollama_up ## run the CLI quickly (without cleaning build cache)
 	@echo 'Running the CLI quickly (reusing existing build cache if available)'
-	@uv run langflow run \
+	@OLLAMA_BASE_URL=$${OLLAMA_BASE_URL:-http://localhost:11434} \
+	uv run langflow run \
 		--frontend-path $(path) \
 		--log-level $(log_level) \
 		--host $(host) \
