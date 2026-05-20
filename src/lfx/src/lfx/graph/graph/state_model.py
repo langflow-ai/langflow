@@ -60,8 +60,5 @@ def create_state_model_from_graph(graph: BaseModel) -> type[BaseModel]:
         if hasattr(vertex, "custom_component") and hasattr(vertex.custom_component, "get_state_model_instance_getter"):
             filtered_vertices.append(vertex)
             state_model_getters.append(vertex.custom_component.get_state_model_instance_getter())
-    fields = {
-        camel_to_snake(v.id): getter
-        for v, getter in zip(filtered_vertices, state_model_getters)
-    }
+    fields = {camel_to_snake(v.id): getter for v, getter in zip(filtered_vertices, state_model_getters, strict=False)}
     return create_state_model(model_name="GraphStateModel", validate=False, **fields)
