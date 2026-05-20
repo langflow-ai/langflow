@@ -538,7 +538,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.9"
+                    "version": "3.11.8"
                   },
                   {
                     "name": "fastapi",
@@ -1038,7 +1038,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.34.2"
+                    "version": "2.33.1"
                   },
                   {
                     "name": "bs4",
