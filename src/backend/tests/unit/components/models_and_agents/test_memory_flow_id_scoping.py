@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.components.models_and_agents.memory import (
+    MAX_CHAT_HISTORY_FETCH_LIMIT,
     MemoryComponent,
     _coerce_flow_id_to_uuid,
     aget_agent_chat_history,
@@ -58,6 +59,21 @@ class TestCoerceFlowIdToUuid:
     def test_returns_none_for_invalid_string_and_does_not_raise(self):
         # Synthetic/test flow IDs may not be UUIDs; we must degrade gracefully.
         assert _coerce_flow_id_to_uuid("not-a-uuid") is None
+
+    def test_invalid_flow_id_emits_structured_error_log(self):
+        """Fallback to unscoped retrieval is a privacy regression — alert on it.
+
+        See PR #13087 review I3: this path re-enables the cross-flow leak
+        that issue #13059 closed. The log call uses ``error`` level + a
+        structured ``event`` tag so observability pipelines can alert.
+        """
+        with patch("lfx.components.models_and_agents.memory.logger") as mock_logger:
+            _coerce_flow_id_to_uuid("not-a-uuid")
+
+        mock_logger.error.assert_called_once()
+        call = mock_logger.error.call_args
+        assert "memory_flow_id_unscoped" in call.args[0]
+        assert call.kwargs.get("extra", {}).get("event") == "memory_flow_id_unscoped"
 
 
 class TestRetrieveMessagesPassesFlowId:
@@ -157,6 +173,111 @@ class TestRetrieveMessagesPassesFlowId:
 
         mock_get.assert_not_awaited()
 
+    @pytest.mark.asyncio
+    async def test_fetches_desc_and_reverses_for_ascending_order(self):
+        """PR #13087 review I2: avoid the >10k row ASC slice trap.
+
+        Querying ``order=ASC, limit=MAX`` then slicing ``[-n:]`` would return
+        the chronological FIRST window on huge sessions. We query DESC with
+        the actual limit and reverse to the user-selected order, so the slice
+        is always the genuine most-recent messages.
+        """
+        component = _build_component(flow_id="22222222-2222-2222-2222-222222222222")
+        # MemoryComponent ``order`` defaults to Ascending in _build_component.
+        # The mock returns DESC-ordered data (most recent first), as the DB would.
+        desc_rows = [SimpleNamespace(id=f"msg-{i}") for i in (4, 3, 2, 1, 0)]
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=desc_rows),
+        ) as mock_get:
+            result = await component.retrieve_messages()
+
+        assert mock_get.await_args.kwargs["order"] == "DESC"
+        assert mock_get.await_args.kwargs["limit"] == 10  # _build_component sets n_messages=10
+        assert [m.id for m in result] == ["msg-0", "msg-1", "msg-2", "msg-3", "msg-4"]
+
+    @pytest.mark.asyncio
+    async def test_descending_order_passthrough_keeps_desc_view(self):
+        component = _build_component(flow_id="22222222-2222-2222-2222-222222222222")
+        component.set(order="Descending")
+        desc_rows = [SimpleNamespace(id=f"msg-{i}") for i in (4, 3, 2, 1, 0)]
+        with patch(
+            "lfx.components.models_and_agents.memory.aget_messages",
+            new=AsyncMock(return_value=desc_rows),
+        ):
+            result = await component.retrieve_messages()
+
+        assert [m.id for m in result] == ["msg-4", "msg-3", "msg-2", "msg-1", "msg-0"]
+
+
+class TestStoreMessagePassesFlowId:
+    """PR #13087 review I1: write/read flow_id handling must be symmetric.
+
+    The original PR protected ``retrieve_messages`` against ``self.graph``
+    raising on ad-hoc instantiation but left ``store_message`` calling
+    ``self.graph.flow_id`` directly — so a custom subclass or integration
+    test would crash on the write path before reaching the safe read path.
+    Both paths now go through ``_coerce_flow_id_to_uuid(_safe_graph_flow_id(self))``.
+    """
+
+    @pytest.mark.asyncio
+    async def test_store_passes_coerced_flow_id_to_astore_and_aget(self):
+        flow_id_str = "22222222-2222-2222-2222-222222222222"
+        component = _build_component(flow_id=flow_id_str)
+        component.set(mode="Store", message="hi", sender="User", sender_name="Tester")
+
+        stored = SimpleNamespace(id="stored-1")
+        with (
+            patch(
+                "lfx.components.models_and_agents.memory.astore_message",
+                new=AsyncMock(return_value=None),
+            ) as mock_store,
+            patch(
+                "lfx.components.models_and_agents.memory.aget_messages",
+                new=AsyncMock(return_value=[stored]),
+            ) as mock_get,
+        ):
+            await component.store_message()
+
+        assert mock_store.await_args.kwargs["flow_id"] == UUID(flow_id_str)
+        assert mock_get.await_args.kwargs["flow_id"] == UUID(flow_id_str)
+        # Symmetric scope: the same coerced UUID is used for both calls.
+        assert mock_store.await_args.kwargs["flow_id"] == mock_get.await_args.kwargs["flow_id"]
+
+    @pytest.mark.asyncio
+    async def test_store_does_not_crash_without_vertex(self):
+        """When _vertex is None, ``self.graph`` raises AttributeError.
+
+        Pre-fix, ``store_message`` accessed ``self.graph.flow_id`` directly
+        and crashed before reaching the safe read path. Now both paths
+        share the same defensive lookup.
+        """
+        component = MemoryComponent()
+        component.set(
+            session_id="s",
+            n_messages=10,
+            order="Ascending",
+            mode="Store",
+            message="hi",
+            sender="User",
+            sender_name="Tester",
+        )
+        # No _vertex assigned — ``self.graph`` will raise AttributeError.
+        stored = SimpleNamespace(id="stored-1")
+        with (
+            patch(
+                "lfx.components.models_and_agents.memory.astore_message",
+                new=AsyncMock(return_value=None),
+            ) as mock_store,
+            patch(
+                "lfx.components.models_and_agents.memory.aget_messages",
+                new=AsyncMock(return_value=[stored]),
+            ),
+        ):
+            await component.store_message()
+
+        assert mock_store.await_args.kwargs["flow_id"] is None
+
 
 class TestAgetAgentChatHistoryHelper:
     """The shared helper centralizes the agent-side memory contract.
@@ -184,15 +305,18 @@ class TestAgetAgentChatHistoryHelper:
         kwargs = mock_get.await_args.kwargs
         assert kwargs["flow_id"] == UUID(flow_id_str), "aget_agent_chat_history must scope by flow_id (issue #13059)."
         assert kwargs["session_id"] == "New Session 0"
-        assert kwargs["order"] == "ASC"
+        # PR #13087 review I2: query DESC + limit=n_messages so sessions
+        # exceeding MAX_CHAT_HISTORY_FETCH_LIMIT still get the real tail.
+        assert kwargs["order"] == "DESC"
+        assert kwargs["limit"] == 10
 
     @pytest.mark.asyncio
     async def test_n_messages_zero_short_circuits_without_querying(self):
         """Regression: ``n_messages == 0`` means "memory disabled".
 
         Before this short-circuit, ``messages[-0:]`` returned the full
-        ``limit=10000`` result, so users who set the field to 0 to disable
-        chat memory unexpectedly got full history back.
+        bounded result, so users who set the field to 0 to disable chat
+        memory unexpectedly got full history back.
         """
         with patch(
             "lfx.components.models_and_agents.memory.aget_messages",
@@ -209,34 +333,40 @@ class TestAgetAgentChatHistoryHelper:
 
     @pytest.mark.asyncio
     async def test_slices_to_n_messages_most_recent(self):
-        messages = [SimpleNamespace(id=f"msg-{i}") for i in range(5)]
+        # DB returns DESC (most recent first); helper reverses to ASC.
+        desc_rows = [SimpleNamespace(id=f"msg-{i}") for i in (4, 3)]
 
         with patch(
             "lfx.components.models_and_agents.memory.aget_messages",
-            new=AsyncMock(return_value=messages),
-        ):
+            new=AsyncMock(return_value=desc_rows),
+        ) as mock_get:
             result = await aget_agent_chat_history(
                 session_id="s",
                 flow_id="77777777-7777-7777-7777-777777777777",
                 n_messages=2,
             )
 
+        assert mock_get.await_args.kwargs["limit"] == 2
+        assert mock_get.await_args.kwargs["order"] == "DESC"
         assert [m.id for m in result] == ["msg-3", "msg-4"]
 
     @pytest.mark.asyncio
     async def test_missing_n_messages_returns_all_fetched(self):
-        messages = [SimpleNamespace(id=f"msg-{i}") for i in range(3)]
+        # DB returns DESC; helper reverses for the agent prompt.
+        desc_rows = [SimpleNamespace(id=f"msg-{i}") for i in (2, 1, 0)]
 
         with patch(
             "lfx.components.models_and_agents.memory.aget_messages",
-            new=AsyncMock(return_value=messages),
-        ):
+            new=AsyncMock(return_value=desc_rows),
+        ) as mock_get:
             result = await aget_agent_chat_history(
                 session_id="s",
                 flow_id=None,
                 n_messages=None,
             )
 
+        # No explicit limit ⇒ fall back to MAX_CHAT_HISTORY_FETCH_LIMIT.
+        assert mock_get.await_args.kwargs["limit"] == MAX_CHAT_HISTORY_FETCH_LIMIT
         assert [m.id for m in result] == ["msg-0", "msg-1", "msg-2"]
 
     @pytest.mark.asyncio
@@ -252,6 +382,54 @@ class TestAgetAgentChatHistoryHelper:
             )
 
         assert mock_get.await_args.kwargs["flow_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_logs_warning_when_unbounded_fetch_hits_ceiling(self):
+        """PR #13087 review I2: surface the silent-truncation case.
+
+        When the caller did not pass ``n_messages`` and the DB returned
+        exactly ``MAX_CHAT_HISTORY_FETCH_LIMIT`` rows, older history may
+        have been silently dropped. Emit a structured warning so on-call
+        has something to grep when a user reports forgotten context.
+        """
+        # Simulate the DB returning exactly the ceiling — older rows truncated.
+        rows = [SimpleNamespace(id=f"msg-{i}") for i in range(MAX_CHAT_HISTORY_FETCH_LIMIT)]
+        with (
+            patch("lfx.components.models_and_agents.memory.logger") as mock_logger,
+            patch(
+                "lfx.components.models_and_agents.memory.aget_messages",
+                new=AsyncMock(return_value=rows),
+            ),
+        ):
+            await aget_agent_chat_history(
+                session_id="s",
+                flow_id=None,
+                n_messages=None,
+            )
+
+        mock_logger.warning.assert_called_once()
+        call = mock_logger.warning.call_args
+        assert "memory_chat_history_limit_reached" in call.args[0]
+        assert call.kwargs.get("extra", {}).get("event") == "memory_chat_history_limit_reached"
+
+    @pytest.mark.asyncio
+    async def test_explicit_n_messages_at_ceiling_does_not_warn(self):
+        """The ceiling warning is for ``n_messages=None`` only — explicit limits are honored."""
+        rows = [SimpleNamespace(id=f"msg-{i}") for i in range(MAX_CHAT_HISTORY_FETCH_LIMIT)]
+        with (
+            patch("lfx.components.models_and_agents.memory.logger") as mock_logger,
+            patch(
+                "lfx.components.models_and_agents.memory.aget_messages",
+                new=AsyncMock(return_value=rows),
+            ),
+        ):
+            await aget_agent_chat_history(
+                session_id="s",
+                flow_id=None,
+                n_messages=MAX_CHAT_HISTORY_FETCH_LIMIT,
+            )
+
+        mock_logger.warning.assert_not_called()
 
 
 class TestAgentGetMemoryDataIntegration:
