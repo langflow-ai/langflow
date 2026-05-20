@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/langflow-ai-langflow-badge.png)](https://mseep.ai/app/langflow-ai-langflow)
+
 <!-- markdownlint-disable MD030 -->
 
 <picture>
