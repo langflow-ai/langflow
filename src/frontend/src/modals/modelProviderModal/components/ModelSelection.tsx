@@ -139,7 +139,7 @@ const ModelRow = ({
             size="tag"
             data-testid={`${testIdPrefix}-deprecated-${model.model_name}`}
           >
-            Deprecated
+            {t("modelProvider.deprecated")}
           </Badge>
         ) : null}
       </div>
@@ -148,7 +148,11 @@ const ModelRow = ({
           checked={enabled}
           onCheckedChange={(checked) => onToggle(model.model_name, checked)}
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
-          aria-label={`${enabled ? "Disable" : "Enable"} ${model.model_name}`}
+          aria-label={
+            enabled
+              ? t("modelProvider.disableModel", { modelName: model.model_name })
+              : t("modelProvider.enableModel", { modelName: model.model_name })
+          }
           stopPropagation
         />
       )}

@@ -13,6 +13,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCheckAgentNames } from "@/controllers/API/queries/deployments";
 import { useGetDeploymentLlms } from "@/controllers/API/queries/deployments/use-get-deployment-llms";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import { useErrorAlert } from "../hooks/use-error-alert";
@@ -49,6 +50,7 @@ export default function StepType() {
     setIsAgentNameValidationPending,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const showErrorAlert = useErrorAlert();
 
   const providerId = selectedInstance?.id ?? "";
@@ -73,7 +75,7 @@ export default function StepType() {
 
   useEffect(() => {
     if (llmsError) {
-      showErrorAlert("Failed to load models", llmsError);
+      showErrorAlert(t("errors.failedToLoadModels"), llmsError);
     }
   }, [llmsError, showErrorAlert]);
 
@@ -184,16 +186,19 @@ export default function StepType() {
 
   return (
     <div className="flex w-full flex-col gap-6 overflow-y-auto py-3">
-      <h2 className="text-lg font-semibold">Deployment Type</h2>
+      <h2 className="text-lg font-semibold">
+        {t("deployments.deploymentType")}
+      </h2>
 
       <div className="flex flex-col gap-3">
         <span className="text-sm font-medium">
-          Choose Type <span className="text-destructive">*</span>
+          {t("deployments.chooseType")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <div
           className="grid grid-cols-2 gap-3"
           role="radiogroup"
-          aria-label="Deployment type"
+          aria-label={t("deployments.ariaDeploymentType")}
         >
           {TYPE_OPTIONS.map((option) => (
             <label
@@ -226,9 +231,11 @@ export default function StepType() {
                 />
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-medium">{option.label}</span>
+                <span className="text-sm font-medium">
+                  {t("deployments.agentTypeLabel")}
+                </span>
                 <p className="text-xs text-muted-foreground">
-                  {option.description}
+                  {t("deployments.agentTypeDescription")}
                 </p>
               </div>
             </label>
@@ -238,11 +245,12 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Agent Name <span className="text-destructive">*</span>
+          {t("deployments.agentName")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <div className="relative">
           <Input
-            placeholder="e.g., Sales Bot"
+            placeholder={t("deployments.placeholderSalesBot")}
             className={cn(
               "bg-muted",
               hasDeploymentNameFormatError &&
@@ -263,12 +271,12 @@ export default function StepType() {
         </div>
         {hasDeploymentNameFormatError && (
           <span className="mt-1 text-xs text-destructive">
-            Agent name must start with a letter.
+            {t("deployments.agentNameFormatError")}
           </span>
         )}
         {isEditMode ? (
           <span className="mt-1 text-xs text-muted-foreground">
-            Name cannot be changed after creation.
+            {t("deployments.agentNameCannotChange")}
           </span>
         ) : hasAgentNameErrors && !isAgentNameValidationPending ? (
           <span className="mt-1.5 flex items-center gap-1.5 text-xs text-destructive">
@@ -276,7 +284,7 @@ export default function StepType() {
               name="AlertTriangle"
               className="h-3.5 w-3.5"
             />
-            Agent name already exists. Please choose a different name.
+            {t("deployments.agentNameAlreadyExists")}
           </span>
         ) : shouldShowAgentNameAvailable ? (
           <span className="mt-1.5 flex items-center gap-1.5 text-xs text-success">
@@ -284,14 +292,15 @@ export default function StepType() {
               name="CheckCircle2"
               className="h-3.5 w-3.5"
             />
-            Agent name is available.
+            {t("deployments.agentNameAvailable")}
           </span>
         ) : null}
       </div>
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Model <span className="text-destructive">*</span>
+          {t("deployments.labelModel")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Select
           value={selectedLlm}
@@ -300,7 +309,11 @@ export default function StepType() {
         >
           <SelectTrigger className="bg-muted focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground">
             <SelectValue
-              placeholder={llmsLoading ? "Loading models..." : "Select a model"}
+              placeholder={
+                llmsLoading
+                  ? t("deployments.loadingModels")
+                  : t("deployments.selectModel")
+              }
             />
           </SelectTrigger>
           <SelectContent
@@ -310,7 +323,7 @@ export default function StepType() {
           >
             {!llmsLoading && llmModels.length === 0 && (
               <SelectItem value="__empty__" disabled>
-                No models available for selected environment
+                {t("deployments.noModelsForEnvironment")}
               </SelectItem>
             )}
             {llmModels.map((model) => (
@@ -333,9 +346,11 @@ export default function StepType() {
       </div>
 
       <div className="flex flex-col">
-        <span className="pb-2 text-sm font-medium">Description</span>
+        <span className="pb-2 text-sm font-medium">
+          {t("deployments.descriptionLabel")}
+        </span>
         <Textarea
-          placeholder="Describe the agent's purpose..."
+          placeholder={t("deployments.placeholderAgentPurpose")}
           rows={3}
           className="resize-none bg-muted placeholder:text-placeholder-foreground"
           value={deploymentDescription}

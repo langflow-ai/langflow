@@ -76,7 +76,7 @@ export default function ChatMessage({
         setStreamUrl(undefined);
         if (JSON.parse(event.data)?.error) {
           setErrorData({
-            title: "Error on Streaming",
+            title: t("errors.errorOnStreaming"),
             list: [JSON.parse(event.data)?.error],
           });
         }
@@ -151,7 +151,7 @@ export default function ChatMessage({
         },
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.errorUpdatingMessages"),
           });
         },
       },
@@ -179,7 +179,7 @@ export default function ChatMessage({
       {
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.errorUpdatingMessages"),
           });
         },
       },

@@ -341,9 +341,7 @@ export default function ModelInputComponent({
     // If we're in connection mode, show the connection option as selected
     if (isConnectionMode) {
       return {
-        name:
-          externalOptions?.fields?.data?.node?.display_name ||
-          "Connect other models",
+        name: t("modelInput.connectOtherModels"),
         icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
         provider: "",
       } as SelectedModel;
@@ -630,8 +628,7 @@ export default function ModelInputComponent({
           {externalOptions?.fields?.data?.node && (
             <div className="border-t bg-background">
               {renderFooterButton(
-                externalOptions.fields.data.node.display_name ||
-                  t("modelInput.connectOtherModels"),
+                t("modelInput.connectOtherModels"),
                 externalOptions.fields.data.node.icon || "CornerDownLeft",
                 () => handleExternalOptions("connect_other_models"),
                 "connect-other-models",
@@ -687,8 +684,8 @@ export default function ModelInputComponent({
                 setOpenManageProvidersDialog(true);
               }}
               data-testid={`${id}-configure`}
-              aria-label="Configure this model's provider"
-              title="This model isn't enabled for your user. Click to configure its provider."
+              aria-label={t("model.configureProvider")}
+              title={t("model.notEnabledTitle")}
               className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
             >
               <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />

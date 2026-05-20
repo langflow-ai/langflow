@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 
 @pytest.fixture
@@ -195,7 +195,7 @@ class TestReadFile:
     def test_should_reject_read_when_file_exceeds_size_limit(
         self, component: FileSystemToolComponent, sandbox: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         (sandbox / "big.txt").write_text("x" * 128, encoding="utf-8")
         monkeypatch.setattr(fs_mod, "MAX_FILE_SIZE_BYTES", 64)
@@ -235,7 +235,7 @@ class TestWriteFile:
     def test_should_reject_write_when_content_exceeds_size_limit(
         self, component: FileSystemToolComponent, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         monkeypatch.setattr(fs_mod, "MAX_FILE_SIZE_BYTES", 8)
         result = component._write_file("too_big.txt", "this content exceeds eight bytes")
@@ -426,7 +426,7 @@ class TestGrepSearch:
     def test_should_truncate_grep_output_at_default_line_limit(
         self, component: FileSystemToolComponent, sandbox: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from lfx.components.tools import filesystem as fs_mod
+        from lfx.components.files_and_knowledge import filesystem as fs_mod
 
         monkeypatch.setattr(fs_mod, "GREP_LINE_LIMIT", 5)
         big = "foo\n" * 20

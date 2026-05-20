@@ -71,7 +71,7 @@ const ProviderList = ({
         className="text-muted-foreground px-4 py-2"
         data-testid="provider-list-loading"
       >
-        <LoadingTextComponent text="Loading providers" />
+        <LoadingTextComponent text={t("modelProviders.loadingProviders")} />
       </div>
     );
   }

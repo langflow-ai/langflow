@@ -5,23 +5,23 @@ export interface StatusConfigEntry {
 
 export const STATUS_CONFIG: Record<string, StatusConfigEntry> = {
   ready: {
-    label: "Ready",
+    label: "knowledge.status.ready",
     textClass: "text-accent-emerald-foreground",
   },
   ingesting: {
-    label: "Ingesting",
+    label: "knowledge.status.ingesting",
     textClass: "text-accent-amber-foreground",
   },
   failed: {
-    label: "Failed",
+    label: "knowledge.status.failed",
     textClass: "text-destructive",
   },
   cancelling: {
-    label: "Cancelling",
+    label: "knowledge.status.cancelling",
     textClass: "text-accent-amber-foreground",
   },
   empty: {
-    label: "Empty",
+    label: "knowledge.status.empty",
     textClass: "text-muted-foreground",
   },
 };
