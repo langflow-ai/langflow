@@ -9,7 +9,7 @@ from enum import Enum
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -75,13 +75,30 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
     """Binds a user to a role within an optional domain (global/org/workspace)."""
 
     __tablename__ = "authz_role_assignment"
+    # A plain UNIQUE(user_id, role_id, domain_type, domain_id) treats NULL
+    # domain_ids as never-equal, so duplicate global assignments slip through.
+    # Use two partial unique indexes instead: one for non-global rows keyed
+    # on domain_id, and one for global rows keyed only on (user_id, role_id,
+    # domain_type). Postgres and SQLite both support partial indexes.
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_authz_role_assignment_scoped",
             "user_id",
             "role_id",
             "domain_type",
             "domain_id",
-            name="uq_authz_role_assignment",
+            unique=True,
+            postgresql_where=text("domain_id IS NOT NULL"),
+            sqlite_where=text("domain_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_authz_role_assignment_global",
+            "user_id",
+            "role_id",
+            "domain_type",
+            unique=True,
+            postgresql_where=text("domain_type = 'global' AND domain_id IS NULL"),
+            sqlite_where=text("domain_type = 'global' AND domain_id IS NULL"),
         ),
     )
 

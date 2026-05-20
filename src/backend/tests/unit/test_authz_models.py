@@ -106,6 +106,96 @@ async def test_authz_role_assignment_persists(authz_async_session: AsyncSession)
 
 
 @pytest.mark.anyio
+async def test_authz_role_assignment_blocks_duplicate_global(authz_async_session: AsyncSession):
+    """Two global assignments with the same (user_id, role_id) must conflict.
+
+    Regression for PR #13153 review: the original UNIQUE(user_id, role_id,
+    domain_type, domain_id) constraint did not catch this because NULL != NULL
+    in SQL. The replacement is a partial unique index keyed on
+    (user_id, role_id, domain_type) with a WHERE on the global+NULL case.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="dupe_assignee", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    role = AuthzRole(name="dupe_editor", permissions=["flow:write"])
+    authz_async_session.add(role)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(role)
+
+    authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="global"))
+    await authz_async_session.commit()
+
+    authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="global"))
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_role_assignment_blocks_duplicate_scoped(authz_async_session: AsyncSession):
+    """Scoped (non-NULL domain_id) duplicates must also conflict via the second partial index."""
+    from uuid import uuid4
+
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="scoped_assignee", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    role = AuthzRole(name="scoped_editor", permissions=["flow:write"])
+    authz_async_session.add(role)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(role)
+
+    workspace_id = uuid4()
+    authz_async_session.add(
+        AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="workspace", domain_id=workspace_id)
+    )
+    await authz_async_session.commit()
+
+    authz_async_session.add(
+        AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="workspace", domain_id=workspace_id)
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_role_assignment_allows_distinct_workspaces(authz_async_session: AsyncSession):
+    """Same (user, role) assigned to two different workspaces is legitimate and must persist."""
+    from uuid import uuid4
+
+    user = User(username="multi_workspace", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    role = AuthzRole(name="multi_editor", permissions=["flow:write"])
+    authz_async_session.add(role)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(role)
+
+    authz_async_session.add(
+        AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="workspace", domain_id=uuid4())
+    )
+    authz_async_session.add(
+        AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="workspace", domain_id=uuid4())
+    )
+    await authz_async_session.commit()
+
+    rows = (
+        await authz_async_session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == user.id))
+    ).all()
+    assert len(rows) == 2
+
+
+@pytest.mark.anyio
 async def test_authz_team_persists(authz_async_session: AsyncSession):
     """AuthzTeam round-trips through the database with default flags."""
     team = AuthzTeam(team_name="Platform", adom_name="platform-adom", description="Platform team")
