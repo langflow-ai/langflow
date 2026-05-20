@@ -16,9 +16,14 @@ Reset vertex.built = False when cache restoration fails, so build()
 runs fully and sets vertex.result correctly.
 """
 
+import threading
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import dill
 import pytest
+from lfx.graph import Graph
+from lfx.graph.vertex.base import Vertex
 
 
 class TestCacheRestorationBuiltFlagReset:
@@ -149,6 +154,27 @@ class TestCacheRestorationBuiltFlagReset:
 
         # Assert - build() should NOT return early
         assert should_return_early is False, "build() should continue with reset built flag"
+
+
+def test_redis_graph_cache_serialization_omits_runtime_component_state():
+    graph = Graph(flow_id="flow-with-runtime-component-state")
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "model-node",
+            "_lock": None,
+            "built_object": None,
+            "built_result": None,
+            "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
+            "full_data": {"id": "model-node"},
+        }
+    )
+    graph.vertices = [vertex]
+    graph._vertices = [vertex.full_data]
+
+    restored = dill.loads(dill.dumps(graph, recurse=True))  # noqa: S301 - trusted local regression fixture
+
+    assert restored.vertices[0].custom_component is None
 
 
 class TestCacheRestorationSuccessCase:
