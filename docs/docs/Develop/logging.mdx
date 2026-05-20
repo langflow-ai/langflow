@@ -44,7 +44,7 @@ To customize log storage locations and behaviors, set the following [Langflow en
 | `LANGFLOW_LOG_TRACE_LOCALS` | Boolean | `false` | Include frame locals in structured tracebacks. Off by default because locals can leak secrets; enable only for local debugging. |
 | `LANGFLOW_NATIVE_TRACING` | Boolean | `true` | Enables the tracer to record execution traces in the Langflow database for use in Trace View. Set to `false` to disable. |
 | `LANGFLOW_PRETTY_LOGS` | Boolean | `True` | Controls output format when `LANGFLOW_LOG_ENV=default` or unset. `true`: [`ConsoleRenderer`](https://www.structlog.org/en/stable/console-output.html) (human-readable). `false`: JSON format. |
-| `LANGFLOW_SERVICE_NAME` | String | `langflow` | Value of the `service` field on every JSON log record. Used as a label by log aggregators. See [Grafana and Loki](/observability-grafana-loki). |
+| `LANGFLOW_SERVICE_NAME` | String | `langflow` | Value of the `service` field on every JSON log record. Used as a label by log aggregators. See [Grafana and Loki](./observability-grafana-loki.mdx). |
 | `LANGFLOW_VERSION` | String | Not set | Adds a `version` field to every JSON log record when set. Omitted otherwise. |
 
 ## View logs in real-time
