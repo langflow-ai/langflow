@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import contextlib
 import contextvars
+import copy
 import re
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
@@ -126,8 +127,12 @@ def _get_client() -> LangflowClient:
 
 
 def _set_client(client: LangflowClient) -> None:
-    global _shared_client  # noqa: PLW0603
+    global _shared_client, _shared_registry  # noqa: PLW0603
     _client_var.set(client)
+    # Invalidate the shared registry when the client changes, since the
+    # registry was loaded against the old client's server.
+    if _shared_client is not client:
+        _shared_registry = None
     _shared_client = client
 
 
@@ -228,14 +233,17 @@ async def login(username: str, password: str, server_url: str | None = None) -> 
         password: Langflow password.
         server_url: Server URL (defaults to LANGFLOW_SERVER_URL env var or http://localhost:7860).
     """
-    old_client = _client_var.get() or _shared_client
+    # Only close the client owned by this session (contextvar). The shared
+    # fallback is still overwritten by _set_client below, but we avoid
+    # closing it here since another session may be using it.
+    old_client = _client_var.get()
     if old_client is not None:
         await old_client.close()
     client = LangflowClient(server_url=server_url)
     _set_client(client)
+    # Clear only this session's cached registry; leave _shared_registry
+    # intact so other sessions are not disrupted.
     _registry_var.set(None)
-    global _shared_registry  # noqa: PLW0603
-    _shared_registry = None
     await client.login(username, password)
     return {"status": "authenticated", "server_url": client.server_url}
 
@@ -403,9 +411,14 @@ async def create_flow_from_spec(spec: str, *, validate: bool = True) -> dict[str
                 id_map[edge["target_id"]],
                 edge["target_input"],
             )
-        # Validate by building the graph server-side
+        # Validate by building the graph server-side and waiting for results
         if validate:
-            await build_flow(flow_id)
+            validation = await validate_flow(flow_id)
+            if not validation.get("valid", False):
+                errors = validation.get("errors", [])
+                detail = "; ".join(e.get("error", "Unknown") for e in errors)
+                msg = f"Flow validation failed: {detail}"
+                raise RuntimeError(msg)
     except Exception:
         # Signal settle so the UI banner doesn't hang
         with contextlib.suppress(Exception):
@@ -1220,54 +1233,60 @@ async def update_flow_from_spec(flow_id: str, spec: str) -> dict[str, Any]:
         spec: Text spec in the same format as create_flow_from_spec.
     """
     parsed = parse_flow_spec(spec)
-    registry = await _get_registry()
 
     validate_spec_references(parsed)
 
-    # Build new flow data from spec
-    flow = empty_flow(
-        name=parsed.get("name", "Untitled Flow"),
-        description=parsed.get("description", ""),
-    )
-
-    id_map: dict[str, str] = {}
-    for node in parsed["nodes"]:
-        result = fb_add_component(flow, node["type"], registry)
-        id_map[node["id"]] = result["id"]
-
-    for spec_id, params in parsed.get("config", {}).items():
-        fb_configure(flow, id_map[spec_id], params)
-
-    for edge in parsed["edges"]:
-        fb_add_connection(
-            flow,
-            id_map[edge["source_id"]],
-            edge["source_output"],
-            id_map[edge["target_id"]],
-            edge["target_input"],
-        )
-
-    layout_flow(flow)
-
-    # Patch the existing flow with new data
-    patch_data: dict[str, Any] = {
-        "data": flow["data"],
-        "description": parsed.get("description", ""),
-    }
+    # Clear the existing flow's nodes and edges, then rebuild using the same
+    # server-side tools as create_flow_from_spec so dynamic template refresh,
+    # prompt variable creation, and component_as_tool auto-enable all work.
+    # Validation is not performed here; callers can use validate_flow explicitly.
+    flow = await _get_flow(flow_id)
+    original_data = copy.deepcopy(flow["data"])
+    flow["data"]["nodes"] = []
+    flow["data"]["edges"] = []
+    patch_data: dict[str, Any] = {"data": flow["data"]}
     if parsed.get("name"):
         patch_data["name"] = parsed["name"]
-
+    if parsed.get("description"):
+        patch_data["description"] = parsed["description"]
     await _get_client().patch(f"/flows/{flow_id}", json_data=patch_data)
-    await _get_client().post_event(flow_id, "flow_updated", "Updated flow from spec")
 
-    return {
-        "id": flow_id,
-        "name": parsed.get("name", ""),
-        "node_count": len(flow["data"]["nodes"]),
-        "edge_count": len(flow["data"]["edges"]),
-        "node_id_map": id_map,
-        "spec_summary": fb_spec_summary(flow),
-    }
+    try:
+        # Add components via server (gets live templates)
+        id_map: dict[str, str] = {}
+        for node in parsed["nodes"]:
+            result = await add_component(flow_id, node["type"])
+            id_map[node["id"]] = result["id"]
+
+        # Configure via server (handles real_time_refresh and tool_mode)
+        for spec_id, params in parsed.get("config", {}).items():
+            await configure_component(flow_id, id_map[spec_id], params)
+
+        # Create dynamic template variable fields on Prompt components
+        await _create_prompt_template_vars(flow_id, parsed, id_map)
+
+        # Connect via server (handles component_as_tool auto-enable)
+        for edge in parsed["edges"]:
+            await connect_components(
+                flow_id,
+                id_map[edge["source_id"]],
+                edge["source_output"],
+                id_map[edge["target_id"]],
+                edge["target_input"],
+            )
+    except Exception:
+        # Restore the original flow data so the user's flow is not destroyed
+        with contextlib.suppress(Exception):
+            await _get_client().post_event(flow_id, "flow_settled", "Update failed, restoring")
+        with contextlib.suppress(Exception):
+            await _get_client().patch(f"/flows/{flow_id}", json_data={"data": original_data})
+        raise
+
+    await _get_client().post_event(flow_id, "flow_settled", "Updated flow from spec")
+
+    info = await get_flow_info(flow_id)
+    info["node_id_map"] = id_map
+    return info
 
 
 async def _set_frozen(flow_id: str, component_id: str, *, frozen: bool) -> dict[str, str]:
