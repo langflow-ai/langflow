@@ -117,7 +117,9 @@ async def ensure_permission(
         return
 
     authz = get_authorization_service()
-    merged_context = {**_auth_context(user), **(context or {})}
+    # User-derived auth fields (e.g. is_superuser) must remain authoritative; caller
+    # context is merged first so it cannot overwrite them.
+    merged_context = {**(context or {}), **_auth_context(user)}
     allowed = await authz.enforce(
         user_id=user.id,
         domain=domain,

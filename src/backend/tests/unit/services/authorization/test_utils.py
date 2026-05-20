@@ -110,6 +110,34 @@ async def test_ensure_permission_allows_when_enforce_returns_true(monkeypatch, f
 
 
 @pytest.mark.anyio
+async def test_ensure_permission_caller_context_cannot_override_is_superuser(monkeypatch, fake_user):
+    """Caller-supplied context must not be able to overwrite the user-derived is_superuser flag.
+
+    Regression for PR #13153 review: previously the merge was
+    ``{**_auth_context(user), **(context or {})}`` which let a caller forge
+    ``context={"is_superuser": True}`` for a non-superuser. The merged context
+    forwarded to ``enforce`` must always reflect the user's actual privilege.
+    """
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_permission(
+        fake_user,
+        domain="*",
+        obj="flow:abc",
+        act="read",
+        context={"is_superuser": True, "extra": "value"},
+    )
+
+    assert len(service.calls) == 1
+    forwarded_context = service.calls[0]["context"]
+    assert forwarded_context["is_superuser"] is False
+    assert forwarded_context["extra"] == "value"
+
+
+@pytest.mark.anyio
 async def test_ensure_permission_raises_403_when_denied(monkeypatch, fake_user):
     """A False enforce result raises HTTP 403 with a descriptive message."""
     _install_settings(monkeypatch, authz_enabled=True)
