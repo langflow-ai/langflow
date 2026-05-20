@@ -120,8 +120,8 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
             {"now": now, "id": trigger_job_id},
         )
         return _ClaimedJob(
-            trigger_job_id=trigger_job_id,
-            trigger_id=trigger_id,
+            trigger_job_id=_coerce_uuid(trigger_job_id),
+            trigger_id=_coerce_uuid(trigger_id),
             attempt=attempt,
             max_attempts=max_attempts,
         )
@@ -147,11 +147,27 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         return None
     trigger_job_id, trigger_id, attempt, max_attempts = row
     return _ClaimedJob(
-        trigger_job_id=trigger_job_id,
-        trigger_id=trigger_id,
+        trigger_job_id=_coerce_uuid(trigger_job_id),
+        trigger_id=_coerce_uuid(trigger_id),
         attempt=attempt,
         max_attempts=max_attempts,
     )
+
+
+def _coerce_uuid(value: object) -> UUID:
+    """Normalize a raw SQL row value to a ``UUID``.
+
+    SQLAlchemy returns ``UUID`` for ORM queries against ``sa.Uuid()``
+    columns but a hex string (or bytes) for ``text()`` queries since
+    raw SQL bypasses the type adapter. The worker uses ``text()`` for
+    the claim query — coerce here so downstream callers can compare
+    against ``Trigger.id`` / ``TriggerJob.id`` without surprises.
+    """
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, bytes):
+        return UUID(bytes=value)
+    return UUID(str(value))
 
 
 async def _load_trigger_and_flow(
