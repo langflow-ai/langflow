@@ -1,10 +1,11 @@
 import {
   BaseEdge,
+  EdgeLabelRenderer,
   type EdgeProps,
   getBezierPath,
   Position,
 } from "@xyflow/react";
-import { memo } from "react";
+import { memo, useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
   ContextMenu,
@@ -21,6 +22,33 @@ const UNRECOGNIZED_DOM_PROPS = [
   "pathOptions",
 ];
 
+const getCubicBezierPoint = (
+  sourceX: number,
+  sourceY: number,
+  sourceControlX: number,
+  sourceControlY: number,
+  targetControlX: number,
+  targetControlY: number,
+  targetX: number,
+  targetY: number,
+) => {
+  const midpoint = 0.5;
+  const inverseMidpoint = 1 - midpoint;
+
+  return {
+    x:
+      inverseMidpoint ** 3 * sourceX +
+      3 * inverseMidpoint ** 2 * midpoint * sourceControlX +
+      3 * inverseMidpoint * midpoint ** 2 * targetControlX +
+      midpoint ** 3 * targetX,
+    y:
+      inverseMidpoint ** 3 * sourceY +
+      3 * inverseMidpoint ** 2 * midpoint * sourceControlY +
+      3 * inverseMidpoint * midpoint ** 2 * targetControlY +
+      midpoint ** 3 * targetY,
+  };
+};
+
 export const DefaultEdge = memo(function DefaultEdge({
   sourceHandleId,
   source,
@@ -30,11 +58,12 @@ export const DefaultEdge = memo(function DefaultEdge({
   targetHandleId,
   targetX,
   targetY,
+  id,
   ...props
 }: EdgeProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const getNode = useFlowStore((state) => state.getNode);
-  const edges = useFlowStore((state) => state.edges);
-  const setEdges = useFlowStore((state) => state.setEdges);
+  const deleteEdge = useFlowStore((state) => state.deleteEdge);
 
   const sourceNode = getNode(source);
   const targetNode = getNode(target);
@@ -68,7 +97,7 @@ export const DefaultEdge = memo(function DefaultEdge({
 
   const edgePathLoop = `M ${sourceXNew} ${sourceYNew} C ${sourceXNew + distance} ${sourceYNew + sourceDistanceY}, ${targetXNew - distance} ${targetYNew + distanceY}, ${targetXNew} ${targetYNew}`;
 
-  const [edgePath] = getBezierPath({
+  const [edgePath, labelX, labelY] = getBezierPath({
     sourceX: sourceXNew,
     sourceY: sourceYNew,
     sourcePosition: Position.Right,
@@ -76,6 +105,24 @@ export const DefaultEdge = memo(function DefaultEdge({
     targetX: targetXNew,
     targetY: targetYNew,
   });
+
+  const loopLabelPosition = getCubicBezierPoint(
+    sourceXNew,
+    sourceYNew,
+    sourceXNew + distance,
+    sourceYNew + sourceDistanceY,
+    targetXNew - distance,
+    targetYNew + distanceY,
+    targetXNew,
+    targetYNew,
+  );
+
+  const deleteButtonX = targetHandleObject.output_types
+    ? loopLabelPosition.x
+    : labelX;
+  const deleteButtonY = targetHandleObject.output_types
+    ? loopLabelPosition.y
+    : labelY;
 
   const { animated, selectable, deletable, selected, ...domSafeProps } = props;
 
@@ -89,6 +136,7 @@ export const DefaultEdge = memo(function DefaultEdge({
   return (
     <>
       <BaseEdge
+        id={id}
         path={targetHandleObject.output_types ? edgePathLoop : edgePath}
         strokeDasharray={targetHandleObject.output_types ? "5 5" : "0"}
         {...domSafeProps}
@@ -98,6 +146,29 @@ export const DefaultEdge = memo(function DefaultEdge({
         data-selected={selected ? "true" : "false"}
       />
 
+      {(selected || isHovered) && deletable !== false && (
+        <EdgeLabelRenderer>
+          <button
+            type="button"
+            className="nodrag nopan pointer-events-auto absolute flex size-[27px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm transition-colors hover:border-destructive hover:bg-destructive hover:text-destructive-foreground"
+            style={{
+              transform: `translate(-50%, -50%) translate(${deleteButtonX}px, ${deleteButtonY}px)`,
+            }}
+            aria-label="Delete connection"
+            data-testid="edge-delete-button"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              deleteEdge(id);
+            }}
+          >
+            <IconComponent name="X" className="size-3" />
+          </button>
+        </EdgeLabelRenderer>
+      )}
+
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <path
@@ -106,15 +177,18 @@ export const DefaultEdge = memo(function DefaultEdge({
             strokeOpacity={0}
             strokeWidth={20}
             fill="none"
+            role="button"
+            aria-label="Connection"
             data-testid={`edge-context-menu-trigger`}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
           />
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem
             variant="destructive"
             onClick={() => {
-              const newEdges = edges.filter((edge) => edge.id !== props.id);
-              setEdges(newEdges);
+              deleteEdge(id);
             }}
             data-testid="context-menu-item-destructive"
           >
