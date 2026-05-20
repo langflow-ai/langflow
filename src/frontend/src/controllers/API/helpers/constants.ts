@@ -41,6 +41,7 @@ export const URLs = {
   REGISTRATION: `registration`,
   DEPLOYMENTS: `deployments`,
   DEPLOYMENT_PROVIDER_ACCOUNTS: `deployments/providers`,
+  TRIGGERS: `triggers`,
   AGENTIC_ASSIST: `agentic/assist`,
   AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
