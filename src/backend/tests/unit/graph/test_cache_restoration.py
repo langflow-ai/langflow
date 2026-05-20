@@ -16,6 +16,7 @@ Reset vertex.built = False when cache restoration fails, so build()
 runs fully and sets vertex.result correctly.
 """
 
+import asyncio
 import threading
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
@@ -163,8 +164,8 @@ def test_redis_graph_cache_serialization_omits_runtime_component_state():
         {
             "id": "model-node",
             "_lock": None,
-            "built_object": None,
-            "built_result": None,
+            "built_object": "cached-object",
+            "built_result": {"result": "cached-result"},
             "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
             "full_data": {"id": "model-node"},
         }
@@ -172,9 +173,19 @@ def test_redis_graph_cache_serialization_omits_runtime_component_state():
     graph.vertices = [vertex]
     graph._vertices = [vertex.full_data]
 
-    restored = dill.loads(dill.dumps(graph, recurse=True))  # noqa: S301 - trusted local regression fixture
+    with pytest.raises(TypeError, match="cannot pickle"):
+        dill.dumps(vertex.__dict__, recurse=True)
 
-    assert restored.vertices[0].custom_component is None
+    restored = dill.loads(dill.dumps(graph, recurse=True))  # noqa: S301 - trusted local regression fixture
+    restored_vertex = restored.vertices[0]
+
+    assert restored.flow_id == graph.flow_id
+    assert restored_vertex.id == vertex.id
+    assert restored_vertex.full_data == vertex.full_data
+    assert restored_vertex.built_object == "cached-object"
+    assert restored_vertex.built_result == {"result": "cached-result"}
+    assert restored_vertex.custom_component is None
+    assert isinstance(restored_vertex.lock, asyncio.Lock)
 
 
 class TestCacheRestorationSuccessCase:
