@@ -17,11 +17,11 @@ import json
 from pathlib import Path
 
 import pytest
-from lfx.components.tools._filesystem_namespace import (
+from lfx.components.files_and_knowledge._filesystem_namespace import (
     compute_user_namespace,
     load_or_create_pepper,
 )
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 
 @pytest.fixture

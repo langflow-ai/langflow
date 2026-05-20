@@ -39,14 +39,13 @@ export type MemoryDetailsProps = {
   handleOpenDocumentPanel: (doc: MemoryDocumentItem) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
   fetchNextSessionsPage: () => void;
   hasNextSessionsPage?: boolean;
   isFetchingNextSessionsPage?: boolean;
 };
 
 export type MemoriesSidebarProps = {
-  memories?: MemoryInfo[];
   filteredMemories: MemoryInfo[];
   memoriesSearch: string;
   setMemoriesSearch: (value: string) => void;
@@ -86,7 +85,7 @@ export type MemoryDetailsHeaderProps = {
   setSelectedSession: (value: string | null) => void;
   deleteMutation: MemoryActionMutation;
   handleToggleActive: (nextIsActive: NextIsActive) => void;
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
   fetchNextSessionsPage: () => void;
   hasNextSessionsPage?: boolean;
   isFetchingNextSessionsPage?: boolean;
