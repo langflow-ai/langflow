@@ -41,6 +41,7 @@ dependencies = [
     "python-multipart>=0.0.12,<1.0.0",
     "orjson>=3.11.6,<4.0.0",
     "alembic>=1.13.0,<2.0.0",
+    "croniter>=2.0.0,<6.0.0",
     "passlib>=1.7.4,<2.0.0",
     "bcrypt==4.0.1",
     "pillow>=12.1.1,<13.0.0",
