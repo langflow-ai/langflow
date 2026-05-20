@@ -8,7 +8,6 @@ from uuid import UUID
 
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.exceptions import InvalidContentError
 from lfx.services.adapters.deployment.schema import (
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
@@ -20,7 +19,6 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
-    SnapshotListParams,
     SnapshotListResult,
     VerifyCredentials,
 )
@@ -109,9 +107,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS as WXO_ADAPTER_PAYLOAD_SCHEMAS,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
-    validate_wxo_name,
-)
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.deployment_provider_account.utils import (
@@ -143,29 +138,6 @@ class _FlowToolPayload(TypedDict):
     display_name: str
     provider_data: AdapterPayload
     raw_name: str
-
-
-def _validate_name_filter(name: str, *, resource: str) -> str:
-    """Normalize and validate a wxO name supplied as a list-endpoint filter.
-
-    ``resource`` names the entity being filtered (e.g. ``"deployment"``,
-    ``"snapshot"``) and is woven into the error detail by this helper.
-
-    Delegates the actual rules (non-empty after sanitisation, leading
-    letter) to :func:`validate_wxo_name` and re-raises the resulting
-    ``InvalidContentError`` as ``HTTPException(422)`` with caller
-    context, so the response makes clear which filter value was
-    rejected.  Failing fast here is preferable to silently dropping
-    invalid names — a single bad entry would otherwise collapse the
-    filter to ``None`` and return unfiltered results.
-    """
-    try:
-        return validate_wxo_name(name, field_label=f"{resource.capitalize()} name")
-    except InvalidContentError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Invalid {resource} name filter '{name}': {exc.message}",
-        ) from exc
 
 
 @register_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
@@ -443,22 +415,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return parsed.model_dump()
 
-    async def resolve_snapshot_list_adapter_params(
-        self,
-        *,
-        deployment_resource_key: str | None,
-        snapshot_names: list[str] | None = None,
-        provider_params: dict[str, Any] | None,
-    ) -> SnapshotListParams:
-        validated_snapshot_names: list[str] | None = None
-        if snapshot_names is not None:
-            validated_snapshot_names = [_validate_name_filter(n, resource="snapshot") for n in snapshot_names]
-        return await super().resolve_snapshot_list_adapter_params(
-            deployment_resource_key=deployment_resource_key,
-            snapshot_names=validated_snapshot_names,
-            provider_params=provider_params,
-        )
-
     def resolve_provider_account_create(
         self,
         *,
@@ -584,6 +540,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=self._build_provider_payload_body(
                 llm=api_provider_payload.llm,
                 display_name=api_provider_payload.display_name,
+                model_fields_set=api_provider_payload.model_fields_set,
                 raw_tool_payloads=[
                     artifact.model_copy(
                         update={
@@ -611,12 +568,13 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             raw=self._build_provider_payload_body(
                 llm=api_provider_payload.llm,
                 display_name=api_provider_payload.display_name,
+                model_fields_set=api_provider_payload.model_fields_set,
                 raw_tool_payloads=[artifact.model_dump(exclude_none=True) for artifact in raw_payloads],
                 connections=api_provider_payload.connections,
                 operations=provider_operations,
             ),
             operation="building the deployment_update provider payload",
-        ).model_dump(mode="json")
+        ).model_dump(mode="json", exclude_unset=True)
 
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         if "provider_data" not in payload.model_fields_set:
@@ -910,6 +868,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
                 name=item_provider_data.name,
                 display_name=item_provider_data.display_name,
+                llm=item_provider_data.llm,
                 environments=item_provider_data.environments,
             ).model_dump(mode="json")
 
@@ -1928,6 +1887,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         *,
         llm: str | None,
         display_name: str | None,
+        model_fields_set: set[str],
         raw_tool_payloads: list[dict[str, Any]],
         connections: list[Any],
         operations: list[AdapterPayload],
@@ -1941,9 +1901,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             },
             "operations": operations,
         }
-        if llm is not None:
+        if "llm" in model_fields_set:
             payload["llm"] = llm
-        if display_name is not None:
+        if "display_name" in model_fields_set:
             payload["display_name"] = display_name
         return payload
 

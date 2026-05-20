@@ -9,7 +9,7 @@ from lfx.services.adapters.deployment.exceptions import InvalidContentError
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey, EnvVarValueSpec, NormalizedId
 from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_langflow_wxo_resource_name,
@@ -20,13 +20,23 @@ RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length
 NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
+def _validate_non_empty_string(value: str) -> str:
+    if not value.strip():
+        msg = "String must not be empty."
+        raise ValueError(msg)
+    return value
+
+
+NonEmptyString = Annotated[str, AfterValidator(_validate_non_empty_string)]
+
+
 class WatsonxFlowArtifactProviderData(BaseModel):
     """Provider metadata for watsonx flow artifacts."""
 
     model_config = ConfigDict(extra="forbid")
 
     project_id: NormalizedId = Field(description="Langflow project id carried for watsonx snapshot creation.")
-    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)] = Field(
+    source_ref: NormalizedStr = Field(
         description="Adapter-neutral source reference used for create/update snapshot correlation.",
     )
     # Optional only at input time. Since tool_display_name is required, the
@@ -474,7 +484,7 @@ class WatsonxToolRefBinding(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    source_ref: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    source_ref: NormalizedStr
     tool_id: NormalizedId
 
 
@@ -490,41 +500,27 @@ class WatsonxResultToolRefBinding(WatsonxToolRefBinding):
 
 
 class WatsonxDeploymentCreateResultData(BaseModel):
-    """Normalized provider result payload for deployment create."""
+    """Provider result payload for deployment create."""
 
     model_config = ConfigDict(extra="ignore")
 
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    app_ids: list[NormalizedId] = Field(default_factory=list)
+    display_name: NonEmptyString
+    app_ids: list[NonEmptyString] = Field(default_factory=list)
     tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
 
-    @field_validator("app_ids", mode="before")
-    @classmethod
-    def normalize_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
-
 
 class WatsonxToolAppBinding(BaseModel):
-    """Normalized tool-app binding item for deployment result payloads."""
+    """Tool-app binding item for deployment result payloads."""
 
     model_config = ConfigDict(extra="forbid")
 
-    tool_id: NormalizedId
-    app_ids: list[NormalizedId] = Field(default_factory=list)
-
-    @field_validator("app_ids", mode="before")
-    @classmethod
-    def normalize_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
+    tool_id: NonEmptyString
+    app_ids: list[NonEmptyString] = Field(default_factory=list)
 
 
 class WatsonxDeploymentUpdateResultData(BaseModel):
-    """Normalized provider result payload for deployment update.
+    """Provider result payload for deployment update.
 
     Semantics:
     - ``created_snapshot_ids``: IDs of snapshot/tools created during this update.
@@ -544,12 +540,12 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    name: NonEmptyString
+    display_name: NonEmptyString
     description: str | None = None
-    created_app_ids: list[NormalizedId] = Field(default_factory=list)
-    created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
+    created_app_ids: list[NonEmptyString] = Field(default_factory=list)
+    created_snapshot_ids: list[NonEmptyString] = Field(default_factory=list)
+    added_snapshot_ids: list[NonEmptyString] = Field(default_factory=list)
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     # Newly attached snapshot/tool refs (created + newly attached existing).
     added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
@@ -559,39 +555,18 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
     referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
 
-    @field_validator("created_app_ids", mode="before")
-    @classmethod
-    def normalize_created_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(app_id).strip() for app_id in value if str(app_id).strip()]
-
-    @field_validator("created_snapshot_ids", mode="before")
-    @classmethod
-    def normalize_created_snapshot_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
-
-    @field_validator("added_snapshot_ids", mode="before")
-    @classmethod
-    def normalize_added_snapshot_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [str(snapshot_id).strip() for snapshot_id in value if str(snapshot_id).strip()]
-
 
 class WatsonxAgentExecutionResultData(BaseModel):
-    """Normalized provider result payload for agent execution create/status."""
+    """Provider result payload for agent execution create/status."""
 
     model_config = ConfigDict(extra="allow")
 
-    execution_id: NormalizedId | None = None
-    agent_id: NormalizedId | None = Field(
+    execution_id: NonEmptyString | None = None
+    agent_id: NonEmptyString | None = Field(
         default=None,
         description="WXO agent identifier (resource_key in Langflow DB).",
     )
-    thread_id: NormalizedId | None = None
+    thread_id: NonEmptyString | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
@@ -606,11 +581,11 @@ class WatsonxModelOut(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    model_name: NormalizedId
+    model_name: NonEmptyString
 
 
 class WatsonxDeploymentLlmListResultData(BaseModel):
-    """Normalized provider result payload for deployment LLM listing."""
+    """Provider result payload for deployment LLM listing."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -622,9 +597,9 @@ class WatsonxSnapshotConnectionsProviderData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: NormalizedStr
-    display_name: NormalizedStr
-    connections: dict[NormalizedId, NormalizedId] = Field(default_factory=dict)
+    name: NonEmptyString
+    display_name: NonEmptyString
+    connections: dict[NonEmptyString, NonEmptyString] = Field(default_factory=dict)
 
 
 class WatsonxConfigItemProviderData(BaseModel):
@@ -632,8 +607,8 @@ class WatsonxConfigItemProviderData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: NormalizedStr
-    environment: NormalizedStr
+    type: NonEmptyString
+    environment: NonEmptyString
 
 
 class WatsonxDeploymentItemProviderData(BaseModel):
@@ -641,12 +616,12 @@ class WatsonxDeploymentItemProviderData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: str
-    display_name: str
+    name: NonEmptyString
+    display_name: NonEmptyString
     description: str
-    tool_ids: list[NormalizedId]
-    llm: NormalizedId | None = None
-    environments: list[NormalizedStr]
+    tool_ids: list[NonEmptyString]
+    llm: NonEmptyString
+    environments: list[NonEmptyString]
 
 
 class WatsonxConfigListResultData(BaseModel):
@@ -658,8 +633,8 @@ class WatsonxConfigListResultData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    deployment_id: NormalizedId | None = None
-    tool_ids: list[NormalizedId] | None = None
+    deployment_id: NonEmptyString | None = None
+    tool_ids: list[NonEmptyString] | None = None
 
 
 class WatsonxSnapshotListResultData(BaseModel):
@@ -671,7 +646,7 @@ class WatsonxSnapshotListResultData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    deployment_id: NormalizedId | None = None
+    deployment_id: NonEmptyString | None = None
 
 
 class WatsonxProviderCreateApplyResult(BaseModel):
@@ -683,9 +658,9 @@ class WatsonxProviderCreateApplyResult(BaseModel):
     app_ids: list[NormalizedId] = Field(default_factory=list)
     tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
-    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    deployment_name: NormalizedStr
+    display_name: NormalizedStr
+    description: NormalizedStr
 
 
 class WatsonxVerifyCredentialsPayload(BaseModel):
@@ -693,7 +668,7 @@ class WatsonxVerifyCredentialsPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    api_key: str
+    api_key: NormalizedStr
 
 
 # Canonical watsonx deployment payload registry. Adapter service and mapper

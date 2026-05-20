@@ -116,7 +116,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
 from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOClient
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
-    extract_agent_tool_ids,
     extract_error_detail,
     raise_as_deployment_error,
     require_single_deployment_id,
@@ -124,6 +123,11 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
 from langflow.services.deps import get_settings_service
 
 logger = logging.getLogger(__name__)
+
+
+def _agent_matches_environment(agent: dict[str, Any], environment: str) -> bool:
+    """Match the singular adapter-local environment filter strictly."""
+    return get_agent_environments(agent) == [environment]
 
 
 if TYPE_CHECKING:
@@ -202,25 +206,22 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     def _validate_deployment_item_provider_data(
         self,
         agent: dict[str, Any],
-        *,
-        for_detail: bool = False,
     ) -> dict[str, object]:
         """Validate deployment item provider_data via the configured slot.
 
-        ``llm`` is detail-only metadata in Langflow's API shape. The adapter list path
-        omits it so list responses do not carry fields the list API intentionally hides.
+        wxO agent responses include ``llm`` for both list and detail payloads,
+        so the shared item slot owns validation for that field.
         """
-        raw: dict[str, object] = {
-            "name": agent["name"],
-            "display_name": agent["display_name"],
-            "description": agent["description"],
-            "tool_ids": extract_agent_tool_ids(agent),
-            "environments": get_agent_environments(agent),
-        }
-        if for_detail:
-            raw["llm"] = agent.get("llm")
-
-        return self.payload_schemas.deployment_item_data.parse(raw).model_dump(mode="json", exclude_unset=True)
+        return self.payload_schemas.deployment_item_data.parse(
+            {
+                "name": agent["name"],
+                "display_name": agent["display_name"],
+                "description": agent["description"],
+                "tool_ids": agent["tools"],
+                "llm": agent["llm"],
+                "environments": get_agent_environments(agent),
+            }
+        ).model_dump(mode="json")
 
     async def create(
         self,
@@ -398,10 +399,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
             if params and params.provider_params:
                 provider_params = dict(params.provider_params)
-                environment_raw = provider_params.pop("environment", None)
-                if environment_raw is not None:
-                    normalized_environment = str(environment_raw).strip().lower()
-                    environment_filter = normalized_environment or None
+                # wxO does not support an "environment" query param. In this
+                # adapter contract, singular "environment" is a strict local
+                # filter; plural "environments" remains a provider passthrough.
+                environment_filter = provider_params.pop("environment", None)
                 query_params = provider_params
 
             if params and params.deployment_ids and "ids" not in query_params:
@@ -418,12 +419,12 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 params=query_params or None,
             )
             if environment_filter is not None:
-                raw_agents = [agent for agent in raw_agents if environment_filter in get_agent_environments(agent)]
+                raw_agents = [agent for agent in raw_agents if _agent_matches_environment(agent, environment_filter)]
             deployments = [
                 get_deployment_metadata(
                     data=agent,
                     deployment_type=DeploymentType.AGENT,
-                    provider_data=self._validate_deployment_item_provider_data(agent, for_detail=False),
+                    provider_data=self._validate_deployment_item_provider_data(agent),
                 )
                 for agent in raw_agents
             ]
@@ -465,7 +466,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             return get_deployment_detail_metadata(
                 data=agent,
                 deployment_type=DeploymentType.AGENT,
-                provider_data=self._validate_deployment_item_provider_data(agent, for_detail=True),
+                provider_data=self._validate_deployment_item_provider_data(agent),
             )
         except Exception as exc:  # noqa: BLE001
             raise_as_deployment_error(
@@ -736,21 +737,17 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter.
 
-        Supports four modes:
+        Supports three modes:
         - **deployment-scoped**: requires exactly one ``deployment_id`` in params;
           returns tools bound to that agent.
         - **snapshot-ids-only**: when ``snapshot_ids`` is provided and
           ``deployment_ids`` is empty/None, fetches tools directly by ID to
           verify which ones still exist in the provider.
-        - **snapshot-names**: when ``snapshot_names`` is provided and
-          ``deployment_ids`` is empty/None, fetches tools by name to check
-          which ones exist in the provider tenant.
         - **tenant-scoped**: when neither deployment_ids nor snapshot_ids are
           provided, returns all draft tools visible in the provider tenant.
         """
         has_deployment_ids = params and params.deployment_ids
         has_snapshot_ids = params and params.snapshot_ids
-        has_snapshot_names = params and params.snapshot_names
 
         if has_snapshot_ids and has_deployment_ids:
             logger.warning(
@@ -762,28 +759,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         if has_snapshot_ids and not has_deployment_ids:
             return await verify_tools_by_ids(clients, params.snapshot_ids)  # type: ignore[union-attr]
-        if has_snapshot_names and not has_deployment_ids:
-            try:
-                raw_tools = await asyncio.to_thread(clients.tool.get_drafts_by_names, params.snapshot_names)  # type: ignore[union-attr]
-            except Exception as exc:  # noqa: BLE001
-                raise_as_deployment_error(
-                    exc,
-                    error_prefix=ErrorPrefix.LIST,
-                    log_msg="Unexpected error while listing wxO snapshots by name",
-                )
-            snapshots = [
-                SnapshotItem(
-                    id=tool["id"],
-                    name=tool.get("name") or tool["id"],
-                    provider_data=self._snapshot_item_provider_data_from_tool(tool),
-                )
-                for tool in (raw_tools or [])
-                if isinstance(tool, dict) and tool.get("id")
-            ]
-            return SnapshotListResult(
-                snapshots=snapshots,
-                provider_result=self.payload_schemas.snapshot_list_result.parse({}).model_dump(exclude_none=True),
-            )
         if not has_deployment_ids:
             try:
                 raw_tools = await asyncio.to_thread(clients.get_tools_raw)

@@ -34,7 +34,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     ToolUploadBatchError,
     create_and_upload_wxo_flow_tools_with_bindings,
     ensure_langflow_connections_binding,
-    extract_langflow_connections_binding,
     to_writable_tool_payload,
     verify_langflow_owned,
 )
@@ -51,7 +50,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_langflow_wxo_resource_name,
     dedupe_list,
     ensure_field_not_empty,
-    extract_agent_tool_ids,
     validate_description,
     validate_technical_name,
 )
@@ -130,7 +128,7 @@ def build_provider_update_plan(
             existing_tool_refs=[],
         )
 
-    agent_tool_ids = extract_agent_tool_ids(agent)
+    agent_tool_ids = agent["tools"]
     final_existing_tool_ids = OrderedUniqueStrs.from_values(agent_tool_ids)
 
     # existing_tool_deltas: per existing tool_id, tracks app_ids to bind/unbind.
@@ -358,7 +356,7 @@ async def _update_existing_tools(
 def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
     rollback_payload: dict[str, Any] = {}
     if "tools" in final_update_payload:
-        rollback_payload["tools"] = extract_agent_tool_ids(agent)
+        rollback_payload["tools"] = agent["tools"]
     for update_field in ("name", "display_name", "description", "llm"):
         if update_field in final_update_payload and update_field in agent:
             rollback_payload[update_field] = agent[update_field]
@@ -464,39 +462,25 @@ async def apply_provider_update_plan_with_rollback(
     rollback_agent_payload: dict[str, Any] = {}
     created_app_ids_journal: list[str] = []
 
-    # Pre-seed resolved_connections with bindings already attached to the
-    # agent's existing tools.  This lets new tools reuse the same connections
-    # without the caller having to redeclare them in the update payload, and
-    # ensures they are checked first during resolution.
+    # Fetch only the existing tools that update operations need to mutate
+    # (connection deltas and renames). We intentionally do not fetch every
+    # currently attached agent tool here: operation app_ids are resolved below
+    # through resolve_connections_for_operations, so unrelated attached tools
+    # should not pre-seed connection state for this update.
     #
     # Edge cases:
-    # - Connection deleted in wxO but still in tool binding: the stale
-    #   connection_id is pre-seeded here. If a new operation explicitly
-    #   references this app_id, resolve_connections_for_operations will
-    #   re-validate it and fail fast. If no operation references it, the
-    #   stale entry is harmless (unused).
-    # - Tool deleted in wxO but still in agent.tools: get_drafts_by_ids
-    #   silently omits missing tools, so we just get fewer bindings.
-    # - Multiple tools share the same app_id: later provider payload entries
-    #   replace earlier ones; explicit operation results still overwrite them.
-    agent_tool_ids = extract_agent_tool_ids(agent)
-    if agent_tool_ids:
-        existing_tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, agent_tool_ids)
+    # - Tool deleted in wxO but still referenced by an operation:
+    #   get_drafts_by_ids silently omits missing tools. _update_existing_tools
+    #   detects the missing target before any tool mutation and raises.
+    # - Connection deleted in wxO but referenced by an operation:
+    #   resolve_connections_for_operations validates operation app_ids before
+    #   bindings are applied, so the update fails before mutating tools.
+    # - Multiple tools share the same app_id: explicit operation resolution is
+    #   authoritative for this update; unrelated tool bindings are not reused.
+    operation_tool_ids = dedupe_list([*plan.existing_tool_deltas.keys(), *plan.tool_renames.keys()])
+    if operation_tool_ids:
+        existing_tools = await asyncio.to_thread(clients.tool.get_drafts_by_ids, operation_tool_ids)
         tool_by_id.update({tool["id"]: tool for tool in existing_tools})
-        resolved_connections.update(
-            {
-                app_id: connection_id
-                for tool in tool_by_id.values()
-                for app_id, connection_id in extract_langflow_connections_binding(tool).items()
-                if app_id and connection_id
-            }
-        )
-        operation_to_provider_app_id.update({app_id: app_id for app_id in resolved_connections})
-        logger.debug(
-            "apply_provider_update_plan: pre-seeded %d connections from %d agent tools",
-            len(resolved_connections),
-            len(agent_tool_ids),
-        )
 
     try:
         try:
