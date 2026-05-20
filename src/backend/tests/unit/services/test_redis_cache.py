@@ -30,9 +30,10 @@ async def test_redis_cache_skips_unpickleable_values_and_clears_stale_entry():
     cache._client = _FakeRedisClient()
     cache.expiration_time = 3600
 
-    await cache.set("flow-id", {"previous": "value"})
-    assert await cache.get("flow-id") == {"previous": "value"}
+    cache_key = 123
+    await cache.set(cache_key, {"previous": "value"})
+    assert await cache.get(cache_key) == {"previous": "value"}
 
-    await cache.set("flow-id", _UnpickleableValue())
+    await cache.set(cache_key, _UnpickleableValue())
 
-    assert await cache.get("flow-id") is CACHE_MISS
+    assert await cache.get(cache_key) is CACHE_MISS

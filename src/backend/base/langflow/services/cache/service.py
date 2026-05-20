@@ -245,7 +245,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
             pickled = dill.dumps(value, recurse=True)
         except (pickle.PicklingError, TypeError, AttributeError) as exc:
             await logger.awarning(f"Skipping Redis cache write for unpickleable value at key {key!r}: {exc}")
-            await self.delete(key)
+            await self.delete(str(key))
             return
 
         if pickled:
