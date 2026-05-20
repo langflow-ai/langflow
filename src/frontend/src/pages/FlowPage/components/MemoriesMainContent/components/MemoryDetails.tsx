@@ -70,7 +70,10 @@ export function MemoryDetails({
           />
           <Popover open={configOpen} onOpenChange={setConfigOpen}>
             <PopoverTrigger asChild>
-              <button type="button" className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-muted/50">
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-muted/50"
+              >
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
                   <IconComponent
                     name="Settings2"
