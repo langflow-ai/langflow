@@ -274,6 +274,18 @@ class KnowledgeBaseComponent(Component):
                 model=model,
                 google_api_key=api_key,
             )
+        if provider == "vLLM Embeddings":
+            from langchain_openai import OpenAIEmbeddings
+
+            all_vars = provider_vars or {}
+            base_url = all_vars.get("VLLM_EMBEDDINGS_API_BASE")
+            vllm_kwargs: dict = {
+                "model": model,
+                "api_key": api_key or "no-key",
+            }
+            if base_url:
+                vllm_kwargs["base_url"] = base_url
+            return OpenAIEmbeddings(**vllm_kwargs)
         if provider == "Ollama":
             from langchain_ollama import OllamaEmbeddings
 
@@ -343,7 +355,7 @@ class KnowledgeBaseComponent(Component):
 
         # Resolve provider-specific variables (e.g. base_url for Ollama, project_id for WatsonX)
         provider_vars: dict[str, str] = {}
-        if provider in {"Ollama", "IBM WatsonX"}:
+        if provider in {"Ollama", "IBM WatsonX", "vLLM Embeddings"}:
             provider_vars = await self._resolve_provider_variables(provider)
 
         # Build the embedder for the knowledge base
