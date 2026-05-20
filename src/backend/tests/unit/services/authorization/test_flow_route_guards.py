@@ -13,13 +13,22 @@ from pathlib import Path
 
 import pytest
 
-_FLOWS_FILE = Path(__file__).resolve().parents[4] / "base" / "langflow" / "api" / "v1" / "flows.py"
+_API_V1 = Path(__file__).resolve().parents[4] / "base" / "langflow" / "api" / "v1"
+_FLOWS_FILE = _API_V1 / "flows.py"
+_CHAT_FILE = _API_V1 / "chat.py"
+_ENDPOINTS_FILE = _API_V1 / "endpoints.py"
+_PROJECTS_FILE = _API_V1 / "projects.py"
+
+
+def _parse_async_funcs(path: Path) -> dict[str, ast.AsyncFunctionDef]:
+    """Return the AST of every async function in *path* keyed by function name."""
+    tree = ast.parse(path.read_text())
+    return {node.name: node for node in ast.walk(tree) if isinstance(node, ast.AsyncFunctionDef)}
 
 
 def _parse_flow_routes() -> dict[str, ast.AsyncFunctionDef]:
     """Return the AST of every async route handler in flows.py keyed by function name."""
-    tree = ast.parse(_FLOWS_FILE.read_text())
-    return {node.name: node for node in ast.walk(tree) if isinstance(node, ast.AsyncFunctionDef)}
+    return _parse_async_funcs(_FLOWS_FILE)
 
 
 def _ensure_flow_permission_calls(func: ast.AsyncFunctionDef) -> list[ast.Call]:
@@ -220,7 +229,91 @@ def test_read_public_flow_remains_unguarded(routes):
     assert _ensure_flow_permission_calls(func) == []
 
 
-def test_read_flows_list_unchanged_in_this_pr(routes):
-    """GET /flows/ list endpoint still has no per-item guard — filter helper lands in a follow-up PR."""
+def test_read_flows_list_uses_filter_visible_resources(routes):
+    """GET /flows/ list endpoint applies filter_visible_resources (Phase B).
+
+    The list helper drops items the user can't read. In OSS pass-through it
+    returns the input unchanged; the enterprise plugin uses batch_enforce to
+    honor role + share grants. Per-item ensure_flow_permission is intentionally
+    NOT used here — filtering is the right primitive for list endpoints.
+    """
     func = routes["read_flows"]
+    # No per-item ensure_flow_permission (would 403 on the first unauthorized item).
     assert _ensure_flow_permission_calls(func) == []
+
+    # filter_visible_resources must be called exactly once.
+    filter_calls = [
+        node
+        for node in ast.walk(func)
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == "filter_visible_resources")
+            or (isinstance(node.func, ast.Attribute) and node.func.attr == "filter_visible_resources")
+        )
+    ]
+    assert len(filter_calls) == 1, f"expected exactly one filter_visible_resources call, got {len(filter_calls)}"
+
+
+# ----------------------------------------------------------------------------- #
+# Phase B: execute-action guards on build/run/webhook surfaces
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("module_path", "func_name"),
+    [
+        (_CHAT_FILE, "build_flow"),
+        (_ENDPOINTS_FILE, "simplified_run_flow"),
+        (_ENDPOINTS_FILE, "simplified_run_flow_session"),
+        (_ENDPOINTS_FILE, "webhook_run_flow"),
+    ],
+)
+def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
+    """build/run/webhook handlers must call ensure_flow_permission(FlowAction.EXECUTE)."""
+    funcs = _parse_async_funcs(module_path)
+    assert func_name in funcs, f"{func_name} missing from {module_path.name}"
+    calls = _ensure_flow_permission_calls(funcs[func_name])
+    assert calls, f"{func_name} has no ensure_flow_permission call"
+    actions = {_action_arg(c) for c in calls}
+    assert "FlowAction.EXECUTE" in actions, f"{func_name} actions={actions}, expected FlowAction.EXECUTE"
+
+
+# ----------------------------------------------------------------------------- #
+# Phase B: project route guards
+# ----------------------------------------------------------------------------- #
+
+
+def _ensure_project_permission_calls(func: ast.AsyncFunctionDef) -> list[ast.Call]:
+    """Return every ensure_project_permission(...) call within the function body."""
+    calls: list[ast.Call] = []
+    for node in ast.walk(func):
+        if not isinstance(node, ast.Call):
+            continue
+        target = node.func
+        is_match = (isinstance(target, ast.Name) and target.id == "ensure_project_permission") or (
+            isinstance(target, ast.Attribute) and target.attr == "ensure_project_permission"
+        )
+        if is_match:
+            calls.append(node)
+    return calls
+
+
+@pytest.mark.parametrize(
+    ("func_name", "expected_action"),
+    [
+        ("create_project", "ProjectAction.CREATE"),
+        ("read_project", "ProjectAction.READ"),
+        ("update_project", "ProjectAction.WRITE"),
+        ("delete_project", "ProjectAction.DELETE"),
+        ("download_file", "ProjectAction.READ"),
+        ("upload_file", "ProjectAction.CREATE"),
+    ],
+)
+def test_project_routes_guarded(func_name, expected_action):
+    """Each project CRUD handler calls ensure_project_permission with the right ProjectAction."""
+    funcs = _parse_async_funcs(_PROJECTS_FILE)
+    assert func_name in funcs, f"{func_name} missing from projects.py"
+    calls = _ensure_project_permission_calls(funcs[func_name])
+    assert calls, f"{func_name} has no ensure_project_permission call"
+    actions = {_action_arg(c) for c in calls}
+    assert expected_action in actions, f"{func_name} actions={actions}, expected {expected_action}"

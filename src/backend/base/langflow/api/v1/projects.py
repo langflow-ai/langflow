@@ -32,6 +32,7 @@ from langflow.api.v1.projects_mcp_helpers import (
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
+from langflow.services.authorization import ProjectAction, ensure_project_permission, filter_visible_resources
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -66,6 +67,9 @@ async def create_project(
     project: FolderCreate,
     current_user: CurrentActiveUser,
 ):
+    await ensure_project_permission(
+        current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
+    )
     try:
         new_project = Folder.model_validate(project, from_attributes=True)
         new_project.user_id = current_user.id
@@ -210,6 +214,14 @@ async def read_projects(
             )
         ).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
+        # When AUTHZ_ENABLED=true, drop projects the user can't read. OSS
+        # default is pass-through; the enterprise plugin honors role + share grants.
+        projects = await filter_visible_resources(
+            current_user,
+            resource_type="project",
+            candidates=list(projects),
+            act=ProjectAction.READ,
+        )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
 
         # Convert to FolderRead while session is still active to avoid detached instance errors
@@ -246,6 +258,14 @@ async def read_project(
 
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.READ,
+        project_id=project_id,
+        project_user_id=project.user_id,
+        workspace_id=project.workspace_id,
+    )
 
     try:
         # Check if pagination is explicitly requested by the user (both page and size provided)
@@ -299,6 +319,14 @@ async def update_project(
 
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.WRITE,
+        project_id=project_id,
+        project_user_id=existing_project.user_id,
+        workspace_id=existing_project.workspace_id,
+    )
 
     result = await session.exec(
         select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
@@ -476,6 +504,14 @@ async def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.DELETE,
+        project_id=project_id,
+        project_user_id=project.user_id,
+        workspace_id=project.workspace_id,
+    )
+
     # Prevent deletion of the Langflow Assistant folder
     if project.name == ASSISTANT_FOLDER_NAME:
         msg = f"Cannot delete the '{ASSISTANT_FOLDER_NAME}' folder, that contains pre-built flows."
@@ -525,6 +561,7 @@ async def download_file(
     current_user: CurrentActiveUser,
 ):
     """Download all flows from project as a zip file."""
+    await ensure_project_permission(current_user, ProjectAction.READ, project_id=project_id)
     return await download_project_flows(session=session, project_id=project_id, current_user=current_user)
 
 
@@ -540,4 +577,5 @@ async def upload_file(
     Accepts either a JSON file with project metadata (folder_name, folder_description, flows)
     or a ZIP file containing individual flow JSON files (as produced by the download endpoint).
     """
+    await ensure_project_permission(current_user, ProjectAction.CREATE)
     return await upload_project_flows(session=session, file=file, current_user=current_user)

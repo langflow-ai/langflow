@@ -29,3 +29,17 @@ class DeploymentAction(str, Enum):
     CREATE = "create"
     DELETE = "delete"
     EXECUTE = "execute"
+
+
+class ProjectAction(str, Enum):
+    """Actions that can be authorized on a project (folder) resource.
+
+    Projects are the OSS-side persistent name for the folder model; the
+    ``project:`` Casbin object prefix matches the API surface and the
+    ``project:{folder_id}`` domain used by ``_resolve_flow_domain``.
+    """
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"

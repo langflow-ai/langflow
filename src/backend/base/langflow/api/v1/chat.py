@@ -45,6 +45,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -217,6 +218,17 @@ async def build_flow(
                 flow_id,
             )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    # Authorize the execute action — runs the enterprise plugin if registered,
+    # no-op in OSS pass-through. Audited regardless.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         if data:
