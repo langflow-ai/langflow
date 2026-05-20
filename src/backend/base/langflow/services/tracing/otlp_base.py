@@ -86,7 +86,8 @@ class OTLPTracerBase(BaseTracer):
                 return value.text
 
             if isinstance(value, Data):
-                return value.get_text()
+                data = value.data
+                return self._convert_langflow_type(data) if isinstance(data, (dict, list)) else value.get_text()
 
             if isinstance(value, (BaseMessage, HumanMessage, SystemMessage)):
                 return str(value.content) if value.content is not None else ""
