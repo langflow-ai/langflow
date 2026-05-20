@@ -442,21 +442,11 @@ async def execute_workflow_background(
         # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
         request_variables = extract_global_variables_from_headers(http_request.headers)
 
-        # Build context from request variables (similar to V1's _run_flow_internal)
-        context = {"request_variables": request_variables} if request_variables else None
-
-        # Build the graph once
+        # Keep the original flow data serializable for Celery. The worker
+        # rebuilds the live Graph object in its own process.
         flow_id_str = str(flow.id)
         user_id = str(api_key_user.id)
         graph_data = deepcopy(flow.data)
-        graph_data = process_tweaks(graph_data, tweaks, stream=False)
-        graph = Graph.from_payload(
-            graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
-        )
-        graph.set_run_id(job_id)
-
-        # Get terminal nodes
-        terminal_node_ids = graph.get_terminal_nodes()
 
         # Launch background task
         task_service = get_task_service()
@@ -470,17 +460,40 @@ async def execute_workflow_background(
             user_id=api_key_user.id,
         )
 
-        await task_service.fire_and_forget_task(
-            job_service.execute_with_status,
-            job_id=job_id,
-            run_coro_func=run_graph_internal,
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=session_id,
-            inputs=None,
-            outputs=terminal_node_ids,
-            stream=False,
-        )
+        if task_service.backend_name == "celery":
+            from langflow.worker import run_workflow_job
+
+            await task_service.fire_and_forget_task(
+                run_workflow_job,
+                job_id=str(job_id),
+                flow_id=flow_id_str,
+                user_id=user_id,
+                flow_name=flow.name,
+                graph_data=graph_data,
+                tweaks=tweaks,
+                session_id=session_id,
+                request_variables=request_variables,
+            )
+        else:
+            # Build context from request variables (similar to V1's _run_flow_internal)
+            context = {"request_variables": request_variables} if request_variables else None
+            graph_data = process_tweaks(graph_data, tweaks, stream=False)
+            graph = Graph.from_payload(
+                graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
+            )
+            graph.set_run_id(job_id)
+
+            await task_service.fire_and_forget_task(
+                job_service.execute_with_status,
+                job_id=job_id,
+                run_coro_func=run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=session_id,
+                inputs=None,
+                outputs=graph.get_terminal_nodes(),
+                stream=False,
+            )
         status = JobStatus.QUEUED
         return WorkflowJobResponse(job_id=str(job_id), flow_id=workflow_request.flow_id, status=status)
 

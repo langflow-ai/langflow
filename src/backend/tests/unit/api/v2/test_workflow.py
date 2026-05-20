@@ -233,7 +233,7 @@ class TestWorkflowDeveloperAPIProtection:
 
             # Should return 200 because flow is valid (empty nodes/edges is valid)
             # The execution will complete successfully with no outputs
-            assert response.status_code == 200
+            assert response.status_code == 200, response.text
             result = response.json()
 
             # Verify response contains expected fields with proper structure
@@ -1208,6 +1208,65 @@ class TestWorkflowBackgroundQueueing:
                 assert "links" in result
                 assert "status" in result["links"]
                 assert mock_job_id in result["links"]["status"]
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_background_execution_with_celery_queues_serializable_worker_task(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Celery background execution must not enqueue a live Graph object."""
+        flow_id = uuid4()
+        flow_data = {"nodes": [], "edges": []}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Celery Background Flow",
+                description="Flow for celery background queueing",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": True,
+                "inputs": {"ChatInput-abc.input_value": "hello"},
+            }
+            headers = {"x-api-key": created_api_key.api_key}
+            mock_job_id = "550e8400-e29b-41d4-a716-446655440001"
+
+            with (
+                patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+                patch("langflow.api.v2.workflow.uuid4", return_value=UUID(mock_job_id)),
+            ):
+                mock_task_service = MagicMock()
+                mock_task_service.backend_name = "celery"
+                mock_task_service.fire_and_forget_task = AsyncMock()
+                mock_get_task_service.return_value = mock_task_service
+
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200, response.text
+            task_func = mock_task_service.fire_and_forget_task.call_args.args[0]
+            task_kwargs = mock_task_service.fire_and_forget_task.call_args.kwargs
+
+            assert hasattr(task_func, "delay")
+            assert "graph" not in task_kwargs
+            assert task_kwargs["graph_data"] == flow_data
+            assert task_kwargs["flow_id"] == str(flow_id)
+            assert task_kwargs["user_id"] == str(created_api_key.user_id)
+            assert task_kwargs["tweaks"] == {"ChatInput-abc": {"input_value": "hello"}}
 
         finally:
             async with session_scope() as session:
