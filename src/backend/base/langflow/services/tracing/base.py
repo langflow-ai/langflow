@@ -42,6 +42,7 @@ class BaseTracer(ABC):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         raise NotImplementedError
 

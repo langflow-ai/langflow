@@ -150,11 +150,15 @@ class TraceloopTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         if not self.ready:
             return
 
         span_context = self.propagator.extract(carrier=self.carrier)
+        if parent_id and parent_id in self.child_spans:
+            span_context = trace.set_span_in_context(self.child_spans[parent_id], context=span_context)
+
         child_span = self._tracer.start_span(
             name=trace_name,
             context=span_context,

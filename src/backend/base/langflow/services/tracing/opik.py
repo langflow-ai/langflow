@@ -113,6 +113,7 @@ class OpikTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         if not self._ready:
             return
@@ -123,8 +124,13 @@ class OpikTracer(BaseTracer):
         processed_inputs = self._convert_to_opik_types(inputs) if inputs else {}
         processed_metadata = self._convert_to_opik_types(metadata) if metadata else {}
 
+        parent_span_id = None
+        if parent_id and parent_id in self.spans:
+            parent_span_id = self.spans[parent_id].id
+
         span = SpanData(
             trace_id=self.opik_trace_id,
+            parent_span_id=parent_span_id,
             name=name,
             input=processed_inputs,
             metadata=processed_metadata,
