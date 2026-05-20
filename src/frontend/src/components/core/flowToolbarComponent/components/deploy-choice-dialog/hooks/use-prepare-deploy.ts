@@ -6,7 +6,9 @@ import { useErrorAlert } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-
 import type {
   DeploymentProvider,
   ProviderAccount,
+  SelectedFlowVersion,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getSelectedFlowVersionKey } from "@/pages/MainPage/pages/deploymentsPage/types";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 
@@ -17,7 +19,7 @@ export function usePrepareDeploy() {
   const [providers, setProviders] = useState<ProviderAccount[]>([]);
   const [pendingSnapshotVersionId, setPendingSnapshotVersionId] = useState("");
   const [initialVersionByFlow, setInitialVersionByFlow] = useState<
-    Map<string, { versionId: string; versionTag: string }>
+    Map<string, SelectedFlowVersion>
   >(new Map());
   const [stepperInitialProvider, setStepperInitialProvider] = useState<
     DeploymentProvider | undefined
@@ -42,11 +44,10 @@ export function usePrepareDeploy() {
     try {
       await saveFlow();
       const snapshot = await createSnapshot({ flowId: currentFlowId });
-      const versionMap = new Map<
-        string,
-        { versionId: string; versionTag: string }
-      >();
+      const versionMap = new Map<string, SelectedFlowVersion>();
       versionMap.set(currentFlowId, {
+        key: getSelectedFlowVersionKey(currentFlowId, snapshot.id),
+        flowId: currentFlowId,
         versionId: snapshot.id,
         versionTag: snapshot.version_tag,
       });

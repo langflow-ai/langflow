@@ -1,5 +1,14 @@
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+
+const STEP_LABEL_KEYS: Record<string, string> = {
+  Provider: "deployments.provider",
+  Type: "deployments.labelType",
+  Flows: "deployments.stepFlows",
+  Review: "deployments.review",
+  Deployed: "deployments.deployed",
+};
 
 export const CREATE_STEPS = [
   { number: 1, label: "Provider" },
@@ -32,6 +41,7 @@ export default function DeploymentStepper({
   steps: stepsProp,
   currentStepOverride,
 }: DeploymentStepperProps) {
+  const { t } = useTranslation();
   const { currentStep, isEditMode } = useDeploymentStepper();
   const steps = stepsProp ?? (isEditMode ? EDIT_STEPS : CREATE_STEPS);
   const activeStep = currentStepOverride ?? currentStep;
@@ -64,7 +74,7 @@ export default function DeploymentStepper({
                 activeStep >= step.number && "font-medium",
               )}
             >
-              {step.label}
+              {t(STEP_LABEL_KEYS[step.label] ?? step.label)}
             </span>
           </div>
         ))}

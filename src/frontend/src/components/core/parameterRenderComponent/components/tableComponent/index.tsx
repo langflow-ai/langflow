@@ -368,6 +368,16 @@ const TableComponent = forwardRef<
       >
         <AgGridReact
           {...props}
+          localeText={{
+            noRowsToShow: t("table.noRowsToShow"),
+            page: t("table.page"),
+            of: t("table.of"),
+            to: t("table.to"),
+            nextPage: t("table.nextPage"),
+            lastPage: t("table.lastPage"),
+            firstPage: t("table.firstPage"),
+            previousPage: t("table.previousPage"),
+          }}
           defaultColDef={{
             minWidth: 100,
             suppressColumnsToolPanel: true, // Don't show hidden columns in tool panel

@@ -51,7 +51,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Langflow MCP Client",
+      title: t("settings.nav.mcpClient"),
       href: "/settings/mcp-client",
       icon: (
         <ForwardedIconComponent

@@ -23,12 +23,13 @@ const DisabledButton = () => (
 );
 
 const PlaygroundButton = ({ hasIO }: PlaygroundButtonProps) => {
+  const { t } = useTranslation();
   return hasIO ? (
     <SimpleSidebarTrigger>
       <ButtonLabel />
     </SimpleSidebarTrigger>
   ) : (
-    <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
+    <ShadTooltip content={t("misc.addChatInputOutputPlayground")}>
       <div>
         <DisabledButton />
       </div>

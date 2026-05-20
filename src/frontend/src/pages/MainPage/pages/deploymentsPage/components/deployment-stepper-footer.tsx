@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
@@ -36,13 +37,14 @@ export default function DeploymentStepperFooter({
   onClose,
   onPrimaryAction,
 }: DeploymentStepperFooterProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between border-t border-border px-6 py-4">
       {isDeployed ? (
         <div />
       ) : (
         <Button variant="ghost" onClick={onCancel}>
-          Cancel
+          {t("deployments.cancel")}
         </Button>
       )}
       <div className="flex items-center gap-3">
@@ -52,7 +54,7 @@ export default function DeploymentStepperFooter({
             onClick={onBack}
             disabled={currentStep === minStep || isDeploying}
           >
-            Back
+            {t("deployments.back")}
           </Button>
         )}
         {!isInDeployPhase && (
@@ -67,9 +69,9 @@ export default function DeploymentStepperFooter({
                 {actionLabel}
               </>
             ) : isCreatingAccount ? (
-              "Connecting..."
+              t("deployments.connecting")
             ) : (
-              "Next"
+              t("deployments.next")
             )}
           </Button>
         )}
@@ -82,7 +84,9 @@ export default function DeploymentStepperFooter({
             {progressLabel}
           </Button>
         )}
-        {isDeployed && <Button onClick={onClose}>Done</Button>}
+        {isDeployed && (
+          <Button onClick={onClose}>{t("deployments.done")}</Button>
+        )}
       </div>
     </div>
   );
