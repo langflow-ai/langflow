@@ -326,8 +326,8 @@ def create_wxo_flow_tool(
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
     logger.debug(
         "create_wxo_flow_tool_payload",
-        tool_name=tool_payload.get("name"),
-        tool_display_name=tool_payload.get("display_name"),
+        tool_name=tool_payload["name"],
+        tool_display_name=tool_payload["display_name"],
         project_id=project_id,
         binding=tool_payload.get("binding", {}).get("langflow"),
     )
