@@ -1,5 +1,6 @@
 import { Background, Panel } from "@xyflow/react";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
