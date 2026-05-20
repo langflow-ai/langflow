@@ -26,13 +26,11 @@ def test_service_subclasses_base(service: AuthorizationService) -> None:
     assert isinstance(service, BaseAuthorizationService)
 
 
-@pytest.mark.asyncio
 async def test_is_enabled_returns_false(service: AuthorizationService) -> None:
     """The LFX default reports authorization as disabled."""
     assert await service.is_enabled() is False
 
 
-@pytest.mark.asyncio
 async def test_enforce_returns_true_for_any_input(service: AuthorizationService) -> None:
     """Default enforce permits every request regardless of arguments."""
     user_id = uuid4()
@@ -57,7 +55,6 @@ async def test_enforce_returns_true_for_any_input(service: AuthorizationService)
     )
 
 
-@pytest.mark.asyncio
 async def test_batch_enforce_returns_all_true_for_any_length(service: AuthorizationService) -> None:
     """batch_enforce returns a True list matching the request count, for any length."""
     user_id = uuid4()
@@ -73,7 +70,6 @@ async def test_batch_enforce_returns_all_true_for_any_length(service: Authorizat
     assert five == [True, True, True, True, True]
 
 
-@pytest.mark.asyncio
 async def test_get_allowed_actions_returns_full_list(service: AuthorizationService) -> None:
     """get_allowed_actions returns every requested action when default service is used."""
     actions = ["read", "write", "delete", "execute"]
@@ -86,19 +82,16 @@ async def test_get_allowed_actions_returns_full_list(service: AuthorizationServi
     assert result == actions
 
 
-@pytest.mark.asyncio
 async def test_invalidate_user_is_noop(service: AuthorizationService) -> None:
     """Cache invalidation hooks are no-ops on the default LFX implementation."""
     assert await service.invalidate_user(uuid4()) is None
 
 
-@pytest.mark.asyncio
 async def test_invalidate_role_is_noop(service: AuthorizationService) -> None:
     """Cache invalidation hooks are no-ops on the default LFX implementation."""
     assert await service.invalidate_role(uuid4()) is None
 
 
-@pytest.mark.asyncio
 async def test_invalidate_all_is_noop(service: AuthorizationService) -> None:
     """Cache invalidation hooks are no-ops on the default LFX implementation."""
     assert await service.invalidate_all() is None
