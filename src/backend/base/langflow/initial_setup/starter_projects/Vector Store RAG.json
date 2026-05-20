@@ -728,7 +728,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.9"
+                    "version": "3.11.8"
                   },
                   {
                     "name": "fastapi",
@@ -1620,7 +1620,7 @@
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "47.0.0"
                   },
                   {
                     "name": "langchain_chroma",
@@ -1636,11 +1636,11 @@
                   },
                   {
                     "name": "numpy",
-                    "version": "2.4.5"
+                    "version": "2.4.4"
                   },
                   {
                     "name": "chromadb",
-                    "version": "1.5.9"
+                    "version": "1.5.8"
                   }
                 ],
                 "total_dependencies": 7
