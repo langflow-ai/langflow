@@ -4,6 +4,9 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import pickle
+import threading
+from types import SimpleNamespace
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -16,6 +19,14 @@ from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
+
+
+class ComponentWithThreadLocal:
+    def __init__(self) -> None:
+        self._console_thread_local = threading.local()
+
+    def set_vertex(self, vertex) -> None:
+        self.vertex = vertex
 
 
 @pytest.fixture
@@ -205,6 +216,30 @@ def test_process_field_parameters_valid(parameter_handler, mock_vertex):
     assert "hidden_field" not in params
     # Validate str_list_field has been processed correctly
     assert params["str_list_field"] == [unescape_string("a"), unescape_string("b")]
+
+
+def test_vertex_cache_state_omits_live_component_instance():
+    """Graph cache snapshots should not pickle live component instances."""
+    graph = SimpleNamespace(flow_id=None)
+    node_data = {
+        "id": "chat_input",
+        "data": {
+            "type": "ChatInput",
+            "node": {
+                "base_classes": [],
+                "display_name": "Chat Input",
+                "outputs": [],
+                "template": {"_type": "Component"},
+            },
+        },
+    }
+    vertex = Vertex(node_data, graph, base_type="components")
+    vertex.add_component_instance(ComponentWithThreadLocal())
+
+    state = vertex.__getstate__()
+
+    assert state["custom_component"] is None
+    pickle.dumps(vertex)
 
 
 def test_process_field_parameters_invalid(parameter_handler, mock_vertex):
