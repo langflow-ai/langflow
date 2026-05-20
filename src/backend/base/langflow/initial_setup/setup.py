@@ -68,8 +68,8 @@ def update_projects_components_with_latest_component_versions(project_data, all_
     project_data_copy = deepcopy(project_data)
 
     for node in project_data_copy.get("nodes", []):
-        node_data = node.get("data").get("node")
-        node_type = node.get("data").get("type")
+        node_data = node.get("data", {}).get("node")
+        node_type = node.get("data", {}).get("type")
 
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
