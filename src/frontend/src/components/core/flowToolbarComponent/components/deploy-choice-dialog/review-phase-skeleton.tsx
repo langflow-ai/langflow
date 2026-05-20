@@ -12,9 +12,11 @@ export default function ReviewPhaseSkeletonContent() {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("deployments.reviewUpdate")}</DialogTitle>
-        <DialogDescription>
-          {t("deployments.reviewUpdateDescription")}
+        <DialogTitle className="text-xl font-semibold">
+          {t("deployments.updateDeployment")}
+        </DialogTitle>
+        <DialogDescription className="text-sm">
+          {t("deployments.updateDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
 
@@ -23,58 +25,44 @@ export default function ReviewPhaseSkeletonContent() {
         data-testid="review-loading-skeleton"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            <span>{t("deployments.agentTypeLabel")}</span>
-            <span className="h-1 w-1 rounded-full bg-border" />
-            <span>{t("deployments.deployment")}</span>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {t("deployments.agentTypeLabel")} {t("deployments.deployment")}
           </div>
-
-          <div className="flex items-end justify-between gap-4">
-            <Skeleton className="h-7 w-52" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-10 rounded-full" />
-              <Skeleton className="h-4 w-4 rounded-full" />
-              <Skeleton className="h-7 w-12 rounded-full" />
-            </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-16 min-w-0 flex-1 rounded-lg" />
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-16 min-w-0 flex-1 rounded-lg" />
           </div>
         </div>
 
+        <Skeleton className="h-14 rounded-lg" />
+
         <div className="space-y-3">
           <div className="space-y-2">
-            <p className="text-sm font-medium">
-              {t("deployments.chooseDeployedVersion")}
+            <p className="text-base font-semibold">
+              {t("deployments.selectVersionToReplace")}
             </p>
-            <p className="text-xs text-muted-foreground">
-              {t("deployments.selectDeployedToolToReplace")}
+            <p className="text-sm text-muted-foreground">
+              {t("deployments.selectedDeployedVersionWillUpdate", {
+                next: "",
+              })}
             </p>
           </div>
 
           <div className="space-y-3">
-            <div className="rounded-lg border border-border/60 bg-primary/5 px-4 py-2.5">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-6 w-6 rounded-full" />
-                <div className="flex flex-1 items-center justify-between gap-3">
-                  <div className="min-w-0 space-y-2">
-                    <Skeleton className="h-4 w-64 max-w-full" />
-                    <p className="text-xs text-muted-foreground">
-                      {t("deployments.willBeReplaced")}
-                    </p>
-                  </div>
-                  <Skeleton className="h-7 w-12 rounded-full" />
-                </div>
-              </div>
-            </div>
-
-            {[1, 2].map((row) => (
+            {[1, 2, 3].map((row) => (
               <div
                 key={row}
-                className="rounded-lg border border-border/50 px-4 py-2.5"
+                className="rounded-lg border border-border px-4 py-3"
               >
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-6 w-6 rounded-full" />
+                <div className="flex min-h-10 items-center gap-4">
+                  <Skeleton className="h-5 w-5 rounded-full" />
                   <div className="flex flex-1 items-center justify-between gap-3">
-                    <Skeleton className="h-4 w-56 max-w-full" />
-                    <Skeleton className="h-7 w-12 rounded-full" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-56 max-w-full" />
+                      <Skeleton className="h-4 w-44 max-w-full" />
+                    </div>
+                    <Skeleton className="h-5 w-10" />
                   </div>
                 </div>
               </div>

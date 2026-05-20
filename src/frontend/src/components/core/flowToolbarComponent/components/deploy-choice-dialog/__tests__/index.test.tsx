@@ -444,7 +444,7 @@ describe("DeployChoiceDialog — deployments phase", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 
@@ -475,7 +475,7 @@ describe("DeployChoiceDialog — deployments phase", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 });
@@ -518,12 +518,12 @@ describe("DeployChoiceDialog — review phase", () => {
     // Single attachment auto-selected; Continue goes straight to review
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 
-  it("shows Review Update title", () => {
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+  it("shows Update Deployment title", () => {
+    expect(screen.getByText("Update Deployment")).toBeInTheDocument();
   });
 
   it("shows spinner while loading review attachment details", async () => {
@@ -578,7 +578,9 @@ describe("DeployChoiceDialog — review phase", () => {
   });
 
   it("Update button calls patchSnapshot with correct args", async () => {
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     expect(mockPatchSnapshot).toHaveBeenCalledWith({
       providerSnapshotId: "snap-1",
@@ -627,13 +629,15 @@ describe("DeployChoiceDialog — review phase", () => {
     await localUser.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Choose deployed version")).toBeInTheDocument(),
+      expect(screen.getByText("Select version to replace")).toBeInTheDocument(),
     );
 
     await localUser.click(
       screen.getByRole("radio", { name: /My Flow current/ }),
     );
-    await localUser.click(screen.getByRole("button", { name: "Update" }));
+    await localUser.click(
+      screen.getByRole("button", { name: "Replace v2 with v3.0" }),
+    );
 
     await waitFor(() =>
       expect(mockPatchSnapshot).toHaveBeenCalledWith({
@@ -652,7 +656,9 @@ describe("DeployChoiceDialog — review phase", () => {
         }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
       "deploying",
@@ -661,7 +667,9 @@ describe("DeployChoiceDialog — review phase", () => {
   });
 
   it("shows deployed state after patchSnapshot resolves", async () => {
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
@@ -673,7 +681,9 @@ describe("DeployChoiceDialog — review phase", () => {
   it("calls showError and returns to review when patchSnapshot fails", async () => {
     mockPatchSnapshot.mockRejectedValue(new Error("Network error"));
 
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     await waitFor(() =>
       expect(mockShowError).toHaveBeenCalledWith(
@@ -681,7 +691,7 @@ describe("DeployChoiceDialog — review phase", () => {
         expect.any(Error),
       ),
     );
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+    expect(screen.getByText("Update Deployment")).toBeInTheDocument();
   });
 });
 
@@ -720,9 +730,11 @@ describe("DeployChoiceDialog — update phase", () => {
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
     await waitFor(() =>
       expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
         "deployed",

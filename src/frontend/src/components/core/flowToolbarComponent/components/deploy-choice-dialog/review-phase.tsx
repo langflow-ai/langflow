@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
@@ -10,6 +9,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { DeploymentType } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { cn } from "@/utils/utils";
 import ReviewPhaseSkeletonContent from "./review-phase-skeleton";
 import type { FlowAttachment } from "./types";
 
@@ -47,121 +47,131 @@ export default function ReviewPhaseContent({
     attachment.deployment_type,
     t,
   );
+  const currentVersionTag = attachment.current_version_tag;
+  const replaceActionLabel = t("deployments.replaceVersionWithVersion", {
+    current: currentVersionTag,
+    next: newVersionTag,
+  });
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{t("deployments.reviewUpdate")}</DialogTitle>
-        <DialogDescription>
-          {t("deployments.reviewUpdateDescription")}
+        <DialogTitle className="text-xl font-semibold">
+          {t("deployments.updateDeployment")}
+        </DialogTitle>
+        <DialogDescription className="text-sm">
+          {t("deployments.updateDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
 
-      <div className="flex flex-col gap-4">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-muted-foreground">
-            <span>{deploymentTypeLabel}</span>
-            <span className="h-1 w-1 rounded-full bg-border" />
-            <span>{t("deployments.deployment")}</span>
+      <div className="flex flex-col gap-5">
+        <div className="space-y-4">
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {deploymentTypeLabel} {t("deployments.deployment")}:{" "}
+            <span>{attachment.deployment_name}</span>
           </div>
-          <div className="flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold">
-                {attachment.deployment_name}
-              </p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2 text-sm">
-              <span className="text-muted-foreground">
-                {attachment.current_version_tag}
-              </span>
-              <ForwardedIconComponent
-                name="ArrowRight"
-                className="h-4 w-4 text-muted-foreground"
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <VersionSummaryCard
+                label={t("deployments.selectedTarget")}
+                value={currentVersionTag}
               />
-              <Badge variant="default">{newVersionTag}</Badge>
+            </div>
+            <ForwardedIconComponent
+              name="ArrowRight"
+              className="h-5 w-5 text-muted-foreground"
+            />
+            <div className="min-w-0 flex-1">
+              <VersionSummaryCard
+                label={t("deployments.flowVersion")}
+                value={newVersionTag}
+              />
             </div>
           </div>
         </div>
 
-        {hasManyAttachments && (
-          <div className="space-y-2">
-            <div>
-              <p className="text-sm font-medium">
-                {t("deployments.chooseDeployedVersion")}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {t("deployments.selectDeployedToolToReplace")}
-              </p>
-            </div>
-            <RadioGroup
-              value={attachment.provider_snapshot_id}
-              onValueChange={onSelectAttachment}
-              className="gap-2"
-            >
-              {attachments.map((item) => {
-                const isSelected =
-                  attachment.provider_snapshot_id === item.provider_snapshot_id;
+        <div className="flex items-center gap-3 rounded-lg border border-accent-blue-foreground/50 bg-accent-blue-muted/20 px-4 py-4 text-accent-blue-foreground">
+          <ForwardedIconComponent name="Info" className="h-5 w-5 shrink-0" />
+          <p className="text-sm leading-6">
+            {t("deployments.replaceVersionNotice", {
+              current: currentVersionTag,
+              next: newVersionTag,
+            })}
+          </p>
+        </div>
 
-                return (
-                  <div
-                    key={item.provider_snapshot_id}
-                    className={`rounded-lg border px-3 py-2 transition-colors ${
-                      isSelected
-                        ? "border-primary/40 bg-primary/5"
-                        : "border-border/60 hover:border-border hover:bg-muted/20"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <RadioGroupItem
-                        value={item.provider_snapshot_id}
-                        id={`attachment-${item.provider_snapshot_id}`}
-                      />
-                      <Label
-                        htmlFor={`attachment-${item.provider_snapshot_id}`}
-                        className="flex flex-1 cursor-pointer items-center justify-between gap-3"
-                      >
-                        <div className="min-w-0">
-                          <span className="block truncate text-sm font-medium">
-                            {item.tool_name}
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <h3 className="text-base font-semibold">
+              {t("deployments.selectVersionToReplace")}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {t("deployments.selectedDeployedVersionWillUpdate", {
+                next: newVersionTag,
+              })}
+            </p>
+          </div>
+
+          <RadioGroup
+            value={attachment.provider_snapshot_id}
+            onValueChange={onSelectAttachment}
+            className="gap-3"
+          >
+            {attachments.map((item) => {
+              const isSelected =
+                attachment.provider_snapshot_id === item.provider_snapshot_id;
+
+              return (
+                <Label
+                  key={item.provider_snapshot_id}
+                  htmlFor={`attachment-${item.provider_snapshot_id}`}
+                  className={cn(
+                    "flex min-h-16 cursor-pointer items-center gap-4 rounded-lg border px-4 py-3 transition-colors",
+                    isSelected
+                      ? "border-muted-foreground bg-muted"
+                      : "border-border hover:border-muted-foreground/70 hover:bg-muted/40",
+                  )}
+                >
+                  <RadioGroupItem
+                    value={item.provider_snapshot_id}
+                    id={`attachment-${item.provider_snapshot_id}`}
+                    className="h-5 w-5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium">
+                      {item.tool_name}
+                    </div>
+                    <div className="truncate text-xs font-medium text-muted-foreground">
+                      {isSelected ? (
+                        <>
+                          {t("deployments.currentDeploymentTarget")}{" "}
+                          <span className="text-muted-foreground">•</span>{" "}
+                          <span className="font-medium text-warning">
+                            {t("deployments.willBeReplacedByVersion", {
+                              next: newVersionTag,
+                            })}
                           </span>
-                          {isSelected && (
-                            <span className="block text-xs text-muted-foreground">
-                              {t("deployments.willBeReplaced")}
-                            </span>
-                          )}
-                        </div>
-                        <Badge variant="secondary">
-                          {item.current_version_tag}
-                        </Badge>
-                      </Label>
+                        </>
+                      ) : (
+                        t("deployments.deployedVersion")
+                      )}
                     </div>
                   </div>
-                );
-              })}
-            </RadioGroup>
-          </div>
-        )}
+                  <span className="shrink-0 text-sm font-semibold text-muted-foreground">
+                    {item.current_version_tag}
+                  </span>
+                </Label>
+              );
+            })}
+          </RadioGroup>
 
-        {!hasManyAttachments && (
-          <div className="rounded-lg border border-border/60 bg-muted/10 px-4 py-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">
-                  {attachment.tool_name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t("deployments.willBeReplaced")}
-                </p>
-              </div>
-              <Badge variant="secondary">
-                {attachment.current_version_tag}
-              </Badge>
-            </div>
-          </div>
-        )}
+          {!hasManyAttachments && (
+            <p className="sr-only">{t("deployments.singleAttachmentTarget")}</p>
+          )}
+        </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4">
+      <div className="flex items-center justify-between pt-2">
         <Button variant="ghost" onClick={onCancel} disabled={isBusy}>
           {t("deployments.cancel")}
         </Button>
@@ -169,12 +179,31 @@ export default function ReviewPhaseContent({
           <Button variant="outline" onClick={onBack} disabled={isBusy}>
             {t("deployments.back")}
           </Button>
-          <Button onClick={onConfirm} disabled={isBusy}>
-            {t("deployments.update")}
+          <Button onClick={onConfirm} disabled={isBusy} ignoreTitleCase>
+            {replaceActionLabel}
           </Button>
         </div>
       </div>
     </>
+  );
+}
+
+function VersionSummaryCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-h-16 items-center justify-center rounded-lg bg-muted px-4">
+      <div className="space-y-2 text-center">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {label}
+        </div>
+        <div className="text-sm font-semibold">{value}</div>
+      </div>
+    </div>
   );
 }
 
