@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from lfx.components.models_and_agents.memory import MemoryComponent
+from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
@@ -491,16 +491,15 @@ class AgentComponent(ToolCallingAgentComponent):
             return Data(data={"content": "", "error": str(exc)})
 
     async def get_memory_data(self):
-        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
-        messages = (
-            await MemoryComponent(**self.get_base_args())
-            .set(
-                session_id=self.graph.session_id,
-                context_id=self.context_id,
-                order="Ascending",
-                n_messages=self.n_messages,
-            )
-            .retrieve_messages()
+        # Scope by flow_id so default playground session names (e.g. "New Session 0")
+        # cannot leak chat history across unrelated flows. See issue #13059.
+        # The helper also returns [] when n_messages == 0, preserving the
+        # explicit "memory disabled" contract from MemoryComponent.retrieve_messages.
+        messages = await aget_agent_chat_history(
+            session_id=self.graph.session_id,
+            flow_id=getattr(self.graph, "flow_id", None),
+            context_id=self.context_id,
+            n_messages=self.n_messages,
         )
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
