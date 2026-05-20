@@ -745,7 +745,7 @@ class Settings(BaseSettings):
         env_value = os.getenv("LANGFLOW_COMPONENTS_PATH")
         if env_value:
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            # LE-1015: split on os.pathsep so multi-entry env vars
+            # Split on os.pathsep so multi-entry env vars
             # ("/path/A:/path/B" on POSIX, "C:\\a;D:\\b" on Windows) are
             # parsed as multiple components paths instead of one literal
             # non-existent path. Empty segments (e.g. trailing pathsep) are

@@ -1,4 +1,4 @@
-"""Atomic-swap Bundle reload pipeline (LE-1018).
+"""Atomic-swap Bundle reload pipeline.
 
 The :func:`reload_bundle` function is the single entry point for replacing
 a Bundle's component set in-place under load.  It runs five clearly-marked
@@ -9,14 +9,14 @@ The five stages
 ---------------
 
 1. **Stage 1 -- parallel load** into a per-reload staging namespace
-   (``__reload_staging__.<reload_id>``).  Uses the LE-1015 loader with
+   (``__reload_staging__.<reload_id>``).  Uses the component loader with
    ``module_namespace`` overridden so that the new modules land in
    ``sys.modules`` without colliding with the live ``_lfx_ext.*`` entries.
 
 2. **Stage 2 -- validate** the staging result.  Any error from the loader
    (manifest invalid, import failure, duplicate class names, etc.) aborts
    the reload here.  The live registry is untouched and a
-   ``bundle_reload_failed`` event is emitted (currently stubbed; LE-1017).
+   ``bundle_reload_failed`` event is emitted (currently stubbed).
 
 3. **Stage 3 -- atomic swap** under the registry's write lock.  This is
    the only stage that mutates shared state.  Old ``sys.modules`` entries
@@ -30,8 +30,7 @@ The five stages
 
 5. **Stage 5 -- emit** a ``bundle_reloaded`` event with the
    ``components_added`` / ``components_removed`` deltas.  Currently a
-   structured-log shim; LE-1017 will swap the body to the real
-   ``ExtensionEventsService``.
+   structured-log shim; a future ``ExtensionEventsService`` will own this.
 
 Concurrency invariants
 ----------------------
@@ -58,7 +57,8 @@ This pipeline only applies to Mode A (in-process Python install).  In
 Mode B/C the bundle code lives in a different container image; reload
 there means rebuilding the image, not calling this function.  The HTTP
 endpoint and CLI both gate on Mode A; if you find yourself reaching into
-this module from a non-Mode-A path, stop and re-read LE-905 first.
+this module from a non-Mode-A path, stop and re-read the Bundle
+Separation design notes first.
 """
 
 from __future__ import annotations
@@ -586,18 +586,19 @@ def _failure(
 # ---------------------------------------------------------------------------
 
 
-# TODO(LE-1017): replace this stub with a call to
-# ExtensionEventsService.emit(...) once the events pipeline ticket lands.
-# The shape of the payload below is what the events service will consume:
-# the ReloadResult is serializable and carries everything needed for the
-# bundle_reloaded / bundle_reload_failed discriminants.
+# TODO: replace this stub with a call to ExtensionEventsService.emit(...)
+# once the events pipeline lands.  The shape of the payload below is what
+# the events service will consume: the ReloadResult is serializable and
+# carries everything needed for the bundle_reloaded / bundle_reload_failed
+# discriminants.
 def _emit_bundle_reload_event(result: ReloadResult) -> None:
-    """Stub for the LE-1017 events pipeline.
+    """Stub for the extension events pipeline.
 
-    Currently logs a structured event; LE-1017 will swap the body to
-    ``ExtensionEventsService.emit("bundle_reloaded" | "bundle_reload_failed", payload)``.
-    Tests can monkey-patch this symbol to capture emissions without
-    waiting for the events service to land.
+    Currently logs a structured event; a future ``ExtensionEventsService``
+    will swap the body to ``.emit("bundle_reloaded" |
+    "bundle_reload_failed", payload)``.  Tests can monkey-patch this
+    symbol to capture emissions without waiting for the events service
+    to land.
     """
     if result.ok:
         logger.info(
