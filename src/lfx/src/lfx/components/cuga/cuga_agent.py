@@ -20,7 +20,7 @@ from lfx.base.models.model_input_constants import (
 from lfx.base.models.model_utils import get_model_name
 from lfx.components.helpers import CurrentDateComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
-from lfx.components.models_and_agents.memory import MemoryComponent
+from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
 from lfx.custom.custom_component.component import _get_component_toolkit
 from lfx.custom.utils import update_component_build_config
 from lfx.field_typing import Tool
@@ -488,10 +488,13 @@ class CugaComponent(ToolCallingAgentComponent):
         logger.debug(f"[CUGA] input_value type: {type(self.input_value)}")
         logger.debug(f"[CUGA] input_value id: {getattr(self.input_value, 'id', None)}")
 
-        messages = (
-            await MemoryComponent(**self.get_base_args())
-            .set(session_id=str(self.graph.session_id), order="Ascending", n_messages=self.n_messages)
-            .retrieve_messages()
+        # Scope by flow_id (issue #13059): the ad-hoc MemoryComponent used previously
+        # had no _vertex, so it could not see the running flow's flow_id and emitted
+        # an unscoped query. The helper also honors n_messages == 0 as "disabled".
+        messages = await aget_agent_chat_history(
+            session_id=str(self.graph.session_id),
+            flow_id=getattr(self.graph, "flow_id", None),
+            n_messages=self.n_messages,
         )
         logger.debug(f"[CUGA] Retrieved {len(messages)} messages from memory")
         return [

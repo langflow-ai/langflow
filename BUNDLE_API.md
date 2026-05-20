@@ -333,3 +333,29 @@ the deserialize half is covered by
     / ``load_seed_extensions`` moved to
     ``lfx.extension.loader._startup``.  Both are re-exported from
     their previous import paths so external imports are unchanged.
+  - **Editable installs are discovered via the entry-point fallback.**
+    ``_distribution_manifest_path`` now falls back to the
+    ``langflow.extensions`` entry-point group when ``dist.files`` only
+    surfaces ``dist-info/`` entries (the ``pip install -e`` /
+    ``uv pip install -e`` case).  The entry-point value is resolved
+    via ``importlib.util.find_spec`` -- which runs import-system
+    finders but never executes the module body -- and the resulting
+    package directory is scanned for ``extension.json`` or a
+    ``[tool.langflow.extension]`` pyproject.  Wheel installs are
+    unaffected: the fallback only fires when the primary ``dist.files``
+    scan finds no manifest.  Previously, editable-installed bundles
+    were silently dropped by ``lfx extension list`` and the registry,
+    even though the bundle pyproject already declared the
+    entry-point.
+  - **Reload CLI: ``--bundle`` is optional; ``--all`` is implemented.**
+    ``lfx extension reload <ext_id>`` now resolves the bundle name
+    from local ``discover_all_extensions`` when ``--bundle`` is
+    omitted; explicit ``--bundle`` still wins for cases where the
+    local install is not visible to the running server.
+    ``lfx extension reload --all`` iterates every locally-discovered
+    bundle, POSTs reload to each, and exits non-zero if any reload
+    fails (previously hard-errored as "not yet wired").  ``--all`` is
+    mutually exclusive with a positional id / ``--bundle`` (exit 2).
+    The HTTP wire contract (``POST /api/v1/extensions/{id}/bundles/
+    {name}/reload`` per-bundle) is unchanged; this is a CLI-only
+    surface change.
