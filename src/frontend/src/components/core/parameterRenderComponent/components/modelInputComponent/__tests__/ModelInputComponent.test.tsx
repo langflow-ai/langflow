@@ -1185,6 +1185,8 @@ describe("ModelInputComponent", () => {
         screen.queryByTestId("model-input-load-failed"),
       ).not.toBeInTheDocument();
     });
+  });
+
   describe("ModelInput filters", () => {
     // Restore the suite-level default mocks before each test in this block —
     // ``jest.clearAllMocks`` only clears call history, not implementations,
