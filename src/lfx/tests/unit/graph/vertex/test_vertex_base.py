@@ -22,10 +22,13 @@ from lfx.utils.util import unescape_string
 
 
 class ComponentWithThreadLocal:
+    """Component stub carrying thread-local state that cannot be pickled."""
+
     def __init__(self) -> None:
         self._console_thread_local = threading.local()
 
     def set_vertex(self, vertex) -> None:
+        """Attach the vertex like real Langflow component instances do."""
         self.vertex = vertex
 
 
