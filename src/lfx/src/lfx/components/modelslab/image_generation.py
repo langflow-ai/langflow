@@ -10,6 +10,7 @@ _MODELSLAB_TEXT2IMG_URL = "https://modelslab.com/api/v6/images/text2img"
 _MODELSLAB_FETCH_URL = "https://modelslab.com/api/v6/images/fetch/{request_id}"
 _POLL_INTERVAL = 5  # seconds
 _POLL_TIMEOUT = 300  # seconds
+_EXPECTED_DIMENSION_PARTS = 2
 
 
 class ModelsLabImageGenerationComponent(Component):
@@ -76,6 +77,15 @@ class ModelsLabImageGenerationComponent(Component):
             required=False,
             advanced=True,
         ),
+        DropdownInput(
+            name="safety_checker",
+            display_name="Safety Checker",
+            info="Whether ModelsLab should apply safety checking to generated images.",
+            options=["no", "yes"],
+            value="no",
+            required=False,
+            advanced=True,
+        ),
     ]
 
     outputs = [
@@ -91,11 +101,13 @@ class ModelsLabImageGenerationComponent(Component):
 
         ModelsLab uses key-in-body authentication and an asynchronous pattern:
         responses may return ``status: processing`` with a request_id, requiring
-        polling until ``status: success``.
+        polling until ``status: success``. The advanced ``safety_checker``
+        option is passed through as ``yes`` or ``no``.
         """
         dims = self.size.split("x") if self.size else ["1024", "1024"]
-        width = int(dims[0]) if len(dims) == 2 else 1024
-        height = int(dims[1]) if len(dims) == 2 else 1024
+        width = int(dims[0]) if len(dims) == _EXPECTED_DIMENSION_PARTS else 1024
+        height = int(dims[1]) if len(dims) == _EXPECTED_DIMENSION_PARTS else 1024
+        safety_checker = self.safety_checker if self.safety_checker in {"yes", "no"} else "no"
 
         payload = {
             "key": self.api_key,
@@ -106,7 +118,7 @@ class ModelsLabImageGenerationComponent(Component):
             "height": height,
             "samples": max(1, min(4, self.samples or 1)),
             "num_inference_steps": max(10, min(50, self.num_inference_steps or 30)),
-            "safety_checker": "no",
+            "safety_checker": safety_checker,
             "enhance_prompt": "yes",
         }
 
@@ -160,7 +172,6 @@ class ModelsLabImageGenerationComponent(Component):
 
         with httpx.Client(timeout=30.0) as client:
             while time.time() < deadline:
-                time.sleep(_POLL_INTERVAL)
                 try:
                     resp = client.post(
                         fetch_url,
@@ -170,6 +181,7 @@ class ModelsLabImageGenerationComponent(Component):
                     resp.raise_for_status()
                     data = resp.json()
                 except httpx.HTTPError:
+                    time.sleep(_POLL_INTERVAL)
                     continue
 
                 if data.get("status") == "error":
@@ -177,6 +189,8 @@ class ModelsLabImageGenerationComponent(Component):
                     return {}
                 if data.get("status") == "success":
                     return data
+
+                time.sleep(_POLL_INTERVAL)
 
         self.status = f"Error: timed out after {_POLL_TIMEOUT}s"
         return {}
