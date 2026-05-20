@@ -60,6 +60,7 @@ from langflow.services.auth.utils import (
     get_current_user_for_sse,
     get_optional_user,
 )
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -766,6 +767,14 @@ async def simplified_run_flow(
             - "end": Final execution result
         - Authentication: Requires API key (Bearer token)
     """
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -834,6 +843,14 @@ async def simplified_run_flow_session(
             detail="This endpoint is not available",
         )
 
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -921,6 +938,15 @@ async def webhook_run_flow(
     # Webhook user and flow are resolved by the dependency
     webhook_user = auth.user
     flow = auth.flow
+
+    await ensure_flow_permission(
+        webhook_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         data = await request.body()

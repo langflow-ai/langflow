@@ -90,10 +90,34 @@ src/
 ### Service Layer
 Backend services in `src/backend/base/langflow/services/`:
 - `auth/` - Authentication
+- `authorization/` - Authorization (RBAC) plugin layer — see below
 - `database/` - SQLAlchemy models and migrations
 - `cache/` - Caching layer
 - `storage/` - File storage
 - `tracing/` - Observability integrations
+
+### Authorization (RBAC)
+
+Authorization is a pluggable layer separate from authentication:
+
+- **OSS** ships the interface (`BaseAuthorizationService` in `lfx`) + a pass-through implementation (`LangflowAuthorizationService`) + the `authz_*` and `casbin_rule` DB schema + route guards.
+- **Enterprise** registers a Casbin-backed implementation via the `lfx.services` entry point `authorization_service` in `lfx.toml` (same pattern as the SSO `auth_service`). The enterprise plugin reads `authz_*` admin tables and writes compiled Casbin rules to `casbin_rule`.
+
+Default is **off**: `LANGFLOW_AUTHZ_ENABLED=false`. When enabled with only the OSS stub registered, every check returns allow — the stub is a no-op so routes stay wired and audit rows still flow. Real allow/deny requires the enterprise plugin.
+
+Route guards live in `langflow.services.authorization.utils`:
+- `ensure_flow_permission(user, FlowAction.*, flow_id=..., flow_user_id=..., workspace_id=..., folder_id=...)` — single-flow CRUD + execute
+- `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
+- `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
+- `filter_visible_resources(user, resource_type=..., candidates=..., act=...)` — list-endpoint filter; safe no-op in OSS
+
+The Casbin request shape is `(subject, domain, object, action)`:
+- subject = `user:{uuid}`
+- domain = `workspace:{uuid}` → `project:{uuid}` → `*` (resolved by `_resolve_flow_domain`)
+- object = `flow:{uuid}` / `deployment:{uuid}` / `project:{uuid}` / `flow:*` / etc.
+- action = `read` / `write` / `create` / `delete` / `execute` / `deploy`
+
+Use `langflow authz dry-run` to simulate a built-in policy against the live audit table without enabling enforcement.
 
 ## Component Development
 

@@ -39,7 +39,7 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -158,6 +158,15 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
+            # When AUTHZ_ENABLED=true, drop any flows the user can't read. OSS
+            # default is pass-through (returns the input list unchanged); the
+            # enterprise plugin uses batch_enforce to apply share/role checks.
+            flows = await filter_visible_resources(
+                current_user,
+                resource_type="flow",
+                candidates=list(flows),
+                act=FlowAction.READ,
+            )
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]

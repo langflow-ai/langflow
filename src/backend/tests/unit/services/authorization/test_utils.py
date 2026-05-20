@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.services.authorization import utils as authz_utils
-from langflow.services.authorization.actions import DeploymentAction, FlowAction
+from langflow.services.authorization.actions import DeploymentAction, FlowAction, ProjectAction
 
 
 class _StubAuthorizationService:
@@ -362,6 +362,75 @@ async def test_non_owner_falls_through_to_enforce(monkeypatch, fake_user):
             flow_id=uuid4(),
             flow_user_id=uuid4(),
         )
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_project_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_accepts_enum(monkeypatch, fake_user):
+    """A ProjectAction enum is coerced to its string value before enforce."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    project_id = uuid4()
+    await authz_utils.ensure_project_permission(fake_user, ProjectAction.READ, project_id=project_id)
+    assert service.calls[0]["act"] == "read"
+    assert service.calls[0]["obj"] == f"project:{project_id}"
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_uses_workspace_domain(monkeypatch, fake_user):
+    """workspace_id is mapped to a workspace: domain string and forwarded in context."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    workspace_id = uuid4()
+    await authz_utils.ensure_project_permission(
+        fake_user, ProjectAction.WRITE, project_id=uuid4(), project_user_id=uuid4(), workspace_id=workspace_id
+    )
+    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
+    assert service.calls[0]["context"]["workspace_id"] == workspace_id
+
+
+@pytest.mark.anyio
+async def test_project_owner_override_skips_enforce(monkeypatch, fake_user):
+    """A project owner short-circuits the enforce call entirely."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)  # Would deny if asked.
+    _install_authz(monkeypatch, service)
+    audit_calls = _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_project_permission(
+        fake_user,
+        ProjectAction.DELETE,
+        project_id=uuid4(),
+        project_user_id=fake_user.id,
+        workspace_id=uuid4(),
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+@pytest.mark.anyio
+async def test_ensure_project_permission_create_uses_wildcard_obj(monkeypatch, fake_user):
+    """ProjectAction.CREATE without a project_id targets ``project:*`` (workspace-scoped create)."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_project_permission(fake_user, ProjectAction.CREATE)
+    assert service.calls[0]["obj"] == "project:*"
+    assert service.calls[0]["act"] == "create"
 
 
 # ----------------------------------------------------------------------------- #

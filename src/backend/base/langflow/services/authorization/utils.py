@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
-from langflow.services.authorization.actions import DeploymentAction, FlowAction
+from langflow.services.authorization.actions import DeploymentAction, FlowAction, ProjectAction
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -32,9 +32,9 @@ def _auth_context(user: User | UserRead) -> dict[str, Any]:
     return {"is_superuser": getattr(user, "is_superuser", False)}
 
 
-def _coerce_action(act: DeploymentAction | FlowAction | str) -> str:
+def _coerce_action(act: DeploymentAction | FlowAction | ProjectAction | str) -> str:
     """Return the string value of an action enum or pass through a raw string."""
-    if isinstance(act, (FlowAction, DeploymentAction)):
+    if isinstance(act, (FlowAction, DeploymentAction, ProjectAction)):
         return act.value
     return act
 
@@ -261,6 +261,50 @@ async def ensure_deployment_permission(
             "deployment_user_id": deployment_user_id,
             "workspace_id": workspace_id,
             "project_id": project_id,
+        },
+    )
+
+
+async def ensure_project_permission(
+    user: User | UserRead,
+    act: ProjectAction | str,
+    *,
+    project_id: UUID | None = None,
+    project_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check project-scoped permission with workspace domain + owner override.
+
+    Projects are the OSS persistent name for folders. The Casbin object is
+    ``project:{project_id}`` (or ``project:*`` for list/create). The domain
+    resolves to ``workspace:{workspace_id}`` when set, otherwise ``*``.
+    The project owner is always allowed (audited as ``owner_override``).
+    """
+    obj = f"project:{project_id}" if project_id else "project:*"
+    act_str = _coerce_action(act)
+    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, None)
+
+    if project_user_id is not None and getattr(user, "id", None) == project_user_id:
+        settings = get_settings_service()
+        if settings.auth_settings.AUTHZ_ENABLED:
+            await audit_decision(
+                user_id=user.id,
+                action=f"project:{act_str}",
+                obj=obj,
+                result=_AUDIT_OWNER_OVERRIDE,
+                details={"domain": resolved_domain},
+            )
+        return
+
+    await ensure_permission(
+        user,
+        domain=resolved_domain,
+        obj=obj,
+        act=act_str,
+        context={
+            "project_user_id": project_user_id,
+            "workspace_id": workspace_id,
         },
     )
 
