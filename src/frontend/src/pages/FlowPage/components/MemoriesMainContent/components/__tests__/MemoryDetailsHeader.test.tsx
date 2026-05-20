@@ -1,7 +1,25 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
 import type { MemoryDetailsHeaderProps } from "../../types";
 import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
+
+const mockSetSuccessData = jest.fn();
+const mockSetErrorData = jest.fn();
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (s: unknown) => unknown) =>
+    selector({
+      setSuccessData: mockSetSuccessData,
+      setErrorData: mockSetErrorData,
+    }),
+}));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -58,6 +76,10 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
     </div>
   ),
 }));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe("MemoryDetailsHeader", () => {
   const makeProps = (overrides?: Partial<MemoryDetailsHeaderProps>) => {
@@ -277,5 +299,90 @@ describe("MemoryDetailsHeader", () => {
     const scrollDiv = container.querySelector(".overflow-y-auto");
     expect(scrollDiv).not.toBeNull();
     expect(scrollDiv).toHaveTextContent("Loading");
+  });
+
+  describe("handleRefresh", () => {
+    it("disables the refresh button while refreshing", async () => {
+      let resolve!: () => void;
+      const onRefresh = jest.fn(
+        () =>
+          new Promise<void>((res) => {
+            resolve = res;
+          }),
+      );
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
+      fireEvent.click(btn);
+      expect(btn).toBeDisabled();
+
+      await act(async () => {
+        resolve();
+      });
+    });
+
+    it("shows success toast after onRefresh resolves", async () => {
+      const onRefresh = jest.fn().mockResolvedValue(undefined);
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetSuccessData).toHaveBeenCalledWith({
+          title: `Memory "Memory One" refreshed`,
+        });
+      });
+    });
+
+    it("does not show success toast when onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("network"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetErrorData).toHaveBeenCalled();
+      });
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+    });
+
+    it("shows error toast with api message when onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("timeout"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: "Failed to refresh memory",
+          list: ["timeout"],
+        });
+      });
+    });
+
+    it("re-enables the refresh button after onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("fail"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
+      fireEvent.click(btn);
+
+      await waitFor(() => expect(btn).not.toBeDisabled());
+    });
   });
 });

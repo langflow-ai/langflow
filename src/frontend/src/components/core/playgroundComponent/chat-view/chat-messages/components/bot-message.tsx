@@ -1,4 +1,5 @@
 import { memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import IconComponent, {
   ForwardedIconComponent,
@@ -25,6 +26,7 @@ import { EditMessageButton } from "./message-options";
 
 export const BotMessage = memo(
   ({ chat, lastMessage, updateChat, playgroundPage }: chatMessagePropsType) => {
+    const { t } = useTranslation();
     const setErrorData = useAlertStore((state) => state.setErrorData);
     const [editMessage, setEditMessage] = useState(false);
     const isBuilding = useFlowStore((state) => state.isBuilding);
@@ -65,7 +67,7 @@ export const BotMessage = memo(
           },
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },
@@ -96,7 +98,7 @@ export const BotMessage = memo(
         {
           onError: () => {
             setErrorData({
-              title: "Error updating messages.",
+              title: t("errors.updatingMessages"),
             });
           },
         },
@@ -159,20 +161,22 @@ export const BotMessage = memo(
                   {!thinkingActive && displayTime > 0 && (
                     <ForwardedIconComponent
                       name="Check"
-                      className="h-4 w-4 text-emerald-400"
+                      className="h-4 w-4 text-accent-emerald-foreground"
                     />
                   )}
                   <span className="w-full flex justify-between">
                     {thinkingActive && displayTime > 0 ? (
-                      <span>Running... {formatSeconds(displayTime)}</span>
+                      <span>
+                        {t("chat.runningStatus")} {formatSeconds(displayTime)}
+                      </span>
                     ) : !thinkingActive && displayTime > 0 ? (
                       <>
                         <span className="text-muted-foreground">
-                          Finished in
+                          {t("chat.finishedIn")}
                         </span>
                         <MessageMetadata
                           duration={displayTime}
-                          usage={chat.properties?.usage}
+                          usage={chat.properties?.usage ?? undefined}
                           timestamp={chat.timestamp}
                         />
                       </>

@@ -437,6 +437,7 @@ jobs:
   publish-nightly-main:
     name: Publish Langflow Main Nightly to PyPI
     needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

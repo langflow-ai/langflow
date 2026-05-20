@@ -717,10 +717,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
             !isFullSidebarPanelMounted && "hidden",
             isFullSidebarPanelMounted &&
-              "transition-[opacity,transform] duration-200 ease-in-out transform-gpu",
-            isFullSidebarPanelMounted &&
               !isFullSidebarPanelShown &&
-              "opacity-0 -translate-x-1 pointer-events-none",
+              "opacity-0 pointer-events-none",
           )}
         >
           {showVersions && currentFlowForVersions?.id ? (

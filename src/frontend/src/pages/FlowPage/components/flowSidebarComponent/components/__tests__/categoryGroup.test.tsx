@@ -261,7 +261,7 @@ describe("CategoryGroup", () => {
         ...defaultProps,
         dataFilter: {
           ...defaultProps.dataFilter,
-          unknownCategory: {
+          unknown_category: {
             unknownComp: { ...mockAPIClass, display_name: "Unknown Component" },
           },
         },
@@ -270,11 +270,13 @@ describe("CategoryGroup", () => {
       render(<CategoryGroup {...propsWithUnknownCategory} />);
 
       expect(
-        screen.getByTestId("category-disclosure-unknownCategory"),
+        screen.getByTestId("category-disclosure-unknown_category"),
       ).toBeInTheDocument();
+      // Snake-case fallbacks are humanised to Title Case so runtime-discovered
+      // bundles render as ``Demo Bundle`` instead of ``demo_bundle``.
       expect(
         screen.getByText(
-          "CategoryDisclosure for unknownCategory - Open: false",
+          "CategoryDisclosure for Unknown Category - Open: false",
         ),
       ).toBeInTheDocument();
     });

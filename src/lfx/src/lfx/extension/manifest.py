@@ -82,7 +82,7 @@ _EXTENSION_ID_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 """Extension IDs are lowercase, hyphenated, must start with a letter, 2-64 chars.
 Mirrors the npm-package / PyPI normalization rules."""
 
-_BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
+BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 """Bundle names use snake_case so they can be addressed in the registry as
 ``ext:<bundle>:<Class>@<slot>`` without quoting."""
 
@@ -191,7 +191,7 @@ class BundleRef(BaseModel):
 
     name: StrictStr = Field(
         ...,
-        pattern=_BUNDLE_NAME_RE.pattern,
+        pattern=BUNDLE_NAME_RE.pattern,
         description=(
             "Bundle name; addressable as ext:<name>:<Class>@<slot>. "
             "Lowercase snake_case, starting with a letter, 2-64 chars."
@@ -201,6 +201,26 @@ class BundleRef(BaseModel):
         ...,
         min_length=1,
         description="Path to the bundle directory, relative to the manifest.",
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description=(
+            "Optional human-friendly label rendered in the sidebar header. "
+            "When omitted, the UI derives one by humanising ``name`` "
+            "(``my_bundle`` -> ``My Bundle``)."
+        ),
+    )
+    icon: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=64,
+        description=(
+            "Optional Lucide icon name used for the sidebar header glyph. "
+            "When omitted, the UI falls back to a generic ``Package`` icon "
+            "for installed extensions and ``folder`` otherwise."
+        ),
     )
 
     @field_validator("path")
