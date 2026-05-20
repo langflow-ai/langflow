@@ -582,6 +582,54 @@ async def test_filter_visible_resources_accepts_custom_key(monkeypatch, fake_use
     assert service.batch_calls[0]["requests"][0][1] == "write"
 
 
+@pytest.mark.anyio
+async def test_filter_visible_resources_groups_by_extracted_domain(monkeypatch, fake_user):
+    """With ``domain_extractor`` set, batch_enforce is called once per unique domain.
+
+    Each call sees only the candidates that resolved to that domain, so the
+    enterprise plugin evaluates each candidate against the right Casbin tuple
+    (the single-domain default would force every candidate through the same
+    wildcard domain, hiding project-scoped grants).
+    """
+    _install_settings(monkeypatch, authz_enabled=True)
+    workspace_a = uuid4()
+    workspace_b = uuid4()
+
+    items = [
+        SimpleNamespace(id=uuid4(), workspace_id=workspace_a, folder_id=None),
+        SimpleNamespace(id=uuid4(), workspace_id=workspace_b, folder_id=None),
+        SimpleNamespace(id=uuid4(), workspace_id=workspace_a, folder_id=None),
+    ]
+
+    # Deny everything in workspace_b, allow everything in workspace_a.
+    class _DomainAwareStub:
+        def __init__(self) -> None:
+            self.batch_calls: list[dict] = []
+
+        async def batch_enforce(self, **kwargs) -> list[bool]:
+            self.batch_calls.append(kwargs)
+            allowed = kwargs["domain"] != f"workspace:{workspace_b}"
+            return [allowed] * len(kwargs["requests"])
+
+    service = _DomainAwareStub()
+    _install_authz(monkeypatch, service)
+
+    result = await authz_utils.filter_visible_resources(
+        fake_user,
+        resource_type="project",
+        candidates=items,
+        domain_extractor=lambda project: authz_utils._resolve_casbin_domain(project.workspace_id, None),
+        act=FlowAction.READ,
+    )
+
+    # Two calls — one per unique domain.
+    domains_called = {call["domain"] for call in service.batch_calls}
+    assert domains_called == {f"workspace:{workspace_a}", f"workspace:{workspace_b}"}
+
+    # Output preserves the original order, with workspace_b's item dropped.
+    assert result == [items[0], items[2]]
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_deployment_permission
 # ----------------------------------------------------------------------------- #

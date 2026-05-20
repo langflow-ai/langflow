@@ -18,7 +18,7 @@ from enum import Enum
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlalchemy import Column, ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Index, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -195,6 +195,27 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # Hot path: "list all shares for resource X" → composite index avoids
         # a bitmap-AND of two single-column indexes.
         Index("ix_authz_share_resource", "resource_type", "resource_id"),
+        # Bound scope and permission_level to known enum values at the DB
+        # level. Without this, an enterprise plugin (or a manual INSERT) could
+        # write a typo like ``scope='PRIVATE'`` that silently bypasses the
+        # partial unique indexes (which match on the lowercase form).
+        CheckConstraint(
+            "scope IN ('private', 'team', 'user', 'public')",
+            name="ck_authz_share_scope_enum",
+        ),
+        CheckConstraint(
+            "permission_level IN ('read', 'write', 'execute', 'admin')",
+            name="ck_authz_share_permission_enum",
+        ),
+        # Targeted (TEAM/USER) shares require a target_id; untargeted
+        # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
+        # split so callers can't accidentally construct rows that one index
+        # covers but the other shouldn't.
+        CheckConstraint(
+            "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
+            "OR (scope IN ('private', 'public') AND target_id IS NULL)",
+            name="ck_authz_share_scope_target_consistency",
+        ),
         Index(
             "uq_authz_share_targeted",
             "resource_type",

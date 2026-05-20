@@ -941,10 +941,10 @@ async def test_permission_check_with_invalid_flow_id(client: AsyncClient, create
 async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that permission check happens before flow execution to prevent resource usage.
 
-    Post-fix behavior is 404 from the helper rather than 403 from
-    ``check_flow_user_permission`` so we avoid the 403-vs-404 existence oracle.
-    The "block before execution" guarantee still holds -- we short-circuit
-    earlier now, not later.
+    The 404 comes from ``get_flow_for_api_key_user`` which scopes lookups by
+    user_id, so cross-user access fails closed at the dependency layer rather
+    than via a downstream 403 (which would have given attackers a
+    403-vs-404 existence oracle on flow UUIDs).
     """
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]

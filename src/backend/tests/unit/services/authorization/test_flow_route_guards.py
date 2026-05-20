@@ -297,6 +297,7 @@ def test_read_flows_list_uses_filter_visible_resources(routes):
         (_ENDPOINTS_FILE, "simplified_run_flow"),
         (_ENDPOINTS_FILE, "simplified_run_flow_session"),
         (_ENDPOINTS_FILE, "webhook_run_flow"),
+        (_ENDPOINTS_FILE, "experimental_run_flow"),
     ],
 )
 def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
@@ -307,6 +308,24 @@ def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
     assert calls, f"{func_name} has no ensure_flow_permission call"
     actions = {_action_arg(c) for c in calls}
     assert "FlowAction.EXECUTE" in actions, f"{func_name} actions={actions}, expected FlowAction.EXECUTE"
+
+
+def test_check_flow_user_permission_is_gone():
+    """The standalone owner-only ``check_flow_user_permission`` helper has been removed.
+
+    It duplicated the work that ``ensure_flow_permission`` now does at the
+    route boundary, AND it would have rejected legitimate enterprise execute
+    grants on shared flows (a real bug under Casbin enforcement). The new
+    contract is "every ``_run_flow_internal`` caller authorizes EXECUTE first";
+    leaving a downstream owner-only check would silently re-introduce the
+    regression on any future route that wires up the internal helper without
+    calling ensure_flow_permission upstream.
+    """
+    funcs = _parse_async_funcs(_ENDPOINTS_FILE)
+    assert "check_flow_user_permission" not in funcs, (
+        "check_flow_user_permission should be removed; the route-level "
+        "ensure_flow_permission(EXECUTE) is the only authorization gate now"
+    )
 
 
 # ----------------------------------------------------------------------------- #

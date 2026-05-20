@@ -325,6 +325,7 @@ async def filter_visible_resources(
     candidates: list[T],
     key: Callable[[T], UUID] | None = None,
     domain: str = "*",
+    domain_extractor: Callable[[T], str] | None = None,
     act: FlowAction | str = FlowAction.READ,
 ) -> list[T]:
     """Return the subset of `candidates` that the user is allowed to read.
@@ -332,6 +333,15 @@ async def filter_visible_resources(
     No-op when ``AUTHZ_ENABLED=false`` — returns the input list unchanged.
     Plumbing for list endpoints; the OSS pass-through always returns the full
     list, so calling this is safe to add ahead of enterprise plugin rollout.
+
+    ``domain_extractor`` lets callers compute a per-candidate domain string
+    (typically via :func:`_resolve_casbin_domain`). Without it, every request
+    in the batch evaluates against the same ``domain``, which makes
+    project-scoped policy grants invisible when candidates live in different
+    workspaces or projects. With it, candidates are grouped by their resolved
+    domain and the enforcer is called once per group, so each request is
+    evaluated against the right Casbin tuple. The OSS pass-through ignores
+    domain entirely and returns ``[True] * len(requests)`` for either path.
     """
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED or not candidates:
@@ -340,14 +350,38 @@ async def filter_visible_resources(
     extractor = key if key is not None else _default_resource_id_getter
     authz = get_authorization_service()
     act_str = _coerce_action(act)
-    requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in candidates]
-    results = await authz.batch_enforce(
-        user_id=user.id,
-        domain=domain,
-        requests=requests,
-        context=_auth_context(user),
-    )
-    return [item for item, allowed in zip(candidates, results, strict=True) if allowed]
+
+    if domain_extractor is None:
+        # Single-domain fast path. Preserves the original single-call shape.
+        requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in candidates]
+        results = await authz.batch_enforce(
+            user_id=user.id,
+            domain=domain,
+            requests=requests,
+            context=_auth_context(user),
+        )
+        return [item for item, allowed in zip(candidates, results, strict=True) if allowed]
+
+    # Group candidates by their resolved domain so each batch_enforce call
+    # evaluates against a single Casbin tuple. Preserves the input order on
+    # output by carrying the original index through the per-domain bucket.
+    buckets: dict[str, list[tuple[int, T]]] = {}
+    for index, item in enumerate(candidates):
+        buckets.setdefault(domain_extractor(item), []).append((index, item))
+
+    decisions: list[bool | None] = [None] * len(candidates)
+    auth_context = _auth_context(user)
+    for resolved_domain, bucket in buckets.items():
+        bucket_requests = [(f"{resource_type}:{extractor(item)}", act_str) for _, item in bucket]
+        bucket_results = await authz.batch_enforce(
+            user_id=user.id,
+            domain=resolved_domain,
+            requests=bucket_requests,
+            context=auth_context,
+        )
+        for (original_index, _), allowed in zip(bucket, bucket_results, strict=True):
+            decisions[original_index] = allowed
+    return [item for item, allowed in zip(candidates, decisions, strict=True) if allowed]
 
 
 def _default_resource_id_getter(item: Any) -> UUID:

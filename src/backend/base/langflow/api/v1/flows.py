@@ -40,6 +40,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
+from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -161,10 +162,14 @@ async def read_flows(
             # When AUTHZ_ENABLED=true, drop any flows the user can't read. OSS
             # default is pass-through (returns the input list unchanged); the
             # enterprise plugin uses batch_enforce to apply share/role checks.
+            # Per-flow ``domain_extractor`` groups requests so project-scoped
+            # grants are evaluated against the right Casbin tuple — flows in
+            # different workspaces/projects can't share a single domain.
             flows = await filter_visible_resources(
                 current_user,
                 resource_type="flow",
                 candidates=list(flows),
+                domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
                 act=FlowAction.READ,
             )
             if header_flows:

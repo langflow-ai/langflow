@@ -433,6 +433,98 @@ async def test_authz_share_allows_distinct_targets(authz_async_session: AsyncSes
 
 
 @pytest.mark.anyio
+async def test_authz_share_rejects_unknown_scope(authz_async_session: AsyncSession):
+    """``scope`` must be one of the documented enum values — ``ck_authz_share_scope_enum``."""
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="invalid_scope_sharer", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    flow = Flow(name="invalid-scope-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope="PRIVATE",  # typo that the lowercase enum doesn't cover
+            target_id=None,
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_share_rejects_targeted_with_null_target(authz_async_session: AsyncSession):
+    """USER/TEAM scopes require a non-NULL target_id — ``ck_authz_share_scope_target_consistency``."""
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="mismatched_share_sharer", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    flow = Flow(name="mismatched-share-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.USER.value,
+            target_id=None,  # USER without a target is invalid
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
+async def test_authz_share_rejects_untargeted_with_target(authz_async_session: AsyncSession):
+    """PRIVATE/PUBLIC scopes forbid target_id — ``ck_authz_share_scope_target_consistency``."""
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="public_with_target_sharer", password=_TEST_PASSWORD)
+    target = User(username="public_with_target_recipient", password=_TEST_PASSWORD)
+    authz_async_session.add_all([user, target])
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+    await authz_async_session.refresh(target)
+
+    flow = Flow(name="public-with-target-flow", data={"nodes": []}, user_id=user.id)
+    authz_async_session.add(flow)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(flow)
+
+    authz_async_session.add(
+        AuthzShare(
+            resource_type="flow",
+            resource_id=flow.id,
+            scope=ShareScope.PUBLIC.value,
+            target_id=target.id,  # PUBLIC with a target is invalid
+            permission_level=SharePermissionLevel.READ.value,
+            created_by=user.id,
+        )
+    )
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
 async def test_authz_edit_lock_persists(authz_async_session: AsyncSession):
     """AuthzEditLock persists with an expiry timestamp tied to a flow + user."""
     user = User(username="lock_holder", password=_TEST_PASSWORD)

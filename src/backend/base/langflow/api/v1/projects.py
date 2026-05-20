@@ -33,6 +33,7 @@ from langflow.api.v1.projects_mcp_helpers import (
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import ProjectAction, ensure_project_permission, filter_visible_resources
+from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -216,10 +217,14 @@ async def read_projects(
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
         # When AUTHZ_ENABLED=true, drop projects the user can't read. OSS
         # default is pass-through; the enterprise plugin honors role + share grants.
+        # ``domain_extractor`` groups requests by workspace so each batch is
+        # evaluated against the right Casbin tuple. Projects are the resource
+        # itself, so the domain falls back to workspace (or ``*``).
         projects = await filter_visible_resources(
             current_user,
             resource_type="project",
             candidates=list(projects),
+            domain_extractor=lambda project: _resolve_casbin_domain(project.workspace_id, None),
             act=ProjectAction.READ,
         )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)
