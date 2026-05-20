@@ -70,7 +70,7 @@ export function MemoryDetails({
           />
           <Popover open={configOpen} onOpenChange={setConfigOpen}>
             <PopoverTrigger asChild>
-              <div className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-muted/50">
+              <button type="button" className="flex w-full cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 text-left transition-colors hover:bg-muted/50">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted">
                   <IconComponent
                     name="Settings2"
@@ -90,7 +90,7 @@ export function MemoryDetails({
                     configOpen && "rotate-180",
                   )}
                 />
-              </div>
+              </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-72 p-4">
               <div className="flex flex-col gap-3 text-xs">
