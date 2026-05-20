@@ -1,4 +1,4 @@
-"""Production-install discovery for the Langflow Extension System (LE-1022).
+"""Production-install discovery for the Langflow Extension System.
 
 This module owns the two production install sources for Modes A, B, and C:
 
@@ -22,7 +22,7 @@ what actually pins these into the runtime; ``register_installed`` and
 ``register_seed`` consume the same :class:`DiscoveredExtension` shape.
 
 This is the production install path, not the loading path.  Component
-loading (LE-1015) is downstream of this; the Extension records here are
+loading is downstream of this; the Extension records here are
 what the loader ultimately resolves to a concrete Bundle directory.
 
 Errors are surfaced as :class:`~lfx.extension.errors.ExtensionError`
@@ -213,43 +213,112 @@ def _distribution_manifest_path(dist: importlib_metadata.Distribution) -> Path |
     if present; otherwise we fall back to a ``pyproject.toml`` that
     declares a ``[tool.langflow.extension]`` table.
 
+    For editable installs whose ``dist.files`` only surfaces ``dist-info/``
+    entries (the ``pip install -e`` / ``uv pip install -e`` case), we fall
+    back to the ``langflow.extensions`` entry-point group declared in the
+    distribution's ``pyproject.toml``.
+
     A missing or unreadable file iteration is treated as "no manifest"
     rather than as an error: the caller's scan should keep walking.
     """
     files = dist.files
-    if files is None:
+    if files is not None:
+        pyproject_candidate: Path | None = None
+        for relative in files:
+            if not relative.parts:
+                continue
+            last = relative.parts[-1]
+            if last == "extension.json":
+                try:
+                    located = Path(dist.locate_file(relative))
+                except (OSError, ValueError):
+                    continue
+                if located.is_file():
+                    return located
+            elif last == "pyproject.toml" and pyproject_candidate is None:
+                try:
+                    located = Path(dist.locate_file(relative))
+                except (OSError, ValueError):
+                    continue
+                if located.is_file():
+                    pyproject_candidate = located
+
+        if pyproject_candidate is not None:
+            try:
+                if _pyproject_declares_extension(pyproject_candidate):
+                    return pyproject_candidate
+            except OSError:
+                # Unreadable pyproject that might declare an extension.  Surface
+                # the candidate path so the downstream manifest-unreadable check
+                # fires with an actionable error instead of silently dropping
+                # the distribution.
+                return pyproject_candidate
+
+    return _distribution_manifest_path_via_entry_points(dist)
+
+
+def _distribution_manifest_path_via_entry_points(
+    dist: importlib_metadata.Distribution,
+) -> Path | None:
+    """Resolve the manifest of an editable install via its entry-point.
+
+    Editable installs (``pip install -e``, ``uv pip install -e``) record only
+    ``dist-info/`` entries in ``dist.files``: the package's source tree lives
+    behind a ``.pth`` file rather than under a wheel-installed directory, so
+    the ``files`` scan above never sees ``extension.json``.  The
+    ``langflow.extensions`` entry-point points at the package that ships the
+    manifest; we resolve it via :func:`importlib.util.find_spec` (which runs
+    the import-system finders but **never executes the module's body**) and
+    look for the manifest in the resulting package directory.
+
+    Returns ``None`` when the distribution has no usable entry-point, the
+    referenced module cannot be located on ``sys.path``, or the located
+    directory does not contain a manifest.
+    """
+    import importlib.util
+
+    try:
+        eps = dist.entry_points
+    except (OSError, AttributeError, TypeError):
+        return None
+    if eps is None:
         return None
 
-    pyproject_candidate: Path | None = None
-    for relative in files:
-        if not relative.parts:
-            continue
-        last = relative.parts[-1]
-        if last == "extension.json":
-            try:
-                located = Path(dist.locate_file(relative))
-            except (OSError, ValueError):
-                continue
-            if located.is_file():
-                return located
-        elif last == "pyproject.toml" and pyproject_candidate is None:
-            try:
-                located = Path(dist.locate_file(relative))
-            except (OSError, ValueError):
-                continue
-            if located.is_file():
-                pyproject_candidate = located
+    try:
+        selected = list(eps.select(group="langflow.extensions"))
+    except AttributeError:
+        # Older importlib.metadata returns a plain tuple of EntryPoint with
+        # no .select() helper; filter manually.
+        selected = [ep for ep in eps if getattr(ep, "group", None) == "langflow.extensions"]
 
-    if pyproject_candidate is not None:
+    for ep in selected:
+        module_name = (getattr(ep, "value", "") or "").split(":", 1)[0].strip()
+        if not module_name:
+            continue
         try:
-            if _pyproject_declares_extension(pyproject_candidate):
-                return pyproject_candidate
-        except OSError:
-            # Unreadable pyproject that might declare an extension.  Surface
-            # the candidate path so the downstream manifest-unreadable check
-            # fires with an actionable error instead of silently dropping
-            # the distribution.
-            return pyproject_candidate
+            spec = importlib.util.find_spec(module_name)
+        except (ImportError, ValueError, ModuleNotFoundError):
+            continue
+        if spec is None:
+            continue
+
+        candidate_dirs: list[Path] = []
+        if spec.submodule_search_locations:
+            candidate_dirs.extend(Path(loc) for loc in spec.submodule_search_locations)
+        elif spec.origin and spec.origin not in {"built-in", "frozen"}:
+            candidate_dirs.append(Path(spec.origin).parent)
+
+        for package_dir in candidate_dirs:
+            extension_json = package_dir / "extension.json"
+            if extension_json.is_file():
+                return extension_json
+            pyproject = package_dir / "pyproject.toml"
+            if pyproject.is_file():
+                try:
+                    if _pyproject_declares_extension(pyproject):
+                        return pyproject
+                except OSError:
+                    return pyproject
     return None
 
 
