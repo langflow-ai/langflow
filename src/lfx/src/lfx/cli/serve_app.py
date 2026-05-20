@@ -33,7 +33,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from lfx.cli.common import (
     execute_graph_with_capture,
     extract_result_data,
-    flow_id_from_content,
     get_api_key,
 )
 from lfx.load import load_flow_from_json
