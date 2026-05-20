@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import { useTranslation } from "react-i18next";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import { cn } from "@/utils/utils";
@@ -25,6 +26,7 @@ export function MemoryDetailsHeader({
   hasNextSessionsPage,
   isFetchingNextSessionsPage,
 }: MemoryDetailsHeaderProps) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -84,7 +86,7 @@ export function MemoryDetailsHeader({
               <Button
                 variant="outline"
                 size="sm"
-                aria-label="Session filter"
+                aria-label={t("memory.sessionFilter")}
                 disabled={sessions.length <= 1 && !hasNextSessionsPage}
                 className="w-[240px] justify-between px-3"
               >
@@ -143,7 +145,7 @@ export function MemoryDetailsHeader({
           size="sm"
           onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
           aria-pressed={memory.is_active}
-          aria-label="Toggle auto-capture"
+          aria-label={t("memory.toggleAutoCapture")}
           className="gap-2"
         >
           <span
@@ -162,7 +164,7 @@ export function MemoryDetailsHeader({
           size="sm"
           onClick={handleRefresh}
           disabled={isRefreshing}
-          aria-label="Reload sessions and messages"
+          aria-label={t("memory.reloadSessions")}
         >
           <IconComponent
             name="RefreshCw"

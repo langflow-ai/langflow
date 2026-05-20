@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ const parseChunkMetadata = (
 };
 
 const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -99,13 +101,15 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
     >
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Chunk {index}</span>
+          <span className="text-sm font-medium">
+            {t("knowledge.chunkLabel", { index })}
+          </span>
           <Badge
             variant="secondary"
             size="sq"
             className="text-xs text-muted-foreground"
           >
-            {chunk.char_count} chars
+            {chunk.char_count} {t("knowledge.charsSuffix")}
           </Badge>
           <Button
             variant="ghost"

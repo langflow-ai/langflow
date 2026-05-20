@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,7 @@ export function StepReview({
   metadataPairs = [],
   perFileMetadata = {},
 }: StepReviewProps) {
+  const { t } = useTranslation();
   const selectedBackend = getDBProviderOption(backendType);
   // Use the same validator that gates "Next Step" so the summary only
   // shows pairs the backend will actually accept.
@@ -72,7 +74,7 @@ export function StepReview({
             name="Layers"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">Chunk Preview</span>
+          <span className="text-sm font-medium">{t("modal.chunkPreview")}</span>
         </div>
         <div className="flex items-center gap-1">
           {files.length > 1 && (
@@ -159,7 +161,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              No files selected. Go back to add files.
+              {t("knowledge.noFilesSelected")}
             </p>
           </div>
         ) : isGeneratingPreview ? (
@@ -169,7 +171,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 animate-spin text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              Generating preview...
+              {t("knowledge.generatingPreview")}
             </p>
           </div>
         ) : chunkPreviews.length > 0 ? (
@@ -185,7 +187,7 @@ export function StepReview({
               className="mb-2 h-8 w-8 text-muted-foreground"
             />
             <p className="text-sm text-muted-foreground">
-              Could not generate preview. Try adjusting your settings.
+              {t("knowledge.couldNotGeneratePreview")}
             </p>
           </div>
         )}
@@ -197,35 +199,39 @@ export function StepReview({
           name="FileStack"
           className="h-4 w-4 text-muted-foreground"
         />
-        <span className="text-sm font-medium">Summary</span>
+        <span className="text-sm font-medium">{t("knowledge.summary")}</span>
       </div>
 
       <div className="shrink-0">
-        <SummaryItem icon="Type" label="Name" value={sourceName} />
+        <SummaryItem
+          icon="Type"
+          label={t("knowledge.labelName")}
+          value={sourceName}
+        />
         <SummaryItem
           icon="Files"
-          label="Files"
-          value={`${files.length} file${files.length !== 1 ? "s" : ""} (${totalFileSize})`}
+          label={t("knowledge.files")}
+          value={`${files.length} ${files.length !== 1 ? t("knowledge.files") : t("knowledge.file")} (${totalFileSize})`}
         />
         <SummaryItem
           icon="Ruler"
-          label="Chunk Size"
-          value={`${chunkSize} chars`}
+          label={t("knowledge.labelChunkSize")}
+          value={`${chunkSize} ${t("knowledge.charsSuffix")}`}
         />
         <SummaryItem
           icon="Layers"
-          label="Chunk Overlap"
-          value={`${chunkOverlap} chars`}
+          label={t("knowledge.labelChunkOverlap")}
+          value={`${chunkOverlap} ${t("knowledge.charsSuffix")}`}
         />
         <SummaryItem
           icon="SplitSquareHorizontal"
-          label="Separator"
-          value={separator || "None"}
+          label={t("knowledge.labelSeparator")}
+          value={separator || t("knowledge.labelNone")}
         />
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <ForwardedIconComponent name="Cpu" className="h-4 w-4" />
-            <span>Embedding Model</span>
+            <span>{t("knowledge.embeddingModelLabel")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             {selectedEmbeddingModel[0]?.icon && (
@@ -235,14 +241,15 @@ export function StepReview({
               />
             )}
             <span className="text-sm font-medium">
-              {selectedEmbeddingModel[0]?.name || "Not selected"}
+              {selectedEmbeddingModel[0]?.name ||
+                t("knowledge.labelNotSelected")}
             </span>
           </div>
         </div>
         <div className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <ForwardedIconComponent name="Database" className="h-4 w-4" />
-            <span>DB Provider</span>
+            <span>{t("knowledge.dbProviderLabel")}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <ForwardedIconComponent
@@ -260,7 +267,7 @@ export function StepReview({
           >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <ForwardedIconComponent name="Tag" className="h-4 w-4" />
-              <span>Metadata</span>
+              <span>{t("knowledge.metadataLabel")}</span>
             </div>
             <div className="flex max-w-[60%] flex-wrap justify-end gap-1">
               {populatedRunPairs.map((pair) => (
@@ -280,8 +287,11 @@ export function StepReview({
                   className="inline-flex items-center rounded-full bg-accent-emerald/20 px-2 py-0.5 text-xs text-accent-emerald-foreground"
                   data-testid="kb-summary-per-file-count"
                 >
-                  +{filesWithOverrides} file override
-                  {filesWithOverrides === 1 ? "" : "s"}
+                  {filesWithOverrides === 1
+                    ? t("knowledge.oneFileOverride")
+                    : t("knowledge.nFileOverrides", {
+                        count: filesWithOverrides,
+                      })}
                 </span>
               )}
             </div>

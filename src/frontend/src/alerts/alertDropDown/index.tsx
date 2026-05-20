@@ -51,7 +51,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
           className="noflow nowheel nopan nodelete nodrag z-50 flex h-[500px] w-[500px] flex-col"
         >
           <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
-            Notifications
+            {t("alerts.notificationsTitle")}
             <div className="flex gap-3 pr-3">
               <button
                 className="text-muted-foreground hover:text-status-red"

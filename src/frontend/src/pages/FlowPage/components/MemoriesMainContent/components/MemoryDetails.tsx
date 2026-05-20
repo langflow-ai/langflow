@@ -6,6 +6,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
+import { useTranslation } from "react-i18next";
 import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
@@ -31,6 +32,7 @@ export function MemoryDetails({
   isFetchingNextSessionsPage,
 }: MemoryDetailsProps) {
   const [configOpen, setConfigOpen] = useState(false);
+  const { t } = useTranslation();
   const pendingLabel =
     memory.batch_size > 1 ? "Pending (this batch)" : "Pending Messages";
   const pendingValue =
@@ -56,17 +58,16 @@ export function MemoryDetails({
       <div className="flex flex-1 flex-col overflow-auto p-4">
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard
-            label="Processed Messages"
+            label={t("memory.processedMessages")}
             value={memory.total_messages_processed}
             icon="MessageSquare"
           />
           <SummaryCard label={pendingLabel} value={pendingValue} icon="Timer" />
           <SummaryCard
-            label="Last Generated"
+            label={t("memory.lastGenerated")}
             value={formatDate(memory.last_generated_at)}
             icon="Clock"
           />
-
           <Popover open={configOpen} onOpenChange={setConfigOpen}>
             <PopoverTrigger asChild>
               <div className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 transition-colors hover:bg-muted/50">
@@ -95,7 +96,7 @@ export function MemoryDetails({
               <div className="flex flex-col gap-3 text-xs">
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-muted-foreground">
-                    Embedding Model
+                    {t("memory.modelLabel")}
                   </span>
                   <span className="text-foreground">
                     {memory.embedding_model}
@@ -104,7 +105,7 @@ export function MemoryDetails({
                 {memory.embedding_provider && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-muted-foreground">
-                      Provider
+                       {t("memory.providerLabel")}
                     </span>
                     <span className="text-foreground">
                       {memory.embedding_provider}
@@ -114,14 +115,14 @@ export function MemoryDetails({
                 {memory.batch_size > 1 && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-muted-foreground">
-                      Batch Size
+                      {t("memory.messagesPerBatch")}
                     </span>
                     <span className="text-foreground">{memory.batch_size}</span>
                   </div>
                 )}
                 <div className="flex flex-col gap-0.5">
                   <span className="font-medium text-muted-foreground">
-                    Preprocessing
+                     {t("memory.preprocessing")}
                   </span>
                   <span className="text-foreground">
                     {memory.preprocessing_enabled ? "Enabled" : "Disabled"}
@@ -130,7 +131,7 @@ export function MemoryDetails({
                 {memory.preprocessing_enabled && memory.preprocessing_model && (
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium text-muted-foreground">
-                      Preprocessing Model
+                     {t("memory.preprocessingModel")} 
                     </span>
                     <span className="text-foreground">
                       {memory.preprocessing_model}
@@ -141,7 +142,7 @@ export function MemoryDetails({
                   memory.preproc_instructions && (
                     <div className="flex flex-col gap-0.5 border-t border-border pt-3">
                       <span className="font-medium text-muted-foreground">
-                        Preprocessing Instructions
+                        {t("memory.preprocessingInstructions")}
                       </span>
                       <p className="leading-relaxed text-foreground">
                         {memory.preproc_instructions}

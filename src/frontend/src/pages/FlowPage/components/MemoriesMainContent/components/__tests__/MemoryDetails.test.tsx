@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
 import type { MemoryDetailsProps } from "../../types";
 import { MemoryDetails } from "../MemoryDetails";
@@ -23,29 +23,28 @@ jest.mock("@/components/ui/popover", () => ({
     onOpenChange?: (open: boolean) => void;
   }) => (
     <div data-testid="popover" data-open={open}>
-      {typeof children === "function"
-        ? null
-        : React.Children.map(children, (child) => {
-            if (React.isValidElement(child)) {
-              return React.cloneElement(child as React.ReactElement<{ onOpenChange?: (open: boolean) => void }>, { onOpenChange });
-            }
-            return child;
-          })}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child)) {
+          return React.cloneElement(
+            child as React.ReactElement<{
+              onOpenChange?: (open: boolean) => void;
+            }>,
+            { onOpenChange },
+          );
+        }
+        return child;
+      })}
     </div>
   ),
   PopoverTrigger: ({
     children,
-    asChild,
     onOpenChange,
   }: {
     children: React.ReactNode;
     asChild?: boolean;
     onOpenChange?: (open: boolean) => void;
   }) => (
-    <div
-      data-testid="popover-trigger"
-      onClick={() => onOpenChange?.(true)}
-    >
+    <div data-testid="popover-trigger" onClick={() => onOpenChange?.(true)}>
       {children}
     </div>
   ),
@@ -114,14 +113,15 @@ describe("MemoryDetails — Config popover", () => {
     render(<MemoryDetails {...baseProps} />);
     const matches = screen.getAllByText("text-embedding-3-small");
     expect(matches.length).toBeGreaterThanOrEqual(1);
-    expect(
-      matches.some((el) => el.className.includes("truncate")),
-    ).toBe(true);
+    expect(matches.some((el) => el.className.includes("truncate"))).toBe(true);
   });
 
-  it("shows embedding model in the popover content", () => {
+  it("shows model label and embedding model in the popover content", () => {
     render(<MemoryDetails {...baseProps} />);
-    expect(screen.getByText("Embedding Model")).toBeInTheDocument();
+    // t("memory.modelLabel") = "Model:"
+    expect(screen.getByText("Model:")).toBeInTheDocument();
+    const modelValues = screen.getAllByText("text-embedding-3-small");
+    expect(modelValues.some((el) => el.className.includes("text-foreground"))).toBe(true);
   });
 
   it("shows preprocessing as Disabled when preprocessing_enabled is false", () => {
@@ -141,7 +141,8 @@ describe("MemoryDetails — Config popover", () => {
 
   it("does not show Provider row when embedding_provider is absent", () => {
     render(<MemoryDetails {...baseProps} />);
-    expect(screen.queryByText("Provider")).not.toBeInTheDocument();
+    // t("memory.providerLabel") = "Provider:"
+    expect(screen.queryByText("Provider:")).not.toBeInTheDocument();
   });
 
   it("shows Provider row when embedding_provider is present", () => {
@@ -151,13 +152,15 @@ describe("MemoryDetails — Config popover", () => {
         memory={{ ...baseMemory, embedding_provider: "OpenAI" }}
       />,
     );
-    expect(screen.getByText("Provider")).toBeInTheDocument();
+    // t("memory.providerLabel") = "Provider:"
+    expect(screen.getByText("Provider:")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
   });
 
   it("does not show Batch Size row when batch_size is 1", () => {
     render(<MemoryDetails {...baseProps} />);
-    expect(screen.queryByText("Batch Size")).not.toBeInTheDocument();
+    // t("memory.messagesPerBatch") = "Messages per batch:"
+    expect(screen.queryByText("Messages per batch:")).not.toBeInTheDocument();
   });
 
   it("shows Batch Size row when batch_size > 1", () => {
@@ -167,7 +170,8 @@ describe("MemoryDetails — Config popover", () => {
         memory={{ ...baseMemory, batch_size: 5 }}
       />,
     );
-    expect(screen.getByText("Batch Size")).toBeInTheDocument();
+    // t("memory.messagesPerBatch") = "Messages per batch:"
+    expect(screen.getByText("Messages per batch:")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
@@ -182,7 +186,10 @@ describe("MemoryDetails — Config popover", () => {
         }}
       />,
     );
-    expect(screen.queryByText("Preprocessing Model")).not.toBeInTheDocument();
+    // t("memory.preprocessingModel") = "Preprocessing model:"
+    expect(
+      screen.queryByText("Preprocessing model:"),
+    ).not.toBeInTheDocument();
   });
 
   it("shows Preprocessing Model when preprocessing is enabled and model is set", () => {
@@ -196,7 +203,8 @@ describe("MemoryDetails — Config popover", () => {
         }}
       />,
     );
-    expect(screen.getByText("Preprocessing Model")).toBeInTheDocument();
+    // t("memory.preprocessingModel") = "Preprocessing model:"
+    expect(screen.getByText("Preprocessing model:")).toBeInTheDocument();
     expect(screen.getByText("gpt-4o-mini")).toBeInTheDocument();
   });
 
@@ -211,8 +219,9 @@ describe("MemoryDetails — Config popover", () => {
         }}
       />,
     );
+    // t("memory.preprocessingInstructions") = "Preprocessing instructions:"
     expect(
-      screen.queryByText("Preprocessing Instructions"),
+      screen.queryByText("Preprocessing instructions:"),
     ).not.toBeInTheDocument();
   });
 
@@ -227,8 +236,9 @@ describe("MemoryDetails — Config popover", () => {
         }}
       />,
     );
+    // t("memory.preprocessingInstructions") = "Preprocessing instructions:"
     expect(
-      screen.getByText("Preprocessing Instructions"),
+      screen.getByText("Preprocessing instructions:"),
     ).toBeInTheDocument();
     expect(screen.getByText("Summarise briefly.")).toBeInTheDocument();
   });

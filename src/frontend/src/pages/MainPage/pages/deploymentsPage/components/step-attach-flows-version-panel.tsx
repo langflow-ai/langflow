@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import VersionLabel from "@/components/common/versionLabelComponent";
 import { Badge } from "@/components/ui/badge";
@@ -49,10 +50,11 @@ export const VersionPanel = memo(function VersionPanel({
   attachedConnectionByFlow?: Map<string, string[]>;
   connections?: ConnectionItem[];
 }) {
+  const { t } = useTranslation();
   if (!selectedFlow) {
     return (
       <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-        Select a flow to see versions
+        {t("deployments.selectFlow")}
       </div>
     );
   }
@@ -60,21 +62,21 @@ export const VersionPanel = memo(function VersionPanel({
   return (
     <>
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Select a version to attach to this deployment
+        {t("deployments.selectVersion")}
       </div>
       <div className="flex flex-1 flex-col overflow-hidden px-4 py-2">
         <h3 className="py-2 text-lg font-semibold">{selectedFlow.name}</h3>
         <div className="flex-1 space-y-3 overflow-y-auto py-3">
           {isLoadingVersions && (
             <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-              Loading versions...
+              {t("deployments.loadingVersions")}
             </div>
           )}
 
           {!isLoadingVersions && versions.length === 0 && (
             <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center">
               <p className="max-w-sm text-sm text-muted-foreground">
-                Deploy this flow by creating a version from current Draft
+                {t("deployments.deployFromDraft")}
               </p>
               <Button
                 onClick={onCreateFromDraft}
@@ -83,7 +85,7 @@ export const VersionPanel = memo(function VersionPanel({
                 ignoreTitleCase
                 data-testid="create-version-from-draft"
               >
-                Create from Draft
+                {t("deployments.createFromDraft")}
               </Button>
             </div>
           )}
@@ -142,7 +144,7 @@ export const VersionPanel = memo(function VersionPanel({
                           size="tag"
                           className="shrink-0 bg-accent-blue-muted text-accent-blue-muted-foreground"
                         >
-                          ATTACHED
+                          {t("deployments.attached")}
                         </Badge>
                       )}
                       {isRemoved && (
@@ -151,12 +153,14 @@ export const VersionPanel = memo(function VersionPanel({
                           size="tag"
                           className="shrink-0 bg-destructive/10 text-destructive"
                         >
-                          REMOVED
+                          {t("deployments.removed")}
                         </Badge>
                       )}
                     </span>
                     <span className="text-xxs leading-tight text-muted-foreground">
-                      Created: {formatDate(version.created_at)}
+                      {t("deployments.versionCreated", {
+                        date: formatDate(version.created_at),
+                      })}
                     </span>
                     {connectionNames.length > 0 && !isRemoved && (
                       <span className="truncate text-xxs leading-tight text-muted-foreground">
@@ -190,7 +194,7 @@ export const VersionPanel = memo(function VersionPanel({
                           onAttach(version.id);
                         }}
                       >
-                        Edit
+                        {t("deployments.edit")}
                       </button>
                       <button
                         type="button"
@@ -217,7 +221,7 @@ export const VersionPanel = memo(function VersionPanel({
                         onAttach(version.id);
                       }}
                     >
-                      Attach
+                      {t("deployments.attach")}
                     </button>
                   )}
                 </div>

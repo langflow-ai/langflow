@@ -25,6 +25,13 @@ export const createCopyButton = (
   getEditor: () => any,
   setSuccessData: (data: { title: string }) => void,
   setErrorData: (data: { title: string; list: string[] }) => void,
+  messages: {
+    copyFailed: string;
+    editorNotAvailable: string;
+    jsonCopied: string;
+    unableToCopy: string;
+    copyJson: string;
+  },
 ): MenuItem => {
   return {
     type: "button" as const,
@@ -32,8 +39,8 @@ export const createCopyButton = (
       const editor = getEditor();
       if (!editor) {
         setErrorData({
-          title: "Copy Failed",
-          list: ["Editor not available"],
+          title: messages.copyFailed,
+          list: [messages.editorNotAvailable],
         });
         return;
       }
@@ -46,17 +53,17 @@ export const createCopyButton = (
       navigator.clipboard
         .writeText(textContent)
         .then(() => {
-          setSuccessData({ title: "JSON copied to clipboard" });
+          setSuccessData({ title: messages.jsonCopied });
         })
         .catch(() => {
           setErrorData({
-            title: "Copy Failed",
-            list: ["Unable to copy to clipboard. Please copy manually."],
+            title: messages.copyFailed,
+            list: [messages.unableToCopy],
           });
         });
     },
     icon: faCopy,
-    title: "Copy JSON to clipboard",
+    title: messages.copyJson,
   };
 };
 
@@ -99,6 +106,14 @@ export const processTextModeItems = (
   getEditor: () => any,
   setSuccessData: (data: { title: string }) => void,
   setErrorData: (data: { title: string; list: string[] }) => void,
+  messages: {
+    copyFailed: string;
+    editorNotAvailable: string;
+    jsonCopied: string;
+    unableToCopy: string;
+    copyJson: string;
+    outputCopied: string;
+  },
 ): MenuItem[] => {
   let filteredItems = filterTextModeItems(items);
 
@@ -107,10 +122,15 @@ export const processTextModeItems = (
       getEditor,
       setSuccessData,
       setErrorData,
+      messages,
     );
     filteredItems = addCopyButtonToItems(filteredItems, copyButton);
   } else {
-    filteredItems = enhanceExistingCopyButtons(filteredItems, setSuccessData);
+    filteredItems = enhanceExistingCopyButtons(
+      filteredItems,
+      setSuccessData,
+      messages.jsonCopied,
+    );
   }
 
   return filteredItems;
@@ -119,10 +139,7 @@ export const processTextModeItems = (
 export const processTreeModeItems = (
   items: MenuItem[],
   setSuccessData: (data: { title: string }) => void,
+  outputCopiedMsg: string,
 ): MenuItem[] => {
-  return enhanceExistingCopyButtons(
-    items,
-    setSuccessData,
-    "Copied to clipboard",
-  );
+  return enhanceExistingCopyButtons(items, setSuccessData, outputCopiedMsg);
 };

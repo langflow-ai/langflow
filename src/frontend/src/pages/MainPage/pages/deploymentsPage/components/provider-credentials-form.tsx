@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import type { ProviderCredentials } from "../types";
@@ -20,20 +21,21 @@ export default function ProviderCredentialsForm({
   apiKeyRequired = true,
   urlRequired = true,
   urlReadOnly = false,
-  apiKeyPlaceholder = "Enter your API key", // pragma: allowlist secret
+  apiKeyPlaceholder,
 }: ProviderCredentialsFormProps) {
+  const { t } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
 
   const urlAndApiKeyFields = (
     <>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Service Instance URL{" "}
+          {t("deployments.fieldServiceInstanceUrl")}{" "}
           {urlRequired ? <span className="text-destructive">*</span> : null}
         </span>
         <Input
           type="url"
-          placeholder="https://api.example.com"
+          placeholder={t("deployments.placeholderApiUrl")}
           className="bg-muted"
           value={credentials.url}
           disabled={urlReadOnly}
@@ -48,17 +50,21 @@ export default function ProviderCredentialsForm({
       </div>
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          API Key{" "}
+          {t("deployments.fieldApiKey")}{" "}
           {apiKeyRequired ? (
             <span className="text-destructive">*</span>
           ) : (
-            <span className="text-muted-foreground">(optional)</span>
+            <span className="text-muted-foreground">
+              ({t("deployments.optional")})
+            </span>
           )}
         </span>
         <div className="relative">
           <Input
             type={showApiKey ? "text" : "password"}
-            placeholder={apiKeyPlaceholder}
+            placeholder={
+              apiKeyPlaceholder ?? t("deployments.placeholderApiKey")
+            }
             className="bg-muted pr-10"
             value={credentials.api_key}
             onChange={(e) =>
@@ -70,7 +76,11 @@ export default function ProviderCredentialsForm({
           />
           <button
             type="button"
-            aria-label={showApiKey ? "Hide API key" : "Show API key"}
+            aria-label={
+              showApiKey
+                ? t("deployments.hideApiKey")
+                : t("deployments.showApiKey")
+            }
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={() => setShowApiKey((prev) => !prev)}
           >
@@ -82,7 +92,7 @@ export default function ProviderCredentialsForm({
         </div>
         {!apiKeyRequired && (
           <span className="pt-2 text-xs text-muted-foreground">
-            Leave blank to keep current credential.
+            {t("deployments.leaveBlankCredential")}
           </span>
         )}
       </div>
@@ -93,11 +103,12 @@ export default function ProviderCredentialsForm({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Name <span className="text-destructive">*</span>
+          {t("deployments.fieldName")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Input
           type="text"
-          placeholder="e.g. Production"
+          placeholder={t("deployments.placeholderEnvironmentName")}
           className="bg-muted"
           value={credentials.name}
           onChange={(e) =>
