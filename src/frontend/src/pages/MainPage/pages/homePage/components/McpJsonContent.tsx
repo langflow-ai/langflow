@@ -163,7 +163,9 @@ export const McpJsonContent = ({
           >
             <TabsList>
               <TabsTrigger value="sse">SSE</TabsTrigger>
-              <TabsTrigger value="streamablehttp">Streamable HTTP</TabsTrigger>
+              <TabsTrigger value="streamablehttp">
+                {t("mcp.modal.streamableHttp")}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

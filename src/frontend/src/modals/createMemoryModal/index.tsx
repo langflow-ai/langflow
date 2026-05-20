@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
+import { useTranslation } from "react-i18next";
 import BaseModal from "../baseModal";
 import { useCreateMemoryModal } from "./useCreateMemoryModal";
 
@@ -24,6 +25,7 @@ export default function CreateMemoryModal({
   flowName,
   onSuccess,
 }: CreateMemoryModalProps): JSX.Element {
+  const { t } = useTranslation();
   const {
     name,
     setName,
@@ -70,7 +72,7 @@ export default function CreateMemoryModal({
             id="memory-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Memory name"
+            placeholder={t("memory.memoryName")}
           />
         </div>
 
@@ -89,7 +91,7 @@ export default function CreateMemoryModal({
                   setSelectedEmbeddingModel(value);
                 }}
                 options={embeddingModelOptions}
-                placeholder="Select embedding model"
+                placeholder={t("memory.selectEmbeddingModel")}
                 modelType="embeddings"
               />
             </div>
@@ -103,7 +105,7 @@ export default function CreateMemoryModal({
 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
-            <Label htmlFor="memory-batch-size">Batch Size</Label>
+            <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
             <ShadTooltip
               content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
               side="right"
@@ -170,7 +172,7 @@ export default function CreateMemoryModal({
                     setSelectedPreprocessingModel(value);
                   }}
                   options={llmModelOptions}
-                  placeholder="Select preprocessing model"
+                  placeholder={t("memory.selectPreprocessingModel")}
                   modelType="llm"
                 />
               </div>
@@ -188,7 +190,7 @@ export default function CreateMemoryModal({
                 id="preprocessing-prompt"
                 value={preprocessingPrompt}
                 onChange={(e) => setPreprocessingPrompt(e.target.value)}
-                placeholder="Produce a concise summary that captures key facts and context."
+                placeholder={t("memory.preprocessingPromptPlaceholder")}
                 className="min-h-[80px] resize-y"
               />
             </div>

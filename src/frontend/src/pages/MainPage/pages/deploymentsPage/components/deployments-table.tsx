@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,7 @@ export default function DeploymentsTable({
   onUpdateDeployment,
   onDeleteDeployment,
 }: DeploymentsTableProps) {
+  const { t } = useTranslation();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -96,12 +98,12 @@ export default function DeploymentsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Attached</TableHead>
-          <TableHead>Environment</TableHead>
-          <TableHead>Last Modified</TableHead>
-          <TableHead>Test</TableHead>
+          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>{t("deployments.columnType")}</TableHead>
+          <TableHead>{t("deployments.columnAttached")}</TableHead>
+          <TableHead>{t("deployments.columnEnvironment")}</TableHead>
+          <TableHead>{t("deployments.columnLastModified")}</TableHead>
+          <TableHead>{t("deployments.columnTest")}</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -153,7 +155,9 @@ export default function DeploymentsTable({
                       />
                     )}
                     {deployment.attached_count}{" "}
-                    {deployment.attached_count === 1 ? "flow" : "flows"}
+                    {deployment.attached_count === 1
+                      ? t("deployments.flow")
+                      : t("deployments.flows")}
                   </button>
                 </TableCell>
                 <TableCell>
@@ -172,7 +176,9 @@ export default function DeploymentsTable({
                     size="icon"
                     className="h-8 w-8"
                     data-testid={`test-deployment-${deployment.id}`}
-                    aria-label={`Test ${deployment.name}`}
+                    aria-label={t("deployments.testDeploymentAriaLabel", {
+                      name: deployment.name,
+                    })}
                     onClick={() => onTestDeployment(deployment)}
                   >
                     <ForwardedIconComponent name="Play" className="h-4 w-4" />
@@ -207,7 +213,7 @@ export default function DeploymentsTable({
                             name="Info"
                             className="mr-2 h-4 w-4"
                           />
-                          Details
+                          {t("deployments.details")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onUpdateDeployment?.(deployment)}
@@ -216,7 +222,7 @@ export default function DeploymentsTable({
                             name="Pencil"
                             className="mr-2 h-4 w-4"
                           />
-                          Update
+                          {t("deployments.updateAction")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -228,7 +234,7 @@ export default function DeploymentsTable({
                             name="Trash2"
                             className="mr-2 h-4 w-4"
                           />
-                          Delete
+                          {t("deployments.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

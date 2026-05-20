@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 if TYPE_CHECKING:
     from pathlib import Path

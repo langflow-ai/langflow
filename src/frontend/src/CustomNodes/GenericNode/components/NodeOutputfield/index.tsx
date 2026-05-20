@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useShortcutsStore } from "@/stores/shortcuts";
@@ -137,6 +138,7 @@ function NodeOutputField({
   hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
@@ -441,9 +443,9 @@ function NodeOutputField({
             content={
               displayOutputPreview
                 ? unknownOutput || emptyOutput
-                  ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
+                  ? t("node.outputCantBeDisplayed")
+                  : t("node.inspectOutput")
+                : t("node.buildComponentFirst")
             }
             styleClasses="z-40"
           >
