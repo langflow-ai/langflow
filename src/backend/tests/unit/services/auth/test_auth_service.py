@@ -11,6 +11,7 @@ from fastapi import HTTPException, status
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidTokenError,
+    MissingCredentialsError,
     TokenExpiredError,
 )
 from langflow.services.auth.service import AuthService
@@ -104,6 +105,113 @@ async def test_get_current_user_from_access_token_requires_active_user(auth_serv
         pytest.raises(InactiveUserError),
     ):
         await auth_service.get_current_user_from_access_token(token, db)
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_missing_creds_raises(
+    auth_service: AuthService,
+):
+    """Default config (AUTO_LOGIN off, skip_auth_auto_login off) rejects callers with no creds."""
+    with pytest.raises(MissingCredentialsError):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_alone_still_rejects(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN without skip_auth_auto_login must still require credentials.
+
+    Without this guard the AUTO_LOGIN security-tightening from #8513 would
+    silently regress for every ``get_current_user``-protected endpoint.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = False
+    auth_settings.SUPERUSER = "admin"
+
+    with pytest.raises(MissingCredentialsError):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_returns_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    caplog: pytest.LogCaptureFixture,
+):
+    """With AUTO_LOGIN + skip_auth_auto_login, missing creds fall back to the superuser.
+
+    Restores parity with ``api_key_security`` so ``CurrentActiveUser``-protected
+    endpoints (e.g. ``GET /api/v1/flows/``) work for ADK/dev environments that
+    relied on the v1.7.1 behavior.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    superuser = _dummy_user(uuid4())
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=superuser),
+        ) as mock_lookup,
+        caplog.at_level("WARNING", logger="lfx.log.logger"),
+    ):
+        result = await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+    assert result is superuser
+    mock_lookup.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_missing_superuser_raises(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN + skip_auth_auto_login with no superuser row in the DB rejects.
+
+    Mirrors the safety check inside ``_api_key_security_impl`` when the
+    configured superuser is absent from the database.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+
+    from langflow.services.auth.exceptions import InvalidCredentialsError
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=None),
+        ),
+        pytest.raises(InvalidCredentialsError),
+    ):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_credentials_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """AUTO_LOGIN fallback must enforce ``is_active`` like token/API-key paths.
+
+    ``CurrentActiveUser`` re-checks this for HTTP routes, but SSE/websocket
+    dependencies delegate directly to ``authenticate_with_credentials``, so
+    the active-user guard must live in this method.
+    """
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(InactiveUserError),
+    ):
+        await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
 
 
 @pytest.mark.anyio

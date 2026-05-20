@@ -8,7 +8,6 @@ import { useEffect } from "react";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
-import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
 import {
   getAxiosWithCredentials,
   getFetchCredentials,
@@ -26,6 +25,23 @@ const api: AxiosInstance = axios.create({
   baseURL: baseURL,
   withCredentials: getAxiosWithCredentials(),
 });
+
+// URL fragments for auth-maintenance endpoints. A 401/403 on any of these
+// must NOT trigger the refresh-then-retry branch — that path itself goes
+// through this same axios instance, so retrying would recurse. Exported
+// for unit testing.
+export const AUTH_MAINTENANCE_PATHS = [
+  "/refresh",
+  "/login",
+  "/logout",
+  "/auto_login",
+];
+
+export function isAuthMaintenanceURL(url: string | undefined): boolean {
+  if (!url) return false;
+  return AUTH_MAINTENANCE_PATHS.some((path) => url.includes(path));
+}
+
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,7 +54,7 @@ function ApiInterceptor() {
   );
 
   const { mutate: mutationLogout } = useLogout();
-  const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
+  const { mutateAsync: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
 
@@ -82,19 +98,60 @@ function ApiInterceptor() {
           ) {
             return Promise.reject(error);
           }
+          // Auth-maintenance endpoints must not trigger refresh themselves.
+          // The refresh mutation uses this same axios instance, so if
+          // ``/refresh`` returns 401 (expired refresh token) it would
+          // re-enter this branch and recurse. Same for login/logout/
+          // auto_login. Reject the original failure and let the caller
+          // (typically the refresh mutation's catch block) drive logout.
+          if (isAuthMaintenanceURL(error?.config?.url)) {
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
+          // One-shot guard: if we've already retried this exact request
+          // once after a refresh, don't retry again. Without this, a
+          // request that 401s post-refresh would loop back through here.
+          const requestConfig = error?.config as
+            | (AxiosRequestConfig & { _retry?: boolean })
+            | undefined;
+          if (requestConfig?._retry) {
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
           const stillRefresh = checkErrorCount();
           if (!stillRefresh) {
             return Promise.reject(error);
           }
 
-          await tryToRenewAccessToken(error);
+          try {
+            await tryToRenewAccessToken(error);
+          } catch {
+            // Refresh failed (already logged + logout dispatched in the
+            // helper). Reject with the original error so callers see a
+            // clean failure instead of a swallowed undefined response.
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
+          // Refresh succeeded — replay the original request and resolve
+          // the interceptor with its response so the caller transparently
+          // gets the retried result. Without this, callers used to
+          // resolve with ``undefined`` after a successful refresh because
+          // the interceptor fell through without returning the retried
+          // response.
+          await clearBuildVerticesState(error);
+          if (requestConfig) {
+            requestConfig._retry = true;
+          }
+          return await remakeRequest(error);
         }
 
         await clearBuildVerticesState(error);
 
-        if (!isAuthenticationError) {
-          return Promise.reject(error);
-        }
+        // Non-recoverable failure path: always reject so callers and
+        // React Query see a real error rather than an undefined response.
+        // This used to silently swallow auth errors under AUTO_LOGIN,
+        // producing infinite "Loading models…" spinners on fresh installs.
+        return Promise.reject(error);
       },
     );
 
@@ -203,17 +260,14 @@ function ApiInterceptor() {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(undefined, {
-      onSuccess: async () => {
-        setAuthenticationErrorCount(0);
-        await remakeRequest(error);
-      },
-      onError: (error) => {
-        console.error(error);
-        mutationLogout();
-        return Promise.reject("Authentication error");
-      },
-    });
+    try {
+      await mutationRenewAccessToken(undefined);
+      setAuthenticationErrorCount(0);
+    } catch (refreshError) {
+      console.error(refreshError);
+      mutationLogout();
+      throw refreshError;
+    }
   }
 
   async function clearBuildVerticesState(error) {
@@ -229,14 +283,11 @@ function ApiInterceptor() {
   async function remakeRequest(error: AxiosError) {
     const originalRequest = error.config as AxiosRequestConfig;
 
-    try {
-      // Browser automatically sends cookies with the request
-      // No need to manually add Authorization header
-      const response = await axios.request(originalRequest);
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
+    // Return the full AxiosResponse so when this value resolves the
+    // outer interceptor promise, callers see a normal axios response and
+    // can read ``response.data`` as usual. Returning ``response.data``
+    // here would double-unwrap and produce ``undefined`` at the call site.
+    return axios.request(originalRequest);
   }
 
   return null;
@@ -356,9 +407,9 @@ async function performStreamingRequest({
         await onData(data);
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (onNetworkError) {
-      onNetworkError(e);
+      onNetworkError(e as Error);
     } else {
       throw e;
     }

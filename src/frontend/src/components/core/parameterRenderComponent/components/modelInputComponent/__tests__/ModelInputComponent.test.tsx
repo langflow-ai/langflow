@@ -1048,6 +1048,145 @@ describe("ModelInputComponent", () => {
     });
   });
 
+  describe("Error / Retry", () => {
+    it("renders the retry button and hides the loading spinner when providers query errors", () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 403"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: {} },
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByTestId("model-input-load-failed")).toBeInTheDocument();
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
+    });
+
+    it("invokes both refetch functions when the retry button is clicked", async () => {
+      const refetchProviders = jest.fn();
+      const refetchEnabled = jest.fn();
+
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 401"),
+        refetch: refetchProviders,
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 401"),
+        refetch: refetchEnabled,
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      await user.click(screen.getByTestId("model-input-load-failed"));
+
+      expect(refetchProviders).toHaveBeenCalledTimes(1);
+      expect(refetchEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps the working dropdown when a background refetch errors but stale data is preserved", async () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      // Background refetch failed, but TanStack Query preserved stale data
+      // for both queries — we should NOT regress to the error UI.
+      mockedProviders.mockReturnValue({
+        data: mockProvidersData,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("transient refetch failure"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isLoading: false,
+        isFetching: false,
+        error: new Error("transient refetch failure"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      const user = userEvent.setup();
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      // Error UI is hidden because stale data is still usable.
+      expect(
+        screen.queryByTestId("model-input-load-failed"),
+      ).not.toBeInTheDocument();
+
+      // The combobox is still interactive — open it and confirm providers render.
+      const combobox = screen.getByRole("combobox");
+      await user.click(combobox);
+      await waitFor(() => {
+        expect(screen.getByText("OpenAI")).toBeInTheDocument();
+      });
+    });
+
+    it("falls back to the loading spinner while an error refetch is in flight", () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      // Errors are present but a refetch is currently in flight — we don't
+      // want the user to see the error UI flicker while we're retrying.
+      mockedProviders.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: true,
+        error: new Error("transient"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: {} },
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("model-input-load-failed"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   describe("ModelInput filters", () => {
     // Restore the suite-level default mocks before each test in this block —
     // ``jest.clearAllMocks`` only clears call history, not implementations,
