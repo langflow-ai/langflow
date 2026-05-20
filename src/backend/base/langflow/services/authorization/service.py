@@ -13,6 +13,7 @@ from lfx.services.authorization.base import BaseAuthorizationService
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from lfx.services.settings.auth import AuthSettings
     from lfx.services.settings.service import SettingsService
 
 
@@ -36,7 +37,7 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         """Return the canonical service-type name."""
         return ServiceType.AUTHORIZATION_SERVICE.value
 
-    def _authz_settings(self):
+    def _authz_settings(self) -> AuthSettings:
         """Return the live AuthSettings snapshot from the settings service."""
         return self.settings_service.auth_settings
 

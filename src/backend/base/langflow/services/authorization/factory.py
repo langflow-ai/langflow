@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
-from lfx.services.settings.service import SettingsService  # noqa: TC002
-
 from langflow.services.factory import ServiceFactory
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from lfx.services.authorization.base import BaseAuthorizationService
+    from lfx.services.settings.service import SettingsService
+
     from langflow.services.authorization.service import LangflowAuthorizationService
 
 

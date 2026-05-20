@@ -215,11 +215,12 @@ async def read_flow(
     raise HTTPException(status_code=404, detail="Flow not found")
 
 
-@router.get("/{flow_id}/note_translations", dependencies=[Depends(get_current_active_user)], status_code=200)
+@router.get("/{flow_id}/note_translations", status_code=200)
 async def get_note_translations(
     *,
     session: DbSession,
     flow_id: UUID,
+    current_user: CurrentActiveUser,
     request: Request,
 ) -> dict[str, str]:
     """Return translated note node descriptions for the current locale.
@@ -230,9 +231,23 @@ async def get_note_translations(
     """
     from langflow.utils.i18n import translate
 
-    flow = await session.get(Flow, flow_id)
+    # Scope the fetch to flows the caller already owns; an enterprise plugin
+    # extends visibility through ensure_flow_permission below. Returning ``{}``
+    # rather than 404 here matches the helper's "no notes" path so that
+    # missing-flow vs not-owned vs not-authorized are indistinguishable to
+    # an attacker probing UUIDs.
+    flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
     if not flow or not flow.data:
         return {}
+
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.READ,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     locale = getattr(request.state, "locale", "en")
     nodes = flow.data.get("nodes", [])

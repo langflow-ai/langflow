@@ -229,6 +229,37 @@ def test_read_public_flow_remains_unguarded(routes):
     assert _ensure_flow_permission_calls(func) == []
 
 
+def test_get_note_translations_is_owner_scoped_and_guarded(routes):
+    """`GET /flows/{flow_id}/note_translations` must scope the fetch by owner and authorize READ.
+
+    Regression for the cross-user data leak found in the PR #13153 review: the
+    original handler used ``session.get(Flow, flow_id)`` with no ownership
+    filter and no ensure_flow_permission, so any authenticated user could read
+    note text from any flow by guessing the UUID. Fix scopes the fetch through
+    ``_read_flow(..., user_id=current_user.id)`` and adds an explicit
+    ``ensure_flow_permission(FlowAction.READ, ...)`` so enterprise plugins can
+    extend visibility via shares.
+    """
+    func = routes["get_note_translations"]
+    calls = _ensure_flow_permission_calls(func)
+    assert calls, "get_note_translations is missing its ensure_flow_permission guard"
+    actions = {_action_arg(c) for c in calls}
+    assert "FlowAction.READ" in actions, f"expected FlowAction.READ, got {actions}"
+
+    # The fetch must go through _read_flow (which scopes by current_user.id),
+    # not a bare session.get(Flow, ...) call.
+    read_flow_calls = [
+        node
+        for node in ast.walk(func)
+        if isinstance(node, ast.Call)
+        and (
+            (isinstance(node.func, ast.Name) and node.func.id == "_read_flow")
+            or (isinstance(node.func, ast.Attribute) and node.func.attr == "_read_flow")
+        )
+    ]
+    assert read_flow_calls, "get_note_translations must fetch the flow via _read_flow (owner-scoped)"
+
+
 def test_read_flows_list_uses_filter_visible_resources(routes):
     """GET /flows/ list endpoint applies filter_visible_resources (Phase B).
 

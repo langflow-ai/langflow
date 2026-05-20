@@ -136,6 +136,39 @@ async def test_authz_role_assignment_blocks_duplicate_global(authz_async_session
 
 
 @pytest.mark.anyio
+async def test_authz_role_assignment_blocks_duplicate_non_global_with_null_domain_id(
+    authz_async_session: AsyncSession,
+):
+    """A row with ``domain_type='org' AND domain_id IS NULL`` must still be uniquely constrained.
+
+    Regression for PR #13153 review: the previous ``uq_authz_role_assignment_global``
+    partial index filtered on ``domain_type = 'global'`` AND ``domain_id IS NULL``,
+    so duplicates with any other ``domain_type`` value plus NULL ``domain_id`` slipped
+    past. The widened ``uq_authz_role_assignment_unscoped`` index filters on
+    ``domain_id IS NULL`` only, covering every ill-formed combination.
+    """
+    from sqlalchemy.exc import IntegrityError
+
+    user = User(username="org_dupe_assignee", password=_TEST_PASSWORD)
+    authz_async_session.add(user)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(user)
+
+    role = AuthzRole(name="org_editor", permissions=["flow:write"])
+    authz_async_session.add(role)
+    await authz_async_session.commit()
+    await authz_async_session.refresh(role)
+
+    authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="org"))
+    await authz_async_session.commit()
+
+    authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="org"))
+    with pytest.raises(IntegrityError):
+        await authz_async_session.commit()
+    await authz_async_session.rollback()
+
+
+@pytest.mark.anyio
 async def test_authz_role_assignment_blocks_duplicate_scoped(authz_async_session: AsyncSession):
     """Scoped (non-NULL domain_id) duplicates must also conflict via the second partial index."""
     from uuid import uuid4
