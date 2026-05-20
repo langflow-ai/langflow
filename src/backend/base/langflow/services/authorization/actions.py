@@ -19,3 +19,13 @@ class FlowAction(str, Enum):
     DELETE = "delete"
     EXECUTE = "execute"
     DEPLOY = "deploy"
+
+
+class DeploymentAction(str, Enum):
+    """Actions that can be authorized on a deployment resource."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    EXECUTE = "execute"

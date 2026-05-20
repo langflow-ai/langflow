@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.services.authorization import utils as authz_utils
-from langflow.services.authorization.actions import FlowAction
+from langflow.services.authorization.actions import DeploymentAction, FlowAction
 
 
 class _StubAuthorizationService:
@@ -469,3 +469,50 @@ async def test_filter_visible_resources_accepts_custom_key(monkeypatch, fake_use
 
     assert result == [items[1]]
     assert service.batch_calls[0]["requests"][0][1] == "write"
+
+
+# ----------------------------------------------------------------------------- #
+# ensure_deployment_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_ensure_deployment_permission_uses_project_domain(monkeypatch, fake_user):
+    """project_id maps to project: domain (same helper as flows' folder_id)."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    project_id = uuid4()
+    await authz_utils.ensure_deployment_permission(
+        fake_user,
+        DeploymentAction.READ,
+        deployment_id=uuid4(),
+        deployment_user_id=uuid4(),
+        project_id=project_id,
+    )
+
+    assert service.calls[0]["domain"] == f"project:{project_id}"
+    assert service.calls[0]["context"]["project_id"] == project_id
+
+
+@pytest.mark.anyio
+async def test_deployment_owner_override_skips_enforce(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+    audit_calls = _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_deployment_permission(
+        fake_user,
+        DeploymentAction.DELETE,
+        deployment_id=uuid4(),
+        deployment_user_id=fake_user.id,
+        project_id=uuid4(),
+    )
+
+    assert service.calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
+    assert audit_calls[0]["action"] == "deployment:delete"

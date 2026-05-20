@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
-from langflow.services.authorization.actions import FlowAction
+from langflow.services.authorization.actions import DeploymentAction, FlowAction
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -32,9 +32,11 @@ def _auth_context(user: User | UserRead) -> dict[str, Any]:
     return {"is_superuser": getattr(user, "is_superuser", False)}
 
 
-def _coerce_action(act: FlowAction | str) -> str:
-    """Return the string value of a FlowAction or pass through a raw string."""
-    return act.value if isinstance(act, FlowAction) else act
+def _coerce_action(act: DeploymentAction | FlowAction | str) -> str:
+    """Return the string value of an action enum or pass through a raw string."""
+    if isinstance(act, (FlowAction, DeploymentAction)):
+        return act.value
+    return act
 
 
 def _split_obj(obj: str) -> tuple[str | None, UUID | None]:
@@ -125,8 +127,9 @@ async def ensure_permission(
     )
 
     audit_details = {"domain": domain}
-    if "flow_user_id" in merged_context and merged_context["flow_user_id"] is not None:
-        audit_details["flow_user_id"] = str(merged_context["flow_user_id"])
+    for owner_key in ("flow_user_id", "deployment_user_id"):
+        if owner_key in merged_context and merged_context[owner_key] is not None:
+            audit_details[owner_key] = str(merged_context[owner_key])
     await audit_decision(
         user_id=user.id,
         action=f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act,
@@ -206,6 +209,50 @@ async def ensure_flow_permission(
             "flow_user_id": flow_user_id,
             "workspace_id": workspace_id,
             "folder_id": folder_id,
+        },
+    )
+
+
+async def ensure_deployment_permission(
+    user: User | UserRead,
+    act: DeploymentAction | str,
+    *,
+    deployment_id: UUID | None = None,
+    deployment_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    project_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check deployment-scoped permission with workspace/project domain + owner override.
+
+    Deployments use ``project_id`` (folder row) for the Casbin project domain, same as
+    flows use ``folder_id``. The deployment owner may always access their deployment.
+    """
+    obj = f"deployment:{deployment_id}" if deployment_id else "deployment:*"
+    act_str = _coerce_action(act)
+    resolved_domain = domain if domain is not None else _resolve_flow_domain(workspace_id, project_id)
+
+    if deployment_user_id is not None and getattr(user, "id", None) == deployment_user_id:
+        settings = get_settings_service()
+        if settings.auth_settings.AUTHZ_ENABLED:
+            await audit_decision(
+                user_id=user.id,
+                action=f"deployment:{act_str}",
+                obj=obj,
+                result=_AUDIT_OWNER_OVERRIDE,
+                details={"domain": resolved_domain},
+            )
+        return
+
+    await ensure_permission(
+        user,
+        domain=resolved_domain,
+        obj=obj,
+        act=act_str,
+        context={
+            "deployment_user_id": deployment_user_id,
+            "workspace_id": workspace_id,
+            "project_id": project_id,
         },
     )
 

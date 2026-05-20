@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from langflow.services.authorization.actions import FlowAction
+from langflow.services.authorization.actions import DeploymentAction, FlowAction
 
 
 def test_flow_action_values_match_casbin_strings():
@@ -25,3 +25,14 @@ def test_flow_action_is_iterable_and_complete():
     """The enum exposes exactly the six canonical actions."""
     values = {member.value for member in FlowAction}
     assert values == {"read", "write", "create", "delete", "execute", "deploy"}
+
+
+def test_deployment_action_values_match_casbin_strings():
+    assert DeploymentAction.READ.value == "read"
+    assert DeploymentAction.CREATE.value == "create"
+    assert DeploymentAction.EXECUTE.value == "execute"
+
+
+def test_deployment_action_subclasses_str():
+    assert isinstance(DeploymentAction.WRITE, str)
+    assert DeploymentAction.DELETE == "delete"
