@@ -84,3 +84,21 @@ async def test_get_allowed_actions_returns_full_list(service: AuthorizationServi
         actions=actions,
     )
     assert result == actions
+
+
+@pytest.mark.asyncio
+async def test_invalidate_user_is_noop(service: AuthorizationService) -> None:
+    """Cache invalidation hooks are no-ops on the default LFX implementation."""
+    assert await service.invalidate_user(uuid4()) is None
+
+
+@pytest.mark.asyncio
+async def test_invalidate_role_is_noop(service: AuthorizationService) -> None:
+    """Cache invalidation hooks are no-ops on the default LFX implementation."""
+    assert await service.invalidate_role(uuid4()) is None
+
+
+@pytest.mark.asyncio
+async def test_invalidate_all_is_noop(service: AuthorizationService) -> None:
+    """Cache invalidation hooks are no-ops on the default LFX implementation."""
+    assert await service.invalidate_all() is None

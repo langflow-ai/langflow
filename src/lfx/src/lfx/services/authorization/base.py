@@ -67,5 +67,14 @@ class BaseAuthorizationService(Service, abc.ABC):
         )
         return [action for action, allowed in zip(actions, results, strict=True) if allowed]
 
+    async def invalidate_user(self, user_id: UUID) -> None:
+        """Drop cached policy for a single user. Plugin override; OSS no-op."""
+
+    async def invalidate_role(self, role_id: UUID) -> None:
+        """Drop cached policy for a single role. Plugin override; OSS no-op."""
+
+    async def invalidate_all(self) -> None:
+        """Drop all cached policy. Plugin override; OSS no-op."""
+
     async def teardown(self) -> None:
         """No resources to release in the base implementation."""
