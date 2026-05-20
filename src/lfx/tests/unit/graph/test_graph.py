@@ -1,5 +1,7 @@
 import copy
 import json
+import pickle
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -113,6 +115,27 @@ def test_invalid_node_types():
     g = Graph()
     with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
+
+
+def test_graph_pickle_omits_unpickleable_vertex_component():
+    graph = Graph(flow_id="flow-with-runtime-component-state")
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "model-node",
+            "_lock": None,
+            "built_object": None,
+            "built_result": None,
+            "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
+            "full_data": {"id": "model-node"},
+        }
+    )
+    graph.vertices = [vertex]
+    graph._vertices = [vertex.full_data]
+
+    restored = pickle.loads(pickle.dumps(graph))  # noqa: S301 - trusted local regression fixture
+
+    assert restored.vertices[0].custom_component is None
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
