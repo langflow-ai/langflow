@@ -164,6 +164,8 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        trigger_worker_task = None
+        trigger_worker_stop: asyncio.Event | None = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -389,6 +391,20 @@ def get_lifespan(*, fix_migration=False, version=None):
             if not queue_service.is_started():
                 queue_service.start()
 
+            # Native triggers: one async worker per process drains the
+            # trigger_job queue. Multi-worker uvicorn cooperates via
+            # row-level locking on Postgres; the stop_event makes
+            # shutdown deterministic. recover_stalled_jobs flips any
+            # in_progress rows orphaned by a prior crash back to queued.
+            from langflow.services.triggers import recover_stalled_jobs, trigger_worker_loop
+
+            try:
+                await recover_stalled_jobs()
+            except Exception as e:  # noqa: BLE001 — startup must continue
+                await logger.awarning(f"trigger worker recovery skipped: {e}")
+            trigger_worker_stop = asyncio.Event()
+            trigger_worker_task = asyncio.create_task(trigger_worker_loop(trigger_worker_stop))
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
@@ -541,6 +557,14 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if models_dev_refresh_task and not models_dev_refresh_task.done():
                         models_dev_refresh_task.cancel()
                         tasks_to_cancel.append(models_dev_refresh_task)
+                    if trigger_worker_task and not trigger_worker_task.done():
+                        # Signal first, then cancel: the loop checks the event
+                        # at every iteration and exits cleanly without waiting
+                        # for the next idle backoff to elapse.
+                        if trigger_worker_stop is not None:
+                            trigger_worker_stop.set()
+                        trigger_worker_task.cancel()
+                        tasks_to_cancel.append(trigger_worker_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
