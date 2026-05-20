@@ -62,7 +62,9 @@ export default function ProviderCredentialsForm({
         <div className="relative">
           <Input
             type={showApiKey ? "text" : "password"}
-            placeholder={apiKeyPlaceholder ?? t("deployments.placeholderApiKey")}
+            placeholder={
+              apiKeyPlaceholder ?? t("deployments.placeholderApiKey")
+            }
             className="bg-muted pr-10"
             value={credentials.api_key}
             onChange={(e) =>
@@ -74,7 +76,11 @@ export default function ProviderCredentialsForm({
           />
           <button
             type="button"
-            aria-label={showApiKey ? t("deployments.hideApiKey") : t("deployments.showApiKey")}
+            aria-label={
+              showApiKey
+                ? t("deployments.hideApiKey")
+                : t("deployments.showApiKey")
+            }
             className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             onClick={() => setShowApiKey((prev) => !prev)}
           >
