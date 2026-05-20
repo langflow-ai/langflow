@@ -225,6 +225,7 @@ class Vertex:
         return self.graph.successor_map.get(self.id, [])
 
     def __getstate__(self):
+        """Return pickle state without request-local runtime objects."""
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
         # Component instances carry request-local runtime state and are recreated from node data after restore.
@@ -234,11 +235,14 @@ class Vertex:
         return state
 
     def __setstate__(self, state):
+        """Restore pickle state and recreate runtime-only defaults."""
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
         self.custom_component = state.get("custom_component")
-        self.built_object = state.get("built_object") or UnbuiltObject()
-        self.built_result = state.get("built_result") or UnbuiltResult()
+        built_object = state.get("built_object")
+        built_result = state.get("built_result")
+        self.built_object = UnbuiltObject() if built_object is None else built_object
+        self.built_result = UnbuiltResult() if built_result is None else built_result
 
     def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices

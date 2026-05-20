@@ -234,6 +234,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def get(self, key, lock=None):
+        """Retrieve a cached value from Redis using a normalized key."""
         if key is None:
             return CACHE_MISS
         value = await self._client.get(str(key))
@@ -241,6 +242,7 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def set(self, key, value, lock=None) -> None:
+        """Store a pickled cache value in Redis when it can be serialized."""
         try:
             pickled = dill.dumps(value, recurse=True)
         except (pickle.PicklingError, TypeError, AttributeError) as exc:
@@ -276,7 +278,8 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
 
     @override
     async def delete(self, key, lock=None) -> None:
-        await self._client.delete(key)
+        """Delete a cached value from Redis using the same key normalization as get and set."""
+        await self._client.delete(str(key))
 
     @override
     async def clear(self, lock=None) -> None:

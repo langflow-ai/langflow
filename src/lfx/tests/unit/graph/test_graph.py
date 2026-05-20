@@ -1,6 +1,7 @@
 import copy
 import json
 import pickle
+from asyncio import Lock
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +16,7 @@ from lfx.graph.graph.utils import (
     update_target_handle,
     update_template,
 )
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
 from lfx.utils.flow_validation import CustomComponentValidationError
@@ -26,6 +28,8 @@ from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 class _UnpickleableRuntimeComponent:
+    """Runtime component double that cannot be pickled."""
+
     def __getstate__(self):
         raise TypeError
 
@@ -135,16 +139,32 @@ def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
 
 
 def test_graph_pickle_omits_runtime_component_instances():
+    """Graph pickling should omit runtime-only vertex state and restore safe defaults."""
     chat_input = ChatInput(_id="chat_input")
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
     graph = Graph(chat_input, chat_output)
-    graph.get_vertex("chat_input").custom_component = _UnpickleableRuntimeComponent()
+    vertex = graph.get_vertex("chat_input")
+    vertex.custom_component = _UnpickleableRuntimeComponent()
+    vertex.built_object = UnbuiltObject()
+    vertex.built_result = UnbuiltResult()
+    original_lock = vertex.lock
+
+    state = vertex.__getstate__()
+    assert state["_lock"] is None
+    assert state["custom_component"] is None
+    assert state["built_object"] is None
+    assert state["built_result"] is None
 
     restored = pickle.loads(pickle.dumps(graph))  # noqa: S301
+    restored_vertex = restored.get_vertex("chat_input")
 
-    assert restored.get_vertex("chat_input").custom_component is None
-    assert restored.get_vertex("chat_input").display_name == graph.get_vertex("chat_input").display_name
+    assert restored_vertex.custom_component is None
+    assert isinstance(restored_vertex.built_object, UnbuiltObject)
+    assert isinstance(restored_vertex.built_result, UnbuiltResult)
+    assert isinstance(restored_vertex._lock, Lock)
+    assert restored_vertex._lock is not original_lock
+    assert restored_vertex.display_name == vertex.display_name
 
 
 def test_find_last_node(grouped_chat_json_flow):
