@@ -1,8 +1,10 @@
 import copy
 import json
+import pickle
 from types import SimpleNamespace
 
 import pytest
+from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.graph.utils import (
     find_last_node,
@@ -21,6 +23,11 @@ from lfx.utils.flow_validation import CustomComponentValidationError
 
 # now we have three types of graph:
 # BASIC_EXAMPLE_PATH, COMPLEX_EXAMPLE_PATH, OPENAPI_EXAMPLE_PATH
+
+
+class _UnpickleableRuntimeComponent:
+    def __getstate__(self):
+        raise TypeError
 
 
 @pytest.fixture
@@ -125,6 +132,19 @@ def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
 
     with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
         Graph.from_payload(_blocked_custom_flow())
+
+
+def test_graph_pickle_omits_runtime_component_instances():
+    chat_input = ChatInput(_id="chat_input")
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+    graph.get_vertex("chat_input").custom_component = _UnpickleableRuntimeComponent()
+
+    restored = pickle.loads(pickle.dumps(graph))  # noqa: S301
+
+    assert restored.get_vertex("chat_input").custom_component is None
+    assert restored.get_vertex("chat_input").display_name == graph.get_vertex("chat_input").display_name
 
 
 def test_find_last_node(grouped_chat_json_flow):
