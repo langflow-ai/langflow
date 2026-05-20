@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Input } from "@/components/ui/input";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
 import { cn } from "@/utils/utils";
@@ -17,9 +19,11 @@ const ModelProvidersContent = ({
   onFlushRef,
   onHasChangesRef,
 }: ModelProvidersContentProps) => {
+  const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
     null,
   );
+  const [providerQuery, setProviderQuery] = useState<string>("");
 
   // Use the custom hook for provider configuration logic
   const {
@@ -83,10 +87,24 @@ const ModelProvidersContent = ({
           syncedSelectedProvider ? "w-1/3 border-r" : "w-full",
         )}
       >
+        <Input
+          icon="Search"
+          value={providerQuery}
+          onChange={(event) => setProviderQuery(event.target.value)}
+          placeholder={t("modelProviders.searchProviders", {
+            defaultValue: "Search providers…",
+          })}
+          aria-label={t("modelProviders.searchProviders", {
+            defaultValue: "Search providers…",
+          })}
+          data-testid="provider-search-input"
+          className="mb-2"
+        />
         <ProviderList
           modelType={modelType}
           onProviderSelect={handleProviderSelect}
           selectedProviderName={syncedSelectedProvider?.provider ?? null}
+          query={providerQuery}
         />
       </div>
 

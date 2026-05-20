@@ -22,10 +22,10 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
     "uvicorn>=0.30.0,<1.0.0",
-    "gunicorn>=25.3.0,<26.0.0",
+    "gunicorn>=25.3.0,<27.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
-    "langchain-core>=1.2.28,<2.0.0",
+    "langchain-core>=1.3.3,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
@@ -118,7 +118,7 @@ dev = [
     "ipykernel>=6.29.0",
     "ruff>=0.12.7",
     "httpx[http2]>=0.27",
-    "pytest>=8.2.0",
+    "pytest>=9.0.3",
     "requests>=2.33.0",
     "pytest-cov>=5.0.0",
     "pytest-mock>=3.14.0",
@@ -260,17 +260,25 @@ serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
+# duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
+# Public consumers should install lfx-duckduckgo directly (pip-installing
+# langflow-base no longer pulls in ddgs by default).  The extra remains
+# defined here so docker/build_and_push_base.Dockerfile can route ddgs
+# through the locked sync (``uv sync --extra duckduckgo``) instead of an
+# unpinned ``uv pip install ddgs`` that would silently drift across
+# rebuilds.  Keep the version range in lockstep with the bundle's
+# pyproject so the lockfile resolves a single ddgs version.
 duckduckgo = ["ddgs>=9.0.0"]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
 
 # Individual utilities
-pyarrow = ["pyarrow>=19.0.1,!=22.0.0"]
+pyarrow = ["pyarrow>=23.0.1,<24.0.0"]
 fastavro = [
     'fastavro==1.9.7; python_version < "3.13"',
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
-gitpython = ["GitPython==3.1.47"]
+gitpython = ["GitPython>=3.1.50"]
 nltk = ["nltk>=3.9.4"]
 lark = ["lark==1.2.2"]
 
@@ -317,14 +325,14 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # ALTK (Agent Lifecycle Toolkit)
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
-# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
+# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
 toolguard = ["toolguard>=0.2.16,<1.0.0"]
 
 # Additional LangChain integrations
-# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
+# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
 langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
@@ -422,7 +430,8 @@ complete = [
     "langflow-base[google-api]",
     "langflow-base[wikipedia]",
     "langflow-base[fake-useragent]",
-    "langflow-base[duckduckgo]",
+    # duckduckgo was an extra of langflow-base; it has been moved to
+    # the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
     "langflow-base[yfinance]",
     "langflow-base[wolframalpha]",
     "langflow-base[pyarrow]",

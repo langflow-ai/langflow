@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ export function AssistantInput({
   draftMessage = "",
   onDraftChange,
 }: AssistantInputProps) {
+  const { t } = useTranslation();
   const [message, setMessage] = useState(draftMessage);
   const [idlePlaceholder] = useState(getAssistantPlaceholder);
 
@@ -176,7 +178,7 @@ export function AssistantInput({
               isProcessing
                 ? isPostGenerationStep
                   ? ""
-                  : "Working on it..."
+                  : t("assistant.workingOnIt")
                 : (placeholder ?? idlePlaceholder)
             }
             disabled={disabled || isProcessing}
@@ -221,7 +223,7 @@ export function AssistantInput({
               <button
                 type="button"
                 onClick={onStop}
-                title="Stop generation"
+                title={t("assistant.stopGeneration")}
                 data-testid="assistant-stop-button"
                 className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted-foreground/15 text-muted-foreground transition-colors hover:bg-muted-foreground/25"
               >
@@ -237,7 +239,7 @@ export function AssistantInput({
                 className="h-8 w-8 rounded-lg"
                 onClick={handleSend}
                 disabled={!canSend}
-                title="Send message"
+                title={t("assistant.sendMessage")}
               >
                 <ForwardedIconComponent name="ArrowUp" className="h-4 w-4" />
               </Button>
