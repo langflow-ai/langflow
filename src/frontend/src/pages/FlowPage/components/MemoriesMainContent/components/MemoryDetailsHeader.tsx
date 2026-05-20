@@ -1,3 +1,4 @@
+import { useState } from "react";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +9,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import { useTranslation } from "react-i18next";
+import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { cn } from "@/utils/utils";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
@@ -23,6 +27,26 @@ export function MemoryDetailsHeader({
   isFetchingNextSessionsPage,
 }: MemoryDetailsHeaderProps) {
   const { t } = useTranslation();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+    } catch (error) {
+      setErrorData({
+        title: "Failed to refresh memory",
+        list: extractApiErrorMessages(error),
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const effectiveSession = (selectedSession ?? sessions?.[0] ?? "") as
     | string
     | null;
@@ -56,15 +80,6 @@ export function MemoryDetailsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          aria-label={t("memory.reloadSessions")}
-        >
-          <IconComponent name="RefreshCw" className="h-4 w-4" />
-        </Button>
-
         {sessions && sessions.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -97,8 +112,7 @@ export function MemoryDetailsHeader({
                     <DropdownMenuItem
                       key={sid}
                       className="flex items-center justify-between"
-                      onSelect={(e) => {
-                        e.preventDefault();
+                      onSelect={() => {
                         setSelectedSession(sid);
                       }}
                     >
@@ -134,11 +148,28 @@ export function MemoryDetailsHeader({
           aria-label={t("memory.toggleAutoCapture")}
           className="gap-2"
         >
-          <IconComponent
-            name={memory.is_active ? "ToggleRight" : "ToggleLeft"}
-            className="h-4 w-4"
+          <span
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              memory.is_active
+                ? "bg-accent-emerald-foreground"
+                : "bg-muted-foreground",
+            )}
           />
           Auto-capture
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          aria-label={t("memory.reloadSessions")}
+        >
+          <IconComponent
+            name="RefreshCw"
+            className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+          />
         </Button>
 
         <DeleteConfirmationModal
