@@ -115,11 +115,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
     def _add_metric(
         self, name: str, description: str, unit: str, metric_type: MetricType, labels: dict[str, bool]
     ) -> None:
-        metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
-        self._metrics_registry[name] = metric
         if labels is None or len(labels) == 0:
             msg = "Labels must be provided for the metric upon registration"
             raise ValueError(msg)
+        metric = Metric(name=name, description=description, metric_type=metric_type, unit=unit, labels=labels)
+        self._metrics_registry[name] = metric
 
     def _register_metric(self) -> None:
         """Define any custom metrics here.
