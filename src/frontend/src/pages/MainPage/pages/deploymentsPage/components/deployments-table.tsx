@@ -38,7 +38,7 @@ interface DeploymentsTableProps {
 }
 
 const COLUMNS = [
-  "Name",
+  "Display Name",
   "Type",
   "Attached",
   "Provider",
@@ -102,7 +102,7 @@ export default function DeploymentsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>Display Name</TableHead>
           <TableHead>{t("deployments.columnType")}</TableHead>
           <TableHead>{t("deployments.columnAttached")}</TableHead>
           <TableHead>{t("deployments.columnEnvironment")}</TableHead>

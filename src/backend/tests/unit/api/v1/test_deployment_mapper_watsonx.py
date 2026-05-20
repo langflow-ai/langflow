@@ -101,65 +101,6 @@ async def test_watsonx_mapper_resolve_deployment_list_passes_none_through() -> N
     assert params is None
 
 
-@pytest.mark.asyncio
-async def test_watsonx_mapper_resolve_snapshot_list_normalizes_names() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    params = await mapper.resolve_snapshot_list_adapter_params(
-        deployment_resource_key="dep-key",
-        snapshot_names=["My Snapshot", "tool-1"],
-        provider_params=None,
-    )
-    assert params.snapshot_names == ["My_Snapshot", "tool_1"]
-
-
-@pytest.mark.asyncio
-async def test_watsonx_mapper_resolve_snapshot_list_passes_none_through() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    params = await mapper.resolve_snapshot_list_adapter_params(
-        deployment_resource_key="dep-key",
-        snapshot_names=None,
-        provider_params=None,
-    )
-    assert params.snapshot_names is None
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("bad_name", "expected_reason_fragment"),
-    [
-        ("!!!", "alphanumeric"),
-        ("123abc", "start with a letter"),
-    ],
-)
-async def test_watsonx_mapper_resolve_snapshot_list_rejects_invalid_name(
-    bad_name: str, expected_reason_fragment: str
-) -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    with pytest.raises(HTTPException) as exc_info:
-        await mapper.resolve_snapshot_list_adapter_params(
-            deployment_resource_key="dep-key",
-            snapshot_names=[bad_name],
-            provider_params=None,
-        )
-    assert exc_info.value.status_code == 422
-    detail = str(exc_info.value.detail)
-    assert f"snapshot name filter '{bad_name}'" in detail
-    assert expected_reason_fragment in detail
-
-
-@pytest.mark.asyncio
-async def test_watsonx_mapper_resolve_snapshot_list_fails_fast_on_first_invalid() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    with pytest.raises(HTTPException) as exc_info:
-        await mapper.resolve_snapshot_list_adapter_params(
-            deployment_resource_key="dep-key",
-            snapshot_names=["Valid_Name", "!!!"],
-            provider_params=None,
-        )
-    assert exc_info.value.status_code == 422
-    assert "'!!!'" in str(exc_info.value.detail)
-
-
 def test_watsonx_mapper_is_registered() -> None:
     mapper = get_mapper(AdapterType.DEPLOYMENT, WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY)
     assert isinstance(mapper, WatsonxOrchestrateDeploymentMapper)
@@ -274,7 +215,8 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
             "name": "Agent 1",
             "display_name": "Agent 1",
             "description": "desc",
-            "tool_ids": ["tool-1", "  ", "tool-2"],
+            "tool_ids": ["tool-1", "tool-2"],
+            "llm": TEST_WXO_LLM,
             "environments": ["draft", "live"],
         },
     )
@@ -289,9 +231,37 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
     assert shaped["created_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["updated_at"] == now.isoformat().replace("+00:00", "Z")
     assert shaped["tool_ids"] == ["tool-1", "tool-2"]
+    assert shaped["llm"] == TEST_WXO_LLM
     assert shaped["environments"] == ["draft", "live"]
     assert "provider_data" not in shaped
     assert "resource_key" not in shaped
+
+
+def test_watsonx_mapper_provider_list_entry_rejects_blank_tool_id() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    now = datetime.now(tz=timezone.utc)
+    item = SimpleNamespace(
+        id="agent-1",
+        name="Agent 1",
+        type=DeploymentType.AGENT,
+        description="desc",
+        created_at=now,
+        updated_at=now,
+        provider_data={
+            "name": "Agent 1",
+            "display_name": "Agent 1",
+            "description": "desc",
+            "tool_ids": ["tool-1", "  "],
+            "llm": TEST_WXO_LLM,
+            "environments": ["draft", "live"],
+        },
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        mapper._shape_provider_deployment_list_entry(item)
+
+    assert exc_info.value.status_code == 500
+    assert "Invalid deployment list item provider_data payload:" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -> None:
@@ -311,6 +281,7 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
                     "display_name": "Agent 1",
                     "description": "desc",
                     "tool_ids": ["tool-1"],
+                    "llm": TEST_WXO_LLM,
                     "environments": ["live"],
                 },
             )
@@ -334,6 +305,7 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
             "updated_at": now.isoformat().replace("+00:00", "Z"),
             "display_name": "Agent 1",
             "tool_ids": ["tool-1"],
+            "llm": TEST_WXO_LLM,
             "environments": ["live"],
         }
     ]
@@ -374,6 +346,7 @@ def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
                     "display_name": "  Agent One  ",
                     "description": "  Provider description  ",
                     "tool_ids": ["tool-1"],
+                    "llm": TEST_WXO_LLM,
                     "environments": [" draft ", "live"],
                 },
             )
@@ -385,8 +358,9 @@ def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
     assert provider_data_by_resource_key == {
         "agent-1": {
             "name": "agent_api_name",
-            "display_name": "Agent One",
-            "environments": ["draft", "live"],
+            "display_name": "  Agent One  ",
+            "llm": TEST_WXO_LLM,
+            "environments": [" draft ", "live"],
         }
     }
 
@@ -418,31 +392,28 @@ def test_watsonx_mapper_shapes_get_provider_agent_metadata() -> None:
     assert provider_data == {
         "llm": TEST_WXO_LLM,
         "name": "agent_api_name",
-        "display_name": "Agent Display Name",
+        "display_name": "  Agent Display Name  ",
         "environments": ["draft"],
     }
 
 
-def test_watsonx_mapper_shapes_get_provider_agent_metadata_keeps_null_llm() -> None:
+def test_watsonx_mapper_shapes_get_provider_agent_metadata_requires_llm() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
 
-    provider_data = mapper.shape_deployment_get_data(
-        {
-            "llm": None,
-            "name": "agent_api_name",
-            "display_name": "Agent Display Name",
-            "description": "Provider description",
-            "tool_ids": ["tool-1"],
-            "environments": ["draft"],
-        }
-    )
+    with pytest.raises(HTTPException) as exc_info:
+        mapper.shape_deployment_get_data(
+            {
+                "llm": None,
+                "name": "agent_api_name",
+                "display_name": "Agent Display Name",
+                "description": "Provider description",
+                "tool_ids": ["tool-1"],
+                "environments": ["draft"],
+            }
+        )
 
-    assert provider_data == {
-        "llm": None,
-        "name": "agent_api_name",
-        "display_name": "Agent Display Name",
-        "environments": ["draft"],
-    }
+    assert exc_info.value.status_code == 500
+    assert "Invalid value for field 'llm'." in str(exc_info.value.detail)
 
 
 @pytest.mark.parametrize(
@@ -464,6 +435,7 @@ def test_watsonx_mapper_shapes_get_provider_agent_metadata_keeps_null_llm() -> N
                     "display_name": None,
                     "description": "Provider description",
                     "tool_ids": ["tool-1"],
+                    "llm": TEST_WXO_LLM,
                     "environments": ["draft"],
                 },
             ),
@@ -506,6 +478,7 @@ def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
                 "name": "Agent 1",
                 "display_name": "Agent One",
                 "description": "Provider description",
+                "llm": TEST_WXO_LLM,
                 "environments": ["draft"],
             }
         },
@@ -518,6 +491,7 @@ def test_watsonx_mapper_shapes_synced_list_items_with_provider_data() -> None:
         "name": "Agent 1",
         "display_name": "Agent One",
         "description": "Provider description",
+        "llm": TEST_WXO_LLM,
         "environments": ["draft"],
     }
 
@@ -1235,6 +1209,12 @@ def test_watsonx_api_payload_accepts_update_without_llm() -> None:
     assert payload.llm is None
 
 
+@pytest.mark.parametrize("field_name", ["display_name", "llm"])
+def test_watsonx_api_payload_rejects_null_update_scalars(field_name: str) -> None:
+    with pytest.raises(ValidationError, match=f"{field_name} cannot be set to null"):
+        WatsonxApiDeploymentUpdatePayload.model_validate({field_name: None})
+
+
 def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -> None:
     flow_version_id = uuid4()
     remove_flow_version_id = uuid4()
@@ -1268,6 +1248,7 @@ def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payl
                 "display_name": "Provider Label",
                 "description": "Provider description",
                 "tool_ids": [],
+                "llm": TEST_WXO_LLM,
                 "environments": ["draft"],
             },
         )
@@ -1302,6 +1283,7 @@ def test_watsonx_mapper_existing_resource_result_does_not_truncate_before_db_wri
                     "display_name": "Provider Label",
                     "description": long_description,
                     "tool_ids": [],
+                    "llm": TEST_WXO_LLM,
                     "environments": ["draft"],
                 },
             )
@@ -1512,6 +1494,7 @@ def test_watsonx_mapper_existing_agent_create_model_uses_provider_metadata() -> 
             "display_name": "Provider Label",
             "description": "Provider description",
             "tool_ids": [],
+            "llm": TEST_WXO_LLM,
             "environments": ["draft"],
         },
     )
@@ -1546,6 +1529,7 @@ def test_watsonx_mapper_existing_agent_create_model_truncates_once_for_db_write(
             "display_name": "Provider Label",
             "description": long_description,
             "tool_ids": [],
+            "llm": TEST_WXO_LLM,
             "environments": ["draft"],
         },
     )
@@ -1579,6 +1563,7 @@ def test_watsonx_mapper_metadata_sync_kwargs_include_display_name() -> None:
                     "display_name": "Provider Label",
                     "description": "Provider description",
                     "tool_ids": [],
+                    "llm": TEST_WXO_LLM,
                     "environments": [],
                 },
                 created_at=datetime.now(tz=timezone.utc),
@@ -1609,6 +1594,7 @@ def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logge
                     "display_name": "Provider Label",
                     "description": "short",
                     "tool_ids": [],
+                    "llm": TEST_WXO_LLM,
                     "environments": [],
                 },
                 created_at=datetime.now(tz=timezone.utc),
@@ -1623,6 +1609,7 @@ def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logge
                     "display_name": "Provider Label 2",
                     "description": "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7),
                     "tool_ids": [],
+                    "llm": TEST_WXO_LLM,
                     "environments": [],
                 },
                 created_at=datetime.now(tz=timezone.utc),
@@ -1656,6 +1643,7 @@ def test_watsonx_mapper_get_metadata_sync_kwargs_include_display_name() -> None:
             "display_name": "Provider Label",
             "description": "Provider description",
             "tool_ids": [],
+            "llm": TEST_WXO_LLM,
             "environments": [],
         },
     )
@@ -2223,9 +2211,10 @@ async def test_watsonx_mapper_translates_llm_only_update_payload() -> None:
     provider_data = resolved.provider_data or {}
 
     assert provider_data["llm"] == TEST_WXO_LLM
+    assert "display_name" not in provider_data
     assert provider_data["operations"] == []
-    assert provider_data["tools"]["raw_payloads"] is None
-    assert provider_data["connections"] == {"raw_payloads": None}
+    assert provider_data["tools"].get("raw_payloads") is None
+    assert provider_data["connections"].get("raw_payloads") is None
 
 
 @pytest.mark.asyncio
@@ -2276,13 +2265,13 @@ async def test_watsonx_mapper_translates_unbind_and_remove_via_attachment_snapsh
     assert provider_data["operations"][1]["tool"]["source_ref"] == str(flow_version_id_remove)
 
 
-def test_watsonx_update_result_data_normalizes_fields() -> None:
+def test_watsonx_update_result_data_preserves_provider_owned_strings() -> None:
     flow_version_id = uuid4()
     data = WatsonxApiDeploymentUpdateResultData.from_provider_result(
         {
             "name": "agent_technical_name",
             "display_name": "Agent Display Name",
-            "created_app_ids": ["  app-one  ", "", "app-two"],
+            "created_app_ids": ["  app-one  ", "app-two"],
             "created_tools": [
                 {"flow_version_id": str(flow_version_id), "tool_id": "tool-1"},
             ],
@@ -2292,7 +2281,7 @@ def test_watsonx_update_result_data_normalizes_fields() -> None:
 
     assert data.name == "agent_technical_name"
     assert data.display_name == "Agent Display Name"
-    assert data.created_app_ids == ["app-one", "app-two"]
+    assert data.created_app_ids == ["  app-one  ", "app-two"]
     assert data.created_tools is not None
     assert data.created_tools[0].flow_version_id == flow_version_id
     assert data.created_tools[0].tool_id == "tool-1"

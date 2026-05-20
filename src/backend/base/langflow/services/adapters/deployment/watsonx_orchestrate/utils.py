@@ -27,8 +27,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         SnapshotListParams,
@@ -246,20 +244,14 @@ def build_agent_payload_from_values(
     agent_name: str,
     agent_display_name: str,
     description: str | None,
-    tool_ids: Sequence[str],
+    tool_ids: list[str],
     llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
         "display_name": agent_display_name,
         "description": resolve_agent_description(description, agent_display_name=agent_display_name),
-        "tools": list(tool_ids),
+        "tools": tool_ids,
         "style": "default",
-        "llm": str(llm).strip(),
+        "llm": llm,
     }
-
-
-def extract_agent_tool_ids(agent: dict[str, Any]) -> list[str]:
-    # Shape source:
-    # - SDK/API agent payload uses "tools" as list[str] in this adapter flow.
-    return [str(tool_id) for tool_id in agent.get("tools", []) if tool_id]

@@ -280,7 +280,7 @@ describe("Column headers", () => {
   it("renders all expected column headers", () => {
     renderTable();
     for (const header of [
-      "Name",
+      "Display Name",
       "Type",
       "Attached",
       "Environment",

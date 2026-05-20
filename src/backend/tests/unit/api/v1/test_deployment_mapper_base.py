@@ -289,24 +289,10 @@ async def test_base_mapper_resolve_snapshot_list_adapter_params_passthrough() ->
     mapper = BaseDeploymentMapper()
     params = await mapper.resolve_snapshot_list_adapter_params(
         deployment_resource_key="dep-key-1",
-        snapshot_names=["snap-a", "snap-b"],
         provider_params={"tag": "nightly"},
     )
     assert params.deployment_ids == ["dep-key-1"]
-    assert params.snapshot_names == ["snap-a", "snap-b"]
     assert params.provider_params == {"tag": "nightly"}
-
-
-@pytest.mark.asyncio
-async def test_base_mapper_resolve_snapshot_list_adapter_params_normalizes_empty_names_to_none() -> None:
-    mapper = BaseDeploymentMapper()
-    params = await mapper.resolve_snapshot_list_adapter_params(
-        deployment_resource_key="dep-key-1",
-        snapshot_names=[],
-        provider_params=None,
-    )
-    assert params.deployment_ids == ["dep-key-1"]
-    assert params.snapshot_names is None
 
 
 @pytest.mark.asyncio
@@ -314,11 +300,9 @@ async def test_base_mapper_resolve_snapshot_list_adapter_params_omits_deployment
     mapper = BaseDeploymentMapper()
     params = await mapper.resolve_snapshot_list_adapter_params(
         deployment_resource_key=None,
-        snapshot_names=None,
         provider_params=None,
     )
     assert params.deployment_ids is None
-    assert params.snapshot_names is None
     assert params.provider_params is None
 
 

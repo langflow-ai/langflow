@@ -263,12 +263,10 @@ class BaseDeploymentMapper:
         self,
         *,
         deployment_resource_key: str | None,
-        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
     ) -> SnapshotListParams:
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            snapshot_names=snapshot_names or None,
             provider_params=provider_params,
         )
 

@@ -50,10 +50,6 @@ Live snapshot/config listing scenarios:
   tenant-scoped snapshot listing and should still succeed (expects Success).
 - `live_list_snapshots_tenant_scope`: lists tenant-scoped snapshots (expects Success).
 - `live_list_configs_tenant_scope`: lists tenant-scoped configs (expects Success).
-- `live_list_snapshots_by_names_returns_known`: queries snapshot_names mode and
-  confirms known names resolve to known snapshot ids (expects Success).
-- `live_list_snapshots_by_names_ignored_with_deployment_scope`: passes both deployment_ids
-  and snapshot_names, and confirms deployment scope takes precedence (expects Success).
 
 Live negative scenarios:
 - `live_negative_create_seed`: creates a second seed deployment for negative-path checks (expects Success).
@@ -594,12 +590,6 @@ class WatsonxAdapterDirectE2E:
         return await self._run_list_snapshots_with_params(
             params=SnapshotListParams(snapshot_ids=snapshot_ids),
             detail_label="snapshots_by_ids_listed",
-        )
-
-    async def _run_list_snapshots_by_names(self, snapshot_names: list[str]) -> tuple[str, str, Any | None]:
-        return await self._run_list_snapshots_with_params(
-            params=SnapshotListParams(snapshot_names=snapshot_names),
-            detail_label="snapshots_by_names_listed",
         )
 
     async def _run_list_configs_with_params(
@@ -1293,7 +1283,7 @@ class WatsonxAdapterDirectE2E:
     async def _run_live_listing_mode_scenarios(self) -> list[ScenarioResult]:
         results: list[ScenarioResult] = []
         print("\n[list/1] creating seed for list mode checks")
-        deployment_id, config_id, seed_snapshot_ids, _ = await self._create_update_seed(
+        _deployment_id, config_id, seed_snapshot_ids, _ = await self._create_update_seed(
             label="list_modes_seed",
             snapshot_count=1,
         )
@@ -1347,72 +1337,6 @@ class WatsonxAdapterDirectE2E:
                     f"tenant_has_config={tenant_has_config} total={len(tenant_config_ids)}"
                 ),
                 ok=status_code == OUTCOME_SUCCESS and bool(config_id) and tenant_has_config,
-            )
-        )
-
-        deployment_list_status, deployment_list_detail, deployment_snapshot_list = await self._run_list_snapshots(
-            deployment_id
-        )
-        deployment_snapshots = getattr(deployment_snapshot_list, "snapshots", []) if deployment_snapshot_list else []
-        seed_snapshot_name = ""
-        for snapshot in deployment_snapshots:
-            snapshot_id = str(getattr(snapshot, "id", "")).strip()
-            snapshot_name = str(getattr(snapshot, "name", "")).strip()
-            if snapshot_id == seed_snapshot_id and snapshot_name:
-                seed_snapshot_name = snapshot_name
-                break
-        if not seed_snapshot_name:
-            results.append(
-                self._build_result(
-                    name="live_list_snapshots_by_names_seed_missing_name",
-                    expected={OUTCOME_SUCCESS},
-                    actual_outcome=deployment_list_status,
-                    detail=(
-                        f"{deployment_list_detail} | seed_snapshot_id={seed_snapshot_id} "
-                        "is missing from deployment-scoped snapshot names"
-                    ),
-                    ok=False,
-                )
-            )
-            return results
-
-        print("[list/4] live_list_snapshots_by_names_returns_known")
-        status_code, detail, by_name_result = await self._run_list_snapshots_by_names([seed_snapshot_name])
-        by_name_ids = self._extract_snapshot_ids(by_name_result)
-        by_name_has_seed = seed_snapshot_id in by_name_ids
-        results.append(
-            self._build_result(
-                name="live_list_snapshots_by_names_returns_known",
-                expected={OUTCOME_SUCCESS},
-                actual_outcome=status_code,
-                detail=(
-                    f"{detail} | seed_snapshot_name={seed_snapshot_name} "
-                    f"seed_snapshot_id={seed_snapshot_id} by_name_has_seed={by_name_has_seed}"
-                ),
-                ok=status_code == OUTCOME_SUCCESS and by_name_has_seed,
-            )
-        )
-
-        print("[list/5] live_list_snapshots_by_names_ignored_with_deployment_scope")
-        status_code, detail, mixed_filter_result = await self._run_list_snapshots_with_params(
-            params=SnapshotListParams(
-                deployment_ids=[deployment_id],
-                snapshot_names=[self._mk_name("snap_name_ignored")],
-            ),
-            detail_label="snapshots_mixed_filter_listed",
-        )
-        mixed_filter_ids = self._extract_snapshot_ids(mixed_filter_result)
-        mixed_kept_seed = seed_snapshot_id in mixed_filter_ids
-        results.append(
-            self._build_result(
-                name="live_list_snapshots_by_names_ignored_with_deployment_scope",
-                expected={OUTCOME_SUCCESS},
-                actual_outcome=status_code,
-                detail=(
-                    f"{detail} | seed_snapshot_id={seed_snapshot_id} mixed_kept_seed={mixed_kept_seed} "
-                    f"returned={sorted(mixed_filter_ids)}"
-                ),
-                ok=status_code == OUTCOME_SUCCESS and mixed_kept_seed,
             )
         )
 
