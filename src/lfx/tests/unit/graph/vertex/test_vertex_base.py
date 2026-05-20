@@ -11,6 +11,7 @@ import pytest
 from ag_ui.core import StepFinishedEvent, StepStartedEvent
 from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
+from lfx.graph.utils import UnbuiltObject, UnbuiltResult
 from lfx.graph.vertex import base as vertex_base_module
 from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
@@ -440,6 +441,27 @@ def test_vertex_base_extract_messages_coerces_uuid_session_id():
 
     messages = vertex_base_module.Vertex.extract_messages_from_artifacts(vertex, artifacts)
     assert messages[0]["session_id"] == str(session_id)
+
+
+@pytest.mark.parametrize("cached_value", [0, False, "", [], {}])
+def test_vertex_setstate_preserves_falsey_cached_values(cached_value):
+    """Falsey cache values are valid results and should not become unbuilt sentinels."""
+    vertex = object.__new__(Vertex)
+
+    vertex.__setstate__({"built_object": cached_value, "built_result": cached_value})
+
+    assert vertex.built_object == cached_value
+    assert vertex.built_result == cached_value
+
+
+def test_vertex_setstate_restores_unbuilt_sentinels_for_none_values():
+    """None remains the marker used for omitted unbuilt state during serialization."""
+    vertex = object.__new__(Vertex)
+
+    vertex.__setstate__({"built_object": None, "built_result": None})
+
+    assert isinstance(vertex.built_object, UnbuiltObject)
+    assert isinstance(vertex.built_result, UnbuiltResult)
 
 
 class TestStrFieldWithNonStringListElements:

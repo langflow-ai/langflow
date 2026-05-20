@@ -234,8 +234,8 @@ class Vertex:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
-        self.built_object = state.get("built_object") or UnbuiltObject()
-        self.built_result = state.get("built_result") or UnbuiltResult()
+        self.built_object = UnbuiltObject() if state.get("built_object") is None else state["built_object"]
+        self.built_result = UnbuiltResult() if state.get("built_result") is None else state["built_result"]
 
     def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
