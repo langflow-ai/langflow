@@ -4,7 +4,7 @@ import type {
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
-import type { ChatInputType, ChatOutputType } from "../chat";
+import type { ChatInputType, ChatOutputType, UsageType } from "../chat";
 import type { FlowType } from "../flow";
 //kind and class are just representative names to represent the actual structure of the object received by the API
 export type APIDataType = { [key: string]: APIKindType };
@@ -13,6 +13,11 @@ export type APIKindType = { [key: string]: APIClassType };
 export type APITemplateType = {
   [key: string]: InputFieldType;
 };
+
+export type ComponentDisplayNamesType = Record<
+  string,
+  { display_name: string[]; description: string[] }
+>;
 
 export type APICodeValidateType = {
   imports: { errors: Array<string> };
@@ -121,6 +126,7 @@ export type OutputFieldType = {
   group_outputs?: boolean;
   method?: string;
   display_name: string;
+  info?: string;
   hidden?: boolean;
   proxy?: OutputFieldProxyType;
   allows_loop?: boolean;
@@ -250,13 +256,14 @@ export type LogsLogType = {
 export type VertexDataTypeAPI = {
   results: { [key: string]: string };
   outputs: { [key: string]: OutputLogType };
-  logs: { [key: string]: LogsLogType };
+  logs: { [key: string]: LogsLogType[] };
   messages: ChatOutputType[] | ChatInputType[];
   inactive?: boolean;
   timedelta?: number;
   duration?: string;
   artifacts?: any | ChatOutputType | ChatInputType;
   message?: ChatOutputType | ChatInputType;
+  token_usage?: UsageType | null;
 };
 
 export type CodeErrorDataTypeAPI = {

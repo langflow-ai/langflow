@@ -1,14 +1,122 @@
 import * as Form from "@radix-ui/react-form";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import type { InputComponentType } from "@/types/components";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
+import { useIMEInput } from "../../hooks/use-ime-input";
 import { getIconName } from "./components/helpers/get-icon-name";
 import CustomInputPopover from "./components/popover";
 import CustomInputPopoverObject from "./components/popoverObject";
+
+interface FormInputBranchProps {
+  refInput: React.RefObject<HTMLInputElement | null>;
+  value: string;
+  onChange?: (value: string, skipSnapshot?: boolean) => void;
+  onChangeFolderName?: (e: {
+    target: { value: string; selectionStart: number | null };
+  }) => void;
+  onInputLostFocus: (event: React.FocusEvent<HTMLInputElement>) => void;
+  autoFocus: boolean;
+  password?: boolean;
+  pwdVisible: boolean;
+  disabled?: boolean;
+  required: boolean;
+  editNode: boolean;
+  className?: string;
+  placeholder: string;
+  blurOnEnter: boolean;
+  name?: string;
+  id: string;
+}
+
+function FormInputBranch({
+  refInput,
+  value,
+  onChange,
+  onChangeFolderName,
+  onInputLostFocus,
+  autoFocus,
+  password,
+  pwdVisible,
+  disabled,
+  required,
+  editNode,
+  className,
+  placeholder,
+  blurOnEnter,
+  name,
+  id,
+}: FormInputBranchProps) {
+  const [cursor, setCursor] = useState<number | null>(null);
+
+  const commitValue = useCallback(
+    (newValue: string) => {
+      if (onChangeFolderName) {
+        onChangeFolderName({
+          target: {
+            value: newValue,
+            selectionStart: refInput.current?.selectionStart ?? null,
+          },
+        });
+        return;
+      }
+      onChange?.(newValue);
+    },
+    [onChange, onChangeFolderName, refInput],
+  );
+
+  const {
+    displayValue,
+    inputProps: imeInputProps,
+    flushPendingComposition,
+  } = useIMEInput<HTMLInputElement>({
+    value: value ?? "",
+    onCommit: commitValue,
+    inputRef: refInput,
+    cursor,
+    setCursor,
+  });
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    flushPendingComposition();
+    onInputLostFocus(event);
+  };
+
+  return (
+    <Form.Control asChild>
+      <Input
+        name={name}
+        id={"form-" + id}
+        ref={refInput}
+        autoFocus={autoFocus}
+        type={password && !pwdVisible ? "password" : "text"}
+        {...imeInputProps}
+        onBlur={handleBlur}
+        value={displayValue}
+        disabled={disabled}
+        required={required}
+        className={classNames(
+          password && !pwdVisible && value !== "" ? "text-clip password" : "",
+          editNode ? "input-edit-node" : "",
+          password && editNode ? "pr-8" : "",
+          password && !editNode ? "pr-10" : "",
+          className!,
+        )}
+        placeholder={password && editNode ? "Key" : placeholder}
+        onCopy={(e) => {
+          e.preventDefault();
+        }}
+        onKeyDown={(e) => {
+          handleKeyDown(e, value, "");
+          if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
+        }}
+      />
+    </Form.Control>
+  );
+}
 
 export default function InputComponent({
   autoFocus = false,
@@ -30,6 +138,7 @@ export default function InputComponent({
   selectedOptions = [],
   setSelectedOptions,
   options = [],
+  disabledOptions,
   optionsPlaceholder = "Search options...",
   optionsButton,
   optionButton,
@@ -44,9 +153,10 @@ export default function InputComponent({
   blockAddNewGlobalVariable = false,
   hasRefreshButton = false,
   inspectionPanel = false,
-}: InputComponentType): JSX.Element {
+}: InputComponentType & {
+  disabledOptions?: Record<string, string>;
+}): JSX.Element {
   const [pwdVisible, setPwdVisible] = useState(false);
-  const [cursor, setCursor] = useState<number | null>(null);
   const refInput = useRef<HTMLInputElement>(null);
   const [showOptions, setShowOptions] = useState<boolean>(false);
 
@@ -56,13 +166,6 @@ export default function InputComponent({
     }
   }, [disabled]);
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && refInput.current) {
-      refInput.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
-
   function onInputLostFocus(event): void {
     if (onBlur) onBlur(event);
   }
@@ -70,43 +173,24 @@ export default function InputComponent({
   return (
     <div className="relative w-full">
       {isForm ? (
-        <Form.Control asChild>
-          <Input
-            name={name}
-            id={"form-" + id}
-            ref={refInput}
-            onBlur={onInputLostFocus}
-            autoFocus={autoFocus}
-            type={password && !pwdVisible ? "password" : "text"}
-            value={value}
-            disabled={disabled}
-            required={required}
-            className={classNames(
-              password && !pwdVisible && value !== ""
-                ? "text-clip password"
-                : "",
-              editNode ? "input-edit-node" : "",
-              password && editNode ? "pr-8" : "",
-              password && !editNode ? "pr-10" : "",
-              className!,
-            )}
-            placeholder={password && editNode ? "Key" : placeholder}
-            onChange={(e) => {
-              setCursor(e.target.selectionStart);
-              if (onChangeFolderName) {
-                return onChangeFolderName(e);
-              }
-              onChange && onChange(e.target.value);
-            }}
-            onCopy={(e) => {
-              e.preventDefault();
-            }}
-            onKeyDown={(e) => {
-              handleKeyDown(e, value, "");
-              if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
-            }}
-          />
-        </Form.Control>
+        <FormInputBranch
+          refInput={refInput}
+          value={value}
+          onChange={onChange}
+          onChangeFolderName={onChangeFolderName}
+          onInputLostFocus={onInputLostFocus}
+          autoFocus={autoFocus}
+          password={password}
+          pwdVisible={pwdVisible}
+          disabled={disabled}
+          required={required}
+          editNode={editNode}
+          className={className}
+          placeholder={placeholder}
+          blurOnEnter={blurOnEnter}
+          name={name}
+          id={id}
+        />
       ) : (
         <>
           {isObjectOption ? (
@@ -162,6 +246,7 @@ export default function InputComponent({
               placeholder={placeholder}
               blurOnEnter={blurOnEnter}
               options={options}
+              disabledOptions={disabledOptions}
               optionsPlaceholder={optionsPlaceholder}
               nodeStyle={nodeStyle}
               popoverWidth={popoverWidth}

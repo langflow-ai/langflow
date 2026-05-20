@@ -31,6 +31,7 @@ const badgeVariants = cva(
         lg: "h-6 text-base",
         sq: "h-6 px-1.5 text-sm font-medium rounded-md",
         xq: "h-6 px-1.5 text-xs font-medium rounded-sm",
+        tag: "h-[18px] px-1.5 text-[11px] leading-[14px] font-medium rounded",
       },
     },
     defaultVariants: {

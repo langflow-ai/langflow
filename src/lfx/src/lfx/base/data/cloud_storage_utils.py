@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from lfx.utils.secrets import secret_value_to_str
+
 
 def validate_aws_credentials(component: Any) -> None:
     """Validate that required AWS S3 credentials are present.
@@ -59,7 +61,7 @@ def create_s3_client(component: Any):
     return boto3.client("s3", **client_config)
 
 
-def parse_google_service_account_key(service_account_key: str) -> dict:
+def parse_google_service_account_key(service_account_key: Any) -> dict:
     """Parse Google service account JSON key with multiple fallback strategies.
 
     This function handles various common formatting issues when users paste
@@ -78,6 +80,8 @@ def parse_google_service_account_key(service_account_key: str) -> dict:
     Raises:
         ValueError: If all parsing strategies fail
     """
+    service_account_key = secret_value_to_str(service_account_key) or ""
+
     credentials_dict = None
     parse_errors = []
 

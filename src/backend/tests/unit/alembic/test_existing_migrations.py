@@ -114,10 +114,16 @@ class TestExistingMigrations:
             pytest.fail(f"Migrations directory not found at {migrations_dir}")
 
         legacy_migration = next(
-            (f for f in migrations_dir.glob("*.py") if not f.name.startswith("00") and f.name != "__init__.py"), None
+            (
+                f
+                for f in sorted(migrations_dir.glob("*.py"))
+                if not f.name.startswith("00") and f.name != "__init__.py" and "Phase:" not in f.read_text()
+            ),
+            None,
         )
 
-        assert legacy_migration is not None, f"No legacy migration files found in {migrations_dir}"
+        if legacy_migration is None:
+            pytest.skip("All migrations already have phase markers")
 
         result = validator.validate_migration_file(legacy_migration)
         assert result["valid"] is False

@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "CRUD folders",
@@ -52,15 +53,13 @@ test(
       timeout: 30000,
     });
 
+    await page.getByTestId("sidebar-nav-new project test name").last().hover();
+
     await page
-      .getByTestId("sidebar-nav-new project test name")
-      .last()
-      .hover()
-      .then(async () => {
-        await page
-          .getByTestId("more-options-button_new-project-test-name")
-          .click();
-      });
+      .getByTestId("more-options-button_new-project-test-name")
+      .waitFor({ state: "visible", timeout: 5000 });
+
+    await page.getByTestId("more-options-button_new-project-test-name").click();
 
     await page.getByTestId("btn-delete-project").click();
     await page.getByText("Delete").last().click();
@@ -130,44 +129,73 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
 });
 
 test("change flow folder", async ({ page }) => {
+  const uniqueFlowName = `move-${Math.random().toString(36).substring(2, 10)}`;
+  const destinationProjectName = `dest-${Math.random().toString(36).substring(2, 10)}`;
+
   await awaitBootstrapTest(page);
 
+  // Create a flow in the Starter Project and rename it to something
+  // unique so our assertions can't collide with any template that
+  // Starter ships with by default.
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
+  await page.waitForTimeout(1000);
+
+  await renameFlow(page, { flowName: uniqueFlowName });
+
+  await page.waitForTimeout(1000);
 
   await page.getByTestId("icon-ChevronLeft").first().click();
-
-  await page.getByPlaceholder("Search flows").isVisible();
-  await page.getByText("Flows").first().isVisible();
-  if (await page.getByText("Components").first().isVisible()) {
-    await page.getByText("Components").first().isVisible();
-  } else {
-    await page.getByText("MCP Server").first().isVisible();
-  }
+  await expect(page.getByPlaceholder("Search flows")).toBeVisible();
 
   await page.getByTestId("add-project-button").click();
   await page
     .locator("[data-testid='project-sidebar']")
     .getByText("New Project")
     .last()
-    .isVisible();
+    .waitFor({ state: "visible", timeout: 10000 });
   await page
     .locator("[data-testid='project-sidebar']")
     .getByText("New Project")
     .last()
     .dblclick();
-  await page.getByTestId("input-project").fill("new project test name");
+  await page.getByTestId("input-project").fill(destinationProjectName);
   await page.keyboard.press("Enter");
-  await page.getByText("new project test name").last().isVisible();
+  await expect(
+    page.getByTestId(`sidebar-nav-${destinationProjectName}`),
+  ).toBeVisible({ timeout: 10000 });
 
-  await page.getByText("Starter Project").last().click();
-  await page.getByText("Basic Prompting").first().hover();
-  await page.mouse.down();
-  await page.getByText("test").first().hover();
-  await page.mouse.up();
-  await page.getByText("Basic Prompting").first().isVisible();
+  // Go back to the source project where the flow currently lives.
+  await page.getByTestId("sidebar-nav-Starter Project").click();
+  await expect(
+    page.getByTestId("list-card").filter({ hasText: uniqueFlowName }),
+  ).toHaveCount(1, { timeout: 10000 });
+
+  // Real HTML5 drag-and-drop: `dragTo()` populates `DataTransfer` so
+  // the `use-on-file-drop.ts` handler reads `getData("flow")` and
+  // triggers the folder-change mutation. `mouse.down/up` would NOT.
+  await page
+    .getByTestId("list-card")
+    .filter({ hasText: uniqueFlowName })
+    .first()
+    .dragTo(page.getByTestId(`sidebar-nav-${destinationProjectName}`));
+
+  // Click the destination folder and verify the moved flow is visible
+  // WITHOUT a manual page refresh. This is the behavior that regresses
+  // when the patch-flow cache invalidation is incomplete.
+  await page.getByTestId(`sidebar-nav-${destinationProjectName}`).click();
+
+  await expect(
+    page.getByTestId("list-card").filter({ hasText: uniqueFlowName }),
+  ).toHaveCount(1, { timeout: 10000 });
+
+  // And the flow must NOT remain in the source project.
+  await page.getByTestId("sidebar-nav-Starter Project").click();
+  await expect(
+    page.getByTestId("list-card").filter({ hasText: uniqueFlowName }),
+  ).toHaveCount(0, { timeout: 10000 });
 });

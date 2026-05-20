@@ -150,7 +150,7 @@ jobs:
         if: ${{ inputs.main_version == '' && (inputs.release_type == 'main' || inputs.release_type == 'main-ep' || inputs.release_type == 'nightly-main' || inputs.release_type == 'main-all' || inputs.release_type == 'nightly-main-all') }}
         id: get-version-main
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}' | sed 's/^v//')
+          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}' | sed 's/^v//')
           echo version=$version
           echo version=$version >> $GITHUB_OUTPUT
   setup:

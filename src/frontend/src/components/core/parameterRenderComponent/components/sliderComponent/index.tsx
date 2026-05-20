@@ -1,6 +1,7 @@
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/helpers/get-min-max-value";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
@@ -91,6 +92,22 @@ export default function SliderComponent({
 
     return null;
   };
+
+  const { t } = useTranslation();
+
+  const labelTranslations: Record<string, string> = {
+    Precise: t("slider.precise"),
+    Balanced: t("slider.balanced"),
+    Creative: t("slider.creative"),
+    Wild: t("slider.wild"),
+  };
+
+  const displayMinLabel = labelTranslations[minLabel] ?? minLabel;
+  const displayMaxLabel = labelTranslations[maxLabel] ?? maxLabel;
+  const displaySliderButtonsOptions = sliderButtonsOptions.map((opt) => ({
+    ...opt,
+    label: labelTranslations[opt.label] ?? opt.label,
+  }));
 
   const isDark = useDarkStore((state) => state.dark);
 
@@ -300,7 +317,7 @@ export default function SliderComponent({
       {sliderButtons && (
         <div className="my-3">
           <div className={clsx("flex rounded-md bg-background")}>
-            {sliderButtonsOptions?.map((option) => (
+            {displaySliderButtonsOptions?.map((option) => (
               <button
                 key={option.id}
                 onClick={() => handleOptionClick(option.id)}
@@ -321,8 +338,8 @@ export default function SliderComponent({
       )}
 
       <SliderLabels
-        minLabel={minLabel}
-        maxLabel={maxLabel}
+        minLabel={displayMinLabel}
+        maxLabel={displayMaxLabel}
         minLabelIcon={minLabelIcon}
         maxLabelIcon={maxLabelIcon}
       />

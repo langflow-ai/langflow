@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -360,12 +361,15 @@ class Graph:
         event_manager: EventManager | None = None,
         *,
         reset_output_values: bool = True,
+        fallback_to_env_vars: bool = False,
     ):
         # Preserve start_component_id from constructor if available
         start_component_id = self._start.get_id() if self._start else None
         self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
+
+        await self.initialize_run()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -376,7 +380,9 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(
+                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            )
             yield result
             if isinstance(result, Finish):
                 return
@@ -688,7 +694,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
@@ -1163,8 +1177,49 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.extension.migration import migrate_flow_payload
+        from lfx.utils.flow_validation import validate_flow_for_current_settings
+
         if "data" in payload:
             payload = payload["data"]
+        # Rewrite legacy component references in place against the append-only
+        # extension migration table.  Best-effort: a corrupt table or unmapped
+        # reference produces typed errors on the report but never raises, so
+        # flow load remains as forgiving as it was pre-Phase-A.
+        migration_report = migrate_flow_payload(payload)
+        # Surface every typed error from the report through the standard
+        # logger so unmapped or ambiguous component references are not
+        # silently dropped.  We log rather than raise because the
+        # rewriter is intentionally tolerant -- a partially-broken flow
+        # still loads, and the frontend renders missing nodes as red
+        # placeholders.  The structured ``code``/``hint`` come from
+        # ``ExtensionError`` so log scrapers can parse the payload.
+        for migration_error in migration_report.errors:
+            # Use %s-style positional formatting consistent with the rest of
+            # the extension subsystem so the rendered message is readable
+            # without relying on structlog's keyword-binding behavior.
+            logger.warning(
+                "extension migration: code=%s flow_id=%s location=%s hint=%s message=%s",
+                migration_error.code,
+                flow_id,
+                migration_error.location,
+                migration_error.hint,
+                migration_error.message,
+            )
+        # TODO(LE-1017): when the extension events pipeline lands, emit a
+        # single ``flow-migrated`` event per flow per session here using
+        # ExtensionEventsService, plus one event per ``ExtensionError`` in
+        # ``migration_report.errors`` so the frontend can surface the
+        # ``component-not-found-with-hint`` / ``component-name-ambiguous``
+        # codes inline.  Until then the warnings above are the only
+        # external-facing surface for these errors.
+        # Defense-in-depth: validate here so that no code path can construct
+        # a graph with blocked/custom components, even if an API endpoint
+        # forgets its own pre-check. Ideally this would live only at the API
+        # boundary (middleware or endpoint dependency) so from_payload stays
+        # pure deserialization, but a missed endpoint means arbitrary code
+        # execution, so we keep this as a safety net.
+        validate_flow_for_current_settings(payload)
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
@@ -1421,6 +1476,8 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
+        *,
+        fallback_to_env_vars: bool = False,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -1446,7 +1503,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1459,6 +1516,7 @@ class Graph:
             get_cache=get_cache_func,
             set_cache=set_cache_func,
             event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
@@ -1671,10 +1729,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()

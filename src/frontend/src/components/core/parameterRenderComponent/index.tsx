@@ -1,5 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
@@ -336,8 +337,10 @@ export function ParameterRenderComponent({
           | Array<{ name?: unknown; link?: string }>
           | undefined;
         const link =
-          connectionOptions?.find((option) => option?.name === templateValue)
-            ?.link || "";
+          templateData?.options?.find(
+            (option: { name?: unknown; link?: unknown }) =>
+              option?.name === templateValue,
+          )?.link || "";
 
         return (
           <CustomConnectionComponent
@@ -389,6 +392,13 @@ export function ParameterRenderComponent({
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
+          />
+        );
+      case "knowledge_backend":
+        return (
+          <DBProviderInputComponent
+            {...baseInputProps}
+            id={`dbprovider_${id}`}
           />
         );
       default:

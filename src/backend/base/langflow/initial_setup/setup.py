@@ -13,11 +13,11 @@ from tempfile import TemporaryDirectory
 from typing import AnyStr
 from uuid import UUID
 
+import aiofiles
 import anyio
 import httpx
 import orjson
 import sqlalchemy as sa
-from aiofile import async_open
 from emoji import demojize, purely_emoji
 from lfx.base.constants import (
     FIELD_FORMAT_ATTRIBUTES,
@@ -28,6 +28,7 @@ from lfx.base.constants import (
 )
 from lfx.log.logger import logger
 from lfx.template.field.prompt import DEFAULT_PROMPT_INTUT_TYPES
+from lfx.utils.component_aliases import flatten_components_with_aliases
 from lfx.utils.util import escape_json_dump
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
@@ -61,11 +62,7 @@ from langflow.services.deps import (
 
 
 def update_projects_components_with_latest_component_versions(project_data, all_types_dict):
-    # Flatten the all_types_dict for easy access
-    all_types_dict_flat = {}
-    for category in all_types_dict.values():
-        for key, component in category.items():
-            all_types_dict_flat[key] = component
+    all_types_dict_flat = flatten_components_with_aliases(all_types_dict)
 
     node_changes_log = defaultdict(list)
     project_data_copy = deepcopy(project_data)
@@ -77,7 +74,13 @@ def update_projects_components_with_latest_component_versions(project_data, all_
         if node_type in all_types_dict_flat:
             latest_node = all_types_dict_flat.get(node_type)
             latest_template = latest_node.get("template")
-            node_data["template"]["code"] = latest_template["code"]
+            node_data["template"]["code"] = deepcopy(latest_template["code"])
+
+            # Sync field_order so the UI renders fields in the correct order
+            latest_field_order = latest_node.get("field_order")
+            if latest_field_order is not None:
+                node_data["field_order"] = latest_field_order
+
             # skip components that are having dynamic values that need to be persisted for templates
 
             if node_type in SKIPPED_COMPONENTS:
@@ -114,7 +117,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
             if node_data["template"]["_type"] != latest_template["_type"]:
                 node_data["template"]["_type"] = latest_template["_type"]
                 if node_type != "Prompt":
-                    node_data["template"] = latest_template
+                    node_data["template"] = deepcopy(latest_template)
                 else:
                     for key, value in latest_template.items():
                         if key not in node_data["template"]:
@@ -125,7 +128,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": value,
                                 }
                             )
-                            node_data["template"][key] = value
+                            node_data["template"][key] = deepcopy(value)
                         elif isinstance(value, dict) and value.get("value"):
                             node_changes_log[node_type].append(
                                 {
@@ -147,23 +150,26 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                 )
             else:
                 for attr in NODE_FORMAT_ATTRIBUTES:
+                    latest_attr_value = latest_node.get(attr)
+                    current_attr_value = node_data.get(attr)
+
                     if (
                         attr in latest_node
                         # Check if it needs to be updated
-                        and latest_node[attr] != node_data.get(attr)
+                        and latest_attr_value != current_attr_value
                     ):
                         node_changes_log[node_type].append(
                             {
                                 "attr": attr,
-                                "old_value": node_data.get(attr),
-                                "new_value": latest_node[attr],
+                                "old_value": current_attr_value,
+                                "new_value": latest_attr_value,
                             }
                         )
-                        node_data[attr] = latest_node[attr]
+                        node_data[attr] = deepcopy(latest_attr_value)
 
                 for field_name, field_dict in latest_template.items():
                     if field_name not in node_data["template"]:
-                        node_data["template"][field_name] = field_dict
+                        node_data["template"][field_name] = deepcopy(field_dict)
                         continue
                     # The idea here is to update some attributes of the field
                     to_check_attributes = FIELD_FORMAT_ATTRIBUTES
@@ -190,7 +196,7 @@ def update_projects_components_with_latest_component_versions(project_data, all_
                                     "new_value": field_dict[attr],
                                 }
                             )
-                            node_data["template"][field_name][attr] = field_dict[attr]
+                            node_data["template"][field_name][attr] = deepcopy(field_dict[attr])
             # Remove fields that are not in the latest template
             if node_type != "Prompt":
                 for field_name in list(node_data["template"].keys()):
@@ -342,11 +348,11 @@ def update_edges_with_latest_component_versions(project_data):
 
         # Find the corresponding source and target nodes
         source_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("source")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("source")),
             None,
         )
         target_node = next(
-            (node for node in project_data.get("nodes", []) if node.get("id") == edge.get("target")),
+            (node for node in project_data_copy.get("nodes", []) if node.get("id") == edge.get("target")),
             None,
         )
 
@@ -366,7 +372,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                 # Find the new source node
                 source_node = next(
-                    (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                    (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                     None,
                 )
 
@@ -395,7 +401,7 @@ def update_edges_with_latest_component_versions(project_data):
 
                     # Find the new target node
                     target_node = next(
-                        (node for node in project_data.get("nodes", []) if node.get("id") == new_node_id),
+                        (node for node in project_data_copy.get("nodes", []) if node.get("id") == new_node_id),
                         None,
                     )
 
@@ -669,10 +675,30 @@ def get_project_data(project):
 
 
 async def update_project_file(project_path: anyio.Path, project: dict, updated_project_data) -> None:
+    """Update starter project JSON file with new data.
+
+    This function attempts to write updated project data back to the source file.
+    In containerized environments with read-only filesystems (e.g., Kubernetes with
+    readOnlyRootFilesystem: true), the write will fail gracefully since the database
+    is the source of truth for project data.
+
+    Args:
+        project_path: Path to the project JSON file
+        project: Project dictionary to update
+        updated_project_data: New project data to write
+    """
     project["data"] = updated_project_data
-    async with async_open(str(project_path), "w", encoding="utf-8") as f:
-        await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
-    await logger.adebug(f"Updated starter project {project['name']} file")
+    try:
+        async with aiofiles.open(str(project_path), "w", encoding="utf-8") as f:
+            await f.write(orjson.dumps(project, option=ORJSON_OPTIONS).decode())
+        await logger.adebug(f"Updated starter project {project['name']} file")
+    except OSError as e:
+        # Handle read-only filesystem (common in containerized environments)
+        # The database update is the important part - file updates are optional
+        await logger.adebug(
+            f"Could not update starter project file {project['name']} (read-only filesystem): {e}. "
+            "This is expected in containerized environments with read-only root filesystem."
+        )
 
 
 def update_existing_project(
@@ -720,7 +746,7 @@ def create_new_project(
         gradient=project_gradient,
         tags=project_tags,
     )
-    db_flow = Flow.model_validate(new_project, from_attributes=True)
+    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
     session.add(db_flow)
 
 
@@ -797,7 +823,7 @@ async def load_agentic_flows() -> list[tuple[anyio.Path, dict]]:
     await logger.adebug("Loading agentic flows")
     async for file in folder.glob("*.json"):
         try:
-            async with async_open(str(file), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file), encoding="utf-8") as f:
                 content = await f.read()
             flow = orjson.loads(content)
             agentic_flows.append((file, flow))
@@ -896,7 +922,7 @@ async def create_or_update_agentic_flows(session: AsyncSession, user_id: UUID) -
                         tags=flow_tags,
                         endpoint_name=flow_endpoint_name,  # Set endpoint_name from JSON
                     )
-                    db_flow = Flow.model_validate(new_project, from_attributes=True)
+                    db_flow = Flow.model_validate(new_project.model_dump(exclude={"id"}))
 
                     # Set the ID from JSON if provided
                     if flow_id:
@@ -955,7 +981,7 @@ async def load_flows_from_directory() -> None:
             if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
                 continue
             await logger.ainfo(f"Loading flow from file: {file_path.name}")
-            async with async_open(str(file_path), "r", encoding="utf-8") as f:
+            async with aiofiles.open(str(file_path), encoding="utf-8") as f:
                 content = await f.read()
             await upsert_flow_from_file(content, file_path.stem, session, user.id)
 
@@ -1037,6 +1063,34 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     return temp_dirs, list(component_paths)
 
 
+# Plain (non-relationship, non-PK, non-FK) columns on ``Flow`` that may be
+# refreshed from an on-disk flow file. Listing these explicitly avoids the
+# ``hasattr``/``setattr`` pattern that can call ``getattr`` on unloaded
+# relationship attributes — under an async SQLAlchemy session that triggers an
+# implicit lazy load outside greenlet context and raises ``MissingGreenlet``.
+# ``id``, ``user_id`` and ``folder_id`` are handled separately by the caller.
+_FLOW_UPDATABLE_COLUMNS = frozenset(
+    {
+        "name",
+        "description",
+        "icon",
+        "icon_bg_color",
+        "gradient",
+        "data",
+        "is_component",
+        "webhook",
+        "endpoint_name",
+        "tags",
+        "locked",
+        "mcp_enabled",
+        "action_name",
+        "action_description",
+        "access_type",
+        "fs_path",
+    }
+)
+
+
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
     flow = orjson.loads(file_content)
     flow_endpoint_name = flow.get("endpoint_name")
@@ -1051,14 +1105,47 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             await logger.aerror(f"Invalid UUID string: {flow_id}")
             return
 
-    existing = await find_existing_flow(session, flow_id, flow_endpoint_name)
+    flow_name = flow.get("name")
+    existing = await find_existing_flow(
+        session,
+        flow_id,
+        flow_endpoint_name,
+        user_id=user_id,
+        name=flow_name,
+    )
     if existing:
         await logger.adebug(f"Found existing flow: {existing.name}")
-        await logger.ainfo(f"Updating existing flow: {flow_id} with endpoint name {flow_endpoint_name}")
-        for key, value in flow.items():
-            if hasattr(existing, key):
-                # flow dict from json and db representation are not 100% the same
-                setattr(existing, key, value)
+        # Normalize the DB id to UUID for comparison without mutating the attached
+        # row: SQLAlchemy can return ids as strings on SQLite, but assigning back
+        # to ``existing.id`` would mark the PK dirty and alter the identity map.
+        db_id_raw = existing.id
+        if isinstance(db_id_raw, str):
+            try:
+                db_id = UUID(db_id_raw)
+            except ValueError:
+                await logger.aerror(f"Invalid UUID string in DB row: {db_id_raw}")
+                return
+        else:
+            db_id = db_id_raw
+        matched_by_id = flow_id is not None and db_id == flow_id
+        if not matched_by_id and not get_settings_service().settings.load_flows_overwrite_on_name_match:
+            await logger.awarning(
+                f"Skipping flow update: db_id={db_id} name={existing.name!r} matched by "
+                f"name/endpoint_name but file id differs (file id={flow_id}). "
+                "Set LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH=true to overwrite."
+            )
+            return
+        await logger.ainfo(
+            f"Updating existing flow: db_id={db_id} name={existing.name!r} "
+            f"(file id={flow_id}, endpoint_name={flow_endpoint_name})"
+        )
+        # Only copy plain columns. Using ``hasattr`` here would return True for
+        # relationship attributes (``user``, ``folder``); calling ``getattr`` on
+        # an unloaded relationship under an async session triggers an implicit
+        # lazy load outside greenlet context and raises ``MissingGreenlet``.
+        for key in _FLOW_UPDATABLE_COLUMNS:
+            if key in flow:
+                setattr(existing, key, flow[key])
         existing.updated_at = datetime.now(tz=timezone.utc).astimezone()
         existing.user_id = user_id
 
@@ -1066,13 +1153,6 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         if existing.folder_id is None:
             folder = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder.id
-
-        if isinstance(existing.id, str):
-            try:
-                existing.id = UUID(existing.id)
-            except ValueError:
-                await logger.aerror(f"Invalid UUID string: {existing.id}")
-                return
 
         session.add(existing)
     else:
@@ -1088,18 +1168,39 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         session.add(flow)
 
 
-async def find_existing_flow(session, flow_id, flow_endpoint_name):
+async def find_existing_flow(session, flow_id, flow_endpoint_name, *, user_id=None, name=None):
+    """Look up an existing flow row by endpoint_name, id, or (user_id, name).
+
+    The ``(user_id, name)`` fallback is required so that flows loaded from
+    ``LANGFLOW_LOAD_FLOWS_PATH`` can upsert against a DB row that shares the
+    user-visible name but has a different ``id`` (e.g. CI/CD re-import,
+    regenerated UUIDs, fresh database). Without it the loader hits the
+    ``unique_flow_name`` ``UniqueConstraint("user_id", "name")`` on INSERT
+    and Langflow fails to start.
+    """
     if flow_endpoint_name:
         await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
         stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
+        # ``unique_flow_endpoint_name`` is scoped per user; scope the lookup too
+        # when a user_id is supplied so we don't return another user's flow.
+        if user_id is not None:
+            stmt = stmt.where(Flow.user_id == user_id)
         if existing := (await session.exec(stmt)).first():
             await logger.adebug(f"Found existing flow by endpoint name: {existing.name}")
             return existing
 
-    stmt = select(Flow).where(Flow.id == flow_id)
-    if existing := (await session.exec(stmt)).first():
-        await logger.adebug(f"Found existing flow by id: {flow_id}")
-        return existing
+    if flow_id is not None:
+        stmt = select(Flow).where(Flow.id == flow_id)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by id: {flow_id}")
+            return existing
+
+    if user_id is not None and name:
+        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == name)
+        if existing := (await session.exec(stmt)).first():
+            await logger.adebug(f"Found existing flow by (user_id, name): {name}")
+            return existing
+
     return None
 
 
@@ -1208,6 +1309,12 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
 
 
 async def initialize_auto_login_default_superuser() -> None:
+    """Initialize the default superuser for AUTO_LOGIN mode.
+
+    Note: In production, this is called indirectly via setup_superuser() during
+    initialize_services(), which includes file lock protection for multi-worker
+    environments. This standalone function is kept for testing and CLI usage.
+    """
     settings_service = get_settings_service()
     if not settings_service.auth_settings.AUTO_LOGIN:
         return
@@ -1217,9 +1324,6 @@ async def initialize_auto_login_default_superuser() -> None:
 
     username = DEFAULT_SUPERUSER
     password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
-    if not username or not password:
-        msg = "SUPERUSER and SUPERUSER_PASSWORD must be set in the settings if AUTO_LOGIN is true."
-        raise ValueError(msg)
 
     async with session_scope() as async_session:
         super_user = await get_auth_service().create_super_user(username, password, db=async_session)
@@ -1242,6 +1346,12 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
     will check for legacy folder names and migrate them to avoid duplicates.
 
     This implementation avoids an external distributed lock and works with both SQLite and PostgreSQL.
+
+    The function only creates a new default folder on first initialization (when the user has no
+    folders at all). If the user has already been through initial setup and has at least one folder
+    — even if they renamed the default or only kept other folders — the existing folder is returned
+    instead of creating a new "Starter Project". This prevents a phantom default folder from being
+    forced back into the UI every time the user logs in or the server restarts.
 
     Args:
         session (AsyncSession): The active database session.
@@ -1284,7 +1394,18 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
                     await session.rollback()
                     break
 
-    # If no existing folder found, create a new one
+    # Respect prior user intent: if the user already has folders (e.g. they renamed the
+    # default folder to something like "My Flows"), do not force a new "Starter Project" back
+    # into their UI on every login/server restart. Return any existing folder instead.
+    any_folder_stmt = (
+        select(Folder).where(Folder.user_id == user_id).order_by(Folder.id).limit(1)  # type: ignore[arg-type]
+    )
+    any_folder = (await session.exec(any_folder_stmt)).first()
+    if any_folder:
+        return FolderRead.model_validate(any_folder, from_attributes=True)
+
+    # No existing folder found for this user — this is the first-time setup path.
+    # Create the default folder.
     try:
         folder_obj = Folder(user_id=user_id, name=DEFAULT_FOLDER_NAME, description=DEFAULT_FOLDER_DESCRIPTION)
         session.add(folder_obj)

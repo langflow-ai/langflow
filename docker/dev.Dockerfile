@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 ENV TZ=UTC
 
 WORKDIR /app
@@ -25,6 +25,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=src/backend/base/pyproject.toml,target=src/backend/base/pyproject.toml \
     --mount=type=bind,source=src/lfx/README.md,target=src/lfx/README.md \
     --mount=type=bind,source=src/lfx/pyproject.toml,target=src/lfx/pyproject.toml \
+    --mount=type=bind,source=src/sdk/README.md,target=src/sdk/README.md \
+    --mount=type=bind,source=src/sdk/pyproject.toml,target=src/sdk/pyproject.toml \
+    --mount=type=bind,source=src/bundles,target=src/bundles \
     uv sync --frozen --no-install-project --no-dev --extra postgresql
 
 EXPOSE 7860

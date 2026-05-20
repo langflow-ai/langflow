@@ -489,3 +489,48 @@ input[type="search"]::-webkit-search-cancel-button {
 .version-preview-banner-exit {
   animation: banner-slide-down 0.25s ease-in forwards;
 }
+
+@keyframes agent-badge-in {
+  0% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.agent-badge-enter {
+  animation: agent-badge-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes agent-badge-out {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+.agent-badge-exit {
+  animation: agent-badge-out 0.35s ease-in forwards;
+}
+
+@keyframes agent-text-swap {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.agent-text-enter {
+  animation: agent-text-swap 0.25s ease-out forwards;
+}

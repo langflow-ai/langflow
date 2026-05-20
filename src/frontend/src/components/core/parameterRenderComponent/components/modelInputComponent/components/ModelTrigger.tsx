@@ -1,8 +1,8 @@
 import { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
-import { RECEIVING_INPUT_VALUE } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import type { SelectedModel } from "../types";
 
@@ -35,7 +35,9 @@ const ModelTrigger = ({
   showEmptyState = false,
   emptyStateLabel = "No models enabled",
 }: ModelTriggerProps) => {
+  const { t } = useTranslation();
   const hasVisibleOptions = visibleOptionsCount > 0;
+
 
   const renderSelectedIcon = () => {
     if (disabled) {
@@ -56,13 +58,20 @@ const ModelTrigger = ({
   if (!hasEnabledProviders && !showEmptyState && !hasVisibleOptions) {
     return (
       <Button
-        variant="default"
-        size="sm"
-        className="w-full"
+        variant="outline"
+        size="xs"
+        className="dropdown-component-false-outline w-full justify-start gap-2 py-2 font-normal"
         onClick={onOpenManageProviders}
       >
-        <ForwardedIconComponent name="Brain" className="h-4 w-4" />
-        <div className="text-[13px]">{placeholder}</div>
+        <ForwardedIconComponent
+          name="BrainCircuit"
+          className="h-4 w-4 flex-shrink-0 text-muted-foreground"
+        />
+        <div className="text-[13px] text-muted-foreground">
+          {placeholder === "Setup Provider"
+            ? t("model.setupProvider")
+            : placeholder}
+        </div>
       </Button>
     );
   }
@@ -93,7 +102,7 @@ const ModelTrigger = ({
             {renderSelectedIcon()}
             <span className="truncate">
               {disabled ? (
-                RECEIVING_INPUT_VALUE
+                t("component.receivingInput")
               ) : isEmptyStateMode ? (
                 <div className="truncate text-muted-foreground">
                   {emptyStateLabel}

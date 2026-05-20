@@ -1,0 +1,170 @@
+---
+title: Deploy Langflow on a remote server
+slug: /deployment-caddyfile
+---
+
+Learn how to deploy Langflow on your own remote server with secure web access.
+This guide walks you through setting up Langflow on a remote server using [Docker](https://docs.docker.com/) and configuring secure web access with [Caddy](https://caddyserver.com/docs/).
+
+## Prerequisites
+
+* A server with a dual-core CPU and at least 2 GB of RAM.
+This example uses [Hetzner cloud](https://www.hetzner.com/) for hosting. Your deployment may vary.
+
+## Connect to your remote server with SSH
+
+1. Create an SSH key to connect to your server remotely.
+For example:
+
+    ```bash
+    ssh-keygen -t ed25519 -C "DANA@EXAMPLE.COM"
+    ```
+
+    Replace `DANA@EXAMPLE.COM` with the email address that you want to associate with the SSH key.
+
+2. In your terminal, follow the instructions to create your SSH key pair.
+This creates both a private and public key.
+To copy the public key from your terminal, enter the following command:
+
+    ```bash
+    cat ~/Downloads/host-lf.pub | pbcopy
+    ```
+
+3. In your remote server, add the SSH key you copied in the previous step.
+For example, if you are using a Hetzner cloud server, click **Server**, and then select **SSH keys** to add an SSH key.
+
+4. To connect to your server with SSH, enter the following command.
+
+    ```bash
+    ssh -i PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME root@SERVER_IP_ADDRESS
+    ```
+
+    Replace the following:
+
+    * `PATH_TO_PRIVATE_KEY/PRIVATE_KEY_NAME`: The path to your private SSH key file that matches the public key you added to your server
+    * `SERVER_IP_ADDRESS`: Your server's IP address
+
+5. When prompted for a key fingerprint, type `yes`.
+
+The terminal output indicates if the connection succeeds or fails.
+The following response was returned after connecting to a Hetzner cloud server:
+
+```text
+System information as of Mon May 19 04:34:44 PM UTC 2025
+
+System load:  0.0               Processes:             129
+Usage of /:   1.5% of 74.79GB   Users logged in:       0
+Memory usage: 5%                IPv4 address for eth0: 5.161.250.132
+Swap usage:   0%                IPv6 address for eth0: 2a01:4ff:f0:4de7::1
+```
+
+## Deploy Langflow on your server
+
+Now that your local machine is connected to your remote server with SSH, you can install Docker, create a `docker-compose.yml` file, and serve it publicly with a reverse proxy, such as Caddy.
+
+1. Install Docker on your server.
+
+    Since this example server is an Ubuntu server, it can install snap packages.
+    If you aren't using Ubuntu or you prefer a different installation method, see the [official Docker installation guide](https://docs.docker.com/get-started/get-docker/) for instructions for your operating system.
+
+    ```bash
+    snap install docker
+    ```
+
+2. Create a file called `docker-compose.yml`, and then open it in a text editor:
+
+    ```bash
+    touch docker-compose.yml && nano docker-compose.yml
+    ```
+
+3. Add the following values to `docker-compose.yml`, and then save the file.
+
+    The following example defines the Langflow service from the `langflow:latest` image and a Caddy service to expose Langflow through a reverse proxy.
+
+    :::tip
+    The [host-langflow](https://github.com/datastax/host-langflow) repository offers pre-built copies of this `docker-compose.yml` and `Caddyfile`, if you prefer to fork the repository to your server.
+    :::
+
+    ```yml
+    version: "3.8"
+
+    services:
+      langflow:
+        image: langflowai/langflow:latest
+        ports:
+          - "7860:7860"
+        environment:
+          - LANGFLOW_HOST=0.0.0.0
+          - LANGFLOW_PORT=7860
+
+      caddy:
+        image: caddy:latest
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - ./Caddyfile:/etc/caddy/Caddyfile
+          - caddy_data:/data
+          - caddy_config:/config
+        depends_on:
+          - langflow
+
+    volumes:
+      caddy_data:
+      caddy_config:
+    ```
+
+4. Create a file called `Caddyfile`:
+
+    ```bash
+    touch Caddyfile && nano Caddyfile
+    ```
+
+5. Add the following values to `Caddyfile`, and then save the file.
+
+    This Caddyfile configures Caddy to listen on port 80, and forward all incoming requests to port 80 to the Langflow service at port 7860.
+
+    ```
+    :80 {
+        reverse_proxy langflow:7860
+    }
+    ```
+
+6. To deploy your server, run `docker-compose up`.
+
+    When the `Welcome to Langflow` message appears, Langflow is running and accessible internally at `http://0.0.0.0:7860` inside the Docker network.
+
+7. To access your Langflow server over the public internet, navigate to your server's public IP address, such as `http://5.161.250.132`.
+This address uses HTTP because HTTPS isn't enabled yet.
+
+8. Recommended: Enable HTTPS:
+
+    1. Modify your domain's A record to point to your server's IP address. For example:
+
+        ```
+        Type: A
+        Name: langflow
+        Value: 5.161.250.132  # Set to your server's IP address
+        ```
+
+    2. Stop your server.
+
+    3. Modify your Caddyfile to include port `443` so Caddy can forward both HTTP (port 80) and HTTPS (port 443) requests to the Langflow service:
+
+        ```
+        :80, :443 {
+            reverse_proxy langflow:7860
+        }
+        ```
+
+    4. Start your server.
+
+        When users visit your domain, Caddy recognizes the incoming traffic and automatically routes it to your server with a secure, encrypted connection.
+
+9. To exit your SSH session, type `exit`.
+
+## See also
+
+To package your local flows into a custom Docker image, see [Containerize a Langflow application](/develop-application).
+
+For a step-by-step guide to deploying Langflow, including deployments to [fly.io](https://fly.io/) and [Flightcontrol.dev](https://www.flightcontrol.dev/), see [How to Host Langflow Anywhere](https://www.youtube.com/watch?v=q4qt5hSnte4).

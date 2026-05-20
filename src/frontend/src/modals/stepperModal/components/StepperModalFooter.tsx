@@ -1,11 +1,7 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import {
-  DEFAULT_BACK_LABEL,
-  DEFAULT_HELP_LABEL,
-  DEFAULT_NEXT_LABEL,
-  DEFAULT_SUBMIT_LABEL,
-} from "../constants";
+import { DEFAULT_SUBMIT_LABEL } from "../constants";
 import type { StepperModalFooterProps } from "../types";
 
 export function StepperModalFooter({
@@ -18,13 +14,17 @@ export function StepperModalFooter({
   submitDisabled = false,
   isSubmitting = false,
   submitLabel = DEFAULT_SUBMIT_LABEL,
-  nextLabel = DEFAULT_NEXT_LABEL,
-  backLabel = DEFAULT_BACK_LABEL,
+  nextLabel,
+  backLabel,
   helpHref,
   onHelp,
-  helpLabel = DEFAULT_HELP_LABEL,
+  helpLabel,
   submitTestId,
 }: StepperModalFooterProps) {
+  const { t } = useTranslation();
+  const resolvedNextLabel = nextLabel ?? t("stepper.nextStep");
+  const resolvedBackLabel = backLabel ?? t("stepper.back");
+  const resolvedHelpLabel = helpLabel ?? t("stepper.needHelp");
   const showHelp = helpHref || onHelp;
 
   return (
@@ -43,7 +43,7 @@ export function StepperModalFooter({
                 rel="noopener noreferrer"
                 className="underline"
               >
-                {helpLabel}
+                {resolvedHelpLabel}
                 <ForwardedIconComponent
                   name="ExternalLink"
                   className="ml-1 h-4 w-4"
@@ -52,19 +52,19 @@ export function StepperModalFooter({
             </Button>
           ) : (
             <Button variant="secondary" onClick={onHelp}>
-              {helpLabel}
+              {resolvedHelpLabel}
             </Button>
           ))}
       </div>
       <div className="flex items-center gap-3">
         {currentStep > 1 && onBack && (
           <Button variant="outline" onClick={onBack}>
-            {backLabel}
+            {resolvedBackLabel}
           </Button>
         )}
         {currentStep < totalSteps ? (
           <Button onClick={onNext} disabled={nextDisabled}>
-            {nextLabel}
+            {resolvedNextLabel}
           </Button>
         ) : (
           <Button

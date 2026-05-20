@@ -3,6 +3,13 @@ from typing import Any
 from uuid import uuid4
 
 import pytest
+
+try:
+    import altk  # noqa: F401
+except ImportError:
+    # agent-lifecycle-toolkit is gated to python_version<'3.14' upstream.
+    pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
+
 from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.components.altk.altk_agent import ALTKAgentComponent

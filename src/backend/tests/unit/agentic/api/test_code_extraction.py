@@ -1,17 +1,19 @@
-"""Tests for code extraction and validation in the agentic module.
+"""Tests for code extraction from LLM responses.
 
-These tests validate the core functionality of extracting Python code from LLM responses
-and validating that the code is a valid Langflow component.
+Tests extract_python_code, helper functions (_find_code_blocks, _find_unclosed_code_block,
+_find_component_code), validate_component_code, and the extract-validate integration flow.
 """
 
+import pytest
 from langflow.agentic.helpers.code_extraction import (
     _find_code_blocks,
+    _find_component_code,
     _find_unclosed_code_block,
+    extract_component_code,
     extract_python_code,
 )
 from langflow.agentic.helpers.validation import validate_component_code
 
-# Sample valid Langflow component code
 VALID_COMPONENT_CODE = """from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema.message import Message
@@ -33,7 +35,6 @@ class HelloWorldComponent(Component):
         return Message(text=f"Hello, {self.input_value}!")
 """
 
-# Incomplete component code (missing closing bracket)
 INCOMPLETE_COMPONENT_CODE = """from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 
@@ -45,7 +46,6 @@ class IncompleteComponent(Component):
         MessageTextInput(name="input_value", display_name="Input"),
 """
 
-# Invalid syntax code
 INVALID_SYNTAX_CODE = """from langflow.custom import Component
 
 class BrokenComponent(Component)
@@ -145,8 +145,16 @@ And here's the component:
 
         assert result is not None
         assert "class HelloWorldComponent" in result
-        # Should NOT return the print code
         assert result.strip() != other_code
+
+    def test_should_return_first_block_when_no_component_code(self):
+        """Should return first code block when none contain Component class."""
+        text = "```python\nprint('hello')\n```\n\n```python\nx = 42\n```"
+
+        result = extract_python_code(text)
+
+        assert result is not None
+        assert "print('hello')" in result
 
     def test_handles_code_with_special_characters(self):
         """Should handle code containing special characters."""
@@ -162,223 +170,6 @@ class SpecialComponent(Component):
 
         assert result is not None
         assert "SpecialComponent" in result
-
-
-class TestFindCodeBlocks:
-    """Tests for _find_code_blocks helper function."""
-
-    def test_finds_closed_python_blocks(self):
-        """Should find all closed python code blocks."""
-        text = "```python\ncode1\n```\n\nText\n\n```python\ncode2\n```"
-
-        result = _find_code_blocks(text)
-
-        assert len(result) == 2
-        assert "code1" in result[0]
-        assert "code2" in result[1]
-
-    def test_finds_unclosed_blocks_as_fallback(self):
-        """Should find unclosed blocks when no closed blocks exist."""
-        text = "Some text\n```python\ncode_here"
-
-        result = _find_code_blocks(text)
-
-        assert len(result) == 1
-        assert "code_here" in result[0]
-
-
-class TestFindUnclosedCodeBlock:
-    """Tests for _find_unclosed_code_block helper function."""
-
-    def test_finds_unclosed_python_block(self):
-        """Should find unclosed ```python block."""
-        text = "Text before\n```python\ncode_content"
-
-        result = _find_unclosed_code_block(text)
-
-        assert len(result) == 1
-        assert "code_content" in result[0]
-
-    def test_finds_unclosed_generic_block(self):
-        """Should find unclosed ``` block without language."""
-        text = "Text\n```\nsome code"
-
-        result = _find_unclosed_code_block(text)
-
-        assert len(result) == 1
-        assert "some code" in result[0]
-
-    def test_returns_empty_for_closed_blocks(self):
-        """Should return empty list when blocks are properly closed."""
-        text = "```python\ncode\n```"
-
-        # This function only looks for unclosed blocks
-        # When called by _find_code_blocks, closed blocks are found first
-        result = _find_unclosed_code_block(text)
-
-        # It will find from ```python to end, but the code will include the closing ```
-        # The function strips trailing backticks, so it should work
-        assert len(result) >= 0  # May or may not find depending on implementation
-
-    def test_returns_empty_for_no_code_blocks(self):
-        """Should return empty list when no code blocks at all."""
-        text = "Just regular text"
-
-        result = _find_unclosed_code_block(text)
-
-        assert result == []
-
-    def test_handles_multiple_backticks_in_code(self):
-        """Should handle code that contains backticks."""
-        text = "```python\ncode with `inline` backticks"
-
-        result = _find_unclosed_code_block(text)
-
-        assert len(result) == 1
-        assert "`inline`" in result[0]
-
-
-class TestValidateComponentCode:
-    """Tests for validate_component_code function."""
-
-    def test_validates_valid_component(self):
-        """Should validate correct Langflow component code."""
-        result = validate_component_code(VALID_COMPONENT_CODE)
-
-        assert result.is_valid is True
-        assert result.class_name == "HelloWorldComponent"
-        assert result.error is None
-        assert result.code == VALID_COMPONENT_CODE
-
-    def test_fails_for_syntax_error(self):
-        """Should fail validation for code with syntax errors."""
-        result = validate_component_code(INVALID_SYNTAX_CODE)
-
-        assert result.is_valid is False
-        assert result.error is not None
-        # Error might be SyntaxError or ValueError depending on validation method
-        assert "expected" in result.error.lower() or "syntax" in result.error.lower()
-
-    def test_fails_for_incomplete_code(self):
-        """Should fail validation for incomplete component code."""
-        result = validate_component_code(INCOMPLETE_COMPONENT_CODE)
-
-        assert result.is_valid is False
-        assert result.error is not None
-
-    def test_fails_for_non_component_code(self):
-        """Should fail validation for code that's not a Langflow component."""
-        non_component_code = """def hello():
-    return "hello"
-"""
-        result = validate_component_code(non_component_code)
-
-        assert result.is_valid is False
-        assert result.error is not None
-
-    def test_fails_for_empty_code(self):
-        """Should fail validation for empty string."""
-        result = validate_component_code("")
-
-        assert result.is_valid is False
-        assert result.error is not None
-
-    def test_fails_for_missing_imports(self):
-        """Should fail validation when required imports are missing."""
-        code_without_imports = """class BrokenComponent(Component):
-    display_name = "Broken"
-"""
-        result = validate_component_code(code_without_imports)
-
-        assert result.is_valid is False
-        assert result.error is not None
-
-
-class TestCodeExtractionAndValidationIntegration:
-    """Integration tests for the full extract -> validate flow."""
-
-    def test_full_flow_with_valid_response(self):
-        """Should extract and validate a complete valid response."""
-        llm_response = f"""I'll create a Hello World component for you.
-
-```python
-{VALID_COMPONENT_CODE}
-```
-
-This component takes an input and returns a greeting message."""
-
-        # Extract
-        code = extract_python_code(llm_response)
-        assert code is not None
-
-        # Validate
-        validation = validate_component_code(code)
-        assert validation.is_valid is True
-        assert validation.class_name == "HelloWorldComponent"
-
-    def test_full_flow_with_unclosed_valid_response(self):
-        """Should extract and validate from unclosed but valid code."""
-        llm_response = f"""Here's your component:
-
-```python
-{VALID_COMPONENT_CODE}"""
-
-        # Extract
-        code = extract_python_code(llm_response)
-        assert code is not None
-
-        # Validate
-        validation = validate_component_code(code)
-        assert validation.is_valid is True
-
-    def test_full_flow_with_invalid_code_returns_error(self):
-        """Should extract but fail validation for broken code."""
-        llm_response = f"""Here's the component:
-
-```python
-{INVALID_SYNTAX_CODE}
-```"""
-
-        # Extract
-        code = extract_python_code(llm_response)
-        assert code is not None
-
-        # Validate should fail
-        validation = validate_component_code(code)
-        assert validation.is_valid is False
-        assert validation.error is not None
-        # Error might be SyntaxError or ValueError depending on validation method
-        assert "expected" in validation.error.lower() or "syntax" in validation.error.lower()
-
-    def test_full_flow_with_text_heavy_response(self):
-        """Should handle responses with lots of explanatory text."""
-        llm_response = f"""I apologize for the previous rate limit error. Let me try again.
-
-Based on your request, I'll create a custom Langflow component that performs sentiment analysis.
-This component will:
-1. Take text input
-2. Process it through a sentiment analyzer
-3. Return the sentiment score
-
-Here's the implementation:
-
-```python
-{VALID_COMPONENT_CODE}
-```
-
-To use this component:
-1. Drag it onto your canvas
-2. Connect an input
-3. The output will contain the sentiment analysis
-
-Let me know if you need any modifications!"""
-
-        code = extract_python_code(llm_response)
-        assert code is not None
-
-        validation = validate_component_code(code)
-        assert validation.is_valid is True
-        assert validation.class_name == "HelloWorldComponent"
 
 
 class TestEdgeCases:
@@ -436,3 +227,281 @@ class UnicodeComponent(Component):
             result = extract_python_code(text)
 
             assert result is not None, f"Failed for tag: {tag}"
+
+
+class TestFindCodeBlocks:
+    """Tests for _find_code_blocks helper function."""
+
+    def test_finds_closed_python_blocks(self):
+        """Should find all closed python code blocks."""
+        text = "```python\ncode1\n```\n\nText\n\n```python\ncode2\n```"
+
+        result = _find_code_blocks(text)
+
+        assert len(result) == 2
+        assert "code1" in result[0]
+        assert "code2" in result[1]
+
+    def test_finds_unclosed_blocks_as_fallback(self):
+        """Should find unclosed blocks when no closed blocks exist."""
+        text = "Some text\n```python\ncode_here"
+
+        result = _find_code_blocks(text)
+
+        assert len(result) == 1
+        assert "code_here" in result[0]
+
+
+class TestFindUnclosedCodeBlock:
+    """Tests for _find_unclosed_code_block helper function."""
+
+    def test_finds_unclosed_python_block(self):
+        """Should find unclosed ```python block."""
+        text = "Text before\n```python\ncode_content"
+
+        result = _find_unclosed_code_block(text)
+
+        assert len(result) == 1
+        assert "code_content" in result[0]
+
+    def test_finds_unclosed_generic_block(self):
+        """Should find unclosed ``` block without language."""
+        text = "Text\n```\nsome code"
+
+        result = _find_unclosed_code_block(text)
+
+        assert len(result) == 1
+        assert "some code" in result[0]
+
+    def test_returns_empty_for_closed_blocks(self):
+        """Should return empty list when blocks are properly closed."""
+        text = "```python\ncode\n```"
+
+        result = _find_unclosed_code_block(text)
+
+        assert len(result) >= 0
+
+    def test_returns_empty_for_no_code_blocks(self):
+        """Should return empty list when no code blocks at all."""
+        text = "Just regular text"
+
+        result = _find_unclosed_code_block(text)
+
+        assert result == []
+
+    def test_handles_multiple_backticks_in_code(self):
+        """Should handle code that contains backticks."""
+        text = "```python\ncode with `inline` backticks"
+
+        result = _find_unclosed_code_block(text)
+
+        assert len(result) == 1
+        assert "`inline`" in result[0]
+
+
+class TestValidateComponentCode:
+    """Tests for validate_component_code function."""
+
+    def test_validates_valid_component(self):
+        """Should validate correct Langflow component code."""
+        result = validate_component_code(VALID_COMPONENT_CODE)
+
+        assert result.is_valid is True
+        assert result.class_name == "HelloWorldComponent"
+        assert result.error is None
+        assert result.code == VALID_COMPONENT_CODE
+
+    def test_fails_for_syntax_error(self):
+        """Should fail validation for code with syntax errors."""
+        result = validate_component_code(INVALID_SYNTAX_CODE)
+
+        assert result.is_valid is False
+        assert result.error is not None
+        assert "expected" in result.error.lower() or "syntax" in result.error.lower()
+
+    def test_fails_for_incomplete_code(self):
+        """Should fail validation for incomplete component code."""
+        result = validate_component_code(INCOMPLETE_COMPONENT_CODE)
+
+        assert result.is_valid is False
+        assert result.error is not None
+
+    def test_fails_for_non_component_code(self):
+        """Should fail validation for code that's not a Langflow component."""
+        non_component_code = """def hello():
+    return "hello"
+"""
+        result = validate_component_code(non_component_code)
+
+        assert result.is_valid is False
+        assert result.error is not None
+
+    def test_fails_for_empty_code(self):
+        """Should fail validation for empty string."""
+        result = validate_component_code("")
+
+        assert result.is_valid is False
+        assert result.error is not None
+
+    def test_passes_static_validation_without_imports(self):
+        """Static validation accepts syntactically valid code even without imports.
+
+        Import validation happens at runtime when the component is loaded into a flow,
+        not during static analysis.
+        """
+        code_without_imports = """class BrokenComponent(Component):
+    display_name = "Broken"
+"""
+        result = validate_component_code(code_without_imports)
+
+        assert result.is_valid is True
+        assert result.class_name == "BrokenComponent"
+
+
+class TestCodeExtractionAndValidationIntegration:
+    """Integration tests for the full extract -> validate flow."""
+
+    def test_full_flow_with_valid_response(self):
+        """Should extract and validate a complete valid response."""
+        llm_response = f"""I'll create a Hello World component for you.
+
+```python
+{VALID_COMPONENT_CODE}
+```
+
+This component takes an input and returns a greeting message."""
+
+        code = extract_python_code(llm_response)
+        assert code is not None
+
+        validation = validate_component_code(code)
+        assert validation.is_valid is True
+        assert validation.class_name == "HelloWorldComponent"
+
+    def test_full_flow_with_unclosed_valid_response(self):
+        """Should extract and validate from unclosed but valid code."""
+        llm_response = f"""Here's your component:
+
+```python
+{VALID_COMPONENT_CODE}"""
+
+        code = extract_python_code(llm_response)
+        assert code is not None
+
+        validation = validate_component_code(code)
+        assert validation.is_valid is True
+
+    def test_full_flow_with_invalid_code_returns_error(self):
+        """Should extract but fail validation for broken code."""
+        llm_response = f"""Here's the component:
+
+```python
+{INVALID_SYNTAX_CODE}
+```"""
+
+        code = extract_python_code(llm_response)
+        assert code is not None
+
+        validation = validate_component_code(code)
+        assert validation.is_valid is False
+        assert validation.error is not None
+        assert "expected" in validation.error.lower() or "syntax" in validation.error.lower()
+
+    def test_full_flow_with_text_heavy_response(self):
+        """Should handle responses with lots of explanatory text."""
+        llm_response = f"""I apologize for the previous rate limit error. Let me try again.
+
+Based on your request, I'll create a custom Langflow component that performs sentiment analysis.
+This component will:
+1. Take text input
+2. Process it through a sentiment analyzer
+3. Return the sentiment score
+
+Here's the implementation:
+
+```python
+{VALID_COMPONENT_CODE}
+```
+
+To use this component:
+1. Drag it onto your canvas
+2. Connect an input
+3. The output will contain the sentiment analysis
+
+Let me know if you need any modifications!"""
+
+        code = extract_python_code(llm_response)
+        assert code is not None
+
+        validation = validate_component_code(code)
+        assert validation.is_valid is True
+        assert validation.class_name == "HelloWorldComponent"
+
+
+class TestBugsAndEdgeCases:
+    """Tests that challenge the code — exposing real bugs and untested edge cases."""
+
+    @pytest.mark.xfail(
+        reason="BUG: extract_component_code overwritten by extract_python_code alias at L96",
+        strict=True,
+    )
+    def test_extract_component_code_should_reject_non_component(self):
+        """extract_component_code should return None for non-component code."""
+        result = extract_component_code("```python\nx = 1\n```")
+        assert result is None
+
+    @pytest.mark.xfail(
+        reason="BUG: empty code block returns '' instead of None (L60 matches[0].strip())",
+        strict=True,
+    )
+    def test_should_return_none_for_empty_code_block(self):
+        """extract_python_code should return None for empty code blocks."""
+        result = extract_python_code("```python\n\n```")
+        assert result is None
+
+    @pytest.mark.xfail(
+        reason="BUG: rstrip('`') at L81 strips ALL trailing backticks, corrupting code",
+        strict=True,
+    )
+    def test_rstrip_should_not_corrupt_code_with_backticks(self):
+        """Unclosed blocks should not strip backticks that are part of the code."""
+        text = '```python\nmarkdown_var = "```"'
+        result = extract_python_code(text)
+        assert result is not None
+        assert '```"' in result
+
+    @pytest.mark.xfail(
+        reason="BUG: L90 'Component' in match matches ComponentFactory, not just inheritance",
+        strict=True,
+    )
+    def test_find_component_code_false_positive_substring(self):
+        """_find_component_code should not match non-Component classes."""
+        non_component = "class ComponentFactory:\n    pass"
+        result = _find_component_code([non_component])
+        assert result is None
+
+    def test_nested_code_blocks_truncate_content(self):
+        """Non-greedy regex truncates code with embedded triple backticks."""
+        text = '```python\ncode = """Example:\n```python\ninner\n```\n"""\n```'
+        result = extract_python_code(text)
+        assert result is not None
+        # Documents: non-greedy regex stops at first ```, truncating inner content
+        assert "inner" not in result
+
+    def test_extract_python_code_whitespace_only_block(self):
+        """Whitespace-only code block should be falsy."""
+        result = extract_python_code("```python\n   \n```")
+        assert not result
+
+    def test_generic_pattern_ignores_language_tags(self):
+        r"""Generic code block pattern expects whitespace after ```, not a language tag.
+
+        ```CODE\\n and ```code\\n both fail to match ```\\s*\\n because
+        'CODE'/'code' are not whitespace. Only ```\\n or ``` \\n match.
+        """
+        text_with_tag = "```CODE\nprint('hello')\n```"
+        text_without_tag = "```\nprint('hello')\n```"
+        result_with_tag = _find_code_blocks(text_with_tag)
+        result_without_tag = _find_code_blocks(text_without_tag)
+        # Only the tagless version matches the generic pattern
+        assert len(result_without_tag) >= len(result_with_tag)

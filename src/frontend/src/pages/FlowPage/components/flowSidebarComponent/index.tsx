@@ -11,8 +11,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -64,6 +66,12 @@ const CATEGORIES = SIDEBAR_CATEGORIES;
 const BUNDLES = SIDEBAR_BUNDLES;
 const MCP_COMPONENT_CATEGORY = "models_and_agents";
 
+type SidebarSearchItem = APIClassType & {
+  category: string;
+  key: string;
+  mcpServerName?: string;
+};
+
 // Search context for the sidebar
 export type SearchContextType = {
   focusSearch: () => void;
@@ -71,7 +79,7 @@ export type SearchContextType = {
   // Additional properties for the sidebar to use
   search?: string;
   setSearch?: (value: string) => void;
-  searchInputRef?: React.RefObject<HTMLInputElement | null>;
+  searchInputRef?: React.RefObject<HTMLInputElement>;
   handleInputFocus?: () => void;
   handleInputBlur?: () => void;
   handleInputChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -95,7 +103,7 @@ export function FlowSearchProvider({
 }) {
   const [search, setSearch] = useState("");
   const [isInputFocused, setIsInputFocused] = useState(false);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null!);
 
   const focusSearchInput = useCallback(() => {
     if (searchInputRef.current) {
@@ -154,6 +162,7 @@ interface FlowSidebarComponentProps {
 }
 
 export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
+  const { t } = useTranslation();
   const rawData = useTypesStore((state) => state.data);
 
   // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
@@ -215,7 +224,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   // Get search state from context
   const context = useSearchContext();
   // Unconditional fallback ref to satisfy Rules of Hooks
-  const fallbackSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const fallbackSearchInputRef = useRef<HTMLInputElement>(null!);
   const {
     search = "",
     setSearch = () => {},
@@ -255,7 +264,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   }, [search, debouncedSetSearch]);
 
   // State
-  const [fuse, setFuse] = useState<Fuse<any> | null>(null);
+  const [fuse, setFuse] = useState<Fuse<SidebarSearchItem> | null>(null);
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [showConfig, setShowConfig] = useState(false);
   const [showBeta, setShowBeta] = useState(showBetaStorage);
@@ -271,16 +280,23 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     setShowLegacy(value);
     setLocalStorage("showLegacy", value.toString());
   }, []);
-  const [mcpSearchData, setMcpSearchData] = useState<any[]>([]);
+  const [mcpSearchData, setMcpSearchData] = useState<SidebarSearchItem[]>([]);
 
   // Create base data that includes MCP category when available
   const baseData = useMemo(() => {
-    if (
-      mcpSuccess &&
-      mcpServers &&
-      data[MCP_COMPONENT_CATEGORY]?.["MCPTools"]
-    ) {
-      const mcpComponent = data[MCP_COMPONENT_CATEGORY]["MCPTools"];
+    const mcpComponent = data[MCP_COMPONENT_CATEGORY]?.["MCPTools"];
+    const dataWithoutMcpTools = mcpComponent
+      ? {
+          ...data,
+          [MCP_COMPONENT_CATEGORY]: Object.fromEntries(
+            Object.entries(data[MCP_COMPONENT_CATEGORY]).filter(
+              ([, component]) => component !== mcpComponent,
+            ),
+          ),
+        }
+      : data;
+
+    if (mcpSuccess && mcpServers && mcpComponent) {
       const newMcpSearchData = mcpServers.map((mcpServer) => ({
         ...mcpComponent,
         display_name: mcpServer.name,
@@ -296,17 +312,17 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
         },
       }));
 
-      const mcpCategoryData: Record<string, any> = {};
+      const mcpCategoryData: Record<string, SidebarSearchItem> = {};
       newMcpSearchData.forEach((mcp) => {
         mcpCategoryData[mcp.display_name] = mcp;
       });
 
       return {
-        ...data,
+        ...dataWithoutMcpTools,
         MCP: mcpCategoryData,
       };
     }
-    return data;
+    return dataWithoutMcpTools;
   }, [data, mcpSuccess, mcpServers]);
 
   const [dataFilter, setFilterData] = useState(baseData);
@@ -465,12 +481,13 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       includeScore: true,
     };
 
-    const fuseData = Object.entries(baseData).flatMap(([category, items]) =>
-      Object.entries(items).map(([key, value]) => ({
-        ...value,
-        category,
-        key,
-      })),
+    const fuseData: SidebarSearchItem[] = Object.entries(baseData).flatMap(
+      ([category, items]) =>
+        Object.entries(items).map(([key, value]) => ({
+          ...value,
+          category,
+          key,
+        })),
     );
 
     // MCP data is already included in baseData, but we still need mcpSearchData for non-search display
@@ -549,10 +566,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const onDragStart = useCallback(
     (
-      event: React.DragEvent<any>,
+      event: React.DragEvent<HTMLElement>,
       data: { type: string; node?: APIClassType },
     ) => {
-      var crt = event.currentTarget.cloneNode(true);
+      const crt = event.currentTarget.cloneNode(true) as HTMLElement;
       crt.style.position = "absolute";
       crt.style.width = "215px";
       crt.style.top = "-500px";
@@ -609,15 +626,18 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
   const currentFlowForVersions = useFlowStore((state) => state.currentFlow);
 
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
+  const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
+
+  const isFeatureSection = showTraces || showMemories;
 
   const SIDEBAR_EXPAND_ANIMATION_MS = 300;
   const [isFullSidebarPanelMounted, setIsFullSidebarPanelMounted] = useState(
-    !showTraces,
+    !isFeatureSection,
   );
   const [isFullSidebarPanelShown, setIsFullSidebarPanelShown] = useState(
-    !showTraces,
+    !isFeatureSection,
   );
-  const prevShowTracesRef = useRef(showTraces);
+  const prevIsFeatureSectionRef = useRef(isFeatureSection);
   const expandedSidebarWidthRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -625,16 +645,16 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       ".group\\/sidebar-wrapper",
     ) as HTMLElement | null;
 
-    const wasShowingTraces = prevShowTracesRef.current;
-    prevShowTracesRef.current = showTraces;
+    const wasInFeatureSection = prevIsFeatureSectionRef.current;
+    prevIsFeatureSectionRef.current = isFeatureSection;
 
     if (!wrapper) {
-      setIsFullSidebarPanelMounted(!showTraces);
-      setIsFullSidebarPanelShown(!showTraces);
+      setIsFullSidebarPanelMounted(!isFeatureSection);
+      setIsFullSidebarPanelShown(!isFeatureSection);
       return;
     }
 
-    if (showTraces) {
+    if (isFeatureSection) {
       const computed =
         getComputedStyle(wrapper).getPropertyValue("--sidebar-width");
       expandedSidebarWidthRef.current = computed?.trim() || null;
@@ -651,7 +671,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       expandedSidebarWidthRef.current || "17.5rem",
     );
 
-    if (wasShowingTraces) {
+    if (wasInFeatureSection) {
       const timeoutId = window.setTimeout(() => {
         // Mount hidden first, then animate in next frame.
         setIsFullSidebarPanelMounted(true);
@@ -667,7 +687,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     // Non-traces transitions: show immediately.
     setIsFullSidebarPanelMounted(true);
     setIsFullSidebarPanelShown(true);
-  }, [showTraces]);
+  }, [isFeatureSection]);
 
   const [category, component] = getFilterComponent?.split(".") ?? ["", ""];
 
@@ -705,10 +725,8 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
             ENABLE_NEW_SIDEBAR && "sidebar-segmented",
             !isFullSidebarPanelMounted && "hidden",
             isFullSidebarPanelMounted &&
-              "transition-[opacity,transform] duration-200 ease-in-out transform-gpu",
-            isFullSidebarPanelMounted &&
               !isFullSidebarPanelShown &&
-              "opacity-0 -translate-x-1 pointer-events-none",
+              "opacity-0 pointer-events-none",
           )}
         >
           {showVersions && currentFlowForVersions?.id ? (
@@ -825,7 +843,14 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                                 className="h-4 w-4"
                               />
                             </span>
-                            Discover more components
+                            <ShadTooltip
+                              content={t("sidebar.discoverMore")}
+                              styleClasses="z-50"
+                            >
+                              <span className="min-w-0 truncate">
+                                {t("sidebar.discoverMore")}
+                              </span>
+                            </ShadTooltip>
                           </Button>
                         )}
                       </>
@@ -843,7 +868,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
               (ENABLE_NEW_SIDEBAR &&
                 activeSection === "mcp" &&
                 !hasMcpServers) ? null : (
-                <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1">
+                <SidebarFooter className="border-t group-data-[collapsible=icon]:hidden p-1 gap-1 empty:hidden empty:border-0">
                   <SidebarMenuButtons
                     customComponent={customComponent}
                     addComponent={addComponent}

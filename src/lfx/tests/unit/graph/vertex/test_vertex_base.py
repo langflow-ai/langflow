@@ -4,6 +4,7 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import pickle
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -16,6 +17,29 @@ from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
+
+
+def test_vertex_getstate_drops_custom_component_runtime_state():
+    """Graph cache serialization should rebuild component instances instead of pickling live runtime state."""
+
+    class UnpickleableComponent:
+        """Component stand-in that fails if live runtime state is serialized."""
+
+        def __getstate__(self):
+            """Raise when pickle tries to serialize the component instance."""
+            msg = "cannot pickle component runtime state"
+            raise TypeError(msg)
+
+    vertex = object.__new__(Vertex)
+    vertex._lock = Mock()
+    vertex.custom_component = UnpickleableComponent()
+    vertex.built_object = object()
+    vertex.built_result = object()
+
+    state = vertex.__getstate__()
+
+    assert state["custom_component"] is None
+    pickle.dumps(state)
 
 
 @pytest.fixture
@@ -49,6 +73,8 @@ def mock_vertex() -> Mock:
     }
     vertex.id = "test-vertex-id"
     vertex.display_name = "Test Vertex"
+    # Default: no incoming edges for any field
+    vertex.get_incoming_edge_by_target_param = Mock(return_value=None)
     return vertex
 
 
@@ -438,3 +464,85 @@ def test_vertex_base_extract_messages_coerces_uuid_session_id():
 
     messages = vertex_base_module.Vertex.extract_messages_from_artifacts(vertex, artifacts)
     assert messages[0]["session_id"] == str(session_id)
+
+
+class TestStrFieldWithNonStringListElements:
+    """Regression: str field containing a list of Message dicts must not crash.
+
+    Bug: On subsequent agent calls, ChatInput's input_value field receives
+    a list of Message dicts from chat history. The param_handler's str case
+    matched `list()` and called `unescape_string(v)` on each element, but
+    v was a dict, causing 'dict' object has no attribute 'replace'.
+    """
+
+    def test_str_field_with_list_of_dicts_extracts_text(self, parameter_handler, mock_vertex):
+        """A str field with list of Message dicts must extract text, not crash."""
+        message_dict = {
+            "text_key": "text",
+            "text": "hello from user",
+            "data": {"text": "hello from user", "sender": "User"},
+            "default_value": "",
+        }
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": [message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello from user"]
+
+    def test_str_field_with_dict_nested_text(self, parameter_handler, mock_vertex):
+        """A Message dict without top-level text should fall back to data.text."""
+        message_dict = {
+            "text_key": "text",
+            "data": {"text": "nested hello", "sender": "User"},
+            "default_value": "",
+        }
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": [message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["nested hello"]
+
+    def test_str_field_with_list_of_strings_still_unescapes(self, parameter_handler, mock_vertex):
+        """A str field with list of strings must still unescape."""
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": ["hello\\nworld", "foo\\nbar"],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello\nworld", "foo\nbar"]
+
+    def test_str_field_with_mixed_list(self, parameter_handler, mock_vertex):
+        """A str field with mixed string and dict elements extracts text from dicts."""
+        message_dict = {"text_key": "text", "data": {"text": "msg"}}
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": ["hello\\nworld", message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello\nworld", "msg"]

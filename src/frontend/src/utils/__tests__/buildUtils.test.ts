@@ -71,8 +71,8 @@ jest.mock("@/utils/utils", () => ({
   tryParseJson: jest.fn((s: string) => null),
 }));
 
-jest.mock("@/constants/alerts_constants", () => ({
-  MISSED_ERROR_ALERT: "MISSED_ERROR_ALERT",
+jest.mock("../../i18n", () => ({
+  default: { t: jest.fn((key: string) => key) },
 }));
 
 jest.mock("@/constants/constants", () => ({
@@ -104,6 +104,7 @@ jest.mock("@/controllers/API", () => ({
 import {
   BATCH_YIELD_MS,
   BATCHABLE_EVENTS,
+  onEvent,
   processBatchedEvents,
   processEndVertexEvent,
 } from "../buildUtils";
@@ -647,5 +648,104 @@ describe("processBatchedEvents", () => {
       expect.any(Number),
     );
     expect(mockFlowStoreState.updateBuildStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe("onEvent — log", () => {
+  const mockAppendLogToFlowPool = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (mockFlowStoreState as any).appendLogToFlowPool = mockAppendLogToFlowPool;
+  });
+
+  it("calls appendLogToFlowPool with correct args for a valid log event", async () => {
+    const data = {
+      component_id: "node-42",
+      output: "component_as_tool",
+      name: "My Log",
+      message: "hello",
+      type: "info",
+    };
+
+    await onEvent("log", data, [], {});
+
+    expect(mockAppendLogToFlowPool).toHaveBeenCalledTimes(1);
+    expect(mockAppendLogToFlowPool).toHaveBeenCalledWith(
+      "node-42",
+      "component_as_tool",
+      { name: "My Log", message: "hello", type: "info" },
+    );
+  });
+
+  it("logs console.error and does not call appendLogToFlowPool when component_id is missing", async () => {
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const data = {
+      output: "component_as_tool",
+      name: "x",
+      message: "y",
+      type: "info",
+    };
+
+    await onEvent("log", data, [], {});
+
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("[buildUtils]"),
+      data,
+    );
+    expect(mockAppendLogToFlowPool).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it("logs console.error and does not call appendLogToFlowPool when output is missing", async () => {
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    const data = {
+      component_id: "node-1",
+      name: "x",
+      message: "y",
+      type: "info",
+    };
+
+    await onEvent("log", data, [], {});
+
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("[buildUtils]"),
+      data,
+    );
+    expect(mockAppendLogToFlowPool).not.toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+});
+
+describe("onEvent — build_end guard", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("calls updateBuildStatus when data.id is present", async () => {
+    await onEvent("build_end", { id: "node-1" }, [], {});
+    expect(mockFlowStoreState.updateBuildStatus).toHaveBeenCalledWith(
+      ["node-1"],
+      expect.anything(),
+    );
+  });
+
+  it("logs console.error and does not call updateBuildStatus when data.id is missing", async () => {
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    await onEvent("build_end", {}, [], {});
+
+    expect(mockFlowStoreState.updateBuildStatus).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining("[buildUtils]"),
+      {},
+    );
+    consoleError.mockRestore();
   });
 });

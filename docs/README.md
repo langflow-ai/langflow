@@ -43,6 +43,57 @@ import customComponent from "!!raw-loader!@langflow/src/lfx/src/lfx/custom/custo
 />
 ```
 
+## Docusaurus Versioning
+
+The versioning configuration is found in `docusaurus.config.js`.
+
+Versioning example for release version `1.9.x` on top of `1.8.x`:
+
+1. Before release, the docs in the active release branch should already be set to `1.8.x`, the current version.
+2. When ready to release `1.9.x`, create a branch and run `npm run docs:version -- 1.9.0` to snapshot the current docs.
+3. After creating a new version, update `docusaurus.config.js` to include the 1.9.0 release:
+
+```javascript
+docs: {
+  lastVersion: '1.9.0',
+  versions: {
+    '1.9.0': {
+      label: '1.9.x',
+      path: '1.9.0',
+    },
+    '1.8.0': {
+      label: '1.8.x',
+      path: '1.8.0',
+    },
+  },
+},
+```
+
+4. Test the deployment locally:
+
+```bash
+npm run build
+npm run serve
+```
+
+5. Create a pull request to main, and merge to create your new release.
+6. To create version 2.0.x, repeat the process: update the active release branch docs to `2.0.x` when you begin working on it, then when ready to release, run `npm run docs:version -- 2.0.0`, update `docusaurus.config.js` with labels using `.x` notation, and merge to main.
+
+- `lastVersion` = the most recent released version (shown as "latest" in the UI).
+
+See the [Docusaurus docs](https://docusaurus.io/docs/versioning) for more info.
+
+### Disable versioning
+
+1. Remove the versions configuration from `docusaurus.config.js`.
+2. Delete the `docs/versioned_docs/` and `docs/versioned_sidebars/` directories.
+3. Delete `docs/versions.json`.
+
+### References
+
+- [Official Docusaurus Versioning Documentation](https://docusaurus.io/docs/versioning)
+- [Docusaurus Versioning Best Practices](https://docusaurus.io/docs/versioning#versioning-best-practices)
+
 ### Deployment
 
 Using SSH:

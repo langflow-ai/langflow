@@ -1,8 +1,16 @@
-from langchain.agents import create_tool_calling_agent
+from datetime import datetime, timezone
+
+from langchain_classic.agents import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
 from lfx.base.agents.agent import LCToolsAgentComponent
-from lfx.base.models.unified_models import get_language_model_options, get_llm, update_model_options_in_build_config
+from lfx.base.agents.default_system_prompt import (
+    DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+    has_env_placeholders,
+    substitute_env_placeholders,
+)
+from lfx.base.models.model_utils import get_model_name
+from lfx.base.models.unified_models import get_language_model_options, get_llm, handle_model_input_update
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
 
 # IBM Granite-specific logic is in a separate file
@@ -40,7 +48,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -64,7 +72,7 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
             name="system_prompt",
             display_name="System Prompt",
             info="System prompt to guide the agent's behavior.",
-            value="You are a helpful assistant that can use tools to answer questions and perform tasks.",
+            value=DEFAULT_SYSTEM_PROMPT_TEMPLATE,
         ),
         DataInput(
             name="chat_history",
@@ -87,33 +95,14 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         """Dynamically update build config with user-filtered model options (tool-calling capable models)."""
-
-        def get_tool_calling_model_options(user_id=None):
-            return get_language_model_options(user_id=user_id, tool_calling=True)
-
-        build_config = update_model_options_in_build_config(
-            component=self,
-            build_config=dict(build_config),
+        return handle_model_input_update(
+            self,
+            dict(build_config),
+            field_value,
+            field_name,
             cache_key_prefix="language_model_options_tool_calling",
-            get_options_func=get_tool_calling_model_options,
-            field_name=field_name,
-            field_value=field_value,
+            get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
-
-        # Show/hide watsonx fields based on selected model
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        if isinstance(current_model_value, list) and len(current_model_value) > 0:
-            selected_model = current_model_value[0]
-            provider = selected_model.get("provider", "")
-            is_watsonx = provider == "IBM WatsonX"
-            if "base_url_ibm_watsonx" in build_config:
-                build_config["base_url_ibm_watsonx"]["show"] = is_watsonx
-                build_config["base_url_ibm_watsonx"]["required"] = is_watsonx
-            if "project_id" in build_config:
-                build_config["project_id"]["show"] = is_watsonx
-                build_config["project_id"]["required"] = is_watsonx
-
-        return build_config
 
     def get_chat_history_data(self) -> list[Data] | None:
         return self.chat_history
@@ -125,6 +114,19 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         effective_system_prompt = self.system_prompt or ""
 
         llm = self._get_llm()
+
+        # Substitute known runtime env placeholders (no-op when absent) so the
+        # default template's {current_date}, {model_name}, {optional_user_context}
+        # resolve before the LLM sees them. The rendered version is stored in
+        # `_effective_system_prompt` (not self.system_prompt) so the user-facing
+        # template is preserved for re-rendering on subsequent runs.
+        if effective_system_prompt and has_env_placeholders(effective_system_prompt):
+            effective_system_prompt = substitute_env_placeholders(
+                effective_system_prompt,
+                current_date=datetime.now(timezone.utc).date().isoformat(),
+                model_name=str(get_model_name(llm)),
+            )
+            self._effective_system_prompt = effective_system_prompt
 
         # Enhance prompt for IBM Granite models (they need explicit tool usage instructions)
         if is_granite_model(llm) and self.tools:

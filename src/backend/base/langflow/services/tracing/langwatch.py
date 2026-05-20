@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from langwatch.tracer import ContextSpan
     from lfx.graph.vertex.base import Vertex
 
@@ -90,6 +90,11 @@ class LangWatchTracer(BaseTracer):
                 )
 
             self._client = langwatch
+
+            # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
+            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+            get_http_instrumentation_manager().enable(self.tracer_provider)
         except ImportError as e:
             logger.exception(f"{e}")
             return False
@@ -164,10 +169,15 @@ class LangWatchTracer(BaseTracer):
             self.trace.update(metadata=(self.trace.metadata or {}) | {"labels": [f"Flow: {metadata['flow_name']}"]})
 
         if self.trace.api_key or self._client._api_key:
-            try:
+            import contextlib
+
+            with contextlib.suppress(ValueError):
+                # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
-            except ValueError:  # ignoring token was created in a different Context errors
-                return
+
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values

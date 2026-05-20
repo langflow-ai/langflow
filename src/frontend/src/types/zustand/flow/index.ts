@@ -8,7 +8,7 @@ import type {
 } from "@xyflow/react";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
-import type { VertexBuildTypeAPI } from "../../api";
+import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
 import type { FlowState } from "../../tabs";
 
@@ -57,6 +57,7 @@ export type ComponentsToUpdateType = {
   icon?: string;
   display_name: string;
   outdated: boolean;
+  blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
 };
@@ -105,6 +106,11 @@ export type FlowStoreType = {
   hasIO: boolean;
   setFlowPool: (flowPool: FlowPoolType) => void;
   addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void;
+  appendLogToFlowPool: (
+    nodeId: string,
+    outputName: string,
+    log: LogsLogType,
+  ) => void;
   CleanFlowPool: () => void;
   isBuilding: boolean;
   buildStartTime: number | null;

@@ -2,6 +2,7 @@ import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
@@ -15,8 +16,12 @@ import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarCom
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
 import { useCloudModeStore } from "../../stores/cloudModeStore";
-import useFlowStore from "../../stores/flowStore";
+import useFlowStore, {
+  registerNodeUpdate,
+  completeNodeUpdate,
+} from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
@@ -73,6 +78,7 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
@@ -95,6 +101,10 @@ function GenericNode({
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
+  );
+
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
   );
 
   const dismissedNodesLegacy = useFlowStore(
@@ -133,10 +143,12 @@ function GenericNode({
 
   const {
     outdated: isOutdated,
+    blocked: isBlocked,
     breakingChange: hasBreakingChange,
     userEdited: isUserEdited,
   } = componentUpdate ?? {
     outdated: false,
+    blocked: false,
     breakingChange: false,
     userEdited: false,
   };
@@ -154,10 +166,10 @@ function GenericNode({
 
   if (!data.node!.template) {
     setErrorData({
-      title: `Error in component ${data.node!.display_name}`,
+      title: t("node.errorNoTemplate", { name: data.node!.display_name }),
       list: [
-        `The component ${data.node!.display_name} has no template.`,
-        `Please contact the developer of the component to fix this issue.`,
+        t("node.errorNoTemplateDetail", { name: data.node!.display_name }),
+        t("node.errorNoTemplateContact"),
       ],
     });
     takeSnapshot();
@@ -178,6 +190,7 @@ function GenericNode({
 
       const currentCode = thisNodeTemplate.code.value;
       if (data.node) {
+        registerNodeUpdate(data.id);
         validateComponentCode(
           { code: currentCode, frontend_node: data.node },
           {
@@ -192,17 +205,19 @@ function GenericNode({
                 removeDismissedNodes([data.id]);
                 setLoadingUpdate(false);
               }
+              completeNodeUpdate(data.id);
             },
             onError: (error) => {
               setErrorData({
-                title: "Error updating Component code",
+                title: t("node.errorUpdatingCode"),
                 list: [
-                  "There was an error updating the Component.",
-                  "If the error persists, please report it on our Discord or GitHub.",
+                  t("node.errorUpdatingCodeDetail"),
+                  t("node.errorUpdatingCodeReport"),
                 ],
               });
               console.error(error);
               setLoadingUpdate(false);
+              completeNodeUpdate(data.id);
             },
           },
         );
@@ -365,8 +380,18 @@ function GenericNode({
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
   const shouldShowUpdateComponent = useMemo(
-    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+    () =>
+      !allowCustomComponents
+        ? isBlocked || isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
+    [
+      isBlocked,
+      isOutdated,
+      hasBreakingChange,
+      isUserEdited,
+      dismissAll,
+      allowCustomComponents,
+    ],
   );
 
   const shouldShowLegacyComponent = useMemo(
@@ -490,10 +515,14 @@ function GenericNode({
     () => handleUpdateCode(true),
     [handleUpdateCode],
   );
-  const memoizedSetDismissAll = useCallback(
-    () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id],
-  );
+  const memoizedSetDismissAll = useCallback(() => {
+    addDismissedNodes([data.id]);
+    setNode(data.id, (old) => {
+      const newNode = cloneDeep(old);
+      (newNode.data as NodeDataType).node!.edited = true;
+      return newNode;
+    });
+  }, [addDismissedNodes, data.id, setNode]);
 
   const memoizedSetDismissAllLegacy = useCallback(
     () => addDismissedNodesLegacy([data.id]),
@@ -522,10 +551,13 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
+            blocked={isBlocked}
             showNode={showNode}
             handleUpdateCode={() => handleUpdateCode()}
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
+            dismissed={dismissAll}
+            isRequired={!allowCustomComponents}
           />
         ) : null}
         {shouldShowLegacyComponent ? (

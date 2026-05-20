@@ -1,5 +1,6 @@
 import type { CellClickedEvent } from "ag-grid-community";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -12,7 +13,13 @@ import {
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,11 +29,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DEFAULT_TABLE_ALERT_MSG,
-  DEFAULT_TABLE_ALERT_TITLE,
-} from "@/constants/constants";
-import { useGetTracesQuery } from "@/controllers/API/queries/traces";
+  useDeleteTracesMutation,
+  useGetTracesQuery,
+} from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
@@ -46,6 +53,7 @@ export function FlowInsightsContent({
   refreshOnMount?: boolean;
   showFlowActivityHeader?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -60,8 +68,32 @@ export function FlowInsightsContent({
   const [startDate, setStartDate] = useState<string>("");
   const [endDateValue, setEndDateValue] = useState<string>("");
   const [groupBySession, setGroupBySession] = useState<boolean>(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const flowIdFromUrl = searchParams.get("id");
   const resolvedFlowId = flowId ?? currentFlowId ?? flowIdFromUrl;
+
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const { mutate: deleteTraces } = useDeleteTracesMutation({
+    onSuccess: () => {
+      setSuccessData({ title: "Records cleared successfully" });
+      refetch();
+    },
+    onError: (error) => {
+      setErrorData({
+        title: "Error clearing records",
+        list: [error.message],
+      });
+    },
+  });
+
+  const handleClearAll = useCallback(() => {
+    const trustedFlowId = flowId ?? currentFlowId;
+    if (trustedFlowId) {
+      deleteTraces({ flow_id: trustedFlowId });
+    }
+  }, [flowId, currentFlowId, deleteTraces]);
 
   const resolvedFlowName = useFlowsManagerStore((state) => {
     if (!resolvedFlowId) return state.currentFlow?.name;
@@ -99,15 +131,13 @@ export function FlowInsightsContent({
         size: pageSize,
       },
     },
-    { enabled: !!resolvedFlowId },
+    {
+      enabled: !!resolvedFlowId,
+      refetchOnMount: refreshOnMount ? "always" : true,
+    },
   );
 
   const rows = tracesData?.traces ?? [];
-
-  useEffect(() => {
-    if (!refreshOnMount) return;
-    refetch();
-  }, [refreshOnMount, refetch]);
 
   useEffect(() => {
     if (!initialTraceId) return;
@@ -153,8 +183,10 @@ export function FlowInsightsContent({
   }, []);
 
   const totalRuns = tracesData?.total ?? rows.length;
-  const totalPages =
-    tracesData?.pages ?? Math.max(1, Math.ceil(totalRuns / pageSize));
+  const totalPages = Math.max(
+    1,
+    tracesData?.pages ?? Math.ceil(totalRuns / pageSize),
+  );
 
   useEffect(() => {
     if (pageIndex > totalPages) {
@@ -181,8 +213,8 @@ export function FlowInsightsContent({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{DEFAULT_TABLE_ALERT_TITLE}</AlertTitle>
-            <AlertDescription>{DEFAULT_TABLE_ALERT_MSG}</AlertDescription>
+            <AlertTitle>{t("table.noDataTitle")}</AlertTitle>
+            <AlertDescription>{t("table.noDataMessage")}</AlertDescription>
           </Alert>
         </div>
       );
@@ -286,6 +318,55 @@ export function FlowInsightsContent({
               onEndDateChange={setEndDateValue}
             />
 
+            {totalRuns > 0 && (
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label="Clear All"
+                onClick={(e) => {
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  setClearConfirmOpen(true);
+                }}
+              >
+                <IconComponent name="Trash2" className="h-4 w-4" />
+              </Button>
+            )}
+            <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <IconComponent
+                      name="Trash2"
+                      className="h-5 w-5 text-destructive"
+                    />
+                    Clear All Records
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to clear all records? This will
+                  permanently delete all related Flow Activity Traces and cannot
+                  be undone.
+                </p>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setClearConfirmOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleClearAll();
+                      setClearConfirmOpen(false);
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Button
               variant="ghost"
               size="icon"
@@ -307,7 +388,7 @@ export function FlowInsightsContent({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="ag-flush-mode flex-1 overflow-hidden">
           {groupBySession ? (
             renderGroupedSessionContent({
               groupedRows,
@@ -331,7 +412,7 @@ export function FlowInsightsContent({
             />
           )}
         </div>
-        <div className="flex justify-end px-3 py-4">
+        <div className="flex justify-end border-t px-3 py-4">
           <PaginatorComponent
             pageIndex={pageIndex}
             pageSize={pageSize}

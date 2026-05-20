@@ -39,8 +39,27 @@ This step also usually lasts about a week.
 After QA and bugfixing are complete for both OSS and Desktop:
 
 * Final releases are cut from their respective RC branches.
-* Release timing is coordinated with Langflow’s DevRel team.
+* Release timing is coordinated with Langflow's DevRel team.
 * For at least 24 hours after release, Discord, GitHub, and other support channels should be monitored for critical bug reports.
+
+### 4. Release Artifacts
+
+The release workflow automatically publishes the following artifacts:
+
+* **PyPI Packages:**
+  * `langflow` - Main package with all integrations
+  * `langflow-base` - Core framework without integrations
+  * `lfx` - Lightweight executor CLI
+  * `langflow-sdk` - SDK for programmatic access (when updated)
+
+* **Docker Images:**
+  * `langflowai/langflow` - Full Langflow image
+  * `langflowai/langflow-backend` - Backend-only image (published independently)
+  * `langflowai/langflow-frontend` - Frontend-only image (published independently)
+  * `langflowai/langflow-ep` - Enterprise edition image (published independently)
+  * `langflowai/langflow-base` - Base image without integrations
+
+**Note:** Backend, frontend, and enterprise images are published separately from the main image and will be built even if the main version already exists on Docker Hub.
 
 ## Branch Model
 
@@ -66,7 +85,14 @@ git push -u origin release-X.Y.Z       # Push RC branch to remote
 3. Review and approve as normal.
 4. Merge into the RC branch after review.
 
-### 3. Final Release
+### 3. Review Regression Log
+
+Before tagging, review `regressions/X.Y.x.yaml` to confirm no unresolved `blocking` entries exist.
+If `blocking` entries exist, they should be signed off on.
+
+See [regressions/README.md](./regressions/README.md) for the full schema and entry instructions.
+
+### 4. Final Release
 
 ```sh
 git checkout release-X.Y.Z && git pull # Ensure RC branch is up to date
@@ -74,7 +100,7 @@ git tag vX.Y.Z                         # Create final release tag
 git push origin vX.Y.Z                 # Push tag to remote
 ```
 
-### 4. Merge RC Back into Main
+### 5. Merge RC Back into Main
 
 ```sh
 git checkout main
@@ -101,6 +127,10 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
 
 * Follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
 * RC tags use `-rc.N`, e.g. `v1.8.0-rc.1`.
+* **All tags MUST start with `v` prefix** (e.g., `v1.9.1`, not `1.9.1`).
+  * The release workflow validates this format and rejects tags without the `v` prefix.
+  * Duplicate tags (e.g., both `1.8.3` and `v1.8.3`) cause GitHub's release notes generation to use the wrong base comparison, resulting in incomplete changelogs.
+  * The workflow automatically checks for and prevents duplicate tags.
 
 ## Roles
 

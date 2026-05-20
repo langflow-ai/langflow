@@ -15,9 +15,17 @@ test(
 
     await page.getByTestId("template-get-started-card-basic-prompting").click();
 
-    // Wait for the flow to load
+    // Wait for the flow to load. 3s was not enough on slower runners
+    // (Windows CI): the sidebar input briefly resolves as visible but the
+    // canvas template is still mounting, and waitForSelector observes the
+    // input being re-mounted and times out. Wait for the canvas controls
+    // to settle (the same gate other tests use after opening a template),
+    // then verify the sidebar input.
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 60000,
+    });
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
 
     // Test 1: Right-click on Chat Input component should open dropdown immediately (single click)

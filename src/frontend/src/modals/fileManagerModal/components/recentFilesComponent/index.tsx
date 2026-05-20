@@ -1,5 +1,6 @@
 import Fuse from "fuse.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -67,6 +68,7 @@ export default function RecentFilesComponent({
       }),
     [filesWithDisabled],
   );
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -221,7 +223,7 @@ export default function RecentFilesComponent({
           });
           setSelectedFiles([]);
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
           setErrorData({
             title: "Error deleting files",
             list: [
@@ -234,7 +236,7 @@ export default function RecentFilesComponent({
   };
 
   return (
-    <div className="flex flex-col gap-4 overflow-hidden">
+    <div className="flex h-full flex-col gap-4 overflow-hidden">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <Input
@@ -273,7 +275,7 @@ export default function RecentFilesComponent({
         </div> */}
       </div>
       <div
-        className={`flex h-80 min-h-80 flex-col gap-1 overflow-y-auto overflow-x-hidden`}
+        className={`flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto overflow-x-hidden`}
       >
         {searchResults.length > 0 ? (
           isHierarchyView ? (
@@ -427,7 +429,7 @@ export default function RecentFilesComponent({
                 className="text-accent-pink-foreground underline"
                 to="/files"
               >
-                My Files.
+                {t("files.myFiles")}.
               </CustomLink>
             </span>
           </div>

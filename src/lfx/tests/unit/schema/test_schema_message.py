@@ -2,6 +2,7 @@ import base64
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -78,6 +79,13 @@ def test_message_from_ai_text():
     assert lc_message.content == text
 
 
+def test_message_serializes_run_id_as_string():
+    run_id = uuid4()
+    message = Message(text="hello", run_id=run_id)
+    dumped = message.model_dump()
+    assert dumped["run_id"] == str(run_id)
+
+
 def test_message_with_single_image(sample_image):
     """Test creating a message with text and an image."""
     text = "Check out this image"
@@ -142,9 +150,11 @@ def test_message_with_invalid_image_path():
     file_path = "test_flow/non_existent.png"
     message = Message(text="Invalid image", sender=MESSAGE_SENDER_USER, files=[file_path])
 
-    # When files don't exist and can't be found in cache, it should raise FileNotFoundError
-    with pytest.raises(FileNotFoundError, match="Image file not found"):
-        message.to_lc_message()
+    # Missing images are skipped during conversion (no exception), leaving only the text content.
+    lc_message = message.to_lc_message()
+    assert isinstance(lc_message, HumanMessage)
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content == [{"type": "text", "text": "Invalid image"}]
 
     # The invalid file path is still stored in the message
     assert message.files == [file_path]
@@ -164,13 +174,17 @@ def test_message_serialization():
     # Create a timestamp with timezone
     message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
     timestamp_str = message.timestamp
-    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+    timestamp_dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
     serialized = message.model_dump()
 
     assert serialized["text"] == "Test message"
     assert serialized["sender"] == MESSAGE_SENDER_USER
-    assert serialized["timestamp"] == timestamp
-    assert serialized["timestamp"].tzinfo == timezone.utc
+    assert serialized["timestamp"] == timestamp_str
+
+    parsed = datetime.strptime(serialized["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert parsed.tzinfo == timezone.utc
+    assert parsed == timestamp_dt
 
 
 def test_message_to_lc_without_sender():
@@ -186,17 +200,26 @@ def test_timestamp_serialization():
     # Test with timezone
     msg1 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     serialized1 = msg1.model_dump()
-    assert serialized1["timestamp"].tzinfo == timezone.utc
+    ts1 = datetime.strptime(serialized1["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts1.tzinfo == timezone.utc
 
     # Test without timezone
     msg2 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
     serialized2 = msg2.model_dump()
-    assert serialized2["timestamp"].tzinfo == timezone.utc
+    ts2 = datetime.strptime(serialized2["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts2.tzinfo == timezone.utc
 
     # Test that both formats result in equivalent UTC times when appropriate
     msg_with_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     msg_without_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
-    assert msg_with_tz.model_dump()["timestamp"] == msg_without_tz.model_dump()["timestamp"]
+
+    ser_with_tz = msg_with_tz.model_dump()["timestamp"]
+    ser_without_tz = msg_without_tz.model_dump()["timestamp"]
+
+    parsed_with_tz = datetime.strptime(ser_with_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    parsed_without_tz = datetime.strptime(ser_without_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
+    assert parsed_with_tz == parsed_without_tz
 
 
 def test_message_with_image_object_direct():

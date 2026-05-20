@@ -14,6 +14,8 @@ from langflow.api.v1.models import (
     get_model_names_for_provider,
     get_provider_from_variable_name,
 )
+from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
+from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
@@ -267,3 +269,76 @@ async def delete_variable(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _collect_candidate_variable_keys_from_flow_data(data: dict) -> set[str]:
+    """Collect explicit global-variable keys from flow data."""
+    candidate_keys: set[str] = set()
+
+    for node in data.get("nodes", []):
+        template = node.get("data", {}).get("node", {}).get("template", {})
+        if not isinstance(template, dict):
+            continue
+        for field in template.values():
+            if not isinstance(field, dict):
+                continue
+            if field.get("load_from_db") is True:
+                var_name = field.get("value")
+                normalized_var_name = var_name.strip() if isinstance(var_name, str) else None
+                if normalized_var_name:
+                    candidate_keys.add(normalized_var_name)
+
+    return candidate_keys
+
+
+def _validate_flow_or_422(*, version_id: UUID, data: object) -> dict:
+    """Validate flow version data structure and raise HTTP 422 on malformed input."""
+    if not (isinstance(data, dict) and "nodes" in data and isinstance(data["nodes"], list)):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Flow version {version_id} data must be a JSON object with a 'nodes' list containing node templates."
+            ),
+        )
+    return data
+
+
+@router.post("/detections", response_model=DetectVarsResponse, include_in_schema=False)
+async def detect_env_vars(
+    payload: DetectVarsRequest,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+):
+    """Detect global variable references used by the given flow version IDs.
+
+    Candidates are inferred only from ``load_from_db=True`` fields, where
+    the field value is interpreted as the referenced global variable name.
+
+    Returned values are cross-checked against the user's existing global
+    variable names. This is a security guardrail: it prevents echoing arbitrary
+    template values (including accidental secrets) and ensures results are
+    actual stored global variables.
+    """
+    variable_service = get_variable_service()
+    existing_variable_names = {
+        name
+        for name in await variable_service.list_variables(user_id=current_user.id, session=session)
+        if isinstance(name, str) and name
+    }
+
+    candidate_keys: set[str] = set()
+    versions_by_id = await get_flow_version_entries_by_ids(
+        session,
+        version_ids=payload.flow_version_ids,
+        user_id=current_user.id,
+    )
+
+    for version_id in payload.flow_version_ids:
+        version = versions_by_id.get(version_id)
+        if version is None:
+            raise HTTPException(status_code=404, detail=f"Flow version {version_id} not found")
+
+        data = _validate_flow_or_422(version_id=version_id, data=version.data)
+        candidate_keys.update(_collect_candidate_variable_keys_from_flow_data(data))
+
+    return DetectVarsResponse(variables=sorted(existing_variable_names.intersection(candidate_keys)))

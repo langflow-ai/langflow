@@ -1,6 +1,8 @@
 import * as Form from "@radix-ui/react-form";
 import { type FormEvent, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
@@ -8,11 +10,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
-import {
-  CONTROL_INPUT_STATE,
-  SIGN_UP_SUCCESS,
-} from "../../constants/constants";
+import { CONTROL_INPUT_STATE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type {
   inputHandlerEventType,
@@ -26,6 +24,7 @@ export default function SignUp(): JSX.Element {
 
   const [isDisabled, setDisableBtn] = useState<boolean>(true);
 
+  const { t } = useTranslation();
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -57,7 +56,7 @@ export default function SignUp(): JSX.Element {
       onSuccess: (user) => {
         track("User Signed Up", user);
         setSuccessData({
-          title: SIGN_UP_SUCCESS,
+          title: t("auth.signUpSuccess"),
         });
         navigate("/login");
       },
@@ -68,7 +67,7 @@ export default function SignUp(): JSX.Element {
           },
         } = error;
         setErrorData({
-          title: SIGNUP_ERROR_ALERT,
+          title: t("errors.signup"),
           list: [detail],
         });
       },
@@ -89,18 +88,24 @@ export default function SignUp(): JSX.Element {
       className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-72 flex-col items-center justify-center gap-2">
+        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
             title="Langflow logo"
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
-          <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up for Langflow
+          <span className="mb-6 text-2xl font-semibold text-primary text-center">
+            {t("auth.signupTitle")}
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Username <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.usernameLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">{t("auth.usernameLabel")}</span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
@@ -112,19 +117,25 @@ export default function SignUp(): JSX.Element {
                   value={username}
                   className="w-full"
                   required
-                  placeholder="Username"
+                  placeholder={t("auth.usernamePlaceholder")}
                 />
               </Form.Control>
 
               <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your username
+                {t("auth.usernameRequired")}
               </Form.Message>
             </Form.Field>
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password" serverInvalid={password != cnfPassword}>
-              <Form.Label className="data-[invalid]:label-invalid">
-                Password <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.passwordLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">{t("auth.passwordLabel")}</span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
               <InputComponent
                 onChange={(value) => {
@@ -134,17 +145,17 @@ export default function SignUp(): JSX.Element {
                 isForm
                 password={true}
                 required
-                placeholder="Password"
+                placeholder={t("auth.passwordPlaceholder")}
                 className="w-full"
               />
 
               <Form.Message className="field-invalid" match="valueMissing">
-                Please enter a password
+                {t("auth.passwordEnterRequired")}
               </Form.Message>
 
               {password != cnfPassword && (
                 <Form.Message className="field-invalid">
-                  Passwords do not match
+                  {t("errors.passwordMismatch")}
                 </Form.Message>
               )}
             </Form.Field>
@@ -154,9 +165,16 @@ export default function SignUp(): JSX.Element {
               name="confirmpassword"
               serverInvalid={password != cnfPassword}
             >
-              <Form.Label className="data-[invalid]:label-invalid">
-                Confirm your password{" "}
-                <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <ShadTooltip
+                  content={t("auth.confirmPasswordLabel")}
+                  styleClasses="z-50"
+                >
+                  <span className="truncate">
+                    {t("auth.confirmPasswordLabel")}
+                  </span>
+                </ShadTooltip>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <InputComponent
@@ -167,12 +185,12 @@ export default function SignUp(): JSX.Element {
                 isForm
                 password={true}
                 required
-                placeholder="Confirm your password"
+                placeholder={t("auth.confirmPasswordPlaceholder")}
                 className="w-full"
               />
 
               <Form.Message className="field-invalid" match="valueMissing">
-                Please confirm your password
+                {t("auth.confirmPasswordRequired")}
               </Form.Message>
             </Form.Field>
           </div>
@@ -186,15 +204,22 @@ export default function SignUp(): JSX.Element {
                   handleSignup();
                 }}
               >
-                Sign up
+                {t("auth.signupButton")}
               </Button>
             </Form.Submit>
           </div>
           <div className="w-full">
             <CustomLink to="/login">
-              <Button className="w-full" variant="outline">
-                Already have an account?&nbsp;<b>Sign in</b>
-              </Button>
+              <ShadTooltip
+                content={`${t("auth.haveAccount")} ${t("auth.signInLink")}`}
+                styleClasses="z-50"
+              >
+                <Button className="w-full overflow-hidden" variant="outline">
+                  <span className="truncate">
+                    {t("auth.haveAccount")}&nbsp;<b>{t("auth.signInLink")}</b>
+                  </span>
+                </Button>
+              </ShadTooltip>
             </CustomLink>
           </div>
         </div>

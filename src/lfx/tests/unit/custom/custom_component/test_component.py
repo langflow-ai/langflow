@@ -168,3 +168,23 @@ async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
     assert result.sender_name == "Test"
     # The focus is on testing the message handling logic, not the database persistence layer
     assert event_manager.on_message.called
+
+
+def test_extract_data_returns_dataframe_unchanged():
+    pd = pytest.importorskip("pandas")
+
+    component = Component()
+    dataframe = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+
+    extracted = component.extract_data(dataframe)
+    assert extracted is dataframe
+
+
+def test_extract_data_returns_series_unchanged():
+    pd = pytest.importorskip("pandas")
+
+    component = Component()
+    series = pd.Series([1, 2, 3], name="numbers")
+
+    extracted = component.extract_data(series)
+    assert extracted is series

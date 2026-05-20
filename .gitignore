@@ -17,6 +17,7 @@ qdrant_storage
 .vscode/settings.json
 .chroma
 .ruff_cache
+opendsstar_cache
 
 # PyCharm
 .idea/
@@ -290,3 +291,9 @@ data/user
 
 sso-config.yaml
 AGENTS.md
+CLAUDE.local.md
+langflow.log.*
+tmp_toolguard/
+
+#whitesource
+whitesource/

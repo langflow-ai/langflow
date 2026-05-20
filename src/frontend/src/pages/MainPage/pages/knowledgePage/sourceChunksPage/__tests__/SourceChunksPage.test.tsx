@@ -27,6 +27,17 @@ jest.mock(
   }),
 );
 
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-kb-metadata-keys",
+  () => ({
+    useGetKbMetadataKeys: () => ({
+      data: { keys: {}, truncated: false },
+      isLoading: false,
+      refetch: jest.fn(),
+    }),
+  }),
+);
+
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => (
@@ -91,6 +102,19 @@ describe("SourceChunksPage", () => {
         error: new Error("Network error"),
       });
       render(<SourceChunksPage />);
+      expect(screen.getByText("Failed to load chunks")).toBeInTheDocument();
+    });
+
+    it("shows error message on 4xx errors", () => {
+      mockGetChunks.mockReturnValue({
+        isLoading: false,
+        isError: true,
+        data: undefined,
+        error: { response: { status: 404 } },
+      });
+
+      render(<SourceChunksPage />);
+
       expect(screen.getByText("Failed to load chunks")).toBeInTheDocument();
     });
   });

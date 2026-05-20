@@ -45,6 +45,13 @@ class FlowVersionRead(BaseModel):
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
+    is_deployed: bool | None = PydanticField(
+        default=None,
+        description=(
+            "True when this version is attached to at least one deployment. "
+            "Omitted unless deployment_provider_id is provided as a query parameter."
+        ),
+    )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

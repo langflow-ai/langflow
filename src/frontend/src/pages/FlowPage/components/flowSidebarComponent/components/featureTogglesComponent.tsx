@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
@@ -9,9 +10,10 @@ const FeatureToggles = ({
   cloudOnly,
   setCloudOnly,
 }) => {
+  const { t } = useTranslation();
   const toggles = [
     {
-      label: "Beta",
+      label: t("sidebar.betaLabel"),
       checked: showBeta,
       onChange: setShowBeta,
       badgeVariant: "purpleStatic" as const,
@@ -19,7 +21,7 @@ const FeatureToggles = ({
       prefix: "Show",
     },
     {
-      label: "Legacy",
+      label: t("sidebar.legacyLabel"),
       checked: showLegacy,
       onChange: setShowLegacy,
       badgeVariant: "secondaryStatic" as const,

@@ -207,6 +207,36 @@ class TestReadComponentIndex:
 
         assert result is None
 
+    def test_read_index_package_not_found(self, tmp_path):
+        """Test reading index when lfx package metadata is unavailable (e.g. Docker workspace install)."""
+        from importlib.metadata import PackageNotFoundError
+
+        index = {
+            "version": "0.4.0",
+            "entries": [["category1", {"comp1": {"template": {}}}]],
+        }
+        payload = orjson.dumps(index, option=orjson.OPT_SORT_KEYS)
+        index["sha256"] = hashlib.sha256(payload).hexdigest()
+
+        with (
+            patch("lfx.interface.components.inspect.getfile") as mock_getfile,
+            patch("importlib.metadata.version") as mock_version,
+        ):
+            mock_getfile.return_value = str(tmp_path / "lfx" / "__init__.py")
+            mock_version.side_effect = PackageNotFoundError("lfx")
+
+            (tmp_path / "lfx" / "_assets").mkdir(parents=True)
+            (tmp_path / "lfx" / "_assets" / "component_index.json").write_bytes(
+                orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
+            )
+
+            result = _read_component_index()
+
+        # Should succeed - version check skipped when metadata unavailable
+        assert result is not None
+        assert result["version"] == "0.4.0"
+        assert "entries" in result
+
     def test_read_index_custom_path_file(self, tmp_path):
         """Test reading index from custom file path."""
         index = {
