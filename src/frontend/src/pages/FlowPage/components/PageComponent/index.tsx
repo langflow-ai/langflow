@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
@@ -33,18 +34,17 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
+import { useHelperLinesStore } from "../../../../stores/helperLinesStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useTypesStore } from "../../../../stores/typesStore";
 import useVersionPreviewStore from "../../../../stores/versionPreviewStore";
@@ -72,11 +72,7 @@ import UpdateAllComponents from "../UpdateAllComponents";
 import { CanvasBadge } from "./components/CanvasBanner";
 import HelperLines from "./components/helper-lines";
 import VersionPreviewOverlay from "./components/VersionPreviewOverlay";
-import {
-  getHelperLines,
-  getSnapPosition,
-  type HelperLinesState,
-} from "./helpers/helper-lines";
+import { getHelperLines, getSnapPosition } from "./helpers/helper-lines";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
@@ -532,18 +528,36 @@ export default function Page({
     [takeSnapshot, onConnect],
   );
 
-  const [helperLines, setHelperLines] = useState<HelperLinesState>({});
   const [isDragging, setIsDragging] = useState(false);
   const helperLineEnabled = useFlowStore((state) => state.helperLineEnabled);
+  const setHelperLines = useHelperLinesStore((state) => state.setHelperLines);
+  const helperLineRafRef = useRef<number | null>(null);
+
+  const cancelHelperLineFrame = useCallback(() => {
+    if (helperLineRafRef.current !== null) {
+      cancelAnimationFrame(helperLineRafRef.current);
+      helperLineRafRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => cancelHelperLineFrame, [cancelHelperLineFrame]);
 
   const onNodeDrag: OnNodeDrag = useCallback(
     (_, node) => {
-      if (helperLineEnabled) {
-        const currentHelperLines = getHelperLines(node, nodes);
-        setHelperLines(currentHelperLines);
+      if (!helperLineEnabled) return;
+      // Coalesce per-mousemove work into one frame and read the latest nodes
+      // from the store at compute time so this callback doesn't get recreated
+      // (and the canvas doesn't re-render) on every node change.
+      if (helperLineRafRef.current !== null) {
+        cancelAnimationFrame(helperLineRafRef.current);
       }
+      helperLineRafRef.current = requestAnimationFrame(() => {
+        helperLineRafRef.current = null;
+        const latestNodes = useFlowStore.getState().nodes;
+        setHelperLines(getHelperLines(node, latestNodes));
+      });
     },
-    [helperLineEnabled, nodes],
+    [helperLineEnabled, setHelperLines],
   );
 
   const onNodeDragStart: OnNodeDrag = useCallback(
@@ -563,6 +577,7 @@ export default function Page({
       updateCurrentFlow({ nodes });
       setPositionDictionary({});
       setIsDragging(false);
+      cancelHelperLineFrame();
       setHelperLines({});
     },
     [
@@ -572,6 +587,8 @@ export default function Page({
       edges,
       reactFlowInstance,
       setPositionDictionary,
+      cancelHelperLineFrame,
+      setHelperLines,
     ],
   );
 
@@ -1013,7 +1030,7 @@ export default function Page({
             >
               <UpdateAllComponents />
               <MemoizedBackground />
-              {helperLineEnabled && <HelperLines helperLines={helperLines} />}
+              {helperLineEnabled && <HelperLines />}
             </ReactFlow>
             <FlowBuildingComponent />
             {bannerVisible && (
