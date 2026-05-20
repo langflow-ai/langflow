@@ -63,6 +63,7 @@ export default function AccordionPromptComponent({
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const cursorPositionRef = useRef<number>(0);
   const isTypingRef = useRef(false);
+  const isComposingRef = useRef(false);
   const { mutate: postValidatePrompt } = usePostValidatePrompt();
   const validateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastValidatedValueRef = useRef<string>(value);
@@ -432,30 +433,32 @@ export default function AccordionPromptComponent({
     // Update internal state
     setInternalValue(normalizedValue);
 
-    // Notify parent immediately
-    handleOnNewValue({ value: normalizedValue });
+    // Skip parent notification and innerHTML updates during IME composition to prevent Korean input breakage
+    if (!isComposingRef.current) {
+      handleOnNewValue({ value: normalizedValue });
 
-    // Check if we need to update HTML for highlighting
-    const currentHTML = contentEditableRef.current.innerHTML;
-    const expectedHTML = normalizedValue
-      ? getHighlightedHTML(normalizedValue)
-      : "";
+      // Check if we need to update HTML for highlighting
+      const currentHTML = contentEditableRef.current.innerHTML;
+      const expectedHTML = normalizedValue
+        ? getHighlightedHTML(normalizedValue)
+        : "";
 
-    // Only update if the HTML actually needs to change (for highlighting)
-    // This prevents unnecessary updates that mess with cursor position
-    if (currentHTML !== expectedHTML) {
-      // Save cursor position
-      saveCursorPosition();
+      // Only update if the HTML actually needs to change (for highlighting)
+      // This prevents unnecessary updates that mess with cursor position
+      if (currentHTML !== expectedHTML) {
+        // Save cursor position
+        saveCursorPosition();
 
-      // Update the highlighted HTML
-      contentEditableRef.current.innerHTML = expectedHTML;
+        // Update the highlighted HTML
+        contentEditableRef.current.innerHTML = expectedHTML;
 
-      // Restore cursor position
-      restoreCursorPosition();
-    }
+        // Restore cursor position
+        restoreCursorPosition();
+      }
 
-    if (normalizedValue === "") {
-      contentEditableRef.current.innerHTML = "";
+      if (normalizedValue === "") {
+        contentEditableRef.current.innerHTML = "";
+      }
     }
 
     // Reset typing flag after current event loop completes
@@ -593,6 +596,13 @@ export default function AccordionPromptComponent({
               ref={contentEditableRef}
               contentEditable={!disabled && !readonly}
               onInput={handleInput}
+              onCompositionStart={() => {
+                isComposingRef.current = true;
+              }}
+              onCompositionEnd={(e) => {
+                isComposingRef.current = false;
+                handleInput(e as unknown as React.FormEvent<HTMLDivElement>);
+              }}
               onKeyDown={handleKeyDown}
               suppressContentEditableWarning
               id={id}
