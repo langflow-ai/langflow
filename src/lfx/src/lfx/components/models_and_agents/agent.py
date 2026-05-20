@@ -91,6 +91,11 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
+            # Agents require tool calling — the filter is honored by
+            # ``handle_model_input_update`` so models that can't run with
+            # tools never reach the picker (and any saved selection that
+            # no longer satisfies the constraint is auto-replaced).
+            filters={"tool_calling": True},
         ),
         SecretStrInput(
             name="api_key",
@@ -516,15 +521,16 @@ class AgentComponent(ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
-        # Update model options with caching (for all field changes)
-        # Agents require tool calling, so filter for only tool-calling capable models
+        # Update model options with caching (for all field changes).
+        # The tool-calling constraint lives on the ModelInput's ``filters``
+        # field (declared above); ``handle_model_input_update`` reads it
+        # and applies the filter to both the dropdown options and the
+        # sticky-default re-injection path.
         build_config = handle_model_input_update(
             component=self,
             build_config=dict(build_config),
             field_value=field_value,
             field_name=field_name,
-            cache_key_prefix="language_model_options_tool_calling",
-            get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
         build_config = dotdict(build_config)
 

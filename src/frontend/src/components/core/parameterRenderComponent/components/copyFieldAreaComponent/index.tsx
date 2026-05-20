@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { GRADIENT_CLASS_DISABLED } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import useAlertStore from "@/stores/alertStore";
@@ -61,6 +62,7 @@ export default function CopyFieldAreaComponent({
   id = "",
   showParameter = true,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -96,7 +98,7 @@ export default function CopyFieldAreaComponent({
     navigator.clipboard.writeText(valueToRender);
 
     setSuccessData({
-      title: "Endpoint URL copied",
+      title: t("success.endpointUrlCopied"),
     });
 
     event?.stopPropagation();

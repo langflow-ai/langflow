@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { formatDate } from "../helpers";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
@@ -22,6 +23,7 @@ export function MemoryDetails({
   hasNextSessionsPage,
   isFetchingNextSessionsPage,
 }: MemoryDetailsProps) {
+  const { t } = useTranslation();
   const pendingLabel =
     memory.batch_size > 1 ? "Pending (this batch)" : "Pending Messages";
   const pendingValue =
@@ -47,13 +49,13 @@ export function MemoryDetails({
       <div className="flex flex-1 flex-col overflow-auto p-4">
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
           <SummaryCard
-            label="Processed Messages"
+            label={t("memory.processedMessages")}
             value={memory.total_messages_processed}
             icon="MessageSquare"
           />
           <SummaryCard label={pendingLabel} value={pendingValue} icon="Timer" />
           <SummaryCard
-            label="Last Generated"
+            label={t("memory.lastGenerated")}
             value={formatDate(memory.last_generated_at)}
             icon="Clock"
           />
@@ -61,14 +63,18 @@ export function MemoryDetails({
 
         <div className="mb-4 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <span>
-            <span className="font-medium text-foreground">Model:</span>{" "}
+            <span className="font-medium text-foreground">
+              {t("memory.modelLabel")}
+            </span>{" "}
             {memory.embedding_model}
           </span>
           {memory.embedding_provider && (
             <>
               <span>&middot;</span>
               <span>
-                <span className="font-medium text-foreground">Provider:</span>{" "}
+                <span className="font-medium text-foreground">
+                  {t("memory.providerLabel")}
+                </span>{" "}
                 {memory.embedding_provider}
               </span>
             </>
@@ -78,7 +84,7 @@ export function MemoryDetails({
               <span>&middot;</span>
               <span>
                 <span className="font-medium text-foreground">
-                  Messages per batch:
+                  {t("memory.messagesPerBatch")}
                 </span>{" "}
                 {memory.batch_size}
               </span>
@@ -89,7 +95,7 @@ export function MemoryDetails({
               <span>&middot;</span>
               <span>
                 <span className="font-medium text-foreground">
-                  Preprocessing:
+                  {t("memory.preprocessing")}
                 </span>{" "}
                 enabled
               </span>

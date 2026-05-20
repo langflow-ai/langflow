@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function ReviewPhaseContent({
   onConfirm,
   onCancel,
 }: ReviewPhaseContentProps) {
+  const { t } = useTranslation();
   const { data: currentVersion, isLoading: isLoadingVersion } =
     useGetFlowVersionEntry(
       { flowId, versionId: attachment.flow_version_id },
@@ -39,7 +41,7 @@ export default function ReviewPhaseContent({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Review Update</DialogTitle>
+        <DialogTitle>{t("deployments.reviewUpdate")}</DialogTitle>
         <DialogDescription>
           Review the version change before updating the deployment.
         </DialogDescription>

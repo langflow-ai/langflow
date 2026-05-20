@@ -1,0 +1,223 @@
+name: Release Bundles
+
+# Manually-triggered workflow for publishing stable `lfx-<name>` bundle wheels
+# from src/bundles/* to PyPI. Bundles change infrequently, so we release them
+# on demand rather than on a schedule. Re-running the workflow without a
+# version bump is a no-op (PyPI rejects the duplicate upload and we tolerate
+# the conflict).
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Git ref to build from (branch, tag, or SHA). Defaults to the workflow's checked-out ref."
+        required: false
+        type: string
+        default: ""
+      dry_run:
+        description: "Build and test only; skip the PyPI publish step."
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  build-bundles:
+    name: Build Langflow Bundles
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      bundles-found: ${{ steps.build.outputs.bundles-found }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
+      - name: Build bundle wheels
+        id: build
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            echo "bundles-found=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          echo "bundles-found=1" >> $GITHUB_OUTPUT
+          ls -la bundles-dist/
+      # Bundles pin lfx (e.g. lfx>=0.5.0,<0.6.0). The smoke test below
+      # installs the bundles in a fresh venv, so it needs an lfx wheel that
+      # satisfies the pin available locally — PyPI may not yet have a
+      # matching lfx published when bundles are released ahead of a main
+      # release. We build the lfx wheel from the current ref so the smoke
+      # test resolves against it; this artifact is not published.
+      - name: Build lfx wheel for smoke test
+        if: steps.build.outputs.bundles-found == '1'
+        run: |
+          mkdir -p lfx-dist
+          LFX_DIST="$PWD/lfx-dist"
+          (cd src/lfx && uv build --wheel --out-dir "$LFX_DIST")
+          ls -la lfx-dist/
+      - name: Upload bundles artifact
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-bundles
+          path: bundles-dist
+      - name: Upload lfx artifact (smoke-test only; not published)
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-lfx-smoketest
+          path: lfx-dist
+
+  test-install:
+    name: Install Smoke Test - ${{ matrix.os }} ${{ matrix.python-version }}
+    needs: [build-bundles]
+    if: needs.build-bundles.outputs.bundles-found == '1'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.10"
+          - os: linux
+            runner: ubuntu-latest
+            python-version: "3.12"
+          - os: macos
+            runner: macos-latest
+            python-version: "3.12"
+          - os: windows
+            runner: windows-latest
+            python-version: "3.12"
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          ignore-empty-workdir: true
+      - name: Download bundles artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-bundles
+          path: ./bundles-dist
+      - name: Download lfx artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-lfx-smoketest
+          path: ./lfx-dist
+      - name: Create fresh virtual environment
+        run: uv venv test-env --seed
+        shell: bash
+      - name: Install lfx + bundle wheels (Unix)
+        if: matrix.os != 'windows'
+        run: |
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
+            echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
+            echo "No lfx wheel found in ./lfx-dist/"
+            exit 1
+          fi
+          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=allow --python ./test-env/bin/python "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+        shell: bash
+      - name: Install lfx + bundle wheels (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          shopt -s nullglob
+          BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
+            echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
+            echo "No lfx wheel found in ./lfx-dist/"
+            exit 1
+          fi
+          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+        shell: bash
+
+  publish-bundles:
+    name: Publish Bundles to PyPI
+    needs: [build-bundles, test-install]
+    if: |
+      always() &&
+      !cancelled() &&
+      !inputs.dry_run &&
+      needs.build-bundles.result == 'success' &&
+      needs.build-bundles.outputs.bundles-found == '1' &&
+      needs.test-install.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundles artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-bundles
+          path: bundles-dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Publish bundles to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          shopt -s nullglob
+          wheels=(bundles-dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "No bundle wheels to publish."
+            exit 0
+          fi
+          failed=0
+          for wheel in "${wheels[@]}"; do
+            echo "Publishing $wheel"
+            # Capture stderr so we can tolerate "already exists" without failing
+            # the whole run — re-running this workflow without bumping a bundle
+            # version should be a no-op for that bundle.
+            if ! err=$(uv publish "$wheel" 2>&1); then
+              echo "$err"
+              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
+                echo "Skipping $wheel: already published."
+              else
+                echo "Publish failed for $wheel"
+                failed=1
+              fi
+            fi
+          done
+          if [ "$failed" = "1" ]; then
+            exit 1
+          fi
