@@ -8,9 +8,9 @@ slug: /extensions-author-guide
 This guide covers how to design, build, and ship a Langflow Extension Bundle from scratch, plus the conventions that make the result safe to maintain alongside the rest of Langflow. If you just want to get something running, start with [Build your first Langflow Extension](./extensions-quickstart.mdx) — that's the three-minute path. Read this when you're ready to publish, port a component out of `lfx.components.<provider>`, or evaluate whether your extension idea fits the v0 contract.
 
 :::info First-delivery scope
-This page documents the first-delivery slice of the Bundle Separation epic (LE-905). It covers the foundation (manifest, single-Bundle loader, atomic-swap reload) plus the pilot migration pattern. The wider Extension System vision — services, routes, registries, partner handover — is described in the project's internal design docs and ships in later epics.
+This page documents the first-delivery slice of the Bundle Separation work. It covers the foundation (manifest, single-Bundle loader, atomic-swap reload) plus the pilot migration pattern. The wider Extension System vision — services, routes, registries, partner handover — ships in later phases.
 
-The structured **events pipeline** (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook, `bundle_reloaded` / `flow-migrated` events) is deferred to LE-1017. Reload and migration emit through the standard logger today and the HTTP response carries the typed result body; the events stream is the additive surface that lands on top.
+The structured **events pipeline** (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook, `bundle_reloaded` / `flow-migrated` events) is deferred. Reload and migration emit through the standard logger today and the HTTP response carries the typed result body; the events stream is the additive surface that lands on top.
 :::
 
 ## Concepts
@@ -109,7 +109,7 @@ Atomic-swap reload (Mode A only) is what makes the dev loop tolerable. The five 
 2. **Stage 2 — validate** the staging load. Any error aborts here; the live bundle is unchanged.
 3. **Stage 3 — swap** under the registry write-lock. New flows resolve to the new class; in-flight flows keep their pre-swap class reference.
 4. **Stage 4 — clean up** the staging namespace.
-5. **Stage 5 — notify**. Today this is a logger emission of the added/removed component lists plus a registered post-swap hook that refreshes the component cache; the typed `bundle_reloaded` events pipeline (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook) is deferred to LE-1017. The reload route's HTTP response body already carries the typed result, so the palette's reload action gets immediate feedback through the existing mutation hook ([`use-reload-bundle.ts`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/controllers/API/queries/extensions/use-reload-bundle.ts)) until the events stream lands.
+5. **Stage 5 — notify**. Today this is a logger emission of the added/removed component lists plus a registered post-swap hook that refreshes the component cache; the typed `bundle_reloaded` events pipeline (`ExtensionEventsService`, `GET /api/v1/extensions/events`, the `use-extension-events` React hook) is deferred. The reload route's HTTP response body already carries the typed result, so the palette's reload action gets immediate feedback through the existing mutation hook ([`use-reload-bundle.ts`](https://github.com/langflow-ai/langflow/blob/main/src/frontend/src/controllers/API/queries/extensions/use-reload-bundle.ts)) until the events stream lands.
 
 :::note First reload after boot
 On the **first** reload after a fresh server boot, `components_added` and `components_removed` are always empty: the bundle is already registered at startup, so the post-swap diff is against an identical pre-swap snapshot. This is expected — non-empty deltas only appear once you edit a component (add/remove a class, rename, etc.) and reload again.
@@ -119,7 +119,7 @@ Reload is **not** a trust boundary. Bundle code was trusted at install time; the
 
 ## Porting an in-tree component
 
-The mechanical steps for extracting `src/lfx/src/lfx/components/<provider>/` into a standalone bundle live in [`src/bundles/PORTING.md`](https://github.com/langflow-ai/langflow/blob/main/src/bundles/PORTING.md). That's the canonical recipe; this page covers the design choices around it. The DuckDuckGo extraction (LE-1023) is the reference implementation — diff `src/bundles/duckduckgo/` against any in-tree component to see the shape.
+The mechanical steps for extracting `src/lfx/src/lfx/components/<provider>/` into a standalone bundle live in [`src/bundles/PORTING.md`](https://github.com/langflow-ai/langflow/blob/main/src/bundles/PORTING.md). That's the canonical recipe; this page covers the design choices around it. The DuckDuckGo extraction is the reference implementation — diff `src/bundles/duckduckgo/` against any in-tree component to see the shape.
 
 A few things that surprise people:
 

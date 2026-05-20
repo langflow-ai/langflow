@@ -1,4 +1,4 @@
-"""Integration test for the LE-1023 pilot: legacy DuckDuckGo flows upgrade cleanly.
+"""Integration test for the DuckDuckGo pilot: legacy flows upgrade cleanly.
 
 Verifies the save/upgrade/load contract for flows referencing
 ``DuckDuckGoSearchComponent`` from the pre-extraction Langflow:
@@ -400,10 +400,10 @@ def _is_editable_install(dist: importlib_metadata.Distribution) -> bool:
 def test_lfx_duckduckgo_ships_manifest() -> None:
     """``importlib.metadata`` can find ``extension.json`` for the installed dist.
 
-    This is the contract LE-1022's :func:`load_installed_extensions` reads
-    at server startup; if the wheel doesn't include the manifest, the
-    bundle never registers and the AC ("pip install langflow still pulls
-    in the pilot bundle as before") fails silently.
+    This is the contract :func:`load_installed_extensions` reads at
+    server startup; if the wheel doesn't include the manifest, the bundle
+    never registers and ``pip install langflow`` silently fails to pull
+    in the pilot bundle.
 
     Editable installs (``pip install -e``) hide package files from
     ``dist.files`` -- only ``dist-info`` entries appear -- so for editable
@@ -431,7 +431,7 @@ def test_lfx_duckduckgo_ships_manifest() -> None:
         )
     else:
         # Non-editable wheel install: assert dist.files surfaces the manifest
-        # (the path LE-1022's loader walks at runtime).
+        # (the path the loader walks at runtime).
         files = dist.files or []
         manifests = [f for f in files if f.parts and f.parts[-1] == "extension.json"]
         assert manifests, (
