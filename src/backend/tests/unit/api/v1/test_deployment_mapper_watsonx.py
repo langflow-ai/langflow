@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -14,6 +15,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBindings,
     FlowVersionPatch,
     UpdateSnapshotBindings,
+    truncate_deployment_description,
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -21,6 +23,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
 )
 from lfx.services.adapters.deployment.schema import (
+    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
@@ -1256,14 +1259,56 @@ def test_watsonx_api_payload_accepts_flow_version_unbind_and_remove_contract() -
 def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payload() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     create_result = mapper.util_create_result_from_existing_resource(
-        existing_resource=DeploymentGetResult(id="existing-agent-1", name="agent_technical_name", type="agent")
+        existing_resource=DeploymentGetResult(
+            id="existing-agent-1",
+            name="agent_technical_name",
+            type="agent",
+            provider_data={
+                "name": "agent_technical_name",
+                "display_name": "Provider Label",
+                "description": "Provider description",
+                "tool_ids": [],
+                "environments": ["draft"],
+            },
+        )
     )
 
     assert create_result.id == "existing-agent-1"
+    assert create_result.type == DeploymentType.AGENT
+    assert create_result.name == "agent_technical_name"
+    assert create_result.description == "Provider description"
     assert isinstance(create_result.provider_result, dict)
-    assert create_result.provider_result.get("deployment_name") == "agent_technical_name"
+    assert "deployment_name" not in create_result.provider_result
+    assert create_result.provider_result.get("display_name") == "Provider Label"
+    assert "description" not in create_result.provider_result
     assert create_result.provider_result.get("app_ids") == []
     assert create_result.provider_result.get("tools_with_refs") == []
+
+
+def test_watsonx_mapper_existing_resource_result_does_not_truncate_before_db_write() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+
+    with patch(
+        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.truncate_deployment_description"
+    ) as mock_truncate:
+        create_result = mapper.util_create_result_from_existing_resource(
+            existing_resource=DeploymentGetResult(
+                id="existing-agent-1",
+                name="agent_technical_name",
+                type="agent",
+                provider_data={
+                    "name": "agent_technical_name",
+                    "display_name": "Provider Label",
+                    "description": long_description,
+                    "tool_ids": [],
+                    "environments": ["draft"],
+                },
+            )
+        )
+
+    assert create_result.description == long_description
+    mock_truncate.assert_not_called()
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_returns_none_without_provider_data() -> None:
@@ -1483,6 +1528,198 @@ def test_watsonx_mapper_existing_agent_create_model_uses_provider_metadata() -> 
     assert deployment.description == "Provider description"
 
 
+def test_watsonx_mapper_existing_agent_create_model_truncates_once_for_db_write() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_account_id = uuid4()
+    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+    payload = DeploymentCreateRequest(
+        provider_id=provider_account_id,
+        type="agent",
+        provider_data={"existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46"},
+    )
+    existing_provider_resource = DeploymentGetResult(
+        id="21b2b5a4-ef72-4697-8731-132163669a46",
+        name="agent_technical_name",
+        type="agent",
+        provider_data={
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
+            "description": long_description,
+            "tool_ids": [],
+            "environments": ["draft"],
+        },
+    )
+
+    with patch(
+        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.truncate_deployment_description",
+        wraps=truncate_deployment_description,
+    ) as mock_truncate:
+        deployment = mapper.resolve_deployment_model_from_existing_resource_for_create(
+            payload=payload,
+            user_id=uuid4(),
+            project_id=uuid4(),
+            deployment_provider_account_id=provider_account_id,
+            existing_provider_resource=existing_provider_resource,
+        )
+
+    assert deployment.description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    mock_truncate.assert_called_once()
+
+
+def test_watsonx_mapper_metadata_sync_kwargs_include_display_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_result = DeploymentListResult(
+        deployments=[
+            ItemResult(
+                id="provider-agent-1",
+                name="agent_technical_name",
+                type="agent",
+                provider_data={
+                    "name": "agent_technical_name",
+                    "display_name": "Provider Label",
+                    "description": "Provider description",
+                    "tool_ids": [],
+                    "environments": [],
+                },
+                created_at=datetime.now(tz=timezone.utc),
+                updated_at=datetime.now(tz=timezone.utc),
+            )
+        ]
+    )
+
+    assert mapper.extract_metadata_for_list(provider_result) == {
+        "provider-agent-1": {
+            "display_name": "Provider Label",
+            "description": "Provider description",
+        }
+    }
+
+
+@patch("langflow.api.v1.mappers.deployments.contracts.logger.info")
+def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logger_info) -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_result = DeploymentListResult(
+        deployments=[
+            ItemResult(
+                id="provider-agent-1",
+                name="agent_technical_name",
+                type="agent",
+                provider_data={
+                    "name": "agent_technical_name",
+                    "display_name": "Provider Label",
+                    "description": "short",
+                    "tool_ids": [],
+                    "environments": [],
+                },
+                created_at=datetime.now(tz=timezone.utc),
+                updated_at=datetime.now(tz=timezone.utc),
+            ),
+            ItemResult(
+                id="provider-agent-2",
+                name="agent_technical_name_2",
+                type="agent",
+                provider_data={
+                    "name": "agent_technical_name_2",
+                    "display_name": "Provider Label 2",
+                    "description": "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7),
+                    "tool_ids": [],
+                    "environments": [],
+                },
+                created_at=datetime.now(tz=timezone.utc),
+                updated_at=datetime.now(tz=timezone.utc),
+            ),
+        ]
+    )
+
+    metadata = mapper.extract_metadata_for_list(provider_result)
+
+    assert metadata["provider-agent-2"]["description"] == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    mock_logger_info.assert_called_once_with(
+        "truncate_deployment_description",
+        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        callsite_function="extract_metadata_for_list",
+        provider_key="watsonx-orchestrate",
+        provider_resource_key="provider-agent-2",
+        provider_list_item_index=1,
+    )
+
+
+def test_watsonx_mapper_get_metadata_sync_kwargs_include_display_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    provider_result = DeploymentGetResult(
+        id="provider-agent-1",
+        name="agent_technical_name",
+        type="agent",
+        provider_data={
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
+            "description": "Provider description",
+            "tool_ids": [],
+            "environments": [],
+        },
+    )
+
+    assert mapper.extract_metadata_for_get(provider_result) == {
+        "display_name": "Provider Label",
+        "description": "Provider description",
+    }
+
+
+def test_watsonx_mapper_create_model_uses_adapter_result_description() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    user_id = uuid4()
+    project_id = uuid4()
+    provider_account_id = uuid4()
+    result = DeploymentCreateResult(
+        id="provider-id",
+        type=DeploymentType.AGENT,
+        name="langflow_OK_AGENT_6_cea1e533",
+        description="Langflow deployment OK AGENT 6",
+        provider_result={
+            "display_name": "OK AGENT 6",
+            "app_ids": [],
+            "tools_with_refs": [],
+        },
+    )
+
+    deployment = mapper.resolve_deployment_model_for_create(
+        result=result,
+        user_id=user_id,
+        project_id=project_id,
+        deployment_provider_account_id=provider_account_id,
+    )
+
+    assert deployment.resource_key == "provider-id"
+    assert deployment.display_name == "OK AGENT 6"
+    assert deployment.deployment_type == DeploymentType.AGENT
+    assert deployment.description == "Langflow deployment OK AGENT 6"
+
+
+def test_watsonx_mapper_create_model_truncates_adapter_result_description() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    result = DeploymentCreateResult(
+        id="provider-id",
+        type=DeploymentType.AGENT,
+        name="langflow_OK_AGENT_6_cea1e533",
+        description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7),
+        provider_result={
+            "display_name": "OK AGENT 6",
+            "app_ids": [],
+            "tools_with_refs": [],
+        },
+    )
+
+    deployment = mapper.resolve_deployment_model_for_create(
+        result=result,
+        user_id=uuid4(),
+        project_id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+    )
+
+    assert deployment.description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+
+
 @pytest.mark.asyncio
 async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
@@ -1498,7 +1735,6 @@ async def test_watsonx_mapper_resolve_update_passthrough_without_provider_data()
     assert resolved.spec is not None
     assert resolved.spec.description == "new description"
     assert resolved.provider_data is None
-    assert mapper.resolve_deployment_update_kwargs(payload) == {"description": "new description"}
     assert mapper.util_flow_version_patch(payload) == FlowVersionPatch()
 
 
@@ -1518,7 +1754,6 @@ async def test_watsonx_mapper_resolve_update_preserves_explicit_null_description
     assert resolved.spec.description is None
     assert "description" in resolved.spec.model_fields_set
     assert resolved.provider_data is None
-    assert mapper.resolve_deployment_update_kwargs(payload) == {"description": None}
 
 
 @pytest.mark.asyncio
@@ -1544,13 +1779,6 @@ async def test_watsonx_mapper_resolve_update_null_description_does_not_set_name(
     assert provider_data["connections"] == {"raw_payloads": None}
 
 
-def test_watsonx_mapper_update_kwargs_without_provider_data_uses_description_only() -> None:
-    mapper = WatsonxOrchestrateDeploymentMapper()
-    payload = DeploymentUpdateRequest(description="new description")
-
-    assert mapper.resolve_deployment_update_kwargs(payload) == {"description": "new description"}
-
-
 def test_watsonx_mapper_flow_version_patch_without_provider_data_is_empty() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     payload = DeploymentUpdateRequest(description="new description")
@@ -1574,10 +1802,6 @@ async def test_watsonx_mapper_resolve_update_rejects_explicit_null_provider_data
             payload=payload,
         )
 
-    assert exc_info.value.status_code == 422
-
-    with pytest.raises(HTTPException) as exc_info:
-        mapper.resolve_deployment_update_kwargs(payload)
     assert exc_info.value.status_code == 422
 
     with pytest.raises(HTTPException) as exc_info:
@@ -2093,7 +2317,8 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     result = DeploymentUpdateResult(
         id="provider-id",
         provider_result={
-            "deployment_name": "agent_technical_name",
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
             "created_app_ids": ["created-app-1"],
             "created_snapshot_bindings": [
                 {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True}
@@ -2109,11 +2334,60 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
     assert shaped.resource_key == "agent-123"
     assert shaped.provider_data == {
         "name": "agent_technical_name",
-        "display_name": "WXO Deployment",
+        "display_name": "Provider Label",
         "created_app_ids": ["created-app-1"],
         "created_tools": [
             {"flow_version_id": str(new_flow_version_id), "tool_id": "new-tool-1"},
         ],
+    }
+
+
+def test_watsonx_mapper_shapes_update_response_with_provider_display_name() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    timestamp = datetime.now(tz=timezone.utc)
+    deployment_row = SimpleNamespace(
+        id=uuid4(),
+        deployment_provider_account_id=uuid4(),
+        resource_key="agent-123",
+        display_name="Stale DB Label",
+        description="updated",
+        deployment_type=DeploymentType.AGENT,
+        created_at=timestamp,
+        updated_at=timestamp,
+    )
+    result = DeploymentUpdateResult(
+        id="provider-id",
+        provider_result={
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
+            "description": "Provider description",
+            "created_app_ids": [],
+            "created_snapshot_bindings": [],
+        },
+    )
+
+    shaped = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
+
+    assert shaped.provider_data["display_name"] == "Provider Label"
+
+
+def test_watsonx_mapper_resolves_kwargs_for_metadata_update_from_adapter_result() -> None:
+    mapper = WatsonxOrchestrateDeploymentMapper()
+    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1)
+    result = DeploymentUpdateResult(
+        id="provider-id",
+        provider_result={
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
+            "description": description,
+        },
+    )
+
+    metadata = mapper.resolve_kwargs_for_metadata_update(result)
+
+    assert metadata == {
+        "display_name": "Provider Label",
+        "description": "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     }
 
 
@@ -2135,7 +2409,8 @@ def test_watsonx_mapper_update_response_rejects_non_uuid_source_ref() -> None:
     result = DeploymentUpdateResult(
         id="provider-id",
         provider_result={
-            "deployment_name": "agent_technical_name",
+            "name": "agent_technical_name",
+            "display_name": "Provider Label",
             "created_app_ids": [],
             "created_snapshot_bindings": [
                 {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": True},
@@ -2166,8 +2441,11 @@ def test_watsonx_mapper_shapes_create_response_with_provider_names() -> None:
     )
     result = DeploymentCreateResult(
         id="provider-id",
+        type=DeploymentType.AGENT,
+        name="agent_technical_name",
+        description="created",
         provider_result={
-            "deployment_name": "agent_technical_name",
+            "display_name": "WXO Deployment",
             "app_ids": ["created-app-1"],
             "tools_with_refs": [
                 {"source_ref": str(flow_version_id), "tool_id": "new-tool-1"},
@@ -2204,8 +2482,11 @@ def test_watsonx_mapper_create_response_rejects_non_uuid_source_ref_in_created_t
     )
     result = DeploymentCreateResult(
         id="provider-id",
+        type=DeploymentType.AGENT,
+        name="agent_technical_name",
+        description="updated",
         provider_result={
-            "deployment_name": "agent_technical_name",
+            "display_name": "WXO Deployment",
             "app_ids": [],
             "tools_with_refs": [
                 {"source_ref": "not-a-uuid", "tool_id": "orphan-tool"},
@@ -2287,8 +2568,11 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
     create_bindings = mapper.util_create_snapshot_bindings(
         result=DeploymentCreateResult(
             id="provider-id",
+            type=DeploymentType.AGENT,
+            name="agent_technical_name",
+            description="created",
             provider_result={
-                "deployment_name": "agent_technical_name",
+                "display_name": "Agent Display Name",
                 "tools_with_refs": [{"source_ref": "fv-1", "tool_id": "snap-1"}],
             },
         ),
@@ -2300,7 +2584,8 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         result=DeploymentUpdateResult(
             id="provider-id",
             provider_result={
-                "deployment_name": "agent_technical_name",
+                "name": "agent_technical_name",
+                "display_name": "Provider Label",
                 "created_snapshot_ids": ["snap-1"],
                 "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
@@ -2312,7 +2597,8 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
         result=DeploymentUpdateResult(
             id="provider-id",
             provider_result={
-                "deployment_name": "agent_technical_name",
+                "name": "agent_technical_name",
+                "display_name": "Provider Label",
                 "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
         ),
@@ -3314,7 +3600,8 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
         id="agent-1",
         provider_result=WXO_SCHEMAS.deployment_update_result.apply(
             WatsonxDeploymentUpdateResultData(
-                deployment_name="agent_technical_name",
+                name="agent_technical_name",
+                display_name="Provider Label",
                 created_app_ids=[],
                 created_snapshot_bindings=[
                     {"source_ref": str(flow_version_id), "tool_id": "tool-1", "created": True},
@@ -3357,7 +3644,8 @@ def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> Non
         id="agent-1",
         provider_result=WXO_SCHEMAS.deployment_update_result.apply(
             WatsonxDeploymentUpdateResultData(
-                deployment_name="agent_technical_name",
+                name="agent_technical_name",
+                display_name="Provider Label",
                 created_app_ids=[],
                 created_snapshot_bindings=[
                     {"source_ref": "external-tool-id", "tool_id": "external-tool-id", "created": True},
@@ -3390,7 +3678,8 @@ def test_watsonx_mapper_update_snapshot_bindings_filters_non_uuid_source_refs() 
         id="agent-1",
         provider_result=WXO_SCHEMAS.deployment_update_result.apply(
             WatsonxDeploymentUpdateResultData(
-                deployment_name="agent_technical_name",
+                name="agent_technical_name",
+                display_name="Provider Label",
                 created_app_ids=[],
                 added_snapshot_bindings=[
                     {"source_ref": str(flow_version_id), "tool_id": "tool-fv-based", "created": True},

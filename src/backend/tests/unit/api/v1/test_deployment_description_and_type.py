@@ -140,7 +140,7 @@ class TestCreateResponse:
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description == "my description"
         assert response.provider_id == provider_account_id
@@ -160,7 +160,7 @@ class TestCreateResponse:
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description is None
         assert response.provider_id == provider_account_id
@@ -180,7 +180,7 @@ class TestCreateResponse:
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.type == DeploymentType.AGENT
         assert response.provider_id == provider_account_id

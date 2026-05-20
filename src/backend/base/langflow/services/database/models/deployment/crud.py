@@ -51,6 +51,24 @@ def _validate_description_max_length(description: str | None) -> str | None:
     return description
 
 
+def _description_length(description: str | None) -> int | None:
+    return len(description) if description is not None else None
+
+
+def _metadata_update_log_payload(update_item: DeploymentMetadataUpdate) -> dict[str, object]:
+    deployment = update_item.langflow_db_row
+    return {
+        "deployment_id": str(deployment.id),
+        "provider_account_id": str(deployment.deployment_provider_account_id),
+        "provider_resource_key": deployment.resource_key,
+        "changed_fields": _deployment_metadata_changed_fields(update_item),
+        "previous_display_name_length": len(deployment.display_name),
+        "next_display_name_length": len(update_item.display_name),
+        "previous_description_length": _description_length(deployment.description),
+        "next_description_length": _description_length(update_item.description),
+    }
+
+
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -203,7 +221,7 @@ async def update_deployment_metadata(
     display_name: str,
     description: str | None,
 ) -> Deployment:
-    """Update provider-owned display metadata without changing local audit fields."""
+    """Update provider-owned metadata without changing local audit fields."""
     update_item = DeploymentMetadataUpdate(
         langflow_db_row=deployment,
         display_name=_strip_or_raise(display_name, "display_name"),
@@ -211,6 +229,12 @@ async def update_deployment_metadata(
     )
     if not _deployment_metadata_has_changed(update_item):
         return deployment
+
+    logger.info(
+        "sync_deployment_metadata_db_write",
+        user_id=str(user_id),
+        **_metadata_update_log_payload(update_item),
+    )
 
     stmt = (
         update(Deployment)
@@ -234,11 +258,18 @@ async def update_deployment_metadata(
     return deployment
 
 
-def _deployment_metadata_has_changed(update_item: DeploymentMetadataUpdate) -> bool:
+def _deployment_metadata_changed_fields(update_item: DeploymentMetadataUpdate) -> list[str]:
     langflow_data = update_item.langflow_db_row
-    return (
-        update_item.display_name != langflow_data.display_name or update_item.description != langflow_data.description
-    )
+    changed_fields: list[str] = []
+    if update_item.display_name != langflow_data.display_name:
+        changed_fields.append("display_name")
+    if update_item.description != langflow_data.description:
+        changed_fields.append("description")
+    return changed_fields
+
+
+def _deployment_metadata_has_changed(update_item: DeploymentMetadataUpdate) -> bool:
+    return bool(_deployment_metadata_changed_fields(update_item))
 
 
 def _deployment_metadata_updates_cte(
@@ -270,10 +301,17 @@ async def update_deployment_metadata_batch(
     user_id: UUID,
     deployment_updates: Sequence[DeploymentMetadataUpdate],
 ) -> None:
-    """Update provider-owned display metadata for multiple deployment rows in one statement."""
+    """Update provider-owned metadata for multiple deployment rows in one statement."""
     updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
     if not updates:
         return
+
+    logger.info(
+        "sync_deployment_metadata_batch_db_write",
+        user_id=str(user_id),
+        update_count=len(updates),
+        updates=[_metadata_update_log_payload(item) for item in updates],
+    )
 
     metadata_updates = _deployment_metadata_updates_cte(updates)
     stmt = (

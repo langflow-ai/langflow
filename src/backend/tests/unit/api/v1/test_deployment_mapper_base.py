@@ -353,12 +353,12 @@ def test_base_mapper_shape_deployment_get_data_raises_not_implemented() -> None:
         mapper.shape_deployment_get_data({"ok": True})
 
 
-def test_base_mapper_resolve_deployment_update_kwargs_raises_not_implemented() -> None:
+def test_base_mapper_resolve_kwargs_for_metadata_update_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
-    payload = DeploymentUpdateRequest(description="new description")
+    result = DeploymentUpdateResult(id="provider-id")
 
     with pytest.raises(NotImplementedError, match="not configured for updating local deployment metadata"):
-        mapper.resolve_deployment_update_kwargs(payload)
+        mapper.resolve_kwargs_for_metadata_update(result)
 
 
 def test_base_mapper_shapes_deployment_create_result() -> None:
@@ -366,7 +366,7 @@ def test_base_mapper_shapes_deployment_create_result() -> None:
     timestamp = datetime.now(tz=timezone.utc)
     deployment_id = uuid4()
     provider_account_id = uuid4()
-    result = DeploymentCreateResult(id="provider-id", provider_result={"ok": True})
+    result = DeploymentCreateResult(id="provider-id", type=DeploymentType.AGENT, provider_result={"ok": True})
     deployment_row = SimpleNamespace(
         id=deployment_id,
         display_name="Deployment 1",
@@ -668,6 +668,7 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
 
     create_result = DeploymentCreateResult(
         id="provider-id",
+        type=DeploymentType.AGENT,
         provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "snap-1"}]},
     )
     bindings = mapper.util_create_snapshot_bindings(

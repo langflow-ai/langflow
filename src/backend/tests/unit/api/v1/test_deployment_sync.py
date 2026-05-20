@@ -18,9 +18,9 @@ from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
-    ProviderDeploymentMetadata,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
+    truncate_deployment_description,
 )
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
@@ -28,6 +28,7 @@ from lfx.services.adapters.deployment.schema import (
     DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     DeploymentCreateResult,
     DeploymentGetResult,
+    DeploymentType,
     DeploymentUpdateResult,
     SnapshotItem,
     SnapshotListResult,
@@ -42,6 +43,7 @@ except ModuleNotFoundError:
     )
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
+CONTRACTS_MODULE = "langflow.api.v1.mappers.deployments.contracts"
 SYNC_MODULE = "langflow.api.v1.mappers.deployments.sync"
 
 
@@ -80,6 +82,7 @@ def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) 
         id=uuid4(),
         resource_key=resource_key,
         display_name="Deployment",
+        description=None,
         deployment_type=deployment_type,
         deployment_provider_account_id=uuid4(),
     )
@@ -90,16 +93,18 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
         _ = provider_view
         return []
 
-    def extract_metadata_for_list(self, provider_view) -> dict[str, ProviderDeploymentMetadata]:
+    def extract_metadata_for_list(self, provider_view) -> dict[str, dict[str, Any]]:
         if provider_view is None:
             return {}
         return {
-            str(item.id): ProviderDeploymentMetadata(
-                display_name=(getattr(item, "provider_data", {}) or {}).get(
+            str(item.id): {
+                "display_name": (getattr(item, "provider_data", {}) or {}).get(
                     "display_name", getattr(item, "name", str(item.id))
                 ),
-                description=(getattr(item, "provider_data", {}) or {}).get("description"),
-            )
+                "description": truncate_deployment_description(
+                    (getattr(item, "provider_data", {}) or {}).get("description")
+                ),
+            }
             for item in provider_view.deployments
         }
 
@@ -121,7 +126,7 @@ def _mock_async_db() -> MagicMock:
 
 @pytest.mark.asyncio
 @patch(f"{MODULE}.update_deployment_metadata", new_callable=AsyncMock)
-async def test_sync_deployment_display_metadata_truncates_provider_description(mock_update_metadata):
+async def test_sync_deployment_display_metadata_passes_provider_metadata(mock_update_metadata):
     from langflow.api.v1.mappers.deployments.helpers import sync_deployment_display_metadata
 
     deployment = _mock_deployment_row("rk-1")
@@ -131,13 +136,65 @@ async def test_sync_deployment_display_metadata_truncates_provider_description(m
     result = await sync_deployment_display_metadata(
         MagicMock(),
         deployment=deployment,
-        provider_metadata=ProviderDeploymentMetadata(display_name="Provider Name", description=long_description),
+        provider_metadata={
+            "display_name": "Provider Name",
+            "description": truncate_deployment_description(long_description),
+        },
         user_id=uuid4(),
     )
 
     assert result is deployment
     mock_update_metadata.assert_awaited_once()
+    assert mock_update_metadata.call_args.kwargs["display_name"] == "Provider Name"
     assert mock_update_metadata.call_args.kwargs["description"] == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+
+
+@patch(f"{CONTRACTS_MODULE}.logger.info")
+def test_truncate_deployment_description_logs_when_truncated(mock_logger_info):
+    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+
+    truncated = truncate_deployment_description(description)
+
+    assert truncated == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    mock_logger_info.assert_called_once_with(
+        "truncate_deployment_description",
+        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+    )
+
+
+@patch(f"{CONTRACTS_MODULE}.logger.info")
+def test_truncate_deployment_description_logs_callsite_metadata_when_provided(mock_logger_info):
+    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+
+    truncated = truncate_deployment_description(
+        description,
+        log_context={
+            "callsite_function": "extract_metadata_for_get",
+            "provider_key": "watsonx-orchestrate",
+            "provider_resource_key": "agent-1",
+        },
+    )
+
+    assert truncated == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    mock_logger_info.assert_called_once_with(
+        "truncate_deployment_description",
+        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        callsite_function="extract_metadata_for_get",
+        provider_key="watsonx-orchestrate",
+        provider_resource_key="agent-1",
+    )
+
+
+@patch(f"{CONTRACTS_MODULE}.logger.info")
+def test_truncate_deployment_description_does_not_log_when_unchanged(mock_logger_info):
+    description = "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+
+    truncated = truncate_deployment_description(description)
+
+    assert truncated == description
+    mock_logger_info.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -528,13 +585,13 @@ class TestListDeploymentsSynced:
         long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
 
         class _MetadataMapper(_NoSnapshotBindingMapper):
-            def extract_metadata_for_list(self, provider_view) -> dict[str, ProviderDeploymentMetadata]:
+            def extract_metadata_for_list(self, provider_view) -> dict[str, dict[str, Any]]:
                 _ = provider_view
                 return {
-                    "rk-1": ProviderDeploymentMetadata(
-                        display_name="Provider Name",
-                        description=long_description,
-                    )
+                    "rk-1": {
+                        "display_name": "Provider Name",
+                        "description": truncate_deployment_description(long_description),
+                    }
                 }
 
         row = _mock_deployment_row("rk-1")
@@ -560,6 +617,7 @@ class TestListDeploymentsSynced:
         assert total == 1
         mock_update_metadata_batch.assert_awaited_once()
         updates = mock_update_metadata_batch.call_args.kwargs["deployment_updates"]
+        assert updates[0].display_name == "Provider Name"
         assert updates[0].description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
@@ -864,6 +922,7 @@ class TestCreateSnapshotMapping:
             deployment_mapper=_FakeMapper(),
             result=DeploymentCreateResult(
                 id="provider-id",
+                type=DeploymentType.AGENT,
                 provider_result={
                     "snapshot_bindings": [
                         {"source_ref": str(flow_version_ids[0]), "snapshot_id": "snap-1"},
@@ -885,7 +944,7 @@ class TestCreateSnapshotMapping:
         with pytest.raises(HTTPException, match="missing required snapshot bindings"):
             resolve_snapshot_map_for_create(
                 deployment_mapper=_FakeMapper(),
-                result=DeploymentCreateResult(id="provider-id"),
+                result=DeploymentCreateResult(id="provider-id", type=DeploymentType.AGENT),
                 flow_version_ids=[uuid4()],
             )
 
@@ -901,7 +960,7 @@ class TestUpdateSnapshotMapping:
             result=DeploymentUpdateResult(
                 id="provider-id",
                 provider_result={
-                    "deployment_name": "agent_api_name",
+                    "name": "agent_api_name",
                     "added_snapshot_bindings": [
                         {"source_ref": str(flow_version_ids[0]), "snapshot_id": "snap-1"},
                         {"source_ref": str(flow_version_ids[1]), "snapshot_id": "snap-2"},
@@ -925,7 +984,7 @@ class TestUpdateSnapshotMapping:
                 result=DeploymentUpdateResult(
                     id="provider-id",
                     provider_result={
-                        "deployment_name": "agent_api_name",
+                        "name": "agent_api_name",
                         "added_snapshot_bindings": [
                             {"source_ref": "other", "snapshot_id": "snap-extra"},
                         ],
@@ -943,7 +1002,7 @@ class TestUpdateSnapshotMapping:
                 result=DeploymentUpdateResult(
                     id="provider-id",
                     provider_result={
-                        "deployment_name": "agent_api_name",
+                        "name": "agent_api_name",
                         "added_snapshot_bindings": [],
                     },
                 ),
@@ -957,6 +1016,7 @@ class TestUpdateSnapshotMapping:
                 deployment_mapper=_FakeMapper(),
                 result=DeploymentCreateResult(
                     id="provider-id",
+                    type=DeploymentType.AGENT,
                     provider_result={"snapshot_bindings": [{"source_ref": "other-ref", "snapshot_id": "snap-1"}]},
                 ),
                 flow_version_ids=[uuid4()],
@@ -967,7 +1027,11 @@ def test_watsonx_mapper_util_created_snapshot_ids_uses_adapter_slot():
     created = WatsonxOrchestrateDeploymentMapper().util_created_snapshot_ids(
         result=DeploymentUpdateResult(
             id="provider-id",
-            provider_result={"deployment_name": "agent_api_name", "created_snapshot_ids": ["snap-1", "snap-2"]},
+            provider_result={
+                "name": "agent_api_name",
+                "display_name": "Agent API Name",
+                "created_snapshot_ids": ["snap-1", "snap-2"],
+            },
         ),
     )
 

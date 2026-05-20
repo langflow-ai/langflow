@@ -276,14 +276,17 @@ async def apply_provider_create_plan_with_rollback(
             )
 
         final_tool_ids = dedupe_list([*plan.existing_tool_ids, *created_tool_ids])
-        agent_create_response = await retry_create(
-            create_agent_deployment,
-            clients=clients,
+        agent_payload = build_agent_payload_from_values(
             agent_name=plan.deployment_name,
             agent_display_name=plan.display_name,
             description=deployment_spec.description,
             tool_ids=final_tool_ids,
             llm=plan.llm,
+        )
+        agent_create_response = await retry_create(
+            create_agent_deployment,
+            clients=clients,
+            payload=agent_payload,
         )
     except Exception:
         # undo tool<->connection bindings of existing tools
@@ -325,6 +328,7 @@ async def apply_provider_create_plan_with_rollback(
         tool_app_bindings=created_tool_app_bindings,
         deployment_name=plan.deployment_name,
         display_name=plan.display_name,
+        description=agent_payload["description"],
     )
 
 
@@ -422,20 +426,9 @@ async def _bind_existing_tools_for_create(
 async def create_agent_deployment(
     *,
     clients: WxOClient,
-    tool_ids: list[str],
-    agent_name: str,
-    agent_display_name: str,
-    description: str,
-    llm: str,
+    payload: dict[str, Any],
 ):
-    """Create a provider agent deployment from explicit payload fields."""
-    payload = build_agent_payload_from_values(
-        agent_name=agent_name,
-        agent_display_name=agent_display_name,
-        description=description,
-        tool_ids=tool_ids,
-        llm=llm,
-    )
+    """Create a provider agent deployment from a prebuilt payload."""
     try:
         return await asyncio.to_thread(clients.agent.create, payload)
     except Exception as exc:  # noqa: BLE001
@@ -444,7 +437,7 @@ async def create_agent_deployment(
             error_prefix=ErrorPrefix.CREATE,
             log_msg="Unexpected provider error during wxO agent create",
             resource="agent",
-            resource_name=agent_name,
+            resource_name=payload["name"],
         )
 
 

@@ -31,7 +31,7 @@ from lfx.services.interfaces import DeploymentServiceProtocol
 from sqlalchemy import and_, literal, union_all
 from sqlmodel import col, func, select
 
-from langflow.api.v1.mappers.deployments.contracts import ProviderDeploymentMetadata, ProviderSnapshotBinding
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 from langflow.api.v1.mappers.deployments.sync import (
     extract_verified_provider_snapshot_ids,
     extract_verified_snapshot_ids,
@@ -711,7 +711,7 @@ async def sync_deployment_display_metadata(
     db: DbSession,
     *,
     deployment: Deployment,
-    provider_metadata: ProviderDeploymentMetadata,
+    provider_metadata: dict[str, Any],
     user_id: UUID,
 ) -> Deployment:
     """Sync provider-owned display metadata into a local deployment row."""
@@ -719,8 +719,7 @@ async def sync_deployment_display_metadata(
         db,
         user_id=user_id,
         deployment=deployment,
-        display_name=provider_metadata.display_name,
-        description=provider_metadata.description,
+        **provider_metadata,
     )
 
 
@@ -865,7 +864,7 @@ async def list_deployments_synced(
     accepted_deployment_ids: list[UUID] = []
     provider_bindings: list[ProviderSnapshotBinding] = []
     provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
-    provider_metadata_by_resource_key: dict[str, ProviderDeploymentMetadata] = {}
+    provider_metadata_by_resource_key: dict[str, dict[str, Any]] = {}
     cursor = page_offset(page, size)
     max_sync_rounds = 2  # Initial pass + one refill pass.
     for _ in range(max_sync_rounds):
@@ -921,8 +920,7 @@ async def list_deployments_synced(
             metadata_updates.append(
                 DeploymentMetadataUpdate(
                     langflow_db_row=row,
-                    display_name=provider_metadata.display_name,
-                    description=provider_metadata.description,
+                    **provider_metadata,
                 )
             )
         await update_deployment_metadata_batch(

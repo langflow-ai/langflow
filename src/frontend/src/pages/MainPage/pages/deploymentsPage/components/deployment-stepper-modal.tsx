@@ -23,6 +23,7 @@ import {
   DEFAULT_FLOW_NAME,
   type Deployment,
   type DeploymentProvider,
+  getDeploymentDisplayName,
   getSelectedFlowVersionKey,
   type ProviderAccount,
   type SelectedFlowVersion,
@@ -113,7 +114,7 @@ export default function DeploymentStepperModal({
         versionTag: `v${fv.version_number}`,
       });
       // Pre-populate tool names from the provider (may differ from flow name).
-      const providerToolName = fv.provider_data?.tool_name;
+      const providerToolName = fv.provider_data?.tool_display_name;
       if (providerToolName) {
         toolNames.set(key, providerToolName);
       }
@@ -284,15 +285,11 @@ function DeploymentStepperModalContent({
 
       const payload = buildDeploymentPayload(providerId);
       const result = await createDeployment(payload);
-      if (
-        result &&
-        typeof result === "object" &&
-        "id" in result &&
-        "name" in result
-      ) {
+      if (result && typeof result === "object" && "id" in result) {
+        const deployment = result as Deployment;
         setCreatedDeployment({
           id: String(result.id),
-          name: String(result.name),
+          name: getDeploymentDisplayName(deployment),
         });
       }
       setDeploymentPhase("deployed");

@@ -53,6 +53,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     )
     adapter_result = DeploymentCreateResult(
         id="provider-deployment-id",
+        type=DeploymentType.AGENT,
         provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "tool-1"}]},
     )
 
@@ -71,7 +72,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
 def test_shape_deployment_create_result_with_none_provider_result() -> None:
     mapper = BaseDeploymentMapper()
     row = _make_deployment_row()
-    result = DeploymentCreateResult(id="dep-1", provider_result=None)
+    result = DeploymentCreateResult(id="dep-1", type=DeploymentType.AGENT, provider_result=None)
 
     response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
 
@@ -82,7 +83,7 @@ def test_shape_deployment_create_result_with_empty_dict_provider_result() -> Non
     """Empty dict provider_result is passed through as-is."""
     mapper = BaseDeploymentMapper()
     row = _make_deployment_row()
-    result = DeploymentCreateResult(id="dep-1", provider_result={})
+    result = DeploymentCreateResult(id="dep-1", type=DeploymentType.AGENT, provider_result={})
 
     response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
 

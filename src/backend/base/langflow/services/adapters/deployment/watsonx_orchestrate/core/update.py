@@ -42,7 +42,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentUpdatePayload,
-    WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
     WatsonxRenameToolOperation,
     WatsonxResultToolRefBinding,
@@ -366,6 +365,31 @@ def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload
     return rollback_payload
 
 
+def _resolve_provider_update_result_field(
+    field_name: str,
+    *,
+    agent: dict[str, Any],
+    update_payload: dict[str, Any],
+) -> Any:
+    return update_payload[field_name] if field_name in update_payload else agent[field_name]
+
+
+def build_provider_update_result_metadata(*, agent: dict[str, Any], update_payload: dict[str, Any]) -> dict[str, Any]:
+    """Optimistically derive metadata returned by the adapter update result.
+
+    The wxO ADK/API update call does not return a full updated agent payload
+    with fields such as ``name``. Use outbound patch values when present,
+    otherwise keep values from the provider resource fetched before the update.
+    """
+    return {
+        "name": _resolve_provider_update_result_field("name", agent=agent, update_payload=update_payload),
+        "display_name": _resolve_provider_update_result_field(
+            "display_name", agent=agent, update_payload=update_payload
+        ),
+        "description": _resolve_provider_update_result_field("description", agent=agent, update_payload=update_payload),
+    }
+
+
 async def _rollback_agent_update(
     *,
     clients: WxOClient,
@@ -389,8 +413,8 @@ async def apply_provider_update_plan_with_rollback(
     agent: dict[str, Any],
     update_payload: dict[str, Any],
     plan: ProviderUpdatePlan,
-) -> WatsonxProviderUpdateApplyResult:
-    """Apply provider_data update operations with rollback protection."""
+) -> dict[str, Any]:
+    """Apply provider_data update operations and return update-result kwargs."""
     logger.debug(
         "apply_provider_update_plan: agent_id='%s', %d raw tools, %d renames, %d connection deltas, %d raw connections",
         agent_id,
@@ -433,6 +457,10 @@ async def apply_provider_update_plan_with_rollback(
     added_snapshot_ids: list[str] = []
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
+    update_result_metadata = build_provider_update_result_metadata(
+        agent=agent,
+        update_payload=final_update_payload,
+    )
     rollback_agent_payload: dict[str, Any] = {}
     created_app_ids_journal: list[str] = []
 
@@ -553,15 +581,16 @@ async def apply_provider_update_plan_with_rollback(
         )
         raise
 
-    return WatsonxProviderUpdateApplyResult(
-        created_app_ids=dedupe_list(created_app_ids),
-        created_snapshot_ids=dedupe_list(created_snapshot_ids),
-        added_snapshot_ids=dedupe_list(added_snapshot_ids),
-        created_snapshot_bindings=created_snapshot_bindings,
-        added_snapshot_bindings=[*plan.added_existing_tool_refs, *created_snapshot_bindings],
-        removed_snapshot_bindings=plan.removed_existing_tool_refs,
-        referenced_snapshot_bindings=[*plan.existing_tool_refs, *created_snapshot_bindings],
-    )
+    return {
+        **update_result_metadata,
+        "created_app_ids": dedupe_list(created_app_ids),
+        "created_snapshot_ids": dedupe_list(created_snapshot_ids),
+        "added_snapshot_ids": dedupe_list(added_snapshot_ids),
+        "created_snapshot_bindings": created_snapshot_bindings,
+        "added_snapshot_bindings": [*plan.added_existing_tool_refs, *created_snapshot_bindings],
+        "removed_snapshot_bindings": plan.removed_existing_tool_refs,
+        "referenced_snapshot_bindings": [*plan.existing_tool_refs, *created_snapshot_bindings],
+    }
 
 
 def build_update_payload_from_spec(

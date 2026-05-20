@@ -100,6 +100,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.update import (
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
+    build_provider_update_result_metadata,
     build_update_payload_from_spec,
     validate_provider_update_request_sections,
 )
@@ -284,7 +285,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
         create_result_payload = WatsonxDeploymentCreateResultData(
-            deployment_name=apply_result.deployment_name,
+            display_name=apply_result.display_name,
             app_ids=apply_result.app_ids,
             tools_with_refs=apply_result.tools_with_refs,
             tool_app_bindings=apply_result.tool_app_bindings,
@@ -296,6 +297,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
 
         return DeploymentCreateResult[WatsonxDeploymentCreateResultData](
             id=apply_result.agent_id,
+            type=deployment_spec.type,
+            name=apply_result.deployment_name,
+            description=apply_result.description,
             provider_result=create_result_slot.parse(create_result_payload),
         )
 
@@ -505,12 +509,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 payload.spec,
                 core_update=core_update,
             )
-            final_name = update_payload.get("name", agent["name"])
 
             if not (core_update and core_update.has_tool_work):
                 if not update_payload:
                     msg = "No data was provided for updating the deployment."
                     raise InvalidContentError(message=msg)
+                provider_result_metadata = build_provider_update_result_metadata(
+                    agent=agent,
+                    update_payload=update_payload,
+                )
                 await retry_update(
                     asyncio.to_thread,
                     clients.agent.update,
@@ -519,7 +526,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
                     id=deployment_id,
-                    provider_result=WatsonxDeploymentUpdateResultData(deployment_name=final_name),
+                    provider_result=WatsonxDeploymentUpdateResultData(
+                        **provider_result_metadata,
+                    ),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -540,16 +549,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
                 id=deployment_id,
                 provider_result=self.payload_schemas.deployment_update_result.apply(
-                    WatsonxDeploymentUpdateResultData(
-                        deployment_name=final_name,
-                        created_app_ids=apply_result.created_app_ids,
-                        created_snapshot_ids=apply_result.created_snapshot_ids,
-                        added_snapshot_ids=apply_result.added_snapshot_ids,
-                        created_snapshot_bindings=apply_result.created_snapshot_bindings,
-                        added_snapshot_bindings=apply_result.added_snapshot_bindings,
-                        removed_snapshot_bindings=apply_result.removed_snapshot_bindings,
-                        referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
-                    )
+                    WatsonxDeploymentUpdateResultData(**apply_result)
                 ),
             )
 

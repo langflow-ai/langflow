@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import truncate_deployment_description
+from lfx.log.logger import logger
+from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+
+
+def truncate_deployment_description(
+    description: str | None,
+    *,
+    log_context: dict[str, Any] | None = None,
+) -> str | None:
+    if description is None:
+        return None
+    if len(description) <= DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
+        return description
+    truncated = description[:DEPLOYMENT_DESCRIPTION_MAX_LENGTH]
+    logger.info(
+        "truncate_deployment_description",
+        original_length=len(description),
+        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        **(log_context or {}),
+    )
+    return truncated
 
 
 class CreateFlowArtifactProviderData(BaseModel):
@@ -57,18 +77,6 @@ class ProviderSnapshotBinding(BaseModel):
 
     resource_key: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     snapshot_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-
-
-class ProviderDeploymentMetadata(BaseModel):
-    """Provider-owned deployment metadata synced into local rows."""
-
-    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-    description: str | None = None
-
-    @field_validator("description")
-    @classmethod
-    def truncate_description(cls, value: str | None) -> str | None:
-        return truncate_deployment_description(value)
 
 
 class CreatedSnapshotIds(BaseModel):

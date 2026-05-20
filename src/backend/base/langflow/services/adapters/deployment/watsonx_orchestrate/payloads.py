@@ -494,7 +494,7 @@ class WatsonxDeploymentCreateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     app_ids: list[NormalizedId] = Field(default_factory=list)
     tools_with_refs: list[WatsonxToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
@@ -544,7 +544,9 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    description: str | None = None
     created_app_ids: list[NormalizedId] = Field(default_factory=list)
     created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
     added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
@@ -672,26 +674,6 @@ class WatsonxSnapshotListResultData(BaseModel):
     deployment_id: NormalizedId | None = None
 
 
-class WatsonxProviderUpdateApplyResult(BaseModel):
-    """Public adapter contract for update helper apply results.
-
-    Field semantics match ``WatsonxDeploymentUpdateResultData``.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    created_app_ids: list[NormalizedId] = Field(default_factory=list)
-    created_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    added_snapshot_ids: list[NormalizedId] = Field(default_factory=list)
-    created_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
-    # Newly attached snapshot/tool refs (created + newly attached existing).
-    added_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
-    # Detached snapshot/tool refs.
-    removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
-    # Full operation correlation set (created + existing refs).
-    referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
-
-
 class WatsonxProviderCreateApplyResult(BaseModel):
     """Public adapter contract for create helper apply results."""
 
@@ -703,6 +685,7 @@ class WatsonxProviderCreateApplyResult(BaseModel):
     tool_app_bindings: list[WatsonxToolAppBinding] = Field(default_factory=list)
     deployment_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     display_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    description: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class WatsonxVerifyCredentialsPayload(BaseModel):

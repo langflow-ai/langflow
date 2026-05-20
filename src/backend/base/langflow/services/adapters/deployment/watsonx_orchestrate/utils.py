@@ -118,6 +118,16 @@ def validate_description(description: str | None, *, field_label: str) -> str | 
     return description
 
 
+def resolve_agent_description(description: str | None, *, agent_display_name: str) -> str:
+    """Resolve the required description content used for agent create payloads.
+
+    wxO does not allow null or empty descriptions.
+    """
+    if description and (desc := description.strip()):
+        return desc
+    return f"Langflow deployment {agent_display_name}"
+
+
 def require_tool_id(tool_response: dict[str, Any]) -> str:
     tool_id = tool_response.get("id")
     if not tool_id:
@@ -235,14 +245,14 @@ def build_agent_payload_from_values(
     *,
     agent_name: str,
     agent_display_name: str,
-    description: str,
+    description: str | None,
     tool_ids: Sequence[str],
     llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
         "display_name": agent_display_name,
-        "description": str(description).strip() or f"Langflow deployment {agent_display_name}",
+        "description": resolve_agent_description(description, agent_display_name=agent_display_name),
         "tools": list(tool_ids),
         "style": "default",
         "llm": str(llm).strip(),

@@ -50,12 +50,6 @@ IdLike = UUID | NormalizedId
 DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
-def truncate_deployment_description(description: str | None) -> str | None:
-    if description is None:
-        return None
-    return description[:DEPLOYMENT_DESCRIPTION_MAX_LENGTH]
-
-
 class DeploymentType(str, Enum):
     """Core deployment types recognized by LFX contracts.
 
@@ -360,13 +354,11 @@ class DeploymentCreateResult(ProviderResultModel[T_DeploymentCreateResult]):
     """Model representing a result for a deployment creation operation."""
 
     id: IdLike = Field(description="The id of the created deployment")
-    config_id: IdLike | None = Field(
+    type: DeploymentType = Field(description="The type of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
+    description: str | None = Field(
         default=None,
-        description="Config id produced or bound during deployment creation.",
-    )
-    snapshot_ids: list[IdLike] = Field(
-        default_factory=list,
-        description="Snapshot ids produced or bound during deployment creation.",
+        description="The description of the deployment",
     )
 
 

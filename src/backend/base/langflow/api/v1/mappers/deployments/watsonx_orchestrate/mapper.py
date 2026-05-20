@@ -49,10 +49,10 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBinding,
     CreateSnapshotBindings,
     FlowVersionPatch,
-    ProviderDeploymentMetadata,
     ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
+    truncate_deployment_description,
 )
 from langflow.api.v1.mappers.deployments.helpers import (
     build_flow_artifacts_from_flow_versions,
@@ -349,22 +349,33 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def resolve_deployment_model_for_create(
         self,
         *,
-        payload: DeploymentCreateRequest,
+        result: DeploymentCreateResult,
         user_id: UUID,
         project_id: UUID,
         deployment_provider_account_id: UUID,
-        resource_key: str,
     ) -> Deployment:
         """Assemble the DB model for a wxO deployment create."""
-        api_provider_payload = self._parse_deployment_create_request(payload)
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
+            slot_name="deployment_create_result",
+            raw=result.provider_result,
+            operation="creating the deployment row in Langflow",
+        )
         return Deployment(
             user_id=user_id,
             project_id=project_id,
             deployment_provider_account_id=deployment_provider_account_id,
-            resource_key=resource_key,
-            display_name=api_provider_payload.display_name,
-            deployment_type=payload.type,
-            description=payload.description or None,
+            resource_key=str(result.id),
+            display_name=adapter_provider_result.display_name,
+            deployment_type=result.type,
+            description=truncate_deployment_description(
+                result.description,
+                log_context={
+                    "callsite_function": "resolve_deployment_model_for_create",
+                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+                    "provider_resource_key": str(result.id),
+                },
+            ),
         )
 
     def resolve_deployment_model_from_existing_resource_for_create(
@@ -377,32 +388,48 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         deployment_provider_account_id: UUID,
     ) -> Deployment:
         """Assemble the DB model for tracking an existing wxO agent."""
-        provider_metadata = self.extract_metadata_for_get(existing_provider_resource)
-        description = provider_metadata.description
+        existing_provider_data = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+            slot_name="deployment_item_data",
+            raw=existing_provider_resource.provider_data,
+            operation="reading deployment metadata from provider when attempting to track the resource in Langflow",
+        )
         return Deployment(
             user_id=user_id,
             project_id=project_id,
             deployment_provider_account_id=deployment_provider_account_id,
             resource_key=str(existing_provider_resource.id),
-            display_name=provider_metadata.display_name,
+            display_name=existing_provider_data.display_name,
             deployment_type=payload.type,
-            description=description,
+            description=truncate_deployment_description(
+                existing_provider_data.description,
+                log_context={
+                    "callsite_function": "resolve_deployment_model_from_existing_resource_for_create",
+                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+                    "provider_resource_key": str(existing_provider_resource.id),
+                },
+            ),
         )
 
-    def resolve_deployment_update_kwargs(self, payload: DeploymentUpdateRequest) -> dict[str, Any]:
-        """Assemble DB update kwargs for a wxO deployment update."""
-        update_kwargs: dict[str, Any] = {}
-        if "provider_data" in payload.model_fields_set:
-            api_provider_payload: WatsonxApiDeploymentUpdatePayload = self._parse_api_payload_slot(
-                slot=self.api_payloads.deployment_update,
-                slot_name="deployment_update",
-                raw=payload.provider_data,
-            )
-            if api_provider_payload.display_name is not None:
-                update_kwargs["display_name"] = api_provider_payload.display_name
-        if "description" in payload.model_fields_set:
-            update_kwargs["description"] = payload.description
-        return update_kwargs
+    def resolve_kwargs_for_metadata_update(self, result: DeploymentUpdateResult) -> dict[str, Any]:
+        """Assemble Deployment metadata update kwargs from the wxO update result."""
+        adapter_provider_result = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update_result,
+            slot_name="deployment_update_result",
+            raw=result.provider_result,
+            operation="syncing deployment metadata after update",
+        )
+        return {
+            "display_name": adapter_provider_result.display_name,
+            "description": truncate_deployment_description(
+                adapter_provider_result.description,
+                log_context={
+                    "callsite_function": "resolve_kwargs_for_metadata_update",
+                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+                    "provider_resource_key": str(result.id),
+                },
+            ),
+        }
 
     def resolve_credentials(
         self,
@@ -626,11 +653,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         without create-time mutation operations. ``created_*`` fields represent
         what this request created, so they are intentionally empty here.
         """
+        existing_provider_data = self._parse_required_payload_slot(
+            slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
+            slot_name="deployment_item_data",
+            raw=existing_resource.provider_data,
+            operation="reading deployment metadata",
+        )
         create_provider_result = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_create_result,
             slot_name="deployment_create_result",
             raw={
-                "deployment_name": existing_resource.name,
+                "display_name": existing_provider_data.display_name,
                 "app_ids": [],
                 "tools_with_refs": [],
             },
@@ -638,6 +671,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return DeploymentCreateResult(
             id=existing_resource.id,
+            type=existing_resource.type,
+            name=existing_resource.name,
+            description=existing_provider_data.description,
             provider_result=create_provider_result.model_dump(mode="json"),
         )
 
@@ -882,9 +918,9 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def extract_metadata_for_list(
         self,
         provider_view: DeploymentListResult,
-    ) -> dict[str, ProviderDeploymentMetadata]:
-        metadata_by_resource_key: dict[str, ProviderDeploymentMetadata] = {}
-        for item in provider_view.deployments:
+    ) -> dict[str, dict[str, Any]]:
+        metadata_by_resource_key: dict[str, dict[str, Any]] = {}
+        for provider_list_item_index, item in enumerate(provider_view.deployments):
             item_provider_data = self._parse_required_payload_slot(
                 slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
                 slot_name="deployment_item_data",
@@ -892,10 +928,18 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 operation="reading deployment list item metadata",
             )
             resource_key = str(item.id)
-            metadata_by_resource_key[resource_key] = ProviderDeploymentMetadata(
-                display_name=item_provider_data.display_name,
-                description=item_provider_data.description,
-            )
+            metadata_by_resource_key[resource_key] = {
+                "display_name": item_provider_data.display_name,
+                "description": truncate_deployment_description(
+                    item_provider_data.description,
+                    log_context={
+                        "callsite_function": "extract_metadata_for_list",
+                        "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+                        "provider_resource_key": resource_key,
+                        "provider_list_item_index": provider_list_item_index,
+                    },
+                ),
+            }
         return metadata_by_resource_key
 
     def extract_snapshot_bindings_for_get(
@@ -924,17 +968,24 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
     def extract_metadata_for_get(
         self,
         get_result: DeploymentGetResult,
-    ) -> ProviderDeploymentMetadata:
+    ) -> dict[str, Any]:
         parsed = self._parse_required_payload_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
             slot_name="deployment_item_data",
             raw=get_result.provider_data,
             operation="reading deployment metadata",
         )
-        return ProviderDeploymentMetadata(
-            display_name=parsed.display_name,
-            description=parsed.description,
-        )
+        return {
+            "display_name": parsed.display_name,
+            "description": truncate_deployment_description(
+                parsed.description,
+                log_context={
+                    "callsite_function": "extract_metadata_for_get",
+                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+                    "provider_resource_key": str(get_result.id),
+                },
+            ),
+        }
 
     async def resolve_rollback_update(
         self,
@@ -1038,7 +1089,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from exc
             created_tools.append(created_tool)
         provider_api_result = WatsonxApiDeploymentCreateResultData(
-            name=adapter_provider_result.deployment_name,
+            name=result.name,
             display_name=deployment_row.display_name,
             created_app_ids=list(adapter_provider_result.app_ids),
             created_tools=created_tools,
@@ -1072,8 +1123,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             adapter_created_snapshot_bindings=adapter_provider_result.created_snapshot_bindings
         )
         provider_api_result = WatsonxApiDeploymentUpdateResultData(
-            name=adapter_provider_result.deployment_name,
-            display_name=deployment_row.display_name,
+            name=adapter_provider_result.name,
+            display_name=adapter_provider_result.display_name,
             created_app_ids=list(adapter_provider_result.created_app_ids),
             created_tools=created_tools,
         )

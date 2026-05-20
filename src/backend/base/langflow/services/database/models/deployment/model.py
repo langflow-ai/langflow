@@ -44,6 +44,7 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         default=None,
         sa_column=Column(sa.Uuid(), nullable=True, index=True),
     )
+    # TODO: Add DB-level length enforcement for provider-synced display_name and description.
     display_name: str = Field(description="Deployment name synced from the provider.")
     description: str | None = Field(
         default=None,
