@@ -114,6 +114,16 @@ class TestMCPCommandInjectionSecurity:
             assert "shell wrapper" in error_msg
             assert "cannot execute" in error_msg
 
+    def test_shell_wrappers_do_not_treat_long_options_as_combined_c_flags(self):
+        """Test that long options like --c do not execute the next argument."""
+        valid_configs = [
+            MCPServerConfig(command="sh", args=["--c", "not-a-wrapped-command"]),
+            MCPServerConfig(command="bash", args=["--compact", "not-a-wrapped-command"]),
+        ]
+
+        for config in valid_configs:
+            assert config.command in ("sh", "bash")
+
     def test_c_flag_blocked_for_non_shell_commands(self):
         """Test that -c flag is blocked for non-shell commands like python/node."""
         dangerous_c_usage = [
