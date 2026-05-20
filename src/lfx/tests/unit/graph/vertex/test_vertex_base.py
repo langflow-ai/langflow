@@ -466,6 +466,27 @@ def test_vertex_base_extract_messages_coerces_uuid_session_id():
     assert messages[0]["session_id"] == str(session_id)
 
 
+class UnpickleableComponent:
+    def __getstate__(self):
+        msg = "cannot pickle component thread-local state"
+        raise TypeError(msg)
+
+
+def test_vertex_serialization_omits_custom_component_instance():
+    """Vertex cache state should not serialize component instances with runtime-only state."""
+    vertex = object.__new__(vertex_base_module.Vertex)
+    vertex._lock = None
+    vertex.built_object = None
+    vertex.built_result = None
+    vertex.custom_component = UnpickleableComponent()
+
+    state = vertex.__getstate__()
+    serialized = pickle.dumps(vertex)
+
+    assert serialized
+    assert state["custom_component"] is None
+
+
 class TestStrFieldWithNonStringListElements:
     """Regression: str field containing a list of Message dicts must not crash.
 
