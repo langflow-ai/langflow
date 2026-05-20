@@ -548,7 +548,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 "add_current_date_tool",
                 "add_calculator_tool",
                 "system_prompt",
-                "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",
                 "verbose",
@@ -561,14 +560,9 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
 
         tools = component_toolkit(component=self).get_tools(
             tool_name="Call_Agent",
-            tool_description=description,
             # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )
