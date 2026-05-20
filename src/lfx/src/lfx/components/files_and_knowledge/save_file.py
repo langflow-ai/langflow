@@ -72,11 +72,8 @@ class SaveToFileComponent(Component):
         "log",
         "tsv",
         "jsonl",
-        "parquet",
-        "xlsx",
-        "zip",
     ]
-    GDRIVE_FORMAT_CHOICES = ["txt", "html", "json", "csv", "xlsx", "slides", "docs", "jpg", "mp3"]
+    GDRIVE_FORMAT_CHOICES = ["txt", "html", "json", "csv", "slides", "docs"]
 
     inputs = [
         SortableListInput(

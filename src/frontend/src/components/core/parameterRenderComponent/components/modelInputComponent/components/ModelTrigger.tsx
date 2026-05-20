@@ -115,7 +115,7 @@ const ModelTrigger = ({
                       !selectedModel?.name && "text-muted-foreground",
                     )}
                   >
-                    {selectedModel?.name || "Select a model"}
+                    {selectedModel?.name || t("model.selectModel")}
                   </div>
                   {showCloudIncompatibleWarning && (
                     <div className="flex items-center gap-1 text-[11px] text-accent-emerald-foreground">
@@ -123,7 +123,7 @@ const ModelTrigger = ({
                         name="CloudOff"
                         className="h-3 w-3"
                       />
-                      <span>Not available in cloud</span>
+                      <span>{t("cloud.notAvailableInCloud")}</span>
                     </div>
                   )}
                 </div>

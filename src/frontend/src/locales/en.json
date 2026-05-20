@@ -849,5 +849,9 @@
   "nodeToolbar.download": "Download",
   "nodeToolbar.delete": "Delete",
   "nodeToolbar.showMore": "Show More",
-  "noteNode.emptyPlaceholder": "Double-click to start typing or enter Markdown..."
+  "noteNode.emptyPlaceholder": "Double-click to start typing or enter Markdown...",
+  "cloud.notAvailableInCloud": "Not available in cloud",
+  "sidebar.cloud": "Cloud",
+  "sidebar.only": "Only",
+  "sidebar.cloudMode": "Cloud Mode"
 }

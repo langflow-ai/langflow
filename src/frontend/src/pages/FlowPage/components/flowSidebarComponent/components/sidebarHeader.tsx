@@ -106,7 +106,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
             data-testid="cloud-mode-indicator"
           >
             <ForwardedIconComponent name="Cloud" className="h-3 w-3" />
-            Cloud Mode
+            {t("sidebar.cloudMode")}
           </Badge>
         </div>
       )}

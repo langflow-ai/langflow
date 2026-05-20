@@ -79,6 +79,10 @@ export function applyCloudDefaultOverrides(
       return;
     }
 
+    if (typeof override !== "object" || override === null) {
+      return;
+    }
+
     if (Object.hasOwn(override, "value")) {
       component.template[fieldName].value = override.value;
     }

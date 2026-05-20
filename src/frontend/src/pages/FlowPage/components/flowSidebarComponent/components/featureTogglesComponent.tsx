@@ -27,7 +27,7 @@ const FeatureToggles = ({
       onChange: setShowBeta,
       badgeVariant: "purpleStatic" as const,
       testId: "sidebar-beta-switch",
-      prefix: "Show",
+      prefix: t("sidebar.show"),
       disabled: false,
     },
     {
@@ -36,16 +36,16 @@ const FeatureToggles = ({
       onChange: setShowLegacy,
       badgeVariant: "secondaryStatic" as const,
       testId: "sidebar-legacy-switch",
-      prefix: "Show",
+      prefix: t("sidebar.show"),
       disabled: false,
     },
     {
-      label: "Cloud",
+      label: t("sidebar.cloud"),
       checked: cloudOnly,
       onChange: setCloudOnly,
       badgeVariant: "emerald" as const,
       testId: "sidebar-cloud-only-switch",
-      prefix: "Only",
+      prefix: t("sidebar.only"),
       disabled: cloudOnlyLocked,
     },
   ];

@@ -417,11 +417,11 @@ export default function ModelInputComponent({
   const cloudFilteredOptionCount = useMemo(
     () =>
       cloudOnly
-        ? flatOptions.filter((option) =>
+        ? options.filter((option) =>
             CLOUD_INCOMPATIBLE_PROVIDERS.has(option.provider || "Unknown"),
           ).length
         : 0,
-    [cloudOnly, flatOptions],
+    [cloudOnly, options],
   );
 
   const showNoCompatibleCloudModels = useMemo(
