@@ -35,7 +35,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from lfx.components.tools.filesystem import (
+from lfx.components.files_and_knowledge.filesystem import (
     FileSystemToolComponent,
     _check_windows_portability,
 )

@@ -20,7 +20,7 @@ import pytest
 # conftest, but importing the module itself works fine — we just can't
 # colocate the test with the production code. Place the test where the
 # main test runner reaches it.
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 if TYPE_CHECKING:
     from pathlib import Path

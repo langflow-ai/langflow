@@ -26,7 +26,7 @@ def _make_user(user_id: str) -> SimpleNamespace:
 def auto_login_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Pin AUTO_LOGIN=True per-instance + point at a fresh tmp_path."""
     monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     monkeypatch.setattr(
         FileSystemToolComponent,
@@ -41,7 +41,7 @@ def _simulate_agent_write(user_id: str, relative: str, content: bytes) -> None:
 
     force_isolation=True + bound user_id, so the file lands in users/<hash>/.
     """
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     fs = FileSystemToolComponent()
     fs._user_id = user_id

@@ -4,9 +4,9 @@ This flow gives an Agent access to component search, description, and
 flow building tools so it can create complete flows from user requests.
 """
 
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import AgentComponent
-from lfx.components.tools.filesystem import FileSystemToolComponent
 from lfx.graph import Graph
 from lfx.mcp.flow_builder_tools import (
     AddComponent,

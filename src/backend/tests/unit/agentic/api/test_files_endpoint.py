@@ -39,7 +39,7 @@ def _write_sandbox_file(sandbox_root: Path, user_id: str, relative_path: str, co
     # Force the FileSystemToolComponent to be the single source of truth for
     # path layout — instantiate it, validate the root, then write our fixture
     # into the same directory.
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     fs = FileSystemToolComponent()
     fs._user_id = user_id
@@ -62,7 +62,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     bind a user_id. We pin the per-instance method instead — no global state.
     """
     monkeypatch.setenv("LANGFLOW_FS_TOOL_BASE_DIR", str(tmp_path))
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     monkeypatch.setattr(
         FileSystemToolComponent,

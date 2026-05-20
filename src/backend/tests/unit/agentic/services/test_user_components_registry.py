@@ -42,7 +42,7 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     pepper = tmp_path / ".fs_pepper"
     pepper.write_bytes(secrets.token_bytes(32))
 
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     monkeypatch.setattr(
         FileSystemToolComponent,
@@ -59,7 +59,7 @@ def shared_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     pepper = tmp_path / ".fs_pepper"
     pepper.write_bytes(secrets.token_bytes(32))
 
-    from lfx.components.tools.filesystem import FileSystemToolComponent
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     monkeypatch.setattr(
         FileSystemToolComponent,

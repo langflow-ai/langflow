@@ -117,7 +117,7 @@ async def get_file(
     # Deferred import: FileSystemToolComponent pulls a chunk of lfx — we don't
     # want every router-import path to do it eagerly. We use the **same**
     # security primitives the agent's tools use, not a parallel implementation.
-    from lfx.components.tools.filesystem import (
+    from lfx.components.files_and_knowledge.filesystem import (
         BINARY_SNIFF_BYTES,
         MAX_FILE_SIZE_BYTES,
         FileSystemToolComponent,
