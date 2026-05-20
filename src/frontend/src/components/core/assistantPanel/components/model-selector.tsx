@@ -133,7 +133,10 @@ export function ModelSelector({
   );
 
   return (
-    <div className="flex items-center gap-1">
+    // gap-3: leaves room for the chip's focus ring (~4px outline + offset)
+    // so the italic warning to the right doesn't visually overlap it after
+    // the user clicks the dropdown and the button keeps keyboard focus.
+    <div className="flex items-center gap-3">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button
