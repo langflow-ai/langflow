@@ -77,7 +77,7 @@ export default function LoginPage(): JSX.Element {
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
         <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
-            title="Langflow logo"
+            title={t("common.langflowLogo")}
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
           <span className="mb-6 text-2xl font-semibold text-primary text-center">

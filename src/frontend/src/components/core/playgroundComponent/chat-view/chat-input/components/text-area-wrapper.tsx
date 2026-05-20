@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   CHAT_INPUT_MAX_HEIGHT,
   CHAT_INPUT_MIN_HEIGHT,
@@ -51,17 +52,18 @@ const TextAreaWrapper = ({
   files,
   isDragging,
 }: TextAreaWrapperProps) => {
+  const { t } = useTranslation();
   const setChatValueStore = useUtilityStore((state) => state.setChatValueStore);
 
   const getPlaceholderText = useCallback((): string => {
     if (isDragging) {
-      return "Drop here";
+      return t("chat.dropHere");
     }
     if (noInput) {
       return CHAT_INPUT_PLACEHOLDER;
     }
-    return "Send a message...";
-  }, [isDragging, noInput, CHAT_INPUT_PLACEHOLDER]);
+    return t("chat.inputPlaceholderSend");
+  }, [isDragging, noInput, CHAT_INPUT_PLACEHOLDER, t]);
 
   const fileClass = files.length > 0 ? "!rounded-t-none border-t-0" : "";
 

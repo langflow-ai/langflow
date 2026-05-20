@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ export default function TestDeploymentModal({
   deployment,
   providerId,
 }: TestDeploymentModalProps) {
+  const { t } = useTranslation();
   const { messages, isWaitingForResponse, sendMessage, resetChat } =
     useDeploymentChat({
       providerId,
@@ -40,7 +42,9 @@ export default function TestDeploymentModal({
         closeButtonClassName="top-5 right-4"
         overlayClassName="bg-black/30 dark:bg-black/50 backdrop-blur"
       >
-        <DialogTitle className="sr-only">Test Deployment</DialogTitle>
+        <DialogTitle className="sr-only">
+          {t("deployments.testDeployment")}
+        </DialogTitle>
         <DialogDescription className="sr-only">
           Chat interface to test the {deployment?.name ?? "deployment"}
         </DialogDescription>

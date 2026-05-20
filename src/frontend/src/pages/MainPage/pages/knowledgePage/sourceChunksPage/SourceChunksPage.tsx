@@ -181,13 +181,19 @@ export const SourceChunksPage = () => {
                   className="w-44 shrink-0"
                   data-testid="chunks-source-type-filter"
                 >
-                  <SelectValue placeholder="All sources" />
+                  <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All sources</SelectItem>
-                  <SelectItem value="file_upload">File Upload</SelectItem>
+                  <SelectItem value="all">
+                    {t("knowledge.allSources")}
+                  </SelectItem>
+                  <SelectItem value="file_upload">
+                    {t("knowledge.fileUpload")}
+                  </SelectItem>
                   <SelectItem value="folder">Folder</SelectItem>
-                  <SelectItem value="template">Flow Template</SelectItem>
+                  <SelectItem value="template">
+                    {t("knowledge.flowTemplate")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <ChunksMetadataFilter

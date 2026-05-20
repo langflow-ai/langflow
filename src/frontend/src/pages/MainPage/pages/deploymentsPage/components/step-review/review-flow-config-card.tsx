@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { EditableToolName } from "./editable-tool-name";
@@ -16,6 +17,7 @@ export function ReviewFlowConfigCard({
   toolError,
   toolNameValue,
 }: ReviewFlowConfigCardProps) {
+  const { t } = useTranslation();
   const newConnections = item.connectionDetails.filter(
     (connection) => connection.isNew,
   );
@@ -63,7 +65,7 @@ export function ReviewFlowConfigCard({
             {existingConnections.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
-                  Existing Connections
+                  {t("deployments.existingConnections")}
                 </span>
                 {existingConnections.map((connection) => (
                   <span
@@ -79,7 +81,7 @@ export function ReviewFlowConfigCard({
             {newConnections.length > 0 && (
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-medium text-muted-foreground">
-                  New Connections
+                  {t("deployments.newConnections")}
                 </span>
                 {newConnections.map((connection) => (
                   <div key={connection.name} className="flex flex-col gap-1.5">

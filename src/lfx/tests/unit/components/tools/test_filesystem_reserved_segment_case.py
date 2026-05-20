@@ -13,7 +13,7 @@ Windows.
 from pathlib import Path
 
 import pytest
-from lfx.components.tools.filesystem import FileSystemToolComponent
+from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
 
 @pytest.fixture

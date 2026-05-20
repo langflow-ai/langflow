@@ -1,5 +1,6 @@
 import { Check, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
 
@@ -79,6 +80,7 @@ export function AssistantComponentResult({
   result,
   onApprove,
 }: AssistantComponentResultProps) {
+  const { t } = useTranslation();
   const [showApproved, setShowApproved] = useState(false);
   const [isViewCodeOpen, setIsViewCodeOpen] = useState(false);
   const componentName = result.className || "Custom Component";
@@ -124,7 +126,7 @@ export function AssistantComponentResult({
         {inputs.length > 0 && (
           <div>
             <h4 className="mb-1.5 text-xs font-semibold text-foreground">
-              Inputs
+              {t("sidebar.category.inputs")}
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {inputs.map((input) => (
@@ -144,7 +146,7 @@ export function AssistantComponentResult({
         {outputs.length > 0 && (
           <div>
             <h4 className="mb-1.5 text-xs font-semibold text-foreground">
-              Outputs
+              {t("sidebar.category.outputs")}
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {outputs.map((output) => (
@@ -168,7 +170,7 @@ export function AssistantComponentResult({
         {showApproved ? (
           <div className="flex h-8 items-center gap-1.5 text-sm font-medium text-accent-emerald-foreground">
             <Check className="h-4 w-4" />
-            <span>Approved</span>
+            <span>{t("node.approved")}</span>
           </div>
         ) : (
           <button
@@ -177,7 +179,7 @@ export function AssistantComponentResult({
             className="h-8 rounded-[10px] bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             onClick={handleApprove}
           >
-            Add to Canvas
+            {t("node.addToCanvas")}
           </button>
         )}
         <button
@@ -186,7 +188,7 @@ export function AssistantComponentResult({
           className="h-8 rounded-[10px] bg-hard-zinc px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-foreground"
           onClick={() => setIsViewCodeOpen(true)}
         >
-          View Code
+          {t("node.viewCode")}
         </button>
       </div>
 

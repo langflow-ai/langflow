@@ -260,11 +260,11 @@ def _rewrite_one_node(
         # the ambiguous-bare-names list.  A bare class name that exists in
         # 2+ bundles cannot have a regular auto-rewrite entry (the CI guard
         # rejects it), so its only surface is the explicit ambiguity
-        # marker.  Surfacing ``component-name-ambiguous`` here -- with the
-        # candidate targets enumerated -- is the LE-1020 contract:
+        # marker.  Surfacing ``component-name-ambiguous`` here -- with
+        # the candidate targets enumerated -- is the migration contract:
         # we will not silently load an ambiguous name into the wrong
-        # bundle, and we tell the operator exactly which targets they have
-        # to choose between.
+        # bundle, and we tell the operator exactly which targets they
+        # have to choose between.
         ambig_marker = table.lookup_ambiguous_bare(legacy_value)
         if ambig_marker is not None:
             target_list = ", ".join(ambig_marker.candidates)
@@ -408,7 +408,7 @@ def migrate_flow_payload(
         if record.error is not None:
             report.errors.append(record.error)
 
-    # TODO(LE-1017): when the events pipeline (ExtensionEventsService) lands,
+    # TODO: when the events pipeline (ExtensionEventsService) lands,
     # emit a single ``flow-migrated`` event per flow per session here when
     # ``report.any_rewritten`` is True.  The event payload should be:
     #   {

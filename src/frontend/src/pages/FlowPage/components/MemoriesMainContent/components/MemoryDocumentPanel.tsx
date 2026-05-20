@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 import { formatTimestamp } from "../helpers";
 import { MemoryDocumentPanelProps } from "../types";
 
@@ -7,6 +8,7 @@ export function MemoryDocumentPanel({
   onOpenChange,
   selectedDocument,
 }: MemoryDocumentPanelProps) {
+  const { t } = useTranslation();
   const titleId = "memories-document-panel-title";
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -21,24 +23,24 @@ export function MemoryDocumentPanel({
         data-testid="memories-document-panel"
       >
         <DialogTitle id={titleId} className="sr-only">
-          Memory chunk details
+          {t("memory.chunkDetailsTitle")}
         </DialogTitle>
         {!selectedDocument ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No chunk selected.
+            {t("memory.noChunkSelected")}
           </div>
         ) : (
           <div className="flex h-full flex-col overflow-hidden">
             <div className="border-b border-border px-4 py-3 pr-12">
               <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden whitespace-nowrap">
                 <span className="shrink-0 text-sm font-medium">
-                  Chunk Details
+                  {t("memory.chunkDetails")}
                 </span>
                 <span className="shrink-0 text-sm text-muted-foreground">
                   -
                 </span>
                 <span className="shrink-0 text-sm font-medium">
-                  {selectedDocument.message_id || "(no id)"}
+                  {selectedDocument.message_id || t("memory.noId")}
                 </span>
               </div>
             </div>
@@ -46,16 +48,20 @@ export function MemoryDocumentPanel({
             <div className="flex-1 overflow-auto p-4">
               <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
                 <span>
-                  <span className="font-medium text-foreground">Session:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {t("memory.sessionLabel")}
+                  </span>{" "}
                   {selectedDocument.session_id || "(no session)"}
                 </span>
                 <span>
-                  <span className="font-medium text-foreground">Sender:</span>{" "}
+                  <span className="font-medium text-foreground">
+                    {t("memory.senderLabel")}
+                  </span>{" "}
                   {selectedDocument.sender || "-"}
                 </span>
                 <span>
                   <span className="font-medium text-foreground">
-                    Timestamp:
+                    {t("memory.timestampLabel")}
                   </span>{" "}
                   {formatTimestamp(selectedDocument.timestamp)}
                 </span>
@@ -63,7 +69,7 @@ export function MemoryDocumentPanel({
 
               <div className="rounded-lg border border-border bg-background p-4">
                 <div className="mb-2 text-xs font-semibold text-muted-foreground">
-                  Content
+                  {t("memory.contentLabel")}
                 </div>
                 <div className="whitespace-pre-wrap break-words text-sm">
                   {selectedDocument.content || ""}

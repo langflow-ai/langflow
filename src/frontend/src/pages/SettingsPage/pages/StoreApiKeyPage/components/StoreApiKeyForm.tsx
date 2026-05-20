@@ -38,7 +38,7 @@ const StoreApiKeyFormComponent = ({
       >
         <Card x-chunk="dashboard-04-chunk-2" id="api">
           <CardHeader>
-            <CardTitle>Store API Key</CardTitle>
+            <CardTitle>{t("storeApiKey.cardTitle")}</CardTitle>
             <CardDescription>
               {(hasApiKey && !validApiKey
                 ? t("store.invalidApiKey")
@@ -59,11 +59,11 @@ const StoreApiKeyFormComponent = ({
                     value={apikey}
                     isForm
                     password={true}
-                    placeholder="Insert your API Key"
+                    placeholder={t("storeApiKey.insertPlaceholder")}
                     className="w-full"
                   />
                   <Form.Message match="valueMissing" className="field-invalid">
-                    Please enter your API Key
+                    {t("storeApiKey.validationRequired")}
                   </Form.Message>
                 </Form.Field>
               </div>
@@ -87,7 +87,7 @@ const StoreApiKeyFormComponent = ({
                 type="submit"
                 data-testid="api-key-save-button-store"
               >
-                Save
+                {t("nodeToolbar.save")}
               </Button>
             </Form.Submit>
           </CardFooter>

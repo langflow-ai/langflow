@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
@@ -42,6 +43,7 @@ export function AssistantMessageItem({
   onApprove,
   onRetry,
 }: AssistantMessageItemProps) {
+  const { t } = useTranslation();
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
   const hasValidatedResult =
@@ -258,7 +260,7 @@ export function AssistantMessageItem({
           <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img
               src={langflowAssistantIcon}
-              alt="Langflow Assistant"
+              alt={t("assistant.title")}
               className="h-full w-full object-cover"
             />
           </div>
@@ -270,7 +272,7 @@ export function AssistantMessageItem({
               isUser ? "text-foreground" : "text-accent-pink-foreground",
             )}
           >
-            {isUser ? "User" : "Langflow Assistant"}
+            {isUser ? t("assistant.user") : t("assistant.title")}
           </span>
           <div className="mt-3 overflow-hidden">{renderContent()}</div>
         </div>
