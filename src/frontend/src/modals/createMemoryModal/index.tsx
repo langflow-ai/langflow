@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -6,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 import BaseModal from "../baseModal";
 import { useCreateMemoryModal } from "./useCreateMemoryModal";
 
