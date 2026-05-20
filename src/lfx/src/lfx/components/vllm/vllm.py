@@ -15,6 +15,7 @@ class VllmComponent(LCModelComponent):
     description = "Generates text using vLLM models via OpenAI-compatible API."
     icon = "vLLM"
     name = "vLLMModel"
+    cloud_compatible = False
 
     inputs = [
         *LCModelComponent.get_base_inputs(),

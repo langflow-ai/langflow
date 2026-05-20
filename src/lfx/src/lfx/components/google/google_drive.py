@@ -18,6 +18,7 @@ class GoogleDriveComponent(Component):
     description = "Loads documents from Google Drive using provided credentials."
     icon = "Google"
     legacy: bool = True
+    cloud_compatible = False
 
     inputs = [
         SecretStrInput(

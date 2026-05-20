@@ -28,6 +28,7 @@ class LocalDBComponent(LCVectorStoreComponent):
     description: str = "Local Vector Store with search capabilities"
     name = "LocalDB"
     icon = "database"
+    cloud_compatible = False
     legacy = True
 
     inputs = [

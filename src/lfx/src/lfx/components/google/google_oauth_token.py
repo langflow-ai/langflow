@@ -18,6 +18,7 @@ class GoogleOAuthToken(Component):
     icon = "Google"
     name = "GoogleOAuthToken"
     legacy: bool = True
+    cloud_compatible = False
     inputs = [
         MultilineInput(
             name="scopes",

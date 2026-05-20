@@ -308,6 +308,7 @@
               "JSON"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Poll for the status of a transcription job using AssemblyAI",
@@ -470,6 +471,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -658,6 +660,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -938,6 +941,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -1218,6 +1222,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -1497,6 +1502,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -1710,6 +1716,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Stores or retrieves stored chat messages from Langflow tables or an external memory.",
@@ -2074,6 +2081,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -2460,6 +2468,7 @@
             ],
             "beta": false,
             "category": "assemblyai",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Create a transcription job for an audio file using AssemblyAI with advanced options",
@@ -2836,6 +2845,7 @@
             ],
             "beta": false,
             "category": "processing",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",

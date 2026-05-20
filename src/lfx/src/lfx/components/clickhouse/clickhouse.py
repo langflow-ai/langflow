@@ -19,6 +19,11 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
     description = "ClickHouse Vector Store with search capabilities"
     name = "Clickhouse"
     icon = "Clickhouse"
+    metadata = {
+        "cloud_default_overrides": {
+            "host": {"value": "", "placeholder": "Enter ClickHouse Cloud host"},
+        },
+    }
 
     inputs = [
         StrInput(name="host", display_name="hostname", required=True, value="localhost"),

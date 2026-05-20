@@ -20,6 +20,11 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     display_name = "Qdrant"
     description = "Qdrant Vector Store with search capabilities"
     icon = "Qdrant"
+    metadata = {
+        "cloud_default_overrides": {
+            "host": {"value": "", "placeholder": "Enter Qdrant Cloud host"},
+        },
+    }
 
     inputs = [
         StrInput(name="collection_name", display_name="Collection Name", required=True),

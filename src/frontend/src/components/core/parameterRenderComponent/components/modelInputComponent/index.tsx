@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+export type { ModelOption } from "./types";
+
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import { CLOUD_INCOMPATIBLE_PROVIDERS } from "@/constants/cloud-incompatible-providers";
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
-import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
-import useAlertStore from "@/stores/alertStore";
+import { useCloudModeStore } from "@/stores/cloudModeStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
@@ -23,6 +25,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
@@ -49,7 +52,6 @@ export default function ModelInputComponent({
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
-  const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
@@ -111,6 +113,7 @@ export default function ModelInputComponent({
     },
   });
 
+
   const modelType =
     modelTypeProp ??
     (nodeClass?.template?.model?.model_type === "language"
@@ -171,11 +174,11 @@ export default function ModelInputComponent({
     );
   }, [providersData]);
 
+  const cloudOnly = useCloudModeStore((state) => state.cloudOnly);
+
   // Groups models by their provider name for sectioned display in dropdown.
-  // Filters out models from disabled providers AND disabled models, then
-  // augments with any enabled models from `providersData` that weren't in the
-  // component's saved `options` (e.g. after importing a flow whose exporter
-  // only had a subset of the current user's enabled providers).
+  // Filters out cloud-incompatible providers when cloud mode is active.
+  // Augments with any enabled models from `providersData` not in saved `options`.
   const groupedOptions = useMemo(() => {
     const grouped: Record<string, ModelOption[]> = {};
     const seen = new Set<string>();
@@ -183,6 +186,10 @@ export default function ModelInputComponent({
     for (const option of options) {
       if (option.metadata?.is_disabled_provider) continue;
       const provider = option.provider || "Unknown";
+
+      if (cloudOnly && CLOUD_INCOMPATIBLE_PROVIDERS.has(provider)) {
+        continue;
+      }
 
       // Backend sticky-default: options tagged with `not_enabled_locally` are
       // the user's saved selection injected into the options list by the
@@ -250,6 +257,7 @@ export default function ModelInputComponent({
     if (enabledModelsData?.enabled_models && providersData) {
       for (const providerInfo of providersData) {
         const providerName = providerInfo.provider;
+        if (cloudOnly && CLOUD_INCOMPATIBLE_PROVIDERS.has(providerName)) continue;
         const providerModels = enabledModelsData.enabled_models[providerName];
         if (!providerModels) continue;
 
@@ -328,6 +336,7 @@ export default function ModelInputComponent({
     modelType,
     value,
     passesModelFilters,
+    cloudOnly,
   ]);
 
   // Flattened array of all enabled options for efficient lookups by name
@@ -349,7 +358,8 @@ export default function ModelInputComponent({
       } as SelectedModel;
     }
 
-    const currentName = value?.[0]?.name;
+    const currentValue = Array.isArray(value) ? value[0] : null;
+    const currentName = currentValue?.name;
     if (!currentName) {
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
@@ -395,6 +405,46 @@ export default function ModelInputComponent({
 
     return flatOptions.length > 0 ? flatOptions[0] : null;
   }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
+
+  const showCloudIncompatibleWarning = useMemo(
+    () =>
+      cloudOnly &&
+      !!selectedModel?.provider &&
+      CLOUD_INCOMPATIBLE_PROVIDERS.has(selectedModel.provider),
+    [cloudOnly, selectedModel?.provider],
+  );
+
+  const cloudFilteredOptionCount = useMemo(
+    () =>
+      cloudOnly
+        ? flatOptions.filter((option) =>
+            CLOUD_INCOMPATIBLE_PROVIDERS.has(option.provider || "Unknown"),
+          ).length
+        : 0,
+    [cloudOnly, flatOptions],
+  );
+
+  const showNoCompatibleCloudModels = useMemo(
+    () =>
+      cloudOnly &&
+      flatOptions.length === 0 &&
+      cloudFilteredOptionCount > 0 &&
+      !selectedModel,
+    [cloudFilteredOptionCount, cloudOnly, flatOptions.length, selectedModel],
+  );
+
+  const effectiveShowEmptyState = showEmptyState || showNoCompatibleCloudModels;
+  const emptyStateLabel = showNoCompatibleCloudModels
+    ? "No cloud-compatible models"
+    : "No models enabled";
+
+  // Reset the auto-select ref when cloud mode changes the available option set
+  // so auto-select can fire again for the filtered option list.
+  const prevFlatOptionsRef = useRef(flatOptions);
+  if (prevFlatOptionsRef.current !== flatOptions) {
+    prevFlatOptionsRef.current = flatOptions;
+    hasProcessedEmptyRef.current = false;
+  }
 
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
@@ -504,8 +554,8 @@ export default function ModelInputComponent({
     setRefreshOptions(true);
     try {
       await refreshAllModelInputs({ silent: true });
-    } catch {
-      // refreshAllModelInputs handles its own error notifications via alertStore
+    } catch (error) {
+      console.error("ModelInputComponent: refresh failed", error);
     } finally {
       setRefreshOptions(false);
     }
@@ -669,14 +719,16 @@ export default function ModelInputComponent({
             <ModelTrigger
               open={open}
               disabled={disabled}
-              options={flatOptions}
+              visibleOptionsCount={flatOptions.length}
               selectedModel={selectedModel}
+              showCloudIncompatibleWarning={showCloudIncompatibleWarning}
               placeholder={placeholder}
               hasEnabledProviders={hasEnabledProviders ?? false}
               onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
               id={id}
               refButton={refButton}
-              showEmptyState={showEmptyState}
+              showEmptyState={effectiveShowEmptyState}
+              emptyStateLabel={emptyStateLabel}
             />
           </div>
           {showConfigureAffordance && (

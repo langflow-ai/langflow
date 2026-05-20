@@ -39,6 +39,7 @@ class ChatOllamaComponent(LCModelComponent):
     description = "Generate text using Ollama Local LLMs."
     icon = "Ollama"
     name = "OllamaModel"
+    cloud_compatible = False
 
     # Define constants for JSON keys
     JSON_MODELS_KEY = "models"

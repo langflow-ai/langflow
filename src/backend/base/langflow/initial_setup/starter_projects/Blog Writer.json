@@ -162,6 +162,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -372,6 +373,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get user text inputs.",
@@ -512,6 +514,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -816,6 +819,7 @@
             ],
             "beta": false,
             "category": "processing",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",
@@ -1008,6 +1012,7 @@
             ],
             "beta": false,
             "category": "data",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",

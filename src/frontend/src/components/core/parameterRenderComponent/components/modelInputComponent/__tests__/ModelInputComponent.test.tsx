@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -9,6 +10,17 @@ import type { ModelInputComponentType, ModelOption } from "../types";
 
 // Mock scrollIntoView for cmdk library
 Element.prototype.scrollIntoView = jest.fn();
+
+// Mock cloud mode store
+let mockCloudOnly = false;
+type CloudModeState = {
+  cloudOnly: boolean;
+  setCloudOnly: jest.Mock;
+};
+jest.mock("@/stores/cloudModeStore", () => ({
+  useCloudModeStore: <T,>(selector: (state: CloudModeState) => T) =>
+    selector({ cloudOnly: mockCloudOnly, setCloudOnly: jest.fn() }),
+}));
 
 // Mock stores
 const mockSetErrorData = jest.fn();
@@ -69,9 +81,13 @@ jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   })),
 }));
 
+let mockEnabledModelsData: {
+  enabled_models: Record<string, Record<string, boolean>>;
+} = { enabled_models: {} };
+
 jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
   useGetEnabledModels: jest.fn(() => ({
-    data: { enabled_models: {} },
+    data: mockEnabledModelsData,
     isLoading: false,
   })),
 }));
@@ -211,6 +227,8 @@ const renderWithQueryClient = (component: React.ReactElement) => {
 describe("ModelInputComponent", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCloudOnly = false;
+    mockEnabledModelsData = { enabled_models: {} };
   });
 
   describe("Rendering", () => {
@@ -628,6 +646,180 @@ describe("ModelInputComponent", () => {
 
       // Component should render without crashing
       expect(screen.getByRole("combobox")).toBeInTheDocument();
+    });
+
+    it("should filter out cloud-incompatible providers when cloud mode is active", () => {
+      mockCloudOnly = true;
+
+      const optionsWithOllama: ModelOption[] = [
+        ...mockOptions,
+        {
+          id: "llama3",
+          name: "llama3",
+          icon: "Ollama",
+          provider: "Ollama",
+          metadata: {},
+        },
+      ];
+
+      renderWithQueryClient(
+        <ModelInputComponent {...defaultProps} options={optionsWithOllama} />,
+      );
+
+      // Ollama model should not appear in the UI when cloud mode is active
+      expect(screen.queryByText("llama3")).not.toBeInTheDocument();
+
+      mockCloudOnly = false;
+    });
+
+    it("should keep showing a saved cloud-incompatible provider selection", async () => {
+      mockCloudOnly = true;
+
+      const optionsWithOllama: ModelOption[] = [
+        {
+          id: "llama3",
+          name: "llama3",
+          icon: "Ollama",
+          provider: "Ollama",
+          metadata: {},
+        },
+        ...mockOptions,
+      ];
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={optionsWithOllama}
+          value={[
+            {
+              id: "llama3",
+              name: "llama3",
+              icon: "Ollama",
+              provider: "Ollama",
+              metadata: {},
+            },
+          ]}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("llama3")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Not available in cloud")).toBeInTheDocument();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox"));
+
+      await waitFor(() => {
+        expect(screen.getByText("OpenAI")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("llama3-option")).not.toBeInTheDocument();
+
+      mockCloudOnly = false;
+    });
+
+    it("should show a cloud-specific empty state when every provider is filtered out", async () => {
+      mockCloudOnly = true;
+      const user = userEvent.setup();
+      const handleOnNewValue = jest.fn();
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[
+            {
+              id: "llama3",
+              name: "llama3",
+              icon: "Ollama",
+              provider: "Ollama",
+              metadata: {},
+            },
+          ]}
+          value={[]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      expect(
+        screen.getByText("No cloud-compatible models"),
+      ).toBeInTheDocument();
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("combobox"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("refresh-model-list")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("llama3-option")).not.toBeInTheDocument();
+
+      mockCloudOnly = false;
+    });
+
+    it("should keep the generic empty state when models are disabled instead of cloud-filtered", () => {
+      mockCloudOnly = true;
+      mockEnabledModelsData = {
+        enabled_models: {
+          OpenAI: {
+            "gpt-4": false,
+          },
+        },
+      };
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={[
+            {
+              id: "gpt-4",
+              name: "gpt-4",
+              icon: "Bot",
+              provider: "OpenAI",
+              metadata: {},
+            },
+          ]}
+          value={[]}
+          showEmptyState={true}
+        />,
+      );
+
+      expect(screen.getByText("No models enabled")).toBeInTheDocument();
+      expect(
+        screen.queryByText("No cloud-compatible models"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show all providers when cloud mode is inactive", () => {
+      mockCloudOnly = false;
+
+      const optionsWithOllama: ModelOption[] = [
+        {
+          id: "llama3",
+          name: "llama3",
+          icon: "Ollama",
+          provider: "Ollama",
+          metadata: {},
+        },
+      ];
+
+      renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          options={optionsWithOllama}
+          value={[
+            {
+              id: "llama3",
+              name: "llama3",
+              icon: "Ollama",
+              provider: "Ollama",
+              metadata: {},
+            },
+          ]}
+        />,
+      );
+
+      // Ollama model should appear when cloud mode is off
+      expect(screen.getByText("llama3")).toBeInTheDocument();
     });
 
     it("should auto-select first model when value is empty and options exist", () => {

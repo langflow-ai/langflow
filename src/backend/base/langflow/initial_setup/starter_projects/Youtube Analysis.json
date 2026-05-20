@@ -245,6 +245,7 @@
             ],
             "beta": false,
             "category": "youtube",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Retrieves and analyzes comments from YouTube videos.",
@@ -470,6 +471,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -1106,6 +1108,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -1319,6 +1322,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -1610,6 +1614,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts spoken content from YouTube videos with multiple output options.",
@@ -1901,6 +1906,7 @@
             ],
             "beta": false,
             "category": "processing",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",
@@ -2092,6 +2098,7 @@
             ],
             "beta": false,
             "category": "input_output",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -2371,6 +2378,7 @@
               "Table"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Runs an LLM on each row of a DataFrame column. If no column is specified, all columns are used.",

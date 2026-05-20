@@ -14,6 +14,16 @@ jest.mock("@/customization/utils/analytics");
 jest.mock("@/utils/reactflowUtils");
 jest.mock("@/utils/utils");
 
+let mockCloudOnly = false;
+jest.mock("@/stores/cloudModeStore", () => ({
+  useCloudModeStore: (
+    selector: (state: {
+      cloudOnly: boolean;
+      setCloudOnly: jest.Mock;
+    }) => unknown,
+  ) => selector({ cloudOnly: mockCloudOnly, setCloudOnly: jest.fn() }),
+}));
+
 describe("useAddComponent", () => {
   const mockPaste = jest.fn();
   const mockGetFilterEdge = jest.fn();
@@ -24,6 +34,7 @@ describe("useAddComponent", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCloudOnly = false;
 
     (useStoreApi as jest.Mock).mockReturnValue(mockStore);
     (useFlowStore as unknown as jest.Mock).mockImplementation((selector) => {
@@ -51,7 +62,7 @@ describe("useAddComponent", () => {
       description: "Test description",
       template: {},
       outputs: [],
-    } as any;
+    } as unknown as APIClassType;
 
     const { result } = renderHook(() => useAddComponent());
     const addComponent = result.current;
@@ -96,7 +107,7 @@ describe("useAddComponent", () => {
       description: "Test description",
       template: {},
       outputs: [],
-    } as any;
+    } as unknown as APIClassType;
 
     const customPosition = { x: 100, y: 200 };
 
@@ -121,7 +132,7 @@ describe("useAddComponent", () => {
       template: {},
       outputs: [],
       minimized: false,
-    } as any;
+    } as unknown as APIClassType;
 
     const { result } = renderHook(() => useAddComponent());
     const addComponent = result.current;
@@ -150,7 +161,7 @@ describe("useAddComponent", () => {
       template: {},
       outputs: [],
       minimized: true,
-    } as any;
+    } as unknown as APIClassType;
 
     const { result } = renderHook(() => useAddComponent());
     const addComponent = result.current;
@@ -181,7 +192,7 @@ describe("useAddComponent", () => {
         { name: "output1", types: ["string", "text"] },
         { name: "output2", types: ["number"] },
       ],
-    } as any;
+    } as unknown as APIClassType;
 
     (useFlowStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
@@ -221,7 +232,7 @@ describe("useAddComponent", () => {
         { name: "output1", types: ["string"] },
         { name: "output2", types: ["number"] },
       ],
-    } as any;
+    } as unknown as APIClassType;
 
     (useFlowStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
@@ -264,7 +275,7 @@ describe("useAddComponent", () => {
       description: "Test description",
       template: {},
       outputs: [],
-    } as any;
+    } as unknown as APIClassType;
 
     const { result } = renderHook(() => useAddComponent());
     const addComponent = result.current;
@@ -289,7 +300,7 @@ describe("useAddComponent", () => {
       display_name: "Test Component",
       description: "Test description",
       template: {},
-    } as any;
+    } as unknown as APIClassType;
 
     const { result } = renderHook(() => useAddComponent());
     const addComponent = result.current;
@@ -309,5 +320,85 @@ describe("useAddComponent", () => {
       },
       expect.any(Object),
     );
+  });
+
+  it("should apply cloud default overrides to new nodes without mutating the source component", () => {
+    mockCloudOnly = true;
+
+    const mockComponent: APIClassType = {
+      display_name: "Qdrant",
+      description: "Qdrant vector store",
+      template: {
+        url: {
+          type: "str",
+          value: "http://localhost:6333",
+          placeholder: "Local URL",
+        },
+      },
+      metadata: {
+        cloud_default_overrides: {
+          url: {
+            value: "",
+            placeholder: "Enter your cloud Qdrant URL",
+          },
+        },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+
+    const { result } = renderHook(() => useAddComponent());
+    const addComponent = result.current;
+
+    addComponent(mockComponent, "Qdrant");
+
+    const pastedNode = mockPaste.mock.calls[0][0].nodes[0].data.node;
+
+    expect(pastedNode).not.toBe(mockComponent);
+    expect(pastedNode.template.url.value).toBe("");
+    expect(pastedNode.template.url.placeholder).toBe(
+      "Enter your cloud Qdrant URL",
+    );
+    expect(mockComponent.template.url.value).toBe("http://localhost:6333");
+    expect(mockComponent.template.url.placeholder).toBe("Local URL");
+  });
+
+  it("should replace cloud-incompatible sortable list defaults on new nodes without mutating the source component", () => {
+    mockCloudOnly = true;
+
+    const localOption = { name: "Local", icon: "hard-drive" };
+    const awsOption = { name: "AWS", icon: "Amazon" };
+    const googleDriveOption = { name: "Google Drive", icon: "google" };
+
+    const mockComponent: APIClassType = {
+      display_name: "Write File",
+      description: "Save data to file",
+      template: {
+        storage_location: {
+          type: "sortableList",
+          value: [localOption],
+          options: [localOption, awsOption, googleDriveOption],
+          limit: 1,
+        },
+      },
+      metadata: {
+        cloud_incompatible_options: {
+          storage_location: ["Local"],
+        },
+      },
+      outputs: [],
+    } as unknown as APIClassType;
+
+    const { result } = renderHook(() => useAddComponent());
+    const addComponent = result.current;
+
+    addComponent(mockComponent, "SaveToFile");
+
+    const pastedNode = mockPaste.mock.calls[0][0].nodes[0].data.node;
+
+    expect(pastedNode).not.toBe(mockComponent);
+    expect(pastedNode.template.storage_location.value).toEqual([awsOption]);
+    expect(mockComponent.template.storage_location.value).toEqual([
+      localOption,
+    ]);
   });
 });

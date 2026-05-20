@@ -103,6 +103,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -390,6 +391,7 @@
             ],
             "beta": false,
             "category": "inputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -728,6 +730,7 @@
               "Table"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Uses an LLM to generate structured data. Ideal for extraction and consistency.",
@@ -1065,6 +1068,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",

@@ -26,6 +26,13 @@ def _get_storage_location_options():
     return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
+# Options that should be hidden when the frontend cloud toggle is active.
+# The frontend reads this from the component metadata to filter SortableListInput options.
+CLOUD_INCOMPATIBLE_OPTIONS = {
+    "storage_location": ["Local"],
+}
+
+
 def _get_default_storage_location() -> list[dict[str, str]]:
     """Return the default storage selection for the component template."""
     return [_get_storage_location_options()[0]]
@@ -49,6 +56,7 @@ class SaveToFileComponent(Component):
     documentation: str = "https://docs.langflow.org/write-file"
     icon = "file-text"
     name = "SaveToFile"
+    metadata = {"cloud_incompatible_options": CLOUD_INCOMPATIBLE_OPTIONS}
 
     # File format options for different storage types
     LOCAL_DATA_FORMAT_CHOICES = ["csv", "excel", "json", "markdown"]

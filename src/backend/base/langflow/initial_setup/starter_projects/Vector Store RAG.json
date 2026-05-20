@@ -190,6 +190,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -449,6 +450,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -702,6 +704,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -1014,6 +1017,7 @@
             ],
             "beta": false,
             "category": "processing",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Extracts text using a template.",
@@ -1584,6 +1588,7 @@
               "Table"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Ingest into or retrieve from a Langflow knowledge base.",
@@ -1636,7 +1641,7 @@
                   },
                   {
                     "name": "numpy",
-                    "version": "2.4.5"
+                    "version": "2.4.6"
                   },
                   {
                     "name": "chromadb",

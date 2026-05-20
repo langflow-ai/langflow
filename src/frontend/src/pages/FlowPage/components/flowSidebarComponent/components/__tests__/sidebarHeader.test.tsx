@@ -65,15 +65,37 @@ jest.mock("@/components/ui/sidebar", () => ({
   ),
 }));
 
+jest.mock("@/components/ui/badge", () => ({
+  Badge: ({ children, variant, className, onClick, ...props }: any) => (
+    <span
+      data-testid={`badge-${variant}`}
+      className={className}
+      onClick={onClick}
+      {...props}
+    >
+      {children}
+    </span>
+  ),
+}));
+
 jest.mock("../featureTogglesComponent", () => ({
   __esModule: true,
-  default: ({ showBeta, setShowBeta, showLegacy, setShowLegacy }: any) => (
+  default: ({
+    showBeta,
+    setShowBeta,
+    showLegacy,
+    setShowLegacy,
+    cloudOnly,
+    setCloudOnly,
+  }: any) => (
     <div
       data-testid="feature-toggles"
       data-show-beta={showBeta}
       data-show-legacy={showLegacy}
+      data-cloud-only={cloudOnly}
       data-set-show-beta={setShowBeta?.toString()}
       data-set-show-legacy={setShowLegacy?.toString()}
+      data-set-cloud-only={setCloudOnly?.toString()}
     >
       Feature Toggles
     </div>
@@ -124,6 +146,7 @@ describe("SidebarHeaderComponent", () => {
   const mockSetShowConfig = jest.fn();
   const mockSetShowBeta = jest.fn();
   const mockSetShowLegacy = jest.fn();
+  const mockSetCloudOnly = jest.fn();
   const mockHandleInputFocus = jest.fn();
   const mockHandleInputBlur = jest.fn();
   const mockHandleInputChange = jest.fn();
@@ -136,6 +159,8 @@ describe("SidebarHeaderComponent", () => {
     setShowBeta: mockSetShowBeta,
     showLegacy: false,
     setShowLegacy: mockSetShowLegacy,
+    cloudOnly: false,
+    setCloudOnly: mockSetCloudOnly,
     searchInputRef: { current: null },
     isInputFocused: false,
     search: "",
@@ -559,6 +584,29 @@ describe("SidebarHeaderComponent", () => {
         "data-description",
         "This is a very long description that might contain multiple lines and special characters @#$%",
       );
+    });
+  });
+
+  describe("Cloud Mode Indicator", () => {
+    it("should not show cloud mode indicator when cloudOnly is false", () => {
+      render(<SidebarHeaderComponent {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId("cloud-mode-indicator"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should show cloud mode indicator when cloudOnly is true", () => {
+      render(<SidebarHeaderComponent {...defaultProps} cloudOnly={true} />);
+
+      expect(screen.getByTestId("cloud-mode-indicator")).toBeInTheDocument();
+    });
+
+    it("should pass cloudOnly prop to feature toggles", () => {
+      render(<SidebarHeaderComponent {...defaultProps} cloudOnly={true} />);
+
+      const featureToggles = screen.getByTestId("feature-toggles");
+      expect(featureToggles).toHaveAttribute("data-cloud-only", "true");
     });
   });
 

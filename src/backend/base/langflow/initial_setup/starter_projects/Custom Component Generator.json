@@ -220,6 +220,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Stores or retrieves stored chat messages from Langflow tables or an external memory.",
@@ -578,6 +579,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": [
@@ -897,6 +899,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",
@@ -1294,6 +1297,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",
@@ -1697,6 +1701,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",
@@ -2093,6 +2098,7 @@
             ],
             "beta": false,
             "category": "inputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -2371,6 +2377,7 @@
             ],
             "beta": false,
             "category": "outputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",

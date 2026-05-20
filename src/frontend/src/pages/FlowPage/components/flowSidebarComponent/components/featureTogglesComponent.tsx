@@ -7,6 +7,17 @@ const FeatureToggles = ({
   setShowBeta,
   showLegacy,
   setShowLegacy,
+  cloudOnly,
+  setCloudOnly,
+  cloudOnlyLocked = false,
+}: {
+  showBeta: boolean;
+  setShowBeta: (v: boolean) => void;
+  showLegacy: boolean;
+  setShowLegacy: (v: boolean) => void;
+  cloudOnly: boolean;
+  setCloudOnly: (v: boolean) => void;
+  cloudOnlyLocked?: boolean;
 }) => {
   const { t } = useTranslation();
   const toggles = [
@@ -16,6 +27,8 @@ const FeatureToggles = ({
       onChange: setShowBeta,
       badgeVariant: "purpleStatic" as const,
       testId: "sidebar-beta-switch",
+      prefix: "Show",
+      disabled: false,
     },
     {
       label: t("sidebar.legacyLabel"),
@@ -23,6 +36,17 @@ const FeatureToggles = ({
       onChange: setShowLegacy,
       badgeVariant: "secondaryStatic" as const,
       testId: "sidebar-legacy-switch",
+      prefix: "Show",
+      disabled: false,
+    },
+    {
+      label: "Cloud",
+      checked: cloudOnly,
+      onChange: setCloudOnly,
+      badgeVariant: "emerald" as const,
+      testId: "sidebar-cloud-only-switch",
+      prefix: "Only",
+      disabled: cloudOnlyLocked,
     },
   ];
 
@@ -32,7 +56,7 @@ const FeatureToggles = ({
         <div key={toggle.label} className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="flex cursor-default gap-2 text-sm font-medium">
-              {t("sidebar.show")}
+              {toggle.prefix}
               <Badge variant={toggle.badgeVariant} size="xq">
                 {toggle.label}
               </Badge>
@@ -41,6 +65,7 @@ const FeatureToggles = ({
           <Switch
             checked={toggle.checked}
             onCheckedChange={toggle.onChange}
+            disabled={toggle.disabled}
             data-testid={toggle.testId}
             className="scale-90"
           />

@@ -153,6 +153,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {
               "template": []
@@ -317,6 +318,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -660,6 +662,7 @@
             ],
             "beta": false,
             "category": "needle",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "A retriever that uses the Needle API to search collections.",
@@ -876,6 +879,7 @@
             ],
             "beta": false,
             "category": "inputs",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -1152,6 +1156,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",

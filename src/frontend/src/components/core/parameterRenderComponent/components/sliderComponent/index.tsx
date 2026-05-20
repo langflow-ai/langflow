@@ -37,6 +37,7 @@ const DEFAULT_ACCENT_PINK_FOREGROUND_COLOR = "333 71% 51%";
 const DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR = "243 75% 59%";
 
 type ColorType = "background" | "text";
+type SliderValue = string | number | string[] | number[];
 
 export default function SliderComponent({
   value,
@@ -51,7 +52,10 @@ export default function SliderComponent({
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   handleOnNewValue,
   showParameter = true,
-}: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
+}: InputProps<
+  SliderValue,
+  Omit<SliderComponentType, "value">
+>): JSX.Element | null {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
 
@@ -243,7 +247,8 @@ export default function SliderComponent({
                 data-testid="slider_input"
               />
             ) : (
-              <span
+              <button
+                type="button"
                 onClick={() => {
                   setIsEditing(true);
                   setInputValue(valueAsNumber.toFixed(2));
@@ -252,7 +257,7 @@ export default function SliderComponent({
                 className="relative bottom-[1px] font-mono text-sm hover:cursor-text"
               >
                 {valueAsNumber.toFixed(2)}
-              </span>
+              </button>
             )}
           </div>
         </div>

@@ -10,6 +10,7 @@ class VllmEmbeddingsComponent(LCEmbeddingsModel):
     description = "Generate embeddings using vLLM models via OpenAI-compatible API."
     icon = "vLLM"
     name = "vLLMEmbeddings"
+    cloud_compatible = False
 
     inputs = [
         MessageTextInput(

@@ -13,6 +13,7 @@ class LMStudioEmbeddingsComponent(LCEmbeddingsModel):
     display_name: str = "LM Studio Embeddings"
     description: str = "Generate embeddings using LM Studio."
     icon = "LMStudio"
+    cloud_compatible = False
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):  # noqa: ARG002
         if field_name == "model":

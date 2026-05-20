@@ -17,6 +17,7 @@ class DoclingInlineComponent(BaseFileComponent):
     trace_type = "tool"
     icon = "Docling"
     name = "DoclingInline"
+    cloud_compatible = False
 
     # https://docling-project.github.io/docling/usage/supported_formats/
     VALID_EXTENSIONS = [

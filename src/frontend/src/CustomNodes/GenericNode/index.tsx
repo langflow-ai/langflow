@@ -15,6 +15,7 @@ import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
+import { useCloudModeStore } from "../../stores/cloudModeStore";
 import useFlowStore, {
   registerNodeUpdate,
   completeNodeUpdate,
@@ -25,10 +26,12 @@ import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
+import { withCurrentCloudMetadata } from "../../utils/cloudMetadataUtils";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
 import useUpdateNodeCode from "../hooks/use-update-node-code";
+import NodeCloudIncompatibleComponent from "./components/NodeCloudIncompatibleComponent";
 import NodeDescription from "./components/NodeDescription";
 import NodeLegacyComponent from "./components/NodeLegacyComponent";
 import NodeName from "./components/NodeName";
@@ -396,6 +399,20 @@ function GenericNode({
     [data.node?.legacy, data.node?.replacement, dismissAllLegacy],
   );
 
+  const cloudOnly = useCloudModeStore((state) => state.cloudOnly);
+  const effectiveNodeClass = useMemo(
+    () =>
+      cloudOnly
+        ? (withCurrentCloudMetadata(data.node, templates[data.type]) ??
+          data.node)
+        : data.node,
+    [cloudOnly, data.node, data.type, templates],
+  );
+  const shouldShowCloudIncompatible = useMemo(
+    () => cloudOnly && effectiveNodeClass?.cloud_compatible === false,
+    [cloudOnly, effectiveNodeClass?.cloud_compatible],
+  );
+
   const memoizedNodeToolbarComponent = useMemo(() => {
     const isRightClicked = rightClickedNodeId === data.id;
     const isSelectedSingle = selected && selectedNodesCount === 1;
@@ -542,15 +559,17 @@ function GenericNode({
             dismissed={dismissAll}
             isRequired={!allowCustomComponents}
           />
-        ) : shouldShowLegacyComponent ? (
+        ) : null}
+        {shouldShowLegacyComponent ? (
           <NodeLegacyComponent
             legacy={data.node?.legacy}
             replacement={data.node?.replacement}
             setDismissAll={memoizedSetDismissAllLegacy}
           />
-        ) : (
-          <></>
-        )}
+        ) : null}
+        {shouldShowCloudIncompatible ? (
+          <NodeCloudIncompatibleComponent />
+        ) : null}
 
         <div
           data-testid={`${data.id}-main-node`}

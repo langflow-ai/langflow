@@ -17,6 +17,7 @@ class GitExtractorComponent(Component):
     display_name = "GitExtractor"
     description = "Analyzes a Git repository and returns file contents and complete repository information"
     icon = "GitLoader"
+    cloud_compatible = False
 
     inputs = [
         MessageTextInput(

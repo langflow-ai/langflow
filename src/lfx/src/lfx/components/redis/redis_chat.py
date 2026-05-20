@@ -12,6 +12,11 @@ class RedisIndexChatMemory(LCChatMemoryComponent):
     description = "Retrieves and store chat messages from Redis."
     name = "RedisChatMemory"
     icon = "Redis"
+    metadata = {
+        "cloud_default_overrides": {
+            "host": {"value": "", "placeholder": "Enter Redis Cloud host"},
+        },
+    }
 
     inputs = [
         StrInput(

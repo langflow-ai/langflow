@@ -20,6 +20,7 @@ class GitLoaderComponent(Component):
     )
     trace_type = "tool"
     icon = "GitLoader"
+    cloud_compatible = False
 
     inputs = [
         DropdownInput(

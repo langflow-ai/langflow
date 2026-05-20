@@ -20,6 +20,11 @@ class MilvusVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Milvus vector store with search capabilities"
     name = "Milvus"
     icon = "Milvus"
+    metadata = {
+        "cloud_default_overrides": {
+            "uri": {"value": "", "placeholder": "Enter Milvus Cloud URI"},
+        },
+    }
 
     inputs = [
         StrInput(name="collection_name", display_name="Collection Name", value="langflow"),

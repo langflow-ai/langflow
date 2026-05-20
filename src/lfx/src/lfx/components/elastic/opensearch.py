@@ -35,6 +35,11 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
     description: str = (
         "Store and search documents using OpenSearch with hybrid semantic and keyword search capabilities."
     )
+    metadata = {
+        "cloud_default_overrides": {
+            "opensearch_url": {"value": "", "placeholder": "Enter OpenSearch Cloud URL"},
+        },
+    }
 
     # Keys we consider baseline
     default_keys: list[str] = [

@@ -13,6 +13,7 @@ class DirectoryComponent(Component):
     icon = "folder"
     name = "Directory"
     legacy = True
+    cloud_compatible = False
     replacement = ["data.File"]
 
     inputs = [

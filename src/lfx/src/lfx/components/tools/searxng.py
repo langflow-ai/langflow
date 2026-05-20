@@ -20,6 +20,11 @@ class SearXNGToolComponent(LCToolComponent):
     description = "A component that searches for tools using SearXNG."
     name = "SearXNGTool"
     legacy: bool = True
+    metadata = {
+        "cloud_default_overrides": {
+            "url": {"value": "", "placeholder": "Enter SearXNG URL"},
+        },
+    }
 
     inputs = [
         MessageTextInput(

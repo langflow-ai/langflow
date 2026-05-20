@@ -197,6 +197,45 @@ async def test_refresh_starter_projects():
     assert "should_store_message" in new_change["nodes"][1]["data"]["node"]["template"]
 
 
+def test_refresh_starter_projects_copies_cloud_compatible():
+    graph_data = {
+        "nodes": [
+            {
+                "id": "Directory1",
+                "data": {
+                    "type": "Directory",
+                    "node": {
+                        "template": {
+                            "_type": "Directory",
+                            "code": {"value": "old"},
+                        },
+                        "description": "Old description",
+                        "cloud_compatible": True,
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    all_types = {
+        "Files": {
+            "Directory": {
+                "template": {
+                    "_type": "Directory",
+                    "code": {"value": "new"},
+                },
+                "description": "Updated description",
+                "cloud_compatible": False,
+            }
+        }
+    }
+
+    updated = update_projects_components_with_latest_component_versions(graph_data, all_types)
+
+    assert updated["nodes"][0]["data"]["node"]["cloud_compatible"] is False
+    assert graph_data["nodes"][0]["data"]["node"]["cloud_compatible"] is True
+
+
 @pytest.mark.parametrize(
     ("url", "expected"),
     [

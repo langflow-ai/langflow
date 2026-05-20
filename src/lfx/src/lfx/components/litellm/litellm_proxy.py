@@ -15,6 +15,11 @@ class LiteLLMProxyComponent(LCModelComponent):
     description = "Generate text using any LLM provider via a LiteLLM proxy with virtual key authentication."
     icon = "LiteLLM"
     name = "LiteLLMProxyModel"
+    metadata = {
+        "cloud_default_overrides": {
+            "api_base": {"value": "", "placeholder": "Enter LiteLLM proxy URL"},
+        },
+    }
 
     inputs = [
         *LCModelComponent.get_base_inputs(),

@@ -10,7 +10,16 @@ import CustomConnectionComponent from "@/customization/components/custom-connect
 import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import { useCloudModeStore } from "@/stores/cloudModeStore";
+import { useTypesStore } from "@/stores/typesStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import {
+  filterCloudCompatibleOptions,
+  getCloudFieldOverride,
+  getCloudIncompatibleOptions,
+  getCloudUiMetadata,
+  withCurrentCloudMetadata,
+} from "@/utils/cloudMetadataUtils";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
 import DictComponent from "./components/dictComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
@@ -36,10 +45,11 @@ export function ParameterRenderComponent({
   templateData,
   templateValue,
   editNode,
-  showParameter,
+  showParameter = true,
   inspectionPanel = false,
   handleNodeClass,
   nodeClass,
+  nodeType,
   disabled,
   placeholder,
   isToolMode,
@@ -53,22 +63,45 @@ export function ParameterRenderComponent({
   templateData: Partial<InputFieldType>;
   templateValue: unknown;
   editNode: boolean;
-  showParameter: boolean;
-  inspectionPanel: boolean;
+  showParameter?: boolean;
+  inspectionPanel?: boolean;
   handleNodeClass: (value: unknown, code?: string, type?: string) => void;
   nodeClass: APIClassType;
+  nodeType?: string;
   disabled: boolean;
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
-  // no-op
+  const cloudOnly = useCloudModeStore((state) => state.cloudOnly);
+  const templates = useTypesStore((state) => state.templates);
+
+  const effectiveNodeClass =
+    cloudOnly && nodeType
+      ? (withCurrentCloudMetadata(
+          nodeClass,
+          templates[nodeType] as APIClassType | undefined,
+        ) ?? nodeClass)
+      : nodeClass;
+
   const id = (
     templateData.type +
     "_" +
     (editNode ? "edit_" : "") +
     templateData.name
   ).toLowerCase();
+
+  const nodeMetadata = getCloudUiMetadata(effectiveNodeClass?.metadata);
+
+  const shouldUseCloudPlaceholder =
+    cloudOnly &&
+    (templateValue === "" ||
+      templateValue === undefined ||
+      templateValue === null);
+
+  const cloudOverride = shouldUseCloudPlaceholder
+    ? getCloudFieldOverride(nodeMetadata, name)
+    : undefined;
 
   const renderComponent = (): React.ReactElement<InputProps> => {
     const baseInputProps: InputProps = {
@@ -77,12 +110,13 @@ export function ParameterRenderComponent({
       editNode,
       handleOnNewValue: handleOnNewValue as handleOnNewValueType,
       disabled,
-      nodeClass,
+      nodeClass: effectiveNodeClass,
       handleNodeClass,
       nodeId,
       helperText: templateData?.helper_text,
       readonly: templateData.readonly,
-      placeholder: placeholder || templateData?.placeholder,
+      placeholder:
+        cloudOverride?.placeholder ?? placeholder ?? templateData?.placeholder,
       isToolMode,
       nodeInformationMetadata,
       hasRefreshButton: templateData.refresh_button,
@@ -121,7 +155,7 @@ export function ParameterRenderComponent({
         <StrRenderComponent
           {...baseInputProps}
           nodeId={nodeId}
-          nodeClass={nodeClass}
+          nodeClass={effectiveNodeClass}
           handleNodeClass={handleNodeClass}
           templateData={templateData}
           name={name}
@@ -196,14 +230,14 @@ export function ParameterRenderComponent({
         return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
           <AccordionPromptComponent
             {...baseInputProps}
-            readonly={!!nodeClass.flow}
+            readonly={!!effectiveNodeClass.flow}
             field_name={name}
             id={`promptarea_${id}`}
           />
         ) : (
           <PromptAreaComponent
             {...baseInputProps}
-            readonly={!!nodeClass.flow}
+            readonly={!!effectiveNodeClass.flow}
             field_name={name}
             id={`promptarea_${id}`}
           />
@@ -212,7 +246,7 @@ export function ParameterRenderComponent({
         return ENABLE_INSPECTION_PANEL && !baseInputProps.editNode ? (
           <AccordionPromptComponent
             {...baseInputProps}
-            readonly={!!nodeClass.flow}
+            readonly={!!effectiveNodeClass.flow}
             field_name={name}
             id={`mustachepromptarea_${id}`}
             isDoubleBrackets={true}
@@ -220,7 +254,7 @@ export function ParameterRenderComponent({
         ) : (
           <MustachePromptAreaComponent
             {...baseInputProps}
-            readonly={!!nodeClass.flow}
+            readonly={!!effectiveNodeClass.flow}
             field_name={name}
             id={`mustachepromptarea_${id}`}
           />
@@ -247,16 +281,20 @@ export function ParameterRenderComponent({
           <ToolsComponent
             {...baseInputProps}
             description={templateData.info || "Add or edit data"}
-            title={nodeClass?.display_name ?? "Tools"}
-            icon={nodeClass?.icon ?? ""}
-            template={nodeClass?.template}
+            title={effectiveNodeClass?.display_name ?? "Tools"}
+            icon={effectiveNodeClass?.icon ?? ""}
+            template={effectiveNodeClass?.template}
           />
         );
-      case "slider":
+      case "slider": {
+        // Slider uses a narrower value type than the generic base input props.
+        // Omit the generic value from the spread so the explicit slider value wins.
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { value: _sliderValue, ...sliderInputProps } = baseInputProps;
         return (
           <SliderComponent
-            {...baseInputProps}
-            value={templateValue}
+            {...sliderInputProps}
+            value={templateValue as string | number | string[] | number[]}
             rangeSpec={templateData.rangeSpec ?? templateData.range_spec}
             minLabel={templateData?.min_label}
             maxLabel={templateData?.max_label}
@@ -268,19 +306,36 @@ export function ParameterRenderComponent({
             id={`slider_${id}`}
           />
         );
-      case "sortableList":
+      }
+      case "sortableList": {
+        // Filter out cloud-incompatible options when cloud mode is active
+        const cloudIncompatibleOptions = cloudOnly
+          ? getCloudIncompatibleOptions(nodeMetadata, name)
+          : [];
+        const sortableOptions =
+          cloudOnly && cloudIncompatibleOptions.length > 0
+            ? filterCloudCompatibleOptions(
+                templateData?.options,
+                cloudIncompatibleOptions,
+              )
+            : templateData?.options;
         return (
           <SortableListComponent
             {...baseInputProps}
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
-            options={templateData?.options}
+            options={sortableOptions}
+            cloudIncompatibleOptions={cloudIncompatibleOptions}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
             id={`sortablelist_${id}`}
           />
         );
+      }
       case "connect": {
+        const connectionOptions = templateData?.options as
+          | Array<{ name?: unknown; link?: string }>
+          | undefined;
         const link =
           templateData?.options?.find(
             (option: { name?: unknown; link?: unknown }) =>
@@ -292,7 +347,7 @@ export function ParameterRenderComponent({
             {...baseInputProps}
             name={name}
             nodeId={nodeId}
-            nodeClass={nodeClass}
+            nodeClass={effectiveNodeClass}
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
             options={templateData?.options}

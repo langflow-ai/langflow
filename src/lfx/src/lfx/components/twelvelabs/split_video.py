@@ -25,6 +25,7 @@ class SplitVideoComponent(Component):
     description = "Split a video into multiple clips of specified duration."
     icon = "TwelveLabs"
     name = "SplitVideo"
+    cloud_compatible = False
     documentation = "https://github.com/twelvelabs-io/twelvelabs-developer-experience/blob/main/integrations/Langflow/TWELVE_LABS_COMPONENTS_README.md"
 
     inputs = [

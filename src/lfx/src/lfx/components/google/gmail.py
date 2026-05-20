@@ -26,6 +26,7 @@ class GmailLoaderComponent(Component):
     icon = "Google"
     legacy: bool = True
     replacement = ["composio.ComposioGmailAPIComponent"]
+    cloud_compatible = False
 
     inputs = [
         SecretStrInput(

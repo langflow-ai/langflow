@@ -20,6 +20,11 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Chroma Vector Store with search capabilities"
     name = "Chroma"
     icon = "Chroma"
+    metadata = {
+        "cloud_default_overrides": {
+            "chroma_server_host": {"value": "", "placeholder": "Enter Chroma Cloud host"},
+        },
+    }
 
     inputs = [
         StrInput(

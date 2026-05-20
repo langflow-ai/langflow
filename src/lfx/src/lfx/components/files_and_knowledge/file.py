@@ -43,6 +43,13 @@ def _get_storage_location_options():
     return [{"name": "Local", "icon": "hard-drive"}, *all_options]
 
 
+# Options that should be hidden when the frontend cloud toggle is active.
+# The frontend reads this from the component metadata to filter SortableListInput options.
+CLOUD_INCOMPATIBLE_OPTIONS = {
+    "storage_location": ["Local"],
+}
+
+
 class FileComponent(BaseFileComponent):
     """File component with optional Docling processing (isolated in a subprocess)."""
 
@@ -53,6 +60,7 @@ class FileComponent(BaseFileComponent):
     icon = "file-text"
     name = "File"
     add_tool_output = True  # Enable tool mode toggle without requiring tool_mode inputs
+    metadata = {"cloud_incompatible_options": CLOUD_INCOMPATIBLE_OPTIONS}
 
     # Extensions that can be processed without Docling (using standard text parsing)
     TEXT_EXTENSIONS = TEXT_FILE_TYPES

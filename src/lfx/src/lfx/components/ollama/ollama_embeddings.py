@@ -20,6 +20,7 @@ class OllamaEmbeddingsComponent(LCModelComponent):
     documentation = "https://python.langchain.com/docs/integrations/text_embedding/ollama"
     icon = "Ollama"
     name = "OllamaEmbeddings"
+    cloud_compatible = False
 
     # Define constants for JSON keys
     JSON_MODELS_KEY = "models"

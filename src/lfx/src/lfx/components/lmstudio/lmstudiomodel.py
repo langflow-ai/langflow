@@ -15,6 +15,7 @@ class LMStudioModelComponent(LCModelComponent):
     description = "Generate text using LM Studio Local LLMs."
     icon = "LMStudio"
     name = "LMStudioModel"
+    cloud_compatible = False
 
     async def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):  # noqa: ARG002
         if field_name == "model_name":

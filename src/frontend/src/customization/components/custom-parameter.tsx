@@ -19,6 +19,7 @@ export function CustomParameterComponent({
   editNode,
   handleNodeClass,
   nodeClass,
+  nodeType,
   placeholder,
   isToolMode = false,
   nodeInformationMetadata,
@@ -29,12 +30,13 @@ export function CustomParameterComponent({
   nodeId: string;
   inputId: targetHandleType;
   templateData: Partial<InputFieldType>;
-  templateValue: any;
+  templateValue: unknown;
   showParameter: boolean;
-  inspectionPanel: boolean;
+  inspectionPanel?: boolean;
   editNode: boolean;
-  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  handleNodeClass: (value: unknown, code?: string, type?: string) => void;
   nodeClass: APIClassType;
+  nodeType?: string;
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
@@ -61,6 +63,7 @@ export function CustomParameterComponent({
       inspectionPanel={inspectionPanel}
       handleNodeClass={handleNodeClass}
       nodeClass={nodeClass}
+      nodeType={nodeType}
       disabled={disabled}
       placeholder={placeholder}
       isToolMode={isToolMode}
@@ -107,7 +110,7 @@ export function CustomParameterLabel({
 }: {
   name: string;
   nodeId: string;
-  templateValue: any;
+  templateValue: unknown;
   nodeClass: APIClassType;
 }) {
   return <></>;

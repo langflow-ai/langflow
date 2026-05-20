@@ -65,6 +65,8 @@ class FrontendNode(BaseModel):
     """Metadata for the component node."""
     tool_mode: bool = False
     """Whether the frontend node is in tool mode."""
+    cloud_compatible: bool = True
+    """Whether the component is compatible with cloud deployment environments."""
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""

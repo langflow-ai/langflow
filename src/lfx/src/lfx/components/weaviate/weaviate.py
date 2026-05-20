@@ -12,6 +12,11 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     description = "Weaviate Vector Store with search capabilities"
     name = "Weaviate"
     icon = "Weaviate"
+    metadata = {
+        "cloud_default_overrides": {
+            "url": {"value": "", "placeholder": "Enter Weaviate Cloud URL"},
+        },
+    }
 
     inputs = [
         StrInput(name="url", display_name="Weaviate URL", value="http://localhost:8080", required=True),

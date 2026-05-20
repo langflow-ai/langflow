@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import * as ReactSortableModule from "react-sortablejs";
 import SortableListComponent from "./index";
@@ -55,5 +55,28 @@ describe("SortableListComponent reproduction", () => {
     }
 
     expect(handleOnNewValue).not.toHaveBeenCalled();
+  });
+
+  it("should mark preserved cloud-incompatible selections", () => {
+    render(
+      <SortableListComponent
+        tooltip=""
+        name="storage_location"
+        value={[{ name: "Local" }]}
+        handleOnNewValue={jest.fn()}
+        disabled={false}
+        recommended={false}
+        placeholder="Select items"
+        isList={true}
+        fileTypes={[]}
+        onDelete={jest.fn()}
+        id="test-id"
+        limit={1}
+        cloudIncompatibleOptions={["Local"]}
+      />,
+    );
+
+    expect(screen.getByText("Local")).toBeInTheDocument();
+    expect(screen.getByText("Not available in cloud")).toBeInTheDocument();
   });
 });

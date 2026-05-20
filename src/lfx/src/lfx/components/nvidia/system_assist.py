@@ -17,6 +17,7 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
     )
     documentation = "https://docs.langflow.org/bundles-nvidia"
     icon = "NVIDIA"
+    cloud_compatible = False
     rise_initialized = False
 
     inputs = [

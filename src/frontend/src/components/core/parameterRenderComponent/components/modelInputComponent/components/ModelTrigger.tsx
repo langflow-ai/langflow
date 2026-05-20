@@ -4,36 +4,43 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
-import { ModelOption, SelectedModel } from "../types";
+import type { SelectedModel } from "../types";
 
 interface ModelTriggerProps {
   open: boolean;
   disabled: boolean;
-  options: ModelOption[];
+  visibleOptionsCount: number;
   selectedModel: SelectedModel | null;
+  showCloudIncompatibleWarning?: boolean;
   placeholder?: string;
   hasEnabledProviders: boolean;
   onOpenManageProviders: () => void;
   id: string;
   refButton: RefObject<HTMLButtonElement | null>;
   showEmptyState?: boolean;
+  emptyStateLabel?: string;
 }
 
 const ModelTrigger = ({
   open,
   disabled,
-  options,
+  visibleOptionsCount,
   selectedModel,
+  showCloudIncompatibleWarning = false,
   placeholder = "Setup Provider",
   hasEnabledProviders,
   onOpenManageProviders,
   id,
   refButton,
   showEmptyState = false,
+  emptyStateLabel = "No models enabled",
 }: ModelTriggerProps) => {
   const { t } = useTranslation();
+  const hasVisibleOptions = visibleOptionsCount > 0;
+
+
   const renderSelectedIcon = () => {
-    if (disabled || options.length === 0) {
+    if (disabled) {
       return null;
     }
 
@@ -46,9 +53,9 @@ const ModelTrigger = ({
   };
 
   // Check if we're in empty state mode (showEmptyState=true and no options)
-  const isEmptyStateMode = showEmptyState && options.length === 0;
+  const isEmptyStateMode = showEmptyState && !hasVisibleOptions;
 
-  if (!hasEnabledProviders && !showEmptyState && options.length === 0) {
+  if (!hasEnabledProviders && !showEmptyState && !hasVisibleOptions) {
     return (
       <Button
         variant="outline"
@@ -73,7 +80,10 @@ const ModelTrigger = ({
     <div className="flex w-full flex-col">
       <PopoverTrigger asChild>
         <Button
-          disabled={disabled}
+          disabled={
+            disabled ||
+            (!hasVisibleOptions && !isEmptyStateMode && !selectedModel)
+          }
           variant="primary"
           size="xs"
           role="combobox"
@@ -95,16 +105,27 @@ const ModelTrigger = ({
                 t("component.receivingInput")
               ) : isEmptyStateMode ? (
                 <div className="truncate text-muted-foreground">
-                  {t("model.noModelsEnabled")}
+                  {emptyStateLabel}
                 </div>
               ) : (
-                <div
-                  className={cn(
-                    "truncate",
-                    !selectedModel?.name && "text-muted-foreground",
+                <div className="flex min-w-0 flex-col items-start">
+                  <div
+                    className={cn(
+                      "truncate",
+                      !selectedModel?.name && "text-muted-foreground",
+                    )}
+                  >
+                    {selectedModel?.name || "Select a model"}
+                  </div>
+                  {showCloudIncompatibleWarning && (
+                    <div className="flex items-center gap-1 text-[11px] text-accent-emerald-foreground">
+                      <ForwardedIconComponent
+                        name="CloudOff"
+                        className="h-3 w-3"
+                      />
+                      <span>Not available in cloud</span>
+                    </div>
                   )}
-                >
-                  {selectedModel?.name || t("model.selectModel")}
                 </div>
               )}
             </span>

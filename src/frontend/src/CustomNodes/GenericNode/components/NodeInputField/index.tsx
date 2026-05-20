@@ -198,6 +198,7 @@ export default function NodeInputField({
             handleNodeClass={handleNodeClass}
             showParameter={true}
             nodeClass={data.node!}
+            nodeType={data.type}
             placeholder={
               isToolMode
                 ? t("input.toolsetPlaceholder")

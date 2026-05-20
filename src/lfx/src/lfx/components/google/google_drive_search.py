@@ -15,6 +15,7 @@ class GoogleDriveSearchComponent(Component):
     description = "Searches Google Drive files using provided credentials and query parameters."
     icon = "Google"
     legacy: bool = True
+    cloud_compatible = False
 
     inputs = [
         SecretStrInput(

@@ -103,6 +103,11 @@ class OpenSearchVectorStoreComponentMultimodalMultiEmbedding(LCVectorStoreCompon
         "Search documents takes a query for vector search, for example\n"
         '  {search_query: "components in openrag"}'
     )
+    metadata = {
+        "cloud_default_overrides": {
+            "opensearch_url": {"value": "", "placeholder": "Enter OpenSearch Cloud URL"},
+        },
+    }
 
     # Keys we consider baseline
     default_keys: list[str] = [

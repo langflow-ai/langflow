@@ -24,6 +24,11 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
     description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
     name = "Elasticsearch"
     icon = "ElasticsearchStore"
+    metadata = {
+        "cloud_default_overrides": {
+            "elasticsearch_url": {"value": "", "placeholder": "Enter Elasticsearch Cloud URL or use Cloud ID"},
+        },
+    }
 
     inputs = [
         StrInput(

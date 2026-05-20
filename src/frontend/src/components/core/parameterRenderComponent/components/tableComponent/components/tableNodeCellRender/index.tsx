@@ -4,7 +4,6 @@ import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
 import type { NodeInfoType } from "@/components/core/parameterRenderComponent/types";
-import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
@@ -70,6 +69,7 @@ export default function TableNodeCellRender({
           editNode={true}
           handleNodeClass={handleNodeClass}
           nodeClass={node?.data.node}
+          nodeType={node?.data?.type}
           disabled={disabled}
           nodeInformationMetadata={nodeInformationMetadata}
         />

@@ -211,6 +211,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Get chat inputs from the Playground.",
@@ -477,6 +478,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Display a chat message in the Playground.",
@@ -796,6 +798,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Fetch content from one or more web pages, following links recursively.",
@@ -1246,6 +1249,7 @@
             ],
             "beta": false,
             "category": "tools",
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Perform basic arithmetic operations on a given expression.",
@@ -1411,6 +1415,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Calls the SearchApi API with result limiting. Supports Google, Bing and DuckDuckGo.",
@@ -1675,6 +1680,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -2311,6 +2317,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",
@@ -2947,6 +2954,7 @@
               "Message"
             ],
             "beta": false,
+            "cloud_compatible": true,
             "conditional_paths": [],
             "custom_fields": {},
             "description": "Define the agent's instructions, then enter a task to complete using tools.",

@@ -37,6 +37,7 @@ import {
   SIDEBAR_CATEGORIES,
 } from "@/utils/styleUtils";
 import { cn, getBooleanFromStorage } from "@/utils/utils";
+import { useCloudModeStore } from "../../../../stores/cloudModeStore";
 import useFlowStore from "../../../../stores/flowStore";
 import { useTypesStore } from "../../../../stores/typesStore";
 import type { APIClassType } from "../../../../types/api";
@@ -50,6 +51,7 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { applyBetaFilter } from "./helpers/apply-beta-filter";
+import { applyCloudFilter } from "./helpers/apply-cloud-filter";
 import { applyComponentFilter } from "./helpers/apply-component-filter";
 import { applyEdgeFilter } from "./helpers/apply-edge-filter";
 import { applyLegacyFilter } from "./helpers/apply-legacy-filter";
@@ -246,6 +248,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
 
   const showBetaStorage = getBooleanFromStorage("showBeta", true);
   const showLegacyStorage = getBooleanFromStorage("showLegacy", false);
+  const { cloudOnly, setCloudOnly: handleSetCloudOnly, isLocked: cloudOnlyLocked } = useCloudModeStore();
 
   // Debounced search value for filtering
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -391,6 +394,10 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
       filteredData = applyLegacyFilter(filteredData);
     }
 
+    if (cloudOnly) {
+      filteredData = applyCloudFilter(filteredData);
+    }
+
     return filteredData;
   }, [
     searchFilteredData,
@@ -398,6 +405,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     getFilterComponent,
     showBeta,
     showLegacy,
+    cloudOnly,
   ]);
 
   const hasResults = useMemo(() => {
@@ -733,6 +741,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                   setShowBeta={handleSetShowBeta}
                   showLegacy={showLegacy}
                   setShowLegacy={handleSetShowLegacy}
+                  cloudOnly={cloudOnly}
+                  setCloudOnly={handleSetCloudOnly}
+                  cloudOnlyLocked={cloudOnlyLocked}
                   searchInputRef={searchInputRef}
                   isInputFocused={isSearchFocused}
                   search={search}

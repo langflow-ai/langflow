@@ -20,6 +20,7 @@ class ListHomeAssistantStates(LCToolComponent):
     )
     documentation: str = "https://developers.home-assistant.io/docs/api/rest/"
     icon = "HomeAssistant"
+    cloud_compatible = False
 
     # 1) Define fields to be received in LangFlow UI
     inputs = [

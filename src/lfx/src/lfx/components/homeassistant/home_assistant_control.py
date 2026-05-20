@@ -26,6 +26,7 @@ class HomeAssistantControl(LCToolComponent):
     )
     documentation: str = "https://developers.home-assistant.io/docs/api/rest/"
     icon: str = "HomeAssistant"
+    cloud_compatible = False
 
     # --- Input fields for LangFlow UI (token, URL) ---
     inputs = [
