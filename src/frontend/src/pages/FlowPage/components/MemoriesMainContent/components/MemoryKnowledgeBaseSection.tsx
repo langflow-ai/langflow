@@ -1,8 +1,8 @@
 import type { UIEvent } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import StringReader from "@/components/common/stringReaderComponent";
 import Loading from "@/components/ui/loading";
-import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -13,11 +13,10 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../helpers";
-
-const noop = () => {};
-
 import { KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoryKnowledgeBaseSectionProps } from "../types";
+
+const noop = () => {};
 
 export function MemoryKnowledgeBaseSection({
   docsData,
