@@ -250,6 +250,7 @@ class ArizePhoenixTracer(OTLPTracerBase):
                 return
 
             self.tracer = tracer
+            self._enable_http_context_propagation(provider)
             self.propagator = TraceContextTextMapPropagator()
             self.carrier = {}
 
@@ -377,9 +378,7 @@ class ArizePhoenixTracer(OTLPTracerBase):
             self._set_span_status(self.root_span, error)
             self.root_span.end(end_time=self._get_current_timestamp())
 
-        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
-
-        get_http_instrumentation_manager().disable()
+        self._disable_http_context_propagation()
 
     @staticmethod
     def _error_to_string(error: Exception | None):

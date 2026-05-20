@@ -1,4 +1,19 @@
-"""Generic OpenTelemetry tracer using standard OTLP configuration via environment variables."""
+"""Generic OpenTelemetry tracer using standard OTLP configuration via environment variables.
+
+OpenTelemetry GenAI Semantic Conventions
+----------------------------------------
+This tracer does NOT implement the OpenTelemetry GenAI semantic conventions
+(https://opentelemetry.io/docs/specs/semconv/gen-ai/). Those conventions define
+attributes like ``gen_ai.request.model``, ``gen_ai.usage.input_tokens``, and
+``gen_ai.operation.name`` for instrumenting LLM API calls.
+
+This tracer operates at the workflow orchestration level, tracing Langflow
+component execution rather than individual LLM calls. The LLM-specific details
+(model name, token counts, request parameters) are encapsulated within
+components and not directly accessible at trace time.
+
+Attributes emitted use the ``langflow.*`` namespace for workflow context.
+"""
 
 from __future__ import annotations
 
@@ -249,7 +264,7 @@ class OTLPTracer(OTLPTracerBase):
             start_time=self._get_current_timestamp(),
         )
 
-        # Set standard attributes
+        # Set Langflow workflow attributes (see module docstring for rationale)
         self.root_span.set_attribute("langflow.trace_id", str(self.trace_id))
         self.root_span.set_attribute("langflow.trace_name", self.trace_name)
         self.root_span.set_attribute("langflow.trace_type", self.trace_type)
