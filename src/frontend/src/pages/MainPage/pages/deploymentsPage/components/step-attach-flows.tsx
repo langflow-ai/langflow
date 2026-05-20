@@ -214,13 +214,14 @@ export default function StepAttachFlows() {
     if (handledPreselectedAttachmentRef.current === preSelected.key) return;
     handledPreselectedAttachmentRef.current = preSelected.key;
 
+    const flowName =
+      flows.find((flow) => flow.id === preSelected.flowId)?.name ??
+      DEFAULT_FLOW_NAME;
+
     setToolNameByFlow((prev) => {
       if (prev.has(preSelected.key)) {
         return prev;
       }
-      const flowName =
-        flows.find((flow) => flow.id === preSelected.flowId)?.name ??
-        DEFAULT_FLOW_NAME;
       const next = new Map(prev);
       next.set(
         preSelected.key,
@@ -233,7 +234,15 @@ export default function StepAttachFlows() {
       return next;
     });
 
+    setPendingAttachment({
+      key: preSelected.key,
+      flowId: preSelected.flowId,
+      flowName,
+      versionId: preSelected.versionId,
+      versionTag: preSelected.versionTag,
+    });
     setRightPanel("connections");
+    initConnectionsForFlow(preSelected.key);
 
     const detect = async () => {
       try {
@@ -257,6 +266,7 @@ export default function StepAttachFlows() {
     defaultToolNameScopeId,
     setErrorData,
     setToolNameByFlow,
+    initConnectionsForFlow,
     updateDetectedEnvVars,
   ]);
 
