@@ -1,0 +1,21 @@
+[project]
+name = "mt-lfx-prototype"
+version = "0.0.1"
+description = "Multitenant lfx prototype: capability-backed services + isolated worker subprocess"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pyjwt>=2.9",
+    "httpx>=0.27",
+    "pydantic>=2.8",
+    "lfx",
+    # Used by the Basic Prompting LanguageModel component.
+    "langchain-openai>=0.2",
+]
+
+[tool.uv.sources]
+lfx = { path = "../../src/lfx", editable = true }
+
+[tool.uv]
+package = false
