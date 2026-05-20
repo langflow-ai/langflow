@@ -39,6 +39,7 @@ http {
 
         location /api {
             proxy_pass ${BACKEND_URL};
+            proxy_read_timeout ${NGINX_PROXY_READ_TIMEOUT}s;
         }
         location /health_check {
             proxy_pass ${BACKEND_URL};
