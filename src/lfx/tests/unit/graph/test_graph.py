@@ -1,5 +1,6 @@
 import copy
 import json
+import pickle
 from types import SimpleNamespace
 
 import pytest
@@ -13,6 +14,7 @@ from lfx.graph.graph.utils import (
     update_target_handle,
     update_template,
 )
+from lfx.graph.utils import UnbuiltObject
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
 from lfx.utils.flow_validation import CustomComponentValidationError
@@ -93,6 +95,20 @@ def get_node_by_type(graph, node_type: type[Vertex]) -> Vertex | None:
     return next((node for node in graph.vertices if isinstance(node, node_type)), None)
 
 
+def _minimal_vertex_data() -> dict:
+    return {
+        "id": "Prompt-1",
+        "data": {
+            "type": "Prompt",
+            "node": {
+                "display_name": "Prompt",
+                "template": {"_type": "Component"},
+                "outputs": [],
+            },
+        },
+    }
+
+
 def test_invalid_node_types():
     graph_data = {
         "nodes": [
@@ -113,6 +129,24 @@ def test_invalid_node_types():
     g = Graph()
     with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
+
+
+def test_vertex_pickle_drops_runtime_component_state():
+    class UnpickleableComponent:
+        def set_vertex(self, vertex: Vertex) -> None:
+            self.vertex = vertex
+
+        def __getstate__(self):
+            msg = "cannot pickle ConsoleThreadLocals object"
+            raise TypeError(msg)
+
+    vertex = Vertex(_minimal_vertex_data(), graph=SimpleNamespace(), base_type="Component")
+    vertex.add_component_instance(UnpickleableComponent())
+
+    restored = pickle.loads(pickle.dumps(vertex))  # noqa: S301
+
+    assert restored.custom_component is None
+    assert isinstance(restored.built_object, UnbuiltObject)
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
