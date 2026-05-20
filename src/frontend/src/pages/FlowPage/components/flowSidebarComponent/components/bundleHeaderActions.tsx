@@ -15,6 +15,7 @@ import type {
 import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import useAlertStore from "@/stores/alertStore";
+import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 
 type AlertList = { title: string; list: string[] } | undefined;
@@ -70,6 +71,7 @@ const BundleHeaderActionsInner = ({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setNoticeData = useAlertStore((state) => state.setNoticeData);
+  const setTypes = useTypesStore((state) => state.setTypes);
   const queryClient = useQueryClient();
   const { mutate: reloadBundle, isPending } = useReloadBundle({
     onSuccess: (data: ReloadBundleResponse) => {
@@ -82,13 +84,13 @@ const BundleHeaderActionsInner = ({
       //      a ReloadResult-shaped body; show a red toast with the typed
       //      errors + hints inline.
       if (data.ok) {
-        // Invalidate the React Query cache so the palette refetches /all and
-        // picks up the post-swap class shapes.  React Query refetches in the
-        // background while the old data stays visible (no flash).  The query
-        // URL already carries ?force_refresh=true so the backend will not
-        // serve its own cached snapshot.  Do NOT call setTypes({}) first --
-        // that wipes the store immediately and causes a visual "page refresh"
-        // while the refetch is in flight.
+        // Drop the cached types snapshot and invalidate the React Query
+        // entry so the palette + canvas re-fetch ``/all`` and pick up the
+        // post-swap class shapes.  Without this the backend has rebuilt
+        // its component cache but the frontend keeps serving stale
+        // templates until a hard refresh -- the visible symptom the
+        // user reports as "reload didn't work".
+        setTypes({});
         queryClient.invalidateQueries({ queryKey: ["useGetTypes"] });
 
         const added = data.components_added.length;
