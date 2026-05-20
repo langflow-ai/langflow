@@ -28,11 +28,21 @@ def test_flow_action_is_iterable_and_complete():
 
 
 def test_deployment_action_values_match_casbin_strings():
+    """Casbin policies use lowercase action strings; the enum values must match."""
     assert DeploymentAction.READ.value == "read"
+    assert DeploymentAction.WRITE.value == "write"
     assert DeploymentAction.CREATE.value == "create"
+    assert DeploymentAction.DELETE.value == "delete"
     assert DeploymentAction.EXECUTE.value == "execute"
 
 
 def test_deployment_action_subclasses_str():
+    """Subclassing str lets the enum be passed wherever a string is accepted."""
     assert isinstance(DeploymentAction.WRITE, str)
     assert DeploymentAction.DELETE == "delete"
+
+
+def test_deployment_action_is_iterable_and_complete():
+    """The enum exposes exactly the five canonical deployment actions (no DEPLOY)."""
+    values = {member.value for member in DeploymentAction}
+    assert values == {"read", "write", "create", "delete", "execute"}
