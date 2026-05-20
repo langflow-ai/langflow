@@ -255,8 +255,14 @@ async def test_ensure_flow_permission_falls_back_to_project_domain(monkeypatch, 
 
 
 @pytest.mark.anyio
-async def test_ensure_flow_permission_workspace_beats_project(monkeypatch, fake_user):
-    """When both workspace_id and folder_id are set, workspace wins as the domain."""
+async def test_ensure_flow_permission_project_beats_workspace(monkeypatch, fake_user):
+    """When both workspace_id and folder_id are set, the project domain wins.
+
+    Casbin g2 is directional (children inherit from parents). Passing the
+    project domain lets workspace-scoped grants flow down via g2 *and* keeps
+    project-scoped grants visible. Passing workspace would make project
+    grants invisible — that was the original (buggy) behavior.
+    """
     _install_settings(monkeypatch, authz_enabled=True)
     service = _StubAuthorizationService(allow=True)
     _install_authz(monkeypatch, service)
@@ -273,8 +279,8 @@ async def test_ensure_flow_permission_workspace_beats_project(monkeypatch, fake_
         folder_id=folder_id,
     )
 
-    assert service.calls[0]["domain"] == f"workspace:{workspace_id}"
-    # folder_id is still passed in context so the plugin can use it for g2 hierarchy.
+    assert service.calls[0]["domain"] == f"project:{folder_id}"
+    # workspace_id is still passed in context so the plugin can use it for ABAC matchers.
     assert service.calls[0]["context"]["folder_id"] == folder_id
     assert service.calls[0]["context"]["workspace_id"] == workspace_id
 
@@ -292,9 +298,14 @@ async def test_ensure_flow_permission_wildcard_domain_when_neither_set(monkeypat
 
 
 def test_resolve_flow_domain_precedence():
-    """Unit test the precedence rule directly (workspace > project > '*')."""
+    """Unit test the precedence rule directly (project > workspace > '*').
+
+    Project is more specific than workspace; passing it lets workspace grants
+    flow down via Casbin g2 inheritance while keeping project-scoped grants
+    visible to the enforcer.
+    """
     ws, folder = uuid4(), uuid4()
-    assert authz_utils._resolve_flow_domain(workspace_id=ws, folder_id=folder) == f"workspace:{ws}"
+    assert authz_utils._resolve_flow_domain(workspace_id=ws, folder_id=folder) == f"project:{folder}"
     assert authz_utils._resolve_flow_domain(workspace_id=ws, folder_id=None) == f"workspace:{ws}"
     assert authz_utils._resolve_flow_domain(workspace_id=None, folder_id=folder) == f"project:{folder}"
     assert authz_utils._resolve_flow_domain(workspace_id=None, folder_id=None) == "*"

@@ -150,19 +150,25 @@ async def ensure_permission(
 def _resolve_flow_domain(workspace_id: UUID | None, folder_id: UUID | None) -> str:
     """Pick the most specific Casbin domain for a flow check.
 
-    Precedence (outer → inner):
-      1. ``workspace:{workspace_id}`` when a workspace is set,
-      2. ``project:{folder_id}`` when a folder is set,
+    Precedence (inner → outer):
+      1. ``project:{folder_id}`` when a folder is set,
+      2. ``workspace:{workspace_id}`` when only a workspace is set,
       3. ``"*"`` when neither is set.
 
     Enterprise Casbin policies link the two via ``g2`` (e.g.
-    ``g2, project:xyz, workspace:abc``) so a workspace-scoped role
-    grant automatically applies to every project inside it.
+    ``g2, project:xyz, workspace:abc``) so that when the enforcer checks
+    against the **project** domain, both project-scoped and workspace-scoped
+    role grants match (workspace grants flow down to projects via g2).
+    Passing the workspace domain when a project is known would make
+    project-scoped grants invisible because g2 is directional — children
+    inherit from parents, not the other way round. ``workspace_id`` is also
+    forwarded in the enforce context for plugins that prefer ABAC-style
+    matchers.
     """
-    if workspace_id is not None:
-        return f"workspace:{workspace_id}"
     if folder_id is not None:
         return f"project:{folder_id}"
+    if workspace_id is not None:
+        return f"workspace:{workspace_id}"
     return "*"
 
 
