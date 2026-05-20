@@ -160,7 +160,7 @@ const FilesTab = ({
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
               <span className="text-xs text-primary">
-                Upload failed,{" "}
+                {t("files.uploadFailed")}{" "}
                 <span
                   className="cursor-pointer text-accent-pink-foreground underline"
                   onClick={(e) => {
@@ -170,7 +170,7 @@ const FilesTab = ({
                     }
                   }}
                 >
-                  try again?
+                  {t("files.tryAgain")}
                 </span>
               </span>
             ) : (

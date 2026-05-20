@@ -419,9 +419,13 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             if not api_key:
                 return
 
+            # ``/api/v1/models`` is a public OpenRouter endpoint (200 for any
+            # bearer, including missing/invalid). Use ``/api/v1/auth/key``
+            # instead — it's documented for key validation, returns 401 on
+            # invalid keys, and only costs a tiny metadata round-trip.
             try:
                 response = requests.get(
-                    "https://openrouter.ai/api/v1/models",
+                    "https://openrouter.ai/api/v1/auth/key",
                     headers={"Authorization": f"Bearer {api_key}"},
                     timeout=5,
                 )

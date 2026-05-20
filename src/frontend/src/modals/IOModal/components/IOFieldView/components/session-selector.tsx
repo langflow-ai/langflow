@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ export default function SessionSelector({
   menuOpen?: boolean;
   onMenuOpenChange?: (open: boolean) => void;
 }) {
+  const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
   const [isEditing, setIsEditing] = useState(false);
   const [editedSession, setEditedSession] = useState(session);
@@ -196,7 +198,11 @@ export default function SessionSelector({
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
         >
-          <ShadTooltip styleClasses="z-50" side="right" content="Options">
+          <ShadTooltip
+            styleClasses="z-50"
+            side="right"
+            content={t("chat.options")}
+          >
             <SelectTrigger
               onClick={(e) => {
                 e.stopPropagation();
