@@ -9,18 +9,15 @@ import PartialPodmanAlt from '@site/docs/_partial-podman-alt.mdx';
 
 Running applications in Docker containers ensures consistent behavior across different systems and eliminates dependency conflicts.
 
-You can use the Langflow Docker image to start a Langflow container.
-
-This guide demonstrates several ways to deploy Langflow with [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/):
+This guide demonstrates several ways to run Langflow with [Docker](https://docs.docker.com/) and [Docker Compose](https://docs.docker.com/compose/):
 
 * [Quickstart](#quickstart): Start a Langflow container with default values.
-* [Use Docker Compose](#clone): Clone the Langflow repo, and then use Docker Compose to build the Langflow Docker container.
-This option provides more control over the configuration, including a persistent PostgreSQL database service, while still using the base Langflow Docker image.
-* [Create a custom flow image](#package-your-flow-as-a-docker-image): Use a Dockerfile to package a flow as a Docker image.
-* [Create a custom Langflow image](#customize-the-langflow-docker-image): Use a Dockerfile to package a custom Langflow Docker image that includes your own code, custom dependencies, or other modifications.
-* [Upgrade the Langflow Docker image](#upgrade-the-langflow-docker-image): Upgrade to a newer image without losing your database or flows by using persistent volumes and replacing only the container.
+* [Use Docker Compose](#docker-compose): Run Langflow with a persistent PostgreSQL database and configurable environment variables.
+* [Customize the Docker image](#customize): Package a flow or add your own code into a custom image built on top of the official Langflow image.
+* [Build and run the Docker image from source](#build-from-source): Build a Docker image from a local clone of the repo, or start a full development environment with hot reload on both frontend and backend.
+* [Upgrade the Langflow Docker image](#upgrade-the-langflow-docker-image): Upgrade to a newer image without losing your database or flows.
 
-## Quickstart: Start a Langflow container with default values {#quickstart}
+## Quickstart {#quickstart}
 
 With Docker installed and running on your system, run the following command:
 
@@ -31,19 +28,13 @@ docker run -p 7860:7860 langflowai/langflow:latest
 Then, access Langflow at `http://localhost:7860/`.
 
 This container runs a pre-built Docker image with default settings.
-For more control over the configuration, see [Clone the repo and run the Langflow Docker container](#clone).
+For more control over the configuration, see [Use Docker Compose](#docker-compose).
 
-## Clone the repo and run the Langflow Docker container {#clone}
+## Use Docker Compose {#docker-compose}
 
-Cloning the Langflow repository and using Docker Compose gives you more control over your configuration, allowing you to customize environment variables, use a persistent PostgreSQL database service (instead of the default SQLite database), and include custom dependencies.
+Docker Compose gives you more control over your configuration, such as setting environment variables, using a persistent PostgreSQL database instead of the default SQLite database, and including custom dependencies.
 
-The default deployment with Docker Compose includes the following:
-
-- **Langflow service**: Runs the latest Langflow image with PostgreSQL as the database.
-- **PostgreSQL service**: Provides persistent data storage for flows, users, and settings.
-- **Persistent volumes**: Ensures your data survives container restarts.
-
-The complete Docker Compose configuration is available in `docker_example/docker-compose.yml`.
+The Langflow repo includes a ready-to-use Compose file at `docker_example/docker-compose.yml` that pulls the latest Langflow image from Docker Hub and includes persistent volume storage with PostgreSQL.
 
 1. Clone the Langflow repository:
 
@@ -65,11 +56,13 @@ The complete Docker Compose configuration is available in `docker_example/docker
 
 4. Access Langflow at `http://localhost:7860/`.
 
-### Customize your deployment
+## Customize the Docker Compose file {#customize}
 
-You can customize the Docker Compose configuration to fit your specific deployment.
+Customize the Docker Compose file to fit your deployment's requirements.
 
-For example, to configure the container's database credentials using a `.env` file, do the following:
+### Include environment variables
+
+Configure a container's database credentials using a `.env` file.
 
 1. Create a `.env` file with your database credentials in the same directory as `docker-compose.yml`:
 
@@ -101,15 +94,12 @@ For example, to configure the container's database credentials using a `.env` fi
 
 For a complete list of available environment variables, see [Langflow environment variables](/environment-variables).
 
-For more customization options, see [Customize the Langflow Docker image with your own code](#customize-the-langflow-docker-image).
+### Package a flow into the image
 
-## Package your flow as a Docker image {#package-your-flow-as-a-docker-image}
+Embed a flow JSON directly into a Docker image.
+This is useful for distributing a specific flow as a standalone container or deploying it to environments like Kubernetes.
 
-This section shows you how to create a Dockerfile that builds a Docker image containing your Langflow flow. This approach is useful when you want to distribute a specific flow as a standalone container or deploy it to environments like Kubernetes.
-
-Unlike the previous sections that use pre-built images, this method builds a custom image with your flow embedded inside it.
-
-1. Create a project directory, and change directory into it.
+1. Create a project directory and change into it:
 
     ```bash
     mkdir langflow-custom && cd langflow-custom
@@ -125,7 +115,7 @@ Unlike the previous sections that use pre-built images, this method builds a cus
     cp /path/to/your/flow.json .
     ```
 
-3. Create a Dockerfile to build your custom image:
+3. Create a `Dockerfile`:
 
     ```dockerfile
     FROM langflowai/langflow:latest
@@ -134,60 +124,22 @@ Unlike the previous sections that use pre-built images, this method builds a cus
     ENV LANGFLOW_LOAD_FLOWS_PATH=/app/flows
     ```
 
-This Dockerfile uses the official Langflow image as the base, creates a directory for your flows, copies your JSON flow files into the directory, and sets the environment variable to tell Langflow where to find the flows.
-
-4. Build and test your custom image:
+4. Build, test, and optionally push your image:
 
     ```bash
     docker build -t myuser/langflow-custom:1.0.0 .
     docker run -p 7860:7860 myuser/langflow-custom:1.0.0
+    docker push myuser/langflow-custom:1.0.0  # optional
     ```
 
-5. Push your image to Docker Hub (optional):
+For Kubernetes deployment, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
 
-    ```bash
-    docker push myuser/langflow-custom:1.0.0
-    ```
+### Add custom code or dependencies
 
-Your custom image now contains your flow and can be deployed anywhere Docker runs. For Kubernetes deployment, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
+Patch custom code into the pre-built image's installation.
+This is useful when you need to add custom Python packages, replace a built-in component, or make targeted changes without a [full source build](#build-from-source).
 
-## Customize the Langflow Docker image with your own code {#customize-the-langflow-docker-image}
-
-While the previous section showed how to package a flow with a Docker image, this section shows how to customize the Langflow application itself. This is useful when you need to add custom Python packages or dependencies, modify Langflow's configuration or settings, include custom components or tools, or add your own code to extend Langflow's functionality.
-
-This example demonstrates how to customize the **Message History** component, but the same approach can be used for any code modifications.
-
-```dockerfile
-FROM langflowai/langflow:latest
-
-# Set working directory
-WORKDIR /app
-
-# Copy your modified memory component
-COPY src/lfx/src/lfx/components/helpers/memory.py /tmp/memory.py
-
-# Find the site-packages directory where langflow is installed
-RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
-
-# Replace the file in the site-packages location
-RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
-    echo "Site packages at: $SITE_PACKAGES" && \
-    mkdir -p "$SITE_PACKAGES/langflow/components/helpers" && \
-    cp /tmp/memory.py "$SITE_PACKAGES/langflow/components/helpers/"
-
-# Clear Python cache in the site-packages directory only
-RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
-    find "$SITE_PACKAGES" -name "*.pyc" -delete && \
-    find "$SITE_PACKAGES" -name "__pycache__" -type d -exec rm -rf {} +
-
-# Expose the default Langflow port
-EXPOSE 7860
-
-# Command to run Langflow
-CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
-```
-
-To use this custom Dockerfile, do the following:
+This example replaces the built-in **Message History** component, but the same pattern applies to any component or file.
 
 1. Create a directory for your custom Langflow setup:
 
@@ -195,16 +147,36 @@ To use this custom Dockerfile, do the following:
     mkdir langflow-custom && cd langflow-custom
     ```
 
-2. Create the necessary directory structure for your custom code.
-In this example, Langflow expects `memory.py` to exist in the `/helpers` directory, so you create a directory in that location.
+2. Create the directory structure that mirrors the component path:
 
     ```bash
     mkdir -p src/lfx/src/lfx/components/helpers
     ```
 
-3. Place your modified `memory.py` file in the `/helpers` directory.
+3. Place your modified `memory.py` file in that directory.
 
-4. Create a new file named `Dockerfile` in your `langflow-custom` directory, and then copy the Dockerfile contents shown above into it.
+4. Create a `Dockerfile`:
+
+    ```dockerfile
+    FROM langflowai/langflow:latest
+
+    WORKDIR /app
+
+    COPY src/lfx/src/lfx/components/helpers/memory.py /tmp/memory.py
+
+    RUN python -c "import site; print(site.getsitepackages()[0])" > /tmp/site_packages.txt
+
+    RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
+        mkdir -p "$SITE_PACKAGES/langflow/components/helpers" && \
+        cp /tmp/memory.py "$SITE_PACKAGES/langflow/components/helpers/"
+
+    RUN SITE_PACKAGES=$(cat /tmp/site_packages.txt) && \
+        find "$SITE_PACKAGES" -name "*.pyc" -delete && \
+        find "$SITE_PACKAGES" -name "__pycache__" -type d -exec rm -rf {} +
+
+    EXPOSE 7860
+    CMD ["python", "-m", "langflow", "run", "--host", "0.0.0.0", "--port", "7860"]
+    ```
 
 5. Build and run the image:
 
@@ -213,7 +185,121 @@ In this example, Langflow expects `memory.py` to exist in the `/helpers` directo
     docker run -p 7860:7860 myuser/langflow-custom:1.0.0
     ```
 
-This approach can be adapted for any other components or custom code you want to add to Langflow by modifying the file paths and component names.
+
+## Build and run the Docker image from source {#build-from-source}
+
+:::tip
+Both `make docker_build` and `make lfx_docker_build` use Podman by default. If you have Docker installed instead, pass the alias `DOCKER=docker` on the command line:
+
+```shell
+make docker_build DOCKER=docker
+```
+:::
+
+
+If you've cloned the Langflow repository and want to build and run your local changes inside a Docker container, run:
+
+    ```shell
+    make docker_build
+    ```
+
+This builds `docker/build_and_push.Dockerfile` and tags the result `langflow:<version>`.
+
+To run the image after building, run:
+
+```shell
+docker run -p 7860:7860 langflow:<version>
+```
+
+Replace `<version>` with the version in `pyproject.toml` at the repo root.
+
+To build only the LFX executor CLI image instead of the full Langflow application, run:
+
+```shell
+make lfx_docker_build
+```
+
+:::note
+`DOCKER=docker` passed on the command line does not propagate to `make lfx_docker_build` — the root target calls into `src/lfx/Makefile` without forwarding the variable, so it falls back to Podman. Export the variable before running the target instead:
+
+```shell
+export DOCKER=docker
+make lfx_docker_build
+```
+:::
+
+This builds `src/lfx/docker/Dockerfile` and tags the result `lfx:latest`.
+It produces a lightweight Alpine-based image that contains only the `lfx` CLI tool, with no frontend or Langflow UI.
+
+The build context is the repo root, not `src/lfx/`. The Dockerfile copies from `pyproject.toml`, `uv.lock`, and `src/sdk/`, so the full workspace is sent to the daemon (~55 MB of tracked files). A root `.dockerignore` file partially mitigates this, but the first build will be slower than you might expect for a small CLI image.
+
+### Write a custom source-based Dockerfile
+
+When writing a source-based Dockerfile, you must copy the manifest files (`pyproject.toml`, `README.md`, and `uv.lock` where present) for every workspace member before running `uv sync`.
+The workspace members are defined in `[tool.uv.workspace]` in the root `pyproject.toml`.
+
+1. To copy all manifest files to your Dockerfile, include the following:
+
+    ```dockerfile
+    COPY ./uv.lock /app/uv.lock
+    COPY ./README.md /app/README.md
+    COPY ./pyproject.toml /app/pyproject.toml
+    COPY ./src/backend/base/README.md /app/src/backend/base/README.md
+    COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
+    COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
+    COPY ./src/lfx/README.md /app/src/lfx/README.md
+    COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+    COPY ./src/sdk/README.md /app/src/sdk/README.md
+    COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+    ```
+
+2. To install dependencies and copy the source, include the following:
+
+    ```dockerfile
+    RUN --mount=type=cache,target=/root/.cache/uv \
+        uv sync --frozen --no-install-project --no-editable --extra postgresql --no-group dev
+
+    COPY ./src /app/src
+
+    RUN --mount=type=cache,target=/root/.cache/uv \
+        uv sync --frozen --no-editable --extra postgresql --no-group dev
+    ```
+
+    The first `uv sync` installs only dependencies before the source is copied, so that Docker can cache that layer. The second `uv sync` installs the project packages (`langflow`, `lfx`) from the copied source. Both calls are required. Omitting the second will produce a container with all dependencies present but the project packages missing, which fails at runtime.
+
+For an example, see [`docker/build_and_push_with_extras.Dockerfile`](https://github.com/langflow-ai/langflow/blob/main/docker/build_and_push_with_extras.Dockerfile).
+
+### Start a development environment with `make dcdev_up`
+
+`make dcdev_up` starts a full development environment from source using [`docker/dev.docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker/dev.docker-compose.yml).
+This is useful if you want to work on the Langflow codebase within a container.
+
+To build the Langflow dcdev image, run:
+
+```shell
+make dcdev_up
+```
+
+Access the backend and Langflow UI at  `http://localhost:7860/`.
+Access the frontend dev server at `http://localhost:3000/`.
+
+The following environment variables are set by default:
+
+| Variable | Default value | Description |
+|---|---|---|
+| `LANGFLOW_DATABASE_URL` | `postgresql://langflow:langflow@postgres:5432/langflow` | PostgreSQL connection string |
+| `LANGFLOW_SUPERUSER` | `langflow` | Initial admin username |
+| `LANGFLOW_SUPERUSER_PASSWORD` | `langflow` | Initial admin password |
+| `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
+
+To override these values, export variables in your shell before running `make dcdev_up`. Shell-exported variables take precedence over the values set in the `environment:` block of the Compose file:
+
+```shell
+export LANGFLOW_SUPERUSER=myadmin
+make dcdev_up
+```
+
+Alternatively, edit `docker/dev.docker-compose.yml` directly. A `.env` file in the repo root will not work  because Docker Compose v2 gives `environment:` block values higher precedence than `env_file:`, so the hardcoded defaults in the Compose file win.
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
@@ -243,7 +329,7 @@ For example, this Docker Compose file uses a bind mount for Langflow data (`./la
       langflow-postgres:
     ```
 
-   For additional examples, see the [Docker Compose configuration](#clone) and the [docker_example compose file](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
+   For additional examples, see the [Docker Compose configuration](#docker-compose) and the [docker_example compose file](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml).
 
 2. Pull the new image and update the image tag in your `docker-compose.yml` or `docker run` command.
 
@@ -278,4 +364,4 @@ This approach keeps the persistent volumes separate from the Langflow container,
 If you need to upgrade to a custom image based on a Langflow release, such as to add `uv` in `1.8.0`, first build a derived image from the official image, and then follow the same steps above.
 Set the custom image in your compose file or `docker run`, and then pull and restart.
 
-For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) (“Docker image no longer includes uv or uvx”).
+For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release notes](/release-notes) ("Docker image no longer includes uv or uvx").
