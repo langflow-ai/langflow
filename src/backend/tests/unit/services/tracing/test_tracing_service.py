@@ -50,6 +50,7 @@ class MockTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex=None,
+        parent_id: str | None = None,
     ) -> None:
         self.add_trace_list.append(
             {
@@ -59,6 +60,7 @@ class MockTracer(BaseTracer):
                 "inputs": inputs,
                 "metadata": metadata,
                 "vertex": vertex,
+                "parent_id": parent_id,
             }
         )
 
