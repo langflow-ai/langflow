@@ -14,13 +14,14 @@ on:
         required: false
         type: string
         default: "langflowai/langflow-nightly:latest"
+  # Note: schedule trigger only works from the default branch (main)
+  # This workflow is called by nightly_build.yml after Docker images are built
   schedule:
     # Run daily at 3:00 AM UTC (after nightly build and Docker push)
     - cron: "0 3 * * *"
 
 env:
   PYTHON_VERSION: "3.13"
-  POSTGRES_VERSION: "16"
   POSTGRES_DB: langflow_test
   POSTGRES_USER: langflow
   POSTGRES_PASSWORD: langflow_test_pass
@@ -33,7 +34,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:16
+        image: postgres:${{ env.POSTGRES_VERSION || '16' }}
         env:
           POSTGRES_DB: ${{ env.POSTGRES_DB }}
           POSTGRES_USER: ${{ env.POSTGRES_USER }}
@@ -47,9 +48,6 @@ jobs:
           - 5432:5432
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -101,7 +99,7 @@ jobs:
           
           echo "Database initialized successfully with stable version"
 
-      - name: Create witness flow and credentials
+      - name: Create witness flow
         working-directory: migration-test
         env:
           LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
@@ -116,7 +114,7 @@ jobs:
           timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
           
           # Create a simple flow via API
-          curl -X POST http://127.0.0.1:7860/api/v1/flows/ \
+          curl -fsSL -X POST http://127.0.0.1:7860/api/v1/flows/ \
             -H "Content-Type: application/json" \
             -d '{
               "name": "Migration Witness Flow",
@@ -124,7 +122,13 @@ jobs:
               "data": {"nodes": [], "edges": []}
             }' > flow_response.json
           
-          cat flow_response.json
+          # Verify flow was created
+          if ! grep -q '"id"' flow_response.json; then
+            echo "❌ Flow creation failed - no id in response"
+            cat flow_response.json
+            exit 1
+          fi
+          echo "✅ Witness flow created successfully"
           
           # Stop Langflow
           kill $LANGFLOW_PID
@@ -140,12 +144,20 @@ jobs:
           NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
           echo "Upgrading to nightly version: $NIGHTLY_TAG"
           
-          # Extract version from tag or use package name
+          # Extract version from Docker tag (format: image:version)
           if [[ "$NIGHTLY_TAG" == *":"* ]]; then
-            # Docker tag format, install langflow-nightly package
-            uv pip install --upgrade langflow-nightly[postgresql]
+            VERSION="${NIGHTLY_TAG##*:}"
+            echo "Extracted version: $VERSION"
+            
+            if [[ "$VERSION" == "latest" ]]; then
+              # Install latest nightly from PyPI
+              uv pip install --upgrade langflow-nightly[postgresql]
+            else
+              # Install specific version
+              uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
+            fi
           else
-            # Direct version
+            # Direct version string
             uv pip install --upgrade "langflow-nightly[postgresql]==$NIGHTLY_TAG"
           fi
           
@@ -377,68 +389,6 @@ jobs:
         working-directory: docker-migration-test
         run: |
           docker compose down -v
-
-  notify-results:
-    name: Notify Migration Test Results
-    needs: [migration-pip-venv, migration-docker-compose]
-    if: always()
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Determine overall status
-        id: status
-        run: |
-          PIP_STATUS="${{ needs.migration-pip-venv.result }}"
-          DOCKER_STATUS="${{ needs.migration-docker-compose.result }}"
-          
-          if [ "$PIP_STATUS" = "success" ] && [ "$DOCKER_STATUS" = "success" ]; then
-            echo "status=success" >> $GITHUB_OUTPUT
-            echo "emoji=✅" >> $GITHUB_OUTPUT
-          else
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "emoji=❌" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "pip_emoji=$([ "$PIP_STATUS" = "success" ] && echo "✅" || echo "❌")" >> $GITHUB_OUTPUT
-          echo "docker_emoji=$([ "$DOCKER_STATUS" = "success" ] && echo "✅" || echo "❌")" >> $GITHUB_OUTPUT
-
-      - name: Send Slack notification
-        if: always()
-        run: |
-          EMOJI="${{ steps.status.outputs.emoji }}"
-          STATUS="${{ steps.status.outputs.status }}"
-          PIP_EMOJI="${{ steps.status.outputs.pip_emoji }}"
-          DOCKER_EMOJI="${{ steps.status.outputs.docker_emoji }}"
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
-          
-          curl -X POST -H 'Content-type: application/json' \
-          --data "{
-            \"blocks\": [
-              {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"$EMOJI *DB Migration Validation $STATUS*\"
-                }
-              },
-              {
-                \"type\": \"section\",
-                \"fields\": [
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Nightly Tag:*\\n\`$NIGHTLY_TAG\`\"
-                  },
-                  {
-                    \"type\": \"mrkdwn\",
-                    \"text\": \"*Overall Status:*\\n$STATUS\"
-                  }
-                ]
-              },
-              {
-                \"type\": \"section\",
-                \"text\": {
-                  \"type\": \"mrkdwn\",
-                  \"text\": \"*Test Results:*\\n$PIP_EMOJI pip/venv migration\\n$DOCKER_EMOJI Docker Compose migration\"
                 }
               },
               {
