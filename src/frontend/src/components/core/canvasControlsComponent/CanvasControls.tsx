@@ -16,6 +16,7 @@ import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowStore from "@/stores/flowStore";
+import { usePlaygroundStore } from "@/stores/playgroundStore";
 import type { AllNodeType } from "@/types/flow";
 import CanvasControlsDropdown from "./CanvasControlsDropdown";
 import HelpDropdown from "./HelpDropdown";
@@ -51,6 +52,10 @@ const CanvasControls = ({
   // While the FlowBuilderWelcome overlay is open, suppress the onboarding
   // tooltip — it renders via Portal and would float over the welcome.
   const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
+  // Same reason as the welcome suppression: the playground sliding container
+  // renders above the canvas, but the tooltip's Portal escapes that stacking
+  // context and would float on top of the playground.
+  const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
   const setInspectionPanelVisible = useFlowStore(
     (state) => state.setInspectionPanelVisible,
   );
@@ -112,7 +117,11 @@ const CanvasControls = ({
   // Single source of truth for the onboarding moment — both the popover
   // tooltip and the "New" pill key off this so they appear together.
   const onboardingActive =
-    !discovered && !assistantSidebarOpen && !isWelcomeOpen && tooltipVisible;
+    !discovered &&
+    !assistantSidebarOpen &&
+    !isWelcomeOpen &&
+    !isPlaygroundOpen &&
+    tooltipVisible;
 
   useEffect(() => {
     reactFlowStoreApi.setState({

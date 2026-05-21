@@ -176,10 +176,10 @@ export function FlowBuilderWelcome({
           </div>
         ) : (
           // Input container — design spec: 736×142px ≈ 46×8.875rem, 6px
-          // radius, 1px border #3F3F46, bg #27272A. ``w-full`` + max-width
-          // for responsiveness; ``min-h`` so it grows with the textarea.
-          // The relative shell hosts the gradient glow behind the input;
-          // glow tokens mirror the AssistantPanel.
+          // radius. ``w-full`` + max-width for responsiveness; ``min-h`` so
+          // it grows with the textarea. The relative shell hosts the
+          // gradient glow behind the input; glow tokens mirror the
+          // AssistantPanel.
           <div className="relative w-full">
             <div
               aria-hidden="true"
@@ -189,7 +189,7 @@ export function FlowBuilderWelcome({
                   "linear-gradient(90deg, hsl(var(--accent-assistant-purple) / 0.4) 0%, hsl(var(--accent-assistant-brand) / 0.5) 50%, hsl(var(--accent-assistant-purple) / 0.4) 100%)",
               }}
             />
-            <div className="relative flex min-h-[8.875rem] w-full flex-col rounded-md border border-[#3F3F46] bg-[#27272A] shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]">
+            <div className="relative flex min-h-[8.875rem] w-full flex-col rounded-md border border-border bg-muted shadow-[0_0_15px_hsl(var(--accent-assistant-purple)/0.12),0_0_30px_hsl(var(--accent-assistant-brand)/0.08)]">
               <textarea
                 ref={textareaRef}
                 data-testid="flow-builder-welcome-textarea"
@@ -231,7 +231,7 @@ export function FlowBuilderWelcome({
         )}
 
         {/* Template buttons — design spec: 143×50px, 12px radius, 13px
-            padding, 10px gap, bg #27272A, 1px border #3F3F46. */}
+            padding, 10px gap. */}
         <div className="flex flex-col items-center gap-2">
           <span className="text-sm text-muted-foreground">
             {WELCOME_OR_TEMPLATE_LABEL}
@@ -241,7 +241,7 @@ export function FlowBuilderWelcome({
               type="button"
               data-testid="flow-builder-welcome-template-simple-agent"
               onClick={() => onSelectTemplate("simple_agent")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-[#3F3F46] bg-[#27272A] p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-[#3F3F46]"
+              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="Bot" className="h-4 w-4" />
               {WELCOME_SIMPLE_AGENT_LABEL}
@@ -250,7 +250,7 @@ export function FlowBuilderWelcome({
               type="button"
               data-testid="flow-builder-welcome-template-vector-store-rag"
               onClick={() => onSelectTemplate("vector_store_rag")}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-[#3F3F46] bg-[#27272A] p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-[#3F3F46]"
+              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="Database" className="h-4 w-4" />
               {WELCOME_VECTOR_STORE_RAG_LABEL}
@@ -259,7 +259,7 @@ export function FlowBuilderWelcome({
               type="button"
               data-testid="flow-builder-welcome-browse-more"
               onClick={onBrowseMore}
-              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-[#3F3F46] bg-[#27272A] p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-[#3F3F46]"
+              className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="LayoutGrid" className="h-4 w-4" />
               {WELCOME_BROWSE_MORE_LABEL}
