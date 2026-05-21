@@ -7,7 +7,11 @@
 
 // Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
-import i18n, { loadLanguage } from "./i18n";
+import i18n, {
+  loadLanguage,
+  normalizeLanguageCode,
+  resolveLanguage,
+} from "./i18n";
 
 describe("loadLanguage", () => {
   beforeEach(() => {
@@ -49,5 +53,23 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+
+  it("normalizes Chinese locale variants to zh-Hans", async () => {
+    expect(normalizeLanguageCode("zh")).toBe("zh-Hans");
+    expect(normalizeLanguageCode("zh-CN")).toBe("zh-Hans");
+
+    await loadLanguage("zh");
+    expect(i18n.hasResourceBundle("zh-Hans", "translation")).toBe(true);
+  });
+
+  it("falls back unsupported locales to English without throwing", async () => {
+    expect(resolveLanguage("ru-RU")).toBe("en");
+    expect(resolveLanguage("ko-KR")).toBe("en");
+
+    await expect(loadLanguage("ru-RU")).resolves.toBeUndefined();
+    await expect(loadLanguage("ko-KR")).resolves.toBeUndefined();
+    expect(i18n.hasResourceBundle("ru", "translation")).toBe(false);
+    expect(i18n.hasResourceBundle("ko", "translation")).toBe(false);
   });
 });
