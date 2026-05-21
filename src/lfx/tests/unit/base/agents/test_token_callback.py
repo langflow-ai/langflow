@@ -244,7 +244,8 @@ class TestErrorPathCaptureInputTokens:
 
     def test_should_not_double_count_input_tokens_when_call_succeeds(self):
         """If on_llm_end fires (call succeeded), use the server-reported usage and
-        DROP the pre-call estimate — otherwise we double-count input tokens."""
+        DROP the pre-call estimate — otherwise we double-count input tokens.
+        """
         import uuid
 
         from langchain_core.messages import HumanMessage
@@ -267,7 +268,8 @@ class TestErrorPathCaptureInputTokens:
 
     def test_should_handle_llm_error_without_prior_start_gracefully(self):
         """If the runtime swallowed on_*_start (unusual but possible), an error
-        with no recorded estimate must not raise — just count nothing for it."""
+        with no recorded estimate must not raise — just count nothing for it.
+        """
         import uuid
 
         handler = TokenUsageCallbackHandler()
