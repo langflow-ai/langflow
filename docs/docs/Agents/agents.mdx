@@ -130,6 +130,10 @@ By default, the **Agent** component uses your Langflow installation's storage, a
 The **Message History** component isn't required for default chat memory, but it is required if you want to use external chat memory like Mem0.
 Additionally, the **Message History** component provides more options for sorting, filtering, and limiting memories. Although, most of these options are built-in to the **Agent** component with default values.
 
+Langflow sends events to the Playground during each agent run: the input message, each tool call with its input and result, streaming tokens as they arrive, and the final answer.
+Langflow writes the completed message to chat history when the run finishes.
+When using the **Structured Response** output, Langflow does not send events to the Playground and does not write to chat history.
+
 For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/message-history).
 
 ### Additional parameters
