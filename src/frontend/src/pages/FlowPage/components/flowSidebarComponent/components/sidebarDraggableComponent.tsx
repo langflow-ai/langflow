@@ -119,8 +119,19 @@ export const SidebarDraggableComponent = forwardRef(
         open={open}
         key={itemName}
       >
+        {/*
+          ``side="right"`` anchors the disabled tooltip into the
+          canvas area (plenty of horizontal room) instead of letting
+          Radix center it above the sidebar item, which on narrow
+          viewports would clip the long "already in this flow"
+          message against the left edge of the screen. We still pass
+          ``avoidCollisions`` so an unusually tall tooltip near the
+          bottom of the sidebar can flip rather than get clipped.
+        */}
         <ShadTooltip
           content={disabled ? disabledTooltip : null}
+          side="right"
+          avoidCollisions
           styleClasses="z-50"
         >
           <div
