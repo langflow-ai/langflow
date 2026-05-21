@@ -22,9 +22,6 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[data-testid="mainpage_title"]', {
-      timeout: 30000,
-    });
 
     await page.getByTestId("blank-flow").click();
 

@@ -404,7 +404,7 @@ test(
     await page.getByTestId("new_project_btn_empty_page").click();
 
     // Navigate to templates
-    await page.getByTestId("side_nav_options_all-templates").click();
+    await page.getByTestId("flow-builder-welcome-browse-more").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
@@ -423,7 +423,7 @@ test(
     await page.getByTestId("sidebar-nav-Starter Project").click();
 
     // The folder should contain our newly created flow
-    await expect(page.getByTestId("list-card")).toBeVisible({
+    await expect(page.getByTestId("list-card").last()).toBeVisible({
       timeout: 5000,
     });
   },

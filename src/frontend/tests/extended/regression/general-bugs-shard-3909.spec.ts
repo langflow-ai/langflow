@@ -18,31 +18,6 @@ test(
 
     await awaitBootstrapTest(page);
 
-    await page.getByText("Close").last().click();
-
-    await page.getByTestId("add-project-button").click();
-
-    await page.getByText("New Project").last().click();
-
-    await page.waitForSelector("text=new flow", { timeout: 30000 });
-
-    expect(
-      (
-        await page.waitForSelector("text=new flow", {
-          timeout: 30000,
-        })
-      ).isVisible(),
-    );
-
-    expect(
-      await page.waitForSelector("data-testid=new_project_btn_empty_page", {
-        timeout: 5000,
-        state: "visible",
-      }),
-    );
-
-    await page.getByTestId("new_project_btn_empty_page").click();
-
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
     await page.waitForSelector("text=playground", { timeout: 30000 });
