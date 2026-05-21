@@ -7,6 +7,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("ChatInput", uniqueInputs)).toBe(
@@ -18,6 +19,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("ChatInput", uniqueInputs)).toBe(
@@ -29,6 +31,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("ChatInput", uniqueInputs)).toBe("");
@@ -40,6 +43,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("Webhook", uniqueInputs)).toBe(
@@ -51,6 +55,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("Webhook", uniqueInputs)).toBe(
@@ -62,6 +67,7 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("Webhook", uniqueInputs)).toBe("");
@@ -73,9 +79,34 @@ describe("getDisabledTooltip", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(getDisabledTooltip("SomeOtherComponent", uniqueInputs)).toBe("");
+    });
+  });
+
+  describe("CronTrigger component", () => {
+    it("should return CRON_TRIGGER_ALREADY_ADDED when CronTrigger exists", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: false,
+        webhookInput: false,
+        cronTrigger: true,
+      };
+
+      expect(getDisabledTooltip("CronTrigger", uniqueInputs)).toBe(
+        "A Cron Trigger is already in this flow. Each flow can only schedule one trigger.",
+      );
+    });
+
+    it("should return empty string when no CronTrigger exists", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: true,
+        webhookInput: true,
+        cronTrigger: false,
+      };
+
+      expect(getDisabledTooltip("CronTrigger", uniqueInputs)).toBe("");
     });
   });
 });

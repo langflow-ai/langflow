@@ -1,6 +1,7 @@
 import type { UniqueInputsComponents } from "../types";
 import {
   CHAT_INPUT_COMPONENT,
+  CRON_TRIGGER_COMPONENT,
   EXCLUSIVITY_RULES,
   WEBHOOK_COMPONENT,
 } from "./constants";
@@ -14,6 +15,12 @@ export const disableItem = (
     return true;
   }
   if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.webhookInput) {
+    return true;
+  }
+  if (
+    SBItemName === CRON_TRIGGER_COMPONENT &&
+    uniqueInputsComponents.cronTrigger
+  ) {
     return true;
   }
 

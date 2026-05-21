@@ -1,6 +1,7 @@
 import type { UniqueInputsComponents } from "../types";
 import {
   CHAT_INPUT_COMPONENT,
+  CRON_TRIGGER_COMPONENT,
   TOOLTIP_MESSAGES,
   WEBHOOK_COMPONENT,
 } from "./constants";
@@ -23,6 +24,12 @@ export const getDisabledTooltip = (
   }
   if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.chatInput) {
     return TOOLTIP_MESSAGES.CANNOT_ADD_WEBHOOK_WITH_CHAT_INPUT;
+  }
+  if (
+    SBItemName === CRON_TRIGGER_COMPONENT &&
+    uniqueInputsComponents.cronTrigger
+  ) {
+    return TOOLTIP_MESSAGES.CRON_TRIGGER_ALREADY_ADDED;
   }
   return "";
 };

@@ -30,6 +30,9 @@ jest.mock("@/utils/reactflowUtils", () => ({
   checkWebhookInput: jest.fn((nodes) =>
     nodes.some((node: any) => node.type === "Webhook"),
   ),
+  checkCronTriggerInput: jest.fn((nodes) =>
+    nodes.some((node: any) => node.type === "CronTrigger"),
+  ),
 }));
 
 jest.mock("@/utils/utils", () => ({

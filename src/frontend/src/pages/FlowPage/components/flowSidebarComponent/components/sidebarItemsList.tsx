@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
-import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
+import {
+  checkChatInput,
+  checkCronTriggerInput,
+  checkWebhookInput,
+} from "@/utils/reactflowUtils";
 import { removeCountFromString } from "@/utils/utils";
 import { disableItem } from "../helpers/disable-item";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
@@ -99,12 +103,17 @@ const UniqueInputsDraggableComponent = ({
   const nodes = useFlowStore((state) => state.nodes);
   const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
   const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
+  const cronTriggerAdded = useMemo(
+    () => checkCronTriggerInput(nodes),
+    [nodes],
+  );
   const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
     return {
       chatInput: chatInputAdded,
       webhookInput: webhookInputAdded,
+      cronTrigger: cronTriggerAdded,
     };
-  }, [chatInputAdded, webhookInputAdded]);
+  }, [chatInputAdded, webhookInputAdded, cronTriggerAdded]);
 
   return (
     <ShadTooltip

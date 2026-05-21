@@ -7,6 +7,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(disableItem("ChatInput", uniqueInputs)).toBe(true);
@@ -16,6 +17,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(disableItem("ChatInput", uniqueInputs)).toBe(true);
@@ -25,6 +27,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(disableItem("ChatInput", uniqueInputs)).toBe(false);
@@ -34,6 +37,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(disableItem("ChatInput", uniqueInputs)).toBe(true);
@@ -45,6 +49,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(disableItem("Webhook", uniqueInputs)).toBe(true);
@@ -54,6 +59,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(disableItem("Webhook", uniqueInputs)).toBe(true);
@@ -63,6 +69,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(disableItem("Webhook", uniqueInputs)).toBe(false);
@@ -74,6 +81,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(disableItem("SomeOtherComponent", uniqueInputs)).toBe(false);
@@ -83,6 +91,7 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: true,
         webhookInput: false,
+        cronTrigger: false,
       };
 
       expect(disableItem("TextInput", uniqueInputs)).toBe(false);
@@ -92,9 +101,55 @@ describe("disableItem", () => {
       const uniqueInputs: UniqueInputsComponents = {
         chatInput: false,
         webhookInput: true,
+        cronTrigger: false,
       };
 
       expect(disableItem("TextInput", uniqueInputs)).toBe(false);
+    });
+  });
+
+  describe("CronTrigger component", () => {
+    it("should disable CronTrigger when a CronTrigger already exists", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: false,
+        webhookInput: false,
+        cronTrigger: true,
+      };
+
+      expect(disableItem("CronTrigger", uniqueInputs)).toBe(true);
+    });
+
+    it("should not disable CronTrigger when none exists", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: false,
+        webhookInput: false,
+        cronTrigger: false,
+      };
+
+      expect(disableItem("CronTrigger", uniqueInputs)).toBe(false);
+    });
+
+    it("should not be affected by ChatInput or Webhook presence", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: true,
+        webhookInput: true,
+        cronTrigger: false,
+      };
+
+      // CronTrigger coexists with both — no exclusivity rule.
+      expect(disableItem("CronTrigger", uniqueInputs)).toBe(false);
+    });
+
+    it("should not affect ChatInput or Webhook when CronTrigger is present", () => {
+      const uniqueInputs: UniqueInputsComponents = {
+        chatInput: false,
+        webhookInput: false,
+        cronTrigger: true,
+      };
+
+      // Reverse: a present CronTrigger doesn't block ChatInput or Webhook.
+      expect(disableItem("ChatInput", uniqueInputs)).toBe(false);
+      expect(disableItem("Webhook", uniqueInputs)).toBe(false);
     });
   });
 });

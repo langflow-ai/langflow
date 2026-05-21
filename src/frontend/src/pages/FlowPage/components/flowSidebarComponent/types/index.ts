@@ -98,4 +98,5 @@ export interface SidebarHeaderComponentProps {
 export interface UniqueInputsComponents {
   chatInput: boolean;
   webhookInput: boolean;
+  cronTrigger: boolean;
 }

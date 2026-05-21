@@ -79,6 +79,10 @@ export function checkWebhookInput(nodes: Node[]) {
   return nodes.some((node) => node.data.type === "Webhook");
 }
 
+export function checkCronTriggerInput(nodes: Node[]) {
+  return nodes.some((node) => node.data.type === "CronTrigger");
+}
+
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   const brokenEdges: {
     source: {
