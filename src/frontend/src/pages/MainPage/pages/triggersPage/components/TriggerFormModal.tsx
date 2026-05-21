@@ -29,6 +29,7 @@ import {
   usePostTrigger,
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { Trigger } from "../types";
@@ -114,23 +115,25 @@ export default function TriggerFormModal({
 
   const isEditing = existingTrigger !== null;
 
-  // Make sure both flows and folders are hydrated when the modal opens
-  // — same queries the home page uses. ``useGetFoldersQuery`` is the
-  // critical one for filtering: ``GET /projects/`` excludes the system
-  // ``Starter Projects`` folder, so the folders returned here are
-  // exactly the ones the user can navigate to in the sidebar.
+  // Hydrate flows + folders when the modal opens. Folders are loaded
+  // so we can show the parent folder name as a disambiguator. The
+  // actual ownership filter, though, is on user_id — that's the only
+  // reliable discriminator between flows the user actually created
+  // and seeded starter templates (which have user_id = null in
+  // AUTO_LOGIN mode).
   useGetRefreshFlowsQuery(
     { get_all: true, remove_example_flows: true },
     { enabled: open && (flows === undefined || flows.length === 0) },
   );
   useGetFoldersQuery();
   const folders = useFolderStore((s) => s.folders);
+  const currentUserId = useAuthStore((s) => s.userData?.id);
 
   const flowOptions = useMemo(() => {
-    const userFolderIds = new Set((folders ?? []).map((f) => f.id));
+    if (!currentUserId) return [];
     return (flows ?? [])
       .filter((f) => !f.is_component)
-      .filter((f) => !f.folder_id || userFolderIds.has(f.folder_id))
+      .filter((f) => f.user_id === currentUserId)
       .map((f) => ({
         id: f.id,
         name: f.name,
@@ -139,7 +142,7 @@ export default function TriggerFormModal({
           "",
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [flows, folders]);
+  }, [flows, folders, currentUserId]);
 
   const defaultValues: FormValues = useMemo(
     () => ({
