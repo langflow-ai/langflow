@@ -109,11 +109,12 @@ from langflow.services.database.models.flow_version_deployment_attachment.crud i
     AttachmentConflictError,
     delete_unbound_attachments,
     get_attachment_by_provider_snapshot_id,
+    list_attachments_by_provider_snapshot_id,
     list_deployment_attachments,
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
-from langflow.services.deps import get_telemetry_service
+from langflow.services.deps import get_authorization_service, get_telemetry_service
 from langflow.services.telemetry.schema import DeploymentPayload
 
 
@@ -1149,43 +1150,99 @@ async def update_snapshot(
 
     snapshot_id = provider_snapshot_id.strip()
 
-    # Attachment is owner-scoped via user_id. For a shared-deployment update
-    # the actor doesn't own the attachment row, so look it up share-aware
-    # (by provider_snapshot_id alone) when the plugin allows cross-user
-    # fetch. The deployment guard later authorizes the WRITE.
+    # ``provider_snapshot_id`` is indexed but NOT unique — a single provider
+    # snapshot can attach to multiple deployments. A bare ``.first()`` after
+    # share-aware widening would silently pick the wrong row, so we resolve
+    # candidates explicitly:
+    #
+    #   1. Try the actor-owned attachment first. This preserves the historical
+    #      owner-only contract (and one DB roundtrip in the hot path).
+    #   2. If none found AND an enterprise plugin permits cross-user fetch,
+    #      enumerate every candidate and authorize the parent deployment for
+    #      each. Proceed only when exactly one deployment authorizes; refuse
+    #      ambiguous matches with 409 so the caller can disambiguate.
+    authz = get_authorization_service()
+    share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+
     attachment = await get_attachment_by_provider_snapshot_id(
         session,
         user_id=current_user.id,
         provider_snapshot_id=snapshot_id,
     )
+    deployment = None
+    if attachment is not None:
+        deployment = await get_deployment_row(
+            session,
+            user_id=current_user.id,
+            deployment_id=attachment.deployment_id,
+        )
+    elif share_aware:
+        candidates = await list_attachments_by_provider_snapshot_id(
+            session,
+            provider_snapshot_id=snapshot_id,
+        )
+        authorized: list[tuple] = []  # (attachment, deployment)
+        for candidate in candidates:
+            candidate_deployment = await get_deployment_row(
+                session,
+                user_id=candidate.user_id,  # share-aware row already returns by-id
+                deployment_id=candidate.deployment_id,
+            )
+            if candidate_deployment is None:
+                continue
+            try:
+                await ensure_deployment_permission(
+                    current_user,
+                    DeploymentAction.WRITE,
+                    deployment_id=candidate_deployment.id,
+                    deployment_user_id=candidate_deployment.user_id,
+                    workspace_id=candidate_deployment.workspace_id,
+                    project_id=candidate_deployment.project_id,
+                )
+            except HTTPException as exc:
+                if exc.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}:
+                    continue
+                raise
+            authorized.append((candidate, candidate_deployment))
+        if len(authorized) > 1:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Provider snapshot '{snapshot_id}' is attached to multiple deployments "
+                    "you have write access to. The PATCH route cannot disambiguate without "
+                    "a deployment_id discriminator."
+                ),
+            )
+        if authorized:
+            attachment, deployment = authorized[0]
+
     if attachment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
         )
-
-    deployment = await get_deployment_row(
-        session,
-        user_id=current_user.id,
-        deployment_id=attachment.deployment_id,
-    )
     if deployment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
         )
 
-    try:
-        await ensure_deployment_permission(
-            current_user,
-            DeploymentAction.WRITE,
-            deployment_id=deployment.id,
-            deployment_user_id=deployment.user_id,
-            workspace_id=deployment.workspace_id,
-            project_id=deployment.project_id,
-        )
-    except HTTPException as exc:
-        raise deny_to_404(exc, detail="Deployment not found.") from exc
+    # Owner-only path still needs the authorization check — the share-aware
+    # branch already ran ensure_* per candidate. Skipping the redundant call
+    # would risk a permission bypass when the actor owns the attachment but
+    # not WRITE on the deployment under a role-restricted enterprise policy.
+    if not (share_aware and attachment.user_id != current_user.id):
+        try:
+            await ensure_deployment_permission(
+                current_user,
+                DeploymentAction.WRITE,
+                deployment_id=deployment.id,
+                deployment_user_id=deployment.user_id,
+                workspace_id=deployment.workspace_id,
+                project_id=deployment.project_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Deployment not found.") from exc
 
     # Owner-scoped lookups from here on. Flow versions attached to a
     # deployment belong to the deployment owner; the provider account does
