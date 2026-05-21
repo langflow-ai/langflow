@@ -1,3 +1,4 @@
+import { AstraflowIcon } from "@/icons/Astraflow";
 import { AgentQLIcon } from "@/icons/AgentQL";
 import { AIMLIcon } from "@/icons/AIML";
 import { AirbyteIcon } from "@/icons/Airbyte";
@@ -121,6 +122,7 @@ import { WindsurfIcon } from "./Windsurf";
 
 // Export the eagerly loaded icons map
 export const eagerIconsMapping = {
+  Astraflow: AstraflowIcon,
   AIML: AIMLIcon,
   Agentics: AgenticsIcon,
   AgentQL: AgentQLIcon,
