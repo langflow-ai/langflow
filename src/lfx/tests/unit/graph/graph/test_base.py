@@ -1,4 +1,5 @@
 import contextvars
+import pickle
 from collections import deque
 
 import pytest
@@ -104,6 +105,31 @@ def test_graph_functional_start_end():
     assert len(results) == len(ids) + 1
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+def test_graph_cache_serialization_omits_runtime_component_state():
+    """Graph cache serialization should not include live component instances."""
+
+    class UnserializableComponent:
+        def __getstate__(self):
+            msg = "cannot serialize runtime component"
+            raise TypeError(msg)
+
+    chat_input = ChatInput(_id="chat_input")
+    chat_output = ChatOutput(input_value="test", _id="chat_output")
+    chat_output.set(sender_name=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    graph.vertices[0].custom_component = UnserializableComponent()
+
+    payload = {"result": graph, "type": type(graph)}
+    serialized_payload = pickle.dumps(payload)
+    deserialized_payload = pickle.loads(serialized_payload)  # noqa: S301 - trusted test payload.
+    deserialized_graph = deserialized_payload["result"]
+
+    assert serialized_payload
+    assert graph.vertices[0].__getstate__()["custom_component"] is None
+    assert deserialized_graph.vertices[0].custom_component is None
 
 
 def test_get_terminal_nodes():
