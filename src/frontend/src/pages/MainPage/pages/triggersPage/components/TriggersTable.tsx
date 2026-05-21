@@ -20,10 +20,7 @@ import {
 import { useDeleteTrigger } from "@/controllers/API/queries/triggers";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
-import type {
-  JobStatus,
-  TriggerInstance,
-} from "../types";
+import type { JobStatus, TriggerInstance } from "../types";
 import { formatDateTime, relativeTimeFrom } from "../utils/format";
 
 interface TriggersTableProps {
@@ -103,143 +100,141 @@ export default function TriggersTable({
   }
 
   const allKeys = triggers.map(triggerKey);
-  const allSelected = allKeys.length > 0 && allKeys.every((k) => selected.has(k));
+  const allSelected =
+    allKeys.length > 0 && allKeys.every((k) => selected.has(k));
   const someSelected = !allSelected && allKeys.some((k) => selected.has(k));
 
   return (
-    // ``overflow-x-auto`` contains any horizontal overflow inside the
-    // table card itself so a narrow container (e.g. the drawer-open
-    // layout) never propagates a page-level scroll. ``min-w-0`` works
-    // with the parent flex column to allow the table to shrink below
-    // its intrinsic min-content width without overflowing siblings.
-    <div className="min-w-0 overflow-x-auto">
+    // ``min-w-0`` lets the table shrink below its intrinsic min-
+    // content width inside the parent flex column; column-level
+    // ``truncate`` (on Flow + component_id) handles long text, and
+    // only the cron chip insists on ``whitespace-nowrap`` because a
+    // mid-expression line break would mislead. The other cells wrap
+    // naturally if the viewport ever gets narrow enough to need it.
+    <div className="min-w-0">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[36px]">
               <Checkbox
                 data-testid="triggers-select-all"
-                checked={allSelected ? true : someSelected ? "indeterminate" : false}
-                onCheckedChange={(value) => onSelectAll(allKeys, value === true)}
+                checked={
+                  allSelected ? true : someSelected ? "indeterminate" : false
+                }
+                onCheckedChange={(value) =>
+                  onSelectAll(allKeys, value === true)
+                }
               />
             </TableHead>
-            <TableHead>
-              {t("triggers.col.flow")}
-            </TableHead>
-          <TableHead className="whitespace-nowrap">
-            {t("triggers.col.cron")}
-          </TableHead>
-          <TableHead className="whitespace-nowrap">
-            {t("triggers.col.timezone")}
-          </TableHead>
-          <TableHead className="whitespace-nowrap">
-            {t("triggers.col.nextFire")}
-          </TableHead>
-          <TableHead className="whitespace-nowrap">
-            {t("triggers.col.lastRun")}
-          </TableHead>
-          <TableHead className="w-[40px]" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {triggers.map((trigger) => {
-          const key = triggerKey(trigger);
-          return (
-            <TableRow key={key} data-testid={`trigger-row-${key}`}>
-              <TableCell>
-                <Checkbox
-                  data-testid={`trigger-select-${key}`}
-                  checked={selected.has(key)}
-                  onCheckedChange={() => onSelectToggle(key)}
-                />
-              </TableCell>
-              <TableCell className="font-medium">
-                <div className="flex min-w-0 flex-col">
-                  <span className="truncate">{trigger.flow_name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {trigger.component_id}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <code className="whitespace-nowrap rounded bg-muted px-1.5 py-0.5 text-xs">
-                  {trigger.cron_expression}
-                </code>
-              </TableCell>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {trigger.timezone}
-              </TableCell>
-              <TableCell
-                className="whitespace-nowrap text-sm text-muted-foreground"
-                title={formatDateTime(trigger.next_fire_at)}
-              >
-                {relativeTimeFrom(trigger.next_fire_at)}
-              </TableCell>
-              <TableCell>
-                {trigger.last_finished_status ? (
-                  <Badge
-                    variant={STATUS_BADGE_VARIANT[trigger.last_finished_status]}
-                    size="xq"
-                    title={formatDateTime(trigger.last_finished_at)}
-                  >
-                    {trigger.last_finished_status}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      data-testid={`trigger-actions-${key}`}
-                    >
-                      <ForwardedIconComponent
-                        name="MoreHorizontal"
-                        className="h-4 w-4"
-                      />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => navigate(`/flow/${trigger.flow_id}`)}
-                    >
-                      <ForwardedIconComponent
-                        name="ExternalLink"
-                        className="mr-2 h-4 w-4"
-                      />
-                      {t("triggers.openInEditor")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onViewJobs(trigger)}>
-                      <ForwardedIconComponent
-                        name="History"
-                        className="mr-2 h-4 w-4"
-                      />
-                      {t("triggers.viewJobs")}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() =>
-                        deleteTrigger({
-                          flow_id: trigger.flow_id,
-                          component_id: trigger.component_id,
-                        })
+            <TableHead>{t("triggers.col.flow")}</TableHead>
+            <TableHead>{t("triggers.col.cron")}</TableHead>
+            <TableHead>{t("triggers.col.timezone")}</TableHead>
+            <TableHead>{t("triggers.col.nextFire")}</TableHead>
+            <TableHead>{t("triggers.col.lastRun")}</TableHead>
+            <TableHead className="w-[40px]" />
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {triggers.map((trigger) => {
+            const key = triggerKey(trigger);
+            return (
+              <TableRow key={key} data-testid={`trigger-row-${key}`}>
+                <TableCell>
+                  <Checkbox
+                    data-testid={`trigger-select-${key}`}
+                    checked={selected.has(key)}
+                    onCheckedChange={() => onSelectToggle(key)}
+                  />
+                </TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex min-w-0 flex-col">
+                    <span className="truncate">{trigger.flow_name}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {trigger.component_id}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <code className="whitespace-nowrap rounded bg-muted px-1.5 py-0.5 text-xs">
+                    {trigger.cron_expression}
+                  </code>
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {trigger.timezone}
+                </TableCell>
+                <TableCell
+                  className="text-sm text-muted-foreground"
+                  title={formatDateTime(trigger.next_fire_at)}
+                >
+                  {relativeTimeFrom(trigger.next_fire_at)}
+                </TableCell>
+                <TableCell>
+                  {trigger.last_finished_status ? (
+                    <Badge
+                      variant={
+                        STATUS_BADGE_VARIANT[trigger.last_finished_status]
                       }
-                      className="text-destructive"
+                      size="xq"
+                      title={formatDateTime(trigger.last_finished_at)}
                     >
-                      <ForwardedIconComponent
-                        name="Trash2"
-                        className="mr-2 h-4 w-4"
-                      />
-                      {t("triggers.delete")}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          );
-        })}
+                      {trigger.last_finished_status}
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        data-testid={`trigger-actions-${key}`}
+                      >
+                        <ForwardedIconComponent
+                          name="MoreHorizontal"
+                          className="h-4 w-4"
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => navigate(`/flow/${trigger.flow_id}`)}
+                      >
+                        <ForwardedIconComponent
+                          name="ExternalLink"
+                          className="mr-2 h-4 w-4"
+                        />
+                        {t("triggers.openInEditor")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onViewJobs(trigger)}>
+                        <ForwardedIconComponent
+                          name="History"
+                          className="mr-2 h-4 w-4"
+                        />
+                        {t("triggers.viewJobs")}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          deleteTrigger({
+                            flow_id: trigger.flow_id,
+                            component_id: trigger.component_id,
+                          })
+                        }
+                        className="text-destructive"
+                      >
+                        <ForwardedIconComponent
+                          name="Trash2"
+                          className="mr-2 h-4 w-4"
+                        />
+                        {t("triggers.delete")}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
