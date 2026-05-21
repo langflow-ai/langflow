@@ -109,7 +109,7 @@ test(
       .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
       .click();
 
-    await page.getByTestId("dropdown-option-0-container").click();
+    await page.getByTestId("dropdown-option-1-container").click();
 
     await page.getByTestId(/^textarea_str_chatinput.*/).click();
     await page

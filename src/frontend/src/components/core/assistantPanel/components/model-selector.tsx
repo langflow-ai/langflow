@@ -95,6 +95,17 @@ export function ModelSelector({
     setIsOpen(false);
   };
 
+  // Discreet UX hint: when the selected model is too small for agent loops
+  // (heuristic in helpers/model-strength.ts), surface an inline italic note
+  // next to the chip. Classification is advisory; the dropdown behaves the
+  // same regardless of result. Re-evaluated on every change of currentModel.
+  // Must stay above the early returns below — Rules of Hooks: hook count
+  // can't change between renders, and isLoading flips false on first fetch.
+  const modelStrength = useMemo(
+    () => classifyModelStrength(currentModel?.name ?? ""),
+    [currentModel?.name],
+  );
+
   if (isLoading) {
     return (
       <Button
@@ -122,15 +133,6 @@ export function ModelSelector({
       </Button>
     );
   }
-
-  // Discreet UX hint: when the selected model is too small for agent loops
-  // (heuristic in helpers/model-strength.ts), surface an inline italic note
-  // next to the chip. Classification is advisory; the dropdown behaves the
-  // same regardless of result. Re-evaluated on every change of currentModel.
-  const modelStrength = useMemo(
-    () => classifyModelStrength(currentModel?.name ?? ""),
-    [currentModel?.name],
-  );
 
   return (
     // gap-3: leaves room for the chip's focus ring (~4px outline + offset)
