@@ -83,7 +83,7 @@ class FlowAlreadyRegisteredError(ValueError):
 class FlowMeta(BaseModel):
     """Metadata returned by the ``/flows`` endpoint."""
 
-    id: str = Field(..., description="Deterministic flow identifier (UUIDv5)")
+    id: str = Field(..., description="Flow identifier (UUID)")
     relative_path: str = Field(..., description="Path of the flow JSON relative to the deployed folder")
     title: str = Field(..., description="Human-readable title (filename stem if unknown)")
     description: str | None = Field(None, description="Optional flow description")
@@ -376,7 +376,7 @@ class UploadFlowRequest(BaseModel):
 
 
 class UploadFlowResponse(BaseModel):
-    id: str = Field(..., description="Deterministic UUID5 of flow content")
+    id: str = Field(..., description="Flow identifier (UUID)")
     name: str
     description: str | None
     run_url: str = Field(..., description="Endpoint to POST run requests, e.g. /flows/{id}/run")
@@ -528,6 +528,17 @@ def create_multi_serve_app(
         dependencies=[Depends(verify_api_key)],
     )
     async def upload_flow(body: UploadFlowRequest) -> UploadFlowResponse:
+        # Conflict check before the expensive load+prepare — only possible when the
+        # caller supplies an explicit id.  uuid4()-generated ids are always unique so
+        # there is no point checking before we have one.
+        flow_id = body.id or str(uuid.uuid4())
+
+        if not body.replace and registry.get(flow_id) is not None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Flow '{flow_id}' already exists. Pass replace=true to overwrite.",
+            )
+
         try:
             graph = load_flow_from_json(body.model_dump(exclude={"replace"}))
         except Exception as exc:
@@ -538,14 +549,6 @@ def create_multi_serve_app(
         except Exception as exc:
             raise HTTPException(status_code=422, detail=f"Flow preparation failed: {exc}") from exc
 
-        flow_id = body.id or str(uuid.uuid4())
-
-        if registry.get(flow_id) is not None and not body.replace:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Flow '{flow_id}' already exists. Pass replace=true to overwrite.",
-            )
-
         graph.flow_id = flow_id
         meta = FlowMeta(
             id=flow_id,
@@ -555,14 +558,7 @@ def create_multi_serve_app(
         )
         # graph.prepare() must run before registry.add() — add() stamps
         # graph.context with no_env_fallback, and prepare() must not overwrite it.
-        try:
-            registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
-        except FlowAlreadyRegisteredError:
-            # Another concurrent request registered the same ID between our get() check and add().
-            raise HTTPException(
-                status_code=409,
-                detail=f"Flow '{flow_id}' already exists. Pass replace=true to overwrite.",
-            ) from None
+        registry.add(graph, meta, overwrite=body.replace, raw_json=body.model_dump(exclude={"replace"}))
         return UploadFlowResponse(
             id=flow_id,
             name=body.name,
