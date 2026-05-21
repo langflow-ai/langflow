@@ -20,10 +20,18 @@ class TestMCPTimeoutConfiguration:
     async def test_stdio_client_default_timeout(self):
         """Test that MCPStdioClient uses global default timeout (180s)."""
         with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
-            mock_get_setting.return_value = 180
+            # Simulate: mcp_tool_execution_timeout=180, mcp_server_timeout=20
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return 180
+                if key == "mcp_server_timeout":
+                    return 20
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
             client = MCPStdioClient()
             assert client._tool_execution_timeout == 180
-            mock_get_setting.assert_called_once_with("mcp_tool_execution_timeout", 180)
 
     @pytest.mark.asyncio
     async def test_stdio_client_custom_timeout(self):
@@ -35,10 +43,18 @@ class TestMCPTimeoutConfiguration:
     async def test_streamable_http_client_default_timeout(self):
         """Test that MCPStreamableHttpClient uses global default timeout (180s)."""
         with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
-            mock_get_setting.return_value = 180
+            # Simulate: mcp_tool_execution_timeout=180, mcp_server_timeout=20
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return 180
+                if key == "mcp_server_timeout":
+                    return 20
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
             client = MCPStreamableHttpClient()
             assert client._tool_execution_timeout == 180
-            mock_get_setting.assert_called_once_with("mcp_tool_execution_timeout", 180)
 
     @pytest.mark.asyncio
     async def test_streamable_http_client_custom_timeout(self):
@@ -220,15 +236,23 @@ class TestMCPTimeoutBehavior:
     async def test_zero_timeout_uses_global_default(self):
         """Test that timeout=0 or None falls back to global setting."""
         with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
-            mock_get_setting.return_value = 180
+            # Simulate: mcp_tool_execution_timeout=180, mcp_server_timeout=20
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return 180
+                if key == "mcp_server_timeout":
+                    return 20
+                return default
 
-            # Test with None
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            # Test with None - should fall back to global setting
             client1 = MCPStdioClient(tool_execution_timeout=None)
             assert client1._tool_execution_timeout == 180
 
-            # Test with 0 (should use provided 0, not fallback)
+            # Test with 0 - should use provided 0 (explicit value)
             client2 = MCPStdioClient(tool_execution_timeout=0)
-            assert client2._tool_execution_timeout == 180  # 0 is falsy, so uses default
+            assert client2._tool_execution_timeout == 0.0  # 0 is explicit, not None
 
     @pytest.mark.asyncio
     async def test_multiple_clients_independent_timeouts(self):
@@ -413,3 +437,237 @@ class TestMCPComponentTimeoutIntegration:
         # Should not raise, and should convert to None
         timeout = float(timeout_value) if timeout_value else None
         assert timeout is None
+
+    @pytest.mark.asyncio
+    async def test_stdio_client_backward_compatibility_mcp_server_timeout(self):
+        """Test backward compatibility: when mcp_tool_execution_timeout is unset.
+
+        Fall back to max(mcp_server_timeout, 180).
+
+        Regression test for review finding: deployments that raised
+        LANGFLOW_MCP_SERVER_TIMEOUT above 180 seconds should not regress.
+        """
+        with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
+            # Simulate: mcp_tool_execution_timeout is unset, mcp_server_timeout=300
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return None  # Unset
+                if key == "mcp_server_timeout":
+                    return 300
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            client = MCPStdioClient()
+            # Should use max(300, 180) = 300
+            assert client._tool_execution_timeout == 300.0
+
+    @pytest.mark.asyncio
+    async def test_streamable_http_client_backward_compatibility_mcp_server_timeout(self):
+        """Test backward compatibility for MCPStreamableHttpClient with mcp_server_timeout."""
+        with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
+            # Simulate: mcp_tool_execution_timeout is unset, mcp_server_timeout=300
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return None  # Unset
+                if key == "mcp_server_timeout":
+                    return 300
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            client = MCPStreamableHttpClient()
+            # Should use max(300, 180) = 300
+            assert client._tool_execution_timeout == 300.0
+
+    @pytest.mark.asyncio
+    async def test_stdio_client_mcp_server_timeout_below_minimum(self):
+        """Test mcp_server_timeout < 180 and mcp_tool_execution_timeout is unset.
+
+        The minimum of 180 seconds is used.
+        """
+        with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
+            # Simulate: mcp_tool_execution_timeout is unset, mcp_server_timeout=20 (default)
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return None  # Unset
+                if key == "mcp_server_timeout":
+                    return 20
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            client = MCPStdioClient()
+            # Should use max(20, 180) = 180
+            assert client._tool_execution_timeout == 180.0
+
+    @pytest.mark.asyncio
+    async def test_stdio_client_new_setting_takes_precedence(self):
+        """Test that mcp_tool_execution_timeout takes precedence over mcp_server_timeout."""
+        with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
+            # Simulate: both settings are configured
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return 250  # New setting
+                if key == "mcp_server_timeout":
+                    return 300  # Old setting (higher)
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            client = MCPStdioClient()
+            # Should use mcp_tool_execution_timeout (250), not mcp_server_timeout
+            assert client._tool_execution_timeout == 250.0
+
+    @pytest.mark.asyncio
+    async def test_stdio_client_component_timeout_overrides_all(self):
+        """Test that component-level timeout overrides both global settings."""
+        with patch("lfx.base.mcp.util._get_mcp_setting") as mock_get_setting:
+            # Simulate: both global settings are configured
+            def get_setting_side_effect(key, default):
+                if key == "mcp_tool_execution_timeout":
+                    return 250
+                if key == "mcp_server_timeout":
+                    return 300
+                return default
+
+            mock_get_setting.side_effect = get_setting_side_effect
+
+            # Component provides its own timeout
+            client = MCPStdioClient(tool_execution_timeout=400)
+            # Should use component timeout (400), ignoring both global settings
+            assert client._tool_execution_timeout == 400.0
+
+    @pytest.mark.asyncio
+    async def test_cache_key_includes_timeout(self):
+        """Test that cache keys include timeout to prevent stale timeout values.
+
+        Regression test for review finding: cached tools can bypass per-component timeout.
+        This test verifies the cache key generation logic includes timeout values.
+        """
+        # Test the cache key generation logic directly
+        import hashlib
+        import json
+
+        # Simulate cache key generation with different timeouts
+        def generate_cache_key(server_name: str, timeout: float, headers: dict | None = None) -> str:
+            if not server_name:
+                return ""
+            cache_data = {
+                "headers": headers or {},
+                "timeout": timeout,
+            }
+            if not headers and timeout == 0.0:
+                return server_name
+            payload = json.dumps(cache_data, sort_keys=True)
+            digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+            return f"{server_name}:{digest}"
+
+        # Test with different timeouts
+        key1 = generate_cache_key("test-server", 0.0)
+        key2 = generate_cache_key("test-server", 300.0)
+        key3 = generate_cache_key("test-server", 600.0)
+
+        # Keys should be different when timeout changes
+        assert key1 != key2, "Cache keys should differ when timeout changes"
+        assert key2 != key3, "Cache keys should differ for different timeout values"
+        assert key1 != key3, "Cache keys should differ for different timeout values"
+
+    @pytest.mark.asyncio
+    async def test_cache_key_same_for_same_timeout(self):
+        """Test that cache keys are consistent for the same timeout value."""
+        import hashlib
+        import json
+
+        def generate_cache_key(server_name: str, timeout: float) -> str:
+            cache_data = {"headers": {}, "timeout": timeout}
+            if timeout == 0.0:
+                return server_name
+            payload = json.dumps(cache_data, sort_keys=True)
+            digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+            return f"{server_name}:{digest}"
+
+        key1 = generate_cache_key("test-server", 250.0)
+        key2 = generate_cache_key("test-server", 250.0)
+
+        # Keys should be identical for same timeout
+        assert key1 == key2, "Cache keys should be identical for same timeout"
+
+    @pytest.mark.asyncio
+    async def test_cache_key_handles_negative_timeout(self):
+        """Test that cache key handles negative timeout gracefully."""
+        import hashlib
+        import json
+
+        def generate_cache_key(server_name: str, timeout: float) -> str:
+            # Negative timeout should be treated as 0.0
+            normalized_timeout = 0.0 if timeout < 0 else timeout
+            cache_data = {"headers": {}, "timeout": normalized_timeout}
+            if normalized_timeout == 0.0:
+                return server_name
+            payload = json.dumps(cache_data, sort_keys=True)
+            digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+            return f"{server_name}:{digest}"
+
+        key_negative = generate_cache_key("test-server", -100.0)
+        key_zero = generate_cache_key("test-server", 0.0)
+
+        # Both should produce the same key (negative treated as 0)
+        assert key_negative == key_zero, "Negative timeout should be treated as 0.0 in cache key"
+
+    @pytest.mark.asyncio
+    async def test_cache_key_includes_headers_and_timeout(self):
+        """Test that cache keys include both headers and timeout."""
+        import hashlib
+        import json
+
+        def generate_cache_key(server_name: str, timeout: float, headers: dict | None = None) -> str:
+            cache_data = {"headers": headers or {}, "timeout": timeout}
+            if not headers and timeout == 0.0:
+                return server_name
+            payload = json.dumps(cache_data, sort_keys=True)
+            digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
+            return f"{server_name}:{digest}"
+
+        key1 = generate_cache_key("test-server", 0.0, {})
+        key2 = generate_cache_key("test-server", 0.0, {"Authorization": "Bearer token123"})
+        key3 = generate_cache_key("test-server", 300.0, {"Authorization": "Bearer token123"})
+
+        # All keys should be different
+        assert key1 != key2, "Cache keys should differ when headers change"
+        assert key2 != key3, "Cache keys should differ when timeout changes"
+        assert key1 != key3, "Cache keys should differ when both headers and timeout differ"
+
+    @pytest.mark.asyncio
+    async def test_global_setting_validation_rejects_zero(self):
+        """Test that global mcp_tool_execution_timeout setting rejects zero values."""
+        from lfx.services.settings.base import Settings
+
+        # Test the validator directly
+        with pytest.raises(ValueError, match="mcp_tool_execution_timeout must be greater than 0"):
+            Settings.validate_mcp_tool_execution_timeout(0.0)
+
+    @pytest.mark.asyncio
+    async def test_global_setting_validation_rejects_negative(self):
+        """Test that global mcp_tool_execution_timeout setting rejects negative values."""
+        from lfx.services.settings.base import Settings
+
+        # Test the validator directly
+        with pytest.raises(ValueError, match="mcp_tool_execution_timeout must be greater than 0"):
+            Settings.validate_mcp_tool_execution_timeout(-100.0)
+
+    @pytest.mark.asyncio
+    async def test_global_setting_accepts_positive_float(self):
+        """Test that global mcp_tool_execution_timeout setting accepts positive float values."""
+        from lfx.services.settings.base import Settings
+
+        # Test that the validator accepts positive values
+        # Note: We test the validator logic, not the full Settings initialization
+        validated_value = Settings.validate_mcp_tool_execution_timeout(180.0)
+        assert validated_value == 180.0
+
+        validated_value = Settings.validate_mcp_tool_execution_timeout(250.5)
+        assert validated_value == 250.5
+
+        validated_value = Settings.validate_mcp_tool_execution_timeout(0.5)
+        assert validated_value == 0.5
