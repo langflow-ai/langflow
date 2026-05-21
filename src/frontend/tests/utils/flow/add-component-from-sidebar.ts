@@ -62,8 +62,14 @@ export async function addComponentFromSidebar(
 
   if (hoverAdd) {
     const slug = addButtonSlug ?? rowTestIdToAddButtonSlug(testId);
-    await page.getByTestId(testId).hover();
-    await page.getByTestId(`add-component-button-${slug}`).click();
+    // Scope the "+" button query to the targeted row — the sidebar can
+    // surface the same `add-component-button-<slug>` testid on multiple
+    // rows (e.g. `input_outputChat Input` AND `saved_componentsChat Input`
+    // both render an `add-component-button-chat-input`), and a top-level
+    // `page.getByTestId(...)` then trips Playwright's strict-mode check.
+    const row = page.getByTestId(testId);
+    await row.hover();
+    await row.getByTestId(`add-component-button-${slug}`).click();
     return;
   }
 
