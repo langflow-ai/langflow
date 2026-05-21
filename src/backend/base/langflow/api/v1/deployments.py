@@ -1171,87 +1171,94 @@ async def update_snapshot(
             detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
         )
 
-    # Group candidates by owning user. ``update_flow_version_by_provider_snapshot_id``
-    # is per-user, so the mutation has a single owner; multiple owners with
-    # the same snapshot id (rare) cannot be safely resolved without a
-    # discriminator on this route.
-    owners = {candidate.user_id for candidate in all_candidates}
     if not share_aware:
         # OSS pass-through cannot widen visibility — only the actor's own
-        # rows are reachable. Filter the candidate set accordingly.
-        owners = {oid for oid in owners if oid == current_user.id}
+        # rows are reachable. The owner-group walk below will see at most
+        # one group (the actor's), which keeps OSS behaviour unchanged.
         all_candidates = [c for c in all_candidates if c.user_id == current_user.id]
         if not all_candidates:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
             )
-    if len(owners) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Provider snapshot '{snapshot_id}' spans multiple owners. "
-                "The PATCH route cannot resolve this without a discriminator."
-            ),
-        )
-    owner_id = next(iter(owners))
-    is_owner = owner_id == current_user.id
 
-    # Authorize every deployment touched by the upcoming mutation. The
-    # ``update_flow_version_by_provider_snapshot_id`` helper rewrites
-    # them all by ``(owner_id, snapshot_id)`` regardless of which one the
-    # actor "found" first — so anything less than full coverage would let
-    # a partial WRITE grant escape into deployments the actor cannot
-    # otherwise modify.
-    resolved_deployments: list = []
+    # ``update_flow_version_by_provider_snapshot_id`` is per-owner: each
+    # owner's rows are mutated independently, so the multi-owner case is
+    # NOT inherently unsafe. Authorize every deployment in each owner
+    # group and keep only the groups that fully authorize. Then:
+    #
+    #   * zero authorized groups → 404 (preserves UUID privacy; an
+    #     authenticated caller learns nothing about who else owns a
+    #     snapshot with the same id),
+    #   * one authorized group → proceed with that group,
+    #   * multiple authorized groups → 409 (the actor has WRITE on
+    #     multiple unrelated snapshot installations and the PATCH route
+    #     has no discriminator to pick one).
+    candidates_by_owner: dict = {}
     for candidate in all_candidates:
-        candidate_deployment = await get_deployment_row(
-            session,
-            user_id=owner_id,
-            deployment_id=candidate.deployment_id,
-        )
-        if candidate_deployment is None:
-            # A dangling attachment whose deployment has been deleted — skip.
-            # The mutation can't affect a deployment that doesn't exist.
-            continue
-        try:
-            await ensure_deployment_permission(
-                current_user,
-                DeploymentAction.WRITE,
-                deployment_id=candidate_deployment.id,
-                deployment_user_id=candidate_deployment.user_id,
-                workspace_id=candidate_deployment.workspace_id,
-                project_id=candidate_deployment.project_id,
-            )
-        except HTTPException as exc:
-            if exc.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}:
-                # All-or-nothing: any deployment the actor can't write
-                # disqualifies the entire snapshot update.
-                if is_owner:
-                    # Owner being denied is a real 403 — they exist, but
-                    # the role policy refuses the write.
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=(
-                            f"Provider snapshot '{snapshot_id}' is attached to a deployment "
-                            f"({candidate_deployment.id}) you cannot write. The update would "
-                            "affect every attachment sharing this snapshot."
-                        ),
-                    ) from exc
-                # Non-owner: convert to 404 to preserve UUID privacy on
-                # the deployments they cannot reach.
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
-                ) from exc
-            raise
-        resolved_deployments.append(candidate_deployment)
+        candidates_by_owner.setdefault(candidate.user_id, []).append(candidate)
 
-    if not resolved_deployments:
+    authorized_groups: list[tuple] = []  # (owner_id, list[Deployment])
+    for owner_id, owner_candidates in candidates_by_owner.items():
+        owner_deployments: list = []
+        group_allowed = True
+        for candidate in owner_candidates:
+            candidate_deployment = await get_deployment_row(
+                session,
+                user_id=owner_id,
+                deployment_id=candidate.deployment_id,
+            )
+            if candidate_deployment is None:
+                # A dangling attachment whose deployment has been deleted
+                # — skip. The mutation can't affect a deployment that
+                # doesn't exist.
+                continue
+            try:
+                await ensure_deployment_permission(
+                    current_user,
+                    DeploymentAction.WRITE,
+                    deployment_id=candidate_deployment.id,
+                    deployment_user_id=candidate_deployment.user_id,
+                    workspace_id=candidate_deployment.workspace_id,
+                    project_id=candidate_deployment.project_id,
+                )
+            except HTTPException as exc:
+                if exc.status_code in {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND}:
+                    # All-or-nothing per group: any denied deployment in
+                    # this owner's set disqualifies the entire group.
+                    # Drop the group silently so other authorized groups
+                    # can still surface, and so unauthorized callers learn
+                    # nothing about the existence of owner groups they
+                    # can't reach.
+                    group_allowed = False
+                    break
+                raise
+            owner_deployments.append(candidate_deployment)
+
+        if group_allowed and owner_deployments:
+            authorized_groups.append((owner_id, owner_deployments))
+
+    if not authorized_groups:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
         )
+    if len(authorized_groups) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Provider snapshot '{snapshot_id}' is attached to multiple owners' "
+                "deployments you can write. The PATCH route cannot resolve this "
+                "without a discriminator."
+            ),
+        )
+
+    owner_id, resolved_deployments = authorized_groups[0]
+    # Restrict the candidate set used downstream to the chosen owner's
+    # rows so ``update_flow_version_by_provider_snapshot_id`` (which is
+    # itself owner-scoped) and the attachment lookup below operate on a
+    # consistent set.
+    all_candidates = candidates_by_owner[owner_id]
 
     # The downstream provider call is scoped to ONE provider account (the
     # one we resolve ``deployment_adapter`` against), but
