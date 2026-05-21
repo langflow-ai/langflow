@@ -95,6 +95,7 @@ _SIMPLIFIED_API_FORM_FIELDS = (
     "output_type",
     "output_component",
     "session_id",
+    "user_id",
 )
 
 
@@ -243,6 +244,11 @@ async def simple_run_flow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
+        # Forward the caller-supplied identifier to tracing providers without
+        # affecting authn/authz. The API-key owner remains the effective user
+        # for permissions, global variables, and job ownership.
+        if input_request.user_id:
+            graph.tracing_user_id = input_request.user_id
         run_id_uuid = uuid4() if run_id is None else UUID(run_id)
         run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
