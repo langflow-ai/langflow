@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "Adicione e salve servidores MCP. Gerenciar servidores em",
   "mcp.modal.descriptionFlowLink": "configurações",
   "mcp.modal.descriptionSettings": "Adicione e salve servidores MCP para usar em todos os seus fluxos.",
+  "mcp.modal.lockedTitle": "O gerenciamento de servidores MCP está bloqueado",
+  "mcp.modal.lockedDescription": "Entre em contato com um administrador para gerenciar servidores MCP externos.",
   "mcp.modal.errorDuplicateEnvKeys": "Foram encontradas chaves duplicadas nas variáveis de ambiente.",
   "mcp.modal.errorDuplicateHeaders": "Foram encontradas chaves duplicadas nos cabeçalhos.",
   "mcp.modal.errorFailedAdd": "Não foi possível adicionar o servidor MCP.",

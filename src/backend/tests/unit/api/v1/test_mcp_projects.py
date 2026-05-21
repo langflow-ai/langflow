@@ -15,6 +15,7 @@ from langflow.api.v1.mcp_projects import (
     get_project_sse,
     get_project_streamable_http_url,
     init_mcp_servers,
+    is_mcp_servers_locked,
     project_mcp_servers,
     project_sse_transports,
 )
@@ -887,6 +888,17 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     monkeypatch.setattr("langflow.api.v1.mcp_projects.get_settings_service", lambda: dummy_service)
 
     return config_path
+
+
+async def test_is_mcp_servers_locked_does_not_fire_for_magicmock_settings():
+    settings = MagicMock()
+    # Simulate test fixtures where unknown attrs return truthy MagicMock placeholders.
+    assert is_mcp_servers_locked(settings) is False
+
+
+async def test_is_mcp_servers_locked_respects_explicit_true_flag():
+    settings = SimpleNamespace(mcp_servers_locked=True)
+    assert is_mcp_servers_locked(settings) is True
 
 
 async def test_install_mcp_config_defaults_to_sse_transport(

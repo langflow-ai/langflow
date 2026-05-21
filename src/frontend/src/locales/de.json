@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "MCP-Server hinzufügen und speichern. Server verwalten in",
   "mcp.modal.descriptionFlowLink": "Einstellungen",
   "mcp.modal.descriptionSettings": "Fügen Sie MCP-Server hinzu und speichern Sie sie, um sie in Ihren Abläufen zu verwenden.",
+  "mcp.modal.lockedTitle": "MCP-Serververwaltung ist gesperrt",
+  "mcp.modal.lockedDescription": "Kontaktiere einen Administrator, um externe MCP-Server zu verwalten.",
   "mcp.modal.errorDuplicateEnvKeys": "In den Umgebungsvariablen wurden doppelte Schlüssel gefunden.",
   "mcp.modal.errorDuplicateHeaders": "In den Kopfzeilen wurden doppelte Schlüssel gefunden.",
   "mcp.modal.errorFailedAdd": "Das Hinzufügen des MCP-Servers ist fehlgeschlagen.",

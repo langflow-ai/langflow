@@ -81,6 +81,16 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
+def is_mcp_servers_locked(settings: Any) -> bool:
+    """Return True only when MCP lock is explicitly enabled.
+
+    Some tests patch ``settings`` with ``MagicMock`` objects where unknown
+    attributes resolve to truthy placeholders. Using ``is True`` ensures the
+    lock is enforced only when the flag is explicitly set to ``True``.
+    """
+    return getattr(settings, "mcp_servers_locked", False) is True
+
+
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,
@@ -548,8 +558,8 @@ async def update_project_mcp_settings(
 
             # P2: Check if MCP server management is locked for non-superusers
             settings_service = get_settings_service()
-            mcp_locked = getattr(settings_service.settings, "mcp_servers_locked", False)
-            if mcp_locked is True and not current_user.is_superuser:
+            mcp_locked = is_mcp_servers_locked(settings_service.settings)
+            if mcp_locked and not current_user.is_superuser:
                 raise HTTPException(
                     status_code=403,
                     detail=(
@@ -786,7 +796,7 @@ async def install_mcp_config(
     settings_service = get_settings_service()
     # Some tests patch settings with MagicMock objects that return truthy placeholders
     # for unknown attrs. Only enforce this gate when the flag is explicitly True.
-    if getattr(settings_service.settings, "mcp_servers_locked", False) is True and not current_user.is_superuser:
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
         raise HTTPException(
             status_code=403,
             detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",

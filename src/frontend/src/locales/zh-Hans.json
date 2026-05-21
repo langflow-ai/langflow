@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "添加并保存 MCP 服务器。 在",
   "mcp.modal.descriptionFlowLink": "设置",
   "mcp.modal.descriptionSettings": "添加并保存 MCP 服务器，以便在各个流程中使用。",
+  "mcp.modal.lockedTitle": "MCP 服务器管理已锁定",
+  "mcp.modal.lockedDescription": "请联系管理员以管理外部 MCP 服务器。",
   "mcp.modal.errorDuplicateEnvKeys": "在环境变量中发现了重复的键。",
   "mcp.modal.errorDuplicateHeaders": "在标题中发现了重复的键。",
   "mcp.modal.errorFailedAdd": "无法添加 MCP 服务器。",
