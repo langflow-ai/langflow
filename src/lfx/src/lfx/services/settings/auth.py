@@ -145,8 +145,9 @@ class AuthSettings(BaseSettings):
     AUTHZ_AUDIT_ENABLED: bool = Field(
         default=True,
         description=(
-            "Write an AuthzAuditLog row for every authorization decision when AUTHZ_ENABLED=true. "
-            "Ignored when AUTHZ_ENABLED=false."
+            "Write an AuthzAuditLog row for every authorization decision and share-administration "
+            "action. Independent of AUTHZ_ENABLED — keep audit on while enforcement is off to "
+            "observe traffic before flipping the AUTHZ_ENABLED flag."
         ),
     )
 

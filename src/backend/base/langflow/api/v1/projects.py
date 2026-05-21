@@ -32,7 +32,12 @@ from langflow.api.v1.projects_mcp_helpers import (
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.authorization import ProjectAction, ensure_project_permission, filter_visible_resources
+from langflow.services.authorization import (
+    FlowAction,
+    ProjectAction,
+    ensure_project_permission,
+    filter_visible_resources,
+)
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.exceptions import (
@@ -320,7 +325,20 @@ async def read_project(
 
         # If no pagination requested, return flows visible to the caller.
         if treat_as_shared:
-            visible_flows = list(project.flows)
+            # A project share grant implies access to the project itself, but
+            # per-flow policy (deny rules, lower scopes) still applies. Without
+            # this call, ``list(project.flows)`` would leak every flow in the
+            # project regardless of finer-grained Casbin rules the plugin may
+            # have. OSS pass-through returns the input list unchanged, so this
+            # has no effect on default OSS installs.
+            visible_flows = await filter_visible_resources(
+                current_user,
+                resource_type="flow",
+                candidates=list(project.flows),
+                domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                owner_extractor=lambda flow: flow.user_id,
+                act=FlowAction.READ,
+            )
         else:
             visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
         project.flows = visible_flows
@@ -468,12 +486,19 @@ async def update_project(
         flow_ids_for_sync = list(dict.fromkeys(excluded_flows + concat_project_components))
 
         async def _move_flows_for_project_update() -> None:
+            # Both SELECT and UPDATE must scope to the project owner — a
+            # non-owner editing a shared project must touch the *owner's*
+            # flows, not the actor's. The previous code filtered the SELECT
+            # by ``current_user.id`` (returning zero rows for non-owners) but
+            # then ran an UPDATE without any owner filter, so an id collision
+            # would have moved cross-user flows without per-flow authz.
+            # Scoping both statements to ``project_owner_id`` closes the gap.
             if my_collection_project:
                 excluded_flow_rows = (
                     await session.exec(
                         select(Flow.id, Flow.folder_id).where(
                             Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
-                            Flow.user_id == current_user.id,
+                            Flow.user_id == project_owner_id,
                         )
                     )
                 ).all()
@@ -483,7 +508,12 @@ async def update_project(
                     new_folder_id=my_collection_project.id,
                 )
                 update_statement_my_collection = (
-                    update(Flow).where(Flow.id.in_(excluded_flows)).values(folder_id=my_collection_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(
+                        Flow.id.in_(excluded_flows),  # type: ignore[attr-defined]
+                        Flow.user_id == project_owner_id,
+                    )
+                    .values(folder_id=my_collection_project.id)
                 )
                 await session.exec(update_statement_my_collection)
 
@@ -492,7 +522,7 @@ async def update_project(
                     await session.exec(
                         select(Flow.id, Flow.folder_id).where(
                             Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
-                            Flow.user_id == current_user.id,
+                            Flow.user_id == project_owner_id,
                         )
                     )
                 ).all()
@@ -502,7 +532,12 @@ async def update_project(
                     new_folder_id=existing_project.id,
                 )
                 update_statement_components = (
-                    update(Flow).where(Flow.id.in_(concat_project_components)).values(folder_id=existing_project.id)  # type: ignore[attr-defined]
+                    update(Flow)
+                    .where(
+                        Flow.id.in_(concat_project_components),  # type: ignore[attr-defined]
+                        Flow.user_id == project_owner_id,
+                    )
+                    .values(folder_id=existing_project.id)
                 )
                 await session.exec(update_statement_components)
 

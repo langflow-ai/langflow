@@ -166,9 +166,30 @@ async def get_flow_by_id_or_name(
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
+    """Load a flow as a Graph after authorizing the caller.
+
+    ``user_id`` is the caller (the user executing the graph), and ``flow_id``
+    identifies the flow to load. This function is reachable from custom
+    components, sub-flow runners, and ``run_flow`` — anywhere a user-supplied
+    ``flow_id`` might end up. We must authorize EXECUTE here so a malicious
+    component or webhook cannot pass an arbitrary id and pull another user's
+    flow definition (which contains the flow author's prompts, tools, and
+    embedded credentials).
+
+    OSS default (``AUTHZ_ENABLED=false`` or no enterprise plugin): the fetch
+    stays owner-scoped, so a non-owner ``flow_id`` returns ``None`` and the
+    function raises ``ValueError`` exactly as before.
+
+    Enterprise (``AUTHZ_ENABLED=true`` and ``supports_cross_user_fetch=True``):
+    the fetch widens to id-only and ``ensure_flow_permission(EXECUTE)`` decides
+    access via the plugin's policy.
+    """
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
+    from langflow.services.authorization import FlowAction, ensure_flow_permission
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+    from langflow.services.database.models.user.model import User
 
     if not flow_id and not flow_name:
         msg = "Flow ID or Flow Name is required"
@@ -179,8 +200,50 @@ async def load_flow(
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
+    uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+    uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+
     async with session_scope() as session:
-        graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
+        flow = await authorized_or_owner_scoped(
+            session,
+            Flow,
+            id_column=Flow.id,
+            resource_id=uuid_flow_id,
+            owner_column=Flow.user_id,
+            owner_id=uuid_user_id,
+        )
+        if flow is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
+
+        # Authorize EXECUTE. ``ensure_flow_permission`` short-circuits on owner
+        # override, so the OSS pass-through path is unchanged. With an
+        # enterprise plugin a deny raises ``HTTPException(403)`` which we
+        # translate back to ``ValueError`` so callers (component execution,
+        # ``run_flow``) keep the existing exception contract.
+        caller = await session.get(User, uuid_user_id)
+        if caller is None:
+            msg = "Session is invalid"
+            raise ValueError(msg)
+        try:
+            await ensure_flow_permission(
+                caller,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            from fastapi import status as http_status
+
+            if exc.status_code == http_status.HTTP_403_FORBIDDEN:
+                msg = f"Flow {flow_id} not found"
+                raise ValueError(msg) from exc
+            raise
+
+        graph_data = flow.data
+
     if not graph_data:
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)

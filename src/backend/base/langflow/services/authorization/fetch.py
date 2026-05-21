@@ -87,20 +87,18 @@ async def authorized_or_owner_scoped(
 def deny_to_404(exc: HTTPException, detail: str = "Not found") -> HTTPException:
     """Convert a 403 from ``ensure_*_permission`` into a 404 for UUID privacy.
 
-    Re-raises any non-403 exception untouched. Callers wrap their guard call:
+    For 403s, returns a fresh ``HTTPException(404, detail=detail)``.
 
-    .. code-block:: python
-
-        try:
-            await ensure_flow_permission(user, FlowAction.READ, flow_id=flow.id, ...)
-        except HTTPException as exc:
-            raise deny_to_404(exc) from exc
-
-    Rationale: a route that was reachable purely through a share grant must
-    not leak the resource's existence to callers who can no longer reach it
-    (e.g. after the share is revoked). 403 confirms the row exists; 404 does
-    not.
+    For non-403s, returns the original exception with its ``detail`` replaced
+    by the caller-supplied ``detail`` and any ``headers`` dropped. This
+    sanitisation is conservative on purpose: helper callers are guard sites,
+    so the exception about to propagate has been filtered through an authz
+    plugin whose detail string may quote resource UUIDs, owner ids, or
+    policy tuples. Letting that detail land in the client response would
+    leak information about resources the caller is not authorised to see.
+    Routes that need to expose a richer detail (e.g. a 409 with a real
+    conflict message) should catch and re-raise outside ``deny_to_404``.
     """
-    if exc.status_code != status.HTTP_403_FORBIDDEN:
-        return exc
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+    if exc.status_code == status.HTTP_403_FORBIDDEN:
+        return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
+    return HTTPException(status_code=exc.status_code, detail=detail)

@@ -115,6 +115,18 @@ def upgrade() -> None:
             batch_op.create_index(batch_op.f("ix_authz_role_assignment_role_id"), ["role_id"], unique=False)
             batch_op.create_index(batch_op.f("ix_authz_role_assignment_domain_id"), ["domain_id"], unique=False)
 
+        # Hot-path lookup index: "all assignments for user X scoped to domain
+        # (type, id)" — the canonical query an enterprise enforcer issues on
+        # every request to compute effective roles. Single-column indexes
+        # leave the planner with a choice between two non-covering scans;
+        # this composite gives a single index seek.
+        op.create_index(
+            "ix_authz_role_assignment_user_domain",
+            "authz_role_assignment",
+            ["user_id", "domain_type", "domain_id"],
+            unique=False,
+        )
+
         # Partial unique indexes — NULL domain_id is never-equal in SQL, so
         # split the constraint into scoped and unscoped buckets. The unscoped
         # bucket filters on domain_id IS NULL only (NOT also on
@@ -194,16 +206,16 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
             sa.CheckConstraint(
                 "scope IN ('private', 'team', 'user', 'public')",
-                name="scope_enum",
+                name="ck_authz_share_scope_enum",
             ),
             sa.CheckConstraint(
                 "permission_level IN ('read', 'write', 'execute', 'admin')",
-                name="permission_enum",
+                name="ck_authz_share_permission_enum",
             ),
             sa.CheckConstraint(
                 "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
                 "OR (scope IN ('private', 'public') AND target_id IS NULL)",
-                name="scope_target_consistency",
+                name="ck_authz_share_scope_target_consistency",
             ),
         )
         with op.batch_alter_table("authz_share", schema=None) as batch_op:
@@ -249,6 +261,14 @@ def upgrade() -> None:
         )
         with op.batch_alter_table("authz_edit_lock", schema=None) as batch_op:
             batch_op.create_index(batch_op.f("ix_authz_edit_lock_flow_id"), ["flow_id"], unique=True)
+            # Expired-lock sweeper queries WHERE expires_at < now() — without
+            # this index that's a full table scan. Cheaper to add here than
+            # to retrofit once a cleanup job lands and starts hurting.
+            batch_op.create_index(
+                batch_op.f("ix_authz_edit_lock_expires_at"),
+                ["expires_at"],
+                unique=False,
+            )
 
     # ------------------------------------------------------------------
     # authz_audit_log — append-only authorization audit
@@ -266,6 +286,15 @@ def upgrade() -> None:
             sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
             sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
             sa.PrimaryKeyConstraint("id"),
+            # ``owner_override`` is the third value the framework writes
+            # (see ``_AUDIT_OWNER_OVERRIDE`` in
+            # ``services/authorization/utils.py``) — without it in the CHECK
+            # set, an enterprise plugin's owner-shortcircuit audit row would
+            # silently violate the constraint.
+            sa.CheckConstraint(
+                "result IN ('allow', 'deny', 'owner_override')",
+                name="ck_authz_audit_log_result_enum",
+            ),
         )
         with op.batch_alter_table("authz_audit_log", schema=None) as batch_op:
             batch_op.create_index(batch_op.f("ix_authz_audit_log_user_id"), ["user_id"], unique=False)

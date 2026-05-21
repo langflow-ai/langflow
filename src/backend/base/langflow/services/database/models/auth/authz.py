@@ -129,6 +129,15 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
             postgresql_where=text("domain_id IS NULL"),
             sqlite_where=text("domain_id IS NULL"),
         ),
+        # Hot-path lookup: "all assignments for user X scoped to a domain"
+        # — every enterprise enforce() call. Composite avoids two non-covering
+        # single-column scans.
+        Index(
+            "ix_authz_role_assignment_user_domain",
+            "user_id",
+            "domain_type",
+            "domain_id",
+        ),
     )
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
@@ -139,7 +148,14 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(sa.Uuid(), ForeignKey("authz_role.id", ondelete="CASCADE"), nullable=False, index=True),
     )
     domain_type: str = Field(default="global", description="global, org, workspace")
-    domain_id: UUIDstr | None = Field(default=None, index=True)
+    # Explicit ``sa_column`` so SQLModel emits ``sa.Uuid()`` matching the
+    # migration's column type. Without this, SQLModel can fall back to
+    # ``AutoString``/``CHAR(32)`` on SQLite, which drifts from the migration
+    # and confuses downstream type introspection.
+    domain_id: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), nullable=True, index=True),
+    )
     assigned_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
     assigned_by: UUIDstr | None = Field(
         default=None,
@@ -201,11 +217,11 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # partial unique indexes (which match on the lowercase form).
         CheckConstraint(
             "scope IN ('private', 'team', 'user', 'public')",
-            name="scope_enum",
+            name="ck_authz_share_scope_enum",
         ),
         CheckConstraint(
             "permission_level IN ('read', 'write', 'execute', 'admin')",
-            name="permission_enum",
+            name="ck_authz_share_permission_enum",
         ),
         # Targeted (TEAM/USER) shares require a target_id; untargeted
         # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
@@ -214,7 +230,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         CheckConstraint(
             "(scope IN ('team', 'user') AND target_id IS NOT NULL) "
             "OR (scope IN ('private', 'public') AND target_id IS NULL)",
-            name="scope_target_consistency",
+            name="ck_authz_share_scope_target_consistency",
         ),
         Index(
             "uq_authz_share_targeted",
@@ -263,7 +279,9 @@ class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False),
     )
     acquired_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
-    expires_at: datetime = Field(sa_column=_tz_column())
+    # ``index=True`` matches the migration's ``ix_authz_edit_lock_expires_at``
+    # so the expired-lock sweeper can do an index seek instead of a table scan.
+    expires_at: datetime = Field(sa_column=_tz_column(index=True))
 
 
 # TODO: AuthzAuditLog is append-only and unbounded. At enterprise scale this
@@ -279,6 +297,14 @@ class AuthzAuditLog(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         Index("ix_authz_audit_log_user_timestamp", "user_id", "timestamp"),
         Index("ix_authz_audit_log_resource", "resource_type", "resource_id"),
+        # ``owner_override`` is the third value the framework writes (see
+        # ``_AUDIT_OWNER_OVERRIDE`` in services/authorization/utils.py); it
+        # must be in the CHECK set or owner-shortcut audit rows would
+        # silently fail the constraint.
+        CheckConstraint(
+            "result IN ('allow', 'deny', 'owner_override')",
+            name="ck_authz_audit_log_result_enum",
+        ),
     )
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)

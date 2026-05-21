@@ -120,34 +120,55 @@ def upgrade() -> None:
     )
 
     timestamp = datetime.now(timezone.utc)
+    # ``sa.Uuid`` adapts ``UUID`` objects per-dialect (CHAR(32) on SQLite,
+    # native UUID on Postgres). Passing a bare string skips that path and
+    # fails at bind time on SQLite (``'str' object has no attribute 'hex'``),
+    # so we pass real UUID objects here.
+    # ``sa.JSON`` serializes Python lists natively on both SQLite and Postgres.
+    # ``json.dumps`` here would write the JSON-encoded string *inside* the
+    # JSON column, which downstream readers (Enterprise PolicySync expects a
+    # list) would have to peel a second time.
     for name, description, permissions in _SYSTEM_ROLES:
-        already_present = conn.execute(
-            sa.select(sa.literal(1)).select_from(authz_role).where(authz_role.c.name == name)
-        ).scalar()
-        if already_present:
-            continue
-        # ``sa.Uuid`` adapts ``UUID`` objects per-dialect (CHAR(32) on SQLite,
-        # native UUID on Postgres). Passing a bare string skips that path and
-        # fails at bind time on SQLite (``'str' object has no attribute
-        # 'hex'``), so we pass real UUID objects here.
-        # ``sa.JSON`` serializes Python lists natively on both SQLite and
-        # Postgres. ``json.dumps`` here would write the JSON-encoded string
-        # *inside* the JSON column, which downstream readers (Enterprise
-        # PolicySync expects a list) would have to peel a second time.
-        conn.execute(
-            authz_role.insert().values(
-                id=uuid4(),
-                name=name,
-                description=description,
-                is_system=True,
-                permissions=list(permissions),
-                parent_role_id=None,
-                workspace_id=None,
-                created_at=timestamp,
-                updated_at=timestamp,
-                created_by=None,
-            )
-        )
+        # Use an atomic check-then-insert to harden against concurrent
+        # rollouts (two pods running migrations against the same DB). The
+        # previous implementation did a SELECT then an INSERT in two
+        # statements: under concurrency both could pass the SELECT, both
+        # could attempt the INSERT, and one would crash on the unique
+        # constraint. ``ON CONFLICT DO NOTHING`` / ``OR IGNORE`` makes this
+        # idempotent under any number of concurrent writers without a lock.
+        dialect = conn.dialect.name
+        values = {
+            "id": uuid4(),
+            "name": name,
+            "description": description,
+            "is_system": True,
+            "permissions": list(permissions),
+            "parent_role_id": None,
+            "workspace_id": None,
+            "created_at": timestamp,
+            "updated_at": timestamp,
+            "created_by": None,
+        }
+        if dialect == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+            stmt = pg_insert(authz_role).values(**values).on_conflict_do_nothing(index_elements=["name"])
+            conn.execute(stmt)
+        elif dialect == "sqlite":
+            from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+            stmt = sqlite_insert(authz_role).values(**values).on_conflict_do_nothing(index_elements=["name"])
+            conn.execute(stmt)
+        else:
+            # Fallback for other dialects (e.g. unit test stand-ins): use the
+            # original check-then-insert. Not fully race-safe but matches the
+            # previous behavior and never raises on a clean fresh DB.
+            already_present = conn.execute(
+                sa.select(sa.literal(1)).select_from(authz_role).where(authz_role.c.name == name)
+            ).scalar()
+            if already_present:
+                continue
+            conn.execute(authz_role.insert().values(**values))
 
 
 def downgrade() -> None:

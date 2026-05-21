@@ -195,14 +195,19 @@ async def read_flows(
 
         # Apply the same authz filter the get_all branch uses so both modes of
         # this endpoint behave consistently. OSS pass-through returns the page
-        # items unchanged; an enterprise plugin filters per-flow. ``page.total``
-        # may overcount denied items — a fully accurate count requires
-        # SQL-level prefiltering via authz_share (Phase 3 work).
+        # items unchanged; an enterprise plugin filters per-flow. The
+        # ``owner_extractor`` lets the helper short-circuit owner-allow without
+        # round-tripping through the enforcer — without it, an enterprise
+        # plugin lacking an explicit owner-allow policy would hide the caller's
+        # own flows from paginated results. ``page.total`` may overcount denied
+        # items — a fully accurate count requires SQL-level prefiltering via
+        # authz_share (Phase 3 work).
         page.items = await filter_visible_resources(
             current_user,
             resource_type="flow",
             candidates=list(page.items),
             domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+            owner_extractor=lambda flow: flow.user_id,
             act=FlowAction.READ,
         )
         return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
@@ -339,14 +344,17 @@ async def update_flow(
         target_workspace_id = flow.workspace_id if flow.workspace_id is not None else db_flow.workspace_id
         target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow.folder_id
         if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.WRITE,
-                flow_id=flow_id,
-                flow_user_id=db_flow.user_id,
-                workspace_id=target_workspace_id,
-                folder_id=target_folder_id,
-            )
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=db_flow.user_id,
+                    workspace_id=target_workspace_id,
+                    folder_id=target_folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
@@ -359,6 +367,41 @@ async def update_flow(
             db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
+            # TOCTOU: a concurrent PATCH could have moved this flow to a
+            # different workspace/folder between the destination check above
+            # and this retry attempt. Re-authorize against the freshly
+            # reloaded source AND destination so the writer cannot ride a
+            # stale check across a race.
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=db_flow_for_attempt.user_id,
+                    workspace_id=db_flow_for_attempt.workspace_id,
+                    folder_id=db_flow_for_attempt.folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
+            attempt_target_workspace_id = (
+                flow.workspace_id if flow.workspace_id is not None else db_flow_for_attempt.workspace_id
+            )
+            attempt_target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow_for_attempt.folder_id
+            if (
+                attempt_target_workspace_id != db_flow_for_attempt.workspace_id
+                or attempt_target_folder_id != db_flow_for_attempt.folder_id
+            ):
+                try:
+                    await ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=db_flow_for_attempt.user_id,
+                        workspace_id=attempt_target_workspace_id,
+                        folder_id=attempt_target_folder_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, detail="Flow not found") from exc
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -405,18 +448,33 @@ async def upsert_flow(
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if existing_flow is not None:
-            # Flow exists - check ownership (return 404 to avoid leaking resource existence)
-            if existing_flow.user_id != current_user.id:
+            # OSS floor: when the registered service cannot widen fetch (OSS
+            # pass-through, or any path where AUTHZ_ENABLED is off), non-owners
+            # must not be able to upsert by id. Without this guard, the
+            # ``Flow.id == flow_id``-only fetch above would let a non-owner
+            # overwrite another user's flow because ``ensure_flow_permission``
+            # is a no-op when AUTHZ_ENABLED=false. With an enterprise plugin
+            # registered, ``ensure_flow_permission`` below is authoritative —
+            # a valid WRITE share grant must be honored, and a deny converts
+            # to 404 to preserve UUID privacy.
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            can_widen = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+            if not can_widen and existing_flow.user_id != current_user.id:
                 raise HTTPException(status_code=404, detail="Flow not found")
 
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.WRITE,
-                flow_id=flow_id,
-                flow_user_id=existing_flow.user_id,
-                workspace_id=existing_flow.workspace_id,
-                folder_id=existing_flow.folder_id,
-            )
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=existing_flow.user_id,
+                    workspace_id=existing_flow.workspace_id,
+                    folder_id=existing_flow.folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
 
             # Destination check (see update_flow above): if the payload moves
             # the flow into a new workspace/folder, also authorize WRITE at the
@@ -426,14 +484,17 @@ async def upsert_flow(
             target_workspace_id = flow.workspace_id if flow.workspace_id is not None else existing_flow.workspace_id
             target_folder_id = flow.folder_id if flow.folder_id is not None else existing_flow.folder_id
             if target_workspace_id != existing_flow.workspace_id or target_folder_id != existing_flow.folder_id:
-                await ensure_flow_permission(
-                    current_user,
-                    FlowAction.WRITE,
-                    flow_id=flow_id,
-                    flow_user_id=existing_flow.user_id,
-                    workspace_id=target_workspace_id,
-                    folder_id=target_folder_id,
-                )
+                try:
+                    await ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=existing_flow.user_id,
+                        workspace_id=target_workspace_id,
+                        folder_id=target_folder_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, detail="Flow not found") from exc
 
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow
@@ -687,10 +748,27 @@ async def delete_multiple_flows(
         async def _delete_operation() -> int:
             if not flow_ids:
                 return 0
-            flows_to_delete = (
-                await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
-            ).all()
+            # Widen the fetch when an enterprise plugin can authorize cross-user
+            # DELETE via share grants. Without this, pre-scoping by
+            # ``Flow.user_id == user.id`` silently drops non-owned flows from
+            # the working set so a valid DELETE share is never honored and
+            # ``ensure_flow_permission`` never emits a deny audit row. In OSS
+            # default the query stays owner-scoped — the no-op pass-through
+            # cannot widen visibility.
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            base_stmt = select(Flow).where(col(Flow.id).in_(flow_ids))
+            if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+                stmt = base_stmt
+            else:
+                stmt = base_stmt.where(Flow.user_id == user.id)
+            flows_to_delete = (await db.exec(stmt)).all()
             for flow in flows_to_delete:
+                # A deny from the enterprise plugin raises 403. We let it
+                # propagate so the audit row is written and the caller knows
+                # the bulk delete was rejected for at least one flow — the
+                # alternative (silent skip) would mask policy violations.
                 await ensure_flow_permission(
                     user,
                     FlowAction.DELETE,
@@ -733,20 +811,39 @@ async def download_multiple_file(
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
     # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
-    flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
+    # Widen the fetch when the enterprise plugin can authorize cross-user READ
+    # via share grants. Pre-scoping by ``Flow.user_id == user.id`` here would
+    # silently drop shared flows from the working set so a valid READ share is
+    # never honored and no audit row is written. OSS default keeps the query
+    # owner-scoped so the no-op pass-through cannot widen visibility.
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    base_stmt = select(Flow).where(col(Flow.id).in_(flow_ids))  # type: ignore[attr-defined]
+    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+        stmt = base_stmt
+    else:
+        stmt = base_stmt.where(and_(Flow.user_id == user.id))
+    flows = (await db.exec(stmt)).all()
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
 
     for flow in flows:
-        await ensure_flow_permission(
-            user,
-            FlowAction.READ,
-            flow_id=flow.id,
-            flow_user_id=flow.user_id,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-        )
+        # Convert deny to 404 to preserve UUID privacy — a caller probing
+        # arbitrary IDs cannot distinguish "doesn't exist" from "exists but
+        # not shared with me".
+        try:
+            await ensure_flow_permission(
+                user,
+                FlowAction.READ,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="No flows found.") from exc
 
     return _build_flows_download_response(flows)
 

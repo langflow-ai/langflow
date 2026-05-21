@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
+from uuid import UUID as _UUID
 
 from lfx.services.base import Service
 from lfx.services.schema import ServiceType
@@ -11,6 +12,47 @@ from lfx.services.schema import ServiceType
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
+
+
+class AuthzContext(TypedDict, total=False):
+    """Documented shape of the ``context`` dict passed to authz plugins.
+
+    Plugins receive a ``dict[str, Any]`` for forward compatibility — new
+    callers may add fields without forcing a plugin recompile — but this
+    TypedDict documents the keys the framework promises to populate and the
+    keys plugins should be prepared to read.
+
+    Framework-populated keys
+    ------------------------
+    is_superuser : bool
+        Always present. ``getattr(user, "is_superuser", False)``.
+
+    Resource-owner hints (one is populated per call, others omitted)
+    ----------------------------------------------------------------
+    flow_user_id, deployment_user_id, project_user_id, knowledge_base_user_id,
+    variable_user_id, file_user_id, share_user_id : UUID | None
+        The id of the user who owns the resource being authorized. The
+        framework's ``ensure_*_permission`` helpers short-circuit on owner
+        match, so this key is the source of truth for the owner-override path.
+
+    Domain / scope hints
+    --------------------
+    workspace_id : UUID | None
+        The workspace this resource belongs to, when applicable.
+    folder_id : UUID | None
+        The folder/project this resource belongs to, when applicable.
+    """
+
+    is_superuser: bool
+    flow_user_id: _UUID | None
+    deployment_user_id: _UUID | None
+    project_user_id: _UUID | None
+    knowledge_base_user_id: _UUID | None
+    variable_user_id: _UUID | None
+    file_user_id: _UUID | None
+    share_user_id: _UUID | None
+    workspace_id: _UUID | None
+    folder_id: _UUID | None
 
 
 class BaseAuthorizationService(Service, abc.ABC):

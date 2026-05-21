@@ -28,6 +28,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
+from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
@@ -200,10 +201,14 @@ async def create_share(
     try:
         await session.flush()
     except Exception as exc:
+        # Log the raw exception server-side; the client gets a fixed string
+        # so we don't leak table/column/constraint names through the 409
+        # body (security rule: error messages don't disclose schema).
         await session.rollback()
+        logger.warning("authz_share insert rejected: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Share could not be created: {exc}",
+            detail="Share could not be created: it may already exist or conflict with an existing share.",
         ) from exc
     await session.refresh(row)
 
@@ -227,6 +232,10 @@ async def create_share(
     return ShareRead.model_validate(row, from_attributes=True)
 
 
+_LIST_SHARES_MAX_LIMIT = 200
+_LIST_SHARES_DEFAULT_LIMIT = 100
+
+
 @router.get("", response_model=list[ShareRead])
 @router.get("/", response_model=list[ShareRead])
 async def list_shares(
@@ -236,12 +245,19 @@ async def list_shares(
     resource_id: Annotated[UUID | None, Query()] = None,
     target_id: Annotated[UUID | None, Query()] = None,
     scope: Annotated[str | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=_LIST_SHARES_MAX_LIMIT)] = _LIST_SHARES_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ShareRead]:
     """List share rows.
 
     Resource owners and superusers see every matching row. Non-owners only
-    see rows whose ``target_id`` is their own user id — they need to know
-    what's shared with them, but not the full grant ledger.
+    see rows whose ``target_id`` is their own user id, rows scoped to a team
+    they belong to, public rows, or rows on resources they own.
+
+    Always paginated — ``limit`` is capped at 200 to bound DB load. The
+    previous unbounded implementation issued an N+1 ``select(AuthzTeamMember)``
+    per row; this version pre-fetches the caller's team memberships once and
+    uses an in-memory set lookup.
     """
     await ensure_share_permission(
         current_user,
@@ -264,11 +280,21 @@ async def list_shares(
             raise HTTPException(status_code=400, detail=f"Unknown scope {scope!r}") from exc
         stmt = stmt.where(AuthzShare.scope == scope_value)
 
+    # Stable ordering + bounded fetch. ``created_at`` is monotonically
+    # increasing for a given operator so this is effectively cursor-like;
+    # callers wanting strict cursor pagination can layer ``id`` ties.
+    stmt = stmt.order_by(AuthzShare.created_at.desc(), AuthzShare.id).offset(offset).limit(limit)
+
     rows = list(await session.exec(stmt))
 
     is_superuser = getattr(current_user, "is_superuser", False)
     if is_superuser:
         return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
+
+    # Pre-fetch the caller's team memberships once — the previous per-row
+    # ``select(AuthzTeamMember)`` was an N+1 that scaled with the page size.
+    team_membership_stmt = select(AuthzTeamMember.team_id).where(AuthzTeamMember.user_id == current_user.id)
+    caller_team_ids: set[UUID] = set(await session.exec(team_membership_stmt))
 
     # Non-superuser visibility: owner / creator / direct user target / team
     # member / public. See ``_user_can_see_share`` for the full rule set.
@@ -282,14 +308,39 @@ async def list_shares(
                 resource_type=row.resource_type,
                 resource_id=row.resource_id,
             )
-        if await _user_can_see_share(
-            session,
+        if _row_visible_to(
             row=row,
             user_id=current_user.id,
             resource_owner_id=owner_cache[key],
+            caller_team_ids=caller_team_ids,
         ):
             visible.append(ShareRead.model_validate(row, from_attributes=True))
     return visible
+
+
+def _row_visible_to(
+    *,
+    row: AuthzShare,
+    user_id: UUID,
+    resource_owner_id: UUID | None,
+    caller_team_ids: set[UUID],
+) -> bool:
+    """In-memory variant of ``_user_can_see_share`` for the batch list path.
+
+    Same rules as ``_user_can_see_share`` but team membership is checked via
+    the pre-fetched ``caller_team_ids`` set so the list loop is O(N) instead
+    of issuing one ``select(AuthzTeamMember)`` per row.
+    """
+    if user_id in {resource_owner_id, row.created_by}:
+        return True
+    scope = row.scope
+    if scope == ShareScope.PUBLIC.value:
+        return True
+    if scope == ShareScope.USER.value and row.target_id == user_id:
+        return True
+    if scope == ShareScope.TEAM.value and row.target_id is not None:
+        return row.target_id in caller_team_ids
+    return False
 
 
 @router.get("/{share_id}", response_model=ShareRead)
@@ -363,7 +414,18 @@ async def update_share(
             detail=f"Unknown permission_level {payload.permission_level!r}",
         ) from exc
     session.add(row)
-    await session.flush()
+    # Match the create_share error contract: rollback + fixed-string 409 +
+    # server-side log so a constraint violation on update doesn't return a
+    # raw SQLAlchemy stacktrace to the client.
+    try:
+        await session.flush()
+    except Exception as exc:
+        await session.rollback()
+        logger.warning("authz_share update rejected: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Share could not be updated: it may conflict with an existing share.",
+        ) from exc
     await session.refresh(row)
 
     await _invalidate_for_share(row.scope, row.target_id)

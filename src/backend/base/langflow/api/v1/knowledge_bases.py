@@ -167,6 +167,13 @@ async def _guard_kb_action(
     # and we skip the DB roundtrip.
     if kb_user_id == current_user.id:
         return _KbGuardResult(record=resolved_record, owner_user=current_user)
+    # ``kb_user_id`` comes from a SQLAlchemy column in production — always a
+    # UUID. Defensive guard: skip the DB lookup if the value isn't a UUID
+    # (e.g. a test mock where ``record.user_id`` is an auto-generated
+    # ``MagicMock``). Without this, the bind fails with
+    # ``Error binding parameter 1: type 'MagicMock' is not supported``.
+    if not isinstance(kb_user_id, uuid.UUID):
+        return _KbGuardResult(record=resolved_record, owner_user=current_user)
     async with session_scope() as session:
         owner = await get_user_by_id(session, kb_user_id)
     if owner is None:

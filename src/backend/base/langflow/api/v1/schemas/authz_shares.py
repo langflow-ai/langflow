@@ -71,7 +71,11 @@ class ShareRead(BaseModel):
     """Read-only projection of an ``authz_share`` row."""
 
     id: UUID
-    resource_type: str
+    # Use the same Literal as ``ShareCreate.resource_type`` so OpenAPI clients
+    # see a stable enum on both sides of the round trip. A bare ``str`` here
+    # would let a row inserted by a future code path with a typoed
+    # ``resource_type`` round-trip back unvalidated.
+    resource_type: ShareResourceType
     resource_id: UUID
     scope: ShareScopeLiteral
     target_id: UUID | None

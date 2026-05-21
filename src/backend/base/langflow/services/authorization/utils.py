@@ -117,6 +117,35 @@ def _split_obj(obj: str) -> tuple[str | None, UUID | None]:
         return resource_type, None
 
 
+# In-flight audit tasks. Keeping a strong reference prevents the event loop
+# from garbage-collecting a pending task before it writes — and gives
+# ``drain_pending_audit_writes`` (called on shutdown) something to await.
+# A bare ``asyncio.create_task`` without this reference can be dropped by
+# the GC mid-write and silently lose the audit row.
+_pending_audit_tasks: set[asyncio.Task[None]] = set()
+
+
+async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
+    """Wait for any in-flight audit-write tasks to complete.
+
+    Called on application shutdown so audit rows scheduled mid-request still
+    land in the DB before the event loop closes. Returns silently after
+    ``timeout`` even if some tasks are still pending — audit must never block
+    shutdown indefinitely.
+    """
+    pending = {task for task in _pending_audit_tasks if not task.done()}
+    if not pending:
+        return
+    done, still_pending = await asyncio.wait(pending, timeout=timeout)
+    if still_pending:
+        logger.warning("drain_pending_audit_writes timed out with %d pending tasks", len(still_pending))
+    # Surface task exceptions in logs but never raise — audit must not block shutdown.
+    for task in done:
+        exc = task.exception() if not task.cancelled() else None
+        if exc is not None:
+            logger.warning("Audit task raised during drain: %s", exc)
+
+
 async def audit_decision(
     *,
     user_id: UUID | None,
@@ -129,11 +158,19 @@ async def audit_decision(
 
     Schedules an asyncio task and returns immediately. Failures inside the task
     are logged but never propagate to the caller so audit writes can never
-    block a real API response.
+    block a real API response. The task reference is held in
+    ``_pending_audit_tasks`` until completion so the event loop cannot GC it
+    mid-write; ``drain_pending_audit_writes`` awaits this set on shutdown so
+    pending rows are not lost.
     """
     settings = get_settings_service()
     auth_settings = settings.auth_settings
-    if not auth_settings.AUTHZ_ENABLED or not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True):
+    # Audit is independent of enforcement: an operator can keep audit on
+    # while AUTHZ_ENABLED=false to observe traffic before flipping the
+    # flag. Previously this short-circuited on AUTHZ_ENABLED too, which
+    # meant share CRUD writes (which the OSS floor allows in default mode)
+    # produced no audit trail at all.
+    if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True):
         return
 
     resource_type, resource_id = _split_obj(obj)
@@ -157,8 +194,9 @@ async def audit_decision(
         except Exception:  # noqa: BLE001 — audit must never raise into the request path
             logger.exception("Failed to write AuthzAuditLog row")
 
-    # Bare create_task is the langflow convention (see main.py:135, main.py:173).
-    asyncio.create_task(_write())  # noqa: RUF006 — fire-and-forget audit task
+    task = asyncio.create_task(_write())
+    _pending_audit_tasks.add(task)
+    task.add_done_callback(_pending_audit_tasks.discard)
 
 
 async def ensure_permission(
@@ -181,21 +219,41 @@ async def ensure_permission(
     # User-derived auth fields (e.g. is_superuser) must remain authoritative; caller
     # context is merged first so it cannot overwrite them.
     merged_context = {**(context or {}), **_auth_context(user)}
-    allowed = await authz.enforce(
-        user_id=user.id,
-        domain=domain,
-        obj=obj,
-        act=act,
-        context=merged_context,
-    )
-
+    # Fail-closed contract: if the plugin's ``enforce`` raises (Casbin DB
+    # down, policy parse error, etc.), we treat the request as denied and
+    # log an explicit error-audit row. Returning False from ``enforce`` is
+    # the plugin's documented way to deny; raising should not silently
+    # become an HTTP 500 that bypasses both the deny path and the audit log.
+    audit_action = f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act
     audit_details = {"domain": domain}
     for owner_key in _OWNER_CONTEXT_KEYS:
         if owner_key in merged_context and merged_context[owner_key] is not None:
             audit_details[owner_key] = str(merged_context[owner_key])
+    try:
+        allowed = await authz.enforce(
+            user_id=user.id,
+            domain=domain,
+            obj=obj,
+            act=act,
+            context=merged_context,
+        )
+    except Exception as exc:
+        logger.exception("Authorization plugin raised during enforce; failing closed")
+        await audit_decision(
+            user_id=user.id,
+            action=audit_action,
+            obj=obj,
+            result=_AUDIT_DENY,
+            details={**audit_details, "error": str(exc)},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Insufficient permissions to {act} on {obj}",
+        ) from exc
+
     await audit_decision(
         user_id=user.id,
-        action=f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act,
+        action=audit_action,
         obj=obj,
         result=_AUDIT_ALLOW if allowed else _AUDIT_DENY,
         details=audit_details,
@@ -265,15 +323,16 @@ async def _ensure_resource_permission(
 
     # Owner override: a resource owner can always operate on their own resource.
     if owner_id is not None and getattr(user, "id", None) == owner_id:
-        settings = get_settings_service()
-        if settings.auth_settings.AUTHZ_ENABLED:
-            await audit_decision(
-                user_id=user.id,
-                action=f"{resource_type}:{act_str}",
-                obj=obj,
-                result=_AUDIT_OWNER_OVERRIDE,
-                details={"domain": resolved_domain},
-            )
+        # ``audit_decision`` is gated on ``AUTHZ_AUDIT_ENABLED`` internally;
+        # we no longer suppress the call on ``AUTHZ_ENABLED=false`` so
+        # operators observing pre-enforcement traffic see owner overrides too.
+        await audit_decision(
+            user_id=user.id,
+            action=f"{resource_type}:{act_str}",
+            obj=obj,
+            result=_AUDIT_OWNER_OVERRIDE,
+            details={"domain": resolved_domain},
+        )
         return
 
     await ensure_permission(
@@ -556,11 +615,16 @@ async def filter_visible_resources(
         decisions[index] = True
 
     if enforce_items:
+        # Use the already-extracted ``user_id`` instead of re-reading
+        # ``user.id`` here. The earlier owner-override partition used
+        # ``getattr(user, "id", None)``, so consistency means a non-User
+        # dependency (e.g. a thin context proxy) lands an explicit None
+        # rather than an AttributeError at this call site.
         if domain_extractor is None:
             # Single-domain fast path. Preserves the original single-call shape.
             requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in enforce_items]
             results = await authz.batch_enforce(
-                user_id=user.id,
+                user_id=user_id,
                 domain=domain,
                 requests=requests,
                 context=_auth_context(user),
@@ -580,7 +644,7 @@ async def filter_visible_resources(
             for resolved_domain, bucket in buckets.items():
                 bucket_requests = [(f"{resource_type}:{extractor(item)}", act_str) for _, item in bucket]
                 bucket_results = await authz.batch_enforce(
-                    user_id=user.id,
+                    user_id=user_id,
                     domain=resolved_domain,
                     requests=bucket_requests,
                     context=auth_context,

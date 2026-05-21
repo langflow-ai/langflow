@@ -344,9 +344,15 @@ async def test_owner_override_skips_enforce(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
-async def test_owner_override_when_disabled_skips_audit(monkeypatch, fake_user):
-    """Owner override on a disabled-authz install does not even write audit (consistency with ensure_permission)."""
-    _install_settings(monkeypatch, authz_enabled=False)
+async def test_owner_override_audits_even_when_authz_disabled(monkeypatch, fake_user):
+    """Owner override on a disabled-authz install still writes an audit row.
+
+    Audit is now gated only on ``AUTHZ_AUDIT_ENABLED`` (the audit recorder
+    here intercepts at that level), so operators can observe traffic ahead of
+    flipping ``AUTHZ_ENABLED``. ``_install_settings`` defaults the audit flag
+    to False so we explicitly enable it here.
+    """
+    _install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
     _install_authz(monkeypatch, _StubAuthorizationService(allow=False))
     audit_calls = _install_audit_recorder(monkeypatch)
 
@@ -356,7 +362,8 @@ async def test_owner_override_when_disabled_skips_audit(monkeypatch, fake_user):
         flow_id=uuid4(),
         flow_user_id=fake_user.id,
     )
-    assert audit_calls == []
+    assert len(audit_calls) == 1
+    assert audit_calls[0]["result"] == "owner_override"
 
 
 @pytest.mark.anyio
@@ -477,14 +484,39 @@ def test_split_obj_non_uuid_suffix_returns_none_id():
 
 
 @pytest.mark.anyio
-async def test_audit_decision_noop_when_authz_disabled(monkeypatch):
-    """audit_decision exits immediately when AUTHZ_ENABLED=False."""
+async def test_audit_decision_runs_when_authz_disabled_but_audit_on(monkeypatch):
+    """Audit is independent of enforcement now.
+
+    Previously ``audit_decision`` short-circuited when ``AUTHZ_ENABLED=False``,
+    which meant share CRUD writes left no audit trail on default installs. The
+    new contract gates only on ``AUTHZ_AUDIT_ENABLED`` so operators can
+    observe traffic before flipping enforcement on.
+    """
     _install_settings(monkeypatch, authz_enabled=False, audit_enabled=True)
     scheduled: list[object] = []
-    monkeypatch.setattr("asyncio.create_task", lambda coro: scheduled.append(coro) or coro)
+
+    class _FakeTask:
+        def add_done_callback(self, cb):
+            self._cb = cb
+
+        def done(self) -> bool:
+            return False
+
+    def _capture(coro):
+        coro.close()
+        task = _FakeTask()
+        scheduled.append(task)
+        return task
+
+    monkeypatch.setattr("asyncio.create_task", _capture)
 
     await authz_utils.audit_decision(user_id=uuid4(), action="flow:read", obj="flow:x", result="allow")
-    assert scheduled == []
+    try:
+        assert len(scheduled) == 1
+    finally:
+        # Don't pollute the module-global pending set for downstream tests.
+        for task in scheduled:
+            authz_utils._pending_audit_tasks.discard(task)
 
 
 @pytest.mark.anyio
@@ -500,18 +532,92 @@ async def test_audit_decision_noop_when_audit_disabled(monkeypatch):
 
 @pytest.mark.anyio
 async def test_audit_decision_schedules_task_when_enabled(monkeypatch):
-    """A scheduled coroutine is produced when both flags are on."""
+    """A scheduled coroutine is produced when both flags are on.
+
+    The new implementation tracks the task in ``_pending_audit_tasks`` so the
+    event loop cannot GC it mid-write and so shutdown can drain it. Our mock
+    returns a lightweight stand-in that supports ``add_done_callback`` exactly
+    as a real ``asyncio.Task`` does.
+    """
     _install_settings(monkeypatch, authz_enabled=True, audit_enabled=True)
     scheduled: list[object] = []
 
+    class _FakeTask:
+        def __init__(self, coro):
+            self._coro = coro
+            self._callbacks: list = []
+
+        def add_done_callback(self, cb):
+            self._callbacks.append(cb)
+
+        def done(self) -> bool:
+            return False
+
     def _capture(coro):
-        scheduled.append(coro)
         coro.close()  # don't actually run — the function imports from DB modules.
+        task = _FakeTask(coro)
+        scheduled.append(task)
+        return task
 
     monkeypatch.setattr("asyncio.create_task", _capture)
 
     await authz_utils.audit_decision(user_id=uuid4(), action="flow:read", obj="flow:x", result="allow")
-    assert len(scheduled) == 1
+    try:
+        assert len(scheduled) == 1
+        # The implementation must hold a reference so the GC can't drop the task.
+        assert scheduled[0] in authz_utils._pending_audit_tasks
+        # And it must register a done-callback that removes itself from the set.
+        assert scheduled[0]._callbacks, "audit_decision must register a done-callback to clean up _pending_audit_tasks"
+    finally:
+        # The fake task is not a real ``asyncio.Task`` — clean up the
+        # module-global set so the next test starts from an empty state.
+        authz_utils._pending_audit_tasks.discard(scheduled[0])
+
+
+@pytest.mark.anyio
+async def test_drain_pending_audit_writes_awaits_tasks():
+    """drain_pending_audit_writes waits for tracked tasks to finish."""
+    import asyncio
+
+    finished = asyncio.Event()
+
+    async def _slow() -> None:
+        await asyncio.sleep(0.01)
+        finished.set()
+
+    task = asyncio.create_task(_slow())
+    authz_utils._pending_audit_tasks.add(task)
+    task.add_done_callback(authz_utils._pending_audit_tasks.discard)
+
+    await authz_utils.drain_pending_audit_writes(timeout=1.0)
+    assert finished.is_set()
+    assert task not in authz_utils._pending_audit_tasks
+
+
+@pytest.mark.anyio
+async def test_ensure_permission_fails_closed_on_plugin_exception(monkeypatch, fake_user):
+    """If the authz plugin raises, ensure_permission must deny (403), not bubble 500."""
+    _install_settings(monkeypatch, authz_enabled=True, audit_enabled=False)
+
+    class _BrokenPlugin:
+        async def enforce(self, **_kwargs):
+            msg = "casbin db down"
+            raise RuntimeError(msg)
+
+        async def batch_enforce(self, **_kwargs):
+            return []
+
+    monkeypatch.setattr(authz_utils, "get_authorization_service", lambda: _BrokenPlugin())
+    captured = _install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_utils.ensure_permission(fake_user, domain="*", obj="flow:abc", act="read")
+
+    assert excinfo.value.status_code == 403, "Plugin exceptions must fail closed (deny), not 500"
+    # The deny path must still emit an audit row so the operator can see the failure.
+    assert captured, "Plugin exception must still produce an audit row"
+    assert captured[0]["result"] == "deny"
+    assert "error" in captured[0]["details"]
 
 
 # ----------------------------------------------------------------------------- #
