@@ -40,6 +40,7 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
@@ -221,18 +222,21 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    # Phase 3 prerequisite: `_read_flow` filters by `current_user.id`, so an
-    # enterprise share grant on a non-owned flow 404s here before the guard
-    # below can permit it. See `langflow.services.authorization.utils`.
+    # ``_read_flow`` is share-aware when an enterprise plugin is registered;
+    # otherwise it stays owner-scoped. A plugin deny becomes 404 here so we
+    # don't disclose existence of a flow the caller can't reach.
     if user_flow := await _read_flow(session, flow_id, current_user.id):
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.READ,
-            flow_id=flow_id,
-            flow_user_id=user_flow.user_id,
-            workspace_id=user_flow.workspace_id,
-            folder_id=user_flow.folder_id,
-        )
+        try:
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.READ,
+                flow_id=flow_id,
+                flow_user_id=user_flow.user_id,
+                workspace_id=user_flow.workspace_id,
+                folder_id=user_flow.folder_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Flow not found") from exc
         # Convert to FlowRead while session is still active to avoid detached instance errors
         return FlowRead.model_validate(user_flow, from_attributes=True)
     raise HTTPException(status_code=404, detail="Flow not found")
@@ -315,14 +319,17 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.WRITE,
-            flow_id=flow_id,
-            flow_user_id=db_flow.user_id,
-            workspace_id=db_flow.workspace_id,
-            folder_id=db_flow.folder_id,
-        )
+        try:
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.WRITE,
+                flow_id=flow_id,
+                flow_user_id=db_flow.user_id,
+                workspace_id=db_flow.workspace_id,
+                folder_id=db_flow.folder_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Flow not found") from exc
 
         # Destination check: if the payload moves the flow into a new
         # workspace/folder, the caller must also be authorized to write at the
@@ -503,14 +510,17 @@ async def delete_flow(
     )
     if not flow:
         raise HTTPException(status_code=404, detail="Flow not found")
-    await ensure_flow_permission(
-        current_user,
-        FlowAction.DELETE,
-        flow_id=flow_id,
-        flow_user_id=flow.user_id,
-        workspace_id=flow.workspace_id,
-        folder_id=flow.folder_id,
-    )
+    try:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.DELETE,
+            flow_id=flow_id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Flow not found") from exc
     await retry_flow_operation_on_deployment_guard(
         db=session,
         user_id=current_user.id,

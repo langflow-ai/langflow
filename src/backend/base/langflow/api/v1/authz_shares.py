@@ -95,20 +95,29 @@ async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
         await authz.invalidate_all()
 
 
-def _ensure_can_administer_share(
+async def _ensure_can_administer_share(
     *,
     user: User,
     owner_id: UUID | None,
 ) -> None:
     """OSS floor: only resource owner or superuser may write shares.
 
-    The enterprise plugin can extend this via ``ensure_share_permission`` (e.g.
-    grant an ``authz_admin`` role broader power) but the OSS pass-through
-    must not let a non-owner mint share rows on someone else's resource.
+    When an enterprise plugin is actively enforcing (cross-user fetch
+    supported AND ``LANGFLOW_AUTHZ_ENABLED=true``) this floor is skipped so
+    a workspace/admin role with ``share:create`` can administer shares for
+    resources it doesn't own; ``ensure_share_permission`` is the
+    authoritative check in that mode. Under the OSS pass-through (allow-all
+    enforce) the floor stays in place so a viewer cannot mint share rows for
+    someone else's resource.
     """
     if getattr(user, "is_superuser", False):
         return
     if owner_id is not None and owner_id == user.id:
+        return
+    authz = get_authorization_service()
+    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+        # Enterprise plugin is active — let ``ensure_share_permission``
+        # decide (its decision will fire downstream of this helper).
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -137,7 +146,7 @@ async def create_share(
     if owner_id is None:
         # The resource simply does not exist — UUID privacy: 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.CREATE,
@@ -292,7 +301,7 @@ async def update_share(
         resource_type=row.resource_type,
         resource_id=row.resource_id,
     )
-    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.UPDATE,
@@ -344,7 +353,7 @@ async def delete_share(
         resource_type=row.resource_type,
         resource_id=row.resource_id,
     )
-    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.DELETE,

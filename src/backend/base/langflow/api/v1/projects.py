@@ -33,7 +33,7 @@ from langflow.api.v1.projects_mcp_helpers import (
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import ProjectAction, ensure_project_permission, filter_visible_resources
-from langflow.services.authorization.fetch import authorized_or_owner_scoped
+from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -276,13 +276,16 @@ async def read_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    await ensure_project_permission(
-        current_user,
-        ProjectAction.READ,
-        project_id=project_id,
-        project_user_id=project.user_id,
-        workspace_id=project.workspace_id,
-    )
+    try:
+        await ensure_project_permission(
+            current_user,
+            ProjectAction.READ,
+            project_id=project_id,
+            project_user_id=project.user_id,
+            workspace_id=project.workspace_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Project not found") from exc
 
     try:
         # When share-aware fetch is on and the project is not owned by the
@@ -353,13 +356,16 @@ async def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    await ensure_project_permission(
-        current_user,
-        ProjectAction.WRITE,
-        project_id=project_id,
-        project_user_id=existing_project.user_id,
-        workspace_id=existing_project.workspace_id,
-    )
+    try:
+        await ensure_project_permission(
+            current_user,
+            ProjectAction.WRITE,
+            project_id=project_id,
+            project_user_id=existing_project.user_id,
+            workspace_id=existing_project.workspace_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Project not found") from exc
 
     result = await session.exec(
         select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
@@ -542,13 +548,16 @@ async def delete_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    await ensure_project_permission(
-        current_user,
-        ProjectAction.DELETE,
-        project_id=project_id,
-        project_user_id=project.user_id,
-        workspace_id=project.workspace_id,
-    )
+    try:
+        await ensure_project_permission(
+            current_user,
+            ProjectAction.DELETE,
+            project_id=project_id,
+            project_user_id=project.user_id,
+            workspace_id=project.workspace_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Project not found") from exc
 
     # Prevent deletion of the Langflow Assistant folder
     if project.name == ASSISTANT_FOLDER_NAME:

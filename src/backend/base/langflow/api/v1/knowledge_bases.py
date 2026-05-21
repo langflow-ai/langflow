@@ -88,7 +88,21 @@ async def _guard_kb_action(
     UUID-typed ``authz_share.resource_id`` column. Legacy disk-only KBs (no
     ``KnowledgeBaseRecord`` row) fall back to ``kb_id=None`` so the enforcer
     sees ``knowledge_base:*`` and the owner-override path still applies.
+
+    Cross-user reachability: when share-aware fetch is supported AND
+    ``LANGFLOW_AUTHZ_ENABLED=true``, the helper falls back to scanning every
+    KB with that name across users so a share grant on a non-owned KB id
+    surfaces here instead of silently degrading to ``knowledge_base:*``. The
+    enforcer is asked once per candidate; the first allowed match wins so a
+    user with overlapping ownership and share access keeps stable behavior.
     """
+    from langflow.services.authorization.utils import (
+        _auth_context,
+        _coerce_action,
+        _resolve_casbin_domain,
+    )
+    from langflow.services.deps import get_authorization_service
+
     kb_id: uuid.UUID | None = None
     kb_user_id: uuid.UUID = current_user.id
     if kb_name:
@@ -96,6 +110,27 @@ async def _guard_kb_action(
         if record is not None:
             kb_id = record.id
             kb_user_id = record.user_id
+        else:
+            # Owner-scoped lookup missed. If share-aware fetch is active,
+            # scan all KBs with that name and ask the enforcer which one the
+            # actor can reach via a share/role grant.
+            authz = get_authorization_service()
+            if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+                candidates = await knowledge_base_service.list_by_name(kb_name)
+                act_str = _coerce_action(action)
+                context = _auth_context(current_user)
+                for candidate in candidates:
+                    allowed = await authz.enforce(
+                        user_id=current_user.id,
+                        domain=_resolve_casbin_domain(None, None),
+                        obj=f"knowledge_base:{candidate.id}",
+                        act=act_str,
+                        context=context,
+                    )
+                    if allowed:
+                        kb_id = candidate.id
+                        kb_user_id = candidate.user_id
+                        break
     await ensure_knowledge_base_permission(
         current_user,
         action,

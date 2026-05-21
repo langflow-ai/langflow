@@ -73,6 +73,7 @@ from langflow.api.v1.schemas.deployments import (
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
@@ -1296,14 +1297,17 @@ async def get_deployment(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
 
     with deployment_provider_scope(deployment_row.deployment_provider_account_id):
         # Deployment-level sync: if the provider no longer has this deployment,
@@ -1428,14 +1432,17 @@ async def update_deployment(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.WRITE,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.WRITE,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     telemetry.provider = provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     deployment_row_id = deployment_row.id
@@ -1543,14 +1550,17 @@ async def delete_deployment(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.DELETE,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.DELETE,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     telemetry.provider = _provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     if include_provider:
