@@ -30,6 +30,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from lfx.components.triggers.constants import (
+    COMMON_TIMEZONES,
+    DEFAULT_CRON_EXPRESSION,
+    DEFAULT_MAX_ATTEMPTS,
+    DEFAULT_TIMEZONE,
+    MAX_ATTEMPTS_LIMIT,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
@@ -40,14 +47,6 @@ from lfx.io import (
     Output,
 )
 from lfx.schema.message import Message
-
-from .constants import (
-    COMMON_TIMEZONES,
-    DEFAULT_CRON_EXPRESSION,
-    DEFAULT_MAX_ATTEMPTS,
-    DEFAULT_TIMEZONE,
-    MAX_ATTEMPTS_LIMIT,
-)
 
 
 class CronTriggerComponent(Component):
