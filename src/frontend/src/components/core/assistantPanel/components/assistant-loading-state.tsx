@@ -6,6 +6,7 @@ import {
   Code2,
 } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
 import { GHOST_PRIMARY_BUTTON } from "../helpers/button-styles";
 
@@ -124,6 +125,7 @@ function AssistantLoadingStateComponent({
   streamingContent,
   onValidationComplete,
 }: AssistantLoadingStateProps) {
+  const { t } = useTranslation();
   const [codeOpen, setCodeOpen] = useState(true);
   const streamingRef = useRef<HTMLPreElement>(null);
 
@@ -225,7 +227,7 @@ function AssistantLoadingStateComponent({
               <ChevronRight className="h-3 w-3" />
             )}
             <Code2 className="h-3 w-3" />
-            <span>Code</span>
+            <span>{t("assistant.code")}</span>
           </button>
           {codeOpen && (
             <pre className="custom-scroll mt-2 max-h-[180px] overflow-auto rounded-md bg-muted/30 px-3 py-2 text-xs leading-relaxed">
@@ -243,7 +245,7 @@ function AssistantLoadingStateComponent({
           onClick={() => onValidationComplete?.()}
           className={GHOST_PRIMARY_BUTTON}
         >
-          <span>Continue</span>
+          <span>{t("assistant.continue")}</span>
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
       )}

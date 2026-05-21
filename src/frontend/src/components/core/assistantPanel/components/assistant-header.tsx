@@ -1,10 +1,8 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import {
-  ASSISTANT_MAX_SESSIONS,
-  ASSISTANT_TITLE,
-} from "../assistant-panel.constants";
+import { ASSISTANT_MAX_SESSIONS } from "../assistant-panel.constants";
 import type { SessionHistoryEntry } from "../assistant-panel.types";
 import { SessionHistoryDropdown } from "./session-history-dropdown";
 
@@ -32,6 +30,7 @@ export function AssistantHeader({
   isExpanded,
   skipAll = false,
 }: AssistantHeaderProps) {
+  const { t } = useTranslation();
   const isAtSessionLimit = sessions.length >= ASSISTANT_MAX_SESSIONS;
   const isNewSessionDisabled = !hasMessages || isAtSessionLimit;
 
@@ -39,7 +38,7 @@ export function AssistantHeader({
     <div className="flex h-12 items-center justify-between px-4">
       <div className="flex items-center gap-2">
         <h2 className="text-sm font-medium text-foreground">
-          {ASSISTANT_TITLE}
+          {t("assistant.title")}
         </h2>
         {skipAll && (
           <span
@@ -56,7 +55,9 @@ export function AssistantHeader({
         <ShadTooltip
           content={
             isAtSessionLimit
-              ? `Maximum of ${ASSISTANT_MAX_SESSIONS} sessions reached. Delete a session to create a new one.`
+              ? t("assistant.maxSessionsTooltip", {
+                  max: ASSISTANT_MAX_SESSIONS,
+                })
               : ""
           }
           side="bottom"
@@ -75,7 +76,9 @@ export function AssistantHeader({
                 name={isAtSessionLimit ? "AlertCircle" : "Plus"}
                 className="h-4 w-4"
               />
-              {isAtSessionLimit ? "Max sessions" : "New session"}
+              {isAtSessionLimit
+                ? t("assistant.maxSessionsLabel")
+                : t("assistant.newSession")}
             </Button>
           </span>
         </ShadTooltip>

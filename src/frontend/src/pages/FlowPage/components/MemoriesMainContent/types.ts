@@ -46,7 +46,6 @@ export type MemoryDetailsProps = {
 };
 
 export type MemoriesSidebarProps = {
-  memories?: MemoryInfo[];
   filteredMemories: MemoryInfo[];
   memoriesSearch: string;
   setMemoriesSearch: (value: string) => void;

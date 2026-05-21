@@ -3,11 +3,11 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
+import { useTranslation } from "react-i18next";
 import { SIDEBAR_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoriesSidebarProps } from "../types";
 
 export function MemoriesSidebar({
-  memories,
   filteredMemories,
   memoriesSearch,
   setMemoriesSearch,
@@ -19,6 +19,7 @@ export function MemoriesSidebar({
   onSelectMemory,
   onCreateMemory,
 }: MemoriesSidebarProps) {
+  const { t } = useTranslation();
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
     const el = e.currentTarget;
@@ -49,21 +50,13 @@ export function MemoriesSidebar({
             Create
           </Button>
         </div>
-        {(memories?.length ?? 0) > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">
-            {(() => {
-              const count = memories!.length;
-              return `${count} ${count === 1 ? "memory" : "memories"}`;
-            })()}
-          </p>
-        )}
       </div>
 
       <div className="p-4">
         <Input
           value={memoriesSearch}
           onChange={(e) => setMemoriesSearch(e.target.value)}
-          placeholder="Search memories..."
+          placeholder={t("memory.searchMemories")}
         />
       </div>
 

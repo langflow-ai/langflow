@@ -278,9 +278,9 @@ def load_extension(
             tree before pip install).
         module_namespace: Top-level package name used when registering bundle
             modules in ``sys.modules``.  Defaults to ``_lfx_ext`` for normal
-            loads.  Reload (LE-1018) passes ``__reload_staging__.<id>`` so
-            Stage 1 lands in an isolated namespace; do not override this in
-            normal application code.
+            loads.  The reload pipeline passes ``__reload_staging__.<id>``
+            so Stage 1 lands in an isolated namespace; do not override
+            this in normal application code.
 
     Returns:
         A :class:`LoadResult`.  ``ok`` is False on any structural failure;
@@ -291,8 +291,8 @@ def load_extension(
         Calling this function a second time for the same bundle overwrites
         the prior bundle's entries in ``sys.modules`` with no cleanup;
         previously-issued :class:`LoadedComponent` ``klass`` references
-        remain bound to the old class objects. The reload pipeline (LE-1018)
-        is responsible for scrubbing registry entries AND the matching
+        remain bound to the old class objects. The reload pipeline is
+        responsible for scrubbing registry entries AND the matching
         ``_lfx_ext.<slot>.<bundle>.*`` namespace before re-invoking this
         loader; direct callers should not rely on this function to refresh
         already-loaded bundles.

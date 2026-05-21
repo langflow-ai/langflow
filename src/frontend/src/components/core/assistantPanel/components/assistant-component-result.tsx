@@ -1,5 +1,6 @@
 import { Check, FileText } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
 import CodeAreaModal from "@/modals/codeAreaModal";
 import {
@@ -83,6 +84,7 @@ export function AssistantComponentResult({
   result,
   onApprove,
 }: AssistantComponentResultProps) {
+  const { t } = useTranslation();
   const [showApproved, setShowApproved] = useState(false);
   const [isViewCodeOpen, setIsViewCodeOpen] = useState(false);
   const componentName = result.className || "Custom Component";
@@ -123,7 +125,7 @@ export function AssistantComponentResult({
         {inputs.length > 0 && (
           <div>
             <h4 className="mb-1.5 text-xs font-semibold text-foreground">
-              Inputs
+              {t("sidebar.category.inputs")}
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {inputs.map((input) => (
@@ -143,7 +145,7 @@ export function AssistantComponentResult({
         {outputs.length > 0 && (
           <div>
             <h4 className="mb-1.5 text-xs font-semibold text-foreground">
-              Outputs
+              {t("sidebar.category.outputs")}
             </h4>
             <div className="flex flex-wrap gap-1.5">
               {outputs.map((output) => (
@@ -167,7 +169,7 @@ export function AssistantComponentResult({
         {showApproved ? (
           <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
             <Check className="h-3.5 w-3.5" />
-            <span>Approved</span>
+            <span>{t("node.approved")}</span>
           </div>
         ) : (
           <button
@@ -186,7 +188,7 @@ export function AssistantComponentResult({
           className={GHOST_SECONDARY_BUTTON}
           onClick={() => setIsViewCodeOpen(true)}
         >
-          <span>View Code</span>
+          <span>{t("node.viewCode")}</span>
         </button>
       </div>
 

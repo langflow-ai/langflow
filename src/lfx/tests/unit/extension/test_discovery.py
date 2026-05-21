@@ -1,6 +1,6 @@
-"""Discovery tests for installed-distribution + seed-directory sources (LE-1022).
+"""Discovery tests for installed-distribution + seed-directory sources.
 
-Two integration pieces (per the LE-1022 acceptance criteria):
+Two integration pieces:
 
     * Three "installed" distributions surfaced via a fake
       ``importlib.metadata.distributions()`` iterator -- mirrors the
@@ -276,6 +276,181 @@ def test_canonicalize_distribution_normalizes_per_pep503() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Editable install entry-point fallback
+# ---------------------------------------------------------------------------
+
+
+class _EditableDistribution(importlib_metadata.Distribution):
+    """In-memory editable Distribution stub.
+
+    Mirrors what ``uv pip install -e`` / ``pip install -e`` produce: the
+    distribution's ``files`` list contains only ``dist-info/`` entries
+    (the actual source tree is reached via a ``.pth`` file rather than
+    listed in RECORD), and the ``langflow.extensions`` entry-point is
+    what the manifest discovery has to lean on.
+    """
+
+    def __init__(self, *, name: str, module_name: str) -> None:
+        self._name = name
+        self._module_name = module_name
+
+    @property
+    def files(self) -> list[importlib_metadata.PackagePath]:  # type: ignore[override]
+        # Editable installs only surface dist-info entries -- no
+        # ``extension.json`` and no source ``pyproject.toml``.
+        slug = self._name.replace("-", "_")
+        return [
+            importlib_metadata.PackagePath(f"{slug}-0.1.0.dist-info/METADATA"),
+            importlib_metadata.PackagePath(f"{slug}-0.1.0.dist-info/RECORD"),
+            importlib_metadata.PackagePath(f"_editable_impl_{slug}.pth"),
+        ]
+
+    def locate_file(self, path: object) -> Path:  # type: ignore[override]
+        return Path(str(path))
+
+    def read_text(self, filename: str) -> str | None:  # type: ignore[override]
+        if filename in {"METADATA", "PKG-INFO"}:
+            return f"Metadata-Version: 2.1\nName: {self._name}\nVersion: 1.0.0\n"
+        return None
+
+    @property
+    def metadata(self) -> object:  # type: ignore[override]
+        class _Stub(dict):
+            pass
+
+        return _Stub({"Name": self._name})
+
+    @property
+    def entry_points(self) -> list[importlib_metadata.EntryPoint]:  # type: ignore[override]
+        return [
+            importlib_metadata.EntryPoint(
+                name=self._name,
+                value=self._module_name,
+                group="langflow.extensions",
+            )
+        ]
+
+
+def _make_editable_package(
+    site_root: Path,
+    *,
+    module_name: str,
+    manifest: dict[str, object],
+) -> Path:
+    """Stand up a real importable package on disk with an ``extension.json``."""
+    pkg_dir = site_root / module_name
+    bundle_name = manifest["bundles"][0]["name"]  # type: ignore[index]
+    (pkg_dir / bundle_name).mkdir(parents=True)
+    (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
+    (pkg_dir / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    return pkg_dir
+
+
+def test_discover_installed_falls_back_to_entry_point_for_editable_install(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Editable installs are discovered via the ``langflow.extensions`` entry-point.
+
+    Reproduces the editable-install bug: ``dist.files`` only carries
+    ``dist-info/`` entries, so the file-walk path finds no manifest.  The
+    entry-point fallback resolves the package directory via
+    :func:`importlib.util.find_spec` and locates ``extension.json`` there.
+    """
+    site = tmp_path / "src"
+    site.mkdir()
+    _make_editable_package(
+        site,
+        module_name="lfx_editable_bundle",
+        manifest=_manifest("lfx-editable-bundle", "bundle"),
+    )
+
+    monkeypatch.syspath_prepend(str(site))
+    # Drop any cached spec from a previous test invocation.
+    import sys
+
+    sys.modules.pop("lfx_editable_bundle", None)
+
+    dist = _EditableDistribution(
+        name="lfx-editable-bundle",
+        module_name="lfx_editable_bundle",
+    )
+
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    assert errors == []
+    assert len(extensions) == 1
+    ext = extensions[0]
+    assert ext.extension_id == "lfx-editable-bundle"
+    assert ext.source_kind == "installed"
+    assert ext.bundle_name == "bundle"
+    assert ext.manifest.kind == "extension.json"
+    assert ext.extension_root == site / "lfx_editable_bundle"
+
+
+def test_discover_installed_entry_point_fallback_handles_missing_module(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An entry-point pointing at an unimportable module yields no result, no crash."""
+    # No package on sys.path corresponds to ``lfx_nonexistent``.
+    monkeypatch.syspath_prepend(str(tmp_path))
+    import sys
+
+    sys.modules.pop("lfx_nonexistent_bundle", None)
+
+    dist = _EditableDistribution(
+        name="lfx-nonexistent-bundle",
+        module_name="lfx_nonexistent_bundle",
+    )
+
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    # Unresolvable entry-point is treated as "no manifest here", same as a
+    # regular non-extension package -- no error, no record.
+    assert extensions == []
+    assert errors == []
+
+
+def test_discover_installed_entry_point_fallback_skipped_when_files_have_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``dist.files`` already exposes the manifest, the entry-point path is unused.
+
+    Guards the wheel-install codepath (the common case) from being
+    accidentally rerouted through ``find_spec`` -- which would otherwise
+    re-import every bundle package on every startup.
+    """
+    site = tmp_path / "site-packages/lfx_wheelish"
+    _write_extension_json(site, _manifest("lfx-wheelish", "wheelish"))
+    monkeypatch.syspath_prepend(str(tmp_path / "site-packages"))
+
+    # Sentinel: if find_spec is consulted, we'd notice.
+    import importlib.util as _importlib_util
+
+    calls = {"n": 0}
+    real_find_spec = _importlib_util.find_spec
+
+    def _tracking_find_spec(name: str, package: str | None = None) -> object:
+        calls["n"] += 1
+        return real_find_spec(name, package)
+
+    monkeypatch.setattr(_importlib_util, "find_spec", _tracking_find_spec)
+
+    dist = _FakeDistribution(
+        name="lfx-wheelish",
+        root=site,
+        manifest_relative="extension.json",
+    )
+    extensions, errors = discover_installed_extensions(distributions=[dist])
+
+    assert errors == []
+    assert len(extensions) == 1
+    assert calls["n"] == 0, "Wheel-install path should not consult find_spec"
+
+
+# ---------------------------------------------------------------------------
 # Seed-directory discovery
 # ---------------------------------------------------------------------------
 
@@ -421,9 +596,9 @@ def test_discover_all_emits_seed_bundle_shadowed_when_ids_collide(
 ) -> None:
     """A seed bundle with the same id as an installed one is flagged, not silently dropped.
 
-    Installed wins by precedence (LE-1022's documented contract); the
-    operator still gets a typed ``seed-bundle-shadowed`` error so the
-    shadow is visible instead of disappearing into discovery debug logs.
+    Installed wins by precedence (documented contract); the operator
+    still gets a typed ``seed-bundle-shadowed`` error so the shadow is
+    visible instead of disappearing into discovery debug logs.
     """
     # ``fake_installed_distributions`` ships ``lfx-openai``; the seed dir
     # below carries the same id from a different on-disk source.

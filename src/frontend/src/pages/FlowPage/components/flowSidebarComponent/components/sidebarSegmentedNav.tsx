@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -35,6 +36,9 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
+            {item.id === "memories" && (
+              <Separator className="mx-auto my-1 w-5" />
+            )}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton

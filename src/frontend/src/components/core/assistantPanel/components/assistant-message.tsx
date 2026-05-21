@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { cn } from "@/utils/utils";
@@ -93,6 +94,7 @@ export function AssistantMessageItem({
   skipApprovalGate = false,
   onAcknowledgeValidation,
 }: AssistantMessageItemProps) {
+  const { t } = useTranslation();
   const isUser = message.role === "user";
   const isStreaming = message.status === "streaming";
 
@@ -167,7 +169,7 @@ export function AssistantMessageItem({
           <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg">
             <img
               src={langflowAssistantIcon}
-              alt="Langflow Assistant"
+              alt={t("assistant.title")}
               className="h-full w-full object-cover"
             />
           </div>
@@ -179,7 +181,7 @@ export function AssistantMessageItem({
               isUser ? "text-foreground" : "text-accent-pink-foreground",
             )}
           >
-            {isUser ? "User" : "Langflow Assistant"}
+            {isUser ? t("assistant.user") : t("assistant.title")}
           </span>
           {!isUser && message.buildTasks && message.buildTasks.length > 0 && (
             <AssistantBuildTasks tasks={message.buildTasks} />

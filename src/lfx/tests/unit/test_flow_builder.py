@@ -360,8 +360,8 @@ class TestConnect:
     def test_add_connection_is_idempotent(self):
         """Repeating add_connection for the same pair must not duplicate the edge.
 
-        Regression for LE-866: connecting components via batch (or after the
-        edge was already created in the UI) appended a second edge with the
+        Regression: connecting components via batch (or after the edge
+        was already created in the UI) appended a second edge with the
         same connection, double-wiring the flow at runtime.
         """
         flow = _fresh_flow()
@@ -375,10 +375,11 @@ class TestConnect:
     def test_add_connection_dedupes_against_ui_saved_edges(self):
         """Re-adding connections to a real UI-saved flow must not grow the edge list.
 
-        Regression for LE-866 against an actual UI-exported fixture. UI-saved
-        edges from older Langflow versions use the `xy-edge__` id prefix
-        instead of `reactflow__edge-`, so dedup must be structural (source,
-        target, handle name, handle fieldName) rather than by edge id.
+        Regression against an actual UI-exported fixture. UI-saved edges
+        from older Langflow versions use the `xy-edge__` id prefix
+        instead of `reactflow__edge-`, so dedup must be structural
+        (source, target, handle name, handle fieldName) rather than by
+        edge id.
         """
         fixture = Path(__file__).parent.parent / "data" / "MemoryChatbotNoLLM.json"
         flow = json.loads(fixture.read_text())

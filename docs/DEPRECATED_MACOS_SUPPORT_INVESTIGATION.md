@@ -1,9 +1,8 @@
 # Investigation: Deprecated macOS Support — Impact on Langflow
 
-**Jira:** LE-265
 **Date:** 2026-04-02
 **Status:** Complete
-**Related:** LE-172 (PyTorch macOS x86_64 + Python 3.13 — resolved in PR #12469)
+**Related:** PyTorch macOS x86_64 + Python 3.13 (resolved in PR #12469)
 
 ---
 
@@ -303,7 +302,5 @@ Line 345: gassist    → sys_platform == 'win32'
 
 | Reference | Description | Status |
 |-----------|-------------|--------|
-| LE-172 | PyTorch macOS x86_64 + Python 3.13 CI failure | ✅ Resolved (PR #12469) |
-| LE-265 | Broader deprecated macOS support investigation | This document |
-| [pytorch/pytorch#114602](https://github.com/pytorch/pytorch/issues/114602) | PyTorch RFC: Deprecate macOS x86_64 builds | Implemented |
 | PR #12469 | Exclude torch-dependent extras on macOS x86_64 | Merged/Open |
+| [pytorch/pytorch#114602](https://github.com/pytorch/pytorch/issues/114602) | PyTorch RFC: Deprecate macOS x86_64 builds | Implemented |

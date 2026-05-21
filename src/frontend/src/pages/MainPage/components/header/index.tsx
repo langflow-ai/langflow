@@ -168,7 +168,13 @@ const HeaderComponent = ({
                 >
                   {type === "mcp"
                     ? t("mainPage.mcpServer")
-                    : type.charAt(0).toUpperCase() + type.slice(1)}
+                    : type === "flows"
+                      ? t("mainPage.tabFlows")
+                      : type === "deployments"
+                        ? t("mainPage.tabDeployments")
+                        : type === "components"
+                          ? t("mainPage.tabComponents")
+                          : type.charAt(0).toUpperCase() + type.slice(1)}
                   {type === "deployments" && (
                     <Badge
                       variant="purpleStatic"

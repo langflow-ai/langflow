@@ -2,6 +2,7 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { Panel, useStoreApi } from "@xyflow/react";
 import { ArrowRight, X } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import langflowAssistantIdleIcon from "@/assets/langflow_assistant_idle.svg";
@@ -33,6 +34,7 @@ const CanvasControls = ({
   selectedNode: AllNodeType | null;
   effectiveLocked?: boolean;
 }) => {
+  const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -239,7 +241,7 @@ const CanvasControls = ({
           size="icon"
           data-testid="canvas-add-note-button"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title="Add Sticky Note"
+          title={t("canvas.addStickyNote")}
           onClick={handleAddNote}
         >
           <ForwardedIconComponent
