@@ -1200,7 +1200,7 @@ def test_base_mapper_rejects_outer_request_validation_without_hook() -> None:
 
 
 def test_base_mapper_provider_label_must_be_defined() -> None:
-    with pytest.raises(NotImplementedError, match="must define PROVIDER_LABEL"):
+    with pytest.raises(NotImplementedError, match="must override PROVIDER_LABEL"):
         BaseDeploymentMapper().get_provider_label()
 
 
@@ -1576,12 +1576,12 @@ def test_watsonx_mapper_create_utilities_reject_explicit_null_provider_data() ->
     with pytest.raises(HTTPException) as exc_info:
         mapper.util_create_flow_version_ids(payload)
     assert exc_info.value.status_code == 422
-    assert "description already set for the agent in wxO" in exc_info.value.detail
+    assert exc_info.value.detail == "Missing provider_data for watsonx Orchestrate."
 
     with pytest.raises(HTTPException) as exc_info:
         mapper.util_existing_deployment_resource_key_for_create(payload)
     assert exc_info.value.status_code == 422
-    assert "description already set for the agent in wxO" in exc_info.value.detail
+    assert exc_info.value.detail == "Missing provider_data for watsonx Orchestrate."
 
 
 def test_watsonx_mapper_existing_agent_onboarding_allows_db_only_payload() -> None:

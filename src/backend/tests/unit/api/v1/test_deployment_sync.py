@@ -64,12 +64,14 @@ def _wxo_deployment_provider_data(
     name: str = "agent_api_name",
     display_name: str = "Agent Display",
     description: str = "Agent description",
+    llm: str = "meta-llm",
 ) -> dict[str, Any]:
     return {
         "name": name,
         "display_name": display_name,
         "description": description,
         "tool_ids": tool_ids,
+        "llm": llm,
         "environments": environments or [],
     }
 
@@ -2143,6 +2145,7 @@ class TestListDeploymentsSyncedBindingPhase:
                             "display_name": "Agent One",
                             "description": "Provider description",
                             "tool_ids": ["snap-1"],
+                            "llm": "meta-llm",
                             "environments": [],
                         },
                     )
@@ -2172,6 +2175,7 @@ class TestListDeploymentsSyncedBindingPhase:
                 "name": "agent_api_name",
                 "display_name": "Agent One",
                 "environments": [],
+                "llm": "meta-llm",
             }
         }
         db.begin_nested.assert_called_once()

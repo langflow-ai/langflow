@@ -99,6 +99,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 from langflow.services.database.models.deployment_provider_account.crud import (
     update_provider_account as update_provider_account_row,
 )
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     AttachmentConflictError,
     delete_unbound_attachments,
@@ -1241,6 +1242,12 @@ async def update_snapshot(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Flow version '{body.flow_version_id}' has no data.",
         )
+    await validate_project_scoped_flow_version_ids(
+        flow_version_ids=[body.flow_version_id],
+        user_id=current_user.id,
+        project_id=deployment.project_id,
+        db=session,
+    )
 
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment.deployment_provider_account_id,
@@ -1251,8 +1258,6 @@ async def update_snapshot(
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-
-    from langflow.services.database.models.flow.model import Flow
 
     flow_row = await session.get(Flow, flow_version.flow_id)
 
