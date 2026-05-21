@@ -661,6 +661,7 @@
   "folder.uploadFlow": "Upload a flow",
   "sidebar.category.saved": "Saved",
   "sidebar.category.inputOutput": "Input & Output",
+  "sidebar.category.triggers": "Triggers",
   "sidebar.category.dataSources": "Data Sources",
   "sidebar.category.modelsAndAgents": "Models & Agents",
   "sidebar.category.llmOperations": "LLM Operations",

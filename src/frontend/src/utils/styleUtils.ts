@@ -324,6 +324,11 @@ export const SIDEBAR_CATEGORIES = [
     icon: "Cable",
   },
   {
+    display_name: "sidebar.category.triggers",
+    name: "triggers",
+    icon: "Clock",
+  },
+  {
     display_name: "sidebar.category.dataSources",
     name: "data_source",
     icon: "Database",
