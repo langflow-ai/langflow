@@ -31,9 +31,7 @@ export const AccountMenu = () => {
   const latestVersion = useDarkStore((state) => state.latestVersion);
   const navigate = useCustomNavigate();
   const { mutate: mutationLogout } = useLogout();
-  const hideLogoutButton = useUtilityStore(
-    (state) => state.hideLogoutButton,
-  );
+  const hideLogoutButton = useUtilityStore((state) => state.hideLogoutButton);
 
   const { isAdmin, autoLogin } = useAuthStore((state) => ({
     isAdmin: state.isAdmin,
