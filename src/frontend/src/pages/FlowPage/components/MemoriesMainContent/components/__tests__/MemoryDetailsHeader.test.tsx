@@ -26,6 +26,25 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: ({ name }: { name: string }) => <span>{name}</span>,
 }));
 
+jest.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+    "aria-label": ariaLabel,
+  }: {
+    checked: boolean;
+    onCheckedChange: (v: boolean) => void;
+    "aria-label"?: string;
+  }) => (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onCheckedChange(!checked)}
+    />
+  ),
+}));
+
 jest.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
@@ -121,9 +140,10 @@ describe("MemoryDetailsHeader", () => {
     });
     render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
-    ).toHaveTextContent("Auto-capture");
+    expect(screen.getByText("Activate")).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", { name: "Toggle auto-capture" });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-checked", "true");
   });
 
   it("calls mutate handlers for actions", () => {
@@ -137,16 +157,11 @@ describe("MemoryDetailsHeader", () => {
   });
 
   it("toggles auto-capture", () => {
-    const props = makeProps();
+    const props = makeProps({ memory: { ...makeProps().memory, is_active: true } });
     render(<MemoryDetailsHeader {...props} />);
-    fireEvent.click(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
-    );
+    fireEvent.click(screen.getByRole("switch", { name: "Toggle auto-capture" }));
 
-    const firstCallArg = (props.handleToggleActive as jest.Mock).mock
-      .calls[0]?.[0];
-    expect(firstCallArg).toEqual(expect.any(Function));
-    expect(firstCallArg(true)).toBe(false);
+    expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
 
   it("renders the session selector when sessions exist", () => {
@@ -160,7 +175,7 @@ describe("MemoryDetailsHeader", () => {
     expect(sessionTrigger).not.toBeDisabled();
   });
 
-  it("disables the session selector when only one session and no more pages", () => {
+  it("always enables the session selector regardless of session count", () => {
     const props = makeProps({
       sessions: ["session-1"],
       hasNextSessionsPage: false,
@@ -168,7 +183,7 @@ describe("MemoryDetailsHeader", () => {
     render(<MemoryDetailsHeader {...props} />);
     expect(
       screen.getByRole("button", { name: "Session filter" }),
-    ).toBeDisabled();
+    ).not.toBeDisabled();
   });
 
   it("renders the reload button with correct aria-label", () => {

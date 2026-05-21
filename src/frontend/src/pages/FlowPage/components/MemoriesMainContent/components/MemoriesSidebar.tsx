@@ -32,24 +32,23 @@ export function MemoriesSidebar({
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-background">
       <div className="border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <IconComponent
-              name="BrainCog"
-              className="h-4 w-4 text-muted-foreground"
-            />
-            <h2 className="text-sm font-semibold">Memories</h2>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onCreateMemory}
-            disabled={!currentFlowId}
-          >
-            <IconComponent name="Plus" className="h-3.5 w-3.5" />
-            Create
-          </Button>
+        <div className="flex items-center gap-2">
+          <IconComponent
+            name="BrainCog"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <h2 className="text-sm font-semibold">Memories</h2>
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onCreateMemory}
+          disabled={!currentFlowId}
+          className="mt-3 rounded-[10px]"
+        >
+          <IconComponent name="Plus" className="h-3.5 w-3.5" />
+          Create
+        </Button>
       </div>
 
       <div className="p-4">
