@@ -96,7 +96,10 @@ describe("MemoryKnowledgeBaseSection", () => {
       name: /learn more about memory bases/i,
     });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute("href", "https://docs.langflow.org/memory-bases");
+    expect(link).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/memory-bases",
+    );
     expect(link).toHaveAttribute("target", "_blank");
   });
 

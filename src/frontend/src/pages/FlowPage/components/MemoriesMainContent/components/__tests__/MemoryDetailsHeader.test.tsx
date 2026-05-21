@@ -428,7 +428,10 @@ describe("MemoryDetailsHeader", () => {
   it("shows read the docs link in activate tooltip with correct href", () => {
     render(<MemoryDetailsHeader {...makeProps()} />);
     const link = screen.getByRole("link", { name: /read the docs/i });
-    expect(link).toHaveAttribute("href", "https://docs.langflow.org/memory-bases");
+    expect(link).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/memory-bases",
+    );
     expect(link).toHaveAttribute("target", "_blank");
   });
 });
