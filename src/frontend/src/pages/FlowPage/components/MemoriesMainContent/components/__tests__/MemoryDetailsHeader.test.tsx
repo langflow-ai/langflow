@@ -157,9 +157,13 @@ describe("MemoryDetailsHeader", () => {
   });
 
   it("toggles auto-capture", () => {
-    const props = makeProps({ memory: { ...makeProps().memory, is_active: true } });
+    const props = makeProps({
+      memory: { ...makeProps().memory, is_active: true },
+    });
     render(<MemoryDetailsHeader {...props} />);
-    fireEvent.click(screen.getByRole("switch", { name: "Toggle auto-capture" }));
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Toggle auto-capture" }),
+    );
 
     expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
