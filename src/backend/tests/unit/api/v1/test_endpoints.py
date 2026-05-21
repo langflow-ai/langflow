@@ -293,6 +293,30 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
 
 
+async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Embedded mode should force all embedded hide flags to true in full config."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", True)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is True
+    assert result["hide_logout_button"] is True
+    assert result["hide_new_project_button"] is True
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is True
+    assert result["hide_getting_started_progress"] is True
+
+
 async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):
     """Test that /config includes mcp_base_url for both authenticated and unauthenticated responses."""
     # Authenticated

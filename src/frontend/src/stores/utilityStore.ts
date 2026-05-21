@@ -72,7 +72,7 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   enableExtensionReload: false,
   setEnableExtensionReload: (enableExtensionReload: boolean) =>
     set({ enableExtensionReload }),
-  // P2 ICA integration flags
+  // Embedded mode flags
   embeddedMode: false,
   setEmbeddedMode: (embeddedMode: boolean) => set({ embeddedMode }),
   hideLogoutButton: false,

@@ -53,7 +53,7 @@ export type UtilityStoreType = {
    */
   enableExtensionReload: boolean;
   setEnableExtensionReload: (enableExtensionReload: boolean) => void;
-  // P2 ICA integration flags
+  // Embedded mode flags
   embeddedMode: boolean;
   setEmbeddedMode: (embeddedMode: boolean) => void;
   hideLogoutButton: boolean;

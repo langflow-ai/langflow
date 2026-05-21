@@ -500,10 +500,12 @@ class Settings(BaseSettings):
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
 
-    # Embedded/iframe mode - ICA integration flags
+    # Embedded mode flags
     embedded_mode: bool = False
     """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
     standalone installations (logout button, new project/flow buttons, starter projects, etc.)."""
+    hide_getting_started_progress: bool = False
+    """If set to True, hides the getting-started onboarding progress UI."""
     hide_logout_button: bool = False
     """If set to True, hides the Logout button in the account menu."""
     hide_new_project_button: bool = False

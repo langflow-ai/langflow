@@ -158,7 +158,7 @@ export const useGetConfig: useQueryFunctionType<
         setHideGettingStartedProgress(
           data.hide_getting_started_progress ?? false,
         );
-        // P2 ICA integration flags
+        // Embedded mode flags
         setEmbeddedMode(data.embedded_mode ?? false);
         setHideLogoutButton(data.hide_logout_button ?? false);
         setHideNewProjectButton(data.hide_new_project_button ?? false);
