@@ -1249,17 +1249,21 @@ async def update_snapshot(
     # concurrent writers can still race and violate that assumption.
     previous_flow_version_id = attachment.flow_version_id
     try:
+        # Owner-scoped — the attachment row belongs to the deployment owner,
+        # not the actor. Audit log still credits ``current_user`` upstream.
         updated_rows = await update_flow_version_by_provider_snapshot_id(
             session,
-            user_id=current_user.id,
+            user_id=owner_id,
             provider_snapshot_id=snapshot_id,
             flow_version_id=body.flow_version_id,
         )
         if updated_rows == 0:
             logger.warning(
                 "Snapshot '%s' update changed zero attachment rows after provider mutation "
-                "(user_id=%s, requested_flow_version_id=%s). Possible concurrent modification.",
+                "(owner_id=%s, actor_id=%s, requested_flow_version_id=%s). "
+                "Possible concurrent modification.",
                 snapshot_id,
+                owner_id,
                 current_user.id,
                 body.flow_version_id,
             )
@@ -1274,10 +1278,13 @@ async def update_snapshot(
             exc_info=True,
         )
         try:
+            # Rollback resolves the previous flow version from the owner's
+            # namespace too — shared-deployment writes never touched the
+            # actor's flow versions.
             prev_version = await get_flow_version_entry(
                 session,
                 version_id=previous_flow_version_id,
-                user_id=current_user.id,
+                user_id=owner_id,
             )
             if prev_version and prev_version.data:
                 prev_artifact = deployment_mapper.resolve_snapshot_update_artifact(
@@ -1287,7 +1294,7 @@ async def update_snapshot(
                 )
                 with deployment_provider_scope(deployment.deployment_provider_account_id):
                     await deployment_adapter.update_snapshot(
-                        user_id=current_user.id,
+                        user_id=owner_id,
                         db=session,
                         snapshot_id=snapshot_id,
                         flow_artifact=prev_artifact,
@@ -1424,8 +1431,11 @@ async def get_deployment(
             )
             await session.rollback()  # clean up potentially dirty session
             try:
+                # Degraded fallback after binding-sync failure — still
+                # owner-scoped so shared reads return the right
+                # ``attached_count`` instead of the actor's empty set.
                 attachments = await list_deployment_attachments(
-                    session, user_id=current_user.id, deployment_id=deployment_row.id
+                    session, user_id=owner_id, deployment_id=deployment_row.id
                 )
                 attached_count = len(attachments)
             except Exception:  # noqa: BLE001

@@ -260,12 +260,14 @@ def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
 
 
 def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
-    """Raise 403 if the KB is associated with a Memory Base.
+    """Raise 403 if the KB is associated with a Memory Base (FastAPI dep).
 
-    Designed as a FastAPI dependency for per-KB routes — FastAPI injects
-    ``kb_name`` from the path parameter and ``current_user`` via its own
-    dependency.  The list endpoint filters memory KBs inline using
-    ``_is_memory_base_associated`` directly.
+    Owner-scoped early gate — runs as ``Depends(...)`` before the route
+    body and only sees the actor. For shared KBs reached through an
+    enterprise share grant the actor has no same-named local KB so this
+    dep returns early; the route body then re-runs the check against the
+    resolved owner via :func:`_assert_kb_not_memory_base` so a shared
+    Memory-Base-managed KB still gets blocked.
 
     A missing local directory is NOT treated as a 404 here because the
     delete route handles the orphan-DB-row case downstream. This dep
@@ -280,6 +282,30 @@ def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser
             return  # Let the route body handle the missing-dir case.
         raise
 
+    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
+    if _is_memory_base_associated(metadata):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
+        )
+
+
+def _assert_kb_not_memory_base(kb_name: str, owner_user) -> None:
+    """Post-resolution memory-base check.
+
+    The FastAPI dep :func:`_check_memory_base_association` only sees the
+    actor; for cross-user-reached KBs (a non-owner with a share grant) it
+    short-circuits because the actor has no same-named local KB. Route
+    bodies call this helper after :func:`_guard_kb_action` resolves the
+    real owner so Memory-Base-managed KBs are still blocked even when
+    reached through a share.
+    """
+    try:
+        kb_path = _resolve_kb_path(kb_name, owner_user)
+    except HTTPException as exc:
+        if exc.status_code == HTTPStatus.NOT_FOUND:
+            return
+        raise
     metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
     if _is_memory_base_associated(metadata):
         raise HTTPException(
@@ -975,6 +1001,7 @@ async def ingest_files_to_knowledge_base(
     so the UI can surface the rejection inline.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
@@ -1153,6 +1180,7 @@ async def ingest_folder_to_knowledge_base(
     via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         settings = get_settings_service().settings
         allowed_roots = settings.kb_allowed_folder_roots or []
@@ -1407,6 +1435,7 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         # Use the resolved owner — a non-owner reaching this route via a
         # share grant must see the owner's KB row, not their own same-named.
@@ -1482,6 +1511,7 @@ async def get_knowledge_base_chunks(
     invasive middleware changes.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1661,6 +1691,7 @@ async def get_knowledge_base_metadata_keys(
     (same trade-off as the chunks-endpoint post-filter pass).
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1768,6 +1799,7 @@ async def ingest_via_connector(
     file-upload + folder already use.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 
@@ -1979,6 +2011,7 @@ async def delete_knowledge_base(
 ) -> dict[str, str]:
     """Delete a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.DELETE, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     # All KB data lives in the owner's namespace (disk path, DB row, remote
     # collection, in-flight job). Route the cleanup helpers through the
     # owner so a non-owner with a delete share grant actually clears the
@@ -2209,6 +2242,7 @@ async def cancel_ingestion(
 ) -> dict[str, str]:
     """Cancel the ongoing ingestion task for a knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.WRITE, kb_name=kb_name)
+    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 

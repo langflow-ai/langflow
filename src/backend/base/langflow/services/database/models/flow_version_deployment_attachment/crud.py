@@ -508,12 +508,24 @@ async def get_attachment_by_provider_snapshot_id(
     """Look up an attachment by its provider_snapshot_id.
 
     Used by the PATCH /snapshots/{provider_snapshot_id} endpoint to
-    resolve the deployment context for a provider-owned snapshot.
+    resolve the deployment context for a provider-owned snapshot. The
+    lookup is share-aware when an enterprise authorization plugin is
+    registered: it loads the attachment by ``provider_snapshot_id`` alone
+    so a non-owner with a deployment-share grant can reach the right
+    attachment. The route's ``ensure_deployment_permission`` is the
+    authoritative gate after the deployment owner is resolved from the
+    attachment. The OSS pass-through keeps the owner-scoped query so the
+    capability-disabled default cannot widen visibility.
     """
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
     stmt = select(FlowVersionDeploymentAttachment).where(
-        FlowVersionDeploymentAttachment.user_id == user_id,
         FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
     )
+    if not share_aware:
+        stmt = stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
     return (await db.exec(stmt)).first()
 
 
