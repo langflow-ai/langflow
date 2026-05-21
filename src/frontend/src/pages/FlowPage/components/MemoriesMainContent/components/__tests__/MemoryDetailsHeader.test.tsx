@@ -78,6 +78,19 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
   ),
 }));
 
+jest.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div role="tooltip">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
 jest.mock("@/modals/deleteConfirmationModal", () => ({
   __esModule: true,
   default: ({
@@ -403,5 +416,19 @@ describe("MemoryDetailsHeader", () => {
 
       await waitFor(() => expect(btn).not.toBeDisabled());
     });
+  });
+
+  it("shows activate tooltip description", () => {
+    render(<MemoryDetailsHeader {...makeProps()} />);
+    expect(
+      screen.getByText(/conversation messages are automatically processed/i),
+    ).toBeInTheDocument();
+  });
+
+  it("shows read the docs link in activate tooltip with correct href", () => {
+    render(<MemoryDetailsHeader {...makeProps()} />);
+    const link = screen.getByRole("link", { name: /read the docs/i });
+    expect(link).toHaveAttribute("href", "https://docs.langflow.org/memory-bases");
+    expect(link).toHaveAttribute("target", "_blank");
   });
 });
