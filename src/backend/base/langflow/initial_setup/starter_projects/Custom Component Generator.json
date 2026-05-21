@@ -926,7 +926,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -1323,7 +1323,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -1726,7 +1726,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -2397,11 +2397,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.135.3"
+                    "version": "0.136.1"
                   },
                   {
                     "name": "lfx",

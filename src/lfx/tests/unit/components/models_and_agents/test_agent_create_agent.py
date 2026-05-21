@@ -86,6 +86,9 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
     On AgentExecutor, this prevented hard crashes when an LLM produced output that
     didn't parse as a tool call. On LangGraph the equivalent is a tool-retry middleware.
     Without this wiring, the legacy "Handle Parse Errors" input becomes a silent no-op.
+
+    Note: ToolRetryMiddleware is only wired when tools are actually present — see
+    `test_should_skip_tool_retry_middleware_when_no_tools_attached` (UI-003 latency).
     """
     from langchain.agents.middleware import ToolRetryMiddleware
 
@@ -96,6 +99,7 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -418,6 +422,7 @@ async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -1143,6 +1148,41 @@ async def test_should_still_cap_model_calls_when_max_iterations_is_zero() -> Non
     assert limiters[0].run_limit >= 1
 
 
+@pytest.mark.asyncio
+async def test_should_skip_tool_retry_middleware_when_no_tools_attached() -> None:
+    """Trivial-prompt latency guard (QA UI-003).
+
+    `ToolRetryMiddleware` exists to recover from runtime errors in tool execution.
+    With an empty tools list it has nothing to retry, but its presence still
+    inflates the compiled graph and adds per-invocation middleware overhead on
+    every model call. For "Say hello"-style prompts (no tools, gpt-4o-mini) the
+    baseline expectation is 1–2s wall and we currently observe 4.8–14.2s. The
+    middleware audit is one cheap, low-risk improvement: don't wire what can't
+    fire.
+    """
+    from langchain.agents.middleware import ToolRetryMiddleware
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    component.set_attributes({"tools": [], "handle_parsing_errors": True})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert not any(isinstance(m, ToolRetryMiddleware) for m in middleware), (
+        "ToolRetryMiddleware must NOT be attached when there are no tools — it cannot fire and only "
+        "adds per-call middleware overhead, contributing to the UI-003 trivial-prompt latency."
+    )
+
+
 def test_should_declare_min_one_range_spec_on_max_iterations_input() -> None:
     """The UI must not let users set `max_iterations` below 1."""
     from lfx.components.models_and_agents.agent import _agent_base_inputs
@@ -1151,3 +1191,157 @@ def test_should_declare_min_one_range_spec_on_max_iterations_input() -> None:
 
     assert max_iter.range_spec is not None, "max_iterations needs a RangeSpec to block sub-1 values"
     assert max_iter.range_spec.min == 1
+
+
+# ===== recursion_limit must be tied to max_iterations =========================
+# QA UI-009/UI-010 (PR #12992): malformed prompts loop on tool calls until
+# LangGraph's default `recursion_limit=25` fires (≈12 model+tool iterations),
+# regardless of the user-set `max_iterations`. The ModelCallLimitMiddleware
+# alone is insufficient because the graph-level recursion guard trips first.
+
+
+@pytest.mark.asyncio
+async def test_should_pass_recursion_limit_derived_from_max_iterations_when_streaming_events() -> None:
+    """`run_agent` must pass a `recursion_limit` aligned with `max_iterations`.
+
+    Without this, an Agent with `max_iterations=15` crashes at LangGraph's default
+    25 graph steps (≈12 model+tool iterations) with `GraphRecursionError: Recursion
+    limit of 25 reached` — long before the ModelCallLimitMiddleware's 15-call cap
+    would have taken effect. The graph guard MUST sit above the middleware so the
+    middleware's user-facing cap is what bounds the loop.
+
+    Each iteration is roughly 2 graph steps (model node + tools node) plus a small
+    constant overhead, so `recursion_limit >= max_iterations * 2 + 5` is the bare
+    minimum that lets the middleware fire first.
+    """
+    captured_config: dict = {}
+
+    def _capture_astream(_input_dict, *, config, **_kwargs):
+        captured_config.update(config or {})
+        return _empty_event_stream()
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = _capture_astream
+
+    component = _build_component()
+    component.set_attributes({"max_iterations": 15, "input_value": "hi", "chat_history": []})
+
+    final_message = MagicMock()
+    final_message.get_id.return_value = None
+    final_message.properties = MagicMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(return_value=final_message),
+        ),
+    ):
+        await component.run_agent(fake_graph)
+
+    assert "recursion_limit" in captured_config, (
+        "run_agent must pass `recursion_limit` to astream_events; otherwise LangGraph's "
+        "default of 25 fires before ModelCallLimitMiddleware reaches the user-set cap "
+        "(UI-009/UI-010 regression)."
+    )
+    # Each user-visible iteration is ~2 graph steps (model + tools), plus overhead.
+    assert captured_config["recursion_limit"] >= 15 * 2 + 5, (
+        f"recursion_limit must sit above max_iterations * 2 + safety; got "
+        f"{captured_config['recursion_limit']} for max_iterations=15"
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_complete_run_agent_synchronously_before_returning_so_downstream_agents_see_final_state() -> None:
+    """Regression guard for QA UI-012 (multi-agent chains).
+
+    The QA report claimed "tools of downstream agents fire concurrently with
+    Agent 1 still running", evidenced by chain spans aggregating to ~474s while
+    wall time was ~207s. Investigation found:
+      - `agent.py`'s `run_agent` `await`s `process_agent_events` fully before
+        returning a Message; it does NOT spawn unawaited tasks.
+      - `lfx/graph/graph/base.py` runs vertices in topological layers; each
+        layer's `asyncio.gather(*tasks)` must resolve before the next layer
+        starts. So downstream `Agent` vertices wired by `input_value` cannot
+        start until upstream agents complete.
+      - The 474s vs 207s discrepancy in the QA trace is consistent with
+        nested-span accounting in LangGraph (parent spans wrap child spans,
+        and aggregate sums double-count), NOT with concurrent agent execution.
+
+    This test pins the agent-side contract: `message_response` only returns
+    when run_agent has fully resolved. If a future refactor introduces a
+    fire-and-forget pattern, this test catches it before the regression ships.
+    """
+    captured_calls: list[tuple[str, float]] = []
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+
+    async def _record_then_return(_stream, agent_message, *_args, **_kwargs):
+        from time import perf_counter
+
+        captured_calls.append(("process_start", perf_counter()))
+        captured_calls.append(("process_end", perf_counter()))
+        return agent_message
+
+    component = _build_component()
+    component.set_attributes({"input_value": "hi", "chat_history": []})
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            side_effect=_record_then_return,
+        ),
+    ):
+        from time import perf_counter
+
+        before = perf_counter()
+        await component.run_agent(fake_graph)
+        after = perf_counter()
+
+    process_start_ts = next(ts for name, ts in captured_calls if name == "process_start")
+    process_end_ts = next(ts for name, ts in captured_calls if name == "process_end")
+
+    assert before <= process_start_ts <= process_end_ts <= after, (
+        "run_agent must fully await process_agent_events before returning. A future change "
+        "that fires this off as a background task would break multi-agent chain semantics."
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_zero() -> None:
+    """A saved `max_iterations=0` is clamped to >=1 by `_build_middleware`; the
+    recursion_limit derived in `run_agent` must use that same clamped value, not
+    the raw user input. Otherwise we'd pass `recursion_limit=5` (5 = safety only)
+    and the agent couldn't run even one iteration.
+    """
+    captured_config: dict = {}
+
+    def _capture_astream(_input_dict, *, config, **_kwargs):
+        captured_config.update(config or {})
+        return _empty_event_stream()
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = _capture_astream
+
+    component = _build_component()
+    component.set_attributes({"max_iterations": 0, "input_value": "hi", "chat_history": []})
+
+    final_message = MagicMock()
+    final_message.get_id.return_value = None
+    final_message.properties = MagicMock()
+
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch(
+            "lfx.components.models_and_agents.agent.process_agent_events",
+            new=AsyncMock(return_value=final_message),
+        ),
+    ):
+        await component.run_agent(fake_graph)
+
+    # Clamped max_iterations=1 → at least 1*2+5 = 7 graph steps must be allowed.
+    assert captured_config.get("recursion_limit", 0) >= 7, (
+        "Clamped max_iterations of 1 must still permit at least one model+tool round-trip"
+    )
