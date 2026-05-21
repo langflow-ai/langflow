@@ -6,6 +6,7 @@ import { zoomOut } from "../../utils/zoom-out";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to see output inspection",
   { tag: ["@release", "@components"] },
@@ -15,7 +16,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
     await adjustScreenView(page);
 
     await initialGPTsetup(page);
@@ -24,7 +25,7 @@ test(
 
     await page.waitForTimeout(600);
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
 
@@ -50,7 +51,7 @@ test(
 
     // Add URL component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
@@ -71,7 +72,7 @@ test(
 
     // Add two chat outputs
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 1000,
     });
@@ -114,7 +115,7 @@ test(
 
     // Run flow and test text output inspection
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
     await page.keyboard.press("o");
@@ -122,10 +123,10 @@ test(
       exact: true,
     });
 
-    await page.getByText(`Component Output`, {
+    await page.getByText(TEXTS.componentOutput, {
       exact: true,
     });
-    await page.getByText("Close").first().click();
+    await page.getByText(TEXTS.close).first().click();
     await page
       .getByTestId("handle-urlcomponent-shownode-extracted pages-right")
       .click();
@@ -137,7 +138,7 @@ test(
 
     // Run and verify text output is still shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
 
@@ -158,10 +159,10 @@ test(
       exact: true,
     });
 
-    await page.getByText(`Component Output`, {
+    await page.getByText(TEXTS.componentOutput, {
       exact: true,
     });
-    await page.getByText("Close").first().click();
+    await page.getByText(TEXTS.close).first().click();
     await page.waitForTimeout(600);
 
     await page
@@ -176,7 +177,7 @@ test(
 
     // Run and verify dataframe output is now shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
@@ -187,10 +188,10 @@ test(
       exact: true,
     });
 
-    await page.getByText(`Component Output`, {
+    await page.getByText(TEXTS.componentOutput, {
       exact: true,
     });
-    await page.getByText("Close").first().click();
+    await page.getByText(TEXTS.close).first().click();
     await page.waitForTimeout(600);
     // Remove all connections
     const dataEdge = await page.locator(".react-flow__edge").first();
@@ -201,7 +202,7 @@ test(
 
     // Run and verify data output is shown
     await page.getByTestId("button_run_url").first().click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000 * 3,
     });
     await page.waitForTimeout(600);
@@ -210,12 +211,12 @@ test(
       exact: true,
     });
 
-    await page.getByText(`Component Output`, {
+    await page.getByText(TEXTS.componentOutput, {
       exact: true,
     });
 
     const closeButton = await page
-      .getByText(`Close`, {
+      .getByText(TEXTS.close, {
         exact: true,
       })
       .count();

@@ -5,6 +5,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to see errors on popups when raise an error",
   { tag: ["@release", "@workspace", "@components"] },
@@ -70,7 +71,7 @@ class CustomComponent(Component):
       .locator("textarea")
       .fill(customComponentCodeWithRaiseErrorMessage);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await page.getByTestId("button_run_custom component").click();
 

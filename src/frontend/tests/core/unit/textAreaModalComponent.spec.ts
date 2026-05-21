@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "TextAreaModalComponent",
   { tag: ["@release", "@workspace"] },
@@ -9,7 +10,7 @@ test(
     await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',

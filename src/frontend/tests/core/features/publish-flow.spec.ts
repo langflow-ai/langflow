@@ -5,6 +5,7 @@ import { TID } from "../../utils/constants/testIds";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to publish a flow",
   { tag: ["@release", "@workspace", "@api"] },
@@ -43,13 +44,13 @@ test(
     // default actionTimeout (20s) was not enough on Windows CI for the
     // shareable-playground page to mount the message input.
     await newPage
-      .getByPlaceholder("Send a message...")
+      .getByPlaceholder(TEXTS.placeholderSendMessage)
       .waitFor({ state: "visible", timeout: TIMEOUTS.long });
     const newUrl = newPage.url();
-    await newPage.getByPlaceholder("Send a message...").fill("Hello");
+    await newPage.getByPlaceholder(TEXTS.placeholderSendMessage).fill("Hello");
     await newPage.getByTestId(TID.buttonSend).last().click();
 
-    const stopButton = newPage.getByRole("button", { name: "Stop" });
+    const stopButton = newPage.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: TIMEOUTS.standard });
 
     await newPage.close();

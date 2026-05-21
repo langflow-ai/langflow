@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 /**
  * Tests for folder deletion integrity
  *
@@ -18,7 +19,7 @@ test(
 
     // Navigate to templates and create a flow first
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -36,14 +37,14 @@ test(
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .waitFor({ state: "visible", timeout: 10000 });
 
     // Rename the folder for easier identification
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -71,10 +72,10 @@ test(
       .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_test-folder-to-delete").click();
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
     // Verify success message
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 5000,
     });
 
@@ -98,7 +99,7 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -116,13 +117,13 @@ test(
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .waitFor({ state: "visible", timeout: 10000 });
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -141,13 +142,13 @@ test(
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .waitFor({ state: "visible", timeout: 10000 });
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -177,10 +178,10 @@ test(
       .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-alpha").click();
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
     // Verify success message
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 5000,
     });
 
@@ -208,9 +209,9 @@ test(
       .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-beta").click();
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 5000,
     });
   },
@@ -224,7 +225,7 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -242,13 +243,13 @@ test(
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .waitFor({ state: "visible", timeout: 10000 });
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -270,9 +271,9 @@ test(
       .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-one").click();
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 5000,
     });
 
@@ -286,13 +287,13 @@ test(
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .waitFor({ state: "visible", timeout: 10000 });
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -317,9 +318,9 @@ test(
       .waitFor({ state: "visible", timeout: 5000 });
     await page.getByTestId("more-options-button_folder-two").click();
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 5000,
     });
   },
@@ -378,10 +379,10 @@ test(
       }
 
       await page.getByTestId("btn-delete-project").click();
-      await page.getByText("Delete").last().click();
+      await page.getByText(TEXTS.delete).last().click();
 
       // Wait for deletion to complete
-      await expect(page.getByText("Project deleted successfully")).toBeVisible({
+      await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
         timeout: 5000,
       });
 
@@ -426,7 +427,7 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,

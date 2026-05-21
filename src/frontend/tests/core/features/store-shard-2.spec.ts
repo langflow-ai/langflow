@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should filter by tag",
   { tag: ["@release", "@api"] },
@@ -28,13 +29,13 @@ test(
     });
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
 
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Success! Your API Key has been saved.")).toBeVisible();
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
@@ -65,7 +66,7 @@ test(
     await safeClick("tag-selector-Vector Store");
     await safeClick("tag-selector-Memory");
 
-    await expect(page.getByText("Basic RAG")).toBeVisible();
+    await expect(page.getByText(TEXTS.templateBasicRag)).toBeVisible();
   },
 );
 
@@ -90,13 +91,13 @@ test("should share component with share button", async ({ page }) => {
   });
 
   await page
-    .getByPlaceholder("Insert your API Key")
+    .getByPlaceholder(TEXTS.placeholderApiKey)
     .fill(process.env.STORE_API_KEY ?? "");
 
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(1000);
-  await expect(page.getByText("Success! Your API Key has been saved.")).toBeVisible();
+  await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
@@ -112,7 +113,7 @@ test("should share component with share button", async ({ page }) => {
   const randomName = Math.random().toString(36).substring(2);
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
   await renameFlow(page, { flowName: randomName });
 

@@ -5,6 +5,7 @@ import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Simple Agent",
   { tag: ["@release", "@starter-projects"] },
@@ -23,7 +24,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
     if (await stopButton.isVisible()) {

@@ -6,6 +6,7 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Basic Prompting (Hello, World)",
   { tag: ["@release", "@starter-projects"] },
@@ -17,9 +18,9 @@ withEventDeliveryModes(
     await initialGPTsetup(page);
     await buildFlowAndWait(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
       .isVisible();
 
@@ -65,7 +66,7 @@ withEventDeliveryModes(
     await expect(page.getByRole("gridcell").last()).toBeVisible();
 
     // Close the logs panel so the rest of the playground UI is reachable again.
-    await page.getByRole("button", { name: "Close" }).click();
+    await page.getByRole("button", { name: TEXTS.close }).click();
     // Use sidebar session more menu (chat-header-more-menu is hidden in fullscreen)
     await page
       .locator('[data-testid^="session-"][data-testid$="-more-menu"]')

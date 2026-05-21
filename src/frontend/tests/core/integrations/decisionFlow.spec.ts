@@ -11,6 +11,7 @@ import {
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { zoomOut } from "../../utils/zoom-out";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should create a flow with decision",
   { tag: ["@release", "@components", "@workflow"] },
@@ -34,7 +35,7 @@ test(
 
     //---------------------------------- CHAT INPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,
     });
@@ -157,7 +158,7 @@ test(
     });
     //---------------------------------- PROMPT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',
       {
@@ -172,7 +173,7 @@ test(
 
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
     await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
       timeout: 2000,
     });
@@ -195,7 +196,7 @@ test(
       });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
@@ -209,7 +210,7 @@ test(
     });
     //---------------------------------- CHAT OUTPUT
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 2000,
     });
@@ -244,7 +245,7 @@ test(
   User: {user_message}
   AI:
       `);
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
     //---------------------------------- MAKE CONNECTIONS
     await page
       .getByTestId("handle-createlist-shownode-json list-right")
@@ -370,7 +371,7 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

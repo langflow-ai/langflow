@@ -9,6 +9,7 @@ import { uploadFile } from "../../utils/upload-file";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to send an image on chat using advanced tool on ChatInputComponent",
   { tag: ["@release", "@components"] },
@@ -18,12 +19,12 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
     await initialGPTsetup(page);
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await openAdvancedOptions(page);
     await page.getByTestId("showfiles").click();
     await closeAdvancedOptions(page);
@@ -43,7 +44,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

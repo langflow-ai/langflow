@@ -8,6 +8,7 @@ import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "SaaS Pricing",
   { tag: ["@release", "@starter-projects"] },
@@ -24,9 +25,9 @@ withEventDeliveryModes(
     await initialGPTsetup(page);
     await buildFlowAndWait(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
       .isVisible();
 

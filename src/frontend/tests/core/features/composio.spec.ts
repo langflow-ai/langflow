@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to interact with composio component",
   { tag: ["@release", "@workspace", "@api", "@components"] },
@@ -59,7 +60,7 @@ test(
 
     await page.getByTestId("button_run_gmail").click();
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000,
     });
 

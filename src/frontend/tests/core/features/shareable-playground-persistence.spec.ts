@@ -15,6 +15,7 @@ import { publishBasicPromptingAndOpenShareablePlayground } from "../../utils/pla
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 import { sessionMoreMenu } from "../../utils/playground/sessions";
 
+import { TEXTS } from "../../utils/constants/texts";
 /**
  * Stub auto-login, navigate to the sign-in page, log in manually.
  */
@@ -22,18 +23,18 @@ async function setupAutoLoginOff(page: Page): Promise<void> {
   await mockAutoLoginDisabled(page);
 
   await page.goto("/");
-  await page.waitForSelector("text=sign in to langflow", {
+  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
     timeout: TIMEOUTS.standard,
   });
 
-  await page.getByPlaceholder("Username").fill("langflow");
-  await page.getByPlaceholder("Password").fill("langflow");
+  await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
+  await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
   });
 
-  await page.getByRole("button", { name: "Sign In" }).click();
+  await page.getByRole("button", { name: TEXTS.signIn }).click();
 
   await page.waitForSelector(`[data-testid="${TID.mainpageTitle}"]`, {
     timeout: TIMEOUTS.standard,

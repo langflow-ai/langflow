@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
@@ -8,7 +9,7 @@ test(
     await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
@@ -103,7 +104,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.waitForTimeout(500);
 
@@ -186,7 +187,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     expect(
       await page.locator('[data-testid="tool_fetch_content"]').isVisible(),

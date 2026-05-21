@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to see multiple edges and interact with them",
   { tag: ["@release", "@api", "@workspace"] },
@@ -12,7 +13,7 @@ test(
     // Knowledge node instead of separate Retriever / Search Results nodes,
     // so assert against display_names that ARE in the current template.
     await expect(page.getByText("Knowledge", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Language Model", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(TEXTS.componentLanguageModel, { exact: true }).first()).toBeVisible();
     await page.getByTestId("canvas_controls_dropdown").click();
 
     const focusElementsOnBoard = async ({ page }) => {
@@ -30,6 +31,6 @@ test(
     await expect(page.getByTestId("icon-ChevronDown").last()).toBeVisible();
     await page.getByTestId("icon-ChevronDown").last().click();
     await expect(page.getByText("Knowledge", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("Language Model", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(TEXTS.componentLanguageModel, { exact: true }).first()).toBeVisible();
   },
 );

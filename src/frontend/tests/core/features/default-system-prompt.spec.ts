@@ -18,6 +18,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { zoomOut } from "../../utils/zoom-out";
 
+import { TEXTS } from "../../utils/constants/texts";
 // Every section header the new default template must contain, in order.
 const SECTION_HEADERS = [
   "# Identity",
@@ -158,7 +159,7 @@ test(
 
     // Load Simple Agent — gives us a ready-to-run Agent wired to ChatInput/Output.
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
     await initialGPTsetup(page);
 
     // Simple Agent's template may carry its own system_prompt — force the fresh
@@ -181,7 +182,7 @@ test(
     await page.getByTestId("input-chat-playground").last().fill("Run now.");
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 
@@ -220,7 +221,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
     await initialGPTsetup(page);
 
     const customPrompt =
@@ -238,7 +239,7 @@ test(
       .fill("Introduce yourself in one short sentence.");
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 
@@ -280,7 +281,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
     await initialGPTsetup(page);
 
     // Force the model to echo the date from its context — any obedience-style
@@ -301,7 +302,7 @@ test(
       .fill("What is today's date?");
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
     await stopButton.waitFor({ state: "hidden", timeout: 120000 });
 

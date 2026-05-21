@@ -3,6 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.skip(
   "should like and add components and flows (requires store API key)",
   { tag: ["@release"] },
@@ -11,7 +12,7 @@ test.skip(
     loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page, { skipModal: true });
 
-    await page.getByText("Close", { exact: true }).click();
+    await page.getByText(TEXTS.close, { exact: true }).click();
     await page.waitForTimeout(1000);
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
@@ -19,11 +20,11 @@ test.skip(
       timeout: 200000,
     });
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
     await page.getByTestId("api-key-save-button-store").click();
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Success! Your API Key has been saved.")).toBeVisible();
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.waitForTimeout(1000);
     await page.getByTestId("button-store").click();
     await page.waitForSelector('[data-testid="likes-Website Content QA"]', {
@@ -67,10 +68,10 @@ test.skip(
     await page.getByTestId("icon-ChevronLeft").first().click();
     await page.waitForSelector("text=Website Content QA", { timeout: 30000 });
     await expect(page.getByText("Website Content QA").first()).toBeVisible();
-    await page.getByText("Components").first().click();
+    await page.getByText(TEXTS.labelComponents).first().click();
     await page.waitForTimeout(1000);
     await page.waitForSelector("text=Basic RAG", { timeout: 30000 });
-    await expect(page.getByText("Basic RAG").first()).toBeVisible();
+    await expect(page.getByText(TEXTS.templateBasicRag).first()).toBeVisible();
   },
 );
 
@@ -92,13 +93,13 @@ test.skip(
     });
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
 
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Success! Your API Key has been saved.")).toBeVisible();
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.waitForTimeout(1000);
 
     await page.getByTestId("button-store").click();
@@ -112,7 +113,7 @@ test.skip(
     await expect(page.getByText("File Loader")).toBeVisible();
     await page.getByTestId("search-store-input").fill("Basic RAG");
     await page.getByTestId("search-store-button").click();
-    await expect(page.getByText("Basic RAG")).toBeVisible();
+    await expect(page.getByText(TEXTS.templateBasicRag)).toBeVisible();
     await page.getByTestId("search-store-input").fill("YouTube QA");
     await page.getByTestId("search-store-button").click();
     await expect(page.getByText("YouTube QA")).toBeVisible();

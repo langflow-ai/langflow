@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.describe("Token Usage Tracking", () => {
   test(
     "node badge should show token count after running an LLM flow",
@@ -21,7 +22,7 @@ test.describe("Token Usage Tracking", () => {
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
       await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
         timeout: 100000,
       });
@@ -29,7 +30,7 @@ test.describe("Token Usage Tracking", () => {
       await initialGPTsetup(page);
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
 
       await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -73,7 +74,7 @@ test.describe("Token Usage Tracking", () => {
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
       await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
         timeout: 100000,
       });
@@ -81,7 +82,7 @@ test.describe("Token Usage Tracking", () => {
       await initialGPTsetup(page);
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
 
       await page.waitForSelector('[data-testid="input-chat-playground"]', {

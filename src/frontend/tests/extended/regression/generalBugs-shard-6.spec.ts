@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should be able to see error when something goes wrong on Code Modal",
   { tag: ["@release"] },
@@ -58,7 +59,7 @@ class CustomComponent(Component):
     await page.locator("textarea").press("Control+a");
     await page.locator("textarea").fill(customCodeWithError);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     // Wait for the error message to appear and have sufficient length
     await page.waitForFunction(

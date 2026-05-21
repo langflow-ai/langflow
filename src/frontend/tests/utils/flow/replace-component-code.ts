@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { TID } from "../constants/testIds";
 
+import { TEXTS } from "../../utils/constants/texts";
 /**
  * Replace the code of the currently-selected custom component.
  *
@@ -21,5 +22,5 @@ export async function replaceComponentCode(
   await page.locator(".ace_content").click();
   await page.keyboard.press("ControlOrMeta+A");
   await page.locator("textarea").fill(code);
-  await page.getByText("Check & Save").last().click();
+  await page.getByText(TEXTS.checkAndSave).last().click();
 }

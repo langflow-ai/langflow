@@ -10,6 +10,8 @@ import {
 } from "../../utils/open-advanced-options";
 
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
+
+import { TEXTS } from "../../utils/constants/texts";
 // TODO: This component doesn't have slider needs updating
 test(
   "user should be able to use query input",
@@ -24,7 +26,7 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
 
     await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 3000,

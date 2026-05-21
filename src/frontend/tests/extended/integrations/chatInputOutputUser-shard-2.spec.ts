@@ -10,6 +10,8 @@ import {
 
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must interact with chat with Input/Output",
   { tag: ["@release", "@components"] },
@@ -19,12 +21,12 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await initialGPTsetup(page);
 
     // Open Playground
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
@@ -60,7 +62,7 @@ test(
     await page.getByTestId("playground-close-button").click();
 
     await disableInspectPanel(page);
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await openAdvancedOptions(page);
     await page.getByTestId("showsender_name").click();
     await closeAdvancedOptions(page);
@@ -79,7 +81,7 @@ test(
       .nth(1)
       .fill("TestSenderNameAI");
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

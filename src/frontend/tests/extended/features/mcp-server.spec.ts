@@ -5,6 +5,7 @@ import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to change mode of MCP tools without any issues",
   { tag: ["@release", "@workspace", "@components"] },
@@ -164,7 +165,7 @@ test(
     await page.waitForTimeout(500);
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -449,7 +450,7 @@ test(
       .click({ timeout: 3000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 3000 });
 
@@ -633,7 +634,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 
@@ -872,7 +873,7 @@ test(
       .click({ timeout: 10000 });
 
     await page
-      .getByText("Delete", { exact: true })
+      .getByText(TEXTS.delete, { exact: true })
       .first()
       .click({ timeout: 10000 });
 

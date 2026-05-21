@@ -6,6 +6,7 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to use chat memory as expected",
   { tag: ["@release", "@workspace", "@components"] },
@@ -15,7 +16,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await adjustScreenView(page);
 
@@ -77,8 +78,8 @@ AI:
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
-    await page.getByText("Edit Prompt", { exact: true }).click();
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await adjustScreenView(page);
 
@@ -92,14 +93,14 @@ AI:
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
     });
 
     await page
-      .getByPlaceholder("Send a message...")
+      .getByPlaceholder(TEXTS.placeholderSendMessage)
       .fill("hi, my car is blue and I like to eat pizza");
 
     await page.getByTestId("button-send").click();
@@ -107,7 +108,7 @@ AI:
     await page.waitForSelector("text=AI", { timeout: 30000 });
 
     await page
-      .getByPlaceholder("Send a message...")
+      .getByPlaceholder(TEXTS.placeholderSendMessage)
       .fill("what color is my car and what do I like to eat?");
 
     await page.getByTestId("button-send").click();

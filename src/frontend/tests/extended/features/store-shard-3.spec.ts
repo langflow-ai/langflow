@@ -3,6 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should order the visualization (requires store API key)",
   { tag: ["@release"] },
@@ -32,7 +33,7 @@ test(
     await newPageStore.getByTestId("sidebar-nav-Langflow Store").click();
 
     await newPageStore
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await newPageStore.getByTestId("api-key-save-button-store").click();
@@ -53,7 +54,7 @@ test(
 
     await newPageStore2.waitForTimeout(1000);
 
-    await expect(newPageStore2.getByText("Basic RAG")).toBeVisible({
+    await expect(newPageStore2.getByText(TEXTS.templateBasicRag)).toBeVisible({
       timeout: 30000,
     });
 
@@ -66,7 +67,7 @@ test(
     await newPageStore2.getByTestId("select-order-store").click();
     await newPageStore2.getByText("Popular").click();
 
-    await newPageStore2.getByText("Basic RAG").isVisible();
+    await newPageStore2.getByText(TEXTS.templateBasicRag).isVisible();
   },
 );
 
@@ -97,7 +98,7 @@ test(
     await newPageStore.getByTestId("sidebar-nav-Langflow Store").click();
 
     await newPageStore
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
     await newPageStore.getByTestId("api-key-save-button-store").click();
     await expect(

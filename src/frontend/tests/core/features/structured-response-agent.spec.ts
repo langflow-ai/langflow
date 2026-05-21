@@ -6,6 +6,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { openAdvancedOptions } from "../../utils/open-advanced-options";
 
+import { TEXTS } from "../../utils/constants/texts";
 /**
  * E2E coverage for the Native Structured Output feature on the Agent
  * component (CZL/MANUAL_TEST_NATIVE_STRUCTURED_OUTPUT.md). The tests
@@ -40,7 +41,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
 
     await initialGPTsetup(page);
 
@@ -84,7 +85,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
 
     await initialGPTsetup(page);
 
@@ -126,7 +127,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
 
     await initialGPTsetup(page);
 

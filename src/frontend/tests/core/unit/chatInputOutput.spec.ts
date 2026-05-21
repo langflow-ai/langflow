@@ -2,13 +2,14 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     await openBlankFlow(page);
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     state: "visible",
   });
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("chat output");
+  await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
   await page.waitForSelector('[data-testid="input_outputChat Output"]', {
     timeout: 2000,
   });
@@ -21,7 +22,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     });
 
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill("chat input");
+  await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
   await page.waitForSelector('[data-testid="input_outputChat Input"]', {
     timeout: 2000,
   });
@@ -43,7 +44,7 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .click();
   await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
-  await page.getByText("Playground", { exact: true }).last().click();
+  await page.getByText(TEXTS.playground, { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });

@@ -9,6 +9,7 @@ import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Market Research",
   { tag: ["@release", "@starter-projects"] },
@@ -48,13 +49,13 @@ withEventDeliveryModes(
     await page.getByTestId("tab_1_stringify").click();
 
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000 * 3,
     });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
       .isVisible();
 

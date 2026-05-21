@@ -3,6 +3,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to drag and drop an old collection without crashing the application",
   { tag: ["@release", "@mainpage"] },
@@ -11,7 +12,7 @@ test(
 
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -65,7 +66,7 @@ test(
 
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

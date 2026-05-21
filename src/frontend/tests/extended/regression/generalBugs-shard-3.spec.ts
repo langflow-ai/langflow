@@ -5,6 +5,7 @@ import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should copy code from playground modal",
   {
@@ -18,7 +19,7 @@ test(
       timeout: 30000,
     });
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page
       .getByTestId("input_outputChat Output")
@@ -27,7 +28,7 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
 
     await page
       .getByTestId("input_outputChat Input")
@@ -36,7 +37,7 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
 
     await page
       .getByTestId("openaiOpenAI")
@@ -79,7 +80,7 @@ test(
       .click();
     await adjustScreenView(page);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
@@ -127,7 +128,7 @@ test(
     expect(await page.getByText("Langflow Chat").isHidden());
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 30000,

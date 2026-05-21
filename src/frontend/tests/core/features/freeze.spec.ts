@@ -4,6 +4,7 @@ import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to freeze a component",
   { tag: ["@release", "@workspace", "@components"] },
@@ -24,7 +25,7 @@ test(
     await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 1000,
     });
@@ -45,11 +46,11 @@ test(
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
-    const firstOutputText = await page.getByPlaceholder("Empty").textContent();
+    const firstOutputText = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
 
     expect(firstOutputText).toBe("hello world");
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.getByTestId("textarea_str_input_value").fill("goodbye world");
 
@@ -76,7 +77,7 @@ test(
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
-    const secondOutputText = await page.getByPlaceholder("Empty").textContent();
+    const secondOutputText = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
 
     expect(secondOutputText).toBe("goodbye world");
   },

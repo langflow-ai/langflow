@@ -3,6 +3,7 @@ import { addCustomComponent } from "../../utils/add-custom-component";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to copy JSON from output",
   { tag: ["@release", "@workspace"] },
@@ -36,7 +37,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page.getByTestId("output-inspection-api response-apirequest").click();
 

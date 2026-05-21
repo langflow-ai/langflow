@@ -8,6 +8,8 @@ import {
 } from "../../utils/open-advanced-options";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "dropDownComponent",
   { tag: ["@release", "@workspace"] },
@@ -241,7 +243,7 @@ class AmazonBedrockComponent(LCModelComponent):
         return output
   `;
     await page.locator("textarea").fill(emptyOptionsCode);
-    await page.getByRole("button", { name: "Check & Save" }).click();
+    await page.getByRole("button", { name: TEXTS.checkAndSave }).click();
     await page
       .getByText("No parameters are available for display.")
       .isVisible();

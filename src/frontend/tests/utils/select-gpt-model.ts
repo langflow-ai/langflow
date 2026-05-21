@@ -3,6 +3,7 @@ import { expect } from "../fixtures";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
+import { TEXTS } from "../utils/constants/texts";
 const PREFERRED_OPENAI_MODELS = [
   "gpt-4o-mini",
   "gpt-4.1-mini",
@@ -67,7 +68,7 @@ const enablePreferredOpenAiModel = async (page: Page) => {
     await toggle.click();
   }
 
-  await page.getByText("Close").last().click();
+  await page.getByText(TEXTS.close).last().click();
   return modelName;
 };
 

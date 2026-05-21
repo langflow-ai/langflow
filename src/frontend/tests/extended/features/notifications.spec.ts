@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "User should be able to interact notifications tab",
   { tag: ["@release"] },
@@ -29,7 +30,7 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
     await page.getByTestId("notification_button").click();
 
     // Add explicit waits before checking visibility

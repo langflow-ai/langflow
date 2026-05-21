@@ -5,6 +5,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Simple Agent Memory",
   { tag: ["@release", "@starter-projects"] },
@@ -15,7 +16,7 @@ withEventDeliveryModes(
 
     // Open Simple Agent template
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
     await initialGPTsetup(page);
 
     // Open Playground

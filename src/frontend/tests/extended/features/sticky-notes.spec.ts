@@ -4,6 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to interact with sticky notes",
   { tag: ["@release", "@workspace"] },
@@ -122,7 +123,7 @@ The future of AI is both exciting and uncertain. As the technology continues to 
 
     await page.getByTestId("note_node").last().click();
     await page.getByTestId("more-options-modal").click();
-    await page.getByText("Delete").first().click();
+    await page.getByText(TEXTS.delete).first().click();
 
     titleNumber = await page.getByText(randomTitle).count();
 

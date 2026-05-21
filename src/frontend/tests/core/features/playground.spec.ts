@@ -9,6 +9,7 @@ import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { sessionMoreMenu } from "../../utils/playground/sessions";
 import { zoomOut } from "../../utils/zoom-out";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "fresh start playground",
   { tag: ["@release", "@workspace", "@api"] },
@@ -54,7 +55,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
       timeout: TIMEOUTS.componentMount,
     });
@@ -98,7 +99,7 @@ test(
     await sessionMoreMenu(page, "first").click();
     await page.getByTestId("message-logs-option").click();
     await expect(page.getByText("Page 1 of 1", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Close" }).click();
+    await page.getByRole("button", { name: TEXTS.close }).click();
 
     // create new session (use sidebar new-chat button)
     await page.getByTestId(TID.newChat).click();

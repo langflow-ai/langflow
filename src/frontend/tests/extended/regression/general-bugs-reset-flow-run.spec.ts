@@ -7,6 +7,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user can run flow with If-Else component multiple times with different branches",
   { tag: ["@release", "@components"] },
@@ -34,7 +35,7 @@ test(
 
     //---------------------------------- Text Output
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
@@ -49,7 +50,7 @@ test(
 
     //---------------------------------- Text Output
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
@@ -103,7 +104,7 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page.waitForTimeout(3000);
 
@@ -129,7 +130,7 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page.waitForTimeout(3000);
 
@@ -157,7 +158,7 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page.waitForTimeout(3000);
 
@@ -181,7 +182,7 @@ test(
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;

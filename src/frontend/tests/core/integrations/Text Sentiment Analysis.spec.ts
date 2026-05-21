@@ -7,6 +7,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "user should be able to analyze text sentiment",
   { tag: ["@release", "@starter-projects"] },
@@ -32,9 +33,9 @@ withEventDeliveryModes(
     await page.getByText("Expand").click();
     await unselectNodes(page);
     await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
     await page
       .getByText("Add a Chat Input component to your flow to send messages.", {
         exact: true,

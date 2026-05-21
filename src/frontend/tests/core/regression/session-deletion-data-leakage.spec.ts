@@ -4,6 +4,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {
@@ -84,12 +85,12 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -147,12 +148,12 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
       // Load a starter project with memory
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 

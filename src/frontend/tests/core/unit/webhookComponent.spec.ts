@@ -8,6 +8,8 @@ import {
 } from "../../utils/open-advanced-options";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to create an api key within a webhook component",
   { tag: ["@release", "@workspace"] },
@@ -60,7 +62,7 @@ test(
 
     expect(curl).toContain(flowId);
 
-    await page.getByText("Close", { exact: true }).last().click();
+    await page.getByText(TEXTS.close, { exact: true }).last().click();
     await closeAdvancedOptions(page);
     await enableInspectPanel(page);
   },

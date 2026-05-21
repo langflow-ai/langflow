@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user can open component dropdown menu by right-clicking on nodes",
   { tag: ["@release", "@components", "@dropdown", "@right-click"] },
@@ -10,7 +11,7 @@ test(
     // Start with a basic template that has multiple components
     if (await page.getByTestId("components-btn").isVisible()) {
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
     }
 
     await page.getByTestId("template-get-started-card-basic-prompting").click();
@@ -29,7 +30,7 @@ test(
     });
 
     // Test 1: Right-click on Chat Input component should open dropdown immediately (single click)
-    const chatInputComponent = page.getByText("Chat Input").first();
+    const chatInputComponent = page.getByText(TEXTS.componentChatInput).first();
 
     // First, click somewhere else to ensure no component is selected
     await page.click("body", { position: { x: 100, y: 100 } });

@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
 
+import { TEXTS } from "../../utils/constants/texts";
 export type SendOpts = {
   /** "canvas" = regular playground panel; "shareable" = published page. */
   surface?: "canvas" | "shareable";
@@ -27,9 +28,9 @@ export async function sendPlaygroundMessage(
 
   if (surface === "shareable") {
     await page
-      .getByPlaceholder("Send a message...")
+      .getByPlaceholder(TEXTS.placeholderSendMessage)
       .waitFor({ state: "visible", timeout: TIMEOUTS.long });
-    await page.getByPlaceholder("Send a message...").fill(message);
+    await page.getByPlaceholder(TEXTS.placeholderSendMessage).fill(message);
   } else {
     await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
       timeout: TIMEOUTS.componentMount,
@@ -43,7 +44,7 @@ export async function sendPlaygroundMessage(
     await page.getByTestId(TID.buttonSend).last().click();
   }
 
-  const stop = page.getByRole("button", { name: "Stop" });
+  const stop = page.getByRole("button", { name: TEXTS.stop });
   await stop.waitFor({ state: "visible", timeout: TIMEOUTS.standard });
   await stop.waitFor({ state: "hidden", timeout: TIMEOUTS.buildComplete });
 }

@@ -6,6 +6,7 @@ import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sid
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { replaceComponentCode } from "../../utils/flow/replace-component-code";
 
+import { TEXTS } from "../../utils/constants/texts";
 const SLEEP_60_CUSTOM_COMPONENT = `
 # from langflow.field_typing import Data
 from langflow.custom import Component
@@ -89,7 +90,7 @@ test(
 
     await page.getByTestId(TID.buttonRunChatOutput).click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector(`[data-testid="${TID.buttonStop}"]`, {
       timeout: TIMEOUTS.standard,

@@ -4,6 +4,7 @@ import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },
@@ -13,7 +14,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
 
     await selectAnthropicModel(page);
 

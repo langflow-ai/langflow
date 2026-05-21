@@ -4,6 +4,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+import { TEXTS } from "../../utils/constants/texts";
 function getRandomSocialMediaQuery(): string {
   const companies = [
     "OpenAI",
@@ -90,7 +91,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
     if (await stopButton.isVisible()) {

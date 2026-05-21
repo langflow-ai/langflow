@@ -9,6 +9,8 @@ import {
 } from "../../utils/open-advanced-options";
 
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to use nested component",
   { tag: ["@release", "@workspace"] },
@@ -52,7 +54,7 @@ test(
     expect(await page.getByText("proptest1", { exact: true }).count()).toBe(1);
     expect(await page.getByText("proptest2", { exact: true }).count()).toBe(1);
 
-    await page.getByText("Save").last().click();
+    await page.getByText(TEXTS.save).last().click();
 
     await disableInspectPanel(page);
 
@@ -82,7 +84,7 @@ test(
     expect(await page.getByText("keytest", { exact: true }).count()).toBe(0);
     expect(await page.getByText("proptest", { exact: true }).count()).toBe(0);
 
-    await page.getByText("Save", { exact: true }).last().click();
+    await page.getByText(TEXTS.save, { exact: true }).last().click();
 
     await closeAdvancedOptions(page);
 

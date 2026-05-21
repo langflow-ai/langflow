@@ -8,6 +8,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to send an image on chat",
   { tag: ["@release", "@workspace", "@components"] },
@@ -24,7 +25,7 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
@@ -33,10 +34,10 @@ test(
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await openAdvancedOptions(page);
     await closeAdvancedOptions(page);
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

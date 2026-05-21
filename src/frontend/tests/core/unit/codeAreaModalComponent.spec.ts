@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import { test } from "../../fixtures";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "CodeAreaModalComponent",
   { tag: ["@release", "@workspace"] },
@@ -60,7 +61,7 @@ class CustomComponent(Component):
     await page.keyboard.press(`ControlOrMeta+A`);
     await page.locator("textarea").fill(codeInputCode);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await page.getByTestId("div-generic-node").click();
 

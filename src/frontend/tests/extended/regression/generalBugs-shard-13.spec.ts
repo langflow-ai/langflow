@@ -3,6 +3,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should be able to share a component on the store by clicking on the share button on the canvas (requires store API key)",
   { tag: ["@release", "@api"] },
@@ -11,17 +12,17 @@ test(
     loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
-    await page.getByText("Close", { exact: true }).click();
+    await page.getByText(TEXTS.close, { exact: true }).click();
 
     await page.waitForSelector('[data-testid="user-profile-settings"]', {
       timeout: 3000,
     });
     await page.getByTestId("user-profile-settings").click();
 
-    await page.getByText("Settings", { exact: true }).first().click();
+    await page.getByText(TEXTS.settings, { exact: true }).first().click();
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
@@ -43,7 +44,7 @@ test(
     await page.getByTestId("new-project-btn").click();
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
     await page.waitForSelector("text=share", { timeout: 10000 });
     await page.waitForSelector("text=playground", { timeout: 10000 });
     await page.waitForSelector("text=api", { timeout: 10000 });

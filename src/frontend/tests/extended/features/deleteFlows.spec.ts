@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "should delete a flow (requires store API key)",
   { tag: ["@release", "@api"] },
@@ -19,13 +20,13 @@ test(
     });
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
 
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Success! Your API Key has been saved.")).toBeVisible();
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.waitForSelector('[data-testid="button-store"]', {
       timeout: 30000,
     });
@@ -54,12 +55,12 @@ test(
     await page.getByTestId("home-dropdown-menu").first().click();
     await page.waitForTimeout(500);
 
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
     await page.waitForTimeout(500);
     await page
       .getByText("Are you sure you want to delete the selected component?")
       .isVisible();
-    await page.getByText("Delete").nth(1).click();
+    await page.getByText(TEXTS.delete).nth(1).click();
     await page.waitForTimeout(1000);
     await expect(page.getByText("Successfully").first()).toBeVisible();
   },

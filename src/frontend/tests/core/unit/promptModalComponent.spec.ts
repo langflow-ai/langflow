@@ -10,6 +10,7 @@ import {
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
   page: Page,
@@ -64,7 +65,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',
       {
@@ -148,7 +149,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',
@@ -377,7 +378,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',
@@ -465,7 +466,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',
@@ -595,7 +596,7 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page.waitForSelector(
       '[data-testid="models_and_agentsPrompt Template"]',

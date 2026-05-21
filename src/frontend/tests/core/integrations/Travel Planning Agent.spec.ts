@@ -6,6 +6,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Travel Planning Agent",
   { tag: ["@release", "@starter-projects"] },
@@ -56,11 +57,11 @@ withEventDeliveryModes(
       test.skip();
     }
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000 * 3,
     });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,

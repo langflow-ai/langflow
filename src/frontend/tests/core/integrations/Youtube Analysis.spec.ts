@@ -5,6 +5,7 @@ import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "YouTube Analysis",
   { tag: ["@release", "@starter-projects"] },
@@ -31,7 +32,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button_run_chat output").last().click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
 
     await page.getByTestId("playground-btn-flow-io").click();
 

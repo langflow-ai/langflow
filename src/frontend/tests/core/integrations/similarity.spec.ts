@@ -7,6 +7,7 @@ import { unselectNodes } from "../../utils/unselect-nodes";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
@@ -89,7 +90,7 @@ test(
     //seventh component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector("text=Text Output", {
       timeout: 1000,
     });
@@ -128,7 +129,7 @@ test(
     await page
       .getByTestId("popover-anchor-input-message")
       .first()
-      .fill("langflow");
+      .fill(TEXTS.authDefaultCredential);
 
     const firstApiKeyInput = page
       .getByTestId("popover-anchor-input-openai_api_key")
@@ -249,7 +250,7 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
 
     await unselectNodes(page);
 

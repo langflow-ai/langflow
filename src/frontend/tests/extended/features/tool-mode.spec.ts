@@ -4,6 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "User should be able to use components as tool",
   { tag: ["@release", "@components"] },
@@ -34,79 +35,79 @@ test(
 
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "visible",
     });
 
-    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBeGreaterThan(0);
 
     await page.keyboard.press("ControlOrMeta+Shift+m");
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "hidden",
     });
 
-    expect(await page.getByText("toolset").count()).toBe(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBe(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "visible",
     });
 
-    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBeGreaterThan(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "hidden",
     });
 
-    expect(await page.getByText("toolset").count()).toBe(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBe(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "visible",
     });
 
-    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBeGreaterThan(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "hidden",
     });
 
-    expect(await page.getByText("toolset").count()).toBe(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBe(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "visible",
     });
 
-    expect(await page.getByText("toolset").count()).toBeGreaterThan(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBeGreaterThan(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "hidden",
     });
 
-    expect(await page.getByText("toolset").count()).toBe(0);
+    expect(await page.getByText(TEXTS.labelToolset).count()).toBe(0);
 
     await page.getByTestId("tool-mode-button").click();
 
-    await page.waitForSelector("text=toolset", {
+    await page.waitForSelector(`text=${TEXTS.labelToolset}`, {
       timeout: 5000,
       state: "visible",
     });
@@ -140,7 +141,7 @@ test(
     expect(await page.locator(".react-flow__edge").count()).toBeGreaterThan(0);
 
     await page.getByTestId("button_run_url").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page.getByTestId("output-inspection-toolset-urlcomponent").click();
 
@@ -151,7 +152,7 @@ test(
     );
 
     expect(await page.getByTestId("tool_tags").count()).toBeGreaterThan(0);
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
@@ -170,7 +171,7 @@ test(
 
     await page.getByTestId("button_run_custom component").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
 
     await page
       .getByTestId("output-inspection-toolset-customcomponent")

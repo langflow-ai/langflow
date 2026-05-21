@@ -6,6 +6,7 @@ import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Research Translation Loop.spec",
   { tag: ["@release", "@starter-projects"] },
@@ -43,7 +44,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 40000 });
 
     if (await stopButton.isVisible()) {
