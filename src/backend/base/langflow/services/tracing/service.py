@@ -194,17 +194,18 @@ class TracingService(Service):
         if self.deactivated:
             return
         langfuse_tracer = _get_langfuse_tracer()
-        # ``user_id`` carries the caller-supplied tracing label when supplied so
-        # the Langfuse "Users" tab groups by end-user. The original auth identity
-        # is forwarded separately and stamped into trace metadata.
+        # ``user_id`` carries the authenticated Langflow user (unchanged from
+        # pre-#9505 behavior for backwards compatibility). ``tracing_user_id``
+        # is the optional caller-supplied override; LangFuseTracer reconciles
+        # them when populating the actual trace fields.
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
             project_name=trace_context.project_name,
             trace_id=trace_context.run_id,
-            user_id=trace_context.tracing_user_id or trace_context.user_id,
+            user_id=trace_context.user_id,
             session_id=trace_context.session_id,
-            auth_user_id=trace_context.user_id,
+            tracing_user_id=trace_context.tracing_user_id,
         )
 
     def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
