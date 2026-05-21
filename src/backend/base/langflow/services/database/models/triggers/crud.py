@@ -1,8 +1,9 @@
-"""Data-access helpers for the ``trigger`` and ``trigger_job`` tables.
+"""Data-access helpers for the ``trigger_job`` work queue.
 
-Kept intentionally narrow: only the queries that have real callers in
-the API and the worker live here. Everything else stays inline in the
-service that needs it, in line with the rest of the codebase.
+Narrow on purpose: only the queries that have real call-sites in the
+worker, the lifecycle hook, or the API live here. Anything situational
+stays inline where it is used so this module does not balloon into a
+generic ORM grab bag.
 """
 
 from __future__ import annotations
@@ -14,47 +15,31 @@ from sqlalchemy import update
 from sqlmodel import col, select
 
 from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.database.models.triggers.model import Trigger, TriggerJob
+from langflow.services.database.models.triggers.model import TriggerJob
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-async def get_trigger(session: AsyncSession, trigger_id: UUID, user_id: UUID) -> Trigger | None:
-    """Return a trigger owned by ``user_id`` or ``None``.
-
-    The ownership filter mirrors the convention used by the flow endpoints:
-    a cross-user access returns 404, not 403.
-    """
-    statement = select(Trigger).where(Trigger.id == trigger_id, Trigger.user_id == user_id)
-    result = await session.exec(statement)
-    return result.first()
-
-
-async def list_triggers(
+async def list_jobs_for_flow(
     session: AsyncSession,
-    user_id: UUID,
+    flow_id: UUID,
     *,
-    flow_id: UUID | None = None,
-) -> list[Trigger]:
-    statement = select(Trigger).where(Trigger.user_id == user_id)
-    if flow_id is not None:
-        statement = statement.where(Trigger.flow_id == flow_id)
-    statement = statement.order_by(col(Trigger.created_at).desc())
-    result = await session.exec(statement)
-    return list(result.all())
-
-
-async def list_trigger_jobs(
-    session: AsyncSession,
-    trigger_id: UUID,
-    *,
+    component_id: str | None = None,
     status: JobStatus | None = None,
     limit: int = 50,
 ) -> list[TriggerJob]:
-    statement = select(TriggerJob).where(TriggerJob.trigger_id == trigger_id)
+    """Return trigger_jobs scoped to a flow, optionally narrowed further.
+
+    Ordered by ``scheduled_at`` descending so the caller naturally sees
+    the most recent activity first.
+    """
+    statement = select(TriggerJob).where(TriggerJob.flow_id == flow_id)
+    if component_id is not None:
+        statement = statement.where(TriggerJob.component_id == component_id)
     if status is not None:
         statement = statement.where(TriggerJob.status == status)
     statement = statement.order_by(col(TriggerJob.scheduled_at).desc()).limit(limit)
@@ -62,17 +47,45 @@ async def list_trigger_jobs(
     return list(result.all())
 
 
+async def cancel_queued_jobs_for_components(
+    session: AsyncSession,
+    flow_id: UUID,
+    component_ids: Sequence[str],
+) -> int:
+    """Mark all queued jobs for ``(flow_id, component_id)`` as cancelled.
+
+    Used by the lifecycle hook when a trigger component is removed from
+    a flow: we don't delete the row (history is preserved) but the
+    worker stops considering it. Returns the count of rows updated.
+    """
+    if not component_ids:
+        return 0
+    now = datetime.now(timezone.utc)
+    statement = (
+        update(TriggerJob)
+        .where(
+            TriggerJob.flow_id == flow_id,
+            col(TriggerJob.component_id).in_(list(component_ids)),
+            TriggerJob.status == JobStatus.QUEUED,
+        )
+        .values(status=JobStatus.CANCELLED, finished_at=now)
+    )
+    result = await session.execute(statement)
+    return result.rowcount or 0
+
+
 async def reset_stalled_in_progress(
     session: AsyncSession,
     *,
     older_than: datetime,
 ) -> int:
-    """Reset ``in_progress`` trigger jobs whose ``started_at`` is older than ``older_than``.
+    """Flip ``in_progress`` jobs older than ``older_than`` back to ``queued``.
 
-    Called once at process startup to recover from worker crashes. Returns the
-    number of rows reset, which the caller logs. Each reset job stays at its
-    current ``attempt`` value so the existing retry budget still applies.
+    Used once at process startup to recover from worker crashes. The
+    ``attempt`` counter is left alone — the prior run never finalised,
+    so it should not consume the retry budget.
     """
+    now = datetime.now(timezone.utc)
     statement = (
         update(TriggerJob)
         .where(
@@ -80,7 +93,7 @@ async def reset_stalled_in_progress(
             col(TriggerJob.started_at).is_not(None),
             col(TriggerJob.started_at) < older_than,
         )
-        .values(status=JobStatus.QUEUED, scheduled_at=datetime.now(timezone.utc), started_at=None)
+        .values(status=JobStatus.QUEUED, scheduled_at=now, started_at=None)
     )
     result = await session.execute(statement)
     return result.rowcount or 0

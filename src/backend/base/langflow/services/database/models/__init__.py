@@ -14,7 +14,7 @@ from .memory_base import MemoryBase, MemoryBaseSession, MemoryBaseWorkflowRun, M
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
-from .triggers import Trigger, TriggerJob, TriggerType
+from .triggers import TriggerJob
 from .user import User
 from .variable import Variable
 
@@ -42,9 +42,7 @@ __all__ = [
     "SpanTable",
     "TraceTable",
     "TransactionTable",
-    "Trigger",
     "TriggerJob",
-    "TriggerType",
     "User",
     "Variable",
 ]
