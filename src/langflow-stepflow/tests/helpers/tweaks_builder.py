@@ -34,7 +34,9 @@ class TweaksBuilder:
 
     Examples:
         >>> builder = TweaksBuilder()
-        >>> builder.add_env_tweak("LanguageModelComponent-abc123", "api_key", "OPENAI_API_KEY")
+        >>> builder.add_env_tweak(
+        ...     "LanguageModelComponent-abc123", "api_key", "OPENAI_API_KEY"
+        ... )
         >>> builder.add_tweak("LanguageModelComponent-abc123", "temperature", 0.8)
         >>> tweaks = builder.build_or_skip()  # Auto-skips test if env vars missing
     """

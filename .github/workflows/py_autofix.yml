@@ -70,7 +70,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin ${{ github.base_ref }}
           git merge origin/${{ github.base_ref }} --no-edit || {
             # Check which files have conflicts
             CONFLICTED=$(git diff --name-only --diff-filter=U)
