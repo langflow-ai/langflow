@@ -1800,25 +1800,27 @@ class TestUploadEndpoint:
         assert any(f["id"] == flow_id for f in list_resp.json())
 
     def test_upload_duplicate_without_replace_returns_409(self, app_with_empty_registry, valid_flow_data):
+        fixed_id = "aaaabbbb-1111-2222-3333-444455556666"
         r1 = app_with_empty_registry.post(
             "/flows/upload/",
-            json={"name": "Flow A", "data": valid_flow_data},
+            json={"id": fixed_id, "name": "Flow A", "data": valid_flow_data},
             headers={"x-api-key": "test-key"},
         )
         assert r1.status_code == 201
 
         r2 = app_with_empty_registry.post(
             "/flows/upload/",
-            json={"name": "Flow B", "data": valid_flow_data},
+            json={"id": fixed_id, "name": "Flow B", "data": valid_flow_data},
             headers={"x-api-key": "test-key"},
         )
         assert r2.status_code == 409
         assert "already exists" in r2.json()["detail"]
 
     def test_upload_replace_true_overwrites(self, app_with_empty_registry, valid_flow_data):
+        fixed_id = "bbbbcccc-1111-2222-3333-444455556666"
         r1 = app_with_empty_registry.post(
             "/flows/upload/",
-            json={"name": "Original Name", "data": valid_flow_data},
+            json={"id": fixed_id, "name": "Original Name", "data": valid_flow_data},
             headers={"x-api-key": "test-key"},
         )
         assert r1.status_code == 201
@@ -1826,7 +1828,7 @@ class TestUploadEndpoint:
 
         r2 = app_with_empty_registry.post(
             "/flows/upload/",
-            json={"name": "Updated Name", "data": valid_flow_data, "replace": True},
+            json={"id": fixed_id, "name": "Updated Name", "data": valid_flow_data, "replace": True},
             headers={"x-api-key": "test-key"},
         )
         assert r2.status_code == 201
