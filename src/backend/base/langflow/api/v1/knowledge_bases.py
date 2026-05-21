@@ -1488,10 +1488,13 @@ async def get_knowledge_base_chunks(
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 
+        # Backend selection + construction must resolve against the KB owner
+        # so remote-backed shared KBs read the owner's credential variables,
+        # not the actor's (the actor often has none of the right vars).
         backend_type_value, backend_config = await _resolve_backend_selection(
             kb_name=kb_name,
             kb_path=kb_path,
-            current_user=current_user,
+            current_user=_kb_guard.owner_user,
         )
 
         # Local-Chroma short-circuit: if the KB lives on disk and has no
@@ -1515,7 +1518,7 @@ async def get_knowledge_base_chunks(
             kb_name=kb_name,
             kb_path=kb_path,
             backend_config=backend_config,
-            user_id=current_user.id,
+            user_id=_kb_guard.owner_user.id,
         )
 
         search_term = search.strip().lower()
@@ -1664,10 +1667,12 @@ async def get_knowledge_base_metadata_keys(
     try:
         kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
 
+        # Backend selection + construction must use the KB owner so
+        # remote-backed shared KBs read the owner's credential variables.
         backend_type_value, backend_config = await _resolve_backend_selection(
             kb_name=kb_name,
             kb_path=kb_path,
-            current_user=current_user,
+            current_user=_kb_guard.owner_user,
         )
 
         # Local-Chroma short-circuit: empty KB without a Chroma store on
@@ -1682,7 +1687,7 @@ async def get_knowledge_base_metadata_keys(
             kb_name=kb_name,
             kb_path=kb_path,
             backend_config=backend_config,
-            user_id=current_user.id,
+            user_id=_kb_guard.owner_user.id,
         )
 
         # Per-key ordered set of stringified distinct values. Insertion
@@ -1974,9 +1979,14 @@ async def delete_knowledge_base(
 ) -> dict[str, str]:
     """Delete a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.DELETE, kb_name=kb_name)
+    # All KB data lives in the owner's namespace (disk path, DB row, remote
+    # collection, in-flight job). Route the cleanup helpers through the
+    # owner so a non-owner with a delete share grant actually clears the
+    # owner's resources, not their own.
+    kb_owner = _kb_guard.owner_user
     try:
         try:
-            kb_path = _resolve_kb_path(kb_name, current_user)
+            kb_path = _resolve_kb_path(kb_name, kb_owner)
         except HTTPException as exc:
             # The local directory is gone but a DB row may still be
             # dangling (remote-backed KBs created without a sidecar,
@@ -1987,7 +1997,7 @@ async def delete_knowledge_base(
                 raise
             handled, orphan_warning = await _cleanup_orphan_db_row(
                 kb_name=kb_name,
-                current_user=current_user,
+                current_user=kb_owner,
             )
             if not handled:
                 raise
@@ -2004,14 +2014,14 @@ async def delete_knowledge_base(
         # reappears in the UI seconds after delete.
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
-            current_user=current_user,
+            current_user=kb_owner,
             job_service=job_service,
         )
 
         remote_warning = await _delete_remote_backend_collection(
             kb_name=kb_name,
             kb_path=kb_path,
-            current_user=current_user,
+            current_user=kb_owner,
         )
 
         # Delete the DB row first, then attempt to clear the on-disk dir.
@@ -2093,10 +2103,11 @@ async def delete_knowledge_bases_bulk(
                     # KB not found — a remote-backed KB (Astra /
                     # Mongo / Postgres / OpenSearch) whose local dir
                     # is missing must still be deletable so the UI
-                    # stops showing it.
+                    # stops showing it. Owner-scoped: the orphan row
+                    # belongs to the KB owner, not the actor.
                     handled, orphan_warning = await _cleanup_orphan_db_row(
                         kb_name=kb_name,
-                        current_user=current_user,
+                        current_user=kb_guard.owner_user,
                     )
                     if handled:
                         deleted_count += 1
@@ -2119,16 +2130,17 @@ async def delete_knowledge_bases_bulk(
             try:
                 # Cancel any in-flight ingestion before tearing down
                 # this KB. See the matching call in the single-delete
-                # endpoint for the failure mode this prevents.
+                # endpoint for the failure mode this prevents. Owner-
+                # scoped so a shared-KB delete clears the owner's job.
                 await _cancel_inflight_ingestion_for_kb(
                     kb_name=kb_name,
-                    current_user=current_user,
+                    current_user=kb_guard.owner_user,
                     job_service=job_service,
                 )
                 remote_warning = await _delete_remote_backend_collection(
                     kb_name=kb_name,
                     kb_path=kb_path,
-                    current_user=current_user,
+                    current_user=kb_guard.owner_user,
                 )
                 if remote_warning:
                     remote_warnings.append(remote_warning)

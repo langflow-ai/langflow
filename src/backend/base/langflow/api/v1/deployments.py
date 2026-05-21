@@ -1034,9 +1034,13 @@ async def list_deployment_configs(
         deployment_resource_key=deployment_row.resource_key if deployment_row is not None else None,
         provider_params=None,
     )
+    # Provider-namespaced — prefer the deployment owner when a shared
+    # deployment_id pinned the scope, otherwise fall back to the provider
+    # account owner (which equals the actor for the no-deployment-id branch).
+    adapter_user_id = deployment_row.user_id if deployment_row is not None else provider_account.user_id
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         config_result = await deployment_adapter.list_configs(
-            user_id=current_user.id,
+            user_id=adapter_user_id,
             params=adapter_params,
             db=session,
         )
@@ -1067,12 +1071,9 @@ async def list_deployment_snapshots(
             detail="filtering by both deployment_id and names is not supported.",
         )
 
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id,
-        user_id=current_user.id,
-        db=session,
-    )
-
+    # Resolve the deployment first when one is pinned so the provider lookup
+    # can use the deployment owner — for a shared deployment the provider
+    # account lives in the owner's namespace, not the actor's.
     deployment_row = None
     if deployment_id is not None:
         deployment_row = await get_deployment_row_or_404(
@@ -1091,8 +1092,16 @@ async def list_deployment_snapshots(
             )
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Deployment not found.") from exc
-        if deployment_row.deployment_provider_account_id != provider_account.id:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
+
+    provider_owner_id = deployment_row.user_id if deployment_row is not None else current_user.id
+    provider_account = await get_owned_provider_account_or_404(
+        provider_id=provider_id,
+        user_id=provider_owner_id,
+        db=session,
+    )
+
+    if deployment_row is not None and deployment_row.deployment_provider_account_id != provider_account.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
@@ -1103,7 +1112,7 @@ async def list_deployment_snapshots(
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_account.id):
         snapshot_result = await deployment_adapter.list_snapshots(
-            user_id=current_user.id,
+            user_id=provider_owner_id,
             params=adapter_params,
             db=session,
         )
@@ -1140,6 +1149,10 @@ async def update_snapshot(
 
     snapshot_id = provider_snapshot_id.strip()
 
+    # Attachment is owner-scoped via user_id. For a shared-deployment update
+    # the actor doesn't own the attachment row, so look it up share-aware
+    # (by provider_snapshot_id alone) when the plugin allows cross-user
+    # fetch. The deployment guard later authorizes the WRITE.
     attachment = await get_attachment_by_provider_snapshot_id(
         session,
         user_id=current_user.id,
@@ -1174,10 +1187,15 @@ async def update_snapshot(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment not found.") from exc
 
+    # Owner-scoped lookups from here on. Flow versions attached to a
+    # deployment belong to the deployment owner; the provider account does
+    # too. ``current_user`` stays the actor for audit but the data plane is
+    # entirely in the owner's namespace.
+    owner_id = deployment.user_id
     flow_version = await get_flow_version_entry(
         session,
         version_id=body.flow_version_id,
-        user_id=current_user.id,
+        user_id=owner_id,
     )
     if flow_version is None:
         raise HTTPException(
@@ -1192,7 +1210,7 @@ async def update_snapshot(
 
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment.deployment_provider_account_id,
-        user_id=current_user.id,
+        user_id=owner_id,
         db=session,
     )
     telemetry.provider = provider_account.provider_key
@@ -1215,7 +1233,7 @@ async def update_snapshot(
         deployment_provider_scope(deployment.deployment_provider_account_id),
     ):
         await deployment_adapter.update_snapshot(
-            user_id=current_user.id,
+            user_id=owner_id,
             db=session,
             snapshot_id=snapshot_id,
             flow_artifact=flow_artifact,
@@ -1331,14 +1349,16 @@ async def get_deployment(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Deployment not found.") from exc
 
+    # All provider/owner-scoped DB operations below use the deployment owner.
+    # The actor (current_user) only governs authorization/audit — the data
+    # plane (stale rows, attachments) lives in the owner's namespace.
+    owner_id = deployment_row.user_id
     with deployment_provider_scope(deployment_row.deployment_provider_account_id):
         # Deployment-level sync: if the provider no longer has this deployment,
         # delete the stale DB row (FK CASCADE handles attachments) and return 404.
-        # Provider-namespaced call uses the deployment owner; for shared
-        # deployments the actor has no provider account in this scope.
         try:
             deployment = await deployment_adapter.get(
-                user_id=deployment_row.user_id,
+                user_id=owner_id,
                 deployment_id=deployment_row.resource_key,
                 db=session,
             )
@@ -1349,7 +1369,9 @@ async def get_deployment(
                 deployment_row.resource_key,
             )
             try:
-                await delete_deployment_by_id(session, user_id=current_user.id, deployment_id=deployment_row.id)
+                # Stale-row delete is owner-scoped — a shared-deployment
+                # reader must be able to clean up the owner's stale row.
+                await delete_deployment_by_id(session, user_id=owner_id, deployment_id=deployment_row.id)
                 await session.commit()
             except Exception:  # noqa: BLE001
                 logger.warning(
@@ -1383,17 +1405,16 @@ async def get_deployment(
 
             if bindings is not None:
                 async with session.begin_nested():
+                    # Unbound-attachment prune operates on the owner's rows.
                     await delete_unbound_attachments(
                         db=session,
-                        user_id=current_user.id,
+                        user_id=owner_id,
                         provider_account_id=deployment_row.deployment_provider_account_id,
                         deployment_ids=[deployment_row.id],
                         bindings=bindings,
                     )
 
-            attachments = await list_deployment_attachments(
-                session, user_id=current_user.id, deployment_id=deployment_row.id
-            )
+            attachments = await list_deployment_attachments(session, user_id=owner_id, deployment_id=deployment_row.id)
             attached_count = len(attachments)
         except Exception:  # noqa: BLE001
             logger.warning(
