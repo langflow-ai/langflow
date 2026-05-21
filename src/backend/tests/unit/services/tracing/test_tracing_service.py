@@ -214,8 +214,8 @@ async def test_start_tracers_forwards_tracing_user_id_to_langfuse(tracing_servic
 
     Regression for GitHub issue #9505: the LangFuseTracer keeps ``user_id`` as
     the authenticated Langflow user (backwards compat) and exposes the override
-    on ``tracing_user_id``. Merge into ``trace.userId`` happens inside the
-    tracer when calling the Langfuse SDK.
+    on ``tracing_user_id``. The tracer stamps the override into trace metadata
+    rather than redefining ``trace.userId``.
     """
     run_id = uuid.uuid4()
     await tracing_service.start_tracers(

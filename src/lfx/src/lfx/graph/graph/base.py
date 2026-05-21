@@ -91,9 +91,10 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
-        # Optional override forwarded to tracing providers as the trace's user_id.
-        # Distinct from self.user_id so request-supplied identifiers can label
-        # external traces (e.g. Langfuse) without leaking into authn/authz paths.
+        # Optional caller-supplied label forwarded to tracing providers. Kept
+        # distinct from ``self.user_id`` so request-supplied identifiers can be
+        # surfaced in external traces (e.g. Langfuse trace metadata) without
+        # leaking into authn/authz paths.
         self.tracing_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []

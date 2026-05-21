@@ -48,10 +48,11 @@ class BaseTracingService(Service, ABC):
             session_id: Session identifier (optional)
             project_name: Project name (optional)
             flow_id: Flow identifier (optional)
-            tracing_user_id: Optional override forwarded to tracing providers as
-                the trace's user_id. When set, takes precedence over ``user_id``
-                for trace labels; ``user_id`` is preserved as the auth identity
-                in trace metadata.
+            tracing_user_id: Optional caller-supplied label forwarded to tracing
+                providers. Does not change ``trace.userId`` (which stays as the
+                auth ``user_id``); each provider decides how to surface it (e.g.
+                LangFuseTracer stamps it under ``langflow.tracing_user_id`` in
+                trace metadata).
         """
 
     @abstractmethod

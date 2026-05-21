@@ -3,7 +3,9 @@
 When the caller supplies a ``user_id`` separate from the authenticated user
 (e.g. via the ``/api/v1/run/{flow_id}`` request body), it must reach the
 tracing layer untouched. The auth user_id remains the source of truth for
-authentication and authorization; only tracing providers see the override.
+authentication and authorization and for ``trace.userId``; the caller-supplied
+label is forwarded as ``tracing_user_id`` so providers can surface it
+separately (e.g. in trace metadata).
 """
 
 from __future__ import annotations
@@ -19,9 +21,8 @@ from lfx.graph import Graph
 async def test_initialize_run_forwards_both_user_id_and_tracing_user_id():
     """Auth ``user_id`` and ``tracing_user_id`` must be passed as distinct kwargs.
 
-    The merge policy (``tracing_user_id or user_id`` for trace labels) lives in
-    the tracing service, not in Graph — Graph just forwards both fields so
-    individual providers can stamp the auth identity separately when needed.
+    Graph just forwards both fields untouched; how the override surfaces (e.g.
+    LangFuseTracer stamps it into trace metadata) is the provider's concern.
     """
     graph = Graph(flow_id="11111111-1111-1111-1111-111111111111", flow_name="t", user_id="auth-user")
     graph.tracing_user_id = "test123"
@@ -44,7 +45,7 @@ async def test_initialize_run_forwards_both_user_id_and_tracing_user_id():
 
 @pytest.mark.asyncio
 async def test_initialize_run_passes_none_tracing_user_id_when_no_override():
-    """Without an override, ``tracing_user_id`` is None — merge happens downstream."""
+    """Without an override, ``tracing_user_id`` is None and only ``user_id`` reaches the tracers."""
     graph = Graph(flow_id="22222222-2222-2222-2222-222222222222", flow_name="t", user_id="auth-user")
     graph.session_id = "s"
     graph.set_run_id(uuid.uuid4())

@@ -60,7 +60,7 @@ class TracingService(BaseTracingService):
             user_id: Authenticated Langflow user identifier
             session_id: Session identifier
             project_name: Project name
-            tracing_user_id: Optional override forwarded to tracing providers
+            tracing_user_id: Optional caller-supplied label forwarded to tracing providers
         """
         logger.debug(f"Trace started: {run_name}")
 
