@@ -118,25 +118,21 @@ export default function TriggersPage() {
     selectedCount > 0
       ? t("triggers.deleteSelected", { count: selectedCount })
       : t("triggers.deleteAll");
-  const bulkCount =
-    selectedCount > 0 ? selectedCount : allTriggers.length;
+  const bulkCount = selectedCount > 0 ? selectedCount : allTriggers.length;
   const showBulkAction = allTriggers.length > 0;
 
   return (
     <div className="flex h-full w-full" data-testid="triggers-wrapper">
-      <div
-        className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
-          jobsTrigger ? "mr-96" : ""
-        }`}
-      >
-        {/*
-          When the jobs drawer is open it already eats 384px on the
-          right via mr-96; the inner xl:container would also cap the
-          remaining width to ~1280px and leave a visible empty gap
-          between the page content's right edge and the drawer. Drop
-          the container constraint while the drawer is open so the
-          content fills the freed space.
-        */}
+      {/*
+        Flex layout: content column is ``flex-1 min-w-0`` so it grows
+        to fill whatever space the drawer leaves, and is allowed to
+        shrink below its intrinsic min-content width without pushing
+        the drawer off-screen. No right-margin trick here — the
+        drawer is a real flex sibling, so flexbox already accounts
+        for its 384px. ``xl:container`` stays only when the drawer
+        is closed to keep the no-drawer reading width comfortable.
+      */}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-y-auto">
         <div
           className={`flex h-full w-full flex-col ${
             jobsTrigger ? "" : "xl:container"
