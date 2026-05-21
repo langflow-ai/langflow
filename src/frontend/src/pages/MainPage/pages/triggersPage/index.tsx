@@ -3,7 +3,9 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetTriggers } from "@/controllers/API/queries/triggers";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import TriggerFormModal from "./components/TriggerFormModal";
 import TriggerJobsDrawer from "./components/TriggerJobsDrawer";
 import TriggersTable from "./components/TriggersTable";
@@ -14,6 +16,15 @@ export default function TriggersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Trigger | null>(null);
   const [jobsTrigger, setJobsTrigger] = useState<Trigger | null>(null);
+
+  // Hydrate the flowsManagerStore when the user lands here directly,
+  // before visiting the home page. The hook is a no-op for repeat
+  // mounts because TanStack Query dedupes by key.
+  const flows = useFlowsManagerStore((s) => s.flows);
+  useGetRefreshFlowsQuery(
+    { get_all: true, remove_example_flows: true },
+    { enabled: flows === undefined },
+  );
 
   const { data: triggers, isLoading } = useGetTriggers({});
 

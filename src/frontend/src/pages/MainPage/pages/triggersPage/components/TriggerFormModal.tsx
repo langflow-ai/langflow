@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import {
   usePatchTrigger,
   usePostTrigger,
@@ -29,6 +30,7 @@ import {
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { Trigger } from "../types";
+import CronScheduleField from "./CronScheduleField";
 
 // Curated list of common IANA timezones. The user can still type any
 // IANA name via the "Other" option which switches to a free-text
@@ -109,6 +111,15 @@ export default function TriggerFormModal({
   const setSuccessData = useAlertStore((s) => s.setSuccessData);
 
   const isEditing = existingTrigger !== null;
+
+  // Make sure the flow selector has data even if the user landed on
+  // /triggers without visiting the home page first. The query also
+  // hydrates the flowsManagerStore that the table uses to render
+  // flow names.
+  useGetRefreshFlowsQuery(
+    { get_all: true, remove_example_flows: true },
+    { enabled: open && (flows === undefined || flows.length === 0) },
+  );
 
   const flowOptions = useMemo(
     () =>
@@ -268,24 +279,18 @@ export default function TriggerFormModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cron_expression">
-              {t("triggers.field.cron")}
-            </Label>
-            <Input
-              id="cron_expression"
-              data-testid="trigger-cron-input"
-              className="font-mono"
-              {...register("cron_expression")}
-              placeholder="*/5 * * * *"
+            <Label>{t("triggers.field.cron")}</Label>
+            <Controller
+              name="cron_expression"
+              control={control}
+              render={({ field }) => (
+                <CronScheduleField
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={errors.cron_expression?.message}
+                />
+              )}
             />
-            <span className="text-xs text-muted-foreground">
-              {t("triggers.field.cronHint")}
-            </span>
-            {errors.cron_expression && (
-              <span className="text-xs text-destructive">
-                {errors.cron_expression.message}
-              </span>
-            )}
           </div>
 
           <div className="flex flex-col gap-1.5">
