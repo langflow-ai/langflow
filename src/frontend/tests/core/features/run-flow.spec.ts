@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openTemplatesModal } from "../../utils/new-project-flow";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -78,7 +79,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").click();
 
     await page.getByText("New Flow").isVisible();
-    await page.getByTestId("new-project-btn").click();
+    await openTemplatesModal(page);
 
     await page.getByTestId("blank-flow").click();
 

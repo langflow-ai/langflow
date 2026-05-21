@@ -1,6 +1,7 @@
 import { test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openTemplatesModal } from "../../utils/new-project-flow";
 
 test(
   "select and delete a flow",
@@ -51,7 +52,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await page.getByTestId("icon-ChevronLeft").first().click();
 
   await page.getByText("New Flow").isVisible();
-  await page.getByTestId("new-project-btn").click();
+  await openTemplatesModal(page);
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
 
@@ -60,7 +61,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   });
 
   await page.getByTestId("icon-ChevronLeft").first().click();
-  await page.getByTestId("new-project-btn").click();
+  await openTemplatesModal(page);
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document Q&A" }).click();
 

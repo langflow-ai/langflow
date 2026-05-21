@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openTemplatesModal } from "../../utils/new-project-flow";
 
 test(
   "should be able to share a component on the store by clicking on the share button on the canvas (requires store API key)",
@@ -47,7 +48,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByTestId("new-project-btn").click();
+    await openTemplatesModal(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();

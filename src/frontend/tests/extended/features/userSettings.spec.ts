@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForNewProjectButton } from "../../utils/new-project-flow";
 
 test.beforeAll(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10000));
@@ -21,9 +22,7 @@ test(
       timeout: 30000,
     });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+    await waitForNewProjectButton(page);
     await page.getByTestId("user-profile-settings").click();
 
     await page.getByText("Settings").click();
@@ -187,9 +186,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
     timeout: 30000,
   });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+  await waitForNewProjectButton(page);
   await page.getByTestId("user-profile-settings").click();
 
   await page.getByText("Settings").click();

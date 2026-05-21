@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { waitForNewProjectButton } from "../../utils/new-project-flow";
 
 // These tests require the server to run with AUTO_LOGIN=FALSE.
 // When the server runs with AUTO_LOGIN=TRUE (default for local dev),
@@ -62,7 +63,7 @@ async function createPublishAndGetUrl(
   page: any,
   context: any,
 ): Promise<string> {
-  await page.waitForSelector('[id="new-project-btn"]', { timeout: 30000 });
+  await waitForNewProjectButton(page);
 
   await awaitBootstrapTest(page, { skipGoto: true });
 

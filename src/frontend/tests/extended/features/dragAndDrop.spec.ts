@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForNewProjectButton } from "../../utils/new-project-flow";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 
 test(
@@ -27,9 +28,7 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="new-project-btn"]', {
-      timeout: 100000,
-    });
+    await waitForNewProjectButton(page, { timeout: 100000 });
 
     await simulateDragAndDrop(
       page,
@@ -81,9 +80,7 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="new-project-btn"]', {
-      timeout: 100000,
-    });
+    await waitForNewProjectButton(page, { timeout: 100000 });
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/assets/flow_test_drag_and_drop.json",

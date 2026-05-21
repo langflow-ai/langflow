@@ -1,5 +1,6 @@
 import { type Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { waitForNewProjectButton } from "./new-project-flow";
 
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {
@@ -55,9 +56,7 @@ export const addNewUserAndLogin = async (page: Page) => {
     timeout: 30000,
   });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+  await waitForNewProjectButton(page);
 
   await page.getByTestId("user-profile-settings").click();
 
