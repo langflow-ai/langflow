@@ -408,7 +408,10 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
     from langflow.services.deps import get_authorization_service
 
     authz = get_authorization_service()
-    share_aware = await authz.supports_cross_user_fetch()
+    # Cross-user fetch is only safe when enforcement is also active — otherwise
+    # the route guards are no-ops and widening the lookup would silently
+    # expose foreign flows without any policy check.
+    share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
 
     async with session_scope() as session:
         # SECURITY: previously the UUID branch below called

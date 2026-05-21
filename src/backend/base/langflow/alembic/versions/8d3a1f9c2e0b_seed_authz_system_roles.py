@@ -4,9 +4,12 @@ Revision ID: 8d3a1f9c2e0b
 Revises: 7c8d9e0f1a2b
 Create Date: 2026-05-21
 
+Phase: EXPAND
+
 Phase 4 of the OSS RBAC rollout. Inserts the three built-in roles referenced
 by the design document so an enterprise plugin has a stable bootstrap set
-without having to ship its own seed migration.
+without having to ship its own seed migration. EXPAND because the change is
+additive — new rows in an existing table, no schema or data semantics change.
 
 OSS does not interpret these JSON permission lists — they are pure metadata.
 The enterprise Casbin plugin reads them during ``PolicySync`` to compile
@@ -19,7 +22,6 @@ re-run.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -101,10 +103,6 @@ _SYSTEM_ROLES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
 )
 
 
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
 def upgrade() -> None:
     conn = op.get_bind()
     authz_role = sa.table(
@@ -121,20 +119,28 @@ def upgrade() -> None:
         sa.column("created_by", sa.Uuid()),
     )
 
-    timestamp = _now_iso()
+    timestamp = datetime.now(timezone.utc)
     for name, description, permissions in _SYSTEM_ROLES:
         already_present = conn.execute(
             sa.select(sa.literal(1)).select_from(authz_role).where(authz_role.c.name == name)
         ).scalar()
         if already_present:
             continue
+        # ``sa.Uuid`` adapts ``UUID`` objects per-dialect (CHAR(32) on SQLite,
+        # native UUID on Postgres). Passing a bare string skips that path and
+        # fails at bind time on SQLite (``'str' object has no attribute
+        # 'hex'``), so we pass real UUID objects here.
+        # ``sa.JSON`` serializes Python lists natively on both SQLite and
+        # Postgres. ``json.dumps`` here would write the JSON-encoded string
+        # *inside* the JSON column, which downstream readers (Enterprise
+        # PolicySync expects a list) would have to peel a second time.
         conn.execute(
             authz_role.insert().values(
-                id=str(uuid4()),
+                id=uuid4(),
                 name=name,
                 description=description,
                 is_system=True,
-                permissions=json.dumps(list(permissions)),
+                permissions=list(permissions),
                 parent_role_id=None,
                 workspace_id=None,
                 created_at=timestamp,

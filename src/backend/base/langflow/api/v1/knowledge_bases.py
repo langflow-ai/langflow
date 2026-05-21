@@ -75,6 +75,36 @@ KB_METADATA_KEYS_VALUES_CAP = 50
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
 
 
+async def _guard_kb_action(
+    *,
+    current_user,
+    action,
+    kb_name: str | None,
+) -> None:
+    """Guard a KB-scoped action by resolving the DB record first.
+
+    Looks up ``KnowledgeBaseRecord(user_id=current_user.id, name=kb_name)`` so
+    the Casbin object key (``knowledge_base:{record.id}``) lines up with the
+    UUID-typed ``authz_share.resource_id`` column. Legacy disk-only KBs (no
+    ``KnowledgeBaseRecord`` row) fall back to ``kb_id=None`` so the enforcer
+    sees ``knowledge_base:*`` and the owner-override path still applies.
+    """
+    kb_id: uuid.UUID | None = None
+    kb_user_id: uuid.UUID = current_user.id
+    if kb_name:
+        record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+        if record is not None:
+            kb_id = record.id
+            kb_user_id = record.user_id
+    await ensure_knowledge_base_permission(
+        current_user,
+        action,
+        kb_id=kb_id,
+        kb_user_id=kb_user_id,
+        kb_name=kb_name,
+    )
+
+
 def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: str, username: str) -> None:
     """Raise 403 if kb_path is not contained within kb_user_path.
 
@@ -501,11 +531,7 @@ async def test_backend_connection(
     # Test-connection is a precondition for ``create_knowledge_base`` — gate
     # it on the same permission so a viewer-role user cannot enumerate
     # backend reachability they could not act on.
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.CREATE,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     # Use a private temp directory for the transient backend so a
     # local-storage backend (Chroma) doesn't leak files into the user's
     # KB root, and so concurrent test-connection calls don't collide.
@@ -554,11 +580,10 @@ async def create_knowledge_base(
         kb_root_path = KBStorageHelper.get_root_path()
         kb_user = current_user.username
         kb_name = request.name.strip().replace(" ", "_")
-        await ensure_knowledge_base_permission(
-            current_user,
-            KnowledgeBaseAction.CREATE,
+        await _guard_kb_action(
+            current_user=current_user,
+            action=KnowledgeBaseAction.CREATE,
             kb_name=kb_name or None,
-            kb_user_id=current_user.id,
         )
         # Validate KB name
         if not kb_name or len(kb_name) < MIN_KB_NAME_LENGTH:
@@ -738,11 +763,7 @@ async def preview_chunks(
     Uses the same RecursiveCharacterTextSplitter as the ingest endpoint
     so the preview accurately reflects what will be stored.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.CREATE,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     try:
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
@@ -876,12 +897,7 @@ async def ingest_files_to_knowledge_base(
     Both are validated server-side; reserved keys + oversized values raise 422
     so the UI can surface the rejection inline.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.INGEST,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
     try:
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
@@ -1059,12 +1075,7 @@ async def ingest_folder_to_knowledge_base(
     Returns a ``TaskResponse`` pointing at the ingestion job; track it
     via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.INGEST,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
     try:
         settings = get_settings_service().settings
         allowed_roots = settings.kb_allowed_folder_roots or []
@@ -1186,11 +1197,7 @@ async def list_knowledge_bases(
     # but a role with ``knowledge_base:read`` revoked entirely is rejected
     # here. Per-row filtering is the enterprise plugin's responsibility once
     # KB share grants exist.
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
     try:
         kb_root_path = KBStorageHelper.get_root_path()
         # Resolve + containment-check on par with every other path
@@ -1322,12 +1329,7 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
 @router.get("/{kb_name}", status_code=HTTPStatus.OK, dependencies=[Depends(_check_memory_base_association)])
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     try:
         record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
         if record is not None:
@@ -1400,12 +1402,7 @@ async def get_knowledge_base_chunks(
     every comma. Repeated key=value params side-step that without
     invasive middleware changes.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1581,12 +1578,7 @@ async def get_knowledge_base_metadata_keys(
     hint. Native distinct queries are deferred to backend-specific work
     (same trade-off as the chunks-endpoint post-filter pass).
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
@@ -1691,12 +1683,7 @@ async def ingest_via_connector(
     is spawned), then hands off to the same async ingestion machinery
     file-upload + folder already use.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.INGEST,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 
@@ -1807,12 +1794,7 @@ async def list_ingestion_runs(
     another's run history. Returns counter-only rows; the UI fetches
     the detail endpoint for the drill-down.
     """
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     # Verify the KB path exists + traversal-safe before exposing run
     # history — otherwise a crafted ``kb_name`` could be used to probe
     # for other users' KB existence by timing list_runs_for_kb.
@@ -1842,12 +1824,7 @@ async def get_ingestion_run(
     current_user: CurrentActiveUser,
 ) -> IngestionRunDetail:
     """Full run detail including per-item breakdown + error messages."""
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.READ,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     _resolve_kb_path(kb_name, current_user)
 
     row = await ingestion_run_service.get_run(run_id, user_id=current_user.id)
@@ -1917,12 +1894,7 @@ async def delete_knowledge_base(
     job_service: Annotated[JobService, Depends(get_job_service)],
 ) -> dict[str, str]:
     """Delete a specific knowledge base."""
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.DELETE,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.DELETE, kb_name=kb_name)
     try:
         try:
             kb_path = _resolve_kb_path(kb_name, current_user)
@@ -2018,11 +1990,10 @@ async def delete_knowledge_bases_bulk(
     # Per-KB guard. The enterprise plugin gets to deny individual KBs without
     # the call site needing to know which (the first denied KB raises 403).
     for kb_name in request.kb_names:
-        await ensure_knowledge_base_permission(
-            current_user,
-            KnowledgeBaseAction.DELETE,
+        await _guard_kb_action(
+            current_user=current_user,
+            action=KnowledgeBaseAction.DELETE,
             kb_name=kb_name,
-            kb_user_id=current_user.id,
         )
     try:
         deleted_count = 0
@@ -2143,12 +2114,7 @@ async def cancel_ingestion(
     task_service: Annotated[TaskService, Depends(get_task_service)],
 ) -> dict[str, str]:
     """Cancel the ongoing ingestion task for a knowledge base."""
-    await ensure_knowledge_base_permission(
-        current_user,
-        KnowledgeBaseAction.WRITE,
-        kb_name=kb_name,
-        kb_user_id=current_user.id,
-    )
+    await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.WRITE, kb_name=kb_name)
     try:
         kb_path = _resolve_kb_path(kb_name, current_user)
 

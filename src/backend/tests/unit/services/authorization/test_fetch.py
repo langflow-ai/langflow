@@ -25,7 +25,13 @@ _DummyRow = Flow
 
 
 class _StubService(BaseAuthorizationService):
-    """Minimal subclass so tests can flip SUPPORTS_CROSS_USER_FETCH."""
+    """Minimal subclass so tests can flip SUPPORTS_CROSS_USER_FETCH.
+
+    Cross-user fetch in the helper requires *both* the plugin capability
+    *and* ``is_enabled()`` to be true, so tests opt into both together via
+    ``supports_cross_user`` to mirror an enterprise plugin with
+    ``AUTHZ_ENABLED=true``.
+    """
 
     SUPPORTS_CROSS_USER_FETCH: ClassVar[bool] = False
 
@@ -38,7 +44,7 @@ class _StubService(BaseAuthorizationService):
         return self._supports
 
     async def is_enabled(self) -> bool:
-        return False
+        return self._supports
 
     async def enforce(self, **_: Any) -> bool:
         return True

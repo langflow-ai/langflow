@@ -63,6 +63,7 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
@@ -148,8 +149,19 @@ async def execute_workflow(
     job_id = uuid4()
 
     try:
-        # Validate flow exists and user has permission
+        # Validate flow exists and user has permission. The lookup becomes
+        # share-aware when an enterprise plugin is registered, so we must
+        # also enforce ``flow:execute`` explicitly — otherwise an API key
+        # with cross-user fetch enabled would bypass policy here.
         flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
+        await ensure_flow_permission(
+            api_key_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
 
         # Background mode execution
         if workflow_request.background:
@@ -618,8 +630,17 @@ async def get_workflow_status(
     try:
         # If job is completed, reconstruct full workflow response from vertex_builds
         if job.status == JobStatus.COMPLETED:
-            # Get the flow
+            # Get the flow (share-aware fetch — also enforce flow:read so an
+            # API key with cross-user fetch cannot read foreign job output).
             flow = await get_flow_by_id_or_endpoint_name(flow_id_str, api_key_user.id)
+            await ensure_flow_permission(
+                api_key_user,
+                FlowAction.READ,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=getattr(flow, "workspace_id", None),
+                folder_id=getattr(flow, "folder_id", None),
+            )
 
             # Reconstruct response from vertex_build table
             return await reconstruct_workflow_response_from_job_id(

@@ -383,28 +383,34 @@ async def ensure_knowledge_base_permission(
     user: User | UserRead,
     act: KnowledgeBaseAction | str,
     *,
-    kb_name: str | None = None,
+    kb_id: UUID | None = None,
     kb_user_id: UUID | None = None,
+    kb_name: str | None = None,
     workspace_id: UUID | None = None,
     project_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
     """Check knowledge-base-scoped permission with owner override.
 
-    Knowledge bases are name-keyed on the filesystem, so ``kb_name`` is used
-    verbatim as the Casbin object slug (``knowledge_base:{kb_name}``). The KB
-    owner can always operate on their own KB; otherwise the enterprise plugin
-    decides.
+    Knowledge bases are tracked by ``KnowledgeBaseRecord`` (UUID primary key,
+    ``(user_id, name)`` unique). The Casbin object slug is
+    ``knowledge_base:{kb_id}`` so it matches the ``authz_share.resource_id``
+    column (UUID) without an extra translation. ``kb_name`` is forwarded in
+    the audit context for human-readable debugging.
+
+    For create-style checks (no KB row yet), pass ``kb_id=None``; the slug
+    becomes ``knowledge_base:*``.
     """
     await _ensure_resource_permission(
         user,
         resource_type="knowledge_base",
-        resource_id=kb_name,
+        resource_id=kb_id,
         owner_id=kb_user_id,
         act_str=_coerce_action(act),
         resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, project_id),
         extra_context={
             "knowledge_base_user_id": kb_user_id,
+            "kb_id": kb_id,
             "kb_name": kb_name,
             "workspace_id": workspace_id,
             "project_id": project_id,

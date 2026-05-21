@@ -72,7 +72,12 @@ async def authorized_or_owner_scoped(
     ``None`` exactly as they did before.
     """
     authz = get_authorization_service()
-    if await authz.supports_cross_user_fetch():
+    # Cross-user fetch requires BOTH the plugin capability AND enforcement
+    # to be enabled. If ``AUTHZ_ENABLED=false`` the route guards are no-ops
+    # (see ``ensure_permission``), so widening the fetch would let an
+    # enterprise plugin's capability silently expose other users' resources
+    # without any policy check. Gate on both.
+    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
         stmt = select(model).where(id_column == resource_id)
     else:
         stmt = select(model).where(id_column == resource_id).where(owner_column == owner_id)

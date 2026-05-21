@@ -39,6 +39,7 @@ from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
@@ -47,13 +48,14 @@ router = APIRouter(prefix="/authz/shares", tags=["Authorization"])
 
 
 # Map resource type slug → (SQLModel, FK-to-user column attribute). Knowledge
-# bases are filesystem-keyed and have no DB row to verify owner against, so
-# they are intentionally absent: a KB owner is always the share creator at
-# share-create time (the kb path is rooted under ``current_user.username``).
+# bases use ``KnowledgeBaseRecord`` (UUID primary key) so the share row's
+# UUID-typed ``resource_id`` aligns with the Casbin object key
+# (``knowledge_base:{kb_id}``) emitted by ``ensure_knowledge_base_permission``.
 _RESOURCE_OWNER_LOOKUPS: dict[str, tuple[type, str]] = {
     "flow": (Flow, "user_id"),
     "deployment": (Deployment, "user_id"),
     "project": (Folder, "user_id"),
+    "knowledge_base": (KnowledgeBaseRecord, "user_id"),
     "variable": (Variable, "user_id"),
     "file": (UserFile, "user_id"),
 }
@@ -65,14 +67,7 @@ async def _resolve_resource_owner(
     resource_type: str,
     resource_id: UUID,
 ) -> UUID | None:
-    """Return the owner ``user_id`` for the named resource, or None if not found.
-
-    Knowledge bases have no DB row to consult, so callers must accept ``None``
-    and apply a name-namespace check separately (the caller is the only
-    legitimate owner under the OSS contract).
-    """
-    if resource_type == "knowledge_base":
-        return None
+    """Return the owner ``user_id`` for the named resource, or None if not found."""
     lookup = _RESOURCE_OWNER_LOOKUPS.get(resource_type)
     if lookup is None:
         return None
@@ -83,11 +78,27 @@ async def _resolve_resource_owner(
     return getattr(row, owner_attr, None)
 
 
+async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
+    """Drop cached policy after a share write, scoped to the share's audience.
+
+    The plugin-side ``invalidate_user(uuid)`` API only knows about user ids,
+    so ``target_id`` is *only* a valid argument when ``scope == "user"``.
+    For team / private / public shares (and for unknown scopes), fall back
+    to ``invalidate_all`` — otherwise we'd hand the enforcer a team uuid as
+    if it were a user uuid and the actual team members' cache would stay
+    stale.
+    """
+    authz = get_authorization_service()
+    if scope == ShareScope.USER.value and target_id is not None:
+        await authz.invalidate_user(target_id)
+    else:
+        await authz.invalidate_all()
+
+
 def _ensure_can_administer_share(
     *,
     user: User,
     owner_id: UUID | None,
-    resource_type: str,
 ) -> None:
     """OSS floor: only resource owner or superuser may write shares.
 
@@ -98,12 +109,6 @@ def _ensure_can_administer_share(
     if getattr(user, "is_superuser", False):
         return
     if owner_id is not None and owner_id == user.id:
-        return
-    # Knowledge bases have no DB owner row — the OSS-side namespace check is
-    # that the share creator must be the calling user, which they always are
-    # because shares are written under ``current_user``. So unowned-resource
-    # paths fall back to "owner unknown, deny" for everything except KBs.
-    if resource_type == "knowledge_base":
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -129,14 +134,10 @@ async def create_share(
         resource_type=payload.resource_type,
         resource_id=payload.resource_id,
     )
-    if payload.resource_type in _RESOURCE_OWNER_LOOKUPS and owner_id is None:
+    if owner_id is None:
         # The resource simply does not exist — UUID privacy: 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-    _ensure_can_administer_share(
-        user=current_user,
-        owner_id=owner_id,
-        resource_type=payload.resource_type,
-    )
+    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.CREATE,
@@ -163,12 +164,10 @@ async def create_share(
         ) from exc
     await session.refresh(row)
 
-    # Tell the enforcer (if any) to drop its cached policy for the share target.
-    authz = get_authorization_service()
-    if payload.target_id is not None:
-        await authz.invalidate_user(payload.target_id)
-    else:
-        await authz.invalidate_all()
+    # Tell the enforcer (if any) to drop its cached policy. Use the share's
+    # scope to pick the right invalidation — a team's target_id is a team
+    # uuid, not a user uuid, so ``invalidate_user`` would not reach members.
+    await _invalidate_for_share(payload.scope, payload.target_id)
 
     await audit_decision(
         user_id=current_user.id,
@@ -293,11 +292,7 @@ async def update_share(
         resource_type=row.resource_type,
         resource_id=row.resource_id,
     )
-    _ensure_can_administer_share(
-        user=current_user,
-        owner_id=owner_id,
-        resource_type=row.resource_type,
-    )
+    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.UPDATE,
@@ -318,11 +313,7 @@ async def update_share(
     await session.flush()
     await session.refresh(row)
 
-    authz = get_authorization_service()
-    if row.target_id is not None:
-        await authz.invalidate_user(row.target_id)
-    else:
-        await authz.invalidate_all()
+    await _invalidate_for_share(row.scope, row.target_id)
 
     await audit_decision(
         user_id=current_user.id,
@@ -353,11 +344,7 @@ async def delete_share(
         resource_type=row.resource_type,
         resource_id=row.resource_id,
     )
-    _ensure_can_administer_share(
-        user=current_user,
-        owner_id=owner_id,
-        resource_type=row.resource_type,
-    )
+    _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
         current_user,
         ShareAction.DELETE,
@@ -368,14 +355,11 @@ async def delete_share(
     target_id = row.target_id
     resource_type = row.resource_type
     resource_id = row.resource_id
+    scope = row.scope
     await session.delete(row)
     await session.flush()
 
-    authz = get_authorization_service()
-    if target_id is not None:
-        await authz.invalidate_user(target_id)
-    else:
-        await authz.invalidate_all()
+    await _invalidate_for_share(scope, target_id)
 
     await audit_decision(
         user_id=current_user.id,

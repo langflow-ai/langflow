@@ -258,7 +258,12 @@ async def read_project(
         # strict-pass-through stub cannot widen visibility.
         from langflow.services.deps import get_authorization_service
 
-        share_aware = await get_authorization_service().supports_cross_user_fetch()
+        authz = get_authorization_service()
+        # Cross-user fetch only when both the plugin capability and the
+        # ``AUTHZ_ENABLED`` flag are on — otherwise route guards are no-ops
+        # and widening the lookup would expose foreign projects without any
+        # policy check.
+        share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
         stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
         if not share_aware:
             stmt = stmt.where(Folder.user_id == current_user.id)

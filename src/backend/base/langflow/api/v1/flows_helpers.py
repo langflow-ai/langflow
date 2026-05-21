@@ -466,8 +466,18 @@ async def _patch_flow(
     user_id: UUID,
     storage_service: StorageService,
 ) -> FlowRead:
-    """Apply a partial update (PATCH) to an existing flow and return a FlowRead."""
+    """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
+
+    ``user_id`` is the *actor* — the caller making the patch. The flow's
+    owner is ``db_flow.user_id``. For shared edits (actor != owner) we keep
+    folder/fs operations rooted at the owner so a non-owner write does not
+    silently move the flow into the actor's folder or write into the actor's
+    fs namespace; the actor cannot change ownership-bound state at all.
+    """
     settings_service = get_settings_service()
+
+    owner_user_id: UUID = db_flow.user_id
+    is_owner_edit = owner_user_id == user_id
 
     # PATCH follows the same rule: None-valued fields are omitted unless
     # explicitly reintroduced below (for example endpoint_name clear).
@@ -476,6 +486,27 @@ async def _patch_flow(
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
         update_data["endpoint_name"] = None
+
+    # A non-owner editing a shared flow must not be able to relocate the
+    # flow into folders or storage they own. Reject ownership-bound mutations
+    # explicitly so the failure surfaces in the response instead of silently
+    # corrupting scope inside ``_validate_and_assign_folder``.
+    if not is_owner_edit:
+        if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change folder of a flow you do not own.",
+            )
+        if "fs_path" in update_data and update_data["fs_path"] != db_flow.fs_path:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change fs_path of a flow you do not own.",
+            )
+        if "user_id" in update_data and update_data["user_id"] != owner_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot transfer ownership of a flow you do not own.",
+            )
 
     if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
         await ensure_flow_move_allowed(
@@ -490,20 +521,25 @@ async def _patch_flow(
 
     _apply_update_data(db_flow, update_data)
 
-    # Validate fs_path if it was changed (will raise HTTPException if invalid)
+    # Validate fs_path if it was changed (will raise HTTPException if invalid).
+    # fs_path lives under the owner's storage namespace, so the owner id
+    # gates the safe-path check.
     if "fs_path" in update_data:
-        await _verify_fs_path(db_flow.fs_path, user_id, storage_service)
+        await _verify_fs_path(db_flow.fs_path, owner_user_id, storage_service)
 
     webhook_component = get_webhook_component_in_flow(db_flow.data) if db_flow.data else None
     db_flow.webhook = webhook_component is not None
     db_flow.updated_at = datetime.now(timezone.utc)
 
-    await _validate_and_assign_folder(session, db_flow, user_id)
+    # Folder validation must be scoped to the owner — otherwise a non-owner
+    # edit would land in the actor's default folder (see ``_validate_and_assign_folder``).
+    await _validate_and_assign_folder(session, db_flow, owner_user_id)
 
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
-    await _save_flow_to_fs(db_flow, user_id, storage_service)
+    # Writes happen under the owner's storage namespace, not the actor's.
+    await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(db_flow, from_attributes=True)
 
