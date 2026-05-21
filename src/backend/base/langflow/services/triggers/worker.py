@@ -1,32 +1,36 @@
 """The in-process trigger worker.
 
-A single ``asyncio`` task per process drains the ``trigger_job`` queue
-and dispatches each row through ``simple_run_flow``. The loop is
-spawned in ``main.py`` lifespan; cancellation on shutdown is handled
-via an ``asyncio.Event``.
+One ``asyncio`` task per process drains ``trigger_job`` and dispatches
+each row through ``simple_run_flow``. Configuration is **always** read
+live from ``flow.data`` at dispatch time — never cached on the
+trigger_job row. This means a user editing the cron in the canvas
+sees the change applied at the next fire without any reconciliation
+step on our side.
 
 Transaction discipline (the single most important property of this
 module): the claim transaction and the terminal transaction are tiny.
-The flow execution itself runs **outside** any open transaction. This
-is the entire reason Postgres-as-queue scales — long work never holds
-a row lock.
+The flow execution itself runs **outside** any open transaction. That
+is the only safe way to run Postgres-as-queue at scale — long work
+never holds a row lock.
 
-Three states per iteration:
+Three steps per iteration:
 
 1. ``_claim_one`` — short txn. ``SELECT ... FOR UPDATE SKIP LOCKED`` on
-   Postgres, optimistic ``UPDATE`` on SQLite. Returns either ``None``
-   (queue empty / nothing eligible) or a small dataclass with the
-   minimum we need to dispatch.
-2. ``_dispatch`` — no txn. Loads the flow and user, builds the
-   ``SimplifiedAPIRequest``, calls ``simple_run_flow``. Returns the
-   workflow ``Job`` id on success, an exception on failure.
+   Postgres, optimistic ``UPDATE ... WHERE status='queued'`` on SQLite.
+   Returns a small dataclass with the queue row identity and the
+   ``(flow_id, component_id)`` pointer the next steps will dereference.
+2. ``_dispatch`` — no txn. Loads the flow + user, looks up the live
+   config via :mod:`langflow.services.triggers.discovery`, builds the
+   ``SimplifiedAPIRequest`` tweaks via
+   :mod:`langflow.services.triggers.tweaks`, calls ``simple_run_flow``.
 3. ``_finalize_success`` / ``_finalize_failure`` — short txn. Updates
-   the row to ``completed`` / ``failed`` and, when applicable, enqueues
-   the next ``trigger_job`` row for recurring cron triggers or for the
-   retry chain.
+   the row to terminal status and either enqueues the next cron fire
+   (success path) or the next retry attempt (failure path, until the
+   budget is exhausted, after which the next cron fire is enqueued
+   anyway so a transient outage does not stop the schedule).
 
 The loop swallows every exception except ``CancelledError`` so a
-single bad trigger never takes the worker down.
+single bad trigger cannot take the worker down.
 """
 
 from __future__ import annotations
@@ -44,17 +48,21 @@ from sqlmodel import select
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.database.models.triggers import Trigger, TriggerJob
+from langflow.services.database.models.triggers import TriggerJob
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from langflow.services.triggers.discovery import (
+    CronTriggerConfig,
+    find_cron_trigger_configs,
+)
 from langflow.services.triggers.scheduler import next_fire_time_utc
+from langflow.services.triggers.tweaks import build_simplified_request_kwargs
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-# Idle/error backoff bounds. Bounded so a recurring minute-level cron
-# never waits more than ``_IDLE_BACKOFF_MAX_S`` after its scheduled
-# time before the worker notices the new row.
+# Idle backoff caps idle queue polling so a minute-level cron is never
+# delayed by more than ``_IDLE_BACKOFF_MAX_S`` after its scheduled tick.
 _IDLE_BACKOFF_START_S = 0.5
 _IDLE_BACKOFF_MAX_S = 5.0
 _ERROR_BACKOFF_S = 10.0
@@ -67,7 +75,8 @@ _RETRY_BACKOFF_CAP_S = 300
 @dataclass(frozen=True)
 class _ClaimedJob:
     trigger_job_id: UUID
-    trigger_id: UUID
+    flow_id: UUID
+    component_id: str
     attempt: int
     max_attempts: int
 
@@ -82,27 +91,40 @@ def _retry_delay(attempt: int) -> timedelta:
     return timedelta(seconds=seconds)
 
 
+def _coerce_uuid(value: object) -> UUID:
+    """Normalize a raw SQL row value to a ``UUID``.
+
+    SQLAlchemy returns ``UUID`` for ORM queries against ``sa.Uuid()``
+    columns but a hex string (or bytes) for ``text()`` queries since
+    raw SQL bypasses the type adapter. The worker uses ``text()`` for
+    the claim query — coerce here so downstream callers can compare
+    against ORM Uuid columns without surprises.
+    """
+    if isinstance(value, UUID):
+        return value
+    if isinstance(value, bytes):
+        return UUID(bytes=value)
+    return UUID(str(value))
+
+
 async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
     """Atomically claim the next eligible ``trigger_job`` row.
 
-    Flips the chosen row to ``in_progress``.
-    On Postgres, uses ``FOR UPDATE SKIP LOCKED`` so multiple workers
-    can run concurrently without ever handing the same row to two
-    workers. On SQLite, uses an optimistic ``UPDATE ... WHERE status =
-    'queued'`` which is atomic because SQLite serializes writes.
+    Flips the chosen row to ``in_progress``. On Postgres uses
+    ``FOR UPDATE SKIP LOCKED`` so multiple workers can run concurrently
+    without ever handing the same row to two workers. On SQLite uses
+    an optimistic ``UPDATE ... WHERE status = 'queued'`` which is atomic
+    because SQLite serialises writes.
 
-    Returns ``None`` if no eligible row exists.
+    Returns ``None`` when no eligible row exists.
     """
     bind = session.get_bind()
     dialect = bind.dialect.name
     now = _utcnow()
 
     if dialect == "postgresql":
-        # Two-step: select the id with row lock, then update. Both
-        # statements run inside the same transaction the caller opened
-        # via session_scope().
         select_stmt = text(
-            "SELECT id, trigger_id, attempt, max_attempts "
+            "SELECT id, flow_id, component_id, attempt, max_attempts "
             "FROM trigger_job "
             "WHERE status = 'queued' AND scheduled_at <= :now "
             "ORDER BY scheduled_at "
@@ -112,7 +134,7 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         row = (await session.execute(select_stmt, {"now": now})).first()
         if row is None:
             return None
-        trigger_job_id, trigger_id, attempt, max_attempts = row
+        trigger_job_id, flow_id, component_id, attempt, max_attempts = row
         await session.execute(
             text(
                 "UPDATE trigger_job SET status = 'in_progress', started_at = :now "
@@ -122,14 +144,13 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         )
         return _ClaimedJob(
             trigger_job_id=_coerce_uuid(trigger_job_id),
-            trigger_id=_coerce_uuid(trigger_id),
+            flow_id=_coerce_uuid(flow_id),
+            component_id=str(component_id),
             attempt=attempt,
             max_attempts=max_attempts,
         )
 
-    # SQLite (and any other dialect): one-shot optimistic update. The
-    # WHERE clause on ``status`` keeps the claim idempotent if two
-    # tasks ever race — only one observes ``status='queued'``.
+    # SQLite (and any other dialect): one-shot optimistic update.
     update_stmt = text(
         "UPDATE trigger_job "
         "SET status = 'in_progress', started_at = :now "
@@ -140,130 +161,149 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         "    LIMIT 1 "
         ") "
         "AND status = 'queued' "
-        "RETURNING id, trigger_id, attempt, max_attempts"
+        "RETURNING id, flow_id, component_id, attempt, max_attempts"
     )
     result = await session.execute(update_stmt, {"now": now})
     row = result.first()
     if row is None:
         return None
-    trigger_job_id, trigger_id, attempt, max_attempts = row
+    trigger_job_id, flow_id, component_id, attempt, max_attempts = row
     return _ClaimedJob(
         trigger_job_id=_coerce_uuid(trigger_job_id),
-        trigger_id=_coerce_uuid(trigger_id),
+        flow_id=_coerce_uuid(flow_id),
+        component_id=str(component_id),
         attempt=attempt,
         max_attempts=max_attempts,
     )
 
 
-def _coerce_uuid(value: object) -> UUID:
-    """Normalize a raw SQL row value to a ``UUID``.
+@dataclass(frozen=True)
+class _DispatchContext:
+    """What ``_dispatch`` needs to execute a fire.
 
-    SQLAlchemy returns ``UUID`` for ORM queries against ``sa.Uuid()``
-    columns but a hex string (or bytes) for ``text()`` queries since
-    raw SQL bypasses the type adapter. The worker uses ``text()`` for
-    the claim query — coerce here so downstream callers can compare
-    against ``Trigger.id`` / ``TriggerJob.id`` without surprises.
+    Loaded inside a short txn so the flow execution itself runs after
+    the connection is back in the pool.
     """
-    if isinstance(value, UUID):
-        return value
-    if isinstance(value, bytes):
-        return UUID(bytes=value)
-    return UUID(str(value))
+
+    flow: Flow
+    user: User
+    config: CronTriggerConfig
 
 
-async def _load_trigger_and_flow(
+async def _load_dispatch_context(
     session: AsyncSession,
-    trigger_id: UUID,
-) -> tuple[Trigger, Flow, User] | None:
-    """Return the trigger plus its flow and owning user.
+    claimed: _ClaimedJob,
+) -> _DispatchContext | None:
+    """Return the flow + user + live component config, or ``None``.
 
-    Returns ``None`` if any of the three was deleted between claim and dispatch.
+    Returns ``None`` whenever any of (flow, user, component) cannot be
+    resolved — flow deleted, user deleted, or the component removed
+    from ``flow.data``. The caller treats these as "trigger gone" and
+    skips the finalize step (the row will be cleaned up by the next
+    save's reconciliation, or by the CASCADE on the flow delete).
     """
-    trigger = (await session.exec(select(Trigger).where(Trigger.id == trigger_id))).first()
-    if trigger is None:
-        return None
-    flow = (await session.exec(select(Flow).where(Flow.id == trigger.flow_id))).first()
+    flow = (
+        await session.exec(select(Flow).where(Flow.id == claimed.flow_id))
+    ).first()
     if flow is None:
         return None
-    user = (await session.exec(select(User).where(User.id == trigger.user_id))).first()
+
+    configs = find_cron_trigger_configs(flow.data)
+    matching = next(
+        (c for c in configs if c.component_id == claimed.component_id),
+        None,
+    )
+    if matching is None:
+        return None
+
+    user_id = flow.user_id
+    if user_id is None:
+        return None
+    user = (await session.exec(select(User).where(User.id == user_id))).first()
     if user is None:
         return None
-    return trigger, flow, user
+
+    return _DispatchContext(flow=flow, user=user, config=matching)
 
 
 async def _run_flow_for_trigger(
-    trigger: Trigger,
-    flow: Flow,
-    user: User,
-    trigger_job_id: UUID,
+    ctx: _DispatchContext,
+    claimed: _ClaimedJob,
+    *,
+    fire_time: datetime,
 ) -> UUID:
     """Invoke ``simple_run_flow`` and return the workflow ``Job`` id.
 
-    Imports happen inside the function so this module does not pull
-    the full request-handling stack at import time (which would create
-    a circular import with ``api.v1.endpoints``).
+    Imports happen inside the function so the worker module does not
+    pull the full request-handling stack at import time (which would
+    create a circular import with ``api.v1.endpoints``).
     """
     from langflow.api.v1.endpoints import simple_run_flow
     from langflow.api.v1.schemas import SimplifiedAPIRequest
 
-    payload = dict(trigger.payload or {})
-    input_request = SimplifiedAPIRequest(
-        input_value=payload.get("input_value"),
-        input_type=payload.get("input_type"),
-        output_type=payload.get("output_type"),
-        output_component=payload.get("output_component"),
-        tweaks=payload.get("tweaks"),
-        session_id=payload.get("session_id"),
-    )
+    request_kwargs = build_simplified_request_kwargs(ctx.config, fire_time=fire_time)
+    input_request = SimplifiedAPIRequest(**request_kwargs)
     run_id = str(uuid4())
     await simple_run_flow(
-        flow=flow,
+        flow=ctx.flow,
         input_request=input_request,
         stream=False,
-        api_key_user=user,
+        api_key_user=ctx.user,
         event_manager=None,
         context={
-            "trigger_id": str(trigger.id),
-            "trigger_job_id": str(trigger_job_id),
+            "trigger_component_id": ctx.config.component_id,
+            "trigger_job_id": str(claimed.trigger_job_id),
+            "trigger_fire_time": fire_time.isoformat(),
         },
         run_id=run_id,
     )
     return UUID(run_id)
 
 
-async def _enqueue_next_cron_job(session: AsyncSession, trigger: Trigger, after: datetime) -> None:
-    """Insert the next ``trigger_job`` for a recurring trigger.
+async def _enqueue_next_cron_job(
+    session: AsyncSession,
+    claimed: _ClaimedJob,
+    ctx: _DispatchContext,
+    *,
+    after: datetime,
+) -> None:
+    """Insert the next ``trigger_job`` for the same ``(flow_id, component_id)``.
 
-    No-op if the trigger has been disabled or if it has no cron
-    expression. Called inside the terminal transaction so the new row
-    is visible to the next iteration immediately.
+    Uses the **live** config because ``ctx.config`` was just freshly
+    parsed from ``flow.data``. If the user edited the cron between
+    enqueue and this finalize step, the new value takes effect now.
     """
-    if not trigger.is_active or trigger.cron_expression is None:
-        return
     next_fire = next_fire_time_utc(
-        cron_expression=trigger.cron_expression,
-        timezone_name=trigger.timezone,
+        cron_expression=ctx.config.cron_expression,
+        timezone_name=ctx.config.timezone,
         after=after,
     )
     session.add(
         TriggerJob(
             id=uuid4(),
-            trigger_id=trigger.id,
+            flow_id=claimed.flow_id,
+            component_id=claimed.component_id,
             status=JobStatus.QUEUED,
             scheduled_at=next_fire,
             attempt=1,
-            max_attempts=trigger.max_attempts,
+            max_attempts=ctx.config.max_attempts,
             created_at=after,
         ),
     )
 
 
-async def _enqueue_retry(session: AsyncSession, trigger: Trigger, claimed: _ClaimedJob, *, after: datetime) -> None:
+async def _enqueue_retry(
+    session: AsyncSession,
+    claimed: _ClaimedJob,
+    *,
+    after: datetime,
+) -> None:
     """Insert a retry ``trigger_job`` row with ``attempt+1``."""
     session.add(
         TriggerJob(
             id=uuid4(),
-            trigger_id=trigger.id,
+            flow_id=claimed.flow_id,
+            component_id=claimed.component_id,
             status=JobStatus.QUEUED,
             scheduled_at=after + _retry_delay(claimed.attempt),
             attempt=claimed.attempt + 1,
@@ -276,85 +316,92 @@ async def _enqueue_retry(session: AsyncSession, trigger: Trigger, claimed: _Clai
 async def _finalize_success(
     session: AsyncSession,
     claimed: _ClaimedJob,
-    trigger: Trigger,
+    ctx: _DispatchContext,
     *,
     run_job_id: UUID,
 ) -> None:
     now = _utcnow()
-    job = (await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))).first()
+    job = (
+        await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))
+    ).first()
     if job is None:
-        # Trigger (and cascading jobs) were deleted while the flow ran.
         return
     job.status = JobStatus.COMPLETED
     job.finished_at = now
     job.run_job_id = run_job_id
     session.add(job)
-    await _enqueue_next_cron_job(session, trigger, after=now)
+    await _enqueue_next_cron_job(session, claimed, ctx, after=now)
 
 
 async def _finalize_failure(
     session: AsyncSession,
     claimed: _ClaimedJob,
-    trigger: Trigger,
+    ctx: _DispatchContext | None,
     *,
     error: str,
 ) -> None:
     now = _utcnow()
-    job = (await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))).first()
+    job = (
+        await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))
+    ).first()
     if job is None:
         return
     job.status = JobStatus.FAILED
     job.finished_at = now
-    job.error = error[:4000]  # bound the column write; full traceback also goes to logs
+    job.error = error[:4000]
     session.add(job)
     if claimed.attempt < claimed.max_attempts:
-        await _enqueue_retry(session, trigger, claimed, after=now)
+        await _enqueue_retry(session, claimed, after=now)
         return
     # Out of retry budget — for recurring cron triggers we still want
-    # the *next* scheduled fire to be enqueued so a transient outage
-    # does not stop the schedule permanently.
-    await _enqueue_next_cron_job(session, trigger, after=now)
+    # the next scheduled fire enqueued so a transient outage does not
+    # stop the schedule permanently. We can only do that if we still
+    # have the context (component config) — without it the trigger is
+    # effectively gone and there is nothing to reschedule.
+    if ctx is not None:
+        await _enqueue_next_cron_job(session, claimed, ctx, after=now)
 
 
 async def _dispatch(claimed: _ClaimedJob) -> None:
-    """Execute the flow for a claimed trigger_job row.
-
-    Opens fresh sessions for load, run, and finalize so the flow run
-    never blocks a DB connection.
-    """
-    # 1. Load (short txn).
+    """Execute the flow for a claimed trigger_job row."""
+    fire_time = _utcnow()
     async with session_scope() as session:
-        loaded = await _load_trigger_and_flow(session, claimed.trigger_id)
-    if loaded is None:
-        # Trigger was deleted between claim and dispatch. Nothing to do —
-        # the trigger_job row was either cascade-deleted with the trigger
-        # or the user disabled the trigger; either way we leave the
-        # ``in_progress`` row to be tidied up by the startup reset hook.
-        await logger.adebug("trigger_job %s: trigger gone before dispatch", claimed.trigger_job_id)
+        ctx = await _load_dispatch_context(session, claimed)
+    if ctx is None:
+        await logger.adebug(
+            "trigger_job %s: trigger gone before dispatch (flow=%s component=%s)",
+            claimed.trigger_job_id,
+            claimed.flow_id,
+            claimed.component_id,
+        )
+        # Mark the row as cancelled so it doesn't sit forever in
+        # in_progress. Without context we cannot reschedule.
+        async with session_scope() as session:
+            await _finalize_failure(session, claimed, None, error="trigger gone before dispatch")
         return
-    trigger, flow, user = loaded
 
-    # 2. Run (no txn).
     try:
-        run_job_id = await _run_flow_for_trigger(trigger, flow, user, claimed.trigger_job_id)
+        run_job_id = await _run_flow_for_trigger(ctx, claimed, fire_time=fire_time)
     except Exception as exc:  # noqa: BLE001 — worker must always finalize
         await logger.aexception(
-            "trigger_job %s failed on attempt %d/%d",
+            "trigger_job %s failed on attempt %d/%d (flow=%s component=%s)",
             claimed.trigger_job_id,
             claimed.attempt,
             claimed.max_attempts,
+            claimed.flow_id,
+            claimed.component_id,
         )
         async with session_scope() as session:
-            await _finalize_failure(session, claimed, trigger, error=repr(exc))
+            await _finalize_failure(session, claimed, ctx, error=repr(exc))
         return
 
-    # 3. Finalize success (short txn).
     async with session_scope() as session:
-        await _finalize_success(session, claimed, trigger, run_job_id=run_job_id)
+        await _finalize_success(session, claimed, ctx, run_job_id=run_job_id)
     await logger.ainfo(
-        "trigger_job %s completed (trigger=%s, run_job=%s)",
+        "trigger_job %s completed (flow=%s component=%s run_job=%s)",
         claimed.trigger_job_id,
-        claimed.trigger_id,
+        claimed.flow_id,
+        claimed.component_id,
         run_job_id,
     )
 
@@ -370,8 +417,7 @@ async def trigger_worker_loop(stop_event: asyncio.Event) -> None:
         stop_event.set()
         task.cancel()
 
-    The two cancellation paths (``stop_event`` and ``task.cancel``)
-    are both honoured.
+    Both cancellation paths are honoured.
     """
     idle_backoff = _IDLE_BACKOFF_START_S
     await logger.ainfo("trigger worker started")
@@ -380,7 +426,6 @@ async def trigger_worker_loop(stop_event: asyncio.Event) -> None:
             async with session_scope() as session:
                 claimed = await _claim_one(session)
             if claimed is None:
-                # Quiet queue: wait, bounded.
                 await _sleep_with_stop(stop_event, idle_backoff)
                 idle_backoff = min(idle_backoff * 2, _IDLE_BACKOFF_MAX_S)
                 continue
@@ -411,7 +456,7 @@ async def recover_stalled_jobs(*, older_than: timedelta = timedelta(minutes=30))
     Crude orphan recovery: if a worker crashed mid-flow the row stays
     ``in_progress`` forever. Run once at process startup to flip such
     rows back to ``queued`` so the worker picks them up again. The
-    ``attempt`` counter is not incremented — the previous run never
+    ``attempt`` counter is not incremented — the prior run never
     finalized, so it does not consume the retry budget.
     """
     from langflow.services.database.models.triggers.crud import reset_stalled_in_progress

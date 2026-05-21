@@ -35,6 +35,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service
 from langflow.services.storage.service import StorageService
+from langflow.services.triggers import reconcile_trigger_jobs_for_flow
 
 if TYPE_CHECKING:
     from langflow.services.database.models.user.model import User
@@ -319,6 +320,7 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
+        await reconcile_trigger_jobs_for_flow(session, db_flow)
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
@@ -433,6 +435,7 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
+    await reconcile_trigger_jobs_for_flow(session, existing_flow)
     await _save_flow_to_fs(existing_flow, user_id, storage_service)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
@@ -483,6 +486,7 @@ async def _patch_flow(
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
+    await reconcile_trigger_jobs_for_flow(session, db_flow)
     await _save_flow_to_fs(db_flow, user_id, storage_service)
 
     return FlowRead.model_validate(db_flow, from_attributes=True)
