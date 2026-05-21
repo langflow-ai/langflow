@@ -1334,26 +1334,33 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
+    get_component_hash_lookups_for_validation()
+    all_known = component_cache.all_known_hashes
+    if all_known is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Component templates are still initializing. Please try again in a few seconds.",
+        )
 
-    # P2: Note: The admin gate for custom_component_admin_only applies only to POST /custom_component
-    # (component creation) not to this endpoint (field refresh/update). This endpoint is called
-    # for metadata-only operations like refreshing available models when a provider changes.
-    # Non-admin users need to be able to refresh field metadata, so the gate does not apply here.
-    # See: https://github.com/langflow-ai/langflow/issues/XXX for details on the field refresh use case.
+    # In admin-only mode, non-admin users may refresh/update only known server
+    # templates. Truly custom code edits remain restricted to administrators.
+    if (
+        getattr(settings_service.settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(code_request.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component editing is restricted to administrators",
+        )
 
-    if not settings_service.settings.allow_custom_components:
-        get_component_hash_lookups_for_validation()
-        all_known = component_cache.all_known_hashes
-        if all_known is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Component templates are still initializing. Please try again in a few seconds.",
-            )
-        if not code_hash_matches_any_template(code_request.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+    if not settings_service.settings.allow_custom_components and not code_hash_matches_any_template(
+        code_request.code, all_known
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     try:
         component = Component(_code=code_request.code)
