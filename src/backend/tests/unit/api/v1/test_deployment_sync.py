@@ -20,12 +20,10 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBindings,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
-    truncate_deployment_description,
 )
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     DeploymentCreateResult,
     DeploymentGetResult,
     DeploymentType,
@@ -43,7 +41,6 @@ except ModuleNotFoundError:
     )
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
-CONTRACTS_MODULE = "langflow.api.v1.mappers.deployments.contracts"
 SYNC_MODULE = "langflow.api.v1.mappers.deployments.sync"
 
 
@@ -101,9 +98,7 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
                 "display_name": (getattr(item, "provider_data", {}) or {}).get(
                     "display_name", getattr(item, "name", str(item.id))
                 ),
-                "description": truncate_deployment_description(
-                    (getattr(item, "provider_data", {}) or {}).get("description")
-                ),
+                "description": (getattr(item, "provider_data", {}) or {}).get("description"),
             }
             for item in provider_view.deployments
         }
@@ -130,7 +125,7 @@ async def test_sync_deployment_display_metadata_passes_provider_metadata(mock_up
     from langflow.api.v1.mappers.deployments.helpers import sync_deployment_display_metadata
 
     deployment = _mock_deployment_row("rk-1")
-    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+    long_description = "x" * 501
     mock_update_metadata.return_value = deployment
 
     result = await sync_deployment_display_metadata(
@@ -138,7 +133,7 @@ async def test_sync_deployment_display_metadata_passes_provider_metadata(mock_up
         deployment=deployment,
         provider_metadata={
             "display_name": "Provider Name",
-            "description": truncate_deployment_description(long_description),
+            "description": long_description,
         },
         user_id=uuid4(),
     )
@@ -146,55 +141,7 @@ async def test_sync_deployment_display_metadata_passes_provider_metadata(mock_up
     assert result is deployment
     mock_update_metadata.assert_awaited_once()
     assert mock_update_metadata.call_args.kwargs["display_name"] == "Provider Name"
-    assert mock_update_metadata.call_args.kwargs["description"] == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-
-
-@patch(f"{CONTRACTS_MODULE}.logger.info")
-def test_truncate_deployment_description_logs_when_truncated(mock_logger_info):
-    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
-
-    truncated = truncate_deployment_description(description)
-
-    assert truncated == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-    mock_logger_info.assert_called_once_with(
-        "truncate_deployment_description",
-        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
-    )
-
-
-@patch(f"{CONTRACTS_MODULE}.logger.info")
-def test_truncate_deployment_description_logs_callsite_metadata_when_provided(mock_logger_info):
-    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
-
-    truncated = truncate_deployment_description(
-        description,
-        log_context={
-            "callsite_function": "extract_metadata_for_get",
-            "provider_key": "watsonx-orchestrate",
-            "provider_resource_key": "agent-1",
-        },
-    )
-
-    assert truncated == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-    mock_logger_info.assert_called_once_with(
-        "truncate_deployment_description",
-        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
-        callsite_function="extract_metadata_for_get",
-        provider_key="watsonx-orchestrate",
-        provider_resource_key="agent-1",
-    )
-
-
-@patch(f"{CONTRACTS_MODULE}.logger.info")
-def test_truncate_deployment_description_does_not_log_when_unchanged(mock_logger_info):
-    description = "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-
-    truncated = truncate_deployment_description(description)
-
-    assert truncated == description
-    mock_logger_info.assert_not_called()
+    assert mock_update_metadata.call_args.kwargs["description"] == long_description
 
 
 # ---------------------------------------------------------------------------
@@ -572,7 +519,7 @@ class TestListDeploymentsSynced:
     @patch(f"{MODULE}.update_deployment_metadata_batch", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
-    async def test_truncates_provider_description_before_batch_metadata_sync(
+    async def test_passes_provider_description_before_batch_metadata_sync(
         self,
         mock_list,
         mock_fetch,
@@ -581,8 +528,8 @@ class TestListDeploymentsSynced:
         mock_count_attachments,
         mock_count,
     ):
-        """Provider descriptions are truncated before local metadata batch sync."""
-        long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+        """Provider descriptions are passed through before local metadata batch sync."""
+        long_description = "x" * 501
 
         class _MetadataMapper(_NoSnapshotBindingMapper):
             def extract_metadata_for_list(self, provider_view) -> dict[str, dict[str, Any]]:
@@ -590,7 +537,7 @@ class TestListDeploymentsSynced:
                 return {
                     "rk-1": {
                         "display_name": "Provider Name",
-                        "description": truncate_deployment_description(long_description),
+                        "description": long_description,
                     }
                 }
 
@@ -618,7 +565,7 @@ class TestListDeploymentsSynced:
         mock_update_metadata_batch.assert_awaited_once()
         updates = mock_update_metadata_batch.call_args.kwargs["deployment_updates"]
         assert updates[0].display_name == "Provider Name"
-        assert updates[0].description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+        assert updates[0].description == long_description
         mock_delete_unbound.assert_awaited_once()
         mock_count.assert_awaited_once()
 

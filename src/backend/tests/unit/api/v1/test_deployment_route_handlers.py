@@ -17,7 +17,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.deployments import DeploymentTelemetryCtx
-from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding, truncate_deployment_description
+from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -37,7 +37,6 @@ from lfx.services.adapters.deployment.exceptions import (
     ServiceUnavailableError,
 )
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
@@ -696,7 +695,7 @@ class TestListDeploymentsMetadataSync:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    async def test_provider_description_truncated_and_display_name_stays_in_provider_data(
+    async def test_provider_description_passed_and_display_name_stays_in_provider_data(
         self,
         mock_get_pa,
         mock_get_mapper,
@@ -723,7 +722,7 @@ class TestListDeploymentsMetadataSync:
                 return {
                     str(item.id): {
                         "display_name": item.provider_data["display_name"],
-                        "description": truncate_deployment_description(item.provider_data["description"]),
+                        "description": item.provider_data["description"],
                     }
                     for item in provider_view.deployments
                 }
@@ -753,7 +752,7 @@ class TestListDeploymentsMetadataSync:
 
         pa = _fake_provider_account()
         row = _fake_deployment_row(resource_key="agent-1", description="old")
-        long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+        long_description = "x" * 501
         provider_view = SimpleNamespace(
             deployments=[
                 SimpleNamespace(
@@ -787,7 +786,7 @@ class TestListDeploymentsMetadataSync:
             deployment_type=None,
         )
 
-        assert result.deployments[0].description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+        assert result.deployments[0].description == long_description
         assert result.deployments[0].provider_data["display_name"] == "Provider Label"
         assert not hasattr(result.deployments[0], "display_name")
         mock_update_metadata_batch.assert_awaited_once()
@@ -2110,7 +2109,7 @@ class TestGetDeploymentSync:
     @patch(f"{HELPERS_MODULE}.count_deployment_attachments", new_callable=AsyncMock, return_value=0)
     @patch(f"{HELPERS_MODULE}.update_deployment_metadata", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
-    async def test_get_sync_truncates_provider_description_and_keeps_display_name_in_provider_data(
+    async def test_get_sync_passes_provider_description_and_keeps_display_name_in_provider_data(
         self,
         mock_resolve,
         mock_update_metadata,
@@ -2128,7 +2127,7 @@ class TestGetDeploymentSync:
                 data = get_result.model_dump()["provider_data"]
                 return {
                     "display_name": data["display_name"],
-                    "description": truncate_deployment_description(data["description"]),
+                    "description": data["description"],
                 }
 
             def extract_snapshot_bindings_for_get(self, get_result, *, resource_key: str):
@@ -2141,7 +2140,7 @@ class TestGetDeploymentSync:
             description="old description",
             deployment_type="agent",
         )
-        long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+        long_description = "x" * 501
         adapter = AsyncMock()
         adapter.get.return_value = DeploymentGetResult(
             id="provider-rk-1",
@@ -2165,7 +2164,7 @@ class TestGetDeploymentSync:
         session.begin_nested = MagicMock(return_value=_AsyncNoopSavepoint())
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
-        assert result.description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+        assert result.description == long_description
         assert result.provider_data["display_name"] == "Provider Label"
         assert not hasattr(result, "display_name")
         mock_update_metadata.assert_awaited_once()

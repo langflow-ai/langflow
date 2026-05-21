@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -15,7 +14,6 @@ from langflow.api.v1.mappers.deployments.contracts import (
     CreateSnapshotBindings,
     FlowVersionPatch,
     UpdateSnapshotBindings,
-    truncate_deployment_description,
 )
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
@@ -23,7 +21,6 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
 )
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     ConfigListItem,
     ConfigListResult,
     DeploymentCreateResult,
@@ -1266,31 +1263,27 @@ def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payl
     assert create_result.provider_result.get("tools_with_refs") == []
 
 
-def test_watsonx_mapper_existing_resource_result_does_not_truncate_before_db_write() -> None:
+def test_watsonx_mapper_existing_resource_result_preserves_description_before_db_write() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
-    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+    long_description = "x" * 501
 
-    with patch(
-        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.truncate_deployment_description"
-    ) as mock_truncate:
-        create_result = mapper.util_create_result_from_existing_resource(
-            existing_resource=DeploymentGetResult(
-                id="existing-agent-1",
-                name="agent_technical_name",
-                type="agent",
-                provider_data={
-                    "name": "agent_technical_name",
-                    "display_name": "Provider Label",
-                    "description": long_description,
-                    "tool_ids": [],
-                    "llm": TEST_WXO_LLM,
-                    "environments": ["draft"],
-                },
-            )
+    create_result = mapper.util_create_result_from_existing_resource(
+        existing_resource=DeploymentGetResult(
+            id="existing-agent-1",
+            name="agent_technical_name",
+            type="agent",
+            provider_data={
+                "name": "agent_technical_name",
+                "display_name": "Provider Label",
+                "description": long_description,
+                "tool_ids": [],
+                "llm": TEST_WXO_LLM,
+                "environments": ["draft"],
+            },
         )
+    )
 
     assert create_result.description == long_description
-    mock_truncate.assert_not_called()
 
 
 def test_watsonx_mapper_resolve_verify_credentials_for_update_returns_none_without_provider_data() -> None:
@@ -1511,10 +1504,10 @@ def test_watsonx_mapper_existing_agent_create_model_uses_provider_metadata() -> 
     assert deployment.description == "Provider description"
 
 
-def test_watsonx_mapper_existing_agent_create_model_truncates_once_for_db_write() -> None:
+def test_watsonx_mapper_existing_agent_create_model_passes_description_for_db_write() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_account_id = uuid4()
-    long_description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7)
+    long_description = "x" * 501
     payload = DeploymentCreateRequest(
         provider_id=provider_account_id,
         type="agent",
@@ -1534,20 +1527,15 @@ def test_watsonx_mapper_existing_agent_create_model_truncates_once_for_db_write(
         },
     )
 
-    with patch(
-        "langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper.truncate_deployment_description",
-        wraps=truncate_deployment_description,
-    ) as mock_truncate:
-        deployment = mapper.resolve_deployment_model_from_existing_resource_for_create(
-            payload=payload,
-            user_id=uuid4(),
-            project_id=uuid4(),
-            deployment_provider_account_id=provider_account_id,
-            existing_provider_resource=existing_provider_resource,
-        )
+    deployment = mapper.resolve_deployment_model_from_existing_resource_for_create(
+        payload=payload,
+        user_id=uuid4(),
+        project_id=uuid4(),
+        deployment_provider_account_id=provider_account_id,
+        existing_provider_resource=existing_provider_resource,
+    )
 
-    assert deployment.description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-    mock_truncate.assert_called_once()
+    assert deployment.description == long_description
 
 
 def test_watsonx_mapper_metadata_sync_kwargs_include_display_name() -> None:
@@ -1580,8 +1568,7 @@ def test_watsonx_mapper_metadata_sync_kwargs_include_display_name() -> None:
     }
 
 
-@patch("langflow.api.v1.mappers.deployments.contracts.logger.info")
-def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logger_info) -> None:
+def test_watsonx_mapper_metadata_sync_passes_list_description() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     provider_result = DeploymentListResult(
         deployments=[
@@ -1607,7 +1594,7 @@ def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logge
                 provider_data={
                     "name": "agent_technical_name_2",
                     "display_name": "Provider Label 2",
-                    "description": "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7),
+                    "description": "x" * 501,
                     "tool_ids": [],
                     "llm": TEST_WXO_LLM,
                     "environments": [],
@@ -1620,16 +1607,7 @@ def test_watsonx_mapper_metadata_sync_truncation_logs_list_item_index(mock_logge
 
     metadata = mapper.extract_metadata_for_list(provider_result)
 
-    assert metadata["provider-agent-2"]["description"] == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
-    mock_logger_info.assert_called_once_with(
-        "truncate_deployment_description",
-        original_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
-        callsite_function="extract_metadata_for_list",
-        provider_key="watsonx-orchestrate",
-        provider_resource_key="provider-agent-2",
-        provider_list_item_index=1,
-    )
+    assert metadata["provider-agent-2"]["description"] == "x" * 501
 
 
 def test_watsonx_mapper_get_metadata_sync_kwargs_include_display_name() -> None:
@@ -1684,13 +1662,13 @@ def test_watsonx_mapper_create_model_uses_adapter_result_description() -> None:
     assert deployment.description == "Langflow deployment OK AGENT 6"
 
 
-def test_watsonx_mapper_create_model_truncates_adapter_result_description() -> None:
+def test_watsonx_mapper_create_model_passes_adapter_result_description() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     result = DeploymentCreateResult(
         id="provider-id",
         type=DeploymentType.AGENT,
         name="langflow_OK_AGENT_6_cea1e533",
-        description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 7),
+        description="x" * 501,
         provider_result={
             "display_name": "OK AGENT 6",
             "app_ids": [],
@@ -1705,7 +1683,7 @@ def test_watsonx_mapper_create_model_truncates_adapter_result_description() -> N
         deployment_provider_account_id=uuid4(),
     )
 
-    assert deployment.description == "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+    assert deployment.description == result.description
 
 
 @pytest.mark.asyncio
@@ -2362,7 +2340,7 @@ def test_watsonx_mapper_shapes_update_response_with_provider_display_name() -> N
 
 def test_watsonx_mapper_resolves_kwargs_for_metadata_update_from_adapter_result() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
-    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1)
+    description = "x" * 501
     result = DeploymentUpdateResult(
         id="provider-id",
         provider_result={
@@ -2376,7 +2354,7 @@ def test_watsonx_mapper_resolves_kwargs_for_metadata_update_from_adapter_result(
 
     assert metadata == {
         "display_name": "Provider Label",
-        "description": "x" * DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
+        "description": description,
     }
 
 
