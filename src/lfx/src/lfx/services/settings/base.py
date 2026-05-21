@@ -155,10 +155,21 @@ class Settings(BaseSettings):
     mcp_server_timeout: int = 20
     """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
 
-    mcp_tool_execution_timeout: int = 180
+    mcp_tool_execution_timeout: float = 180.0
     """Maximum seconds to wait for MCP tool execution before timing out.
     Default is 180 seconds (3 minutes) to support long-running operations.
-    Individual components can override this with their own timeout setting."""
+    Supports decimal values for sub-second timeouts (e.g., 0.5 for 500ms).
+    Individual components can override this with their own timeout setting.
+    Must be a positive number greater than 0."""
+
+    @field_validator("mcp_tool_execution_timeout")
+    @classmethod
+    def validate_mcp_tool_execution_timeout(cls, v: float) -> float:
+        """Validate that mcp_tool_execution_timeout is positive."""
+        if v <= 0:
+            msg = "mcp_tool_execution_timeout must be greater than 0"
+            raise ValueError(msg)
+        return v
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
