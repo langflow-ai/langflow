@@ -51,6 +51,7 @@ from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.triggers import TriggerJob
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from langflow.services.triggers._sqlmodel_compat import suppress_sqlmodel_exec_warning
 from langflow.services.triggers.discovery import (
     CronTriggerConfig,
     find_cron_trigger_configs,
@@ -131,17 +132,19 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
             "LIMIT 1 "
             "FOR UPDATE SKIP LOCKED"
         )
-        row = (await session.execute(select_stmt, {"now": now})).first()
+        with suppress_sqlmodel_exec_warning():
+            row = (await session.execute(select_stmt, {"now": now})).first()
         if row is None:
             return None
         trigger_job_id, flow_id, component_id, attempt, max_attempts = row
-        await session.execute(
-            text(
-                "UPDATE trigger_job SET status = 'in_progress', started_at = :now "
-                "WHERE id = :id"
-            ),
-            {"now": now, "id": trigger_job_id},
-        )
+        with suppress_sqlmodel_exec_warning():
+            await session.execute(
+                text(
+                    "UPDATE trigger_job SET status = 'in_progress', started_at = :now "
+                    "WHERE id = :id"
+                ),
+                {"now": now, "id": trigger_job_id},
+            )
         return _ClaimedJob(
             trigger_job_id=_coerce_uuid(trigger_job_id),
             flow_id=_coerce_uuid(flow_id),
@@ -163,7 +166,8 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         "AND status = 'queued' "
         "RETURNING id, flow_id, component_id, attempt, max_attempts"
     )
-    result = await session.execute(update_stmt, {"now": now})
+    with suppress_sqlmodel_exec_warning():
+        result = await session.execute(update_stmt, {"now": now})
     row = result.first()
     if row is None:
         return None

@@ -16,6 +16,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.triggers.model import TriggerJob
+from langflow.services.triggers._sqlmodel_compat import suppress_sqlmodel_exec_warning
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -70,7 +71,8 @@ async def cancel_queued_jobs_for_components(
         )
         .values(status=JobStatus.CANCELLED, finished_at=now)
     )
-    result = await session.execute(statement)
+    with suppress_sqlmodel_exec_warning():
+        result = await session.execute(statement)
     return result.rowcount or 0
 
 
@@ -95,5 +97,6 @@ async def reset_stalled_in_progress(
         )
         .values(status=JobStatus.QUEUED, scheduled_at=now, started_at=None)
     )
-    result = await session.execute(statement)
+    with suppress_sqlmodel_exec_warning():
+        result = await session.execute(statement)
     return result.rowcount or 0
