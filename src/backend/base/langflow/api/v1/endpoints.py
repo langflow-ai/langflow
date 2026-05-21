@@ -60,6 +60,7 @@ from langflow.services.auth.utils import (
     get_current_user_for_sse,
     get_optional_user,
 )
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -506,23 +507,6 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-async def check_flow_user_permission(
-    flow: FlowRead | None,
-    api_key_user: UserRead,
-) -> None:
-    """Check if the user associated with the API key has permission to run the flow.
-
-    Args:
-        flow (FlowRead | None): The flow to check permissions for
-        api_key_user (UserRead): The user associated with the API key
-
-    Raises:
-        HTTPException: If the user does not have permission to run the flow
-    """
-    if flow and flow.user_id != api_key_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
-
-
 async def get_flow_for_api_key_user(
     flow_id_or_name: str,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -531,13 +515,15 @@ async def get_flow_for_api_key_user(
 
     Using the raw helper as a FastAPI ``Depends`` exposed ``user_id`` as a
     plain query parameter that no real caller sets, so flow lookups on the
-    ``/run*`` routes bypassed user scoping entirely and relied on
-    ``check_flow_user_permission`` later in the handler for a 403.  That gave
-    attackers a 403-vs-404 existence oracle on flow UUIDs.  This wrapper
-    pulls the authenticated user from ``api_key_security`` and passes it to
-    the helper, so cross-user access fails closed with 404 at the helper
-    layer.  ``check_flow_user_permission`` is kept in the handler chain as
-    defense in depth.
+    ``/run*`` routes bypassed user scoping entirely. This wrapper pulls the
+    authenticated user from ``api_key_security`` and passes it to the helper,
+    so cross-user access fails closed with 404 at the helper layer.
+
+    NOTE (Phase 3 prerequisite): the ``user_id`` filter here will need to
+    become share-aware (load by id, then check ``authz_share`` rows or call
+    the enterprise plugin's ``enforce``) once the share-CRUD APIs land. Until
+    then, an enterprise execute-grant on a flow the caller does not own would
+    404 here before the route's ``ensure_flow_permission`` can see it.
     """
     return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
 
@@ -610,8 +596,12 @@ async def _run_flow_internal(
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
     """
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
-
+    # Authorization happens upstream: every caller of _run_flow_internal must
+    # have called ensure_flow_permission(FlowAction.EXECUTE, ...) before
+    # invoking us. The owner-only check that used to live here would reject any
+    # enterprise execute-grant on a shared flow, defeating the plugin's
+    # purpose. Adding a defense-in-depth check here would re-introduce the
+    # same regression.
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -766,6 +756,14 @@ async def simplified_run_flow(
             - "end": Final execution result
         - Authentication: Requires API key (Bearer token)
     """
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -834,6 +832,14 @@ async def simplified_run_flow_session(
             detail="This endpoint is not available",
         )
 
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -921,6 +927,15 @@ async def webhook_run_flow(
     # Webhook user and flow are resolved by the dependency
     webhook_user = auth.user
     flow = auth.flow
+
+    await ensure_flow_permission(
+        webhook_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         data = await request.body()
@@ -1038,8 +1053,14 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
-    # Get the flow from the id or name
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)

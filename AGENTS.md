@@ -90,10 +90,36 @@ src/
 ### Service Layer
 Backend services in `src/backend/base/langflow/services/`:
 - `auth/` - Authentication
+- `authorization/` - Authorization (RBAC) plugin layer — see below
 - `database/` - SQLAlchemy models and migrations
 - `cache/` - Caching layer
 - `storage/` - File storage
 - `tracing/` - Observability integrations
+
+### Authorization (RBAC)
+
+Authorization is a pluggable layer separate from authentication:
+
+- **OSS** ships the interface (`BaseAuthorizationService` in `lfx`) + a pass-through implementation (`LangflowAuthorizationService`) + the `authz_*` and `casbin_rule` DB schema + route guards.
+- **Enterprise** registers a Casbin-backed implementation via the `lfx.services` entry point `authorization_service` in `lfx.toml` (same pattern as the SSO `auth_service`). The enterprise plugin reads `authz_*` admin tables and writes compiled Casbin rules to `casbin_rule`.
+
+Default is **off**: `LANGFLOW_AUTHZ_ENABLED=false`. When enabled with only the OSS stub registered, every check returns allow — the stub is a no-op so routes stay wired and audit rows still flow. Real allow/deny requires the enterprise plugin.
+
+Route guards live in `langflow.services.authorization.utils`:
+- `ensure_flow_permission(user, FlowAction.*, flow_id=..., flow_user_id=..., workspace_id=..., folder_id=...)` — single-flow CRUD + execute
+- `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
+- `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
+- `filter_visible_resources(user, resource_type=..., candidates=..., act=...)` — list-endpoint filter; safe no-op in OSS
+
+The Casbin request shape is `(subject, domain, object, action)`:
+- subject = `user:{uuid}`
+- domain = `project:{uuid}` → `workspace:{uuid}` → `*` (resolved by `_resolve_flow_domain`; the more specific domain wins so project-scoped grants match directly while workspace-scoped grants still flow down via Casbin `g2` inheritance)
+- object = `flow:{uuid}` / `deployment:{uuid}` / `project:{uuid}` / `flow:*` / etc.
+- action = `read` / `write` / `create` / `delete` / `execute` / `deploy`
+
+Use `langflow authz dry-run` to simulate a built-in policy against the live audit table without enabling enforcement.
+
+**Phase 1/2 contract — owner-scoped fetch:** the route guards above sit on top of fetch helpers (`_read_flow`, `get_flow_for_api_key_user`, `get_deployment`, project reads in `projects.py`) that still scope queries by `current_user.id`. That means even with an enterprise plugin registered, a share grant on a non-owned flow / folder / deployment **still returns 404 at the fetch layer before the guard can authorize**. Cross-user enforcement (the case where a non-owner with a share grant can read/write/execute a resource) lands in Phase 3 alongside `authz_share` CRUD APIs and share-aware fetch helpers that load by id first and convert plugin denies to 404 to preserve UUID-privacy. The current guards exist, are wired, and emit audit rows — but the cross-user reachability they enable is a Phase 3 prerequisite, not a Phase 1/2 deliverable.
 
 ## Component Development
 

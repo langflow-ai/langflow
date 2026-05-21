@@ -7,6 +7,7 @@ from enum import Enum
 
 class ServiceType(str, Enum):
     AUTH_SERVICE = "auth_service"
+    AUTHORIZATION_SERVICE = "authorization_service"
     DATABASE_SERVICE = "database_service"
     STORAGE_SERVICE = "storage_service"
     SETTINGS_SERVICE = "settings_service"

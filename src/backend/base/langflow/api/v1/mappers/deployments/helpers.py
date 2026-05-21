@@ -426,6 +426,11 @@ async def get_deployment_row_or_404(
     user_id: UUID,
     db: DbSession,
 ) -> Deployment:
+    # Phase 3 prerequisite: ``get_deployment_db`` filters by ``user_id`` so an
+    # enterprise share grant on a non-owned deployment 404s here before the
+    # caller's ``ensure_deployment_permission`` can authorize. Cross-user
+    # deployment access requires share-aware loading — see
+    # ``langflow.services.authorization.utils``.
     deployment_row = await get_deployment_db(db, user_id=user_id, deployment_id=deployment_id)
     if deployment_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")

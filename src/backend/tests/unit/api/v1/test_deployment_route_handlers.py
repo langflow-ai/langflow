@@ -73,6 +73,13 @@ def _fake_provider_account(
 def _fake_deployment_row(**overrides) -> SimpleNamespace:
     return SimpleNamespace(
         id=overrides.get("id", uuid4()),
+        # ``user_id`` and ``workspace_id`` are read by ensure_deployment_permission
+        # on every guarded deployment handler — keep the fixture in sync with the
+        # real Deployment model so tests don't trip the authz layer with
+        # AttributeError. None values are valid (owner override skipped,
+        # workspace domain falls back to "*").
+        user_id=overrides.get("user_id", uuid4()),
+        workspace_id=overrides.get("workspace_id"),
         resource_key=overrides.get("resource_key", "rk-1"),
         name=overrides.get("name", "test-deployment"),
         description=overrides.get("description"),

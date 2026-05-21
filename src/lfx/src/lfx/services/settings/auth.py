@@ -133,6 +133,23 @@ class AuthSettings(BaseSettings):
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
+    # Authorization (RBAC) feature flags — enforcement implemented by enterprise Casbin plugin
+    AUTHZ_ENABLED: bool = Field(
+        default=False,
+        description="Enable authorization enforcement. Requires an authorization_service plugin (e.g. enterprise).",
+    )
+    AUTHZ_SUPERUSER_BYPASS: bool = Field(
+        default=True,
+        description="When True, active superusers bypass authorization checks (audited by the plugin).",
+    )
+    AUTHZ_AUDIT_ENABLED: bool = Field(
+        default=True,
+        description=(
+            "Write an AuthzAuditLog row for every authorization decision when AUTHZ_ENABLED=true. "
+            "Ignored when AUTHZ_ENABLED=false."
+        ),
+    )
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")

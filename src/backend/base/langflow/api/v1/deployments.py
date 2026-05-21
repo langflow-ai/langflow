@@ -72,6 +72,8 @@ from langflow.api.v1.schemas.deployments import (
     SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
+from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
+from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
@@ -531,6 +533,7 @@ async def create_deployment(
     )
     should_create_provider_resource = existing_resource_key is None
     project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
+    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
     flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
     await validate_project_scoped_flow_version_ids(
         flow_version_ids=flow_version_ids,
@@ -732,6 +735,11 @@ async def list_deployments(
     provider_account = await get_owned_provider_account_or_404(
         provider_id=provider_id, user_id=current_user.id, db=session
     )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.READ,
+        project_id=project_id,
+    )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
@@ -763,6 +771,23 @@ async def list_deployments(
             project_id=project_id,
             names=names,
         )
+    # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
+    # the coarse READ check above gates whether the caller can list deployments
+    # at all; this call drops individual rows the enterprise plugin denies. OSS
+    # pass-through returns the input unchanged. ``rows_with_counts`` is
+    # ``list[tuple[Deployment, int, list[...]]]`` so the key/domain extractors
+    # operate on the first element. ``total`` may overcount denied items —
+    # accurate paginated counts need SQL-level prefilter (Phase 3, alongside
+    # ``authz_share``).
+    rows_with_counts = await filter_visible_resources(
+        current_user,
+        resource_type="deployment",
+        candidates=list(rows_with_counts),
+        key=lambda row: row[0].id,
+        domain_extractor=lambda row: _resolve_casbin_domain(row[0].workspace_id, row[0].project_id),
+        owner_extractor=lambda row: row[0].user_id,
+        act=DeploymentAction.READ,
+    )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
         # include flow_version_ids in list items only when
@@ -846,6 +871,14 @@ async def create_deployment_run(
         user_id=current_user.id,
         db=session,
     )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.EXECUTE,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
+    )
     telemetry.provider = _provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     adapter_execution_payload = await deployment_mapper.resolve_execution_create(
@@ -886,6 +919,14 @@ async def get_deployment_run(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
+    )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.READ,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
     )
     execution_lookup_id = run_id.strip()
     with (
@@ -944,6 +985,14 @@ async def list_deployment_configs(
             user_id=current_user.id,
             db=session,
         )
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
         if provider_account is None:
             provider_account = await get_owned_provider_account_or_404(
                 provider_id=deployment_row.deployment_provider_account_id,
@@ -958,6 +1007,9 @@ async def list_deployment_configs(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Either provider_id or deployment_id must be provided.",
         )
+
+    if deployment_row is None:
+        await ensure_deployment_permission(current_user, DeploymentAction.READ)
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
@@ -1010,6 +1062,14 @@ async def list_deployment_snapshots(
             deployment_id=deployment_id,
             user_id=current_user.id,
             db=session,
+        )
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
         )
         if deployment_row.deployment_provider_account_id != provider_account.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
@@ -1081,6 +1141,15 @@ async def update_snapshot(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
         )
+
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.WRITE,
+        deployment_id=deployment.id,
+        deployment_user_id=deployment.user_id,
+        workspace_id=deployment.workspace_id,
+        project_id=deployment.project_id,
+    )
 
     flow_version = await get_flow_version_entry(
         session,
@@ -1227,6 +1296,14 @@ async def get_deployment(
         user_id=current_user.id,
         db=session,
     )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.READ,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
+    )
 
     with deployment_provider_scope(deployment_row.deployment_provider_account_id):
         # Deployment-level sync: if the provider no longer has this deployment,
@@ -1351,6 +1428,14 @@ async def update_deployment(
         user_id=current_user.id,
         db=session,
     )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.WRITE,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
+    )
     telemetry.provider = provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     deployment_row_id = deployment_row.id
@@ -1458,6 +1543,14 @@ async def delete_deployment(
         user_id=current_user.id,
         db=session,
     )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.DELETE,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
+    )
     telemetry.provider = _provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     if include_provider:
@@ -1499,6 +1592,14 @@ async def get_deployment_status(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
+    )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.READ,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
     )
     with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
         health_result = await deployment_adapter.get_status(
@@ -1550,6 +1651,14 @@ async def list_deployment_flow_versions(
         deployment_id=deployment_id,
         user_id=current_user.id,
         db=session,
+    )
+    await ensure_deployment_permission(
+        current_user,
+        DeploymentAction.READ,
+        deployment_id=deployment_row.id,
+        deployment_user_id=deployment_row.user_id,
+        workspace_id=deployment_row.workspace_id,
+        project_id=deployment_row.project_id,
     )
     with (
         handle_adapter_errors(mapper=deployment_mapper),

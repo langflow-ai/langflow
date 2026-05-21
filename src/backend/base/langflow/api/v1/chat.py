@@ -45,6 +45,7 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -83,7 +84,6 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
-    dependencies=[Depends(get_current_active_user)],
     include_in_schema=False,
 )
 async def retrieve_vertices_order(
@@ -94,6 +94,7 @@ async def retrieve_vertices_order(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
+    current_user: CurrentActiveUser,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -104,6 +105,9 @@ async def retrieve_vertices_order(
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         session (AsyncSession, optional): The session dependency.
+        current_user: The authenticated user (required so the handler can
+            run the same authorization guard the supported /build/{flow_id}/flow
+            route uses).
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
@@ -111,6 +115,29 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
+    # pattern as build_flow below. ``build_graph_from_db`` reaches into the DB
+    # with a bare ``session.get(Flow, flow_id)`` that has no owner filter, so
+    # without this gate any authenticated user could build any other user's
+    # flow by guessing a UUID. Even though the route is deprecated and hidden
+    # from the schema, it remains routed and reachable.
+    stmt = (
+        select(Flow)
+        .where(Flow.id == flow_id)
+        .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+    )
+    flow = (await session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -203,6 +230,12 @@ async def build_flow(
     # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
     # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
     # since build is a valid operation on shared flows.
+    #
+    # Phase 3 prerequisite: the owner-OR-public filter below short-circuits an
+    # enterprise execute-grant on a non-owned private flow. Cross-user build
+    # support requires share-aware loading (load by id, then check via the
+    # plugin, then convert deny to 404 for UUID-privacy) which lands with the
+    # `authz_share` CRUD work. See `langflow.services.authorization.utils`.
     async with session_scope() as session:
         stmt = (
             select(Flow)
@@ -217,6 +250,17 @@ async def build_flow(
                 flow_id,
             )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    # Authorize the execute action — runs the enterprise plugin if registered,
+    # no-op in OSS pass-through. Audited regardless.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         if data:
@@ -346,6 +390,29 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
+    # pattern as retrieve_vertices_order above. The route is deprecated and
+    # hidden from the schema but still routed, and ``build_graph_from_db``
+    # loads the flow with no owner filter, so without this gate any
+    # authenticated user could build a vertex on someone else's flow.
+    async with session_scope() as authz_session:
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await authz_session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
