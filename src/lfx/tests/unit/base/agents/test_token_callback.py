@@ -200,9 +200,11 @@ class TestStrategyPriority:
 
 
 class TestErrorPathCaptureInputTokens:
-    """QA UI-013 (PR #12992): an LLM call that fails (e.g. HTTP 429 quota) must NOT
-    silently contribute 0 tokens to the accumulator. The user is billed for the
-    tokens sent in the request body; dropping them under-counts real consumption.
+    """QA UI-013 (PR #12992): a failed LLM call must still contribute its input tokens.
+
+    An LLM call that fails (e.g. HTTP 429 quota) must NOT silently contribute 0 tokens
+    to the accumulator. The user is billed for the tokens sent in the request body;
+    dropping them under-counts real consumption.
 
     The handler MUST capture an estimate of the input tokens on
     `on_chat_model_start` / `on_llm_start` and flush it into the totals on
@@ -238,13 +240,18 @@ class TestErrorPathCaptureInputTokens:
             "Tokens sent with a failed LLM call must still be accumulated. Otherwise "
             "the trace under-counts real billed consumption (UI-013 regression)."
         )
-        assert usage.input_tokens and usage.input_tokens >= 50, (
+        assert usage.input_tokens, (
+            f"Expected an input-token estimate from the failed call's messages; got {usage.input_tokens}"
+        )
+        assert usage.input_tokens >= 50, (
             f"Expected an input-token estimate from the failed call's messages; got {usage.input_tokens}"
         )
 
     def test_should_not_double_count_input_tokens_when_call_succeeds(self):
-        """If on_llm_end fires (call succeeded), use the server-reported usage and
-        DROP the pre-call estimate — otherwise we double-count input tokens."""
+        """If on_llm_end fires (call succeeded), prefer server-reported usage.
+
+        Drop the pre-call estimate — otherwise we double-count input tokens.
+        """
         import uuid
 
         from langchain_core.messages import HumanMessage
@@ -266,8 +273,10 @@ class TestErrorPathCaptureInputTokens:
         assert usage.output_tokens == 50
 
     def test_should_handle_llm_error_without_prior_start_gracefully(self):
-        """If the runtime swallowed on_*_start (unusual but possible), an error
-        with no recorded estimate must not raise — just count nothing for it."""
+        """If the runtime swallowed on_*_start (unusual but possible), tolerate it.
+
+        An error with no recorded estimate must not raise — just count nothing for it.
+        """
         import uuid
 
         handler = TokenUsageCallbackHandler()

@@ -1643,11 +1643,13 @@ class TestConversationContextOrdering:
 
 
 class TestALTKAgentRunnableType:
-    """ALTK Agent runs on legacy AgentExecutor, so its create_agent_runnable must NOT
-    return a langgraph CompiledStateGraph (the new create_agent return type inherited
-    from AgentComponent). Wrapping a CompiledStateGraph in AgentExecutor.from_agent_and_tools
-    surfaces as `TypeError: unsupported operand type(s) for +=: 'dict' and 'dict'` at run
-    time (LangChain RunnableAgent tries to accumulate graph state dicts) or as
+    """ALTK Agent runs on legacy AgentExecutor.
+
+    Its create_agent_runnable must NOT return a langgraph CompiledStateGraph (the new
+    create_agent return type inherited from AgentComponent). Wrapping a
+    CompiledStateGraph in AgentExecutor.from_agent_and_tools surfaces as
+    `TypeError: unsupported operand type(s) for +=: 'dict' and 'dict'` at run time
+    (LangChain RunnableAgent tries to accumulate graph state dicts) or as
     `contents are required` when a Gemini-backed flow is built on it (UI-016).
     """
 
@@ -1655,7 +1657,6 @@ class TestALTKAgentRunnableType:
         from unittest.mock import patch
 
         from langgraph.graph.state import CompiledStateGraph
-
         from lfx.components.altk.altk_agent import ALTKAgentComponent
 
         agent = ALTKAgentComponent(

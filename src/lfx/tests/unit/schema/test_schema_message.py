@@ -329,8 +329,10 @@ def test_get_file_content_dicts_with_string_paths():
 
 
 def test_should_not_inject_binary_payload_as_text_when_file_is_neither_image_nor_known_text_type():
-    """QA API-010: ``tweaks.ChatInput.files=['<path>']`` was injecting raw bytes as
-    text into the HumanMessage when the file was not detected as an image.
+    """QA API-010: refuse to text-decode unknown binary files.
+
+    ``tweaks.ChatInput.files=['<path>']`` was injecting raw bytes as text into the
+    HumanMessage when the file was not detected as an image.
 
     Root cause: ``read_text_file`` falls back to ``latin-1`` decoding (which always
     succeeds), so binary content like a non-PIL-readable PNG slips through and is
@@ -362,8 +364,10 @@ def test_should_not_inject_binary_payload_as_text_when_file_is_neither_image_nor
 
 
 def test_should_not_use_attachment_prefix_that_triggers_gemini_refusal_in_file_text_content():
-    """QA GAP-M-3: the ``Attachment: <filename>\\n<contents>`` framing triggers Gemini
-    refusals (``"I cannot process attachments in this environment"``). Wrap text-file
+    r"""QA GAP-M-3: avoid attachment framing that triggers Gemini refusals.
+
+    The ``Attachment: <filename>\n<contents>`` framing triggers Gemini refusals
+    (``"I cannot process attachments in this environment"``). Wrap text-file
     contents in a neutral header that doesn't read as a multimodal-attachment request.
     """
     import tempfile

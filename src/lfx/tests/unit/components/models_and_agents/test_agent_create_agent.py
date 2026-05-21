@@ -1156,7 +1156,7 @@ async def test_should_skip_tool_retry_middleware_when_no_tools_attached() -> Non
     With an empty tools list it has nothing to retry, but its presence still
     inflates the compiled graph and adds per-invocation middleware overhead on
     every model call. For "Say hello"-style prompts (no tools, gpt-4o-mini) the
-    baseline expectation is 1–2s wall and we currently observe 4.8–14.2s. The
+    baseline expectation is 1-2s wall and we currently observe 4.8-14.2s. The
     middleware audit is one cheap, low-risk improvement: don't wire what can't
     fire.
     """
@@ -1311,7 +1311,9 @@ async def test_should_complete_run_agent_synchronously_before_returning_so_downs
 
 @pytest.mark.asyncio
 async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_zero() -> None:
-    """A saved `max_iterations=0` is clamped to >=1 by `_build_middleware`; the
+    """`recursion_limit` must use the clamped `max_iterations`, not the raw user input.
+
+    A saved `max_iterations=0` is clamped to >=1 by `_build_middleware`; the
     recursion_limit derived in `run_agent` must use that same clamped value, not
     the raw user input. Otherwise we'd pass `recursion_limit=5` (5 = safety only)
     and the agent couldn't run even one iteration.
