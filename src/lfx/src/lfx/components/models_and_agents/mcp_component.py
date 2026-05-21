@@ -142,13 +142,33 @@ class MCPToolsComponent(ComponentWithCache):
         return {}
 
     def _mcp_servers_cache_key(self, server_name: str) -> str:
-        """Cache key for shared servers map; includes headers so auth/tweak changes get distinct entries."""
+        """Cache key for shared servers map.
+
+        Includes headers and timeout so auth/tweak/timeout changes get distinct entries.
+        """
         if not server_name:
             return ""
+
+        # Get normalized timeout value (0 means use global default)
+        timeout_value = getattr(self, "tool_execution_timeout", 0.0)
+        # Validate timeout is non-negative
+        if timeout_value < 0:
+            timeout_value = 0.0
+        normalized_timeout = float(timeout_value) if timeout_value else 0.0
+
         hdrs = self._normalized_headers_for_cache()
-        if not hdrs:
+
+        # Build cache key components
+        cache_data = {
+            "headers": hdrs,
+            "timeout": normalized_timeout,
+        }
+
+        # If no headers and default timeout, just use server name
+        if not hdrs and normalized_timeout == 0.0:
             return server_name
-        payload = json.dumps(hdrs, sort_keys=True)
+
+        payload = json.dumps(cache_data, sort_keys=True)
         digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
         return f"{server_name}:{digest}"
 
