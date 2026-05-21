@@ -423,12 +423,13 @@ jobs:
           npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
 
       - name: Generate Combined Report
+        continue-on-error: true
         run: |
           npx nyc report \
             --reporter=html \
             --reporter=text \
             --temp-dir coverage/combined \
-            --report-dir coverage/final
+            --report-dir coverage/final || echo "Failed to generate combined coverage report"
 
       - name: Upload Merged Frontend Coverage to Codecov
         uses: codecov/codecov-action@v5
