@@ -403,6 +403,27 @@ test(
 
     await page.getByTestId("new_project_btn_empty_page").click();
 
+    // The empty-state CTA can either open the templates modal directly
+    // (EmptyPageCommunity) or surface the FlowBuilderWelcome overlay
+    // (EmptyFolder → useStartNewFlow). Race both and click "Browse more"
+    // when the overlay shows up so we always end up on the templates modal.
+    await Promise.race([
+      page.waitForSelector('[data-testid="modal-title"]', { timeout: 30000 }),
+      page.waitForSelector('[data-testid="flow-builder-welcome-panel"]', {
+        timeout: 30000,
+      }),
+    ]);
+    if (
+      (await page
+        .locator('[data-testid="flow-builder-welcome-panel"]')
+        .count()) > 0
+    ) {
+      await page.getByTestId("flow-builder-welcome-browse-more").click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 30000,
+      });
+    }
+
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
@@ -422,8 +443,10 @@ test(
     // Verify we can click on the folder and see the flow
     await page.getByTestId("sidebar-nav-Starter Project").click();
 
-    // The folder should contain our newly created flow
-    await expect(page.getByTestId("list-card")).toBeVisible({
+    // The folder should contain our newly created flow. Templates render an
+    // extra example list-card alongside the user's flow when the folder is
+    // freshly created, so scope to the first match to satisfy strict mode.
+    await expect(page.getByTestId("list-card").first()).toBeVisible({
       timeout: 5000,
     });
   },

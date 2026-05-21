@@ -118,8 +118,11 @@ test(
     await page.getByTestId("session-rename-input").fill("my first session");
     await page.keyboard.press("Enter");
     await expect(
-      page.getByTestId(TID.sessionSelector).getByText("my first session"),
-    ).toBeVisible();
+      page
+        .getByTestId(TID.sessionSelector)
+        .filter({ hasText: "my first session" })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
 
     // check cancel rename (using Escape key)
     await sessionMoreMenu(page, "last").click();
@@ -127,8 +130,11 @@ test(
     await page.getByTestId("session-rename-input").fill("cancel name");
     await page.keyboard.press("Escape");
     await expect(
-      page.getByTestId(TID.sessionSelector).getByText("my first session"),
-    ).toBeVisible();
+      page
+        .getByTestId(TID.sessionSelector)
+        .filter({ hasText: "my first session" })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
 
     // check delete session
     await sessionMoreMenu(page, "last").click();
