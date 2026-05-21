@@ -115,6 +115,37 @@ def test_invalid_node_types():
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
 
 
+def test_graph_pickle_omits_unpickleable_custom_component():
+    import pickle
+    import threading
+
+    graph = Graph(flow_id="flow-with-unpickleable-component")
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "model-node",
+            "_lock": None,
+            "built_object": "built-value",
+            "built_result": {"result": "built-value"},
+            "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
+            "full_data": {"id": "model-node"},
+        }
+    )
+    graph.vertices = [vertex]
+    graph._vertices = [vertex.full_data]
+
+    restored = pickle.loads(  # noqa: S301 - trusted in-process regression fixture
+        pickle.dumps({"result": graph, "type": type(graph)})
+    )["result"]
+
+    assert restored.vertices[0].custom_component is None
+    assert restored.vertices[0].id == "model-node"
+    assert restored.vertices[0].built_object == "built-value"
+    assert restored.vertices[0].built_result == {"result": "built-value"}
+    assert restored.vertices[0].full_data == {"id": "model-node"}
+    assert restored._vertices == [{"id": "model-node"}]
+
+
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
