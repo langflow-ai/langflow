@@ -7,7 +7,6 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import TableComponent from "@/components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "@/components/ui/button";
@@ -273,25 +272,23 @@ const FilesTab = ({
 
   const UploadButtonComponent = useMemo(() => {
     return (
-      <ShadTooltip content={t("files.uploadFile")} side="bottom">
-        <Button
-          className="!px-3 md:!px-4 md:!pl-3.5"
-          onClick={async () => {
-            await handleUpload();
-          }}
-          id="upload-file-btn"
-          data-testid="upload-file-btn"
-        >
-          <ForwardedIconComponent
-            name="Plus"
-            aria-hidden="true"
-            className="h-4 w-4"
-          />
-          <span className="hidden whitespace-nowrap font-semibold md:inline">
-            {t("files.uploadFiles")}
-          </span>
-        </Button>
-      </ShadTooltip>
+      <Button
+        className="!px-3 md:!px-4 md:!pl-3.5"
+        onClick={async () => {
+          await handleUpload();
+        }}
+        id="upload-file-btn"
+        data-testid="upload-file-btn"
+      >
+        <ForwardedIconComponent
+          name="Plus"
+          aria-hidden="true"
+          className="h-4 w-4"
+        />
+        <span className="hidden whitespace-nowrap font-semibold md:inline">
+          {t("files.uploadFiles")}
+        </span>
+      </Button>
     );
   }, []);
 
