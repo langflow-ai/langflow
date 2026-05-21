@@ -24,6 +24,7 @@ class MockTracer(BaseTracer):
         flow_id: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
+        auth_user_id: str | None = None,
     ) -> None:
         self.trace_name = trace_name
         self.trace_type = trace_type
@@ -32,6 +33,7 @@ class MockTracer(BaseTracer):
         self.flow_id = flow_id
         self.user_id = user_id
         self.session_id = session_id
+        self.auth_user_id = auth_user_id
         self._ready = True
         self.end_called = False
         self.get_langchain_callback_called = False
@@ -203,6 +205,47 @@ async def test_start_end_tracers(tracing_service):
     # Verify worker_task is cancelled
     assert trace_context.worker_task is None
     assert not trace_context.running
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_forwards_tracing_user_id_to_langfuse(tracing_service):
+    """``tracing_user_id`` overrides the trace label; ``user_id`` becomes ``auth_user_id``.
+
+    Regression for GitHub issue #9505: trace.userId should reflect the
+    caller-supplied identifier while the auth user remains recoverable.
+    """
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(
+        run_id,
+        "run",
+        "auth-uuid",
+        "session-abc",
+        "project",
+        tracing_user_id="end-user-123",
+    )
+
+    trace_context = trace_context_var.get()
+    langfuse = trace_context.tracers["langfuse"]
+    # Langfuse receives the override as its user_id (the trace's userId field)
+    # and the auth identity is preserved separately for metadata stamping.
+    assert langfuse.user_id == "end-user-123"
+    assert langfuse.auth_user_id == "auth-uuid"
+    # The shared trace context still records the auth user under user_id.
+    assert trace_context.user_id == "auth-uuid"
+    assert trace_context.tracing_user_id == "end-user-123"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_without_override_keeps_auth_user_as_label(tracing_service):
+    """Without an override, Langfuse keeps using the auth user as the trace label."""
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(run_id, "run", "auth-uuid", "session-abc", "project")
+
+    langfuse = trace_context_var.get().tracers["langfuse"]
+    assert langfuse.user_id == "auth-uuid"
+    assert langfuse.auth_user_id == "auth-uuid"
 
 
 @pytest.mark.asyncio

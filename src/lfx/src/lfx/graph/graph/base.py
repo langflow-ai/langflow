@@ -676,9 +676,10 @@ class Graph:
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
                 run_name=run_name,
-                user_id=self.tracing_user_id or self.user_id,
+                user_id=self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
+                tracing_user_id=self.tracing_user_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:

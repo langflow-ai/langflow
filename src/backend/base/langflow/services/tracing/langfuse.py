@@ -171,12 +171,17 @@ class LangFuseTracer(BaseTracer):
         trace_id: UUID,
         user_id: str | None = None,
         session_id: str | None = None,
+        auth_user_id: str | None = None,
     ) -> None:
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
         self.user_id = user_id
+        # The authenticated Langflow user — preserved as trace metadata so
+        # downstream consumers can recover it even when ``user_id`` carries a
+        # caller-supplied label (e.g. an end-user identifier).
+        self.auth_user_id = auth_user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
@@ -223,12 +228,18 @@ class LangFuseTracer(BaseTracer):
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
 
-            # Set trace-level metadata (user_id, session_id)
-            self._root_span.update_trace(
-                name=self.flow_id,
-                user_id=self.user_id,
-                session_id=self.session_id,
-            )
+            # Set trace-level metadata (user_id, session_id). When the caller
+            # supplied a tracing label distinct from the auth user, stamp the
+            # auth user under ``langflow.auth_user_id`` so consumers that need
+            # the original Langflow user can still recover it.
+            trace_kwargs: dict[str, Any] = {
+                "name": self.flow_id,
+                "user_id": self.user_id,
+                "session_id": self.session_id,
+            }
+            if self.auth_user_id and self.auth_user_id != self.user_id:
+                trace_kwargs["metadata"] = {"langflow.auth_user_id": self.auth_user_id}
+            self._root_span.update_trace(**trace_kwargs)
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")

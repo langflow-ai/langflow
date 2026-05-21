@@ -16,8 +16,13 @@ from lfx.graph import Graph
 
 
 @pytest.mark.asyncio
-async def test_initialize_run_uses_tracing_user_id_override():
-    """``Graph.tracing_user_id`` must be forwarded to ``start_tracers``."""
+async def test_initialize_run_forwards_both_user_id_and_tracing_user_id():
+    """Auth ``user_id`` and ``tracing_user_id`` must be passed as distinct kwargs.
+
+    The merge policy (``tracing_user_id or user_id`` for trace labels) lives in
+    the tracing service, not in Graph — Graph just forwards both fields so
+    individual providers can stamp the auth identity separately when needed.
+    """
     graph = Graph(flow_id="11111111-1111-1111-1111-111111111111", flow_name="t", user_id="auth-user")
     graph.tracing_user_id = "test123"
     graph.session_id = "session-abc"
@@ -32,13 +37,14 @@ async def test_initialize_run_uses_tracing_user_id_override():
 
     fake_service.start_tracers.assert_awaited_once()
     kwargs = fake_service.start_tracers.await_args.kwargs
-    assert kwargs["user_id"] == "test123"
+    assert kwargs["user_id"] == "auth-user"
+    assert kwargs["tracing_user_id"] == "test123"
     assert kwargs["session_id"] == "session-abc"
 
 
 @pytest.mark.asyncio
-async def test_initialize_run_falls_back_to_auth_user_when_no_override():
-    """Without an override, the auth ``user_id`` is still forwarded (existing behavior)."""
+async def test_initialize_run_passes_none_tracing_user_id_when_no_override():
+    """Without an override, ``tracing_user_id`` is None — merge happens downstream."""
     graph = Graph(flow_id="22222222-2222-2222-2222-222222222222", flow_name="t", user_id="auth-user")
     graph.session_id = "s"
     graph.set_run_id(uuid.uuid4())
@@ -52,6 +58,7 @@ async def test_initialize_run_falls_back_to_auth_user_when_no_override():
 
     kwargs = fake_service.start_tracers.await_args.kwargs
     assert kwargs["user_id"] == "auth-user"
+    assert kwargs["tracing_user_id"] is None
 
 
 def test_tracing_user_id_default_is_none():
