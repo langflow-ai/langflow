@@ -26,8 +26,8 @@ import {
   usePostTrigger,
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
-import { useFolderStore } from "@/stores/foldersStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useFolderStore } from "@/stores/foldersStore";
 
 /**
  * Curated IANA timezone list. Mirrors
@@ -180,7 +180,14 @@ export default function TriggerCreateModal({
     const max =
       intervalUnit === "minutes" ? MINUTE_INTERVAL_MAX : HOUR_INTERVAL_MAX;
     return intervalValue >= 1 && intervalValue <= max;
-  }, [flowId, atSpecificTime, timeOfDay, timezone, intervalValue, intervalUnit]);
+  }, [
+    flowId,
+    atSpecificTime,
+    timeOfDay,
+    timezone,
+    intervalValue,
+    intervalUnit,
+  ]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +218,9 @@ export default function TriggerCreateModal({
                 className={CONTROL_HEIGHT_CLASS}
                 data-testid="trigger-flow-select"
               >
-                <SelectValue placeholder={t("triggers.field.flowPlaceholder")} />
+                <SelectValue
+                  placeholder={t("triggers.field.flowPlaceholder")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {flowOptions.length === 0 ? (
@@ -240,7 +249,10 @@ export default function TriggerCreateModal({
 
           {/* ---------- schedule toggle ---------- */}
           <div className="flex items-center justify-between rounded-md border border-input px-3 py-1.5">
-            <Label htmlFor="at_specific_time" className="cursor-pointer text-sm">
+            <Label
+              htmlFor="at_specific_time"
+              className="cursor-pointer text-sm"
+            >
               {t("triggers.field.atSpecificTime")}
             </Label>
             <Switch
@@ -317,10 +329,7 @@ export default function TriggerCreateModal({
                   data-testid="trigger-time-of-day"
                 />
               </FieldRow>
-              <FieldRow
-                label={t("triggers.field.timezone")}
-                htmlFor="timezone"
-              >
+              <FieldRow label={t("triggers.field.timezone")} htmlFor="timezone">
                 <Select value={timezone} onValueChange={setTimezone}>
                   <SelectTrigger
                     id="timezone"

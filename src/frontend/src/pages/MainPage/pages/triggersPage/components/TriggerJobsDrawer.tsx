@@ -14,7 +14,10 @@ interface TriggerJobsDrawerProps {
 
 const STATUS_BADGE: Record<
   JobStatus,
-  { variant: "default" | "successStatic" | "errorStatic" | "secondaryStatic"; label: string }
+  {
+    variant: "default" | "successStatic" | "errorStatic" | "secondaryStatic";
+    label: string;
+  }
 > = {
   queued: { variant: "default", label: "queued" },
   in_progress: { variant: "default", label: "in_progress" },
@@ -53,12 +56,18 @@ function JobCard({ job }: { job: TriggerJob }) {
           attempt {job.attempt}/{job.max_attempts}
         </span>
       </div>
-      <TimestampRow label="scheduled" value={formatDateTime(job.scheduled_at)} />
+      <TimestampRow
+        label="scheduled"
+        value={formatDateTime(job.scheduled_at)}
+      />
       {job.started_at && (
         <TimestampRow label="started" value={formatDateTime(job.started_at)} />
       )}
       {job.finished_at && (
-        <TimestampRow label="finished" value={formatDateTime(job.finished_at)} />
+        <TimestampRow
+          label="finished"
+          value={formatDateTime(job.finished_at)}
+        />
       )}
       {job.error && (
         <div className="mt-1 rounded bg-error-background px-2 py-1 text-xs text-error-foreground break-words">

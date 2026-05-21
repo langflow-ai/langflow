@@ -38,7 +38,10 @@ export default function BulkDeleteConfirmDialog({
         <DialogHeader>
           <DialogTitle>
             <div className="flex items-center">
-              <Trash2 className="h-6 w-6 pr-1 text-foreground" strokeWidth={1.5} />
+              <Trash2
+                className="h-6 w-6 pr-1 text-foreground"
+                strokeWidth={1.5}
+              />
               <span className="pl-2">{t("triggers.bulkDeleteTitle")}</span>
             </div>
           </DialogTitle>
