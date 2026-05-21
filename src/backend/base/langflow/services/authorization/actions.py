@@ -43,3 +43,51 @@ class ProjectAction(str, Enum):
     WRITE = "write"
     CREATE = "create"
     DELETE = "delete"
+
+
+class KnowledgeBaseAction(str, Enum):
+    """Actions that can be authorized on a knowledge base resource.
+
+    Knowledge bases are name-keyed (``knowledge_base:{kb_name}``) rather than
+    UUID-keyed, but the action vocabulary mirrors other resources. ``ingest``
+    is a distinct verb because ingesting documents has a different cost and
+    permission posture than ordinary writes.
+    """
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    INGEST = "ingest"
+
+
+class VariableAction(str, Enum):
+    """Actions that can be authorized on a variable resource."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+
+
+class FileAction(str, Enum):
+    """Actions that can be authorized on a user-file resource (v2 files)."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+
+
+class ShareAction(str, Enum):
+    """Actions that can be authorized on an authz_share row itself.
+
+    Shares are themselves authorizable: creating a share grants someone access
+    to a resource you own, so the action vocabulary lives in a dedicated enum
+    so audit rows can distinguish ``share:create`` from ``flow:create``.
+    """
+
+    READ = "read"
+    CREATE = "create"
+    DELETE = "delete"
+    UPDATE = "update"

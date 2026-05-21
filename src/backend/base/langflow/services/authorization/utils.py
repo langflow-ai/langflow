@@ -31,7 +31,15 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
 
-from langflow.services.authorization.actions import DeploymentAction, FlowAction, ProjectAction
+from langflow.services.authorization.actions import (
+    DeploymentAction,
+    FileAction,
+    FlowAction,
+    KnowledgeBaseAction,
+    ProjectAction,
+    ShareAction,
+    VariableAction,
+)
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -49,7 +57,26 @@ _AUDIT_DENY = "deny"
 _AUDIT_OWNER_OVERRIDE = "owner_override"
 
 # Context keys that name the resource owner — used by audit-detail extraction.
-_OWNER_CONTEXT_KEYS = ("flow_user_id", "deployment_user_id", "project_user_id")
+_OWNER_CONTEXT_KEYS = (
+    "flow_user_id",
+    "deployment_user_id",
+    "project_user_id",
+    "knowledge_base_user_id",
+    "variable_user_id",
+    "file_user_id",
+    "share_user_id",
+)
+
+# Action enum types we coerce to their string value.
+_ACTION_ENUMS = (
+    FlowAction,
+    DeploymentAction,
+    ProjectAction,
+    KnowledgeBaseAction,
+    VariableAction,
+    FileAction,
+    ShareAction,
+)
 
 
 def _auth_context(user: User | UserRead) -> dict[str, Any]:
@@ -57,9 +84,18 @@ def _auth_context(user: User | UserRead) -> dict[str, Any]:
     return {"is_superuser": getattr(user, "is_superuser", False)}
 
 
-def _coerce_action(act: DeploymentAction | FlowAction | ProjectAction | str) -> str:
+def _coerce_action(
+    act: DeploymentAction
+    | FlowAction
+    | ProjectAction
+    | KnowledgeBaseAction
+    | VariableAction
+    | FileAction
+    | ShareAction
+    | str,
+) -> str:
     """Return the string value of an action enum or pass through a raw string."""
-    if isinstance(act, (FlowAction, DeploymentAction, ProjectAction)):
+    if isinstance(act, _ACTION_ENUMS):
         return act.value
     return act
 
@@ -209,7 +245,7 @@ async def _ensure_resource_permission(
     user: User | UserRead,
     *,
     resource_type: str,
-    resource_id: UUID | None,
+    resource_id: UUID | str | None,
     owner_id: UUID | None,
     act_str: str,
     resolved_domain: str,
@@ -221,6 +257,9 @@ async def _ensure_resource_permission(
     on owner override (audited as ``owner_override``), and otherwise delegates
     to ``ensure_permission``. ``extra_context`` is forwarded verbatim — callers
     own the key names so each resource type's audit row stays self-describing.
+
+    ``resource_id`` accepts either a UUID (flows, deployments, projects, files,
+    variables) or a string slug (knowledge bases are name-keyed).
     """
     obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
 
@@ -336,6 +375,114 @@ async def ensure_project_permission(
         extra_context={
             "project_user_id": project_user_id,
             "workspace_id": workspace_id,
+        },
+    )
+
+
+async def ensure_knowledge_base_permission(
+    user: User | UserRead,
+    act: KnowledgeBaseAction | str,
+    *,
+    kb_name: str | None = None,
+    kb_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    project_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check knowledge-base-scoped permission with owner override.
+
+    Knowledge bases are name-keyed on the filesystem, so ``kb_name`` is used
+    verbatim as the Casbin object slug (``knowledge_base:{kb_name}``). The KB
+    owner can always operate on their own KB; otherwise the enterprise plugin
+    decides.
+    """
+    await _ensure_resource_permission(
+        user,
+        resource_type="knowledge_base",
+        resource_id=kb_name,
+        owner_id=kb_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, project_id),
+        extra_context={
+            "knowledge_base_user_id": kb_user_id,
+            "kb_name": kb_name,
+            "workspace_id": workspace_id,
+            "project_id": project_id,
+        },
+    )
+
+
+async def ensure_variable_permission(
+    user: User | UserRead,
+    act: VariableAction | str,
+    *,
+    variable_id: UUID | None = None,
+    variable_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check variable-scoped permission with owner override."""
+    await _ensure_resource_permission(
+        user,
+        resource_type="variable",
+        resource_id=variable_id,
+        owner_id=variable_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, None),
+        extra_context={
+            "variable_user_id": variable_user_id,
+            "workspace_id": workspace_id,
+        },
+    )
+
+
+async def ensure_file_permission(
+    user: User | UserRead,
+    act: FileAction | str,
+    *,
+    file_id: UUID | None = None,
+    file_user_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check file-scoped permission (v2 user files) with owner override."""
+    await _ensure_resource_permission(
+        user,
+        resource_type="file",
+        resource_id=file_id,
+        owner_id=file_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else _resolve_casbin_domain(workspace_id, None),
+        extra_context={
+            "file_user_id": file_user_id,
+            "workspace_id": workspace_id,
+        },
+    )
+
+
+async def ensure_share_permission(
+    user: User | UserRead,
+    act: ShareAction | str,
+    *,
+    share_id: UUID | None = None,
+    share_user_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check authz_share-scoped permission with owner override.
+
+    A share row is "owned" by the user who created it (``created_by``). The
+    resource owner is therefore always allowed to administer their own
+    shares; enterprise plugins decide everything else.
+    """
+    await _ensure_resource_permission(
+        user,
+        resource_type="share",
+        resource_id=share_id,
+        owner_id=share_user_id,
+        act_str=_coerce_action(act),
+        resolved_domain=domain if domain is not None else "*",
+        extra_context={
+            "share_user_id": share_user_id,
         },
     )
 

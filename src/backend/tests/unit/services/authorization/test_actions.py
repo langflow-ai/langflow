@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from langflow.services.authorization.actions import DeploymentAction, FlowAction
+from langflow.services.authorization.actions import (
+    DeploymentAction,
+    FileAction,
+    FlowAction,
+    KnowledgeBaseAction,
+    ShareAction,
+    VariableAction,
+)
 
 
 def test_flow_action_values_match_casbin_strings():
@@ -46,3 +53,36 @@ def test_deployment_action_is_iterable_and_complete():
     """The enum exposes exactly the five canonical deployment actions (no DEPLOY)."""
     values = {member.value for member in DeploymentAction}
     assert values == {"read", "write", "create", "delete", "execute"}
+
+
+def test_knowledge_base_action_values():
+    """Knowledge bases support read/write/create/delete plus an INGEST verb."""
+    values = {member.value for member in KnowledgeBaseAction}
+    assert values == {"read", "write", "create", "delete", "ingest"}
+
+
+def test_variable_action_values():
+    values = {member.value for member in VariableAction}
+    assert values == {"read", "write", "create", "delete"}
+
+
+def test_file_action_values():
+    values = {member.value for member in FileAction}
+    assert values == {"read", "write", "create", "delete"}
+
+
+def test_share_action_values():
+    """Share actions cover CRUD over ``authz_share`` rows themselves."""
+    values = {member.value for member in ShareAction}
+    assert values == {"read", "create", "update", "delete"}
+
+
+def test_new_actions_subclass_str():
+    """All new action enums subclass str so they coerce in audit/log paths."""
+    for member in (
+        KnowledgeBaseAction.READ,
+        VariableAction.CREATE,
+        FileAction.DELETE,
+        ShareAction.UPDATE,
+    ):
+        assert isinstance(member, str)

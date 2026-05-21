@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from lfx.services.base import Service
 from lfx.services.schema import ServiceType
@@ -21,6 +21,18 @@ class BaseAuthorizationService(Service, abc.ABC):
     """
 
     name = ServiceType.AUTHORIZATION_SERVICE.value
+
+    # Capability flag. Implementations that can authorize non-owner access (share
+    # grants, domain roles) set this to True so share-aware fetch helpers load
+    # resources by id and rely on enforce() to gate access. The OSS pass-through
+    # leaves this False so fetch helpers keep their owner-scoped queries — that
+    # way enabling AUTHZ_ENABLED without an enterprise plugin does not silently
+    # widen visibility.
+    SUPPORTS_CROSS_USER_FETCH: ClassVar[bool] = False
+
+    async def supports_cross_user_fetch(self) -> bool:
+        """Return True when this service can authorize non-owner resource access."""
+        return self.SUPPORTS_CROSS_USER_FETCH
 
     @abc.abstractmethod
     async def is_enabled(self) -> bool:

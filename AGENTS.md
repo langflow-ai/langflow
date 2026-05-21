@@ -109,6 +109,10 @@ Route guards live in `langflow.services.authorization.utils`:
 - `ensure_flow_permission(user, FlowAction.*, flow_id=..., flow_user_id=..., workspace_id=..., folder_id=...)` — single-flow CRUD + execute
 - `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
 - `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
+- `ensure_knowledge_base_permission(user, KnowledgeBaseAction.*, kb_name=..., kb_user_id=...)`
+- `ensure_variable_permission(user, VariableAction.*, variable_id=..., variable_user_id=...)`
+- `ensure_file_permission(user, FileAction.*, file_id=..., file_user_id=...)`
+- `ensure_share_permission(user, ShareAction.*, share_id=..., share_user_id=...)`
 - `filter_visible_resources(user, resource_type=..., candidates=..., act=...)` — list-endpoint filter; safe no-op in OSS
 
 The Casbin request shape is `(subject, domain, object, action)`:
@@ -119,7 +123,13 @@ The Casbin request shape is `(subject, domain, object, action)`:
 
 Use `langflow authz dry-run` to simulate a built-in policy against the live audit table without enabling enforcement.
 
-**Phase 1/2 contract — owner-scoped fetch:** the route guards above sit on top of fetch helpers (`_read_flow`, `get_flow_for_api_key_user`, `get_deployment`, project reads in `projects.py`) that still scope queries by `current_user.id`. That means even with an enterprise plugin registered, a share grant on a non-owned flow / folder / deployment **still returns 404 at the fetch layer before the guard can authorize**. Cross-user enforcement (the case where a non-owner with a share grant can read/write/execute a resource) lands in Phase 3 alongside `authz_share` CRUD APIs and share-aware fetch helpers that load by id first and convert plugin denies to 404 to preserve UUID-privacy. The current guards exist, are wired, and emit audit rows — but the cross-user reachability they enable is a Phase 3 prerequisite, not a Phase 1/2 deliverable.
+**Share-aware fetch (Phase 3):** route fetch helpers (`_read_flow`, `get_flow_by_id_or_endpoint_name`, `get_deployment`, project reads in `projects.py`, v2 file fetcher) branch on `BaseAuthorizationService.supports_cross_user_fetch()`. The OSS pass-through reports `False` so the existing owner-scoped queries are preserved — enabling `LANGFLOW_AUTHZ_ENABLED=true` without an enterprise plugin cannot widen visibility. Enterprise plugins set `SUPPORTS_CROSS_USER_FETCH=True` so resources load by id alone and `ensure_*_permission` decides access; route handlers can convert a plugin-deny `HTTPException(403)` to `HTTPException(404)` via `langflow.services.authorization.fetch.deny_to_404` to preserve UUID privacy.
+
+**Share CRUD API (Phase 3):** `/api/v1/authz/shares` provides POST / GET / PATCH / DELETE on `authz_share` rows. The handler enforces an OSS floor (resource owner or superuser may administer shares for that resource) so the OSS pass-through cannot let a non-owner mint share rows. Each write fires `BaseAuthorizationService.invalidate_user` / `invalidate_all` so an enterprise enforcer can drop cached policy. Audit rows are written via `audit_decision` with `share:create` / `share:update` / `share:delete` actions.
+
+**Audit query API (Phase 4):** `GET /api/v1/authz/audit` (superuser-only) exposes a paginated, filterable view of `authz_audit_log`. Supports `user_id`, `resource_type`, `resource_id`, `action`, `result`, `since`, `until` filters; page size capped at 200.
+
+**Default role catalog (Phase 4):** the seed migration `8d3a1f9c2e0b_seed_authz_system_roles` inserts the three built-in `is_system=True` roles (viewer / developer / admin) with `"{resource}:{action}"` permission slugs. OSS does not interpret these — they exist so an enterprise plugin's `PolicySync` has a stable bootstrap source.
 
 ## Component Development
 

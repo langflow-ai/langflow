@@ -33,6 +33,7 @@ from langflow.api.v1.projects_mcp_helpers import (
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import ProjectAction, ensure_project_permission, filter_visible_resources
+from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -250,15 +251,18 @@ async def read_project(
     search: str = "",
 ):
     try:
-        # Phase 3 prerequisite: owner-scoped fetch shadows enterprise share
-        # grants on non-owned projects; see langflow.services.authorization.utils.
-        project = (
-            await session.exec(
-                select(Folder)
-                .options(selectinload(Folder.flows))
-                .where(Folder.id == project_id, Folder.user_id == current_user.id)
-            )
-        ).first()
+        # Share-aware fetch: when an enterprise authorization service is
+        # registered (``SUPPORTS_CROSS_USER_FETCH=True``) the project is
+        # loaded by id alone and ``ensure_project_permission`` below decides
+        # access. The OSS pass-through keeps the owner-scoped query so the
+        # strict-pass-through stub cannot widen visibility.
+        from langflow.services.deps import get_authorization_service
+
+        share_aware = await get_authorization_service().supports_cross_user_fetch()
+        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
+        if not share_aware:
+            stmt = stmt.where(Folder.user_id == current_user.id)
+        project = (await session.exec(stmt)).first()
     except Exception as e:
         if "No result found" in str(e):
             raise HTTPException(status_code=404, detail="Project not found") from e
@@ -276,9 +280,17 @@ async def read_project(
     )
 
     try:
+        # When share-aware fetch is on and the project is not owned by the
+        # caller (i.e. reached via a share grant), show all flows in the
+        # project — the share grant on the project implies access to its
+        # contents. Otherwise keep the existing owner-scoped flow filter.
+        treat_as_shared = share_aware and project.user_id != current_user.id
+
         # Check if pagination is explicitly requested by the user (both page and size provided)
         if page is not None and size is not None:
-            stmt = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id)
+            stmt = select(Flow).where(Flow.folder_id == project_id)
+            if not treat_as_shared:
+                stmt = stmt.where(Flow.user_id == current_user.id)
 
             if Flow.updated_at is not None:
                 stmt = stmt.order_by(Flow.updated_at.desc())  # type: ignore[attr-defined]
@@ -298,9 +310,12 @@ async def read_project(
 
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
-        # If no pagination requested, return all flows for the current user
-        flows_from_current_user_in_project = [flow for flow in project.flows if flow.user_id == current_user.id]
-        project.flows = flows_from_current_user_in_project
+        # If no pagination requested, return flows visible to the caller.
+        if treat_as_shared:
+            visible_flows = list(project.flows)
+        else:
+            visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
+        project.flows = visible_flows
 
         # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors
         return FolderReadWithFlows.model_validate(project, from_attributes=True)
@@ -319,9 +334,14 @@ async def update_project(
     background_tasks: BackgroundTasks,
 ):
     try:
-        existing_project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
+        existing_project = await authorized_or_owner_scoped(
+            session,
+            Folder,
+            id_column=Folder.id,
+            resource_id=project_id,
+            owner_column=Folder.user_id,
+            owner_id=current_user.id,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -503,9 +523,14 @@ async def delete_project(
     current_user: CurrentActiveUser,
 ):
     try:
-        project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-        ).first()
+        project = await authorized_or_owner_scoped(
+            session,
+            Folder,
+            id_column=Folder.id,
+            resource_id=project_id,
+            owner_column=Folder.user_id,
+            owner_id=current_user.id,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -571,14 +596,17 @@ async def download_file(
     """Download all flows from project as a zip file."""
     # Fetch the project row first so the authorization call carries the
     # owner id (for the owner-override path) and the workspace id (for the
-    # project-domain resolver). Without these, an enterprise plugin would
-    # evaluate the check against ``domain="*"`` and miss workspace-scoped
-    # grants, and an owner could even be denied by a role-only policy.
-    # Phase 3 prerequisite: owner-scoped fetch — see
-    # ``langflow.services.authorization.utils``.
-    project = (
-        await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
-    ).first()
+    # project-domain resolver). When share-aware fetch is supported, the
+    # row is loaded by id and ``ensure_project_permission`` decides access;
+    # otherwise the query stays owner-scoped.
+    project = await authorized_or_owner_scoped(
+        session,
+        Folder,
+        id_column=Folder.id,
+        resource_id=project_id,
+        owner_column=Folder.user_id,
+        owner_id=current_user.id,
+    )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     await ensure_project_permission(

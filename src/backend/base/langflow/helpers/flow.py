@@ -397,6 +397,19 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 
 
 async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
+    """Resolve a flow by UUID or ``endpoint_name``.
+
+    When the registered authorization service supports cross-user fetch
+    (enterprise Casbin), the owner-equality check is skipped and the route's
+    ``ensure_flow_permission`` decides access. The OSS pass-through default
+    keeps the owner-scoped lookup so enabling ``LANGFLOW_AUTHZ_ENABLED`` alone
+    cannot widen visibility.
+    """
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    share_aware = await authz.supports_cross_user_fetch()
+
     async with session_scope() as session:
         # SECURITY: previously the UUID branch below called
         # ``session.get(Flow, flow_id)`` with no ownership check, so any
@@ -424,12 +437,12 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
-            if flow is not None and uuid_user_id is not None and flow.user_id != uuid_user_id:
+            if flow is not None and uuid_user_id is not None and not share_aware and flow.user_id != uuid_user_id:
                 flow = None
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if uuid_user_id is not None:
+            if uuid_user_id is not None and not share_aware:
                 stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:

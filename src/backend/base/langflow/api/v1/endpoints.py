@@ -519,11 +519,9 @@ async def get_flow_for_api_key_user(
     authenticated user from ``api_key_security`` and passes it to the helper,
     so cross-user access fails closed with 404 at the helper layer.
 
-    NOTE (Phase 3 prerequisite): the ``user_id`` filter here will need to
-    become share-aware (load by id, then check ``authz_share`` rows or call
-    the enterprise plugin's ``enforce``) once the share-CRUD APIs land. Until
-    then, an enterprise execute-grant on a flow the caller does not own would
-    404 here before the route's ``ensure_flow_permission`` can see it.
+    When an enterprise authorization service is registered, the lookup is
+    share-aware (load by id, route guard decides access). The OSS pass-through
+    default keeps the owner-scoped lookup.
     """
     return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
 

@@ -343,10 +343,23 @@ async def _read_flow(
     flow_id: UUID,
     user_id: UUID,
 ):
-    """Read a flow."""
-    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id)
+    """Read a flow.
 
-    return (await session.exec(stmt)).first()
+    When the registered authorization service supports cross-user fetch
+    (enterprise Casbin), the row is loaded by id alone and the caller's
+    ``ensure_flow_permission`` decides access. Otherwise the query stays
+    owner-scoped so the OSS pass-through default cannot widen visibility.
+    """
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+
+    return await authorized_or_owner_scoped(
+        session,
+        Flow,
+        id_column=Flow.id,
+        resource_id=flow_id,
+        owner_column=Flow.user_id,
+        owner_id=user_id,
+    )
 
 
 async def _update_existing_flow(

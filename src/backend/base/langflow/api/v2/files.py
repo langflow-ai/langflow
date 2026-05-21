@@ -16,6 +16,8 @@ from sqlmodel import col, select
 
 from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
+from langflow.services.authorization import FileAction, ensure_file_permission
+from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -87,18 +89,20 @@ async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGene
 
 
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
-    # Fetch the file from the DB
-    stmt = select(UserFile).where(UserFile.id == file_id)
-    results = await session.exec(stmt)
-    file = results.first()
+    # Share-aware fetch. Under the OSS pass-through this keeps the existing
+    # owner-scoped query (cannot widen visibility). Enterprise plugins set
+    # ``SUPPORTS_CROSS_USER_FETCH=True`` so a share grant can resolve here.
+    file = await authorized_or_owner_scoped(
+        session,
+        UserFile,
+        id_column=UserFile.id,
+        resource_id=file_id,
+        owner_column=UserFile.user_id,
+        owner_id=current_user.id,
+    )
 
     # Check if the file exists
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    # Make sure the user has access to the file
-    if file.user_id != current_user.id:
-        # Return 404 to prevent information disclosure about resource existence
         raise HTTPException(status_code=404, detail="File not found")
 
     return file
@@ -140,6 +144,11 @@ async def upload_user_file(
     ephemeral: bool = False,
 ) -> UploadFileResponse:
     """Upload a file for the current user and track it in the database."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.CREATE,
+        file_user_id=current_user.id,
+    )
     # Get the max allowed file size from settings (in MB)
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
@@ -414,6 +423,11 @@ async def list_files(
     # storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ) -> list[UserFile]:
     """List the files available to the current user."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.READ,
+        file_user_id=current_user.id,
+    )
     try:
         # Load sample files if they don't exist
         # TODO: Pending further testing
@@ -440,6 +454,15 @@ async def delete_files_batch(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Delete multiple files by their IDs."""
+    # Gate each id on file:delete; a viewer cannot wipe out files they only
+    # have read access to. Enterprise plugins consult share grants here.
+    for fid in file_ids:
+        await ensure_file_permission(
+            current_user,
+            FileAction.DELETE,
+            file_id=fid,
+            file_user_id=current_user.id,
+        )
     try:
         # Fetch all files from the DB
         stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
@@ -537,6 +560,13 @@ async def download_files_batch(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Download multiple files as a zip file by their IDs."""
+    for fid in file_ids:
+        await ensure_file_permission(
+            current_user,
+            FileAction.READ,
+            file_id=fid,
+            file_user_id=current_user.id,
+        )
     try:
         # Fetch all files from the DB
         stmt = select(UserFile).where(col(UserFile.id).in_(file_ids), col(UserFile.user_id) == current_user.id)
@@ -648,6 +678,13 @@ async def download_file(
         if not file:
             raise HTTPException(status_code=404, detail="File not found")
 
+        await ensure_file_permission(
+            current_user,
+            FileAction.READ,
+            file_id=file.id,
+            file_user_id=file.user_id,
+        )
+
         # Get the basename of the file path
         file_name = Path(file.path).name
 
@@ -701,10 +738,18 @@ async def edit_file_name(
     try:
         # Fetch the file from the DB
         file = await fetch_file_object(file_id, current_user, session)
+        await ensure_file_permission(
+            current_user,
+            FileAction.WRITE,
+            file_id=file.id,
+            file_user_id=file.user_id,
+        )
 
         # Update the file name
         file.name = name
         session.add(file)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error editing file: {e}") from e
 
@@ -724,6 +769,13 @@ async def delete_file(
         file_to_delete = await fetch_file_object(file_id, current_user, session)
         if not file_to_delete:
             raise HTTPException(status_code=404, detail="File not found")
+
+        await ensure_file_permission(
+            current_user,
+            FileAction.DELETE,
+            file_id=file_to_delete.id,
+            file_user_id=file_to_delete.user_id,
+        )
 
         # Extract just the filename from the path (strip user_id prefix)
         file_name = Path(file_to_delete.path).name
@@ -788,6 +840,11 @@ async def delete_all_files(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Delete all files for the current user."""
+    await ensure_file_permission(
+        current_user,
+        FileAction.DELETE,
+        file_user_id=current_user.id,
+    )
     try:
         # Fetch all files from the DB
         stmt = select(UserFile).where(UserFile.user_id == current_user.id)

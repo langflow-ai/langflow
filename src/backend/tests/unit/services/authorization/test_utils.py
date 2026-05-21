@@ -8,7 +8,15 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.services.authorization import utils as authz_utils
-from langflow.services.authorization.actions import DeploymentAction, FlowAction, ProjectAction
+from langflow.services.authorization.actions import (
+    DeploymentAction,
+    FileAction,
+    FlowAction,
+    KnowledgeBaseAction,
+    ProjectAction,
+    ShareAction,
+    VariableAction,
+)
 
 
 class _StubAuthorizationService:
@@ -711,3 +719,172 @@ async def test_deployment_owner_override_skips_enforce(monkeypatch, fake_user):
     assert len(audit_calls) == 1
     assert audit_calls[0]["result"] == "owner_override"
     assert audit_calls[0]["action"] == "deployment:delete"
+
+
+# --------------------------------------------------------------------------- #
+# ensure_knowledge_base_permission
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_kb_permission_kb_name_in_object_slug(monkeypatch, fake_user):
+    """KBs are name-keyed; the Casbin obj slug must carry the name verbatim."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_knowledge_base_permission(
+        fake_user,
+        KnowledgeBaseAction.READ,
+        kb_name="my-kb",
+        kb_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == "knowledge_base:my-kb"
+    assert service.calls[0]["act"] == "read"
+    assert service.calls[0]["context"]["kb_name"] == "my-kb"
+
+
+@pytest.mark.anyio
+async def test_kb_permission_owner_override(monkeypatch, fake_user):
+    """KB owner is allowed even when the enforcer denies."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+    audit_calls = _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_knowledge_base_permission(
+        fake_user,
+        KnowledgeBaseAction.DELETE,
+        kb_name="my-kb",
+        kb_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+    assert audit_calls[0]["action"] == "knowledge_base:delete"
+
+
+@pytest.mark.anyio
+async def test_kb_permission_denied_raises_403(monkeypatch, fake_user):
+    """Non-owner + denied enforcer → 403 from the helper."""
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    with pytest.raises(HTTPException) as exc:
+        await authz_utils.ensure_knowledge_base_permission(
+            fake_user,
+            KnowledgeBaseAction.DELETE,
+            kb_name="someone-elses",
+            kb_user_id=uuid4(),
+        )
+    assert exc.value.status_code == 403
+
+
+# --------------------------------------------------------------------------- #
+# ensure_variable_permission
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_variable_permission_uses_variable_object_slug(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    variable_id = uuid4()
+    await authz_utils.ensure_variable_permission(
+        fake_user,
+        VariableAction.WRITE,
+        variable_id=variable_id,
+        variable_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"variable:{variable_id}"
+
+
+@pytest.mark.anyio
+async def test_variable_permission_owner_override(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+    audit_calls = _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_variable_permission(
+        fake_user,
+        VariableAction.DELETE,
+        variable_id=uuid4(),
+        variable_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+# --------------------------------------------------------------------------- #
+# ensure_file_permission
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_file_permission_uses_file_object_slug(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    file_id = uuid4()
+    await authz_utils.ensure_file_permission(
+        fake_user,
+        FileAction.READ,
+        file_id=file_id,
+        file_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"file:{file_id}"
+
+
+@pytest.mark.anyio
+async def test_file_permission_owner_override(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+    audit_calls = _install_audit_recorder(monkeypatch)
+
+    await authz_utils.ensure_file_permission(
+        fake_user,
+        FileAction.DELETE,
+        file_id=uuid4(),
+        file_user_id=fake_user.id,
+    )
+
+    assert service.calls == []
+    assert audit_calls[0]["result"] == "owner_override"
+
+
+# --------------------------------------------------------------------------- #
+# ensure_share_permission
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_share_permission_uses_share_object_slug(monkeypatch, fake_user):
+    _install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    _install_authz(monkeypatch, service)
+    _install_audit_recorder(monkeypatch)
+
+    share_id = uuid4()
+    await authz_utils.ensure_share_permission(
+        fake_user,
+        ShareAction.CREATE,
+        share_id=share_id,
+        share_user_id=uuid4(),
+    )
+
+    assert service.calls[0]["obj"] == f"share:{share_id}"
+    assert service.calls[0]["act"] == "create"
