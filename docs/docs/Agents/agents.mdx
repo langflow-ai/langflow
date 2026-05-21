@@ -161,6 +161,8 @@ The **Agent** component has two outputs:
     Modify the prompt in the **Output Format Instructions** field to change extraction behavior.
     This does not modify the schema defined in **Output Schema**.
 
+    Both outputs can be connected at the same time, but each output produces a separate LLM call. If you only need structured data, connect **Structured Response** only.
+
 ## See also
 
 * [**Agent** and **MCP Tools** components](/components-agents)
