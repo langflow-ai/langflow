@@ -1552,7 +1552,7 @@
   "memory.noChunkSelected": "No chunk selected.",
   "memory.noChunksYet": "No chunks yet",
   "memory.noChunksRunFlow": "Run a flow, and chunks will start appearing automatically.",
-  "memory.noChunksLearnMore": "Learn more about Memory Base",
+  "memory.noChunksLearnMore": "Learn more about Memory Bases",
   "memory.memoryBaseTooltip": "A store of processed conversation chunks used for semantic retrieval.",
   "memory.chunksTooltip": "Chunks are units of processed conversation content stored for semantic search and retrieval.",
   "memory.autoCaptureTooltip": "When enabled, conversation messages are automatically processed and stored as memory chunks.",

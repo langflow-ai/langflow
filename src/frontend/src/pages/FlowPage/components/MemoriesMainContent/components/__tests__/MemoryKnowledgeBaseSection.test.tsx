@@ -93,7 +93,7 @@ describe("MemoryKnowledgeBaseSection", () => {
     render(<MemoryKnowledgeBaseSection {...props} />);
 
     const link = screen.getByRole("link", {
-      name: /learn more about memory base/i,
+      name: /learn more about memory bases/i,
     });
     expect(link).toBeInTheDocument();
     expect(link).toHaveAttribute("href", "https://docs.langflow.org/memory-bases");
