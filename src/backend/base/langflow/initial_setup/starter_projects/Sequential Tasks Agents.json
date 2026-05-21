@@ -3810,7 +3810,7 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
