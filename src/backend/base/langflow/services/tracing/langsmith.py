@@ -76,7 +76,7 @@ class LangSmithTracer(BaseTracer):
         return run_type
 
     def setup_langsmith(self) -> bool:
-        if os.getenv("LANGCHAIN_API_KEY") is None:
+        if os.getenv("LANGSMITH_API_KEY", os.getenv("LANGCHAIN_API_KEY")) is None:
             return False
         try:
             from langsmith import Client
@@ -85,6 +85,7 @@ class LangSmithTracer(BaseTracer):
         except ImportError:
             logger.exception("Could not import langsmith. Please install it with `pip install langsmith`.")
             return False
+        os.environ["LANGSMITH_TRACING"] = "true"
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
 
