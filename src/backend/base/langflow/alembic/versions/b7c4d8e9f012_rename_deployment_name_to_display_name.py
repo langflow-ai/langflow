@@ -135,6 +135,7 @@ def downgrade() -> None:
 
     old_column_exists = migration.column_exists(DEPLOYMENT_TABLE, OLD_NAME_COLUMN, conn)
     display_name_exists = migration.column_exists(DEPLOYMENT_TABLE, DISPLAY_NAME_COLUMN, conn)
+    should_restore_name_unique_constraint = old_column_exists or display_name_exists
 
     if display_name_exists and old_column_exists:
         conn.execute(
@@ -160,9 +161,12 @@ def downgrade() -> None:
             )
         elif display_name_exists and old_column_exists:
             batch_op.drop_column(DISPLAY_NAME_COLUMN)
-        if (old_column_exists or display_name_exists) and not migration.constraint_exists(
-            DEPLOYMENT_TABLE, NAME_UNIQUE_CONSTRAINT, conn
-        ):
+
+    # Create the constraint after the rename/drop batch has materialized the old column.
+    if should_restore_name_unique_constraint and not migration.constraint_exists(
+        DEPLOYMENT_TABLE, NAME_UNIQUE_CONSTRAINT, conn
+    ):
+        with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
             batch_op.create_unique_constraint(
                 NAME_UNIQUE_CONSTRAINT,
                 ["deployment_provider_account_id", OLD_NAME_COLUMN],
