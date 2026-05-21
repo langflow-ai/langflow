@@ -170,10 +170,8 @@ class MCPServerConfig(BaseModel):
             return self
 
         base_command = _extract_base_command(self.command)
-        has_shell_exec_flag = any(arg in SHELL_EXEC_FLAGS for arg in self.args)
-
         # Shell exec flags (-c, /c) are ONLY allowed with shell wrappers
-        if has_shell_exec_flag and base_command not in SHELL_WRAPPERS:
+        if any(arg.lower() in SHELL_EXEC_FLAGS for arg in self.args) and base_command not in SHELL_WRAPPERS:
             msg = f"Flag -c or /c is only allowed with shell wrappers (cmd/sh/bash), not with '{base_command}'"
             logger.warning("MCP -c flag rejected for non-shell command: {}", base_command)
             raise ValueError(msg)
@@ -183,7 +181,7 @@ class MCPServerConfig(BaseModel):
             # Find the wrapped command after shell exec flag
             wrapped_command = None
             for i, arg in enumerate(self.args):
-                if arg in SHELL_EXEC_FLAGS and i + 1 < len(self.args):
+                if _is_shell_exec_flag(base_command, arg) and i + 1 < len(self.args):
                     wrapped_command = self.args[i + 1]
                     break
 
@@ -337,3 +335,19 @@ def _extract_base_command(command: str) -> str:
         base_command = base_command[:-4]
 
     return base_command
+
+
+def _is_shell_exec_flag(base_command: str, arg: str) -> bool:
+    """Return whether ``arg`` makes the shell execute the next argument."""
+    arg_lower = arg.lower()
+    if arg_lower in SHELL_EXEC_FLAGS:
+        return True
+
+    # sh/bash allow combined short options such as -lc and -euc, where c still
+    # executes the next argument as a command string.
+    return (
+        base_command in {"sh", "bash"}
+        and arg_lower.startswith("-")
+        and not arg_lower.startswith("--")
+        and "c" in arg_lower[1:]
+    )
