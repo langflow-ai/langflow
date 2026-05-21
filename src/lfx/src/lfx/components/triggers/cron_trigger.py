@@ -15,17 +15,15 @@ Design notes:
   and as the prefix of the node id in ``flow.data`` (e.g.
   ``"CronTrigger-abc12"``). Renaming would be a breaking change for
   every saved flow.
-* The canvas UX is NOT raw cron syntax. A ``schedule_mode`` dropdown
-  drives which friendly parameters (interval, time of day, day of
-  week) are visible; the actual ``cron_expression`` field is derived
-  from those inputs via :func:`compose_cron` and is only directly
-  editable when the user picks the ``Custom (cron expression)`` mode.
-* The single source of truth on the wire — what gets read by the
-  trigger worker and the discovery helper — is still
-  ``cron_expression``. The mode + parameter fields are the *user-
-  facing* representation; the derived cron is the *system-facing*
-  representation. They are kept in sync at every input change by
-  :meth:`update_build_config`.
+* The canvas UX is binary: an ``at_specific_time`` toggle picks
+  between "fire every N units" (intervals — timezone-agnostic) and
+  "fire daily at HH:MM in a specific timezone". Each path shows only
+  the fields it needs.
+* ``cron_expression`` remains the single source of truth on the wire
+  — what gets read by the trigger worker and the discovery helper.
+  The visible fields are the *user-facing* representation; the
+  derived cron is the *system-facing* representation. They are kept
+  in sync at every input change by :meth:`update_build_config`.
 * No ``outputs``: the trigger does not feed downstream nodes. It
   kicks the whole flow off when the worker fires; the flow uses its
   own inputs.
@@ -46,25 +44,19 @@ from lfx.components.triggers.constants import (
     MAX_ATTEMPTS_LIMIT,
 )
 from lfx.components.triggers.cron_builder import (
-    DAYS_OF_WEEK,
-    MODE_CUSTOM,
-    MODE_DAILY,
-    MODE_EVERY_N_HOURS,
-    MODE_EVERY_N_MINUTES,
-    MODE_WEEKLY,
-    SCHEDULE_MODES,
+    INTERVAL_UNITS,
+    UNIT_MINUTES,
     compose_cron,
 )
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import DropdownInput, IntInput, MessageTextInput
+from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput
 
-# Default time-of-day for the Daily / Weekly modes — 09:00 in the
-# trigger's selected timezone. Sensible business-hours default.
+# Defaults sized to be sensible the moment the user drops the
+# component on the canvas — without typing anything else, the
+# trigger is already configured for "every 5 minutes".
+_DEFAULT_INTERVAL_VALUE = 5
 _DEFAULT_TIME_OF_DAY = "09:00"
-_DEFAULT_DAY_OF_WEEK = "Monday"
-_DEFAULT_MINUTES_INTERVAL = 5
-_DEFAULT_HOURS_INTERVAL = 1
 
 
 class CronTriggerComponent(Component):
@@ -76,73 +68,68 @@ class CronTriggerComponent(Component):
     icon = "clock"
 
     inputs = [
-        # ----- friendly mode picker (shown to everyone) -----
-        DropdownInput(
-            name="schedule_mode",
-            display_name="Schedule",
-            info="Pick how often this flow should run.",
-            options=list(SCHEDULE_MODES),
-            value=MODE_EVERY_N_MINUTES,
+        # ----- top-level switch -----
+        BoolInput(
+            name="at_specific_time",
+            display_name="Schedule at specific time",
+            info=(
+                "Off (default): fire at fixed intervals (every N minutes or hours). "
+                "On: fire at a specific time of day in a chosen timezone."
+            ),
+            value=False,
             real_time_refresh=True,
         ),
-        # ----- mode-specific parameters (one is visible at a time) -----
+        # ----- interval branch (shown when at_specific_time is False) -----
         IntInput(
-            name="minutes_interval",
-            display_name="Every (minutes)",
-            info="Run every N minutes.",
-            value=_DEFAULT_MINUTES_INTERVAL,
+            name="interval_value",
+            display_name="Every",
+            info="How many units between fires.",
+            value=_DEFAULT_INTERVAL_VALUE,
             range_spec=RangeSpec(min=1, max=59, step=1),
             real_time_refresh=True,
         ),
-        IntInput(
-            name="hours_interval",
-            display_name="Every (hours)",
-            info="Run every N hours, on the hour.",
-            value=_DEFAULT_HOURS_INTERVAL,
-            range_spec=RangeSpec(min=1, max=23, step=1),
+        DropdownInput(
+            name="interval_unit",
+            display_name="Unit",
+            info="The unit paired with the 'Every' number.",
+            options=list(INTERVAL_UNITS),
+            value=UNIT_MINUTES,
             real_time_refresh=True,
-            show=False,
         ),
+        # ----- specific-time branch (shown when at_specific_time is True) -----
         MessageTextInput(
             name="time_of_day",
             display_name="Time of day (HH:MM)",
-            info="24-hour clock, in the timezone chosen below.",
+            info="24-hour clock, in the timezone selected below.",
             value=_DEFAULT_TIME_OF_DAY,
             input_types=[],
             real_time_refresh=True,
             show=False,
         ),
         DropdownInput(
-            name="day_of_week",
-            display_name="Day of week",
-            options=list(DAYS_OF_WEEK),
-            value=_DEFAULT_DAY_OF_WEEK,
-            real_time_refresh=True,
-            show=False,
-        ),
-        MessageTextInput(
-            name="cron_expression",
-            display_name="Cron Expression",
-            info=(
-                "Auto-filled from the Schedule above. Editable only when "
-                "Schedule is set to 'Custom (cron expression)'. Five-field "
-                "POSIX cron: 'minute hour day month weekday'."
-            ),
-            value=DEFAULT_CRON_EXPRESSION,
-            input_types=[],
-            show=False,
-        ),
-        # ----- always-visible secondary controls -----
-        DropdownInput(
             name="timezone",
             display_name="Timezone",
             info=(
-                "IANA timezone name used to interpret the schedule. "
+                "IANA timezone name used to interpret the time of day. "
                 "Type any IANA name to use a timezone not in the list."
             ),
             options=list(COMMON_TIMEZONES),
             value=DEFAULT_TIMEZONE,
             combobox=True,
+            show=False,
+        ),
+        # ----- system-facing derived field (never visible) -----
+        # Persisted in flow.data so the backend worker can read the
+        # current cron without re-running update_build_config. Always
+        # hidden; the user edits the controls above and this field
+        # is recomputed for them on every change.
+        MessageTextInput(
+            name="cron_expression",
+            display_name="Cron Expression",
+            info="Auto-derived from the schedule controls above.",
+            value=DEFAULT_CRON_EXPRESSION,
+            input_types=[],
+            show=False,
         ),
         # ----- advanced (collapsed by default) -----
         IntInput(
@@ -159,30 +146,14 @@ class CronTriggerComponent(Component):
     outputs = []
 
     # ------------------------------------------------------------------ #
-    #  Dynamic build config — show/hide fields by mode, derive cron
+    #  Dynamic build config — show/hide fields by toggle, derive cron
     # ------------------------------------------------------------------ #
 
-    # Map mode → list of "user-editable parameter field names" that
-    # should be visible in that mode. Centralised so the visibility
-    # rule lives in exactly one place and the matching unit tests can
-    # assert against the same dict.
-    _MODE_VISIBLE_FIELDS: dict[str, tuple[str, ...]] = {
-        MODE_EVERY_N_MINUTES: ("minutes_interval",),
-        MODE_EVERY_N_HOURS: ("hours_interval",),
-        MODE_DAILY: ("time_of_day",),
-        MODE_WEEKLY: ("day_of_week", "time_of_day"),
-        MODE_CUSTOM: ("cron_expression",),
-    }
-
-    # The full set of fields that ``update_build_config`` toggles.
-    # Anything not in here keeps its declared visibility.
-    _TOGGLEABLE_FIELDS: tuple[str, ...] = (
-        "minutes_interval",
-        "hours_interval",
-        "time_of_day",
-        "day_of_week",
-        "cron_expression",
-    )
+    # Field groups: which fields belong to each side of the toggle.
+    # Centralised so the visibility rule lives in exactly one place
+    # and the matching unit tests can assert against the same tuples.
+    _INTERVAL_FIELDS: tuple[str, ...] = ("interval_value", "interval_unit")
+    _SPECIFIC_TIME_FIELDS: tuple[str, ...] = ("time_of_day", "timezone")
 
     def update_build_config(
         self,
@@ -195,40 +166,37 @@ class CronTriggerComponent(Component):
         Called by the canvas whenever an input flagged with
         ``real_time_refresh=True`` changes. Two responsibilities:
 
-        1. Show only the parameter fields relevant to the current
-           ``schedule_mode``.
-        2. Re-derive ``cron_expression`` from the structured
-           parameters whenever the user is NOT in custom mode. In
-           custom mode the user types the cron themselves and we
-           leave the field alone.
+        1. Show only the field group relevant to the current
+           ``at_specific_time`` value.
+        2. Re-derive ``cron_expression`` from the structured controls.
         """
-        if field_name == "schedule_mode":
-            mode = field_value
+        if field_name == "at_specific_time":
+            at_specific_time = bool(field_value)
         else:
-            mode = build_config.get("schedule_mode", {}).get("value", MODE_EVERY_N_MINUTES)
-
-        visible = set(self._MODE_VISIBLE_FIELDS.get(mode, ()))
-        for fname in self._TOGGLEABLE_FIELDS:
-            if fname in build_config:
-                build_config[fname]["show"] = fname in visible
-
-        # Derive cron from the structured fields (skip in custom mode —
-        # the user owns the cron_expression there).
-        if mode != MODE_CUSTOM:
-            build_config["cron_expression"]["value"] = compose_cron(
-                mode=mode,
-                minutes_interval=build_config.get("minutes_interval", {}).get(
-                    "value", _DEFAULT_MINUTES_INTERVAL
-                ),
-                hours_interval=build_config.get("hours_interval", {}).get(
-                    "value", _DEFAULT_HOURS_INTERVAL
-                ),
-                time_of_day=build_config.get("time_of_day", {}).get(
-                    "value", _DEFAULT_TIME_OF_DAY
-                ),
-                day_of_week=build_config.get("day_of_week", {}).get(
-                    "value", _DEFAULT_DAY_OF_WEEK
-                ),
+            at_specific_time = bool(
+                build_config.get("at_specific_time", {}).get("value", False),
             )
+
+        # Visibility — the two branches are exclusive.
+        for fname in self._INTERVAL_FIELDS:
+            if fname in build_config:
+                build_config[fname]["show"] = not at_specific_time
+        for fname in self._SPECIFIC_TIME_FIELDS:
+            if fname in build_config:
+                build_config[fname]["show"] = at_specific_time
+
+        # Re-derive the cron expression. Always — both branches.
+        build_config["cron_expression"]["value"] = compose_cron(
+            at_specific_time=at_specific_time,
+            interval_value=build_config.get("interval_value", {}).get(
+                "value", _DEFAULT_INTERVAL_VALUE
+            ),
+            interval_unit=build_config.get("interval_unit", {}).get(
+                "value", UNIT_MINUTES
+            ),
+            time_of_day=build_config.get("time_of_day", {}).get(
+                "value", _DEFAULT_TIME_OF_DAY
+            ),
+        )
 
         return build_config

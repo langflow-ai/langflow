@@ -1,48 +1,40 @@
-"""Compose a 5-field POSIX cron string from a user-friendly mode + parameters.
+"""Compose a 5-field POSIX cron string from the friendly schedule controls.
 
 Pure functions only. The CronTrigger component's
 ``update_build_config`` hook calls into here whenever the canvas user
-edits a mode or a parameter; the result is written into the node's
+edits a field; the result is written into the node's
 ``cron_expression`` template field, which is the single source of
-truth the rest of the system reads.
+truth the rest of the system (lifecycle hook, worker, discovery)
+reads.
 
-Splitting this out of the component file keeps the component shell
-declarative (just input/output declarations) and makes the mode →
-cron mapping unit-testable without spinning up the canvas.
+Two scheduling shapes are supported, chosen by the ``at_specific_time``
+boolean:
+
+* ``False`` (default) — **intervals**. Fires every N units, where the
+  unit is either minutes or hours. Timezone is irrelevant because
+  ``*/N * * * *`` and ``0 */N * * *`` fire at the same wall-clock
+  cadence regardless of locale.
+* ``True`` — **specific time of day**. Fires at HH:MM every day, in
+  the IANA timezone selected on the node.
+
+This module owns the mapping. Splitting it out of the component file
+keeps the component shell declarative (just input/output declarations)
+and makes the mapping unit-testable without spinning up the canvas.
 """
 
 from __future__ import annotations
 
-# Mode identifiers persisted in ``schedule_mode``. Plain strings so the
-# canvas dropdown can render them verbatim — no extra i18n layer
-# needed for a feature where the user reads English component names
-# anyway.
-MODE_EVERY_N_MINUTES = "Every N minutes"
-MODE_EVERY_N_HOURS = "Every N hours"
-MODE_DAILY = "Daily at…"
-MODE_WEEKLY = "Weekly on…"
-MODE_CUSTOM = "Custom (cron expression)"
+# Unit identifiers persisted in ``interval_unit``. Plain strings so
+# the canvas dropdown can render them verbatim — no extra i18n layer
+# needed.
+UNIT_MINUTES = "minutes"
+UNIT_HOURS = "hours"
 
-SCHEDULE_MODES: tuple[str, ...] = (
-    MODE_EVERY_N_MINUTES,
-    MODE_EVERY_N_HOURS,
-    MODE_DAILY,
-    MODE_WEEKLY,
-    MODE_CUSTOM,
-)
+INTERVAL_UNITS: tuple[str, ...] = (UNIT_MINUTES, UNIT_HOURS)
 
-# Day-of-week dropdown labels. Order matches the cron numbering
-# (Sunday=0..Saturday=6) so the index in ``DAYS_OF_WEEK`` IS the cron
-# value we emit.
-DAYS_OF_WEEK: tuple[str, ...] = (
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-)
+# Bounds reflect what a single cron field can express.
+_MAX_MINUTES = 59
+_MAX_HOURS = 23
 
 # Number of segments in a well-formed "HH:MM" time string.
 _HOUR_MINUTE_PARTS = 2
@@ -82,43 +74,30 @@ def _parse_time_of_day(value: object, *, fallback_hour: int = 9, fallback_minute
     return hour, minute
 
 
-def _day_of_week_index(label: object) -> int:
-    """Return the cron weekday number (0=Sun..6=Sat) for ``label``.
-
-    Falls back to Monday (1) when the input is missing or unknown.
-    """
-    if isinstance(label, str) and label in DAYS_OF_WEEK:
-        return DAYS_OF_WEEK.index(label)
-    return DAYS_OF_WEEK.index("Monday")
-
-
 def compose_cron(
     *,
-    mode: str,
-    minutes_interval: object = 5,
-    hours_interval: object = 1,
+    at_specific_time: bool,
+    interval_value: object = 5,
+    interval_unit: object = UNIT_MINUTES,
     time_of_day: object = "09:00",
-    day_of_week: object = "Monday",
-    fallback: str = "*/5 * * * *",
 ) -> str:
-    """Build a 5-field cron expression from the friendly mode controls.
+    """Build a 5-field cron expression from the friendly controls.
 
-    ``fallback`` is returned when ``mode`` is unrecognised — keeps the
-    contract: the function always yields a parseable cron unless the
-    caller is in the explicit "Custom (cron expression)" mode (which
-    bypasses this function and uses the user's literal input).
+    ``at_specific_time`` is the top-level toggle. When False, the
+    ``interval_*`` parameters drive an "every N units" cron and the
+    other fields are ignored. When True, the ``time_of_day`` field
+    drives a "daily at HH:MM" cron and the interval fields are ignored.
+
+    Defensive: every parameter has a fallback so the canvas can never
+    push a config that breaks the downstream croniter parse.
     """
-    if mode == MODE_EVERY_N_MINUTES:
-        n = _clamp(_coerce_int(minutes_interval, 5), 1, 59)
-        return f"*/{n} * * * *"
-    if mode == MODE_EVERY_N_HOURS:
-        n = _clamp(_coerce_int(hours_interval, 1), 1, 23)
-        return f"0 */{n} * * *"
-    if mode == MODE_DAILY:
+    if at_specific_time:
         hour, minute = _parse_time_of_day(time_of_day)
         return f"{minute} {hour} * * *"
-    if mode == MODE_WEEKLY:
-        hour, minute = _parse_time_of_day(time_of_day)
-        dow = _day_of_week_index(day_of_week)
-        return f"{minute} {hour} * * {dow}"
-    return fallback
+
+    unit = interval_unit if interval_unit in INTERVAL_UNITS else UNIT_MINUTES
+    if unit == UNIT_HOURS:
+        n = _clamp(_coerce_int(interval_value, 1), 1, _MAX_HOURS)
+        return f"0 */{n} * * *"
+    n = _clamp(_coerce_int(interval_value, 5), 1, _MAX_MINUTES)
+    return f"*/{n} * * * *"

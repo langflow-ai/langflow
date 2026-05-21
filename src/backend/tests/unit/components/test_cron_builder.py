@@ -1,84 +1,126 @@
 """Pure-function tests for ``compose_cron``.
 
-Every branch of the mode mapping is exercised with both well-formed
-and defensive inputs (out-of-range values, non-numeric strings, missing
-fields) so the cron string the worker eventually ends up scheduling
-on is predictable no matter what the canvas sends in.
+Two branches of ``at_specific_time`` plus defensive input cases so
+the cron string the worker eventually schedules on is predictable
+regardless of what the canvas sends in.
 """
 
 from __future__ import annotations
 
 import pytest
 from lfx.components.triggers.cron_builder import (
-    DAYS_OF_WEEK,
-    MODE_CUSTOM,
-    MODE_DAILY,
-    MODE_EVERY_N_HOURS,
-    MODE_EVERY_N_MINUTES,
-    MODE_WEEKLY,
-    SCHEDULE_MODES,
+    INTERVAL_UNITS,
+    UNIT_HOURS,
+    UNIT_MINUTES,
     compose_cron,
 )
 
 # --------------------------------------------------------------------------- #
-#  every-N-minutes
+#  Interval branch (at_specific_time = False)
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.parametrize(
-    ("minutes", "expected"),
+    ("interval_value", "expected"),
     [
         (5, "*/5 * * * *"),
         (1, "*/1 * * * *"),
         (30, "*/30 * * * *"),
     ],
 )
-def test_every_n_minutes_emits_step(minutes, expected):
-    assert compose_cron(mode=MODE_EVERY_N_MINUTES, minutes_interval=minutes) == expected
+def test_minutes_interval_emits_step(interval_value, expected):
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value=interval_value,
+            interval_unit=UNIT_MINUTES,
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize(
-    ("minutes", "expected_step"),
+    ("interval_value", "expected_step"),
     [
-        (0, 1),   # below range — clamps to 1
-        (-7, 1),  # below range — clamps to 1
-        (60, 59),  # above range — clamps to 59
+        (0, 1),    # below range → clamps to 1
+        (-7, 1),   # negative idem
+        (60, 59),  # above the minute cap → clamps to 59
         (999, 59),
     ],
 )
-def test_every_n_minutes_clamps_out_of_range(minutes, expected_step):
-    result = compose_cron(mode=MODE_EVERY_N_MINUTES, minutes_interval=minutes)
+def test_minutes_interval_clamps_out_of_range(interval_value, expected_step):
+    result = compose_cron(
+        at_specific_time=False,
+        interval_value=interval_value,
+        interval_unit=UNIT_MINUTES,
+    )
     assert result == f"*/{expected_step} * * * *"
 
 
-def test_every_n_minutes_falls_back_for_non_numeric():
-    assert compose_cron(mode=MODE_EVERY_N_MINUTES, minutes_interval="nope") == "*/5 * * * *"
-
-
-# --------------------------------------------------------------------------- #
-#  every-N-hours
-# --------------------------------------------------------------------------- #
+def test_minutes_interval_falls_back_for_non_numeric():
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value="nope",
+            interval_unit=UNIT_MINUTES,
+        )
+        == "*/5 * * * *"
+    )
 
 
 @pytest.mark.parametrize(
-    ("hours", "expected"),
+    ("interval_value", "expected"),
     [
         (1, "0 */1 * * *"),
         (3, "0 */3 * * *"),
         (12, "0 */12 * * *"),
     ],
 )
-def test_every_n_hours_emits_top_of_hour_step(hours, expected):
-    assert compose_cron(mode=MODE_EVERY_N_HOURS, hours_interval=hours) == expected
+def test_hours_interval_emits_top_of_hour_step(interval_value, expected):
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value=interval_value,
+            interval_unit=UNIT_HOURS,
+        )
+        == expected
+    )
 
 
-def test_every_n_hours_clamps_out_of_range():
-    assert compose_cron(mode=MODE_EVERY_N_HOURS, hours_interval=0) == "0 */1 * * *"
-    assert compose_cron(mode=MODE_EVERY_N_HOURS, hours_interval=24) == "0 */23 * * *"
+def test_hours_interval_clamps_out_of_range():
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value=0,
+            interval_unit=UNIT_HOURS,
+        )
+        == "0 */1 * * *"
+    )
+    # Above the cron hour cap (23) → clamps to 23.
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value=24,
+            interval_unit=UNIT_HOURS,
+        )
+        == "0 */23 * * *"
+    )
+
+
+def test_unknown_unit_falls_back_to_minutes():
+    """Unexpected ``interval_unit`` value (e.g. legacy/typo) defaults to minutes."""
+    assert (
+        compose_cron(
+            at_specific_time=False,
+            interval_value=5,
+            interval_unit="weeks",  # not in INTERVAL_UNITS
+        )
+        == "*/5 * * * *"
+    )
 
 
 # --------------------------------------------------------------------------- #
-#  daily
+#  Specific-time branch (at_specific_time = True)
 # --------------------------------------------------------------------------- #
 
 
@@ -91,72 +133,57 @@ def test_every_n_hours_clamps_out_of_range():
         ("23:59", "59 23 * * *"),
     ],
 )
-def test_daily_emits_correct_minute_hour(time_of_day, expected):
-    assert compose_cron(mode=MODE_DAILY, time_of_day=time_of_day) == expected
-
-
-def test_daily_clamps_out_of_range_components():
-    assert compose_cron(mode=MODE_DAILY, time_of_day="25:99") == "59 23 * * *"
-
-
-def test_daily_falls_back_for_malformed_input():
-    # Missing colon → fall back to 09:00 defaults.
-    assert compose_cron(mode=MODE_DAILY, time_of_day="garbage") == "0 9 * * *"
-    # Empty string idem.
-    assert compose_cron(mode=MODE_DAILY, time_of_day="") == "0 9 * * *"
-    # Non-string idem.
-    assert compose_cron(mode=MODE_DAILY, time_of_day=None) == "0 9 * * *"
-
-
-# --------------------------------------------------------------------------- #
-#  weekly
-# --------------------------------------------------------------------------- #
-
-
-@pytest.mark.parametrize(
-    ("day", "time_of_day", "expected"),
-    [
-        ("Sunday", "00:00", "0 0 * * 0"),
-        ("Monday", "09:00", "0 9 * * 1"),
-        ("Friday", "18:30", "30 18 * * 5"),
-        ("Saturday", "12:00", "0 12 * * 6"),
-    ],
-)
-def test_weekly_appends_day_index(day, time_of_day, expected):
+def test_specific_time_emits_correct_minute_hour(time_of_day, expected):
     assert (
-        compose_cron(mode=MODE_WEEKLY, day_of_week=day, time_of_day=time_of_day)
+        compose_cron(at_specific_time=True, time_of_day=time_of_day)
         == expected
     )
 
 
-def test_weekly_falls_back_to_monday_for_unknown_day():
-    assert compose_cron(mode=MODE_WEEKLY, day_of_week="NotADay", time_of_day="09:00") == "0 9 * * 1"
+def test_specific_time_clamps_out_of_range_components():
+    assert (
+        compose_cron(at_specific_time=True, time_of_day="25:99")
+        == "59 23 * * *"
+    )
 
 
-def test_days_of_week_order_matches_cron_numbering():
-    """Pinned: Sunday must be index 0, Saturday index 6 — that's what cron expects."""
-    assert DAYS_OF_WEEK[0] == "Sunday"
-    assert DAYS_OF_WEEK[6] == "Saturday"
+@pytest.mark.parametrize(
+    "bad_value",
+    [
+        "garbage",  # missing colon → fall back to 09:00
+        "",         # empty
+        None,       # non-string
+        42,         # non-string
+    ],
+)
+def test_specific_time_falls_back_for_malformed_input(bad_value):
+    assert (
+        compose_cron(at_specific_time=True, time_of_day=bad_value)
+        == "0 9 * * *"
+    )
+
+
+def test_specific_time_ignores_interval_params():
+    """In specific-time mode, ``interval_value`` / ``interval_unit`` must not leak into the result."""
+    assert (
+        compose_cron(
+            at_specific_time=True,
+            interval_value=999,
+            interval_unit=UNIT_HOURS,
+            time_of_day="07:15",
+        )
+        == "15 7 * * *"
+    )
 
 
 # --------------------------------------------------------------------------- #
-#  custom / unknown mode → fallback
+#  Constants
 # --------------------------------------------------------------------------- #
 
 
-def test_unknown_mode_returns_fallback():
-    # Custom mode never goes through compose_cron in real usage —
-    # the component bypasses it. But if anything calls compose_cron
-    # with an unknown mode, the fallback keeps the contract.
-    assert compose_cron(mode="not-a-real-mode") == "*/5 * * * *"
-    assert compose_cron(mode=MODE_CUSTOM, fallback="0 0 * * *") == "0 0 * * *"
+def test_interval_units_constant_lists_both_units():
+    """Pinned: dropdown options come from this tuple.
 
-
-def test_schedule_modes_constant_lists_all_modes():
-    assert set(SCHEDULE_MODES) == {
-        MODE_EVERY_N_MINUTES,
-        MODE_EVERY_N_HOURS,
-        MODE_DAILY,
-        MODE_WEEKLY,
-        MODE_CUSTOM,
-    }
+    Keeps the component declaration and the builder in sync.
+    """
+    assert set(INTERVAL_UNITS) == {UNIT_MINUTES, UNIT_HOURS}
