@@ -27,6 +27,8 @@ class ComponentFunctionEntrypointNameNullError(HTTPException):
 class BaseComponent:
     ERROR_CODE_NULL: ClassVar[str] = "Python code must be provided."
     ERROR_FUNCTION_ENTRYPOINT_NAME_NULL: ClassVar[str] = "The name of the entrypoint function must be provided."
+    INPUT_INTERFACE_TYPES: ClassVar[set[str]] = {"ChatInput", "Webhook", "TextInput"}
+    OUTPUT_INTERFACE_TYPES: ClassVar[set[str]] = {"ChatOutput", "DataOutput", "TextOutput"}
 
     def __init__(self, **data) -> None:
         self._code: str | None = None
@@ -86,6 +88,37 @@ class BaseComponent:
         return validate.create_function(self._code, self._function_entrypoint_name)
 
     @staticmethod
+    def _get_interface_component_type_names() -> tuple[set[str], set[str]]:
+        return BaseComponent.INPUT_INTERFACE_TYPES, BaseComponent.OUTPUT_INTERFACE_TYPES
+
+    @staticmethod
+    def _infer_interface_flags(component: Any, template_config: dict[str, Any]) -> None:
+        if "is_input" in template_config and "is_output" in template_config:
+            return
+
+        input_names, output_names = BaseComponent._get_interface_component_type_names()
+        component_name = getattr(component, "name", None) or component.__class__.__name__
+        display_name = getattr(component, "display_name", None)
+        candidates = {
+            str(component_name),
+            str(component_name).replace(" ", ""),
+            str(component_name).replace("_", ""),
+        }
+        if display_name:
+            candidates.update(
+                {
+                    str(display_name),
+                    str(display_name).replace(" ", ""),
+                    str(display_name).replace("_", ""),
+                }
+            )
+
+        if "is_input" not in template_config and any(candidate in input_names for candidate in candidates):
+            template_config["is_input"] = True
+        if "is_output" not in template_config and any(candidate in output_names for candidate in candidates):
+            template_config["is_output"] = True
+
+    @staticmethod
     def get_template_config(component):
         """Gets the template configuration for the custom component itself."""
         template_config = {}
@@ -100,6 +133,8 @@ class BaseComponent:
         for key in template_config.copy():
             if key not in ATTR_FUNC_MAPPING:
                 template_config.pop(key, None)
+
+        BaseComponent._infer_interface_flags(component, template_config)
 
         return template_config
 
