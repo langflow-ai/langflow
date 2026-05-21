@@ -785,6 +785,7 @@ async def list_deployments(
         candidates=list(rows_with_counts),
         key=lambda row: row[0].id,
         domain_extractor=lambda row: _resolve_casbin_domain(row[0].workspace_id, row[0].project_id),
+        owner_extractor=lambda row: row[0].user_id,
         act=DeploymentAction.READ,
     )
     deployments = deployment_mapper.shape_deployment_list_items(

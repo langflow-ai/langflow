@@ -299,6 +299,12 @@ def test_read_flows_list_uses_filter_visible_resources(routes):
     ("module_path", "func_name"),
     [
         (_CHAT_FILE, "build_flow"),
+        # Deprecated but still routed — guarded with EXECUTE just like the
+        # supported build_flow. ``build_graph_from_db`` does a raw
+        # ``session.get(Flow, flow_id)`` with no owner filter, so the route
+        # handler must enforce ownership itself.
+        (_CHAT_FILE, "retrieve_vertices_order"),
+        (_CHAT_FILE, "build_vertex"),
         (_ENDPOINTS_FILE, "simplified_run_flow"),
         (_ENDPOINTS_FILE, "simplified_run_flow_session"),
         (_ENDPOINTS_FILE, "webhook_run_flow"),

@@ -118,6 +118,13 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "endpoint_name",
         "tags",
         "folder_id",
+        # ``workspace_id`` is part of the FlowUpdate / FlowCreate contract and
+        # the PATCH/PUT routes re-authorize WRITE at the destination scope when
+        # the payload changes it (see flows.py). Omitting it here would silently
+        # accept the payload, pass the authorization check, and then drop the
+        # write — leaving the flow in its old workspace despite the API saying
+        # the move succeeded.
+        "workspace_id",
         "icon",
         "icon_bg_color",
         "gradient",

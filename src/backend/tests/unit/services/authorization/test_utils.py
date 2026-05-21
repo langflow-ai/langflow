@@ -630,6 +630,42 @@ async def test_filter_visible_resources_groups_by_extracted_domain(monkeypatch, 
     assert result == [items[0], items[2]]
 
 
+@pytest.mark.anyio
+async def test_filter_visible_resources_owner_override_skips_enforcer(monkeypatch, fake_user):
+    """Items owned by the caller are force-included without consulting the enforcer.
+
+    Mirrors the owner-override short-circuit in ``_ensure_resource_permission``
+    so list and direct-read agree under enterprise enforcement. Without this,
+    a deny-all plugin would hide the caller's own rows from the listing
+    response while letting them read the same rows directly.
+    """
+    _install_settings(monkeypatch, authz_enabled=True)
+    other_user = uuid4()
+
+    items = [
+        SimpleNamespace(id=uuid4(), user_id=fake_user.id),  # owned → must keep
+        SimpleNamespace(id=uuid4(), user_id=other_user),  # not owned → enforcer decides
+        SimpleNamespace(id=uuid4(), user_id=fake_user.id),  # owned → must keep
+    ]
+    # Deny-all stub so any item that reaches the enforcer would be dropped.
+    service = _StubAuthorizationService(allow=False)
+    _install_authz(monkeypatch, service)
+
+    result = await authz_utils.filter_visible_resources(
+        fake_user,
+        resource_type="flow",
+        candidates=items,
+        owner_extractor=lambda item: item.user_id,
+        act=FlowAction.READ,
+    )
+
+    # Owned items kept (positions 0 and 2); non-owned item dropped by deny.
+    assert result == [items[0], items[2]]
+    # Enforcer was consulted only for the non-owned item.
+    assert len(service.batch_calls) == 1
+    assert len(service.batch_calls[0]["requests"]) == 1
+
+
 # ----------------------------------------------------------------------------- #
 # ensure_deployment_permission
 # ----------------------------------------------------------------------------- #

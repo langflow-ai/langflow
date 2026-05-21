@@ -225,6 +225,7 @@ async def read_projects(
             resource_type="project",
             candidates=list(projects),
             domain_extractor=lambda project: _resolve_casbin_domain(project.workspace_id, None),
+            owner_extractor=lambda project: project.user_id,
             act=ProjectAction.READ,
         )
         sorted_projects = sorted(projects, key=lambda x: x.name != DEFAULT_FOLDER_NAME)

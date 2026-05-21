@@ -170,6 +170,7 @@ async def read_flows(
                 resource_type="flow",
                 candidates=list(flows),
                 domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
             if header_flows:
