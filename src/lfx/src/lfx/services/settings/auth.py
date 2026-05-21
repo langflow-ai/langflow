@@ -143,11 +143,13 @@ class AuthSettings(BaseSettings):
         description="When True, active superusers bypass authorization checks (audited by the plugin).",
     )
     AUTHZ_AUDIT_ENABLED: bool = Field(
-        default=True,
+        default=False,
         description=(
             "Write an AuthzAuditLog row for every authorization decision and share-administration "
-            "action. Independent of AUTHZ_ENABLED — keep audit on while enforcement is off to "
-            "observe traffic before flipping the AUTHZ_ENABLED flag."
+            "action. Independent of AUTHZ_ENABLED — set this to True while enforcement is off to "
+            "observe traffic before flipping the AUTHZ_ENABLED flag. Defaults to False because the "
+            "fire-and-forget audit task opens its own DB session per row; on SQLite this can "
+            "contend with concurrent write transactions ('database is locked')."
         ),
     )
 
