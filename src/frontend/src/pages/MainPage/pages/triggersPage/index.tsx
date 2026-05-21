@@ -10,6 +10,7 @@ import {
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
 import BulkDeleteConfirmDialog from "./components/BulkDeleteConfirmDialog";
+import TriggerCreateModal from "./components/TriggerCreateModal";
 import TriggerJobsDrawer from "./components/TriggerJobsDrawer";
 import TriggersTable, { triggerKey } from "./components/TriggersTable";
 import type { TriggerInstance } from "./types";
@@ -39,6 +40,7 @@ export default function TriggersPage() {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [jobsTrigger, setJobsTrigger] = useState<TriggerInstance | null>(null);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const { mutate: deleteOne, isPending: isDeletingOne } = useDeleteTrigger({
     onError: (err) =>
@@ -146,18 +148,29 @@ export default function TriggersPage() {
                 </div>
                 {t("triggers.title")}
               </div>
-              {showBulkAction && (
+              <div className="flex items-center gap-2">
+                {showBulkAction && (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    data-testid="triggers-bulk-delete-button"
+                    onClick={() => setBulkDialogOpen(true)}
+                    disabled={isDeletingOne || isDeletingAll}
+                  >
+                    <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+                    {bulkLabel}
+                  </Button>
+                )}
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="md"
-                  data-testid="triggers-bulk-delete-button"
-                  onClick={() => setBulkDialogOpen(true)}
-                  disabled={isDeletingOne || isDeletingAll}
+                  data-testid="triggers-new-trigger-button"
+                  onClick={() => setCreateOpen(true)}
                 >
-                  <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
-                  {bulkLabel}
+                  <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+                  {t("triggers.create")}
                 </Button>
-              )}
+              </div>
             </div>
 
             <div className="text-sm text-muted-foreground pb-6">
@@ -190,6 +203,8 @@ export default function TriggersPage() {
         isLoading={isDeletingOne || isDeletingAll}
         onConfirm={handleBulkConfirm}
       />
+
+      <TriggerCreateModal open={createOpen} setOpen={setCreateOpen} />
     </div>
   );
 }
