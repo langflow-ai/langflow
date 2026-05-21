@@ -11,7 +11,6 @@ from langchain_core.outputs import LLMResult
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import extract_usage_from_llm_result  # single source of truth for LLMResult extraction
 
-
 # Chars-per-token approximation. tiktoken would be more accurate but adds a heavy
 # dependency for what is a best-effort fallback when the server never returned a
 # real usage block (e.g. the call failed with HTTP 429 before completing).
